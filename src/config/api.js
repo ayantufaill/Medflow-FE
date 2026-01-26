@@ -1,8 +1,22 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+// Use production URL as default for production builds, localhost for development
+const getDefaultApiUrl = () => {
+  // Check if we're in production mode
+  if (import.meta.env.PROD) {
+    return 'https://medflow-be.onrender.com/api';
+  }
+  // Development fallback
+  return 'http://localhost:5001/api';
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getDefaultApiUrl();
 
 // Verify base URL is loaded from env
+console.log('API_BASE_URL:', API_BASE_URL);
+console.log('VITE_API_BASE_URL from env:', import.meta.env.VITE_API_BASE_URL);
+console.log('Mode:', import.meta.env.MODE);
+console.log('Production:', import.meta.env.PROD);
 
 
 /**
