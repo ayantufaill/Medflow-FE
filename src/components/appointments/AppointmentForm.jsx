@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -22,13 +23,22 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
+  InputAdornment,
+  Tooltip,
+  Chip,
 } from '@mui/material';
 import {
   Save as SaveIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
   Close as CloseIcon,
-  PlaylistAdd as WaitlistIcon
+  PlaylistAdd as WaitlistIcon,
+  Error as ErrorIcon,
+  CheckCircle as CheckCircleIcon,
+  LocalHospital as InsuranceIcon,
+  AttachMoney as MoneyIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -71,6 +81,9 @@ const AppointmentForm = ({
   const appointmentTypeSearchTimerRef = useRef(null);
   const [addingToWaitlist, setAddingToWaitlist] = useState(false);
   const { showSnackbar } = useSnackbar();
+  
+  // Insurance eligibility state
+  const [insuranceEligibility, setInsuranceEligibility] = useState(null);
 
   const searchPatients = useCallback(async (search = '') => {
     try {
@@ -157,6 +170,11 @@ const AppointmentForm = ({
 
   const [conflictError, setConflictError] = useState('');
   const [checkingConflict, setCheckingConflict] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [showAvailableSlotsDialog, setShowAvailableSlotsDialog] = useState(false);
+  const [conflictDate, setConflictDate] = useState(null);
+  const [conflictProviderId, setConflictProviderId] = useState(null);
+  const [conflictDuration, setConflictDuration] = useState(30);
 
   const {
     register,
@@ -194,6 +212,7 @@ const AppointmentForm = ({
   const customFields = watch('customFields') || {};
   const providerId = watch('providerId');
   const appointmentDate = watch('appointmentDate');
+  const watchedPatientId = watch('patientId');
   const startTime = watch('startTime');
   const endTime = watch('endTime');
   const durationMinutes = watch('durationMinutes');
@@ -276,11 +295,19 @@ const AppointmentForm = ({
             });
 
             if (!isSlotAvailable) {
+              // Store available slots for display
+              setAvailableSlots(availableSlots);
+              setConflictDate(dateStr);
+              setConflictProviderId(providerIdValue);
+              setConflictDuration(appointmentDuration);
               setConflictError(
                 `This time slot is not available. The provider may have other appointments at this time. Please select an available time slot.`
               );
               return true;
             }
+            
+            // Clear available slots if slot is available
+            setAvailableSlots([]);
           } catch (slotsError) {
             console.warn(
               'Available slots API failed, using manual conflict check:',
@@ -352,6 +379,24 @@ const AppointmentForm = ({
           });
 
           if (conflictingAppointments.length > 0) {
+            // Fetch available slots to show user
+            try {
+              const availableSlotsResult = await appointmentService.getAvailableSlots(
+                providerIdValue,
+                dateStr,
+                appointmentDuration
+              );
+              const slots = availableSlotsResult?.availableSlots || [];
+              if (slots.length > 0) {
+                setAvailableSlots(slots);
+                setConflictDate(dateStr);
+                setConflictProviderId(providerIdValue);
+                setConflictDuration(appointmentDuration);
+              }
+            } catch (err) {
+              console.warn('Could not fetch available slots:', err);
+            }
+            
             const conflictDetails = conflictingAppointments
               .map((apt) => `${apt.startTime} - ${apt.endTime}`)
               .join(', ');
@@ -562,6 +607,146 @@ const AppointmentForm = ({
     initialData,
     checkAppointmentConflict,
   ]);
+
+  // Check insurance eligibility when patientId changes (from form watch or initial data)
+  // Always fetch fresh patient data to ensure insurance info is up-to-date
+  useEffect(() => {
+    const checkPatientInsurance = async () => {
+      const currentPatientId = watchedPatientId || initialData?.patientId?._id || initialData?.patientId;
+      
+      if (!currentPatientId) {
+        setInsuranceEligibility(null);
+        return;
+      }
+
+      // Fetch insurance data separately since getPatientById might not include it
+      // This ensures we have updated data even after user adds insurance and comes back
+      try {
+        console.log('Fetching insurance data for patient:', currentPatientId);
+        
+        // Fetch active insurances for the patient
+        const insurances = await patientService.getPatientInsurances(currentPatientId, true);
+        console.log('Insurances received:', insurances);
+        
+        // Find primary active insurance
+        const primaryInsurance = insurances?.find(
+          ins => ins.isActive === true && ins.insuranceType === 'primary'
+        );
+        
+        console.log('Primary insurance found:', primaryInsurance);
+        
+        if (primaryInsurance) {
+          // Get insurance company name
+          let insuranceName = 'Unknown';
+          if (primaryInsurance.insuranceCompanyId) {
+            if (typeof primaryInsurance.insuranceCompanyId === 'object') {
+              insuranceName = primaryInsurance.insuranceCompanyId.name || 'Unknown';
+            } else {
+              // If it's just an ID, we might need to fetch the company
+              // For now, use 'Unknown'
+              insuranceName = 'Unknown';
+            }
+          }
+          
+          setInsuranceEligibility({
+            status: primaryInsurance.verificationStatus || 'pending',
+            insuranceName: insuranceName,
+            copayAmount: primaryInsurance.copayAmount,
+          });
+        } else {
+          console.log('No primary active insurance found for patient');
+          console.log('All insurances:', insurances);
+          setInsuranceEligibility({ 
+            status: 'no_insurance', 
+            message: 'No active insurance found',
+            insuranceName: 'No Insurance'
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching patient insurance:', err);
+        console.error('Error details:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+        });
+        
+        // On error, still try to check from patients array as fallback
+        const patient = patients.find(p => (p._id || p.id) === currentPatientId);
+        if (patient) {
+          const primaryInsurance = patient.primaryInsurance || 
+            patient.insurances?.find(ins => ins.isActive && ins.insuranceType === 'primary');
+          if (primaryInsurance) {
+            setInsuranceEligibility({
+              status: primaryInsurance.verificationStatus || 'pending',
+              insuranceName: primaryInsurance.insuranceCompanyId?.name || 'Unknown',
+              copayAmount: primaryInsurance.copayAmount,
+            });
+          } else {
+            setInsuranceEligibility({ 
+              status: 'no_insurance', 
+              message: 'No active insurance found',
+              insuranceName: 'No Insurance'
+            });
+          }
+        } else {
+          setInsuranceEligibility({ 
+            status: 'no_insurance', 
+            message: 'No active insurance found',
+            insuranceName: 'No Insurance'
+          });
+        }
+      }
+    };
+
+    checkPatientInsurance();
+  }, [watchedPatientId, initialData?.patientId, patients]);
+
+  // Refresh insurance data when page becomes visible (user comes back from adding insurance)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && watchedPatientId) {
+        // Refresh insurance check when user comes back to the page
+        const checkPatientInsurance = async () => {
+          try {
+            console.log('Page visible, refreshing insurance data for:', watchedPatientId);
+            const insurances = await patientService.getPatientInsurances(watchedPatientId, true);
+            const primaryInsurance = insurances?.find(
+              ins => ins.isActive === true && ins.insuranceType === 'primary'
+            );
+            
+            if (primaryInsurance) {
+              let insuranceName = 'Unknown';
+              if (primaryInsurance.insuranceCompanyId) {
+                if (typeof primaryInsurance.insuranceCompanyId === 'object') {
+                  insuranceName = primaryInsurance.insuranceCompanyId.name || 'Unknown';
+                }
+              }
+              
+              setInsuranceEligibility({
+                status: primaryInsurance.verificationStatus || 'pending',
+                insuranceName: insuranceName,
+                copayAmount: primaryInsurance.copayAmount,
+              });
+            } else {
+              setInsuranceEligibility({ 
+                status: 'no_insurance', 
+                message: 'No active insurance found',
+                insuranceName: 'No Insurance'
+              });
+            }
+          } catch (err) {
+            console.error('Error refreshing insurance data:', err);
+          }
+        };
+        checkPatientInsurance();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [watchedPatientId]);
 
   useEffect(() => {
     if (initialData) {
@@ -928,8 +1113,11 @@ const AppointmentForm = ({
       >
         <Dialog
           open={!!conflictError}
-          onClose={() => setConflictError('')}
-          maxWidth="sm"
+          onClose={() => {
+            setConflictError('');
+            setAvailableSlots([]);
+          }}
+          maxWidth="md"
           fullWidth
         >
           <DialogTitle>
@@ -943,7 +1131,10 @@ const AppointmentForm = ({
               <Typography variant="h6" color="error">
                 Conflict Detected
               </Typography>
-              <IconButton size="small" onClick={() => setConflictError('')}>
+              <IconButton size="small" onClick={() => {
+                setConflictError('');
+                setAvailableSlots([]);
+              }}>
                 <CloseIcon />
               </IconButton>
             </Box>
@@ -951,15 +1142,101 @@ const AppointmentForm = ({
           <DialogContent>
             <Typography>{conflictError}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              You can either change the appointment time or add this appointment to the waitlist for later scheduling.
+              {availableSlots.length > 0 
+                ? 'Please select an available time slot below or add this appointment to the waitlist.'
+                : 'You can either change the appointment time or add this appointment to the waitlist for later scheduling.'}
             </Typography>
+            
+            {/* Available Slots Display */}
+            {availableSlots.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
+                  Available Time Slots for {conflictDate && dayjs(conflictDate).format('MMMM DD, YYYY')}:
+                </Typography>
+                <Box
+                  sx={{
+                    maxHeight: 300,
+                    overflowY: 'auto',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 2,
+                    mt: 1,
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    {availableSlots.map((slot, index) => {
+                      const [hours, minutes] = slot.split(':');
+                      const hour = parseInt(hours);
+                      const ampm = hour >= 12 ? 'PM' : 'AM';
+                      const displayHour = hour % 12 || 12;
+                      const formattedTime = `${displayHour}:${minutes} ${ampm}`;
+                      
+                      // Calculate end time
+                      const slotStart = dayjs(`${conflictDate} ${slot}`);
+                      const slotEnd = slotStart.add(conflictDuration, 'minute');
+                      const endTimeStr = slotEnd.format('HH:mm');
+                      const [endHours, endMinutes] = endTimeStr.split(':');
+                      const endHour = parseInt(endHours);
+                      const endAmpm = endHour >= 12 ? 'PM' : 'AM';
+                      const endDisplayHour = endHour % 12 || 12;
+                      const formattedEndTime = `${endDisplayHour}:${endMinutes} ${endAmpm}`;
+                      
+                      return (
+                        <Grid size={{ xs: 6, sm: 4, md: 3 }} key={index}>
+                          <Button
+                            variant="outlined"
+                            fullWidth
+                            onClick={() => {
+                              // Set the selected time
+                              const selectedStart = dayjs(`${conflictDate} ${slot}`);
+                              const selectedEnd = selectedStart.add(conflictDuration, 'minute');
+                              
+                              reset({
+                                ...watch(),
+                                startTime: selectedStart,
+                                endTime: selectedEnd,
+                              });
+                              
+                              setConflictError('');
+                              setAvailableSlots([]);
+                            }}
+                            sx={{
+                              py: 1.5,
+                              borderColor: 'primary.main',
+                              '&:hover': {
+                                borderColor: 'primary.dark',
+                                bgcolor: 'primary.50',
+                              },
+                            }}
+                          >
+                            <Box>
+                              <Typography variant="body2" fontWeight="medium">
+                                {formattedTime}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                - {formattedEndTime}
+                              </Typography>
+                            </Box>
+                          </Button>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              </Box>
+            )}
           </DialogContent>
           <DialogActions>
             <Button
-              onClick={() => setConflictError('')}
+              onClick={() => {
+                setConflictError('');
+                setAvailableSlots([]);
+              }}
               variant="outlined"
             >
-              Change Time
+              Cancel
             </Button>
             <Button
               onClick={handleAddToWaitlist}
@@ -988,6 +1265,37 @@ const AppointmentForm = ({
             </Box>
           </DialogContent>
         </Dialog>
+
+        {/* Enhanced Conflict Error Alert */}
+        {conflictError && (
+          <Grid size={12}>
+            <Alert
+              severity="error"
+              icon={<ErrorIcon />}
+              sx={{ mb: 2 }}
+              action={
+                <IconButton
+                  size="small"
+                  onClick={() => setConflictError('')}
+                  color="inherit"
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              }
+            >
+              <Typography variant="body2" fontWeight="bold" gutterBottom>
+                Appointment Conflict Detected
+              </Typography>
+              <Typography variant="body2">
+                {conflictError}
+              </Typography>
+              <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                Please select a different time slot or provider to continue.
+              </Typography>
+            </Alert>
+          </Grid>
+        )}
+
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
@@ -1010,9 +1318,14 @@ const AppointmentForm = ({
                     }
                     value={selectedPatient || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
+                      const patientId = newValue ? newValue._id || newValue.id : '';
+                      field.onChange(patientId);
+                      
+                      // Insurance eligibility will be checked by the useEffect that watches watchedPatientId
+                      // This ensures we always get fresh data from the API, even after user adds insurance
+                      if (!newValue) {
+                        setInsuranceEligibility(null);
+                      }
                     }}
                     onInputChange={(event, newInputValue, reason) => {
                       if (reason === 'input') {
@@ -1061,6 +1374,100 @@ const AppointmentForm = ({
               }}
             />
           </Grid>
+
+          {/* Insurance Eligibility Display */}
+          {insuranceEligibility && (
+            <Grid size={12}>
+              <Alert
+                severity={
+                  insuranceEligibility.status === 'verified'
+                    ? 'success'
+                    : insuranceEligibility.status === 'pending'
+                    ? 'warning'
+                    : insuranceEligibility.status === 'failed' || insuranceEligibility.status === 'inactive'
+                    ? 'error'
+                    : 'info'
+                }
+                icon={
+                  insuranceEligibility.status === 'verified' ? (
+                    <CheckCircleIcon />
+                  ) : insuranceEligibility.status === 'pending' ? (
+                    <ErrorIcon />
+                  ) : insuranceEligibility.status === 'no_insurance' ? (
+                    <InsuranceIcon />
+                  ) : (
+                    <ErrorIcon />
+                  )
+                }
+                sx={{ mb: 2 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: insuranceEligibility.copayAmount ? 1 : 0, flexWrap: 'wrap' }}>
+                  <Chip
+                    label={
+                      insuranceEligibility.status === 'verified'
+                        ? 'VERIFIED'
+                        : insuranceEligibility.status === 'pending'
+                        ? 'PENDING'
+                        : insuranceEligibility.status === 'failed'
+                        ? 'FAILED'
+                        : insuranceEligibility.status === 'inactive'
+                        ? 'INACTIVE'
+                        : 'NO INSURANCE'
+                    }
+                    size="small"
+                    color={
+                      insuranceEligibility.status === 'verified'
+                        ? 'success'
+                        : insuranceEligibility.status === 'pending'
+                        ? 'warning'
+                        : insuranceEligibility.status === 'failed' || insuranceEligibility.status === 'inactive'
+                        ? 'error'
+                        : 'default'
+                    }
+                  />
+                  <Typography variant="body2" fontWeight="medium">
+                    Insurance Eligibility: {insuranceEligibility.insuranceName}
+                  </Typography>
+                </Box>
+                {insuranceEligibility.copayAmount && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Expected Copay: <strong>${insuranceEligibility.copayAmount}</strong>
+                  </Typography>
+                )}
+                {insuranceEligibility.message && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    {insuranceEligibility.message}
+                  </Typography>
+                )}
+                {insuranceEligibility.status === 'no_insurance' && watchedPatientId && (
+                  <Box sx={{ mt: 1.5 }}>
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const patientId = watchedPatientId;
+                        if (patientId) {
+                          try {
+                            navigate(`/patients/${patientId}?tab=insurance`);
+                          } catch (error) {
+                            console.error('Navigation error:', error);
+                            window.location.href = `/patients/${patientId}?tab=insurance`;
+                          }
+                        }
+                      }}
+                    >
+                      Add Insurance
+                    </Button>
+                  </Box>
+                )}
+              </Alert>
+            </Grid>
+          )}
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="providerId"
@@ -1360,7 +1767,20 @@ const AppointmentForm = ({
                         errors.startTime?.message ||
                         (conflictError && checkingConflict
                           ? 'Checking availability...'
+                          : conflictError
+                          ? 'Time slot has conflicts'
                           : ''),
+                      InputProps: conflictError
+                        ? {
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Tooltip title="Time slot has conflicts">
+                                  <ErrorIcon color="error" fontSize="small" />
+                                </Tooltip>
+                              </InputAdornment>
+                            ),
+                          }
+                        : undefined,
                     },
                   }}
                   disabled={checkingConflict}
@@ -1439,18 +1859,31 @@ const AppointmentForm = ({
                       clearErrors('endTime');
                     }}
                     minTime={minTime}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        error: !!errors.endTime || !!conflictError,
-                        helperText:
-                          errors.endTime?.message ||
-                          (conflictError && checkingConflict
-                            ? 'Checking availability...'
-                            : ''),
-                      },
-                    }}
-                    disabled={checkingConflict}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: !!errors.endTime || !!conflictError,
+                      helperText:
+                        errors.endTime?.message ||
+                        (conflictError && checkingConflict
+                          ? 'Checking availability...'
+                          : conflictError
+                          ? 'Time slot has conflicts'
+                          : ''),
+                      InputProps: conflictError
+                        ? {
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Tooltip title="Time slot has conflicts">
+                                  <ErrorIcon color="error" fontSize="small" />
+                                </Tooltip>
+                              </InputAdornment>
+                            ),
+                          }
+                        : undefined,
+                    },
+                  }}
+                  disabled={checkingConflict}
                   />
                 );
               }}

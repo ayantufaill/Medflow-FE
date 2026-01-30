@@ -684,27 +684,27 @@ const ViewAppointmentPage = () => {
               )}
               <Grid size={6}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Insurance Verified
+                  Insurance Status
                 </Typography>
-                <Typography variant="body1" fontWeight="medium">
-                  {appointment.insuranceVerified ? "Yes" : "No"}
+                <Chip
+                  label={appointment.insuranceVerified ? "✓ Verified" : "✗ Not Verified"}
+                  color={appointment.insuranceVerified ? "success" : "warning"}
+                  size="small"
+                  variant={appointment.insuranceVerified ? "filled" : "outlined"}
+                />
+              </Grid>
+              <Grid size={6}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  Copay Collected
+                </Typography>
+                <Typography variant="body1" fontWeight="medium" color={appointment.copayCollected > 0 ? "success.main" : "text.primary"}>
+                  {appointment.copayCollected > 0 ? `$${appointment.copayCollected.toFixed(2)}` : "Not collected"}
                 </Typography>
               </Grid>
-              {appointment.copayCollected !== undefined &&
-                appointment.copayCollected !== null && (
-                  <Grid size={6}>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      gutterBottom
-                    >
-                      Copay Collected
-                    </Typography>
-                    <Typography variant="body1" fontWeight="medium">
-                      ${appointment.copayCollected.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                )}
               <Grid size={6}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Requires Interpreter

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Box,
@@ -26,8 +26,16 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { providerValidations } from '../../validations/providerValidations';
-import { userService } from '../../services/user.service';
+import { useUsersByRole } from '../../hooks/queries/useUsers';
 import { providerService } from '../../services/provider.service';
+
+// Only log in development
+const isDevelopment = import.meta.env.DEV;
+const debugLog = (...args) => {
+  if (isDevelopment) {
+    console.log(...args);
+  }
+};
 
 const ProviderForm = ({
   onSubmit,
@@ -38,43 +46,65 @@ const ProviderForm = ({
   formId,
   externalUsers = null,
 }) => {
-  const [users, setUsers] = useState(externalUsers || []);
-  const [usersLoading, setUsersLoading] = useState(externalUsers === null);
-  const [specialties, setSpecialties] = useState([]);
-  const [specialtiesLoading, setSpecialtiesLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const userSearchTimerRef = useRef(null);
   const [specialtySearch, setSpecialtySearch] = useState('');
   const specialtySearchTimerRef = useRef(null);
 
-  const searchUsers = useCallback(async (search = '') => {
-    try {
-      setUsersLoading(true);
-      const result = await userService.getUsersByRoleName(
-        'Doctor',
-        1,
-        20,
-        'active',
-        !isEditMode,
-        search
-      );
-      setUsers(result.users || []);
-    } catch (err) {
-      console.error('Error searching users:', err);
-    } finally {
-      setUsersLoading(false);
-    }
-  }, [isEditMode]);
+  // Use React Query to fetch and cache users - optimized with caching
+  const {
+    data: allUsers = [],
+    isLoading: usersLoading,
+    error: usersError,
+  } = useUsersByRole('Doctor', {
+    limit: 500,
+    status: 'active',
+    excludeWithProvider: false, // Fetch all first, filter on frontend
+    enabled: externalUsers === null, // Only fetch if externalUsers not provided
+  });
 
-  useEffect(() => {
+  // Memoized: Filter users based on edit mode and search - only recalculates when dependencies change
+  const users = useMemo(() => {
+    // Use external users if provided
     if (externalUsers !== null) {
-      setUsers(externalUsers);
-      setUsersLoading(false);
-      return;
+      return externalUsers;
     }
 
-    searchUsers('');
-  }, [isEditMode, externalUsers, searchUsers]);
+    let filteredUsers = [...allUsers];
+
+    // If creating new provider (not edit mode), filter out users who already have providers
+    if (!isEditMode) {
+      filteredUsers = filteredUsers.filter(user => {
+        return !user.hasProvider && !user.providerId;
+      });
+    }
+
+    // Apply search filter if search term is provided
+    if (userSearch && userSearch.trim()) {
+      const searchLower = userSearch.toLowerCase().trim();
+      filteredUsers = filteredUsers.filter(user => 
+        (user.firstName?.toLowerCase().includes(searchLower)) ||
+        (user.lastName?.toLowerCase().includes(searchLower)) ||
+        (user.email?.toLowerCase().includes(searchLower))
+      );
+    }
+
+    debugLog('ProviderForm - Filtered users:', {
+      total: filteredUsers.length,
+      allUsers: allUsers.length,
+      excludeWithProvider: !isEditMode,
+      search: userSearch || '(empty)',
+    });
+
+    return filteredUsers;
+  }, [allUsers, isEditMode, userSearch, externalUsers]);
+
+  // Log errors only in development
+  useEffect(() => {
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+    }
+  }, [usersError]);
 
   const searchSpecialties = useCallback(async (search = '') => {
     try {
@@ -434,15 +464,19 @@ const ProviderForm = ({
                       );
                     }}
                     onInputChange={(event, newInputValue, reason) => {
+                      // Debounced search - update state after 300ms of no typing
                       if (reason === 'input') {
                         if (userSearchTimerRef.current) {
                           clearTimeout(userSearchTimerRef.current);
                         }
                         userSearchTimerRef.current = setTimeout(() => {
-                          searchUsers(newInputValue);
+                          setUserSearch(newInputValue);
                         }, 300);
                       } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
-                        searchUsers('');
+                        if (userSearchTimerRef.current) {
+                          clearTimeout(userSearchTimerRef.current);
+                        }
+                        setUserSearch('');
                       }
                     }}
                     isOptionEqualToValue={(option, value) =>

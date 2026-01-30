@@ -87,6 +87,12 @@ const AppointmentsListPage = () => {
   });
   const [cancelReason, setCancelReason] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [checkInDialog, setCheckInDialog] = useState({
+    open: false,
+    appointment: null,
+    copayAmount: 0,
+  });
+  const [checkInLoading, setCheckInLoading] = useState(false);
   const previousSearchRef = useRef('');
   const searchDebounceTimerRef = useRef(null);
 
@@ -253,9 +259,45 @@ const AppointmentsListPage = () => {
 
   const handleCheckIn = async (appointmentId) => {
     handleActionMenuClose();
+    const appointment = appointments.find(
+      (apt) => (apt._id || apt.id) === appointmentId
+    );
+
+    if (!appointment) return;
+
+    // Get expected copay from patient's primary insurance
+    const expectedCopay =
+      appointment.patientId?.primaryInsurance?.copayAmount ||
+      appointment.patientId?.insurances?.find((ins) => ins.isActive && ins.insuranceType === 'primary')
+        ?.copayAmount ||
+      0;
+
+    setCheckInDialog({
+      open: true,
+      appointment: appointment,
+      copayAmount: expectedCopay,
+    });
+  };
+
+  const handleCheckInConfirm = async () => {
+    if (!checkInDialog.appointment) return;
+
     try {
+      setCheckInLoading(true);
+      const appointmentId = checkInDialog.appointment._id || checkInDialog.appointment.id;
+
+      // First check-in the appointment
       await appointmentService.checkInAppointment(appointmentId);
+
+      // Then update with copay if amount > 0
+      if (checkInDialog.copayAmount > 0) {
+        await appointmentService.updateAppointment(appointmentId, {
+          copayCollected: checkInDialog.copayAmount,
+        });
+      }
+
       showSnackbar('Patient checked in successfully', 'success');
+      setCheckInDialog({ open: false, appointment: null, copayAmount: 0 });
       fetchAppointments();
     } catch (err) {
       showSnackbar(
@@ -264,6 +306,8 @@ const AppointmentsListPage = () => {
           'Failed to check in patient',
         'error'
       );
+    } finally {
+      setCheckInLoading(false);
     }
   };
 
@@ -557,12 +601,19 @@ const AppointmentsListPage = () => {
                           {appointment.appointmentTypeId?.name || '-'}
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            label={appointment.insuranceVerified ? 'Verified' : 'Not Verified'}
-                            color={appointment.insuranceVerified ? 'success' : 'default'}
-                            size="small"
-                            variant={appointment.insuranceVerified ? 'filled' : 'outlined'}
-                          />
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Chip
+                              label={appointment.insuranceVerified ? '✓ Verified' : '✗ Not Verified'}
+                              color={appointment.insuranceVerified ? 'success' : 'warning'}
+                              size="small"
+                              variant={appointment.insuranceVerified ? 'filled' : 'outlined'}
+                            />
+                            {appointment.copayCollected > 0 && (
+                              <Typography variant="caption" color="success.main" fontWeight="medium">
+                                Copay: ${appointment.copayCollected}
+                              </Typography>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
@@ -745,6 +796,68 @@ const AppointmentsListPage = () => {
             startIcon={cancelLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
             {cancelLoading ? 'Cancelling...' : 'Cancel Appointment'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Check-in with Copay Dialog */}
+      <Dialog
+        open={checkInDialog.open}
+        onClose={() => setCheckInDialog({ open: false, appointment: null, copayAmount: 0 })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Check-in Patient</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Patient: {checkInDialog.appointment?.patientId?.firstName}{' '}
+              {checkInDialog.appointment?.patientId?.lastName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Appointment: {checkInDialog.appointment?.appointmentTypeId?.name || 'N/A'}
+            </Typography>
+          </Box>
+
+          <TextField
+            fullWidth
+            label="Copay Amount"
+            type="number"
+            value={checkInDialog.copayAmount}
+            onChange={(e) =>
+              setCheckInDialog({
+                ...checkInDialog,
+                copayAmount: parseFloat(e.target.value) || 0,
+              })
+            }
+            InputProps={{
+              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            }}
+            inputProps={{ min: 0, step: 0.01 }}
+            helperText="Enter copay amount collected from patient (leave 0 if no copay)"
+            sx={{ mt: 2 }}
+          />
+
+          {checkInDialog.appointment?.patientId?.primaryInsurance?.copayAmount && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Expected Copay: ${checkInDialog.appointment.patientId.primaryInsurance.copayAmount}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setCheckInDialog({ open: false, appointment: null, copayAmount: 0 })}
+            disabled={checkInLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCheckInConfirm}
+            disabled={checkInLoading}
+            startIcon={checkInLoading ? <CircularProgress size={20} /> : <CheckCircleIcon />}
+          >
+            {checkInLoading ? 'Checking In...' : 'Check In'}
           </Button>
         </DialogActions>
       </Dialog>

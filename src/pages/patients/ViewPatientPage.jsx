@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -81,12 +81,19 @@ import {
 const ViewPatientPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
+  const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [patient, setPatient] = useState(null);
-  const [tabValue, setTabValue] = useState(0);
+  
+  // Initialize tab from URL query param, default to 0
+  const initialTab = searchParams.get('tab') === 'insurance' ? 1 : 
+                     searchParams.get('tab') === 'notes' ? 2 :
+                     searchParams.get('tab') === 'documents' ? 3 :
+                     searchParams.get('tab') === 'vitals' ? 4 : 0;
+  const [tabValue, setTabValue] = useState(initialTab);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Insurance state
@@ -187,6 +194,22 @@ const ViewPatientPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
+
+  // Update tab when URL query param changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'insurance') {
+      setTabValue(1);
+    } else if (tabParam === 'notes') {
+      setTabValue(2);
+    } else if (tabParam === 'documents') {
+      setTabValue(3);
+    } else if (tabParam === 'vitals') {
+      setTabValue(4);
+    } else if (!tabParam) {
+      setTabValue(0);
+    }
+  }, [searchParams]);
 
   const handleBack = () => {
     window.history.back();

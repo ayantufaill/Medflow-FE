@@ -430,25 +430,95 @@ const AppointmentCalendarPage = () => {
     return isSlotAvailable(selectInfo.start, startTime);
   };
 
+  // Professional color palette consistent with Material-UI design system
   const getStatusColor = (status) => {
     const statusColors = {
-      scheduled: "#1976d2",
-      confirmed: "#0288d1",
-      checked_in: "#ed6c02",
-      in_progress: "#9c27b0",
-      completed: "#2e7d32",
-      cancelled: "#d32f2f",
-      no_show: "#757575",
+      scheduled: "#1976d2",      // Primary blue
+      confirmed: "#1565c0",      // Darker blue for confirmed
+      checked_in: "#f57c00",      // Orange for checked in
+      in_progress: "#7b1fa2",    // Purple for in progress
+      completed: "#2e7d32",      // Green for completed
+      cancelled: "#c62828",       // Dark red for cancelled
+      no_show: "#616161",        // Gray for no show
     };
     return statusColors[status] || "#1976d2";
   };
 
+  // Professional colors for appointment types
+  const getAppointmentTypeColor = (appointmentTypeName) => {
+    if (!appointmentTypeName) return null;
+    
+    const typeName = appointmentTypeName.toLowerCase();
+    
+    // Map common appointment types to professional colors
+    const typeColors = {
+      // Consultation types - use blue shades
+      'initial consultation': '#1976d2',      // Primary blue
+      'consultation': '#1976d2',
+      'new patient': '#1976d2',
+      'initial visit': '#1976d2',
+      
+      // Follow-up types - use teal/cyan shades (more professional than bright cyan)
+      'follow-up visit': '#00897b',           // Professional teal
+      'follow up': '#00897b',
+      'followup': '#00897b',
+      'follow-up': '#00897b',
+      'return visit': '#00897b',
+      'routine visit': '#00897b',
+      
+      // Procedure types - use indigo
+      'procedure': '#3949ab',
+      'surgery': '#3949ab',
+      'minor procedure': '#3949ab',
+      
+      // Emergency/Urgent - use red-orange
+      'emergency': '#d84315',
+      'urgent': '#d84315',
+      
+      // Check-up types - use green
+      'check-up': '#388e3c',
+      'checkup': '#388e3c',
+      'wellness visit': '#388e3c',
+      'annual exam': '#388e3c',
+      
+      // Therapy/Treatment - use purple
+      'therapy': '#7b1fa2',
+      'treatment': '#7b1fa2',
+      'physical therapy': '#7b1fa2',
+    };
+    
+    // Check for exact match first
+    if (typeColors[typeName]) {
+      return typeColors[typeName];
+    }
+    
+    // Check for partial matches
+    for (const [key, color] of Object.entries(typeColors)) {
+      if (typeName.includes(key) || key.includes(typeName)) {
+        return color;
+      }
+    }
+    
+    // Default: use a professional blue-gray for unknown types
+    return null;
+  };
+
   const formattedEvents = events.map((event) => {
-    const color = event.backgroundColor || getStatusColor(event.extendedProps?.status);
+    // Priority: appointment type color > status color > default
+    const appointmentTypeColor = getAppointmentTypeColor(
+      event.extendedProps?.appointmentTypeName || event.title
+    );
+    const statusColor = getStatusColor(event.extendedProps?.status);
+    
+    // Use appointment type color if available, otherwise use status color
+    const color = appointmentTypeColor || event.backgroundColor || statusColor;
+    
     return {
       ...event,
       backgroundColor: color,
       borderColor: color,
+      // Add subtle opacity for better visual hierarchy
+      classNames: ['appointment-event'],
     };
   });
 
@@ -748,12 +818,24 @@ const AppointmentCalendarPage = () => {
               ".fc-event": {
                 cursor: "pointer",
                 borderRadius: "6px",
+                borderWidth: "2px",
+                fontWeight: 500,
+                fontSize: "0.875rem",
               },
               ".fc-timegrid-slot": {
                 height: "40px",
               },
               ".fc-timegrid-event": {
                 borderRadius: "6px",
+                borderWidth: "2px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+              },
+              ".appointment-event": {
+                opacity: 0.95,
+                "&:hover": {
+                  opacity: 1,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.16)",
+                },
               },
               ".fc-timegrid-slot-lane.mf-slot-disabled": {
                 backgroundColor: theme.palette.action.disabledBackground,
@@ -864,20 +946,18 @@ const AppointmentCalendarPage = () => {
         <DialogContent dividers>
           {selectedEvent && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: 'wrap' }}>
                 <Chip
                   label={selectedEvent.status?.replace("_", " ").toUpperCase()}
                   color={getStatusChipColor(selectedEvent.status)}
                   size="small"
                 />
-                {selectedEvent.insuranceVerified && (
-                  <Chip
-                    label="Insurance Verified"
-                    color="success"
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
+                <Chip
+                  label={selectedEvent.insuranceVerified ? "Insurance ✓" : "Insurance ✗"}
+                  color={selectedEvent.insuranceVerified ? "success" : "warning"}
+                  size="small"
+                  variant={selectedEvent.insuranceVerified ? "filled" : "outlined"}
+                />
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -932,6 +1012,31 @@ const AppointmentCalendarPage = () => {
                   <Typography variant="body1">
                     {selectedEvent.appointmentTypeName || "N/A"}
                   </Typography>
+                </Box>
+              </Box>
+
+              {/* Insurance & Copay Info */}
+              <Box sx={{ 
+                p: 1.5, 
+                bgcolor: selectedEvent.insuranceVerified ? 'success.50' : 'warning.50', 
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: selectedEvent.insuranceVerified ? 'success.light' : 'warning.light'
+              }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Insurance Status
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" fontWeight="medium">
+                    {selectedEvent.insuranceVerified ? '✓ Verified' : '✗ Not Verified'}
+                  </Typography>
+                  {selectedEvent.copayCollected > 0 && (
+                    <Chip 
+                      label={`Copay: $${selectedEvent.copayCollected}`} 
+                      size="small" 
+                      color="success"
+                    />
+                  )}
                 </Box>
               </Box>
 

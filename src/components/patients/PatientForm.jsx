@@ -17,6 +17,17 @@ import {
   IconButton,
   Paper,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -36,6 +47,8 @@ import {
   parseDriverLicense,
 } from '../../services/ocr.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { patientService } from '../../services/patient.service';
+import { useNavigate } from 'react-router-dom';
 
 const PatientForm = ({
   onSubmit,
@@ -60,6 +73,15 @@ const PatientForm = ({
   const [showOcrText, setShowOcrText] = useState(false);
   const fileInputRef = useRef(null);
   const { showSnackbar } = useSnackbar();
+  const navigate = useNavigate();
+
+  // Duplicate detection state
+  const [duplicateDialog, setDuplicateDialog] = useState({
+    open: false,
+    duplicates: [],
+  });
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const duplicateCheckTimerRef = useRef(null);
 
   const {
     register,
@@ -194,6 +216,97 @@ const PatientForm = ({
   const handleBack = () => {
     window.history.back();
   };
+
+  // Check for duplicate patients
+  const checkForDuplicates = useCallback(async (firstName, lastName, dateOfBirth) => {
+    // Only check in create mode
+    if (isEditMode || !firstName || !lastName) {
+      return;
+    }
+
+    // Backend requires dateOfBirth, so only check if it's provided and valid
+    if (!dateOfBirth || !dayjs(dateOfBirth).isValid()) {
+      console.log('Skipping duplicate check - dateOfBirth required');
+      return;
+    }
+
+    try {
+      setCheckingDuplicates(true);
+      console.log('Checking duplicates for:', { firstName, lastName, dateOfBirth });
+      
+      const duplicateData = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth: dayjs(dateOfBirth).format('YYYY-MM-DD'),
+      };
+
+      const duplicates = await patientService.checkDuplicates(duplicateData);
+      console.log('Duplicate check result:', duplicates);
+
+      if (duplicates && duplicates.length > 0) {
+        console.log('Found duplicates, showing dialog');
+        setDuplicateDialog({
+          open: true,
+          duplicates: duplicates,
+        });
+      } else {
+        console.log('No duplicates found');
+      }
+    } catch (err) {
+      console.error('Error checking duplicates:', err);
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      // Don't show error to user, just log it - backend validation error is expected if DOB missing
+    } finally {
+      setCheckingDuplicates(false);
+    }
+  }, [isEditMode]);
+
+  // Watch for changes in firstName, lastName, dateOfBirth and check duplicates
+  const firstName = watch('firstName');
+  const lastName = watch('lastName');
+  const dateOfBirth = watch('dateOfBirth');
+
+  useEffect(() => {
+    if (isEditMode) return;
+
+    // Clear previous timer
+    if (duplicateCheckTimerRef.current) {
+      clearTimeout(duplicateCheckTimerRef.current);
+    }
+
+    // Debounce duplicate check - wait 1.5 seconds after user stops typing
+    // Backend requires firstName, lastName, AND dateOfBirth
+    if (
+      firstName &&
+      lastName &&
+      firstName.trim().length > 0 &&
+      lastName.trim().length > 0 &&
+      dateOfBirth &&
+      dayjs(dateOfBirth).isValid()
+    ) {
+      console.log('Setting duplicate check timer for:', { firstName, lastName, dateOfBirth });
+      duplicateCheckTimerRef.current = setTimeout(() => {
+        console.log('Timer fired, checking duplicates...');
+        checkForDuplicates(firstName, lastName, dateOfBirth);
+      }, 1500);
+    } else {
+      console.log('Not checking duplicates - missing required fields:', {
+        firstName: !!firstName,
+        lastName: !!lastName,
+        dateOfBirth: !!dateOfBirth && dayjs(dateOfBirth).isValid(),
+      });
+    }
+
+    return () => {
+      if (duplicateCheckTimerRef.current) {
+        clearTimeout(duplicateCheckTimerRef.current);
+      }
+    };
+  }, [firstName, lastName, dateOfBirth, isEditMode, checkForDuplicates]);
 
   // Handle driver's license scan
   const handleLicenseScan = async (event) => {
@@ -1413,6 +1526,80 @@ const PatientForm = ({
           )}
         </Grid>
       </Box>
+
+      {/* Duplicate Detection Dialog */}
+      <Dialog
+        open={duplicateDialog.open}
+        onClose={() => setDuplicateDialog({ open: false, duplicates: [] })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Alert severity="warning" sx={{ mb: 0 }}>
+            Potential Duplicate Patients Found
+          </Alert>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, mt: 2 }}>
+            The following patients have similar information. Please review before creating a new patient:
+          </Typography>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Name</strong></TableCell>
+                  <TableCell><strong>Date of Birth</strong></TableCell>
+                  <TableCell><strong>Phone</strong></TableCell>
+                  <TableCell><strong>Email</strong></TableCell>
+                  <TableCell><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {duplicateDialog.duplicates.map((dup) => (
+                  <TableRow key={dup._id || dup.id} hover>
+                    <TableCell>
+                      {dup.firstName} {dup.lastName}
+                    </TableCell>
+                    <TableCell>
+                      {dup.dateOfBirth
+                        ? dayjs(dup.dateOfBirth).format('MM/DD/YYYY')
+                        : '-'}
+                    </TableCell>
+                    <TableCell>{dup.phonePrimary || '-'}</TableCell>
+                    <TableCell>{dup.email || '-'}</TableCell>
+                    <TableCell>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          navigate(`/patients/${dup._id || dup.id}`);
+                          setDuplicateDialog({ open: false, duplicates: [] });
+                        }}
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDuplicateDialog({ open: false, duplicates: [] })}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setDuplicateDialog({ open: false, duplicates: [] });
+              // Continue with form submission - will be handled by parent onSubmit
+            }}
+          >
+            Continue Anyway
+          </Button>
+        </DialogActions>
+      </Dialog>
     </LocalizationProvider>
   );
 };
