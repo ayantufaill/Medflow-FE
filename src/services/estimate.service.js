@@ -62,6 +62,14 @@ export const estimateService = {
   },
 
   /**
+   * Delete estimate
+   */
+  async deleteEstimate(estimateId) {
+    const response = await apiClient.delete(`/estimates/${estimateId}`);
+    return response.data.data;
+  },
+
+  /**
    * Update estimate
    */
   async updateEstimate(estimateId, updates) {
@@ -71,9 +79,11 @@ export const estimateService = {
 
   /**
    * Convert estimate to invoice
+   * @param {string} estimateId
+   * @param {Object} data - { appointmentId, dueDate (ISO string) }
    */
-  async convertToInvoice(estimateId) {
-    const response = await apiClient.post(`/estimates/${estimateId}/convert`);
+  async convertToInvoice(estimateId, data = {}) {
+    const response = await apiClient.post(`/estimates/${estimateId}/convert`, data);
     return response.data.data;
   },
 

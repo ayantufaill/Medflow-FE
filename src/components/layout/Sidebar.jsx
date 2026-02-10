@@ -36,6 +36,9 @@ import {
   Payment,
   RequestQuote,
   MedicalServices,
+  Assignment,
+  CloudUpload,
+  VerifiedUser,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -144,6 +147,27 @@ const menuItems = [
     icon: <AccountBalance />,
     path: '/insurance-companies',
     requiredRoles: ['Admin'],
+  },
+  // Sprint 6 - Claims Management
+  {
+    text: 'Claims',
+    icon: <Assignment />,
+    path: '/claims',
+    requiredRoles: ['Admin', 'Billing'],
+  },
+  // Sprint 6 - ERA/EOB Processing
+  {
+    text: 'ERA/EOB',
+    icon: <CloudUpload />,
+    path: '/era',
+    requiredRoles: ['Admin', 'Billing'],
+  },
+  // Sprint 6 - Authorization Management
+  {
+    text: 'Authorizations',
+    icon: <VerifiedUser />,
+    path: '/authorizations',
+    requiredRoles: ['Admin', 'Billing', 'Front Desk'],
   },
 ];
 

@@ -92,11 +92,14 @@ const PaymentsListPage = () => {
       setPayments(result.payments || []);
       setTotalPayments(result.pagination?.total || 0);
     } catch (err) {
-      setError(
+      const msg =
         err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch payments.'
-      );
+        err.response?.data?.message ||
+        (err.response?.status === 403 && 'You do not have permission to view payments.') ||
+        (err.response?.status === 401 && 'Please sign in again.') ||
+        (err.message && String(err.message)) ||
+        'Failed to fetch payments.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

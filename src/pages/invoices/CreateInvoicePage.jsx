@@ -24,6 +24,7 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { invoiceService } from '../../services/invoice.service';
 import { appointmentService } from '../../services/appointment.service';
+import { insuranceCompanyService } from '../../services/insurance.service';
 
 const CreateInvoicePage = () => {
   const navigate = useNavigate();
@@ -34,6 +35,9 @@ const CreateInvoicePage = () => {
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [insuranceCompanies, setInsuranceCompanies] = useState([]);
+  const [loadingInsurance, setLoadingInsurance] = useState(false);
+  const [selectedInsurance, setSelectedInsurance] = useState(null);
 
   const appointmentIdFromUrl = searchParams.get('appointmentId');
 
@@ -48,6 +52,22 @@ const CreateInvoicePage = () => {
       notes: '',
     },
   });
+
+  // Fetch insurance companies for dropdown
+  useEffect(() => {
+    const fetchInsurance = async () => {
+      try {
+        setLoadingInsurance(true);
+        const result = await insuranceCompanyService.getAllInsuranceCompanies(1, 100, '', 'active');
+        setInsuranceCompanies(result.companies || []);
+      } catch (err) {
+        console.warn('Error fetching insurance companies:', err);
+      } finally {
+        setLoadingInsurance(false);
+      }
+    };
+    fetchInsurance();
+  }, []);
 
   // Fetch completed appointments that don't have invoices
   useEffect(() => {
@@ -66,14 +86,14 @@ const CreateInvoicePage = () => {
         }
         
         // Get all invoices to check which appointments already have invoices
-        let appointmentIdsWithInvoices = new Set();
+        const appointmentIdsWithInvoices = new Set();
         try {
-          const invoicesResult = await invoiceService.getAllInvoices({ page: 1, limit: 100 });
+          const invoicesResult = await invoiceService.getAllInvoices({ page: 1, limit: 500 });
           const invoices = invoicesResult.invoices || [];
           
-          invoices.forEach(inv => {
-            // Handle different invoice structures
-            const aptId = inv.appointmentId || inv.appointment?._id || inv.appointment?.id;
+          invoices.forEach((inv) => {
+            // appointmentId can be: populated object { _id } or raw string
+            const aptId = inv.appointmentId?._id ?? inv.appointmentId ?? inv.appointment?._id ?? inv.appointment?.id;
             if (aptId) {
               appointmentIdsWithInvoices.add(String(aptId));
             }
@@ -137,6 +157,7 @@ const CreateInvoicePage = () => {
       const invoiceData = {
         dueDate: dayjs(data.dueDate).format('YYYY-MM-DD'),
         notes: data.notes || undefined,
+        insuranceCompanyId: selectedInsurance ? (selectedInsurance._id || selectedInsurance.id) : undefined,
       };
 
       const invoice = await invoiceService.createInvoiceFromAppointment(
@@ -263,6 +284,37 @@ const CreateInvoicePage = () => {
                       }}
                     />
                   )}
+                />
+              </Grid>
+
+              {/* Insurance (optional) */}
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Autocomplete
+                  options={insuranceCompanies}
+                  loading={loadingInsurance}
+                  getOptionLabel={(opt) => (opt ? opt.name || '' : '')}
+                  value={selectedInsurance}
+                  onChange={(_, newValue) => setSelectedInsurance(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Insurance (optional)"
+                      placeholder="Select insurance company..."
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingInsurance && <CircularProgress size={20} />}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  isOptionEqualToValue={(option, value) =>
+                    (option?._id || option?.id) === (value?._id || value?.id)
+                  }
+                  noOptionsText={loadingInsurance ? 'Loading...' : 'No insurance companies found'}
                 />
               </Grid>
 

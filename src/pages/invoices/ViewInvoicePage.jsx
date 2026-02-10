@@ -21,10 +21,12 @@ import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Payment as PaymentIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { invoiceService } from '../../services/invoice.service';
+import { claimService } from '../../services/claim.service';
 
 const STATUS_COLORS = {
   draft: 'default',
@@ -41,15 +43,22 @@ const ViewInvoicePage = () => {
   const { invoiceId } = useParams();
   const { showSnackbar } = useSnackbar();
   const [invoice, setInvoice] = useState(null);
+  const [existingClaim, setExistingClaim] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [creatingClaim, setCreatingClaim] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
         setLoading(true);
-        const data = await invoiceService.getInvoiceById(invoiceId);
-        setInvoice(data);
+        const [invoiceData, claimsResult] = await Promise.all([
+          invoiceService.getInvoiceById(invoiceId),
+          claimService.getAllClaims({ invoiceId, limit: 1 }).catch(() => ({ claims: [] })),
+        ]);
+        setInvoice(invoiceData);
+        const claims = claimsResult?.claims || [];
+        setExistingClaim(claims.length > 0 ? claims[0] : null);
       } catch (err) {
         setError(
           err.response?.data?.error?.message ||
@@ -62,6 +71,36 @@ const ViewInvoicePage = () => {
     };
     fetchInvoice();
   }, [invoiceId]);
+
+  const handleCreateClaim = async () => {
+    if (!invoice?.insuranceCompanyId && !invoice?.insuranceCompany?._id) {
+      showSnackbar('This invoice has no insurance. Add insurance to create a claim.', 'warning');
+      return;
+    }
+    try {
+      setCreatingClaim(true);
+      const claim = await claimService.createClaimFromInvoice(invoiceId, {
+        insuranceCompanyId: invoice.insuranceCompanyId || invoice.insuranceCompany?._id,
+      });
+      showSnackbar('Claim created successfully', 'success');
+      navigate(`/claims/${claim._id || claim.id}`);
+    } catch (err) {
+      const msg =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        'Failed to create claim.';
+      showSnackbar(msg, 'error');
+      if (msg?.toLowerCase().includes('already exists')) {
+        const result = await claimService.getAllClaims({ invoiceId, limit: 1 }).catch(() => ({ claims: [] }));
+        const claims = result?.claims || [];
+        if (claims.length > 0) {
+          setExistingClaim(claims[0]);
+        }
+      }
+    } finally {
+      setCreatingClaim(false);
+    }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -113,6 +152,26 @@ const ViewInvoicePage = () => {
           />
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          {(invoice?.insuranceCompanyId || invoice?.insuranceCompany?._id) && (
+            existingClaim ? (
+              <Button
+                variant="outlined"
+                startIcon={<AssignmentIcon />}
+                onClick={() => navigate(`/claims/${existingClaim._id || existingClaim.id}`)}
+              >
+                View Claim
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={creatingClaim ? null : <AssignmentIcon />}
+                onClick={handleCreateClaim}
+                disabled={creatingClaim}
+              >
+                {creatingClaim ? 'Creating...' : 'Create Claim'}
+              </Button>
+            )
+          )}
           {canPay && (
             <Button
               variant="contained"
@@ -167,6 +226,14 @@ const ViewInvoicePage = () => {
             </Typography>
             <Typography variant="body1">
               {formatDate(invoice?.dueDate)}
+            </Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Typography variant="caption" color="text.secondary">
+              Insurance
+            </Typography>
+            <Typography variant="body1">
+              {invoice?.insuranceCompany?.name || invoice?.insuranceCompanyId?.name || '—'}
             </Typography>
           </Grid>
         </Grid>

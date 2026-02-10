@@ -31,6 +31,7 @@ import {
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
+  Edit as EditIcon,
   Search as SearchIcon,
   Add as AddIcon,
   Refresh as RefreshIcon,
@@ -173,6 +174,11 @@ const EstimatesListPage = () => {
   const handleViewDetails = (estimateId) => {
     handleActionMenuClose();
     navigate(`/estimates/${estimateId}`);
+  };
+
+  const handleEdit = (estimateId) => {
+    handleActionMenuClose();
+    navigate(`/estimates/${estimateId}/edit`);
   };
 
   const handleDelete = (estimateId, estimateNumber) => {
@@ -320,6 +326,8 @@ const EstimatesListPage = () => {
                     <TableCell>Date</TableCell>
                     <TableCell>Valid Until</TableCell>
                     <TableCell align="right">Total</TableCell>
+                    <TableCell align="right">Insurance</TableCell>
+                    <TableCell align="right">Patient Portion</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
@@ -327,7 +335,7 @@ const EstimatesListPage = () => {
                 <TableBody>
                   {estimates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">No estimates found</Typography>
                       </TableCell>
                     </TableRow>
@@ -340,11 +348,14 @@ const EstimatesListPage = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {estimate.patient?.firstName} {estimate.patient?.lastName}
+                          {estimate.patient?.firstName || estimate.patientId?.firstName}{' '}
+                          {estimate.patient?.lastName || estimate.patientId?.lastName}
                         </TableCell>
-                        <TableCell>{formatDate(estimate.estimateDate)}</TableCell>
-                        <TableCell>{formatDate(estimate.validUntil)}</TableCell>
-                        <TableCell align="right">{formatPrice(estimate.totalAmount)}</TableCell>
+                        <TableCell>{formatDate(estimate.estimateDate || estimate.createdDate)}</TableCell>
+                        <TableCell>{formatDate(estimate.validUntil || estimate.expirationDate)}</TableCell>
+                        <TableCell align="right">{formatPrice(estimate.totalAmount ?? estimate.estimatedAmount)}</TableCell>
+                        <TableCell align="right">{formatPrice(estimate.insurancePortion)}</TableCell>
+                        <TableCell align="right">{formatPrice((estimate.totalAmount ?? estimate.estimatedAmount ?? 0) - (estimate.insurancePortion || 0))}</TableCell>
                         <TableCell>
                           <Chip
                             label={estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1)}
@@ -399,6 +410,14 @@ const EstimatesListPage = () => {
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
+        {(actionMenu.status === 'draft' || actionMenu.status === 'expired') && (
+          <MenuItem onClick={() => handleEdit(actionMenu.estimateId)}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
         {actionMenu.status === 'accepted' && (
           <MenuItem onClick={() => handleConvertToInvoice(actionMenu.estimateId)}>
             <ListItemIcon>

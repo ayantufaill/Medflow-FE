@@ -97,7 +97,23 @@ import RecordPaymentPage from './pages/payments/RecordPaymentPage';
 import ViewPaymentPage from './pages/payments/ViewPaymentPage';
 import EstimatesListPage from './pages/estimates/EstimatesListPage';
 import CreateEstimatePage from './pages/estimates/CreateEstimatePage';
+import EditEstimatePage from './pages/estimates/EditEstimatePage';
 import ViewEstimatePage from './pages/estimates/ViewEstimatePage';
+// Sprint 6 - Claims Module
+import ClaimsListPage from './pages/claims/ClaimsListPage';
+import ViewClaimPage from './pages/claims/ViewClaimPage';
+import DeniedClaimsPage from './pages/claims/DeniedClaimsPage';
+import ResubmitClaimPage from './pages/claims/ResubmitClaimPage';
+import SecondaryClaimsPage from './pages/claims/SecondaryClaimsPage';
+// Sprint 6 - ERA Module
+import ERAListPage from './pages/era/ERAListPage';
+import ImportERAPage from './pages/era/ImportERAPage';
+import ViewERAPage from './pages/era/ViewERAPage';
+import UnmatchedERAItemsPage from './pages/era/UnmatchedERAItemsPage';
+// Sprint 6 - Authorization Module
+import AuthorizationsListPage from './pages/authorizations/AuthorizationsListPage';
+import CreateAuthorizationPage from './pages/authorizations/CreateAuthorizationPage';
+import ViewAuthorizationPage from './pages/authorizations/ViewAuthorizationPage';
 
 const theme = createTheme({
   palette: {
@@ -1011,11 +1027,144 @@ function App() {
                 }
               />
               <Route
+                path="/estimates/:estimateId/edit"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
+                    <Layout>
+                      <EditEstimatePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/estimates/:estimateId"
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
                     <Layout>
                       <ViewEstimatePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Sprint 6 - Claims Module */}
+              <Route
+                path="/claims"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <ClaimsListPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/claims/denied"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <DeniedClaimsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/claims/:claimId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <ViewClaimPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/claims/:claimId/resubmit"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <ResubmitClaimPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/claims/secondary"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <SecondaryClaimsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Sprint 6 - ERA Module */}
+              <Route
+                path="/era"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <ERAListPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/era/import"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <ImportERAPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/era/unmatched"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <UnmatchedERAItemsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/era/:eraId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                    <Layout>
+                      <ViewERAPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Sprint 6 - Authorization Module */}
+              <Route
+                path="/authorizations"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+                    <Layout>
+                      <AuthorizationsListPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/authorizations/new"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+                    <Layout>
+                      <CreateAuthorizationPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/authorizations/:authorizationId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+                    <Layout>
+                      <ViewAuthorizationPage />
                     </Layout>
                   </ProtectedRoute>
                 }

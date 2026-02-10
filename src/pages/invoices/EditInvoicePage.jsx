@@ -9,6 +9,7 @@ import {
   Button,
   Grid,
   TextField,
+  Autocomplete,
   CircularProgress,
   Divider,
   Table,
@@ -32,6 +33,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { invoiceService } from '../../services/invoice.service';
+import { insuranceCompanyService } from '../../services/insurance.service';
 
 const EditInvoicePage = () => {
   const navigate = useNavigate();
@@ -43,6 +45,9 @@ const EditInvoicePage = () => {
   const [error, setError] = useState('');
   const [newItem, setNewItem] = useState({ description: '', quantity: '', unitPrice: '' });
   const [addingItem, setAddingItem] = useState(false);
+  const [insuranceCompanies, setInsuranceCompanies] = useState([]);
+  const [loadingInsurance, setLoadingInsurance] = useState(false);
+  const [selectedInsurance, setSelectedInsurance] = useState(null);
 
   const {
     control,
@@ -56,11 +61,21 @@ const EditInvoicePage = () => {
     const fetchInvoice = async () => {
       try {
         setLoading(true);
-        const data = await invoiceService.getInvoiceById(invoiceId);
-        setInvoice(data);
+        const [invoiceData, insResult] = await Promise.all([
+          invoiceService.getInvoiceById(invoiceId),
+          insuranceCompanyService.getAllInsuranceCompanies(1, 100, '', 'active').catch(() => ({ companies: [] })),
+        ]);
+        setInvoice(invoiceData);
+        setInsuranceCompanies(insResult.companies || []);
+        const ins = invoiceData?.insuranceCompany || invoiceData?.insuranceCompanyId;
+        const insId = ins?._id ?? ins?.id ?? invoiceData?.insuranceCompanyId;
+        const selected = ins && (ins.name || insId)
+          ? (insResult.companies?.find((c) => (c._id || c.id) === insId) || ins)
+          : null;
+        setSelectedInsurance(selected);
         reset({
-          dueDate: data.dueDate ? dayjs(data.dueDate) : dayjs().add(30, 'day'),
-          notes: data.notes || '',
+          dueDate: invoiceData.dueDate ? dayjs(invoiceData.dueDate) : dayjs().add(30, 'day'),
+          notes: invoiceData.notes || '',
         });
       } catch (err) {
         setError(
@@ -82,6 +97,7 @@ const EditInvoicePage = () => {
       await invoiceService.updateInvoice(invoiceId, {
         dueDate: dayjs(data.dueDate).format('YYYY-MM-DD'),
         notes: data.notes || undefined,
+        insuranceCompanyId: selectedInsurance ? (selectedInsurance._id || selectedInsurance.id) : undefined,
       });
       showSnackbar('Invoice updated successfully', 'success');
       navigate(`/invoices/${invoiceId}`);
@@ -231,6 +247,36 @@ const EditInvoicePage = () => {
                       }}
                     />
                   )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Autocomplete
+                  options={insuranceCompanies}
+                  loading={loadingInsurance}
+                  getOptionLabel={(opt) => (opt ? opt.name || '' : '')}
+                  value={selectedInsurance}
+                  onChange={(_, newValue) => setSelectedInsurance(newValue)}
+                  disabled={!canEdit}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Insurance"
+                      placeholder="Select insurance company..."
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingInsurance && <CircularProgress size={20} />}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  isOptionEqualToValue={(option, value) =>
+                    (option?._id || option?.id) === (value?._id || value?.id)
+                  }
+                  noOptionsText="No insurance companies found"
                 />
               </Grid>
               <Grid size={12}>

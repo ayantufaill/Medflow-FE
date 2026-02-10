@@ -16,14 +16,27 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
+  Edit as EditIcon,
   Receipt as ReceiptIcon,
 } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { estimateService } from '../../services/estimate.service';
+import { appointmentService } from '../../services/appointment.service';
 
 const STATUS_COLORS = {
   draft: 'default',
@@ -42,6 +55,10 @@ const ViewEstimatePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [converting, setConverting] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [convertAppointmentId, setConvertAppointmentId] = useState('');
+  const [convertDueDate, setConvertDueDate] = useState(dayjs().add(14, 'day'));
+  const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
     const fetchEstimate = async () => {
@@ -62,11 +79,34 @@ const ViewEstimatePage = () => {
     fetchEstimate();
   }, [estimateId]);
 
+  const handleOpenConvertDialog = async () => {
+    const patientId = estimate?.patient?._id || estimate?.patientId;
+    if (!patientId) {
+      showSnackbar('Patient not found', 'error');
+      return;
+    }
+    setConvertDialogOpen(true);
+    try {
+      const result = await appointmentService.getAppointmentsByPatient(patientId, 1, 50);
+      setAppointments(Array.isArray(result) ? result : (result?.appointments || []));
+    } catch {
+      setAppointments([]);
+    }
+  };
+
   const handleConvertToInvoice = async () => {
+    if (!convertAppointmentId || !convertDueDate) {
+      showSnackbar('Please select appointment and due date', 'error');
+      return;
+    }
     try {
       setConverting(true);
-      await estimateService.convertToInvoice(estimateId);
+      await estimateService.convertToInvoice(estimateId, {
+        appointmentId: convertAppointmentId,
+        dueDate: dayjs(convertDueDate).toISOString(),
+      });
       showSnackbar('Estimate converted to invoice successfully', 'success');
+      setConvertDialogOpen(false);
       navigate('/invoices');
     } catch (err) {
       showSnackbar(
@@ -126,16 +166,27 @@ const ViewEstimatePage = () => {
             size="small"
           />
         </Box>
-        {canConvert && (
-          <Button
-            variant="contained"
-            startIcon={converting ? <CircularProgress size={20} color="inherit" /> : <ReceiptIcon />}
-            onClick={handleConvertToInvoice}
-            disabled={converting}
-          >
-            Convert to Invoice
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {(estimate?.status === 'draft' || estimate?.status === 'expired') && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => navigate(`/estimates/${estimateId}/edit`)}
+            >
+              Edit
+            </Button>
+          )}
+          {canConvert && (
+            <Button
+              variant="contained"
+              startIcon={converting ? <CircularProgress size={20} color="inherit" /> : <ReceiptIcon />}
+              onClick={handleOpenConvertDialog}
+              disabled={converting}
+            >
+              Convert to Invoice
+            </Button>
+          )}
+        </Box>
       </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -145,7 +196,8 @@ const ViewEstimatePage = () => {
               Patient
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {estimate?.patient?.firstName} {estimate?.patient?.lastName}
+              {estimate?.patient?.firstName || estimate?.patientId?.firstName}{' '}
+              {estimate?.patient?.lastName || estimate?.patientId?.lastName}
             </Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -153,7 +205,7 @@ const ViewEstimatePage = () => {
               Created Date
             </Typography>
             <Typography variant="body1">
-              {formatDate(estimate?.estimateDate || estimate?.createdAt)}
+              {formatDate(estimate?.estimateDate || estimate?.createdDate || estimate?.createdAt)}
             </Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -161,7 +213,7 @@ const ViewEstimatePage = () => {
               Valid Until
             </Typography>
             <Typography variant="body1">
-              {formatDate(estimate?.validUntil)}
+              {formatDate(estimate?.validUntil || estimate?.expirationDate)}
             </Typography>
           </Grid>
         </Grid>
@@ -203,6 +255,41 @@ const ViewEstimatePage = () => {
         </TableContainer>
       </Paper>
 
+      {/* Estimate vs Actual (when converted) */}
+      {estimate?.status === 'converted' && (estimate?.actualPaidAmount != null || estimate?.convertedInvoiceId) && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight="medium" gutterBottom>
+            Estimate vs Actual
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="caption" color="text.secondary">Estimated Amount</Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatCurrency(estimate?.totalAmount ?? estimate?.estimatedAmount)}
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="caption" color="text.secondary">Actual Paid (Claim)</Typography>
+              <Typography variant="body1" fontWeight="medium" color="success.main">
+                {formatCurrency(estimate?.actualPaidAmount ?? 0)}
+              </Typography>
+            </Grid>
+            {estimate?.linkedClaimId && (
+              <Grid size={{ xs: 12 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => navigate(`/claims/${estimate.linkedClaimId}`)}
+                >
+                  View Claim
+                </Button>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      )}
+
       {/* Summary */}
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={2}>
@@ -221,13 +308,58 @@ const ViewEstimatePage = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '200px' }}>
                 <Typography fontWeight="bold">Total Estimate:</Typography>
                 <Typography fontWeight="bold" color="primary" variant="h6">
-                  {formatCurrency(estimate?.totalAmount)}
+                  {formatCurrency(estimate?.totalAmount ?? estimate?.estimatedAmount)}
                 </Typography>
               </Box>
             </Box>
           </Grid>
         </Grid>
       </Paper>
+
+      {/* Convert to Invoice Dialog */}
+      <Dialog open={convertDialogOpen} onClose={() => setConvertDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Convert Estimate to Invoice</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <FormControl fullWidth required>
+              <InputLabel>Appointment</InputLabel>
+              <Select
+                value={convertAppointmentId}
+                label="Appointment"
+                onChange={(e) => setConvertAppointmentId(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>Select appointment</em>
+                </MenuItem>
+                {appointments.map((apt) => (
+                  <MenuItem key={apt._id || apt.id} value={apt._id || apt.id}>
+                    {apt.appointmentCode || apt.code || apt._id} - {formatDate(apt.appointmentDate || apt.date)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Due Date"
+                value={convertDueDate}
+                onChange={(v) => setConvertDueDate(v)}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </LocalizationProvider>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConvertDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleConvertToInvoice}
+            disabled={converting || !convertAppointmentId || !convertDueDate}
+            startIcon={converting ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {converting ? 'Converting...' : 'Convert'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
