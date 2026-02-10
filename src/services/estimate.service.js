@@ -78,6 +78,15 @@ export const estimateService = {
   },
 
   /**
+   * Send estimate to patient by email (draft only). Sets status to 'sent'.
+   * @param {string} estimateId
+   */
+  async sendToPatient(estimateId) {
+    const response = await apiClient.post(`/estimates/${estimateId}/send`);
+    return response.data.data?.estimate ?? response.data.data;
+  },
+
+  /**
    * Convert estimate to invoice
    * @param {string} estimateId
    * @param {Object} data - { appointmentId, dueDate (ISO string) }

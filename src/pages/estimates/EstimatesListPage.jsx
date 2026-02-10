@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -28,6 +28,7 @@ import {
   InputLabel,
   Select,
   Grid,
+  Link,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -40,6 +41,7 @@ import {
   Clear,
   FilterAltOff,
   Receipt as ReceiptIcon,
+  Send as SendIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { estimateService } from '../../services/estimate.service';
@@ -49,8 +51,7 @@ import dayjs from 'dayjs';
 const STATUS_COLORS = {
   draft: 'default',
   sent: 'info',
-  accepted: 'success',
-  declined: 'error',
+  approved: 'success',
   expired: 'warning',
   converted: 'secondary',
 };
@@ -78,6 +79,7 @@ const EstimatesListPage = () => {
     status: null,
   });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [sendingEstimateId, setSendingEstimateId] = useState(null);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -87,29 +89,32 @@ const EstimatesListPage = () => {
 
   const hasActiveFilters = search || statusFilter;
 
-  const fetchEstimates = useCallback(async (searchValue) => {
+  const fetchEstimates = useCallback(async (searchValue, options = {}) => {
+    const { silent = false } = options;
     try {
-      setLoading(true);
-      setError('');
-
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       const params = {
         page: page + 1,
         limit: rowsPerPage,
         search: searchValue?.trim() || undefined,
         status: statusFilter || undefined,
       };
-
       const result = await estimateService.getAllEstimates(params);
       setEstimates(result.estimates || []);
       setTotalEstimates(result.pagination?.total || 0);
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch estimates.'
-      );
+      if (!silent) {
+        setError(
+          err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            'Failed to fetch estimates.'
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, rowsPerPage, statusFilter]);
 
@@ -128,6 +133,32 @@ const EstimatesListPage = () => {
   useEffect(() => {
     debouncedFetch(search);
   }, [search, debouncedFetch]);
+
+  // Auto-refresh so patient approve/decline from email shows without manual refresh
+  const pollIntervalRef = useRef(null);
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 45000; // 45 seconds
+    const refreshIfVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchEstimates(search, { silent: true });
+      }
+    };
+    pollIntervalRef.current = setInterval(refreshIfVisible, POLL_INTERVAL_MS);
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, [search, page, rowsPerPage, statusFilter, fetchEstimates]);
+
+  // Refetch when user comes back to this tab
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchEstimates(search, { silent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [search, page, rowsPerPage, statusFilter, fetchEstimates]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -186,18 +217,31 @@ const EstimatesListPage = () => {
     handleDeleteClick(estimateId, estimateNumber);
   };
 
-  const handleConvertToInvoice = async (estimateId) => {
-    handleActionMenuClose();
+  const handleSendToPatient = async (estimateId) => {
+    if (!estimateId) {
+      showSnackbar('Could not identify estimate', 'error');
+      return;
+    }
+    setSendingEstimateId(estimateId);
     try {
-      await estimateService.convertToInvoice(estimateId);
-      showSnackbar('Estimate converted to invoice successfully', 'success');
+      await estimateService.sendToPatient(estimateId);
+      showSnackbar('Estimate sent to patient successfully', 'success');
+      handleActionMenuClose();
       await fetchEstimates(search);
     } catch (err) {
       showSnackbar(
-        err.response?.data?.error?.message || 'Failed to convert estimate',
+        err.response?.data?.error?.message || 'Failed to send estimate to patient',
         'error'
       );
+    } finally {
+      setSendingEstimateId(null);
+      handleActionMenuClose();
     }
+  };
+
+  const handleConvertToInvoice = (estimateId) => {
+    handleActionMenuClose();
+    navigate(`/estimates/${estimateId}?openConvert=1`);
   };
 
   const formatPrice = (price) => {
@@ -280,8 +324,7 @@ const EstimatesListPage = () => {
                 </MenuItem>
                 <MenuItem value="draft">Draft</MenuItem>
                 <MenuItem value="sent">Sent</MenuItem>
-                <MenuItem value="accepted">Accepted</MenuItem>
-                <MenuItem value="declined">Declined</MenuItem>
+                <MenuItem value="approved">Approved</MenuItem>
                 <MenuItem value="expired">Expired</MenuItem>
                 <MenuItem value="converted">Converted</MenuItem>
               </Select>
@@ -348,8 +391,35 @@ const EstimatesListPage = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {estimate.patient?.firstName || estimate.patientId?.firstName}{' '}
-                          {estimate.patient?.lastName || estimate.patientId?.lastName}
+                          {(() => {
+                            const patientId =
+                              estimate.patient?._id ||
+                              estimate.patient?.id ||
+                              (typeof estimate.patientId === 'object' ? estimate.patientId?._id : estimate.patientId);
+                            const name = [
+                              estimate.patient?.firstName || estimate.patientId?.firstName,
+                              estimate.patient?.lastName || estimate.patientId?.lastName,
+                            ]
+                              .filter(Boolean)
+                              .join(' ');
+                            if (patientId && name) {
+                              return (
+                                <Link
+                                  component="button"
+                                  variant="body2"
+                                  onClick={() => navigate(`/patients/${patientId}`)}
+                                  sx={{
+                                    fontWeight: 500,
+                                    textAlign: 'left',
+                                    '&:hover': { textDecoration: 'underline' },
+                                  }}
+                                >
+                                  {name}
+                                </Link>
+                              );
+                            }
+                            return name || '—';
+                          })()}
                         </TableCell>
                         <TableCell>{formatDate(estimate.estimateDate || estimate.createdDate)}</TableCell>
                         <TableCell>{formatDate(estimate.validUntil || estimate.expirationDate)}</TableCell>
@@ -410,6 +480,27 @@ const EstimatesListPage = () => {
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
+        {actionMenu.status === 'draft' && (
+          <MenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              const id = actionMenu.estimateId;
+              handleSendToPatient(id);
+            }}
+            disabled={!!sendingEstimateId}
+          >
+            <ListItemIcon>
+              {sendingEstimateId === actionMenu.estimateId ? (
+                <CircularProgress size={20} color="primary" />
+              ) : (
+                <SendIcon fontSize="small" color="primary" />
+              )}
+            </ListItemIcon>
+            <ListItemText>
+              {sendingEstimateId === actionMenu.estimateId ? 'Sending…' : 'Send to Patient'}
+            </ListItemText>
+          </MenuItem>
+        )}
         {(actionMenu.status === 'draft' || actionMenu.status === 'expired') && (
           <MenuItem onClick={() => handleEdit(actionMenu.estimateId)}>
             <ListItemIcon>
@@ -418,7 +509,7 @@ const EstimatesListPage = () => {
             <ListItemText>Edit</ListItemText>
           </MenuItem>
         )}
-        {actionMenu.status === 'accepted' && (
+        {actionMenu.status === 'approved' && (
           <MenuItem onClick={() => handleConvertToInvoice(actionMenu.estimateId)}>
             <ListItemIcon>
               <ReceiptIcon fontSize="small" color="primary" />

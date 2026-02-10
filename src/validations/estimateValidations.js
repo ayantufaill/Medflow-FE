@@ -35,8 +35,7 @@ export const estimateValidations = {
 export const ESTIMATE_STATUSES = [
   { value: 'draft', label: 'Draft', color: 'default' },
   { value: 'sent', label: 'Sent to Patient', color: 'info' },
-  { value: 'accepted', label: 'Accepted', color: 'success' },
-  { value: 'declined', label: 'Declined', color: 'error' },
+  { value: 'approved', label: 'Approved', color: 'success' },
   { value: 'expired', label: 'Expired', color: 'warning' },
   { value: 'converted', label: 'Converted to Invoice', color: 'primary' },
 ];

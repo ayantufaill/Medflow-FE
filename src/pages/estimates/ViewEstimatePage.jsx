@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -29,6 +29,7 @@ import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Receipt as ReceiptIcon,
+  Send as SendIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -41,8 +42,7 @@ import { appointmentService } from '../../services/appointment.service';
 const STATUS_COLORS = {
   draft: 'default',
   sent: 'info',
-  accepted: 'success',
-  declined: 'error',
+  approved: 'success',
   expired: 'warning',
   converted: 'secondary',
 };
@@ -50,34 +50,86 @@ const STATUS_COLORS = {
 const ViewEstimatePage = () => {
   const navigate = useNavigate();
   const { estimateId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
   const [estimate, setEstimate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [converting, setConverting] = useState(false);
+  const [sending, setSending] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertAppointmentId, setConvertAppointmentId] = useState('');
   const [convertDueDate, setConvertDueDate] = useState(dayjs().add(14, 'day'));
   const [appointments, setAppointments] = useState([]);
 
-  useEffect(() => {
-    const fetchEstimate = async () => {
+  const fetchEstimate = useCallback(
+    async (showLoading = true) => {
       try {
-        setLoading(true);
+        if (showLoading) setLoading(true);
         const data = await estimateService.getEstimateById(estimateId);
         setEstimate(data);
       } catch (err) {
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            'Failed to load estimate.'
-        );
+        if (showLoading) {
+          setError(
+            err.response?.data?.error?.message ||
+              err.response?.data?.message ||
+              'Failed to load estimate.'
+          );
+        }
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
+    },
+    [estimateId]
+  );
+
+  useEffect(() => {
+    fetchEstimate(true);
+  }, [fetchEstimate]);
+
+  // Open convert dialog when coming from list "Convert to Invoice" (?openConvert=1)
+  useEffect(() => {
+    if (!estimate || estimate?.status !== 'approved' || searchParams.get('openConvert') !== '1') return;
+    const patientId = estimate?.patient?._id || estimate?.patientId;
+    if (!patientId) return;
+    setSearchParams({}, { replace: true });
+    setConvertDialogOpen(true);
+    appointmentService.getAppointmentsByPatient(patientId, 1, 50).then((result) => {
+      setAppointments(Array.isArray(result) ? result : (result?.appointments || []));
+    }).catch(() => setAppointments([]));
+  }, [estimate, estimate?.status, searchParams, setSearchParams]);
+
+  // Auto-refresh when patient approves/declines from email (tab focus + poll when status is Sent)
+  useEffect(() => {
+    if (!estimateId || !estimate) return;
+    const isPendingResponse = estimate?.status === 'sent';
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchEstimate(false);
     };
-    fetchEstimate();
-  }, [estimateId]);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const pollInterval = isPendingResponse ? setInterval(() => fetchEstimate(false), 30000) : null;
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [estimateId, estimate?.status, fetchEstimate]);
+
+  const handleSendToPatient = async () => {
+    try {
+      setSending(true);
+      await estimateService.sendToPatient(estimateId);
+      showSnackbar('Estimate sent to patient successfully', 'success');
+      const data = await estimateService.getEstimateById(estimateId);
+      setEstimate(data);
+    } catch (err) {
+      showSnackbar(
+        err.response?.data?.error?.message || 'Failed to send estimate to patient',
+        'error'
+      );
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleOpenConvertDialog = async () => {
     const patientId = estimate?.patient?._id || estimate?.patientId;
@@ -148,7 +200,7 @@ const ViewEstimatePage = () => {
     );
   }
 
-  const canConvert = estimate?.status === 'accepted';
+  const canConvert = estimate?.status === 'approved';
 
   return (
     <Box>
@@ -174,6 +226,17 @@ const ViewEstimatePage = () => {
               onClick={() => navigate(`/estimates/${estimateId}/edit`)}
             >
               Edit
+            </Button>
+          )}
+          {estimate?.status === 'draft' && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={sending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              onClick={handleSendToPatient}
+              disabled={sending}
+            >
+              Send to Patient
             </Button>
           )}
           {canConvert && (
