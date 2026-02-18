@@ -4,13 +4,18 @@ import {
   Box,
   Button,
   Grid,
-  Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
+import {
+  PortalEmptyState,
+  PortalPageHeader,
+  PortalSectionTitle,
+  portalSurfaceSx,
+} from './PortalUi';
 
 const ProviderPortalMessagesPage = () => {
   const [threads, setThreads] = useState([]);
@@ -97,19 +102,23 @@ const ProviderPortalMessagesPage = () => {
   };
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">Portal Messages</Typography>
+    <Stack spacing={2.5}>
+      <PortalPageHeader
+        title="Portal Messages"
+        subtitle="Review patient conversations and reply in the same thread."
+      />
       {error && <Alert severity="error">{error}</Alert>}
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Patient Threads
-            </Typography>
+          <Box sx={{ ...portalSurfaceSx, height: '100%' }}>
+            <PortalSectionTitle title="Patient Threads" />
             <Stack spacing={1}>
               {threads.length === 0 && (
-                <Typography color="text.secondary">No messages yet.</Typography>
+                <PortalEmptyState
+                  title="No messages yet"
+                  description="Patient conversations will appear here."
+                />
               )}
               {threads.map((thread) => {
                 const patientName = thread.patient
@@ -120,10 +129,12 @@ const ProviderPortalMessagesPage = () => {
                     key={thread._id}
                     variant={selectedThreadId === thread._id ? 'contained' : 'outlined'}
                     onClick={() => setSelectedThreadId(thread._id)}
-                    sx={{ justifyContent: 'space-between' }}
+                    sx={{ justifyContent: 'space-between', alignItems: 'flex-start', borderRadius: 2, textTransform: 'none', p: 1.2 }}
                   >
                     <Box textAlign="left">
-                      <Typography variant="body2">{thread.subject || 'Conversation'}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        {thread.subject || 'Conversation'}
+                      </Typography>
                       <Typography variant="caption" color="inherit">
                         {patientName || thread.patient?.email || thread.patientId || 'Unknown patient'}
                       </Typography>
@@ -135,63 +146,69 @@ const ProviderPortalMessagesPage = () => {
                 );
               })}
             </Stack>
-          </Paper>
+          </Box>
         </Grid>
 
         <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Reply
-            </Typography>
-            <Stack spacing={1.5}>
-              <TextField
-                label="Subject"
-                value={draft.subject}
-                onChange={(event) => setDraft((prev) => ({ ...prev, subject: event.target.value }))}
-              />
-              <TextField
-                label="Message"
-                value={draft.message}
-                onChange={(event) => setDraft((prev) => ({ ...prev, message: event.target.value }))}
-                multiline
-                minRows={3}
-              />
-              <Button
-                variant="contained"
-                onClick={handleSendReply}
-                disabled={!selectedThreadId || !draft.message.trim() || sending}
-              >
-                {sending ? 'Sending...' : 'Send Reply'}
-              </Button>
-            </Stack>
-          </Paper>
-
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Messages
-            </Typography>
-            <Stack spacing={1}>
-              {messages.length === 0 && (
-                <Typography color="text.secondary">Select a thread to view messages.</Typography>
-              )}
-              {messages.map((message) => (
-                <Box
-                  key={message._id}
-                  sx={{
-                    border: '1px solid #e8edf3',
-                    borderRadius: 1,
-                    p: 1.5,
-                    backgroundColor: message.senderRole === 'doctor' ? '#f3f9ff' : '#fff',
-                  }}
+          <Stack spacing={2}>
+            <Box sx={portalSurfaceSx}>
+              <PortalSectionTitle title="Reply" />
+              <Stack spacing={1.5}>
+                <TextField
+                  label="Subject"
+                  value={draft.subject}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, subject: event.target.value }))}
+                />
+                <TextField
+                  label="Message"
+                  value={draft.message}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, message: event.target.value }))}
+                  multiline
+                  minRows={4}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleSendReply}
+                  disabled={!selectedThreadId || !draft.message.trim() || sending}
                 >
-                  <Typography variant="body2">{message.message}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {message.senderRole} • {dayjs(message.createdAt).format('MMM D, YYYY h:mm A')}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Paper>
+                  {sending ? 'Sending...' : 'Send Reply'}
+                </Button>
+              </Stack>
+            </Box>
+
+            <Box sx={portalSurfaceSx}>
+              <PortalSectionTitle title="Messages" />
+              <Stack spacing={1.25}>
+                {messages.length === 0 && (
+                  <PortalEmptyState
+                    title="Select a thread"
+                    description="Open a patient thread to see full conversation."
+                  />
+                )}
+                {messages.map((message) => {
+                  const isDoctor = message.senderRole === 'doctor';
+                  return (
+                    <Box
+                      key={message._id}
+                      sx={{
+                        border: '1px solid #e8edf3',
+                        borderRadius: 2,
+                        p: 1.5,
+                        backgroundColor: isDoctor ? '#e9f4ff' : '#fff',
+                        alignSelf: isDoctor ? 'flex-end' : 'flex-start',
+                        maxWidth: { xs: '100%', md: '85%' },
+                      }}
+                    >
+                      <Typography variant="body2">{message.message}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {isDoctor ? 'You' : 'Patient'} • {dayjs(message.createdAt).format('MMM D, YYYY h:mm A')}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
+          </Stack>
         </Grid>
       </Grid>
     </Stack>
@@ -199,3 +216,4 @@ const ProviderPortalMessagesPage = () => {
 };
 
 export default ProviderPortalMessagesPage;
+

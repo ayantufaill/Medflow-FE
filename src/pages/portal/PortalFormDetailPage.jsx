@@ -5,7 +5,7 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
-  Paper,
+  Box,
   Stack,
   TextField,
   Typography,
@@ -16,6 +16,7 @@ import {
   getTemplateDefinition,
   normalizeFormDataForTemplate,
 } from './portalFormTemplates';
+import { PortalPageHeader, PortalSectionTitle, portalSurfaceSx } from './PortalUi';
 
 const PortalFormDetailPage = () => {
   const { formId } = useParams();
@@ -145,18 +146,22 @@ const PortalFormDetailPage = () => {
   }
 
   return (
-    <Stack spacing={2}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h4">Form Details</Typography>
-        <Button component={RouterLink} to="/portal/forms" variant="outlined">
-          Back
-        </Button>
-      </Stack>
+    <Stack spacing={2.5}>
+      <PortalPageHeader
+        title="Form Details"
+        subtitle={`Form #${form?._id || '-'}`}
+        action={
+          <Button component={RouterLink} to="/portal/forms" variant="outlined">
+            Back
+          </Button>
+        }
+      />
 
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">{success}</Alert>}
 
-      <Paper sx={{ p: 2 }}>
+      <Box sx={portalSurfaceSx}>
+        <PortalSectionTitle title={template?.title || templateId || 'General Form'} />
         <Stack spacing={1.5}>
           <Typography variant="body2" color="text.secondary">
             Form ID: {form?._id || '-'}
@@ -192,10 +197,9 @@ const PortalFormDetailPage = () => {
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </Stack>
-      </Paper>
+      </Box>
     </Stack>
   );
 };
 
 export default PortalFormDetailPage;
-

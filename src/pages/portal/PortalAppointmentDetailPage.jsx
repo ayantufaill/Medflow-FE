@@ -4,12 +4,17 @@ import {
   Alert,
   Button,
   Grid,
-  Paper,
   Stack,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
+import {
+  PortalPageHeader,
+  PortalSectionTitle,
+  PortalStatusChip,
+  portalSurfaceSx,
+} from './PortalUi';
 
 const getProviderName = (provider) => {
   if (!provider) return '-';
@@ -25,6 +30,15 @@ const getAppointmentTypeName = (appointmentType) => {
   if (typeof appointmentType === 'string') return appointmentType;
   return appointmentType.name || appointmentType._id || '-';
 };
+
+const DetailItem = ({ label, value }) => (
+  <Stack spacing={0.4}>
+    <Typography variant="caption" color="text.secondary">
+      {label}
+    </Typography>
+    <Typography>{value || '-'}</Typography>
+  </Stack>
+);
 
 const PortalAppointmentDetailPage = () => {
   const { appointmentId } = useParams();
@@ -63,74 +77,59 @@ const PortalAppointmentDetailPage = () => {
   }
 
   return (
-    <Stack spacing={2}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h4">Appointment Details</Typography>
-        <Button component={RouterLink} to="/portal/appointments" variant="outlined">
-          Back
-        </Button>
-      </Stack>
+    <Stack spacing={2.5}>
+      <PortalPageHeader
+        title="Appointment Details"
+        subtitle={`Appointment #${appointment._id}`}
+        action={
+          <Button component={RouterLink} to="/portal/appointments" variant="outlined">
+            Back
+          </Button>
+        }
+      />
 
-      <Paper sx={{ p: 2 }}>
+      <Stack sx={portalSurfaceSx} spacing={1.5}>
+        <PortalSectionTitle
+          title="Visit Information"
+          action={<PortalStatusChip status={appointment.status} />}
+        />
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
-            <Typography variant="caption" color="text.secondary">
-              Appointment ID
-            </Typography>
-            <Typography>{appointment._id}</Typography>
+            <DetailItem
+              label="Date"
+              value={
+                appointment.appointmentDate
+                  ? dayjs(appointment.appointmentDate).format('ddd, MMM D, YYYY')
+                  : '-'
+              }
+            />
           </Grid>
           <Grid item xs={12} md={6}>
-            <Typography variant="caption" color="text.secondary">
-              Status
-            </Typography>
-            <Typography>{appointment.status || '-'}</Typography>
+            <DetailItem
+              label="Time"
+              value={`${appointment.startTime || '-'} - ${appointment.endTime || '-'}`}
+            />
           </Grid>
           <Grid item xs={12} md={6}>
-            <Typography variant="caption" color="text.secondary">
-              Date
-            </Typography>
-            <Typography>
-              {appointment.appointmentDate
-                ? dayjs(appointment.appointmentDate).format('MMM D, YYYY')
-                : '-'}
-            </Typography>
+            <DetailItem label="Provider" value={getProviderName(appointment.providerId)} />
           </Grid>
           <Grid item xs={12} md={6}>
-            <Typography variant="caption" color="text.secondary">
-              Time
-            </Typography>
-            <Typography>
-              {appointment.startTime || '-'} - {appointment.endTime || '-'}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="caption" color="text.secondary">
-              Provider
-            </Typography>
-            <Typography>{getProviderName(appointment.providerId)}</Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="caption" color="text.secondary">
-              Appointment Type
-            </Typography>
-            <Typography>{getAppointmentTypeName(appointment.appointmentTypeId)}</Typography>
+            <DetailItem
+              label="Appointment Type"
+              value={getAppointmentTypeName(appointment.appointmentTypeId)}
+            />
           </Grid>
           <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              Chief Complaint
-            </Typography>
-            <Typography>{appointment.chiefComplaint || '-'}</Typography>
+            <DetailItem label="Chief Complaint" value={appointment.chiefComplaint || '-'} />
           </Grid>
           <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              Notes
-            </Typography>
-            <Typography>{appointment.notes || '-'}</Typography>
+            <DetailItem label="Notes" value={appointment.notes || '-'} />
           </Grid>
         </Grid>
-      </Paper>
+      </Stack>
     </Stack>
   );
 };
 
 export default PortalAppointmentDetailPage;
+

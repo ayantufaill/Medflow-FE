@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -6,12 +6,19 @@ import {
   Button,
   CircularProgress,
   Grid,
-  Paper,
   Stack,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
+import {
+  PortalEmptyState,
+  PortalPageHeader,
+  PortalSectionTitle,
+  PortalStatCard,
+  PortalStatusChip,
+  portalSurfaceSx,
+} from './PortalUi';
 
 const PortalDashboardPage = () => {
   const [loading, setLoading] = useState(true);
@@ -52,6 +59,14 @@ const PortalDashboardPage = () => {
     fetchAll();
   }, []);
 
+  const patientName = useMemo(
+    () =>
+      data.profile?.patient?.firstName ||
+      data.profile?.user?.firstName ||
+      'Patient',
+    [data.profile]
+  );
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" py={6}>
@@ -61,78 +76,116 @@ const PortalDashboardPage = () => {
   }
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4">Welcome back</Typography>
-        <Typography color="text.secondary">
-          {data.profile?.patient?.firstName || data.profile?.user?.firstName || 'Patient'}
-        </Typography>
-      </Box>
+    <Stack spacing={2.5}>
+      <PortalPageHeader
+        title={`Welcome, ${patientName}`}
+        subtitle="Track appointments, complete forms, and stay connected with your care team."
+        action={
+          <Stack direction="row" spacing={1}>
+            <Button component={RouterLink} to="/portal/appointments" variant="contained">
+              Book Appointment
+            </Button>
+            <Button component={RouterLink} to="/portal/messages" variant="outlined">
+              Open Messages
+            </Button>
+          </Stack>
+        }
+      />
 
       {error && <Alert severity="error">{error}</Alert>}
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Upcoming Appointments
-            </Typography>
-            <Typography variant="h4">{data.appointments.length}</Typography>
-          </Paper>
+          <PortalStatCard
+            label="Upcoming Appointments"
+            value={data.appointments.length}
+            accent="#1566b0"
+            helper="Next 5 records"
+          />
         </Grid>
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Unread Notifications
-            </Typography>
-            <Typography variant="h4">
-              {data.notifications.filter((item) => !item.isRead).length}
-            </Typography>
-          </Paper>
+          <PortalStatCard
+            label="Unread Notifications"
+            value={data.notifications.filter((item) => !item.isRead).length}
+            accent="#0d8a72"
+            helper="Recent updates"
+          />
         </Grid>
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Pending Forms
-            </Typography>
-            <Typography variant="h4">{data.pendingForms.length}</Typography>
-          </Paper>
+          <PortalStatCard
+            label="Pending Forms"
+            value={data.pendingForms.length}
+            accent="#d97706"
+            helper="Action required"
+          />
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Next Appointments
-        </Typography>
+      <Box sx={portalSurfaceSx}>
+        <PortalSectionTitle
+          title="Next Appointments"
+          subtitle="Your upcoming visits and their status."
+          action={
+            <Button component={RouterLink} to="/portal/appointments" size="small">
+              View all
+            </Button>
+          }
+        />
         {data.appointments.length === 0 ? (
-          <Typography color="text.secondary">No appointments found.</Typography>
+          <Stack spacing={1.2}>
+            <PortalEmptyState
+              title="No appointments scheduled"
+              description="Book your next visit to see it here."
+            />
+            <Box>
+              <Button component={RouterLink} to="/portal/appointments" variant="outlined" size="small">
+                Book now
+              </Button>
+            </Box>
+          </Stack>
         ) : (
           <Stack spacing={1}>
             {data.appointments.map((appointment) => (
               <Box
                 key={appointment._id}
-                sx={{ border: '1px solid #eceff3', borderRadius: 1, p: 1.5 }}
+                sx={{
+                  border: '1px solid #e1eaf8',
+                  borderRadius: 2,
+                  p: 1.5,
+                  backgroundColor: '#fff',
+                }}
               >
-                <Typography variant="body2" fontWeight={600}>
-                  {dayjs(appointment.appointmentDate).format('MMM D, YYYY')} •{' '}
-                  {appointment.startTime}-{appointment.endTime}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Status: {appointment.status}
-                </Typography>
-                <Button
-                  size="small"
-                  component={RouterLink}
-                  to={`/portal/appointments/${appointment._id}`}
-                  sx={{ mt: 0.5 }}
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  spacing={1}
                 >
-                  View Details
-                </Button>
+                  <Box>
+                    <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                      {dayjs(appointment.appointmentDate).format('ddd, MMM D, YYYY')} •{' '}
+                      {appointment.startTime}-{appointment.endTime}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Appointment #{appointment._id}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <PortalStatusChip status={appointment.status} />
+                    <Button
+                      size="small"
+                      component={RouterLink}
+                      to={`/portal/appointments/${appointment._id}`}
+                    >
+                      View
+                    </Button>
+                  </Stack>
+                </Stack>
               </Box>
             ))}
           </Stack>
         )}
-      </Paper>
+      </Box>
     </Stack>
   );
 };

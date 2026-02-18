@@ -6,7 +6,6 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -18,6 +17,12 @@ import {
   getTemplateDefinition,
   normalizeFormDataForTemplate,
 } from './portalFormTemplates';
+import {
+  PortalEmptyState,
+  PortalPageHeader,
+  PortalSectionTitle,
+  portalSurfaceSx,
+} from './PortalUi';
 
 const PortalFormsPage = () => {
   const [pendingForms, setPendingForms] = useState([]);
@@ -192,23 +197,33 @@ const PortalFormsPage = () => {
   };
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">Forms</Typography>
+    <Stack spacing={2.5}>
+      <PortalPageHeader
+        title="Forms"
+        subtitle="Complete required forms and review previous submissions."
+      />
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Pending Forms
-        </Typography>
+      <Box sx={portalSurfaceSx}>
+        <PortalSectionTitle
+          title="Pending Forms"
+          subtitle="Please submit these before your next visit."
+        />
         <Stack spacing={2}>
           {pendingForms.length === 0 && (
-            <Typography color="text.secondary">No pending forms.</Typography>
+            <PortalEmptyState
+              title="No pending forms"
+              description="You are all caught up."
+            />
           )}
           {pendingForms.map((form) => {
             const template = getTemplateDefinition(form.templateId);
             const latestSubmitted = submittedByTemplate.get(form.templateId);
             return (
-              <Box key={form.templateId} sx={{ border: '1px solid #e8edf3', borderRadius: 1, p: 1.5 }}>
+              <Box
+                key={form.templateId}
+                sx={{ border: '1px solid #e8edf3', borderRadius: 2, p: 1.5, backgroundColor: '#fff' }}
+              >
                 <Typography fontWeight={600}>{template?.title || form.name}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   {form.description}
@@ -249,18 +264,22 @@ const PortalFormsPage = () => {
             );
           })}
         </Stack>
-      </Paper>
+      </Box>
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Submitted Forms
-        </Typography>
+      <Box sx={portalSurfaceSx}>
+        <PortalSectionTitle
+          title="Submitted Forms"
+          subtitle="Open any form to review or update."
+        />
         <Stack spacing={1}>
           {submittedForms.length === 0 && (
-            <Typography color="text.secondary">No submitted forms.</Typography>
+            <PortalEmptyState
+              title="No submitted forms yet"
+              description="Your submitted forms will appear here."
+            />
           )}
           {submittedForms.map((form) => (
-            <Box key={form._id} sx={{ border: '1px solid #e8edf3', borderRadius: 1, p: 1.5 }}>
+            <Box key={form._id} sx={{ border: '1px solid #e8edf3', borderRadius: 2, p: 1.5, backgroundColor: '#fff' }}>
               <Typography variant="body2" fontWeight={600}>
                 {getTemplateDefinition(form.templateId)?.title || form.templateId || 'General form'}
               </Typography>
@@ -278,10 +297,9 @@ const PortalFormsPage = () => {
             </Box>
           ))}
         </Stack>
-      </Paper>
+      </Box>
     </Stack>
   );
 };
 
 export default PortalFormsPage;
-

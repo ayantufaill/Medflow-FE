@@ -8,14 +8,21 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Grid,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
+import {
+  PortalEmptyState,
+  PortalPageHeader,
+  PortalSectionTitle,
+  PortalStatusChip,
+  portalSurfaceSx,
+} from './PortalUi';
 
 const DEFAULT_DURATION = 30;
 
@@ -36,6 +43,14 @@ const defaultBooking = {
   startTime: '',
   chiefComplaint: '',
   notes: '',
+};
+
+const getProviderName = (provider) => {
+  if (!provider) return 'Provider';
+  if (typeof provider === 'string') return provider;
+  const linkedUser = provider.userId;
+  const fullName = `${linkedUser?.firstName || ''} ${linkedUser?.lastName || ''}`.trim();
+  return fullName || provider.providerCode || provider._id || 'Provider';
 };
 
 const PortalAppointmentsPage = () => {
@@ -243,139 +258,164 @@ const PortalAppointmentsPage = () => {
   };
 
   return (
-    <Stack spacing={3}>
-      <Typography variant="h4">Appointments</Typography>
+    <Stack spacing={2.5}>
+      <PortalPageHeader
+        title="Appointments"
+        subtitle="Book, review, and reschedule your upcoming visits."
+      />
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Book New Appointment
-        </Typography>
-        <Box component="form" onSubmit={handleBook}>
-          <Stack spacing={1.5}>
-            <TextField
-              select
-              label="Provider"
-              value={booking.providerId}
-              onChange={(event) =>
-                setBooking((prev) => ({ ...prev, providerId: event.target.value }))
-              }
-              required
-            >
-              {providerOptions.map((provider) => (
-                <MenuItem key={provider.value} value={provider.value}>
-                  {provider.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Date"
-              type="date"
-              value={booking.appointmentDate}
-              onChange={(event) =>
-                setBooking((prev) => ({ ...prev, appointmentDate: event.target.value }))
-              }
-              InputLabelProps={{ shrink: true }}
-              required
-              fullWidth
+      <Grid container spacing={2}>
+        <Grid item xs={12} lg={5}>
+          <Box sx={portalSurfaceSx}>
+            <PortalSectionTitle
+              title="Book New Appointment"
+              subtitle="Pick provider, date, and an available time slot."
             />
-            <TextField
-              select
-              label="Available Time Slots"
-              value={booking.startTime}
-              onChange={(event) =>
-                setBooking((prev) => ({ ...prev, startTime: event.target.value }))
-              }
-              required
-              disabled={!booking.providerId || slotsLoading}
-              helperText={slotsLoading ? 'Loading slots...' : ''}
-            >
-              {availableSlots.map((slot) => (
-                <MenuItem key={slot} value={slot}>
-                  {slot} - {addMinutes(slot, DEFAULT_DURATION)}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Chief Complaint"
-              value={booking.chiefComplaint}
-              onChange={(event) =>
-                setBooking((prev) => ({ ...prev, chiefComplaint: event.target.value }))
-              }
-            />
-            <TextField
-              label="Notes"
-              value={booking.notes}
-              onChange={(event) => setBooking((prev) => ({ ...prev, notes: event.target.value }))}
-              multiline
-              minRows={2}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={bookingLoading || !booking.providerId || !booking.startTime}
-            >
-              {bookingLoading ? 'Booking...' : 'Book Appointment'}
-            </Button>
-          </Stack>
-        </Box>
-      </Paper>
-
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Your Appointments
-        </Typography>
-        <Stack spacing={1.5}>
-          {appointments.length === 0 && (
-            <Typography color="text.secondary">No appointments available.</Typography>
-          )}
-          {appointments.map((appointment) => (
-            <Box
-              key={appointment._id}
-              sx={{ border: '1px solid #e8edf3', borderRadius: 1, p: 1.5 }}
-            >
-              <Typography variant="body1" fontWeight={600}>
-                {dayjs(appointment.appointmentDate).format('MMM D, YYYY')} •{' '}
-                {appointment.startTime}-{appointment.endTime}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Status: {appointment.status}
-              </Typography>
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap">
-                <Button
-                  size="small"
-                  component={RouterLink}
-                  to={`/portal/appointments/${appointment._id}`}
-                  variant="text"
+            <Box component="form" onSubmit={handleBook}>
+              <Stack spacing={1.5}>
+                <TextField
+                  select
+                  label="Provider"
+                  value={booking.providerId}
+                  onChange={(event) =>
+                    setBooking((prev) => ({ ...prev, providerId: event.target.value }))
+                  }
+                  required
                 >
-                  View Details
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => openRescheduleDialog(appointment)}
-                  disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                  {providerOptions.map((provider) => (
+                    <MenuItem key={provider.value} value={provider.value}>
+                      {provider.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Date"
+                  type="date"
+                  value={booking.appointmentDate}
+                  onChange={(event) =>
+                    setBooking((prev) => ({ ...prev, appointmentDate: event.target.value }))
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  select
+                  label="Available Time Slots"
+                  value={booking.startTime}
+                  onChange={(event) =>
+                    setBooking((prev) => ({ ...prev, startTime: event.target.value }))
+                  }
+                  required
+                  disabled={!booking.providerId || slotsLoading}
+                  helperText={slotsLoading ? 'Loading slots...' : '30-minute duration'}
                 >
-                  Reschedule
-                </Button>
+                  {availableSlots.map((slot) => (
+                    <MenuItem key={slot} value={slot}>
+                      {slot} - {addMinutes(slot, DEFAULT_DURATION)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Chief Complaint"
+                  value={booking.chiefComplaint}
+                  onChange={(event) =>
+                    setBooking((prev) => ({ ...prev, chiefComplaint: event.target.value }))
+                  }
+                />
+                <TextField
+                  label="Notes"
+                  value={booking.notes}
+                  onChange={(event) => setBooking((prev) => ({ ...prev, notes: event.target.value }))}
+                  multiline
+                  minRows={2}
+                />
                 <Button
-                  size="small"
-                  color="error"
-                  variant="outlined"
-                  onClick={() => {
-                    setSelectedAppointment(appointment);
-                    setCancelReason('');
-                  }}
-                  disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                  type="submit"
+                  variant="contained"
+                  disabled={bookingLoading || !booking.providerId || !booking.startTime}
                 >
-                  Cancel
+                  {bookingLoading ? 'Booking...' : 'Book Appointment'}
                 </Button>
               </Stack>
             </Box>
-          ))}
-        </Stack>
-      </Paper>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12} lg={7}>
+          <Box sx={portalSurfaceSx}>
+            <PortalSectionTitle title="Your Appointments" subtitle="Latest scheduled and past visits." />
+            <Stack spacing={1.25}>
+              {appointments.length === 0 && (
+                <PortalEmptyState
+                  title="No appointments available"
+                  description="Once you book an appointment, it will appear here."
+                />
+              )}
+              {appointments.map((appointment) => (
+                <Box
+                  key={appointment._id}
+                  sx={{
+                    border: '1px solid #e1eaf8',
+                    borderRadius: 2,
+                    p: 1.5,
+                    backgroundColor: '#fff',
+                  }}
+                >
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    spacing={1}
+                  >
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                        {dayjs(appointment.appointmentDate).format('ddd, MMM D, YYYY')} •{' '}
+                        {appointment.startTime}-{appointment.endTime}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {getProviderName(appointment.providerId)}
+                      </Typography>
+                    </Box>
+                    <PortalStatusChip status={appointment.status} />
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap">
+                    <Button
+                      size="small"
+                      component={RouterLink}
+                      to={`/portal/appointments/${appointment._id}`}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => openRescheduleDialog(appointment)}
+                      disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                    >
+                      Reschedule
+                    </Button>
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      onClick={() => {
+                        setSelectedAppointment(appointment);
+                        setCancelReason('');
+                      }}
+                      disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                    >
+                      Cancel
+                    </Button>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </Grid>
+      </Grid>
 
       <Dialog
         open={Boolean(selectedAppointment)}
@@ -383,7 +423,7 @@ const PortalAppointmentsPage = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Update Appointment</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Update Appointment</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 1 }}>
             <TextField
@@ -408,7 +448,7 @@ const PortalAppointmentsPage = () => {
               ))}
             </TextField>
             <TextField
-              label="Cancellation Reason"
+              label="Cancellation Reason (optional)"
               value={cancelReason}
               onChange={(event) => setCancelReason(event.target.value)}
               multiline
@@ -431,3 +471,4 @@ const PortalAppointmentsPage = () => {
 };
 
 export default PortalAppointmentsPage;
+

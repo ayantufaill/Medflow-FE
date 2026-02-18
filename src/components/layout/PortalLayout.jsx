@@ -4,7 +4,9 @@ import {
   AppBar,
   Box,
   Button,
+  Chip,
   Container,
+  Divider,
   Stack,
   Toolbar,
   Typography,
@@ -41,21 +43,34 @@ const PortalLayout = ({ children }) => {
       sx={{
         minHeight: '100vh',
         background:
-          'radial-gradient(circle at 0% 0%, rgba(25,118,210,0.08), transparent 35%), #f7f9fc',
+          'radial-gradient(circle at 0% 0%, rgba(18, 82, 145, 0.14), transparent 38%), radial-gradient(circle at 90% 20%, rgba(36, 150, 237, 0.09), transparent 30%), #f4f7fc',
+        fontFamily: '"Manrope", "Segoe UI", sans-serif',
       }}
     >
       <AppBar
         position="static"
         elevation={0}
         sx={{
-          background: 'linear-gradient(90deg, #0f4c81 0%, #1976d2 60%, #2496ed 100%)',
+          background: 'linear-gradient(100deg, #0d3e68 0%, #145a98 50%, #1e7fcb 100%)',
         }}
       >
-        <Toolbar sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, py: 0.5 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            MedFlow Portal
-          </Typography>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+        <Toolbar sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, py: 1 }}>
+          <Stack spacing={0.2}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              MedFlow Portal
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.9 }}>
+              Patient Self-Service
+            </Typography>
+          </Stack>
+          <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
             {links.map((link) => {
               const isActive =
                 location.pathname === link.to ||
@@ -69,29 +84,50 @@ const PortalLayout = ({ children }) => {
                   variant={isActive ? 'contained' : 'text'}
                   sx={{
                     textTransform: 'none',
-                    borderRadius: 8,
-                    backdropFilter: 'blur(6px)',
+                    borderRadius: 999,
+                    px: 1.5,
+                    fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    backgroundColor: isActive ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.12)',
+                    color: isActive ? '#0e4f86' : '#fff',
+                    '&:hover': {
+                      backgroundColor: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.22)',
+                    },
                   }}
                 >
                   {link.label}
                 </Button>
               );
             })}
-            <Typography variant="body2" sx={{ opacity: 0.9, ml: 1 }}>
-              {fullName}
-            </Typography>
+            <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.28)', mx: 0.3 }} />
+            <Chip
+              size="small"
+              label={fullName}
+              sx={{
+                color: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.16)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                maxWidth: 200,
+                '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' },
+              }}
+            />
             <Button
               onClick={handleLogout}
               variant="outlined"
               color="inherit"
-              sx={{ borderColor: 'rgba(255,255,255,0.5)' }}
+              sx={{
+                borderColor: 'rgba(255,255,255,0.52)',
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
             >
               Logout
             </Button>
           </Stack>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2.5, md: 3 } }}>
         {children}
       </Container>
     </Box>
