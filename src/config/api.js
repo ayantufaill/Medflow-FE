@@ -7,7 +7,7 @@ const getDefaultApiUrl = () => {
     return 'https://medflow-be.onrender.com/api';
   }
   // Development fallback
-  return 'http://localhost:5001/api';
+  return 'http://localhost:5002/api';
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getDefaultApiUrl();

@@ -26,8 +26,15 @@ export const invoiceService = {
       data.invoices = data.invoices.map(invoice => ({
         ...invoice,
         id: invoice._id || invoice.id,
-        patient: invoice.patientId || invoice.patient, // Map patientId to patient (if populated, it's an object)
-        appointment: invoice.appointmentId || invoice.appointment, // Map appointmentId to appointment
+        // Prefer populated nested objects from backend; fallback only when id field itself is an object.
+        patient:
+          invoice.patient ||
+          (invoice.patientId && typeof invoice.patientId === 'object' ? invoice.patientId : null),
+        appointment:
+          invoice.appointment ||
+          (invoice.appointmentId && typeof invoice.appointmentId === 'object'
+            ? invoice.appointmentId
+            : null),
       }));
     }
     return data;

@@ -185,39 +185,39 @@ const ViewWaitlistPage = () => {
               size="small"
             />
           </Grid>
-          {waitlistEntry.patientId && (
+          {(waitlistEntry.patient || waitlistEntry.patientId) && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Patient
               </Typography>
               <Typography variant="body1" fontWeight="medium">
-                {waitlistEntry.patientId.firstName}{" "}
-                {waitlistEntry.patientId.lastName}
-                {waitlistEntry.patientId.patientCode &&
-                  ` (${waitlistEntry.patientId.patientCode})`}
+                {(waitlistEntry.patient?.firstName || waitlistEntry.patientId?.firstName)}{" "}
+                {(waitlistEntry.patient?.lastName || waitlistEntry.patientId?.lastName)}
+                {(waitlistEntry.patient?.patientCode || waitlistEntry.patientId?.patientCode) &&
+                  ` (${waitlistEntry.patient?.patientCode || waitlistEntry.patientId?.patientCode})`}
               </Typography>
             </Grid>
           )}
-          {waitlistEntry.providerId && (
+          {(waitlistEntry.provider || waitlistEntry.providerId) && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Provider
               </Typography>
               <Typography variant="body1" fontWeight="medium">
-                {waitlistEntry.providerId.userId?.firstName}{" "}
-                {waitlistEntry.providerId.userId?.lastName}
-                {waitlistEntry.providerId.providerCode &&
-                  ` (${waitlistEntry.providerId.providerCode})`}
+                {(waitlistEntry.provider?.userId?.firstName || waitlistEntry.providerId?.userId?.firstName)}{" "}
+                {(waitlistEntry.provider?.userId?.lastName || waitlistEntry.providerId?.userId?.lastName)}
+                {(waitlistEntry.provider?.providerCode || waitlistEntry.providerId?.providerCode) &&
+                  ` (${waitlistEntry.provider?.providerCode || waitlistEntry.providerId?.providerCode})`}
               </Typography>
             </Grid>
           )}
-          {waitlistEntry.appointmentTypeId && (
+          {(waitlistEntry.appointmentType || waitlistEntry.appointmentTypeId) && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Appointment Type
               </Typography>
               <Typography variant="body1" fontWeight="medium">
-                {waitlistEntry.appointmentTypeId.name || "-"}
+                {waitlistEntry.appointmentType?.name || waitlistEntry.appointmentTypeId?.name || "-"}
               </Typography>
             </Grid>
           )}
@@ -261,8 +261,9 @@ const ViewWaitlistPage = () => {
                 Created By
               </Typography>
               <Typography variant="body1" fontWeight="medium">
-                {waitlistEntry.createdBy.firstName}{" "}
-                {waitlistEntry.createdBy.lastName}
+                {typeof waitlistEntry.createdBy === "object"
+                  ? `${waitlistEntry.createdBy.firstName || ""} ${waitlistEntry.createdBy.lastName || ""}`.trim() || waitlistEntry.createdBy._id
+                  : waitlistEntry.createdBy}
               </Typography>
             </Grid>
           )}

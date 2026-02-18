@@ -52,6 +52,7 @@ const RoomForm = ({
   const handleFormSubmit = (formData) => {
     const sanitizedData = {
       name: sanitizeValue(formData.name),
+      isActive: formData.isActive ?? true,
     };
 
     onSubmit(sanitizedData);

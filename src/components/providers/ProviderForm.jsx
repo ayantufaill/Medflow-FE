@@ -50,13 +50,15 @@ const ProviderForm = ({
   const userSearchTimerRef = useRef(null);
   const [specialtySearch, setSpecialtySearch] = useState('');
   const specialtySearchTimerRef = useRef(null);
+  const [specialties, setSpecialties] = useState([]);
+  const [specialtiesLoading, setSpecialtiesLoading] = useState(false);
 
   // Use React Query to fetch and cache users - optimized with caching
   const {
     data: allUsers = [],
     isLoading: usersLoading,
     error: usersError,
-  } = useUsersByRole('Doctor', {
+  } = useUsersByRole('Provider', {
     limit: 500,
     status: 'active',
     excludeWithProvider: false, // Fetch all first, filter on frontend

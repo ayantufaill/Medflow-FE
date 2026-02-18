@@ -293,6 +293,12 @@ const handleActionMenuClose = () => {
     }
   };
 
+  const formatCreatedDate = (value) => {
+    if (!value) return '-';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString();
+  };
+
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "start", gap: 2, mb: 3 }}>
@@ -469,7 +475,7 @@ const handleActionMenuClose = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {new Date(template.createdAt).toLocaleDateString()}
+                      {formatCreatedDate(template.createdAt)}
                     </Typography>
                   </TableCell>
                   <TableCell align="right" onClick={(e) => e.stopPropagation()}>

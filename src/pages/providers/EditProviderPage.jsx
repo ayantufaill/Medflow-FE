@@ -31,7 +31,7 @@ const EditProviderPage = () => {
 
       const [providerData, usersResult] = await Promise.all([
         providerService.getProviderById(providerId),
-        userService.getUsersByRoleName('Doctor', 1, 1000, 'active', false),
+        userService.getUsersByRoleName('Provider', 1, 1000, 'active', false),
       ]);
 
       setProvider(providerData);

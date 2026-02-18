@@ -82,6 +82,17 @@ const ViewNoteTemplatePage = () => {
     return types[type] || type;
   };
 
+  const formatCreatedDate = (value) => {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "-";
+    return parsed.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
     <>
       {loading ? (
@@ -222,14 +233,7 @@ const ViewNoteTemplatePage = () => {
                         Created
                       </Typography>
                       <Typography variant="body1">
-                        {new Date(template.createdAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
+                        {formatCreatedDate(template.createdAt)}
                       </Typography>
                     </Grid>
 
@@ -243,8 +247,9 @@ const ViewNoteTemplatePage = () => {
                           Created By
                         </Typography>
                         <Typography variant="body1">
-                          {template.createdBy.firstName}{" "}
-                          {template.createdBy.lastName}
+                          {typeof template.createdBy === "object"
+                            ? `${template.createdBy.firstName || ""} ${template.createdBy.lastName || ""}`.trim() || template.createdBy._id
+                            : template.createdBy}
                         </Typography>
                       </Grid>
                     )}

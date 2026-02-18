@@ -17,6 +17,7 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import { loginValidations } from "../../validations/auth.validations";
+import { getPostLoginRoute } from "../../utils/auth-routing";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -140,7 +141,7 @@ const LoginPage = () => {
     try {
       const result = await login(data);
       if (result.success) {
-        navigate("/dashboard", { replace: true });
+        navigate(getPostLoginRoute(result.user), { replace: true });
       } else {
         // Use the error object if available, otherwise use the error message
         if (result.errorObj) {

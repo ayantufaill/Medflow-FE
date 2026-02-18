@@ -482,12 +482,12 @@ const WaitlistListPage = () => {
                     waitlistEntries.map((entry) => (
                       <TableRow key={entry._id || entry.id} hover>
                         <TableCell>
-                          {entry.patientId?.firstName}{" "}
-                          {entry.patientId?.lastName}
+                          {(entry.patient?.firstName || entry.patientId?.firstName || "-")}{" "}
+                          {(entry.patient?.lastName || entry.patientId?.lastName || "")}
                         </TableCell>
                         <TableCell>
-                          {entry.providerId?.userId?.firstName}{" "}
-                          {entry.providerId?.userId?.lastName}
+                          {(entry.provider?.userId?.firstName || entry.providerId?.userId?.firstName || "-")}{" "}
+                          {(entry.provider?.userId?.lastName || entry.providerId?.userId?.lastName || "")}
                         </TableCell>
                         <TableCell>
                           <Box>
@@ -621,10 +621,10 @@ const WaitlistListPage = () => {
           {entryToReschedule && (
             <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
               <Typography variant="subtitle2">
-                Patient: {entryToReschedule.patientId?.firstName} {entryToReschedule.patientId?.lastName}
+                Patient: {entryToReschedule.patient?.firstName || entryToReschedule.patientId?.firstName} {entryToReschedule.patient?.lastName || entryToReschedule.patientId?.lastName}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Provider: {entryToReschedule.providerId?.userId?.firstName} {entryToReschedule.providerId?.userId?.lastName}
+                Provider: {entryToReschedule.provider?.userId?.firstName || entryToReschedule.providerId?.userId?.firstName} {entryToReschedule.provider?.userId?.lastName || entryToReschedule.providerId?.userId?.lastName}
               </Typography>
             </Box>
           )}

@@ -17,6 +17,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { authService } from '../../services/auth.service';
 import { registerValidations, getConfirmPasswordValidation } from '../../validations/auth.validations';
+import { getPostLoginRoute } from '../../utils/auth-routing';
 
 const RegisterVerifyPage = () => {
   const navigate = useNavigate();
@@ -62,10 +63,18 @@ const RegisterVerifyPage = () => {
           localStorage.setItem('accessToken', result.tokens.accessToken);
           localStorage.setItem('refreshToken', result.tokens.refreshToken);
         }
-        // Redirect to login or dashboard after 2 seconds
+        // Redirect to role-specific home or login after 2 seconds
         setTimeout(() => {
           if (result.tokens) {
-            navigate('/dashboard', { replace: true });
+            const roleRoute = (() => {
+              try {
+                const payload = JSON.parse(atob(result.tokens.accessToken.split('.')[1]));
+                return getPostLoginRoute(payload.roles || []);
+              } catch {
+                return '/dashboard';
+              }
+            })();
+            navigate(roleRoute, { replace: true });
           } else {
             navigate('/login', {
               state: { message: 'Password set successfully! Your account is now active. Please login.' },
@@ -215,4 +224,3 @@ const RegisterVerifyPage = () => {
 };
 
 export default RegisterVerifyPage;
-

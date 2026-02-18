@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { Provider as ReduxProvider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +8,9 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import PublicRoute from './components/shared/PublicRoute';
+import HomeRoute from './components/shared/HomeRoute';
 import Layout from './components/layout/Layout';
+import PortalLayout from './components/layout/PortalLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
@@ -114,6 +116,17 @@ import UnmatchedERAItemsPage from './pages/era/UnmatchedERAItemsPage';
 import AuthorizationsListPage from './pages/authorizations/AuthorizationsListPage';
 import CreateAuthorizationPage from './pages/authorizations/CreateAuthorizationPage';
 import ViewAuthorizationPage from './pages/authorizations/ViewAuthorizationPage';
+import PortalLoginPage from './pages/portal/PortalLoginPage';
+import PortalRegisterPage from './pages/portal/PortalRegisterPage';
+import PortalDashboardPage from './pages/portal/PortalDashboardPage';
+import PortalAppointmentsPage from './pages/portal/PortalAppointmentsPage';
+import PortalAppointmentDetailPage from './pages/portal/PortalAppointmentDetailPage';
+import PortalMessagesPage from './pages/portal/PortalMessagesPage';
+import PortalFormsPage from './pages/portal/PortalFormsPage';
+import PortalFormDetailPage from './pages/portal/PortalFormDetailPage';
+import PortalProfilePage from './pages/portal/PortalProfilePage';
+import PortalNotificationsPage from './pages/portal/PortalNotificationsPage';
+import ProviderPortalMessagesPage from './pages/portal/ProviderPortalMessagesPage';
 
 const theme = createTheme({
   palette: {
@@ -197,6 +210,102 @@ function App() {
                   <PublicRoute>
                     <RegisterVerifyPage />
                   </PublicRoute>
+                }
+              />
+              <Route
+                path="/portal/login"
+                element={
+                  <PublicRoute>
+                    <PortalLoginPage />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/portal/register"
+                element={
+                  <PublicRoute>
+                    <PortalRegisterPage />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/portal"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalDashboardPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/appointments"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalAppointmentsPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/appointments/:appointmentId"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalAppointmentDetailPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/messages"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalMessagesPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/forms"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalFormsPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/forms/:formId"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalFormDetailPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/profile"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalProfilePage />
+                    </PortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal/notifications"
+                element={
+                  <ProtectedRoute requiredRoles={['Patient']}>
+                    <PortalLayout>
+                      <PortalNotificationsPage />
+                    </PortalLayout>
+                  </ProtectedRoute>
                 }
               />
               <Route
@@ -581,6 +690,16 @@ function App() {
                   <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
                     <Layout>
                       <AppointmentsListPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portal-messages"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Provider', 'Doctor']}>
+                    <Layout>
+                      <ProviderPortalMessagesPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -1169,8 +1288,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<HomeRoute />} />
+              <Route path="*" element={<HomeRoute />} />
             </Routes>
           </BrowserRouter>
         </SnackbarProvider>

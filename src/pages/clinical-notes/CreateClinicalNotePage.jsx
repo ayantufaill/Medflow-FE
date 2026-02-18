@@ -40,6 +40,8 @@ import {
 } from '../../validations/clinicalNoteValidations';
 import { sanitizeSOAPFields } from '../../utils/sanitize';
 
+const ensureArray = (value) => (Array.isArray(value) ? value : []);
+
 const CreateClinicalNotePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -105,8 +107,11 @@ const CreateClinicalNotePage = () => {
           patientService.getAllPatients(1, 100),
           providerService.getAllProviders(1, 100),
         ]);
-        setTemplates(templatesRes || []);
-        setAllTemplates(templatesRes || []);
+        const normalizedTemplates = ensureArray(
+          templatesRes?.noteTemplates ?? templatesRes?.templates ?? templatesRes
+        );
+        setTemplates(normalizedTemplates);
+        setAllTemplates(normalizedTemplates);
         setPatients(patientsRes?.patients || []);
         setAllPatients(patientsRes?.patients || []);
         setProviders(providersRes?.providers || []);
@@ -183,7 +188,7 @@ const CreateClinicalNotePage = () => {
     }
     try {
       setTemplateLoading(true);
-      const filtered = allTemplates.filter(t => 
+      const filtered = ensureArray(allTemplates).filter(t =>
         t.name.toLowerCase().includes(search.toLowerCase())
       );
       setTemplates(filtered);
@@ -498,7 +503,7 @@ const CreateClinicalNotePage = () => {
                 control={control}
                 render={({ field: { onChange, value } }) => (
                   <Autocomplete
-                    value={templates.find(t => t._id === value) || null}
+                    value={ensureArray(templates).find(t => t._id === value) || null}
                     onChange={(event, newValue) => {
                       onChange(newValue?._id || '');
                     }}
@@ -509,7 +514,7 @@ const CreateClinicalNotePage = () => {
                         setTemplates(allTemplates);
                       }
                     }}
-                    options={templates}
+                    options={ensureArray(templates)}
                     loading={templateLoading}
                     getOptionLabel={(option) => option.name || ''}
                     isOptionEqualToValue={(option, val) => option._id === val._id}

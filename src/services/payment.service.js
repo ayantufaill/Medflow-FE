@@ -26,9 +26,15 @@ export const paymentService = {
       data.payments = data.payments.map(payment => ({
         ...payment,
         id: payment._id || payment.id,
-        receiptNumber: payment.paymentCode || payment.receiptNumber, // Map paymentCode to receiptNumber
-        patient: payment.patientId || payment.patient, // Map patientId to patient (if populated, it's an object)
-        invoice: payment.invoiceId || payment.invoice, // Map invoiceId to invoice (if populated, it's an object)
+        receiptNumber: payment.receiptNumber || payment.paymentCode || payment.referenceNumber || payment._id || payment.id,
+        paymentCode: payment.paymentCode || payment.receiptNumber || payment.referenceNumber || payment._id || payment.id,
+        patient:
+          payment.patient ||
+          (payment.patientId && typeof payment.patientId === 'object' ? payment.patientId : null),
+        invoice:
+          payment.invoice ||
+          (payment.invoiceId && typeof payment.invoiceId === 'object' ? payment.invoiceId : null),
+        paymentMethod: payment.paymentMethod || payment.method || null,
       }));
     }
     return data;
@@ -43,9 +49,15 @@ export const paymentService = {
     return {
       ...payment,
       id: payment._id || payment.id,
-      receiptNumber: payment.paymentCode || payment.receiptNumber, // Map paymentCode to receiptNumber
-      patient: payment.patientId || payment.patient, // Map patientId to patient
-      invoice: payment.invoiceId || payment.invoice, // Map invoiceId to invoice
+      receiptNumber: payment.receiptNumber || payment.paymentCode || payment.referenceNumber || payment._id || payment.id,
+      paymentCode: payment.paymentCode || payment.receiptNumber || payment.referenceNumber || payment._id || payment.id,
+      patient:
+        payment.patient ||
+        (payment.patientId && typeof payment.patientId === 'object' ? payment.patientId : null),
+      invoice:
+        payment.invoice ||
+        (payment.invoiceId && typeof payment.invoiceId === 'object' ? payment.invoiceId : null),
+      paymentMethod: payment.paymentMethod || payment.method || null,
     };
   },
 
@@ -74,9 +86,15 @@ export const paymentService = {
     return {
       ...payment,
       id: payment._id || payment.id,
-      receiptNumber: payment.paymentCode || payment.receiptNumber, // Map paymentCode to receiptNumber
-      patient: payment.patientId || payment.patient, // Map patientId to patient
-      invoice: payment.invoiceId || payment.invoice, // Map invoiceId to invoice
+      receiptNumber: payment.receiptNumber || payment.paymentCode || payment.referenceNumber || payment._id || payment.id,
+      paymentCode: payment.paymentCode || payment.receiptNumber || payment.referenceNumber || payment._id || payment.id,
+      patient:
+        payment.patient ||
+        (payment.patientId && typeof payment.patientId === 'object' ? payment.patientId : null),
+      invoice:
+        payment.invoice ||
+        (payment.invoiceId && typeof payment.invoiceId === 'object' ? payment.invoiceId : null),
+      paymentMethod: payment.paymentMethod || payment.method || null,
     };
   },
 

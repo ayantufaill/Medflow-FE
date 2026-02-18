@@ -39,6 +39,7 @@ import {
   Assignment,
   CloudUpload,
   VerifiedUser,
+  Forum,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -85,6 +86,12 @@ const menuItems = [
     icon: <EventRepeat />,
     path: '/recurring-appointments',
     requiredRoles: ['Admin', 'Receptionist'],
+  },
+  {
+    text: 'Portal Messages',
+    icon: <Forum />,
+    path: '/portal-messages',
+    requiredRoles: ['Admin', 'Provider', 'Doctor'],
   },
   {
     text: 'Note Templates',
