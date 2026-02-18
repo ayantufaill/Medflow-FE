@@ -3,6 +3,8 @@ import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Alert,
   Button,
+  Checkbox,
+  FormControlLabel,
   Paper,
   Stack,
   TextField,
@@ -10,32 +12,21 @@ import {
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
-
-const safeStringify = (value) => {
-  try {
-    return JSON.stringify(value || {}, null, 2);
-  } catch {
-    return '{}';
-  }
-};
+import {
+  getTemplateDefinition,
+  normalizeFormDataForTemplate,
+} from './portalFormTemplates';
 
 const PortalFormDetailPage = () => {
   const { formId } = useParams();
   const [form, setForm] = useState(null);
   const [templateId, setTemplateId] = useState('');
-  const [jsonText, setJsonText] = useState('{}');
+  const [formData, setFormData] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const parsedJsonError = useMemo(() => {
-    try {
-      JSON.parse(jsonText || '{}');
-      return '';
-    } catch (err) {
-      return err.message || 'Invalid JSON';
-    }
-  }, [jsonText]);
+  const template = useMemo(() => getTemplateDefinition(templateId), [templateId]);
 
   useEffect(() => {
     (async () => {
@@ -44,7 +35,7 @@ const PortalFormDetailPage = () => {
         const row = await portalService.getFormById(formId);
         setForm(row);
         setTemplateId(row.templateId || '');
-        setJsonText(safeStringify(row.formData));
+        setFormData(normalizeFormDataForTemplate(row.templateId, row.formData));
       } catch (err) {
         setError(
           err.response?.data?.error?.message ||
@@ -55,15 +46,40 @@ const PortalFormDetailPage = () => {
     })();
   }, [formId]);
 
+  const updateValue = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const validateRequiredFields = () => {
+    if (!template) return '';
+    for (const field of template.fields) {
+      if (!field.required) continue;
+      const value = formData[field.key];
+      if (field.type === 'boolean' && !value) {
+        return `${field.label} is required`;
+      }
+      if (field.type !== 'boolean' && !String(value || '').trim()) {
+        return `${field.label} is required`;
+      }
+    }
+    return '';
+  };
+
   const handleSave = async () => {
-    if (!formId || parsedJsonError) return;
+    if (!formId) return;
+    const validationError = validateRequiredFields();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
       setSaving(true);
       setError('');
       setSuccess('');
       const updated = await portalService.updateForm(formId, {
         templateId: templateId || undefined,
-        formData: JSON.parse(jsonText || '{}'),
+        formData,
       });
       setForm(updated);
       setSuccess('Form updated successfully');
@@ -76,6 +92,52 @@ const PortalFormDetailPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const renderField = (field) => {
+    const value = formData[field.key];
+    if (field.type === 'boolean') {
+      return (
+        <FormControlLabel
+          key={field.key}
+          control={
+            <Checkbox
+              checked={Boolean(value)}
+              onChange={(event) => updateValue(field.key, event.target.checked)}
+            />
+          }
+          label={field.label}
+        />
+      );
+    }
+
+    if (field.type === 'textarea') {
+      return (
+        <TextField
+          key={field.key}
+          label={field.label}
+          value={value || ''}
+          onChange={(event) => updateValue(field.key, event.target.value)}
+          multiline
+          minRows={3}
+          fullWidth
+          required={Boolean(field.required)}
+        />
+      );
+    }
+
+    return (
+      <TextField
+        key={field.key}
+        label={field.label}
+        type={field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}
+        value={value || ''}
+        onChange={(event) => updateValue(field.key, event.target.value)}
+        fullWidth
+        InputLabelProps={field.type === 'date' ? { shrink: true } : undefined}
+        required={Boolean(field.required)}
+      />
+    );
   };
 
   if (!form && !error) {
@@ -93,7 +155,6 @@ const PortalFormDetailPage = () => {
 
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">{success}</Alert>}
-      {parsedJsonError && <Alert severity="warning">JSON error: {parsedJsonError}</Alert>}
 
       <Paper sx={{ p: 2 }}>
         <Stack spacing={1.5}>
@@ -104,25 +165,30 @@ const PortalFormDetailPage = () => {
             Submitted:{' '}
             {form?.submittedAt ? dayjs(form.submittedAt).format('MMM D, YYYY h:mm A') : '-'}
           </Typography>
+
           <TextField
-            label="Template ID"
-            value={templateId}
-            onChange={(event) => setTemplateId(event.target.value)}
+            label="Form Type"
+            value={template?.title || templateId || 'General Form'}
+            InputProps={{ readOnly: true }}
             fullWidth
           />
-          <TextField
-            label="Form Data (JSON)"
-            value={jsonText}
-            onChange={(event) => setJsonText(event.target.value)}
-            multiline
-            minRows={14}
-            fullWidth
-          />
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving || Boolean(parsedJsonError)}
-          >
+
+          <Stack spacing={1.5}>
+            {template
+              ? template.fields.map((field) => renderField(field))
+              : (
+                <TextField
+                  label="Response"
+                  value={formData.response || ''}
+                  onChange={(event) => updateValue('response', event.target.value)}
+                  multiline
+                  minRows={8}
+                  fullWidth
+                />
+              )}
+          </Stack>
+
+          <Button variant="contained" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </Stack>
@@ -132,3 +198,4 @@ const PortalFormDetailPage = () => {
 };
 
 export default PortalFormDetailPage;
+
