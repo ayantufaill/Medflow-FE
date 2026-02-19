@@ -9,6 +9,7 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import PublicRoute from './components/shared/PublicRoute';
 import HomeRoute from './components/shared/HomeRoute';
+import RoleBasedPortalMessagesRoute from './components/shared/RoleBasedPortalMessagesRoute';
 import Layout from './components/layout/Layout';
 import PortalLayout from './components/layout/PortalLayout';
 import LoginPage from './pages/auth/LoginPage';
@@ -121,7 +122,6 @@ import PortalRegisterPage from './pages/portal/PortalRegisterPage';
 import PortalDashboardPage from './pages/portal/PortalDashboardPage';
 import PortalAppointmentsPage from './pages/portal/PortalAppointmentsPage';
 import PortalAppointmentDetailPage from './pages/portal/PortalAppointmentDetailPage';
-import PortalMessagesPage from './pages/portal/PortalMessagesPage';
 import PortalFormsPage from './pages/portal/PortalFormsPage';
 import PortalFormDetailPage from './pages/portal/PortalFormDetailPage';
 import PortalProfilePage from './pages/portal/PortalProfilePage';
@@ -261,10 +261,8 @@ function App() {
               <Route
                 path="/portal/messages"
                 element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalMessagesPage />
-                    </PortalLayout>
+                  <ProtectedRoute requiredRoles={['Patient', 'Admin', 'Provider', 'Doctor']}>
+                    <RoleBasedPortalMessagesRoute />
                   </ProtectedRoute>
                 }
               />
