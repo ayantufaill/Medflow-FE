@@ -69,7 +69,7 @@ const menuItems = [
     path: '/patients',
     requiredRoles: ['Admin', 'Receptionist', 'Doctor'],
   },
-  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments', requiredRoles: ['Admin', 'Receptionist'] },
+  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
   // {
   //   text: 'Calendar',
   //   icon: <CalendarMonth />,

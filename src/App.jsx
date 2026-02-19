@@ -687,7 +687,7 @@ function App() {
               <Route
                 path="/appointments"
                 element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                  <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
                     <Layout>
                       <AppointmentsListPage />
                     </Layout>
@@ -737,7 +737,7 @@ function App() {
               <Route
                 path="/appointments/:appointmentId"
                 element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                  <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
                     <Layout>
                       <ViewAppointmentPage />
                     </Layout>

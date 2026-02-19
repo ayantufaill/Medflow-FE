@@ -133,6 +133,11 @@ export const portalService = {
     return response.data.data.messages || [];
   },
 
+  async getProviderPatientContext(patientId) {
+    const response = await apiClient.get(`/portal/provider/patients/${patientId}/context`);
+    return response.data.data;
+  },
+
   async replyToProviderThread(payload) {
     const response = await apiClient.post('/portal/provider/messages/reply', payload);
     return response.data.data.message;

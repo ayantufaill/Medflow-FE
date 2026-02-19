@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Alert,
   Box,
   Typography,
   Paper,
@@ -18,6 +19,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -35,13 +37,149 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { appointmentService } from "../../services/appointment.service";
+import { portalService } from "../../services/portal.service";
 import { useSnackbar } from "../../contexts/SnackbarContext";
+import { useAuth } from "../../contexts/AuthContext";
 import dayjs from "dayjs";
+
+const isPlainObject = (value) =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const toDisplayLabel = (key) => {
+  if (!key) return "";
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase());
+};
+
+const formatDateTimeValue = (value) => {
+  if (!value) return "N/A";
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format("MMM DD, YYYY h:mm A") : "N/A";
+};
+
+const formatFieldValue = (value) => {
+  if (value === null || value === undefined || value === "") return "N/A";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "N/A";
+    const parsed = dayjs(trimmed);
+    if (parsed.isValid() && /[T:\-]/.test(trimmed)) {
+      return trimmed.includes(":")
+        ? formatDateTimeValue(trimmed)
+        : parsed.format("MMM DD, YYYY");
+    }
+    return trimmed;
+  }
+  return String(value);
+};
+
+const FormDataViewer = ({ data, depth = 0 }) => {
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary">
+          N/A
+        </Typography>
+      );
+    }
+
+    const hasNestedItems = data.some((item) => isPlainObject(item) || Array.isArray(item));
+    if (!hasNestedItems) {
+      return <Typography variant="body2">{data.map((item) => formatFieldValue(item)).join(", ")}</Typography>;
+    }
+
+    return (
+      <Stack spacing={1}>
+        {data.map((item, index) => (
+          <Box
+            key={`form-array-item-${index}`}
+            sx={{
+              border: "1px solid #e6ebf4",
+              borderRadius: 1.5,
+              p: 1,
+              backgroundColor: depth > 0 ? "#fbfdff" : "#ffffff",
+            }}
+          >
+            <Typography variant="caption" sx={{ fontWeight: 700, display: "block", mb: 0.5 }}>
+              Item {index + 1}
+            </Typography>
+            <FormDataViewer data={item} depth={depth + 1} />
+          </Box>
+        ))}
+      </Stack>
+    );
+  }
+
+  if (!isPlainObject(data)) {
+    return <Typography variant="body2">{formatFieldValue(data)}</Typography>;
+  }
+
+  const entries = Object.entries(data);
+  if (entries.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        N/A
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack spacing={1}>
+      {entries.map(([key, value]) => {
+        const label = toDisplayLabel(key);
+        const hasNestedValue = isPlainObject(value) || Array.isArray(value);
+        if (hasNestedValue) {
+          return (
+            <Box key={key}>
+              <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {label}
+              </Typography>
+              <Box
+                sx={{
+                  border: "1px solid #e6ebf4",
+                  borderRadius: 1.5,
+                  p: 1,
+                  backgroundColor: "#fbfdff",
+                }}
+              >
+                <FormDataViewer data={value} depth={depth + 1} />
+              </Box>
+            </Box>
+          );
+        }
+
+        return (
+          <Stack
+            key={key}
+            direction="row"
+            justifyContent="space-between"
+            spacing={1}
+            sx={{ borderBottom: "1px dashed #e6ebf4", pb: 0.5 }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {label}
+            </Typography>
+            <Typography variant="body2" sx={{ textAlign: "right" }}>
+              {formatFieldValue(value)}
+            </Typography>
+          </Stack>
+        );
+      })}
+    </Stack>
+  );
+};
 
 const ViewAppointmentPage = () => {
   const navigate = useNavigate();
   const { appointmentId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [appointment, setAppointment] = useState(null);
@@ -54,6 +192,15 @@ const ViewAppointmentPage = () => {
   const [rescheduleEndTime, setRescheduleEndTime] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [contextError, setContextError] = useState("");
+  const [patientContext, setPatientContext] = useState(null);
+  const [selectedForm, setSelectedForm] = useState(null);
+  const roleNames = (user?.roles || [])
+    .map((role) => (typeof role === "string" ? role : role?.name || ""))
+    .filter(Boolean);
+  const canManageAppointments = roleNames.some((role) => ["Admin", "Receptionist"].includes(role));
+  const canViewProviderContext = roleNames.some((role) => ["Provider", "Doctor"].includes(role));
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -82,6 +229,56 @@ const ViewAppointmentPage = () => {
       fetchData();
     }
   }, [appointmentId]);
+
+  useEffect(() => {
+    if (!appointment || !canViewProviderContext) {
+      setPatientContext(null);
+      setContextError("");
+      setContextLoading(false);
+      return;
+    }
+
+    const patientId =
+      typeof appointment.patientId === "string"
+        ? appointment.patientId
+        : appointment.patientId?._id;
+
+    if (!patientId) {
+      setPatientContext(null);
+      setContextError("");
+      setContextLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setContextLoading(true);
+        setContextError("");
+        const data = await portalService.getProviderPatientContext(patientId);
+        if (!cancelled) {
+          setPatientContext(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPatientContext(null);
+          setContextError(
+            err.response?.data?.error?.message ||
+              err.response?.data?.message ||
+              "Failed to load patient context"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setContextLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appointment, canViewProviderContext]);
 
   if (loading) {
     return (
@@ -344,6 +541,11 @@ const ViewAppointmentPage = () => {
     }
   };
 
+  const contextPatient = patientContext?.patient || null;
+  const contextForms = patientContext?.forms || [];
+  const contextClinicalNotes = patientContext?.clinicalNotes || [];
+  const contextAppointments = patientContext?.appointments || [];
+
   return (
     <Box>
       {/* Navigation Header */}
@@ -440,7 +642,8 @@ const ViewAppointmentPage = () => {
           </Box>
           {/* Action Buttons */}
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            {appointment &&
+            {canManageAppointments &&
+              appointment &&
               (appointment.status === "scheduled" ||
                 appointment.status === "confirmed") && (
                 <Button
@@ -455,7 +658,7 @@ const ViewAppointmentPage = () => {
                   Check In
                 </Button>
               )}
-            {canCancel() && (
+            {canManageAppointments && canCancel() && (
               <Button
                 variant="outlined"
                 color="error"
@@ -464,11 +667,11 @@ const ViewAppointmentPage = () => {
                 startIcon={<CancelIcon />}
                 onClick={handleCancelClick}
                 disabled={processing}
-              >
-                Cancel
-              </Button>
-            )}
-            {canReschedule() && (
+                >
+                  Cancel
+                </Button>
+              )}
+            {canManageAppointments && canReschedule() && (
               <Button
                 variant="outlined"
                 color="primary"
@@ -477,21 +680,23 @@ const ViewAppointmentPage = () => {
                 startIcon={<ScheduleIcon />}
                 onClick={handleRescheduleClick}
                 disabled={processing}
+                >
+                  Reschedule
+                </Button>
+              )}
+            {canManageAppointments && (
+              <Button
+                variant="contained"
+                size="small"
+                disableElevation
+                startIcon={<EditIcon />}
+                onClick={() => navigate(`/appointments/${appointmentId}/edit`)}
+                disabled={processing}
               >
-                Reschedule
+                Edit
               </Button>
             )}
-            <Button
-              variant="contained"
-              size="small"
-              disableElevation
-              startIcon={<EditIcon />}
-              onClick={() => navigate(`/appointments/${appointmentId}/edit`)}
-              disabled={processing}
-            >
-              Edit
-            </Button>
-            {canDelete() && (
+            {canManageAppointments && canDelete() && (
               <Button
                 variant="outlined"
                 color="error"
@@ -524,6 +729,7 @@ const ViewAppointmentPage = () => {
           <Tabs value={tabValue} onChange={handleTabChange}>
             <Tab label="Appointment Information" />
             <Tab label="Additional Details" />
+            {canViewProviderContext && <Tab label="Patient Context" />}
           </Tabs>
         </Box>
 
@@ -854,6 +1060,140 @@ const ViewAppointmentPage = () => {
             </Grid>
           </Box>
         )}
+
+        {/* Tab Panel: Patient Context (Provider/Doctor) */}
+        {canViewProviderContext && tabValue === 2 && (
+          <Box sx={{ p: 2 }}>
+            {contextError && <Alert severity="error" sx={{ mb: 2 }}>{contextError}</Alert>}
+
+            {contextLoading ? (
+              <Box display="flex" justifyContent="center" p={2}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <Stack spacing={2}>
+                {!contextPatient ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No patient context found for this appointment.
+                  </Typography>
+                ) : (
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                      Patient Details
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary">Name</Typography>
+                        <Typography variant="body1">
+                          {`${contextPatient.firstName || ""} ${contextPatient.lastName || ""}`.trim() || "N/A"}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary">Email</Typography>
+                        <Typography variant="body1">{contextPatient.email || "N/A"}</Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary">Phone</Typography>
+                        <Typography variant="body1">{contextPatient.phonePrimary || "N/A"}</Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary">DOB</Typography>
+                        <Typography variant="body1">
+                          {contextPatient.dateOfBirth ? dayjs(contextPatient.dateOfBirth).format("MMM DD, YYYY") : "N/A"}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                    Submitted Forms
+                  </Typography>
+                  {contextForms.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No submitted forms found.
+                    </Typography>
+                  ) : (
+                    <Stack spacing={1}>
+                      {contextForms.map((form) => (
+                        <Box key={form._id} sx={{ border: "1px solid #e6ebf4", borderRadius: 1.5, p: 1.25 }}>
+                          <Typography variant="body2" fontWeight="bold">
+                            {(form.templateId || "patient-form").replace(/-/g, " ")}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Submitted: {formatDateTimeValue(form.submittedAt)}
+                          </Typography>
+                          <Button
+                            size="small"
+                            sx={{ mt: 0.75, px: 0, minWidth: "auto" }}
+                            onClick={() => setSelectedForm(form)}
+                          >
+                            View form details
+                          </Button>
+                        </Box>
+                      ))}
+                    </Stack>
+                  )}
+                </Paper>
+
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                    Clinical Notes
+                  </Typography>
+                  {contextClinicalNotes.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No clinical notes available.
+                    </Typography>
+                  ) : (
+                    <Stack spacing={1}>
+                      {contextClinicalNotes.map((note) => (
+                        <Box key={note._id} sx={{ border: "1px solid #e6ebf4", borderRadius: 1.5, p: 1.25 }}>
+                          <Typography variant="body2" fontWeight="bold">
+                            {note.summary || note.chiefComplaint || "Clinical note"}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Type: {(note.noteType || "soap").toUpperCase()}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Created: {formatDateTimeValue(note.createdAt)}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  )}
+                </Paper>
+
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                    Related Appointments
+                  </Typography>
+                  {contextAppointments.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No related appointments available.
+                    </Typography>
+                  ) : (
+                    <Stack spacing={1}>
+                      {contextAppointments.map((item) => (
+                        <Box key={item._id} sx={{ border: "1px solid #e6ebf4", borderRadius: 1.5, p: 1.25 }}>
+                          <Typography variant="body2" fontWeight="bold">
+                            {item.appointmentCode || item._id}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {item.appointmentDate ? dayjs(item.appointmentDate).format("MMM DD, YYYY") : "N/A"} • {item.startTime || "--"} - {item.endTime || "--"}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Status: {item.status || "scheduled"}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  )}
+                </Paper>
+              </Stack>
+            )}
+          </Box>
+        )}
       </Paper>
 
       {/* Cancel Dialog */}
@@ -1020,6 +1360,35 @@ const ViewAppointmentPage = () => {
             Delete
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(selectedForm)}
+        onClose={() => setSelectedForm(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Form Details</DialogTitle>
+        <DialogContent dividers>
+          {selectedForm && (
+            <Stack spacing={1.25}>
+              <Typography variant="body2">
+                <strong>Form ID:</strong> {selectedForm._id}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Template:</strong> {selectedForm.templateId || "N/A"}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Status:</strong> {selectedForm.status || "submitted"}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Submitted:</strong> {formatDateTimeValue(selectedForm.submittedAt)}
+              </Typography>
+              <Divider />
+              <FormDataViewer data={selectedForm.formData} />
+            </Stack>
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

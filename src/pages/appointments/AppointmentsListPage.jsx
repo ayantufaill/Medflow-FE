@@ -52,6 +52,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { appointmentService } from '../../services/appointment.service';
 import { providerService } from '../../services/provider.service';
 import { patientService } from '../../services/patient.service';
@@ -60,6 +61,7 @@ import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 const AppointmentsListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -105,6 +107,10 @@ const AppointmentsListPage = () => {
   };
 
   const hasActiveFilters = search || statusFilter || startDate || endDate;
+  const roleNames = (user?.roles || [])
+    .map((role) => (typeof role === 'string' ? role : role?.name || ''))
+    .filter(Boolean);
+  const canManageAppointments = roleNames.some((role) => ['Admin', 'Receptionist'].includes(role));
 
 
   const fetchAppointments = useCallback(async () => {
@@ -398,22 +404,24 @@ const AppointmentsListPage = () => {
         <Typography variant="h4" fontWeight="bold">
           Appointments
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<EventIcon />}
-            onClick={() => navigate('/appointments/calendar')}
-          >
-            Calendar View
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/appointments/new')}
-          >
-            New Appointment
-          </Button>
-        </Box>
+        {canManageAppointments && (
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<EventIcon />}
+              onClick={() => navigate('/appointments/calendar')}
+            >
+              Calendar View
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/appointments/new')}
+            >
+              New Appointment
+            </Button>
+          </Box>
+        )}
       </Box>
 
       <Dialog open={!!error} onClose={() => setError('')} maxWidth="sm" fullWidth>
@@ -674,17 +682,24 @@ const AppointmentsListPage = () => {
             </ListItemIcon>
             <ListItemText>View Details</ListItemText>
           </MenuItem>,
-          <MenuItem key="edit" onClick={() => handleEdit(actionMenu.appointmentId)}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>,
           ...((() => {
             const appointment = appointments.find(
               (apt) => (apt._id || apt.id) === actionMenu.appointmentId
             );
             const items = [];
+
+            if (!canManageAppointments) {
+              return items;
+            }
+
+            items.push(
+              <MenuItem key="edit" onClick={() => handleEdit(actionMenu.appointmentId)}>
+                <ListItemIcon>
+                  <EditIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Edit</ListItemText>
+              </MenuItem>
+            );
 
             if (canCheckIn(appointment)) {
               items.push(
