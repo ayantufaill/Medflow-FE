@@ -42,57 +42,35 @@ import interactionPlugin from "@fullcalendar/interaction";
 import dayjs from "dayjs";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { appointmentService } from "../../services/appointment.service";
-import { providerService } from "../../services/provider.service";
+import { useDropdownData } from "../../hooks/redux/useDropdownData";
 
 const AppointmentCalendarPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const calendarRef = useRef(null);
-  const fetchingRef = useRef(false); // Prevent concurrent fetches
-  const lastFetchedRangeRef = useRef({
-    startDate: "",
-    endDate: "",
-    providerId: "",
-  }); // Track last fetched range
-  const slotsFetchTimeoutRef = useRef(null); // For debouncing slot fetches
+  const fetchingRef = useRef(false);
+  const lastFetchedRangeRef = useRef({ startDate: "", endDate: "", providerId: "" });
+  const slotsFetchTimeoutRef = useRef(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState("");
   const [currentView, setCurrentView] = useState("timeGridWeek");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState({}); // { date: [slots] }
+  const [availableSlots, setAvailableSlots] = useState({});
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [providerDialogOpen, setProviderDialogOpen] = useState(false);
-  const [loadingProviders, setLoadingProviders] = useState(false);
   const [selectedProviderData, setSelectedProviderData] = useState(null);
   const [providerSearchText, setProviderSearchText] = useState('');
   const providerSearchTimerRef = useRef(null);
 
-  const searchProviders = useCallback(async (search = "") => {
-    try {
-      setLoadingProviders(true);
-      const result = await providerService.getAllProviders(
-        1,
-        20,
-        search,
-        true,
-        ''
-      );
-      setProviders(result.providers || []);
-    } catch (err) {
-      console.error("Error searching providers:", err);
-    } finally {
-      setLoadingProviders(false);
-    }
-  }, []);
+  // ─── Redux cached providers (no extra API call) ─────────
+  const { providers, providersLoading: loadingProviders } = useDropdownData({ providers: true });
 
-  useEffect(() => {
-    searchProviders("");
-  }, [searchProviders]);
+  // searchProviders is no longer needed - providers come from Redux cache
+  const searchProviders = useCallback(() => {}, []);
 
 
   const handleProviderSearchChange = (event, newInputValue) => {
@@ -952,12 +930,12 @@ const AppointmentCalendarPage = () => {
                   color={getStatusChipColor(selectedEvent.status)}
                   size="small"
                 />
-                <Chip
+                  <Chip
                   label={selectedEvent.insuranceVerified ? "Insurance ✓" : "Insurance ✗"}
                   color={selectedEvent.insuranceVerified ? "success" : "warning"}
-                  size="small"
+                    size="small"
                   variant={selectedEvent.insuranceVerified ? "filled" : "outlined"}
-                />
+                  />
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

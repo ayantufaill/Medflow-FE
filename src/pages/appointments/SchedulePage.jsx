@@ -28,30 +28,21 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentService } from '../../services/appointment.service';
-import { providerService } from '../../services/provider.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 
 const SchedulePage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+
+  // Providers from Redux cache
+  const { providers } = useDropdownData({ providers: true });
+
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState('');
   const [startDate, setStartDate] = useState(dayjs());
   const [endDate, setEndDate] = useState(dayjs().add(7, 'day'));
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        const result = await providerService.getAllProviders(1, 100, '', true);
-        setProviders(result.providers || []);
-      } catch (err) {
-        console.error('Error fetching providers:', err);
-      }
-    };
-    fetchProviders();
-  }, []);
 
   useEffect(() => {
     // Only fetch if dates are valid

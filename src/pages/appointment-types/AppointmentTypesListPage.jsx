@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useDebouncedCallback } from 'use-debounce';
+import { useState, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -45,79 +46,50 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentTypeService } from '../../services/appointment-type.service';
+import {
+  fetchAppointmentTypes as fetchAppointmentTypesAction,
+  selectAppointmentTypeList,
+  selectAppointmentTypePagination,
+  selectAppointmentTypeListLoading,
+  selectAppointmentTypeListError,
+  invalidateAppointmentTypes,
+  removeAppointmentTypeFromList,
+  updateAppointmentTypeInList,
+} from '../../store/slices/appointmentTypeSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const AppointmentTypesListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [appointmentTypes, setAppointmentTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+
+  // Redux state
+  const appointmentTypes = useSelector(selectAppointmentTypeList);
+  const pagination = useSelector(selectAppointmentTypePagination);
+  const loading = useSelector(selectAppointmentTypeListLoading);
+  const reduxError = useSelector(selectAppointmentTypeListError);
+
   const [error, setError] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalTypes, setTotalTypes] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    typeId: null,
-    typeName: '',
-  });
-  const [actionMenu, setActionMenu] = useState({
-    anchorEl: null,
-    typeId: null,
-    typeName: '',
-    isActive: null,
-  });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, typeId: null, typeName: '' });
+  const [actionMenu, setActionMenu] = useState({ anchorEl: null, typeId: null, typeName: '', isActive: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
+  const [debouncedSearch] = useDebounce(search, 500);
+  const totalTypes = pagination?.total || 0;
 
-  const fetchAppointmentTypes = useCallback(async (searchValue) => {
-    try {
-      setLoading(true);
-      setError('');
-
-      let isActive = undefined;
-      if (statusFilter === 'active') {
-        isActive = true;
-      } else if (statusFilter === 'inactive') {
-        isActive = false;
-      }
-
-      const result = await appointmentTypeService.getAllAppointmentTypes(
-        page + 1,
-        rowsPerPage,
-        searchValue?.trim(),
-        isActive
-      );
-      setAppointmentTypes(result.appointmentTypes || []);
-      setTotalTypes(result.pagination?.total || 0);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch appointment types. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, statusFilter]);
-
-  const debouncedFetch = useDebouncedCallback((searchValue) => {
-    if (page === 0) {
-      fetchAppointmentTypes(searchValue);
-    } else {
-      setPage(0);
-    }
-  }, 500);
-
+  // ─── Single fetch via Redux (fires once per param change) ───
   useEffect(() => {
-    fetchAppointmentTypes(search);
-  }, [page, rowsPerPage, statusFilter]);
+    let isActive = null;
+    if (statusFilter === 'active') isActive = true;
+    else if (statusFilter === 'inactive') isActive = false;
+    dispatch(fetchAppointmentTypesAction({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), isActive }));
+  }, [dispatch, page, rowsPerPage, debouncedSearch, statusFilter]);
 
-  useEffect(() => {
-    debouncedFetch(search);
-  }, [search, debouncedFetch]);
+  useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -141,20 +113,12 @@ const AppointmentTypesListPage = () => {
       setDeleteLoading(true);
       await appointmentTypeService.deleteAppointmentType(deleteDialog.typeId);
       showSnackbar('Appointment type deleted successfully', 'success');
+      dispatch(removeAppointmentTypeFromList(deleteDialog.typeId));
       setDeleteDialog({ open: false, typeId: null, typeName: '' });
-      await fetchAppointmentTypes();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete appointment type. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete appointment type. Please try again.',
-        'error'
-      );
+      const msg = err.response?.data?.error?.message || 'Failed to delete appointment type.';
+      setError(msg);
+      showSnackbar(msg, 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -212,24 +176,23 @@ const AppointmentTypesListPage = () => {
     try {
       setToggleLoading(true);
       const newStatus = !currentStatus;
-      await appointmentTypeService.updateAppointmentType(typeId, {
-        isActive: newStatus,
-      });
-      showSnackbar(
-        `Appointment type ${newStatus ? 'activated' : 'deactivated'} successfully`,
-        'success'
-      );
+      await appointmentTypeService.updateAppointmentType(typeId, { isActive: newStatus });
+      showSnackbar(`Appointment type ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+      dispatch(updateAppointmentTypeInList({ _id: typeId, isActive: newStatus }));
       handleActionMenuClose();
-      await fetchAppointmentTypes();
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to update appointment type status. Please try again.';
-      showSnackbar(errorMessage, 'error');
+      showSnackbar(err.response?.data?.error?.message || 'Failed to update status.', 'error');
     } finally {
       setToggleLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    dispatch(invalidateAppointmentTypes());
+    let isActive = null;
+    if (statusFilter === 'active') isActive = true;
+    else if (statusFilter === 'inactive') isActive = false;
+    dispatch(fetchAppointmentTypesAction({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), isActive }));
   };
 
   return (
@@ -319,7 +282,7 @@ const AppointmentTypesListPage = () => {
                 </IconButton>
               <Tooltip title="Refresh">
                 <IconButton
-                  onClick={fetchAppointmentTypes}
+                  onClick={handleRefresh}
                   disabled={loading}
                   color="primary"
                 >

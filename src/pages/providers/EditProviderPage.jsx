@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -11,54 +12,40 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { providerService } from '../../services/provider.service';
-import { userService } from '../../services/user.service';
 import ProviderForm from '../../components/providers/ProviderForm';
+import {
+  fetchProviderById,
+  selectCachedProviderById,
+  selectProviderDetailLoading,
+  selectProviderListError,
+} from '../../store/slices/providerSlice';
 
 const EditProviderPage = () => {
   const navigate = useNavigate();
   const { providerId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+
+  const provider = useSelector((state) => selectCachedProviderById(state, providerId));
+  const detailLoading = useSelector(selectProviderDetailLoading);
+  const detailError = useSelector(selectProviderListError);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [provider, setProvider] = useState(null);
-  const [users, setUsers] = useState([]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const [providerData, usersResult] = await Promise.all([
-        providerService.getProviderById(providerId),
-        userService.getUsersByRoleName('Provider', 1, 1000, 'active', false),
-      ]);
-
-      setProvider(providerData);
-      setUsers(usersResult.users || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to load data. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    if (providerId) {
-      fetchData();
-    }
-  }, [providerId]);
+    if (!providerId) return;
+    dispatch(fetchProviderById(providerId));
+  }, [providerId, dispatch]);
 
   const onSubmit = async (data) => {
     try {
       setSaving(true);
       setError('');
 
-      await providerService.updateProvider(providerId, data);
+      const updated = await providerService.updateProvider(providerId, data);
+      dispatch(updateProviderInList(updated));
+      dispatch(invalidateProviderDetail(providerId));
 
       showSnackbar('Provider updated successfully', 'success');
       navigate('/providers');
@@ -74,7 +61,8 @@ const EditProviderPage = () => {
     }
   };
 
-  if (loading) {
+  const loading = detailLoading && !provider;
+  if (detailLoading) {
     return (
       <Box
         display="flex"
@@ -87,10 +75,10 @@ const EditProviderPage = () => {
     );
   }
 
-  if (error && !provider) {
+  if (detailError && !provider) {
     return (
       <Box>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">{detailError}</Alert>
       </Box>
     );
   }
@@ -135,7 +123,6 @@ const EditProviderPage = () => {
           initialData={provider}
           loading={saving}
           isEditMode={true}
-          externalUsers={users}
         />
       </Paper>
     </Box>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -46,21 +46,32 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
+import { usePatients } from '../../hooks/redux/usePatient';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const PatientsListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+
+  // ─── Redux State ─────────────────────────────────────────
+  const {
+    patients,
+    pagination,
+    loading,
+    error: reduxError,
+    fetch: fetchPatientsRedux,
+    refetch,
+    removeFromList,
+  } = usePatients();
+
+  // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalPatients, setTotalPatients] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [dobStartDate, setDobStartDate] = useState(null);
   const [dobEndDate, setDobEndDate] = useState(null);
+  const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     patientId: null,
@@ -72,53 +83,35 @@ const PatientsListPage = () => {
     patientName: '',
     isActive: null,
   });
-
   const [statusLoading, setStatusLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [debouncedSearch] = useDebounce(search, 500);
 
-  // Memoize today's date to prevent creating new dayjs objects on every render
   const today = useMemo(() => dayjs(), []);
 
-  const fetchPatients = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      let sanitizedSearch = debouncedSearch;
-      if (sanitizedSearch) {
-        sanitizedSearch = sanitizedSearch.replace(/^\+/, '').trim();
-      }
-
-      const dobStart = dobStartDate
-        ? dayjs(dobStartDate).format('YYYY-MM-DD')
-        : '';
-      const dobEnd = dobEndDate ? dayjs(dobEndDate).format('YYYY-MM-DD') : '';
-
-      const result = await patientService.getAllPatients(
-        page + 1,
-        rowsPerPage,
-        sanitizedSearch,
-        statusFilter,
-        dobStart,
-        dobEnd
-      );
-      setPatients(result.patients || []);
-      setTotalPatients(result.pagination?.total || 0);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch patients. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, debouncedSearch, statusFilter, dobStartDate, dobEndDate]);
-
+  // ─── Fetch via Redux (only when params change) ──────────
   useEffect(() => {
-    fetchPatients();
-  }, [fetchPatients]);
+    let sanitizedSearch = debouncedSearch;
+    if (sanitizedSearch) {
+      sanitizedSearch = sanitizedSearch.replace(/^\+/, '').trim();
+    }
+    const dobStart = dobStartDate ? dayjs(dobStartDate).format('YYYY-MM-DD') : '';
+    const dobEnd = dobEndDate ? dayjs(dobEndDate).format('YYYY-MM-DD') : '';
+
+    fetchPatientsRedux({
+      page: page + 1,
+      limit: rowsPerPage,
+      search: sanitizedSearch,
+      status: statusFilter,
+      dobStart,
+      dobEnd,
+    });
+  }, [page, rowsPerPage, debouncedSearch, statusFilter, dobStartDate, dobEndDate, fetchPatientsRedux]);
+
+  // Sync Redux error to local error for display
+  useEffect(() => {
+    if (reduxError) setError(reduxError);
+  }, [reduxError]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -130,11 +123,7 @@ const PatientsListPage = () => {
   };
 
   const handleDeleteClick = (patientId, patientName) => {
-    setDeleteDialog({
-      open: true,
-      patientId,
-      patientName,
-    });
+    setDeleteDialog({ open: true, patientId, patientName });
   };
 
   const handleDeleteConfirm = async () => {
@@ -142,20 +131,12 @@ const PatientsListPage = () => {
       setDeleteLoading(true);
       await patientService.deletePatient(deleteDialog.patientId);
       showSnackbar('Patient deleted successfully', 'success');
+      removeFromList(deleteDialog.patientId); // Remove from Redux list instantly
       setDeleteDialog({ open: false, patientId: null, patientName: '' });
-      await fetchPatients();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete patient. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete patient. Please try again.',
-        'error'
-      );
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete patient.';
+      setError(msg);
+      showSnackbar(msg, 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -166,21 +147,11 @@ const PatientsListPage = () => {
   };
 
   const handleActionMenuOpen = (event, patientId, patientName, isActive) => {
-    setActionMenu({
-      anchorEl: event.currentTarget,
-      patientId,
-      patientName,
-      isActive,
-    });
+    setActionMenu({ anchorEl: event.currentTarget, patientId, patientName, isActive });
   };
 
   const handleActionMenuClose = () => {
-    setActionMenu({
-      anchorEl: null,
-      patientId: null,
-      patientName: '',
-      isActive: null,
-    });
+    setActionMenu({ anchorEl: null, patientId: null, patientName: '', isActive: null });
   };
 
   const handleViewDetails = (patientId) => {
@@ -199,19 +170,14 @@ const PatientsListPage = () => {
   };
 
   const getPatientInitials = (firstName, lastName) => {
-    if (firstName && lastName) {
-      return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    }
+    if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
     return 'P';
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return '-';
-    }
+    try { return new Date(dateString).toLocaleDateString(); }
+    catch { return '-'; }
   };
 
   const handleResetFilters = () => {
@@ -222,34 +188,23 @@ const PatientsListPage = () => {
     setPage(0);
   };
 
+  const handleRefresh = () => {
+    refetch();
+  };
+
+  const totalPatients = pagination?.total || 0;
+
   return (
     <Box>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4" fontWeight="bold">
-          Patient Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/patients/new')}
-        >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" fontWeight="bold">Patient Management</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/patients/new')}>
           Add Patient
         </Button>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
       )}
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
@@ -263,20 +218,10 @@ const PatientsListPage = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 size="small"
                 InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
+                  startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
                   endAdornment: search && (
                     <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setSearch('')}
-                        edge="end"
-                      >
-                        <ClearIcon />
-                      </IconButton>
+                      <IconButton size="small" onClick={() => setSearch('')} edge="end"><ClearIcon /></IconButton>
                     </InputAdornment>
                   ),
                 }}
@@ -284,22 +229,15 @@ const PatientsListPage = () => {
             </Grid>
             <Grid size={4}>
               <FormControl fullWidth size="small">
-                <InputLabel id="status-filter-label">
-                  Filter by Status
-                </InputLabel>
+                <InputLabel id="status-filter-label">Filter by Status</InputLabel>
                 <Select
                   labelId="status-filter-label"
                   id="status-filter"
                   value={statusFilter}
                   label="Filter by Status"
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(0);
-                  }}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
                 >
-                  <MenuItem value="">
-                    <em>All Status</em>
-                  </MenuItem>
+                  <MenuItem value=""><em>All Status</em></MenuItem>
                   <MenuItem value="active">Active</MenuItem>
                   <MenuItem value="inactive">Inactive</MenuItem>
                 </Select>
@@ -309,16 +247,8 @@ const PatientsListPage = () => {
               <DatePicker
                 label="DOB Start Date"
                 value={dobStartDate}
-                onChange={(newValue) => {
-                  setDobStartDate(newValue);
-                  setPage(0);
-                }}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    size: 'small',
-                  },
-                }}
+                onChange={(newValue) => { setDobStartDate(newValue); setPage(0); }}
+                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
                 maxDate={dobEndDate || today}
               />
             </Grid>
@@ -326,51 +256,26 @@ const PatientsListPage = () => {
               <DatePicker
                 label="DOB End Date"
                 value={dobEndDate}
-                onChange={(newValue) => {
-                  setDobEndDate(newValue);
-                  setPage(0);
-                }}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    size: 'small',
-                  },
-                }}
+                onChange={(newValue) => { setDobEndDate(newValue); setPage(0); }}
+                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
                 minDate={dobStartDate}
                 maxDate={today}
               />
             </Grid>
             <Grid size={2}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 1,
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                }}
-              >
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
                 <Tooltip title="Refresh">
                   <span>
-                  <IconButton
-                    onClick={fetchPatients}
-                    disabled={loading}
-                    color="primary"
-                    sx={{ flexShrink: 0 }}
-                  >
-                    <RefreshIcon />
-                  </IconButton>
+                    <IconButton onClick={handleRefresh} disabled={loading} color="primary" sx={{ flexShrink: 0 }}>
+                      <RefreshIcon />
+                    </IconButton>
                   </span>
                 </Tooltip>
                 <Tooltip title="Reset Filters">
                   <span>
-                  <IconButton
-                    onClick={handleResetFilters}
-                    disabled={loading || (!dobStartDate && !dobEndDate && !statusFilter)}
-                    color="primary"
-                    sx={{ flexShrink: 0 }}
-                  >
-                    <FilterAltOff />
-                  </IconButton>
+                    <IconButton onClick={handleResetFilters} disabled={loading || (!dobStartDate && !dobEndDate && !statusFilter)} color="primary" sx={{ flexShrink: 0 }}>
+                      <FilterAltOff />
+                    </IconButton>
                   </span>
                 </Tooltip>
               </Box>
@@ -379,28 +284,12 @@ const PatientsListPage = () => {
         </LocalizationProvider>
 
         {loading ? (
-          <Box display="flex" justifyContent="center" p={4}>
-            <CircularProgress />
-          </Box>
+          <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
         ) : (
           <>
             <Box sx={{ position: 'relative' }}>
               {statusLoading && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    borderRadius: 1,
-                  }}
-                >
+                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, borderRadius: 1 }}>
                   <CircularProgress />
                 </Box>
               )}
@@ -421,69 +310,36 @@ const PatientsListPage = () => {
                     {patients.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                          <Typography color="text.secondary">
-                            No patients found
-                          </Typography>
+                          <Typography color="text.secondary">No patients found</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
                       patients.map((patient) => (
-                        <TableRow 
-                          key={patient._id || patient.id} 
+                        <TableRow
+                          key={patient._id || patient.id}
                           hover
                           sx={{ cursor: 'pointer' }}
                           onClick={() => navigate(`/patients/${patient._id || patient.id}`)}
                         >
                           <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1.5,
-                              }}
-                            >
-                              <Avatar
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  bgcolor: 'primary.main',
-                                  fontSize: '1rem',
-                                }}
-                              >
-                                {getPatientInitials(
-                                  patient.firstName,
-                                  patient.lastName
-                                )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', fontSize: '1rem' }}>
+                                {getPatientInitials(patient.firstName, patient.lastName)}
                               </Avatar>
-                              <Typography variant="body2">
-                                {patient.firstName} {patient.lastName}
-                              </Typography>
+                              <Typography variant="body2">{patient.firstName} {patient.lastName}</Typography>
                             </Box>
                           </TableCell>
                           <TableCell>{patient.patientCode || '-'}</TableCell>
-                          <TableCell>
-                            {formatDate(patient.dateOfBirth)}
-                          </TableCell>
+                          <TableCell>{formatDate(patient.dateOfBirth)}</TableCell>
                           <TableCell>{patient.phonePrimary || '-'}</TableCell>
                           <TableCell>{patient.email || '-'}</TableCell>
                           <TableCell>
-                            <Chip
-                              label={patient.isActive ? 'Active' : 'Inactive'}
-                              color={patient.isActive ? 'success' : 'default'}
-                              size="small"
-                            />
+                            <Chip label={patient.isActive ? 'Active' : 'Inactive'} color={patient.isActive ? 'success' : 'default'} size="small" />
                           </TableCell>
                           <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                             <IconButton
                               size="small"
-                              onClick={(e) =>
-                                handleActionMenuOpen(
-                                  e,
-                                  patient._id || patient.id,
-                                  `${patient.firstName} ${patient.lastName}`,
-                                  patient.isActive
-                                )
-                              }
+                              onClick={(e) => handleActionMenuOpen(e, patient._id || patient.id, `${patient.firstName} ${patient.lastName}`, patient.isActive)}
                             >
                               <MoreVertIcon />
                             </IconButton>
@@ -512,39 +368,17 @@ const PatientsListPage = () => {
         anchorEl={actionMenu.anchorEl}
         open={Boolean(actionMenu.anchorEl)}
         onClose={handleActionMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <MenuItem onClick={() => handleViewDetails(actionMenu.patientId)}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => handleEdit(actionMenu.patientId)}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem>
-        {/* <MenuItem
-          key="delete"
-          onClick={() =>
-            handleDelete(actionMenu.patientId, actionMenu.patientName)
-          }
-          sx={{ color: 'error.main' }}
-        >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem> */}
       </Menu>
 
       <ConfirmationDialog

@@ -32,8 +32,8 @@ import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import { clinicalNoteService } from '../../services/clinical-note.service';
 import { noteTemplateService } from '../../services/note-template.service';
 import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
 import { appointmentService } from '../../services/appointment.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import {
   clinicalNoteValidations,
   NOTE_TYPES,
@@ -52,14 +52,14 @@ const CreateClinicalNotePage = () => {
   const [error, setError] = useState('');
   const [templates, setTemplates] = useState([]);
   const [allTemplates, setAllTemplates] = useState([]);
+  // Providers from Redux cache
+  const { providers, providersLoading: providerLoading } = useDropdownData({ providers: true });
+
   const [patients, setPatients] = useState([]);
   const [allPatients, setAllPatients] = useState([]);
-  const [providers, setProviders] = useState([]);
-  const [allProviders, setAllProviders] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [patientLoading, setPatientLoading] = useState(false);
-  const [providerLoading, setProviderLoading] = useState(false);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [appointmentLoading, setAppointmentLoading] = useState(false);
   const [signDialog, setSignDialog] = useState(false);
@@ -102,10 +102,10 @@ const CreateClinicalNotePage = () => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const [templatesRes, patientsRes, providersRes] = await Promise.all([
+        // Providers come from Redux cache — only fetch templates & patients
+        const [templatesRes, patientsRes] = await Promise.all([
           noteTemplateService.getActiveTemplates(),
           patientService.getAllPatients(1, 100),
-          providerService.getAllProviders(1, 100),
         ]);
         const normalizedTemplates = ensureArray(
           templatesRes?.noteTemplates ?? templatesRes?.templates ?? templatesRes
@@ -114,8 +114,6 @@ const CreateClinicalNotePage = () => {
         setAllTemplates(normalizedTemplates);
         setPatients(patientsRes?.patients || []);
         setAllPatients(patientsRes?.patients || []);
-        setProviders(providersRes?.providers || []);
-        setAllProviders(providersRes?.providers || []);
       } catch (err) {
         setError('Failed to load initial data');
         showSnackbar('Failed to load initial data', 'error');
@@ -165,21 +163,8 @@ const CreateClinicalNotePage = () => {
     }
   }, 300);
 
-  const debouncedProviderSearch = useDebouncedCallback(async (search) => {
-    if (!search || search.length < 2) {
-      setProviders(allProviders);
-      return;
-    }
-    try {
-      setProviderLoading(true);
-      const result = await providerService.getAllProviders(1, 50, search);
-      setProviders(result?.providers || []);
-    } catch (err) {
-      console.error('Failed to search providers', err);
-    } finally {
-      setProviderLoading(false);
-    }
-  }, 300);
+  // Providers come from Redux cache — no separate search needed
+  const debouncedProviderSearch = useDebouncedCallback(() => {}, 300);
 
   const debouncedTemplateSearch = useDebouncedCallback(async (search) => {
     if (!search || search.length < 2) {
@@ -464,12 +449,8 @@ const CreateClinicalNotePage = () => {
                     onChange={(event, newValue) => {
                       onChange(newValue?._id || '');
                     }}
-                    onInputChange={(event, newInputValue, reason) => {
-                      if (reason === 'input') {
-                        debouncedProviderSearch(newInputValue);
-                      } else if (reason === 'clear') {
-                        setProviders(allProviders);
-                      }
+                    onInputChange={() => {
+                      // Providers come from Redux cache — no search needed
                     }}
                     options={providers}
                     loading={providerLoading}

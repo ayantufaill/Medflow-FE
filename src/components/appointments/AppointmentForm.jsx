@@ -47,13 +47,11 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { appointmentValidations } from '../../validations/appointmentValidations';
 import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
-import { appointmentTypeService } from '../../services/appointment-type.service';
 import { appointmentService } from '../../services/appointment.service';
-import { roomService } from '../../services/room.service';
 import { languageService } from '../../services/language.service';
 import { waitlistService } from '../../services/waitlist.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 
 const AppointmentForm = ({
   onSubmit,
@@ -63,10 +61,18 @@ const AppointmentForm = ({
   hideButtons = false,
   formId,
 }) => {
+  // ─── Redux cached dropdown data (fetched ONCE, shared across all forms) ───
+  const {
+    providers,
+    rooms,
+    appointmentTypes,
+    providersLoading,
+    roomsLoading,
+    appointmentTypesLoading,
+    loading: dropdownLoading,
+  } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
+
   const [patients, setPatients] = useState([]);
-  const [providers, setProviders] = useState([]);
-  const [appointmentTypes, setAppointmentTypes] = useState([]);
-  const [rooms, setRooms] = useState([]);
   const [languages, setLanguages] = useState([]);
   const [loadingLanguages, setLoadingLanguages] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -88,12 +94,7 @@ const AppointmentForm = ({
   const searchPatients = useCallback(async (search = '') => {
     try {
       setLoadingPatients(true);
-      const result = await patientService.getAllPatients(
-        1,
-        20,
-        search,
-        'active'
-      );
+      const result = await patientService.getAllPatients(1, 20, search, 'active');
       setPatients(result.patients || []);
     } catch (err) {
       console.error('Error searching patients:', err);
@@ -102,37 +103,20 @@ const AppointmentForm = ({
     }
   }, []);
 
-  const searchProviders = useCallback(async (search = '') => {
-    try {
-      setLoadingProviders(true);
-      const result = await providerService.getAllProviders(1, 20, search, true);
-      setProviders(result.providers || []);
-    } catch (err) {
-      console.error('Error searching providers:', err);
-    } finally {
-      setLoadingProviders(false);
-    }
+  // Providers & appointment types now come from Redux (cached)
+  // These search functions filter the cached data locally
+  const searchProviders = useCallback((search = '') => {
+    // Providers are already in Redux - local filter is enough
+    setLoadingProviders(false);
   }, []);
 
-  const searchAppointmentTypes = useCallback(async (search = '') => {
-    try {
-      setLoadingAppointmentTypes(true);
-      const result = await appointmentTypeService.getAllAppointmentTypes(
-        1,
-        20,
-        search,
-        true
-      );
-      setAppointmentTypes(result.appointmentTypes || []);
-    } catch (err) {
-      console.error('Error searching appointment types:', err);
-    } finally {
-      setLoadingAppointmentTypes(false);
-    }
+  const searchAppointmentTypes = useCallback((search = '') => {
+    // Appointment types are already in Redux - local filter is enough
+    setLoadingAppointmentTypes(false);
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchLocalData = async () => {
       try {
         setLoadingData(true);
 
@@ -142,18 +126,12 @@ const AppointmentForm = ({
           throw new Error('Authentication required. Please log in again.');
         }
 
-        const [patientsResult, providersResult, typesResult, roomsResult, languagesResult] =
-          await Promise.all([
-            patientService.getAllPatients(1, 100, '', 'active'),
-            providerService.getAllProviders(1, 100, '', true),
-            appointmentTypeService.getAllAppointmentTypes(1, 100, '', true),
-            roomService.getAllRooms(1, 100, '', true),
-            languageService.getAllLanguages(true),
-          ]);
+        // Only fetch patients and languages — providers, rooms, appointmentTypes come from Redux
+        const [patientsResult, languagesResult] = await Promise.all([
+          patientService.getAllPatients(1, 100, '', 'active'),
+          languageService.getAllLanguages(true),
+        ]);
         setPatients(patientsResult.patients || []);
-        setProviders(providersResult.providers || []);
-        setAppointmentTypes(typesResult.appointmentTypes || []);
-        setRooms(roomsResult.rooms || []);
         setLanguages(languagesResult || []);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -165,7 +143,7 @@ const AppointmentForm = ({
       }
     };
 
-    fetchData();
+    fetchLocalData();
   }, []);
 
   const [conflictError, setConflictError] = useState('');
@@ -1859,17 +1837,17 @@ const AppointmentForm = ({
                       clearErrors('endTime');
                     }}
                     minTime={minTime}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      error: !!errors.endTime || !!conflictError,
-                      helperText:
-                        errors.endTime?.message ||
-                        (conflictError && checkingConflict
-                          ? 'Checking availability...'
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: !!errors.endTime || !!conflictError,
+                        helperText:
+                          errors.endTime?.message ||
+                          (conflictError && checkingConflict
+                            ? 'Checking availability...'
                           : conflictError
                           ? 'Time slot has conflicts'
-                          : ''),
+                            : ''),
                       InputProps: conflictError
                         ? {
                             endAdornment: (
@@ -1881,9 +1859,9 @@ const AppointmentForm = ({
                             ),
                           }
                         : undefined,
-                    },
-                  }}
-                  disabled={checkingConflict}
+                      },
+                    }}
+                    disabled={checkingConflict}
                   />
                 );
               }}

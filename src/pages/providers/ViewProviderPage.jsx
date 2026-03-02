@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -23,15 +23,19 @@ import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
 } from "@mui/icons-material";
-import { providerService } from "../../services/provider.service";
+import { useProvider } from "../../hooks/queries/useProviders";
 
 const ViewProviderPage = () => {
   const navigate = useNavigate();
   const { providerId } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [provider, setProvider] = useState(null);
+  const { data: provider, isLoading: loading, error: queryError } = useProvider(providerId);
   const [tabValue, setTabValue] = useState(0);
+
+  const error = queryError
+    ? queryError.response?.data?.error?.message ||
+      queryError.response?.data?.message ||
+      "Failed to load provider. Please try again."
+    : "";
 
   const formatSpecialty = (value) => {
     if (!value) return '-';
@@ -48,30 +52,6 @@ const ViewProviderPage = () => {
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const data = await providerService.getProviderById(providerId);
-        setProvider(data);
-      } catch (err) {
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            "Failed to load provider. Please try again."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (providerId) {
-      fetchData();
-    }
-  }, [providerId]);
 
   if (loading) {
     return (
@@ -171,7 +151,7 @@ const ViewProviderPage = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
