@@ -18,6 +18,8 @@ import {
   selectCachedProviderById,
   selectProviderDetailLoading,
   selectProviderListError,
+  updateProviderInList,
+  invalidateProviderDetail,
 } from '../../store/slices/providerSlice';
 
 const EditProviderPage = () => {
@@ -61,8 +63,7 @@ const EditProviderPage = () => {
     }
   };
 
-  const loading = detailLoading && !provider;
-  if (detailLoading) {
+  if (detailLoading && !provider) {
     return (
       <Box
         display="flex"
