@@ -2,19 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Typography,
   Paper,
   Alert,
-  IconButton,
-  Button,
-  CircularProgress,
 } from "@mui/material";
-import {
-  ArrowBack as ArrowBackIcon,
-} from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { patientService } from "../../services/patient.service";
-import PatientForm from "../../components/patients/PatientForm";
+import NewPatientIntakeForm from "../../components/patients/NewPatientIntakeForm";
 
 const CreatePatientPage = () => {
   const navigate = useNavigate();
@@ -67,57 +60,26 @@ const CreatePatientPage = () => {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
-        <IconButton onClick={handleBack}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Create Patient
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Enter patient details to create a new patient record.
-          </Typography>
-        </Box>
-      </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
           {error}
         </Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <PatientForm
+      <Paper
+        sx={{
+          p: { xs: 0.75, sm: 1.25 },
+          borderRadius: 2,
+          border: '1px solid #dfe5eb',
+          boxShadow: '0 4px 18px rgba(15, 23, 42, 0.04)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <NewPatientIntakeForm
           onSubmit={handleSubmit}
           loading={saving}
-          isEditMode={false}
-          hideButtons={true}
-          formId="create-patient-form"
+          onCancel={handleBack}
         />
-
-        <Box
-          sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 4 }}
-        >
-          <Button
-            variant="outlined"
-            onClick={handleBack}
-            disabled={saving}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            type="submit"
-            form="create-patient-form"
-            disabled={saving}
-            startIcon={
-              saving ? <CircularProgress size={20} color="inherit" /> : null
-            }
-          >
-            {saving ? "Creating..." : "Create Patient"}
-          </Button>
-        </Box>
       </Paper>
     </Box>
   );
