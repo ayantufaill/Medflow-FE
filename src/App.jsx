@@ -30,12 +30,17 @@ import CreatePracticeInfoPage from './pages/practice-info/CreatePracticeInfoPage
 import EditPracticeInfoPage from './pages/practice-info/EditPracticeInfoPage';
 import ViewPracticeInfoPage from './pages/practice-info/ViewPracticeInfoPage';
 import PatientsListPage from './pages/patients/PatientsListPage';
+import PatientManagementPage from './pages/patients/PatientManagementPage';
 import CreatePatientPage from './pages/patients/CreatePatientPage';
 import EditPatientPage from './pages/patients/EditPatientPage';
 import ViewPatientPage from './pages/patients/ViewPatientPage';
+import RedirectToPatientDetails from './pages/patients/RedirectToPatientDetails';
 import ViewPatientInsurancePage from './pages/patients/ViewPatientInsurancePage';
 import ViewPatientAllergyPage from './pages/patients/ViewPatientAllergyPage';
 import PatientMedicalHistoryPage from './pages/patients/PatientMedicalHistoryPage';
+import PatientSignedDocumentsPage from './pages/patients/PatientSignedDocumentsPage';
+import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage';
+import PatientDetailPage from './pages/patients/PatientDetailPage';
 import AllergiesListPage from './pages/allergies/AllergiesListPage';
 import CreateAllergyPage from './pages/allergies/CreateAllergyPage';
 import EditAllergyPage from './pages/allergies/EditAllergyPage';
@@ -86,6 +91,7 @@ import UploadDocumentPage from './pages/documents/UploadDocumentPage';
 import EditDocumentPage from './pages/documents/EditDocumentPage';
 import ViewDocumentPage from './pages/documents/ViewDocumentPage';
 import PatientDocumentsPage from './pages/documents/PatientDocumentsPage';
+import InsuranceFormMockupPage from './pages/demo/InsuranceFormMockupPage';
 // Sprint 5 - Billing Module
 import ServicesListPage from './pages/services/ServicesListPage';
 import CreateServicePage from './pages/services/CreateServicePage';
@@ -317,6 +323,14 @@ function App() {
                 }
               />
               <Route
+                path="/demo/insurance-form"
+                element={
+                  <ProtectedRoute requireAllRoles={true}>
+                    <InsuranceFormMockupPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/profile"
                 element={
                   <ProtectedRoute requireAllRoles={true}>
@@ -431,7 +445,7 @@ function App() {
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
-                      <PatientsListPage />
+                      <PatientManagementPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -442,6 +456,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
                       <CreatePatientPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/details/:patientId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <PatientDetailPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -461,7 +485,7 @@ function App() {
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
-                      <ViewPatientPage />
+                      <RedirectToPatientDetails />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -492,6 +516,26 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
                     <Layout>
                       <PatientMedicalHistoryPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/signed-documents"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <PatientSignedDocumentsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/dental-history"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientDentalHistoryPage />
                     </Layout>
                   </ProtectedRoute>
                 }

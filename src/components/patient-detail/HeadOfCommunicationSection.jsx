@@ -1,0 +1,43 @@
+import { Box, Typography, Avatar, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { getInitials } from './utils';
+
+const sectionTitleSx = {
+  fontSize: '0.95rem',
+  fontWeight: 700,
+  color: 'primary.main',
+  mb: 1.5,
+};
+
+export default function HeadOfCommunicationSection({ patient }) {
+  return (
+    <Box>
+      <Typography variant="subtitle1" sx={sectionTitleSx}>
+        Head of Communication
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5 }}>
+        <Avatar
+          sx={{
+            width: 32,
+            height: 32,
+            bgcolor: 'primary.main',
+            fontSize: '0.75rem',
+          }}
+        >
+          {getInitials(patient?.firstName, patient?.lastName)}
+        </Avatar>
+        <FormControl size="small" sx={{ minWidth: 0, flex: 1 }}>
+          <InputLabel>Head of Communication</InputLabel>
+          <Select label="Head of Communication" value="current" sx={{ borderRadius: 1.5 }}>
+            <MenuItem value="current">
+              {patient?.firstName || 'Anna'} {patient?.lastName || ''}
+            </MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        For patients under 16, send all communication to the Head of Communication. Patients above
+        16 will receive their own communication.
+      </Typography>
+    </Box>
+  );
+}

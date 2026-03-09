@@ -25,33 +25,38 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  FormControl,
-  InputLabel,
-  Select,
-  Grid,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Search as SearchIcon,
-  Add as AddIcon,
+  PersonAdd as PersonAddIcon,
+  Upload as UploadIcon,
+  PersonOff as PersonOffIcon,
   Refresh as RefreshIcon,
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon,
   Clear as ClearIcon,
   FilterAltOff,
+  Info as InfoIcon,
 } from '@mui/icons-material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { usePatients } from '../../hooks/redux/usePatient';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
-const PatientsListPage = () => {
+const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+
+  const handlePatientClick = (patientId, patientObj) => {
+    if (embedded && onPatientSelect) {
+      onPatientSelect(patientId, patientObj);
+    } else {
+      navigate(`/patients/details/${patientId}`, { state: { patient: patientObj } });
+    }
+  };
 
   // ─── Redux State ─────────────────────────────────────────
   const {
@@ -69,8 +74,6 @@ const PatientsListPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dobStartDate, setDobStartDate] = useState(null);
-  const [dobEndDate, setDobEndDate] = useState(null);
   const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
@@ -85,9 +88,13 @@ const PatientsListPage = () => {
   });
   const [statusLoading, setStatusLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [sortByName, setSortByName] = useState(true);
+  const [deactivateDialog, setDeactivateDialog] = useState({ open: false, count: 0 });
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const today = useMemo(() => dayjs(), []);
+  const effectiveStatus = statusFilter;
 
   // ─── Fetch via Redux (only when params change) ──────────
   useEffect(() => {
@@ -95,18 +102,15 @@ const PatientsListPage = () => {
     if (sanitizedSearch) {
       sanitizedSearch = sanitizedSearch.replace(/^\+/, '').trim();
     }
-    const dobStart = dobStartDate ? dayjs(dobStartDate).format('YYYY-MM-DD') : '';
-    const dobEnd = dobEndDate ? dayjs(dobEndDate).format('YYYY-MM-DD') : '';
-
     fetchPatientsRedux({
       page: page + 1,
       limit: rowsPerPage,
       search: sanitizedSearch,
-      status: statusFilter,
-      dobStart,
-      dobEnd,
+      status: effectiveStatus,
+      dobStart: '',
+      dobEnd: '',
     });
-  }, [page, rowsPerPage, debouncedSearch, statusFilter, dobStartDate, dobEndDate, fetchPatientsRedux]);
+  }, [page, rowsPerPage, debouncedSearch, effectiveStatus, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
@@ -156,7 +160,12 @@ const PatientsListPage = () => {
 
   const handleViewDetails = (patientId) => {
     handleActionMenuClose();
-    navigate(`/patients/${patientId}`);
+    if (embedded && onPatientSelect) {
+      const patientObj = displayPatients.find((p) => (p._id || p.id) === patientId);
+      onPatientSelect(patientId, patientObj);
+    } else {
+      navigate(`/patients/details/${patientId}`);
+    }
   };
 
   const handleEdit = (patientId) => {
@@ -183,8 +192,6 @@ const PatientsListPage = () => {
   const handleResetFilters = () => {
     setSearch('');
     setStatusFilter('');
-    setDobStartDate(null);
-    setDobEndDate(null);
     setPage(0);
   };
 
@@ -192,96 +199,152 @@ const PatientsListPage = () => {
     refetch();
   };
 
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedIds(patients.map((p) => p._id || p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (patientId) => {
+    setSelectedIds((prev) =>
+      prev.includes(patientId) ? prev.filter((id) => id !== patientId) : [...prev, patientId]
+    );
+  };
+
+  const handleDeactivateSelected = () => {
+    setDeactivateDialog({ open: true, count: selectedIds.length });
+  };
+
+  const handleDeactivateConfirm = async () => {
+    try {
+      setDeactivateLoading(true);
+      for (const id of selectedIds) {
+        await patientService.updatePatient(id, { isActive: false });
+      }
+      showSnackbar(`Deactivated ${selectedIds.length} patient(s)`, 'success');
+      setSelectedIds([]);
+      setDeactivateDialog({ open: false, count: 0 });
+      refetch();
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate.';
+      showSnackbar(msg, 'error');
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
+  const handleImportPatient = () => {
+    showSnackbar('Import Patient coming soon', 'info');
+  };
+
+  const computeAge = (dateOfBirth) => {
+    if (!dateOfBirth) return '-';
+    try {
+      const today = new Date();
+      const dob = new Date(dateOfBirth);
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+      return age;
+    } catch {
+      return '-';
+    }
+  };
+
+  const displayPatients = useMemo(() => {
+    const list = [...patients];
+    if (sortByName) {
+      list.sort((a, b) => {
+        const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
+        const nb = `${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase();
+        return na.localeCompare(nb);
+      });
+    }
+    return list;
+  }, [patients, sortByName]);
+
   const totalPatients = pagination?.total || 0;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Typography variant="h4" fontWeight="bold">Patient Management</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/patients/new')}>
-          Add Patient
-        </Button>
-      </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
       )}
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <Grid container spacing={2} sx={{ mb: 3, alignItems: 'flex-end' }}>
-            <Grid size={8}>
-              <TextField
-                fullWidth
-                placeholder="Search by name, email, phone, or patient code..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                size="small"
-                InputProps={{
-                  startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
-                  endAdornment: search && (
-                    <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setSearch('')} edge="end"><ClearIcon /></IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="status-filter-label">Filter by Status</InputLabel>
-                <Select
-                  labelId="status-filter-label"
-                  id="status-filter"
-                  value={statusFilter}
-                  label="Filter by Status"
-                  onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-                >
-                  <MenuItem value=""><em>All Status</em></MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={5}>
-              <DatePicker
-                label="DOB Start Date"
-                value={dobStartDate}
-                onChange={(newValue) => { setDobStartDate(newValue); setPage(0); }}
-                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
-                maxDate={dobEndDate || today}
-              />
-            </Grid>
-            <Grid size={5}>
-              <DatePicker
-                label="DOB End Date"
-                value={dobEndDate}
-                onChange={(newValue) => { setDobEndDate(newValue); setPage(0); }}
-                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
-                minDate={dobStartDate}
-                maxDate={today}
-              />
-            </Grid>
-            <Grid size={2}>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
-                <Tooltip title="Refresh">
-                  <span>
-                    <IconButton onClick={handleRefresh} disabled={loading} color="primary" sx={{ flexShrink: 0 }}>
-                      <RefreshIcon />
+        {/* Row 1: Search + Action buttons (reference layout) */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+            <TextField
+              placeholder="Search Patient"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              size="small"
+              sx={{ flex: '1 1 280px', maxWidth: 480 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
+                      <SearchIcon />
                     </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Reset Filters">
-                  <span>
-                    <IconButton onClick={handleResetFilters} disabled={loading || (!dobStartDate && !dobEndDate && !statusFilter)} color="primary" sx={{ flexShrink: 0 }}>
-                      <FilterAltOff />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Box>
-            </Grid>
-          </Grid>
-        </LocalizationProvider>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Tooltip title="Search help">
+              <IconButton size="small" color="info"><InfoIcon /></IconButton>
+            </Tooltip>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<PersonAddIcon />}
+                onClick={() => navigate('/patients/new')}
+              >
+                Add Patient
+              </Button>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<UploadIcon />}
+                onClick={handleImportPatient}
+              >
+                Import Patient
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<PersonOffIcon />}
+                disabled={selectedIds.length === 0}
+                onClick={handleDeactivateSelected}
+              >
+                Deactivate Patient(s)
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Row 2: Filter checkboxes */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2, flexWrap: 'wrap' }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={sortByName}
+                  onChange={(e) => setSortByName(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Sort By Name"
+            />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 1 }}>
+              <Tooltip title="Refresh">
+                <IconButton size="small" onClick={handleRefresh} disabled={loading}><RefreshIcon /></IconButton>
+              </Tooltip>
+              <Tooltip title="Reset Filters">
+                <IconButton size="small" onClick={handleResetFilters}><FilterAltOff /></IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
 
         {loading ? (
           <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
@@ -297,55 +360,81 @@ const PatientsListPage = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          indeterminate={selectedIds.length > 0 && selectedIds.length < displayPatients.length}
+                          checked={displayPatients.length > 0 && selectedIds.length === displayPatients.length}
+                          onChange={handleSelectAll}
+                        />
+                      </TableCell>
+                      <TableCell>Patient Number</TableCell>
                       <TableCell>Name</TableCell>
-                      <TableCell>Code</TableCell>
-                      <TableCell>DOB</TableCell>
-                      <TableCell>Phone</TableCell>
+                      <TableCell>Age</TableCell>
+                      <TableCell>Date of Birth</TableCell>
                       <TableCell>Email</TableCell>
+                      <TableCell>Telephone Number</TableCell>
+                      <TableCell>Sex</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {patients.length === 0 ? (
+                    {displayPatients.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                           <Typography color="text.secondary">No patients found</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      patients.map((patient) => (
-                        <TableRow
-                          key={patient._id || patient.id}
-                          hover
-                          sx={{ cursor: 'pointer' }}
-                          onClick={() => navigate(`/patients/${patient._id || patient.id}`)}
-                        >
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', fontSize: '1rem' }}>
-                                {getPatientInitials(patient.firstName, patient.lastName)}
-                              </Avatar>
-                              <Typography variant="body2">{patient.firstName} {patient.lastName}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>{patient.patientCode || '-'}</TableCell>
-                          <TableCell>{formatDate(patient.dateOfBirth)}</TableCell>
-                          <TableCell>{patient.phonePrimary || '-'}</TableCell>
-                          <TableCell>{patient.email || '-'}</TableCell>
-                          <TableCell>
-                            <Chip label={patient.isActive ? 'Active' : 'Inactive'} color={patient.isActive ? 'success' : 'default'} size="small" />
-                          </TableCell>
-                          <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleActionMenuOpen(e, patient._id || patient.id, `${patient.firstName} ${patient.lastName}`, patient.isActive)}
-                            >
-                              <MoreVertIcon />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      displayPatients.map((patient) => {
+                        const pid = patient._id || patient.id;
+                        const isSelected = selectedIds.includes(pid);
+                        return (
+                          <TableRow
+                            key={pid}
+                            hover
+                            selected={isSelected}
+                            sx={{ cursor: 'pointer' }}
+                            onClick={() => handlePatientClick(pid, patient)}
+                          >
+                            <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={() => handleSelectOne(pid)}
+                              />
+                            </TableCell>
+                            <TableCell>{patient.patientCode || '-'}</TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.875rem' }}>
+                                  {getPatientInitials(patient.firstName, patient.lastName)}
+                                </Avatar>
+                                <Typography variant="body2">{patient.firstName} {patient.lastName}</Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>{computeAge(patient.dateOfBirth)}</TableCell>
+                            <TableCell>{formatDate(patient.dateOfBirth)}</TableCell>
+                            <TableCell>{patient.email || '-'}</TableCell>
+                            <TableCell>{patient.phonePrimary || '-'}</TableCell>
+                            <TableCell>{patient.gender === 'male' ? 'Male' : patient.gender === 'female' ? 'Female' : patient.gender || '-'}</TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={patient.isActive !== false ? 'Active' : 'Inactive'}
+                                color={patient.isActive !== false ? 'success' : 'default'}
+                              />
+                            </TableCell>
+                            <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleActionMenuOpen(e, pid, `${patient.firstName} ${patient.lastName}`, patient.isActive)}
+                              >
+                                <MoreVertIcon />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -391,6 +480,18 @@ const PatientsListPage = () => {
         cancelText="Cancel"
         confirmColor="error"
         loading={deleteLoading}
+      />
+
+      <ConfirmationDialog
+        open={deactivateDialog.open}
+        onClose={() => setDeactivateDialog({ open: false, count: 0 })}
+        onConfirm={handleDeactivateConfirm}
+        title="Deactivate Patient(s)"
+        message={`Deactivate ${deactivateDialog.count} selected patient(s)? They will be marked inactive.`}
+        confirmText="Deactivate"
+        cancelText="Cancel"
+        confirmColor="error"
+        loading={deactivateLoading}
       />
     </Box>
   );

@@ -790,7 +790,7 @@ const PatientForm = ({
 
                 return (
                   <DatePicker
-                    label="Date of Birth *"
+                    label="Date of Birth"
                     value={dateValue}
                     onChange={(newValue) => {
                       field.onChange(newValue);
