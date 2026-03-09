@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -8,68 +8,110 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  Grid,
+  Divider,
+  IconButton,
+  Tooltip,
   Table,
   TableBody,
   TableRow,
   TableCell,
   TableHead,
-  Card,
-  CardContent,
-  Grid,
-  Chip,
-  Divider,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
-  Healing as DentalIcon,
-  Build as ProcedureIcon,
-  CalendarMonth as TimelineIcon,
-  Image as XRayIcon,
-  Note as NoteIcon,
-  Refresh as RefreshIcon,
-  FilterList as FilterIcon,
-} from '@mui/icons-material';
-import { patientService } from '../../services/patient.service';
-import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
+  Print as PrintIcon,
+  Edit as EditIcon,
+  CheckCircle as CheckCircleIcon,
+  Check as CheckIcon,
+} from "@mui/icons-material";
 
-// Mock data for UI preview — replace with API when backend is ready
-const MOCK_PROCEDURES = [
-  { id: '1', date: '2025-01-15', procedure: 'D0120 - Periodic Oral Evaluation', tooth: '–', status: 'Completed', provider: 'Dr. Smith' },
-  { id: '2', date: '2024-11-20', procedure: 'D1110 - Adult Prophy (Cleaning)', tooth: '–', status: 'Completed', provider: 'Dr. Smith' },
-  { id: '3', date: '2024-08-10', procedure: 'D2391 - Resin Composite, 1 surface', tooth: '#3 (ULM)', status: 'Completed', provider: 'Dr. Jones' },
-  { id: '4', date: '2024-05-05', procedure: 'D0274 - Bitewing - 2 films', tooth: '–', status: 'Completed', provider: 'Dr. Smith' },
-  { id: '5', date: '2024-02-01', procedure: 'D0150 - Comprehensive Oral Eval', tooth: '–', status: 'Completed', provider: 'Dr. Jones' },
-];
+import { patientService } from "../../services/patient.service";
+import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 
-const MOCK_TIMELINE = [
-  { id: '1', date: '2025-01-15', title: 'Periodic exam', type: 'procedure' },
-  { id: '2', date: '2024-11-20', title: 'Prophy (cleaning)', type: 'procedure' },
-  { id: '3', date: '2024-08-10', title: 'Filling #3', type: 'procedure' },
-  { id: '4', date: '2024-05-05', title: 'Bitewing X-ray', type: 'xray' },
-  { id: '5', date: '2024-02-01', title: 'New patient exam', type: 'exam' },
-];
+const MOCK_DENTAL_HISTORY = {
+  generalInfo: {
+    mouthCondition: "good",
+    previousDentist: "Dr. John Smith",
+    recentExamDate: "2020-01-15",
+    recentTreatmentDate: "2019-11-20",
+    immediateConcern: "General checkup",
+    patientSince: "5 years",
+    recentXrayDate: "2020-02-01",
+    dentistVisitFrequency: "6mo",
+  },
 
-const MOCK_NOTES = [
-  { id: '1', date: '2025-01-15', note: 'Patient reports no pain. Good OH. Recommended 6mo recall.' },
-  { id: '2', date: '2024-08-10', note: 'MO composite #3 placed. Patient tolerated procedure well.' },
-];
+  personalHistory: [
+    {
+      id: 1,
+      question: "Are you fearful of dental treatment?",
+      answer: "Yes",
+      scale: 5,
+      note: "patient anxiety",
+      additionalInfo:
+        "The scale represents a Visual Analog Scale (VAS). A number higher than 8 represents a higher probability that perceived prognosis will be lower. These patients are more likely to complain about post-operative discomfort.",
+    },
+    {
+      id: 2,
+      question: "Have you had an unfavorable dental experience?",
+      answer: "Yes",
+      note: "",
+      additionalInfo:
+        "Ensure the incident is acknowledged and not repeated. 'We are more often frightened than hurt.'",
+    },
+    {
+      id: 3,
+      question: "Have you ever had complications from past dental treatment?",
+      answer: "Yes",
+      note: "",
+      additionalInfo:
+        "List problems such as pain management, TMD, or sensitivity following treatment.",
+    },
+    {
+      id: 4,
+      question: "Do you grind or clench your teeth?",
+      answer: "No",
+      note: "",
+      additionalInfo:
+        "Bruxism can cause tooth wear, fractures, and TMJ problems.",
+    },
+    {
+      id: 5,
+      question: "Have you had any oral surgery?",
+      answer: "Yes",
+      note: "Wisdom teeth extraction 2018",
+      additionalInfo: "Note type of surgery, date and complications.",
+    },
+    {
+      id: 6,
+      question:
+        "Have you had any teeth removed or missing teeth due to trauma?",
+      answer: "Yes",
+      note: "Gum disease",
+      additionalInfo:
+        "Note which teeth and reason for removal.",
+    },
+  ],
 
-const formatDate = (d) => {
-  if (!d) return '–';
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  reviewStatus: false,
+  lastUpdateDate: "Mar 26, 2020",
 };
 
 const PatientDentalHistoryPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
+
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+  const [dentalHistory] = useState(MOCK_DENTAL_HISTORY);
 
   useEffect(() => {
     let cancelled = false;
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -81,222 +123,550 @@ const PatientDentalHistoryPage = () => {
         if (!cancelled) setLoading(false);
       }
     };
-    fetchData();
-    return () => { cancelled = true; };
-  }, [patientId]);
 
-  const getPatientName = () => {
-    if (patient?.firstName && patient?.lastName) return `${patient.firstName} ${patient.lastName}`;
-    return 'Patient';
-  };
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [patientId]);
 
   if (loading && !patient) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box>
+    <Box
+      sx={{
+        bgcolor: '#f5f5f5',
+        minHeight: '100%',
+        pb: 4,
+        position: 'relative',
+      }}
+    >
       <PatientSectionTabs activeTab="dental" patientId={patientId} />
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(`/patients/details/${patientId}`)}
-            size="small"
-          >
-            Back to patient
-          </Button>
+
+      {/* HEADER */}
+
+      <Box
+        sx={{
+          mt: 1.5,
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box>
-            <Typography variant="h5" fontWeight="bold">
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, color: '#424242', fontSize: '1.1rem' }}
+            >
               Dental History
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {getPatientName()}
-              {patient?.dateOfBirth && ` · DOB: ${formatDate(patient.dateOfBirth)}`}
+            <Typography
+              variant="body2"
+              sx={{ color: '#757575', mt: 0.25 }}
+            >
+              {patient?.firstName || ''} {patient?.lastName || ''} · DOB: {patient?.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Refresh">
-            <IconButton size="small">
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Button variant="outlined" size="small" startIcon={<FilterIcon />}>
-            Filters
+
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button
+            variant="contained"
+            size="small"
+            sx={{
+              textTransform: 'none',
+              borderRadius: 1,
+              bgcolor: '#1976d2',
+              '&:hover': { bgcolor: '#1565c0' },
+            }}
+          >
+            Update Hx
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<CheckIcon />}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 1,
+              bgcolor: '#43a047',
+              '&:hover': { bgcolor: '#388e3c' },
+            }}
+          >
+            Reviewed With Patient
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PrintIcon />}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 1,
+              borderColor: '#9e9e9e',
+              color: '#616161',
+              '&:hover': { borderColor: '#616161' },
+            }}
+          >
+            Print
           </Button>
         </Box>
       </Box>
 
-      {/* Summary cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={4} md={3}>
-          <Card variant="outlined" sx={{ borderRadius: 1.5 }}>
-            <CardContent>
-              <Typography color="text.secondary" variant="body2" gutterBottom>
-                Total Procedures
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {MOCK_PROCEDURES.length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4} md={3}>
-          <Card variant="outlined" sx={{ borderRadius: 1.5 }}>
-            <CardContent>
-              <Typography color="text.secondary" variant="body2" gutterBottom>
-                Last Visit
-              </Typography>
-              <Typography variant="h6" fontWeight={600}>
-                {formatDate(MOCK_PROCEDURES[0]?.date)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4} md={3}>
-          <Card variant="outlined" sx={{ borderRadius: 1.5 }}>
-            <CardContent>
-              <Typography color="text.secondary" variant="body2" gutterBottom>
-                Clinical Notes
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {MOCK_NOTES.length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4} md={3}>
-          <Card variant="outlined" sx={{ borderRadius: 1.5 }}>
-            <CardContent>
-              <Typography color="text.secondary" variant="body2" gutterBottom>
-                X-Rays
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                1
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* GENERAL INFORMATION */}
 
-      {/* Tabs: Procedures | Timeline | Notes */}
-      <Paper variant="outlined" sx={{ borderRadius: 1.5, borderColor: 'grey.300', overflow: 'hidden' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-            <Tab label="Procedures" icon={<ProcedureIcon />} iconPosition="start" />
-            <Tab label="Timeline" icon={<TimelineIcon />} iconPosition="start" />
-            <Tab label="Clinical Notes" icon={<NoteIcon />} iconPosition="start" />
-            <Tab label="X-Rays" icon={<XRayIcon />} iconPosition="start" />
-          </Tabs>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          mb: 2,
+          borderRadius: 1,
+          border: '1px solid #e0e0e0',
+          bgcolor: '#ffffff',
+        }}
+      >
+
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 2,
+            fontWeight: 700,
+            color: '#424242',
+            fontSize: '1.05rem',
+          }}
+        >
+          General Information
+        </Typography>
+
+        <Grid container spacing={2}>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
+              >
+                How would you rate the condition of your mouth?
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  px: 1.5,
+                  py: 1,
+                  fontSize: 14,
+                  bgcolor: '#ffffff',
+                }}
+              >
+                {dentalHistory.generalInfo.mouthCondition}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
+              >
+                Previous Dentist
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  px: 1.5,
+                  py: 1,
+                  fontSize: 14,
+                  bgcolor: '#ffffff',
+                }}
+              >
+                {dentalHistory.generalInfo.previousDentist}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
+              >
+                Date of most recent dental exam
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  px: 1.5,
+                  py: 1,
+                  fontSize: 14,
+                  bgcolor: '#ffffff',
+                }}
+              >
+                {dentalHistory.generalInfo.recentExamDate}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
+              >
+                Recent treatment date
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  px: 1.5,
+                  py: 1,
+                  fontSize: 14,
+                  bgcolor: '#ffffff',
+                }}
+              >
+                {dentalHistory.generalInfo.recentTreatmentDate}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
+              >
+                Immediate concern
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  px: 1.5,
+                  py: 1,
+                  fontSize: 14,
+                  bgcolor: '#ffffff',
+                }}
+              >
+                {dentalHistory.generalInfo.immediateConcern}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
+              >
+                Patient since
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  px: 1.5,
+                  py: 1,
+                  fontSize: 14,
+                  bgcolor: '#ffffff',
+                }}
+              >
+                {dentalHistory.generalInfo.patientSince}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 2,
+                mt: 0.5,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: '#616161' }}
+              >
+                I routinely see my dentist every:
+              </Typography>
+              <RadioGroup
+                row
+                value={dentalHistory.generalInfo.dentistVisitFrequency}
+                sx={{
+                  '& .MuiFormControlLabel-root': { mr: 2 },
+                  '& .MuiTypography-root': { fontSize: 14 },
+                }}
+              >
+                <FormControlLabel
+                  value="3mo"
+                  control={<Radio size="small" />}
+                  label="3 Mo."
+                />
+                <FormControlLabel
+                  value="4mo"
+                  control={<Radio size="small" />}
+                  label="4 Mo."
+                />
+                <FormControlLabel
+                  value="6mo"
+                  control={<Radio size="small" />}
+                  label="6 Mo."
+                />
+                <FormControlLabel
+                  value="12mo"
+                  control={<Radio size="small" />}
+                  label="12 Mo."
+                />
+                <FormControlLabel
+                  value="not"
+                  control={<Radio size="small" />}
+                  label="Not routinely"
+                />
+              </RadioGroup>
+            </Box>
+          </Grid>
+        </Grid>
+
+        <Box sx={{ mt: 2, display: "flex", justifyContent: "space-between" }}>
+          <Typography variant="body2">
+            Date of this medical history update: {dentalHistory.lastUpdateDate}
+          </Typography>
+
+          {dentalHistory.reviewStatus && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CheckCircleIcon color="success" />
+              <Typography variant="caption">
+                Reviewed with patient
+              </Typography>
+            </Box>
+          )}
         </Box>
-        <Box sx={{ p: 2.5 }}>
-          {tabValue === 0 && (
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                Treatment history (sample data)
-              </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Procedure</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Tooth</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Provider</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {MOCK_PROCEDURES.map((row) => (
-                    <TableRow key={row.id} hover>
-                      <TableCell>{formatDate(row.date)}</TableCell>
-                      <TableCell>{row.procedure}</TableCell>
-                      <TableCell>{row.tooth}</TableCell>
-                      <TableCell>{row.provider}</TableCell>
-                      <TableCell>
-                        <Chip label={row.status} size="small" color="success" variant="outlined" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          )}
-          {tabValue === 1 && (
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                Chronological activity
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {MOCK_TIMELINE.map((item) => (
-                  <Box
-                    key={item.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      py: 1.25,
-                      px: 1.5,
-                      borderRadius: 1,
-                      bgcolor: 'grey.50',
-                      border: '1px solid',
-                      borderColor: 'grey.200',
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
-                      {formatDate(item.date)}
-                    </Typography>
-                    <Chip
-                      label={item.type}
-                      size="small"
-                      variant="outlined"
-                      sx={{ textTransform: 'capitalize' }}
-                    />
-                    <Typography variant="body2" fontWeight={500}>
-                      {item.title}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          )}
-          {tabValue === 2 && (
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                Notes from visits
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {MOCK_NOTES.map((item) => (
-                  <Paper key={item.id} variant="outlined" sx={{ p: 2, borderColor: 'grey.300' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(item.date)}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>
-                      {item.note}
-                    </Typography>
-                  </Paper>
-                ))}
-              </Box>
-            </Box>
-          )}
-          {tabValue === 3 && (
-            <Box sx={{ py: 4, textAlign: 'center' }}>
-              <XRayIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">
-                X-ray images will appear here when linked to the patient record.
-              </Typography>
-            </Box>
-          )}
+
+      </Paper>
+
+      {/* TABS */}
+
+      <Paper
+        variant="outlined"
+        sx={{
+          mb: 2,
+          borderRadius: 1,
+          border: '1px solid #e0e0e0',
+          bgcolor: '#ffffff',
+        }}
+      >
+        <Box sx={{ borderBottom: '1px solid #e0e0e0', mb: 2 }}>
+          <Tabs
+         value={tabValue}
+            onChange={(e, v) => setTabValue(v)}
+            TabIndicatorProps={{ style: { height: 3 } }}
+          >
+            <Tab
+              label="Summary"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: 14,
+                minHeight: 40,
+              }}
+            />
+            <Tab
+              label="Full Dental History"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: 14,
+                minHeight: 40,
+              }}
+            />
+          </Tabs>
         </Box>
       </Paper>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-        This is a UI preview with sample data. Connect your data source to show real dental history.
-      </Typography>
+      {/* SUMMARY */}
+
+      {tabValue === 0 && (
+
+        <Box>
+
+
+          {/* TABLE */}
+
+          <Paper
+            variant="outlined"
+            sx={{
+              borderRadius: 1,
+              border: '1px solid #e0e0e0',
+              bgcolor: '#ffffff',
+            }}
+          >
+
+            <Table>
+
+              <TableHead>
+                <TableRow sx={{ background: "#fafafa" }}>
+                  <TableCell sx={{ width: "55%" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#616161' }}>Personal History</Typography>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <Typography variant="caption">🟢 Low</Typography>
+                        <Typography variant="caption">🟡 Moderate</Typography>
+                        <Typography variant="caption">🔴 High</Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+              
+                  <TableCell sx={{ width: "10%" }} align="center">
+                  </TableCell>
+              
+                  <TableCell sx={{ width: "35%" }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#616161' }}>
+                      Additional information
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+
+                {dentalHistory.personalHistory.map((item) => (
+
+                  <TableRow
+                    key={item.id}
+                    sx={{
+                      borderBottom: "2px solid #e0e0e0",
+                    }}
+                  >
+
+                    <TableCell>
+
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#424242' }}>
+                        {item.id}. {item.question}
+                      </Typography>
+
+                      {item.scale && (
+                        <Typography variant="caption" sx={{ display: 'block', color: '#9e9e9e', mt: 0.5 }}>
+                          on a scale of 1 to 10: {item.scale}
+                        </Typography>
+                      )}
+
+                      {item.note && (
+                        <Typography variant="caption" display="block" sx={{ color: '#9e9e9e', mt: 0.5 }}>
+                          Doctor's Note: {item.note}
+                        </Typography>
+                      )}
+
+                    </TableCell>
+
+                    <TableCell align="center">
+
+                      <Typography
+                       variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          color: item.answer === "Yes" ? "#ef5350" : '#616161',
+                        }}
+                      >
+                        {item.answer}
+                      </Typography>
+
+                    </TableCell>
+
+                    <TableCell
+                      sx={{
+                        background: "#f5f5f5",
+                        maxHeight: 120,
+                        overflow: "auto",
+                      }}
+                    >
+
+                      <Typography variant="body2" sx={{ color: '#616161' }}>
+                        {item.additionalInfo}
+                      </Typography>
+
+                    </TableCell>
+
+                  </TableRow>
+
+                ))}
+
+              </TableBody>
+
+            </Table>
+
+          </Paper>
+
+        </Box>
+
+      )}
+
+      {tabValue === 1 && (
+        <Box sx={{ py: 5, textAlign: "center" }}>
+          <Typography color="text.secondary">
+            Full dental history will appear here
+          </Typography>
+        </Box>
+      )}
+
+      {/* Signature */}
+      <Box sx={{ mt: 2 }}>
+        <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          mb: 0,
+          borderRadius: 1,
+          border: '1px solid #e0e0e0',
+          bgcolor: '#ffffff',
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box>
+            <Typography
+              variant="caption"
+              sx={{ color: '#9e9e9e', mb: 0.5, display: 'block' }}
+            >
+              Patient/Guardian Signature:
+            </Typography>
+            <Box
+              sx={{
+                width: 240,
+                height: 72,
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                bgcolor: '#fafafa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ color: '#bdbdbd' }}
+              >
+                Signature
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
+      </Box>
+
     </Box>
   );
 };
