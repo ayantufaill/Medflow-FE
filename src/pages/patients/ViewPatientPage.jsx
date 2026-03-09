@@ -58,6 +58,8 @@ import {
   Visibility as VisibilityIcon,
   History as HistoryIcon,
   CameraAlt as CameraAltIcon,
+  Security as SecurityIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -632,172 +634,323 @@ const ViewPatientPage = () => {
                 onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
                 onBalance={() => setTabValue(1)}
                 onDocuments={() => setTabValue(5)}
+                onAddFamilyMember={() => showSnackbar('Add family member — coming soon', 'info')}
               />
             </Box>
           )}
 
           {/* Insurance Tab */}
           {tabValue === 1 && (
-            <Box sx={{ p: 3 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
-                  Insurance
-                </Typography>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={handleInsuranceAdd}
-                >
-                  Add Insurance
-                </Button>
-              </Box>
-              <Grid
-                container
-                spacing={2}
-                sx={{ mb: 3, alignItems: 'flex-end' }}
-              >
-                <Grid size={9}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Search insurance..."
-                    value={insuranceSearch}
-                    onChange={(e) => setInsuranceSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon />
-                        </InputAdornment>
-                      ),
-                      endAdornment: insuranceSearch && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => setInsuranceSearch('')}
-                            edge="end"
-                          >
-                            <ClearIcon />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                <Grid size={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="insurance-status-filter-label">
-                      Status
-                    </InputLabel>
-                    <Select
-                      labelId="insurance-status-filter-label"
-                      value={insuranceStatusFilter}
-                      label="Status"
-                      onChange={(e) => setInsuranceStatusFilter(e.target.value)}
-                    >
-                      <MenuItem value="">
-                        <em>All</em>
-                      </MenuItem>
-                      <MenuItem value="active">Active</MenuItem>
-                      <MenuItem value="inactive">Inactive</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="insurance-verification-filter-label">
-                      Verification
-                    </InputLabel>
-                    <Select
-                      labelId="insurance-verification-filter-label"
-                      value={insuranceVerificationFilter}
-                      label="Verification"
-                      onChange={(e) =>
-                        setInsuranceVerificationFilter(e.target.value)
-                      }
-                    >
-                      <MenuItem value="">
-                        <em>All</em>
-                      </MenuItem>
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="verified">Verified</MenuItem>
-                      <MenuItem value="failed">Failed</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={3.5}>
-                  <DatePicker
-                    label="Effective From"
-                    value={insuranceEffectiveDateStart}
-                    onChange={(newValue) =>
-                      setInsuranceEffectiveDateStart(newValue)
-                    }
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: 'small',
-                      },
-                    }}
-                    maxDate={insuranceEffectiveDateEnd || undefined}
-                  />
-                </Grid>
-                <Grid size={3.5}>
-                  <DatePicker
-                    label="Effective To"
-                    value={insuranceEffectiveDateEnd}
-                    onChange={(newValue) =>
-                      setInsuranceEffectiveDateEnd(newValue)
-                    }
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: 'small',
-                      },
-                    }}
-                    minDate={insuranceEffectiveDateStart || undefined}
-                  />
-                </Grid>
-                <Grid size={2}>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}
-                  >
-                    <Tooltip title="Clear Filters">
-                      <span>
-                        <IconButton
-                          onClick={handleResetInsuranceFilters}
-                          disabled={!hasInsuranceFilters}
-                          color="primary"
-                        >
-                          <FilterAltOff />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Refresh">
-                      <span>
-                        <IconButton
-                          onClick={fetchInsurancesAndCompanies}
-                          color="primary"
-                        >
-                          <RefreshIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                </Grid>
-              </Grid>
+            <Box sx={{ p: 3, display: 'flex', gap: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                {(() => {
+                  const hasActiveCoverage = insurances.some((i) => i.isActive);
+                  const inactiveInsurances = insurances.filter((i) => !i.isActive);
 
-              {filteredInsurances.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No insurance records found.
-                </Typography>
-              ) : (
+                  if (!hasActiveCoverage) {
+                    return (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: 320,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            color: 'error.main',
+                            fontWeight: 600,
+                            mb: 3,
+                          }}
+                        >
+                          Patient has no active coverage.
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Button
+                            component="span"
+                            sx={{
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                              color: 'primary.main',
+                              textDecoration: 'underline',
+                              minWidth: 0,
+                              p: 0,
+                              '&:hover': {
+                                bgcolor: 'transparent',
+                                textDecoration: 'underline',
+                              },
+                            }}
+                            onClick={handleInsuranceAdd}
+                          >
+                            Add Patient Insurance
+                          </Button>
+                          <Button
+                            variant="contained"
+                            size="medium"
+                            startIcon={<SecurityIcon />}
+                            onClick={() =>
+                              inactiveInsurances.length > 0
+                                ? document
+                                    .getElementById('imported-coverage-list')
+                                    ?.scrollIntoView({
+                                      behavior: 'smooth',
+                                      block: 'nearest',
+                                    })
+                                : showSnackbar(
+                                    'No imported coverage available',
+                                    'info'
+                                  )
+                            }
+                            sx={{
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Imported Coverage
+                          </Button>
+                          <Button
+                            variant="contained"
+                            size="medium"
+                            startIcon={<AddIcon />}
+                            onClick={handleInsuranceAdd}
+                            sx={{
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                            }}
+                          >
+                            New Coverage
+                          </Button>
+                        </Box>
+                        {inactiveInsurances.length > 0 && (
+                          <Box
+                            id="imported-coverage-list"
+                            sx={{ mt: 4, width: '100%', maxWidth: 500 }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                              sx={{ mb: 1.5, textAlign: 'left' }}
+                            >
+                              Inactive coverage (activate to use)
+                            </Typography>
+                            <Stack spacing={1}>
+                              {inactiveInsurances.map((ins) => (
+                                <Paper
+                                  key={ins._id || ins.id}
+                                  variant="outlined"
+                                  sx={{
+                                    p: 1.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                  }}
+                                >
+                                  <Typography variant="body2">
+                                    {getInsuranceCompanyName(
+                                      ins.insuranceCompanyId
+                                    )}{' '}
+                                    – {ins.insuranceType || 'Unknown'}
+                                  </Typography>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="success"
+                                    onClick={() =>
+                                      handleInsuranceActivate(ins)
+                                    }
+                                  >
+                                    Activate
+                                  </Button>
+                                </Paper>
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+                      </Box>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          mb: 2,
+                        }}
+                      >
+                        <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+                          Insurance
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={handleInsuranceAdd}
+                        >
+                          Add Insurance
+                        </Button>
+                      </Box>
+                      <Grid
+                        container
+                        spacing={2}
+                        sx={{ mb: 3, alignItems: 'flex-end' }}
+                      >
+                        <Grid size={9}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Search insurance..."
+                            value={insuranceSearch}
+                            onChange={(e) =>
+                              setInsuranceSearch(e.target.value)
+                            }
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <SearchIcon />
+                                </InputAdornment>
+                              ),
+                              endAdornment: insuranceSearch && (
+                                <InputAdornment position="end">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setInsuranceSearch('')}
+                                    edge="end"
+                                  >
+                                    <ClearIcon />
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+                        <Grid size={3}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel id="insurance-status-filter-label">
+                              Status
+                            </InputLabel>
+                            <Select
+                              labelId="insurance-status-filter-label"
+                              value={insuranceStatusFilter}
+                              label="Status"
+                              onChange={(e) =>
+                                setInsuranceStatusFilter(e.target.value)
+                              }
+                            >
+                              <MenuItem value="">
+                                <em>All</em>
+                              </MenuItem>
+                              <MenuItem value="active">Active</MenuItem>
+                              <MenuItem value="inactive">Inactive</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={3}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel id="insurance-verification-filter-label">
+                              Verification
+                            </InputLabel>
+                            <Select
+                              labelId="insurance-verification-filter-label"
+                              value={insuranceVerificationFilter}
+                              label="Verification"
+                              onChange={(e) =>
+                                setInsuranceVerificationFilter(e.target.value)
+                              }
+                            >
+                              <MenuItem value="">
+                                <em>All</em>
+                              </MenuItem>
+                              <MenuItem value="pending">Pending</MenuItem>
+                              <MenuItem value="verified">Verified</MenuItem>
+                              <MenuItem value="failed">Failed</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={3.5}>
+                          <DatePicker
+                            label="Effective From"
+                            value={insuranceEffectiveDateStart}
+                            onChange={(newValue) =>
+                              setInsuranceEffectiveDateStart(newValue)
+                            }
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                size: 'small',
+                              },
+                            }}
+                            maxDate={insuranceEffectiveDateEnd || undefined}
+                          />
+                        </Grid>
+                        <Grid size={3.5}>
+                          <DatePicker
+                            label="Effective To"
+                            value={insuranceEffectiveDateEnd}
+                            onChange={(newValue) =>
+                              setInsuranceEffectiveDateEnd(newValue)
+                            }
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                size: 'small',
+                              },
+                            }}
+                            minDate={insuranceEffectiveDateStart || undefined}
+                          />
+                        </Grid>
+                        <Grid size={2}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              gap: 1,
+                            }}
+                          >
+                            <Tooltip title="Clear Filters">
+                              <span>
+                                <IconButton
+                                  onClick={handleResetInsuranceFilters}
+                                  disabled={!hasInsuranceFilters}
+                                  color="primary"
+                                >
+                                  <FilterAltOff />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Refresh">
+                              <span>
+                                <IconButton
+                                  onClick={fetchInsurancesAndCompanies}
+                                  color="primary"
+                                >
+                                  <RefreshIcon />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {filteredInsurances.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No insurance records found.
+                        </Typography>
+                      ) : (
                 <TableContainer>
                   <Table sx={{ minWidth: 650 }}>
                     <TableHead>
@@ -910,6 +1063,54 @@ const ViewPatientPage = () => {
                   </Table>
                 </TableContainer>
               )}
+                    </>
+                  );
+                })()}
+              </Box>
+              {/* Right sidebar utility icons - shown when no active coverage */}
+              {tabValue === 1 &&
+                !insurances.some((i) => i.isActive) && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Tooltip title="Scan insurance card">
+                      <IconButton
+                        color="primary"
+                        onClick={handleInsuranceAdd}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'primary.main',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <CameraAltIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Verification checklist">
+                      <IconButton
+                        color="primary"
+                        onClick={() =>
+                          showSnackbar(
+                            'Verification checklist — coming soon',
+                            'info'
+                          )
+                        }
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'primary.main',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <AssignmentIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
             </Box>
           )}
 

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Box, Button, CircularProgress, Alert, IconButton } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
+import { Box, Button, CircularProgress, Alert } from '@mui/material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { PatientDetailOverview } from '../../components/patient-detail';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
+import { PatientInsuranceTabContent } from '../../components/patient-tabs';
 import { patientService } from '../../services/patient.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
@@ -17,7 +18,9 @@ const PatientDetailPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
+  const tabParam = searchParams.get('tab') || 'details';
 
   const patientFromNav = location.state?.patient;
   const [patient, setPatient] = useState(patientFromNav ?? null);
@@ -121,26 +124,31 @@ const PatientDetailPage = () => {
 
   return (
     <Box>
-      <PatientSectionTabs activeTab="details" patientId={patientId} />
+      <PatientSectionTabs activeTab={tabParam} patientId={patientId} />
       <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <ErrorBoundary>
-          <PatientDetailOverview
-          patient={patient}
-          patientNumber={patient?.patientCode ?? patientId}
-          preferredDentists={[]}
-          preferredHygienists={[]}
-          onEdit={() => navigate(`/patients/${patientId}/edit`)}
-          onRefresh={fetchPatient}
-          onDeactivate={() =>
-            setDeactivateDialog({
-              open: true,
-              patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
-            })
-          }
-          onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
-          onBalance={() => navigate(`/patients/${patientId}/insurance`)}
-          onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
-        />
+          {tabParam === 'insurance' ? (
+            <PatientInsuranceTabContent patientId={patientId} />
+          ) : (
+            <PatientDetailOverview
+              patient={patient}
+              patientNumber={patient?.patientCode ?? patientId}
+              preferredDentists={[]}
+              preferredHygienists={[]}
+              onEdit={() => navigate(`/patients/${patientId}/edit`)}
+              onRefresh={fetchPatient}
+              onDeactivate={() =>
+                setDeactivateDialog({
+                  open: true,
+                  patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
+                })
+              }
+              onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
+              onBalance={() => navigate(`/patients/details/${patientId}?tab=insurance`)}
+              onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
+              onAddFamilyMember={() => showSnackbar('Add family member — coming soon', 'info')}
+            />
+          )}
         </ErrorBoundary>
       </Box>
       <ConfirmationDialog

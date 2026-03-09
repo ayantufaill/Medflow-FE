@@ -9,7 +9,7 @@ import { getInitials, computeAge } from './utils';
 /**
  * Screenshot: large circular profile photo, name "Anna ... | 27 years old", email, row of 4 icons (dollar, person, calendar, tooth).
  */
-export default function PatientSummaryCard({ patient, onBalance }) {
+export default function PatientSummaryCard({ patient, onBalance, onProfileClick }) {
   const age = computeAge(patient?.dateOfBirth);
   const ageText = age != null ? ` | ${age} years old` : '';
 
@@ -52,7 +52,8 @@ export default function PatientSummaryCard({ patient, onBalance }) {
           )}
           <IconButton
             size="small"
-            title="Person"
+            title="MyChart Profile"
+            onClick={onProfileClick}
             sx={{
               color: 'grey.600',
               border: '1px solid',

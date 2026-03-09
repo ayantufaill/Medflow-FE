@@ -21,6 +21,13 @@ const PatientManagementPage = () => {
     setActiveTab(urlTab);
   }, [urlTab]);
 
+  // When insurance tab is selected with patientId, redirect to patient details (insurance tab)
+  useEffect(() => {
+    if (activeTab === 'insurance' && urlPatientId) {
+      navigate(`/patients/details/${urlPatientId}?tab=insurance`, { replace: true });
+    }
+  }, [activeTab, urlPatientId, navigate]);
+
   const handlePatientSelect = (patientId, patientFromList) => {
     setActiveTab('details');
     navigate(`/patients/details/${patientId}`, { state: patientFromList ? { patient: patientFromList } : {} });
@@ -34,7 +41,7 @@ const PatientManagementPage = () => {
       details: 'Select a patient from the list above to view details, or open a patient from the list.',
       medical: 'Medical history is available on the patient detail page.',
       dental: 'Dental history is available on the patient detail page.',
-      insurance: 'Insurance is available on the patient detail page.',
+      insurance: 'Select a patient from the list above to view insurance, or open a patient and click the Insurance tab.',
       additional_docs: 'Additional documents — coming soon.',
       signed_docs: 'Select a patient from the list, then open Signed Docs.',
     };

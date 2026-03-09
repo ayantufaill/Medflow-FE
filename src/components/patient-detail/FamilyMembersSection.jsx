@@ -9,11 +9,10 @@ const sectionTitleSx = {
 };
 
 /**
- * Per PROMPT: Family Members (Add New, list area, "(One HOH per family)").
- * Financial Responsibility (small info icon by title, Radio Self / HOH responsible).
- * Head of Communication (avatar + name + dropdown, description).
+ * Family Members (Add New, list area, "(One HOH per family)").
+ * Pass onAddNew to handle adding family members.
  */
-export default function FamilyMembersSection({ patient }) {
+export default function FamilyMembersSection({ patient, onAddNew }) {
   const name = patient ? `${patient.firstName} ${patient.lastName}` : '';
   const preferred = patient?.preferredName || name;
   const displayName = name + (preferred && preferred !== name ? ` (${preferred})` : '');
@@ -27,6 +26,7 @@ export default function FamilyMembersSection({ patient }) {
         variant="outlined"
         size="small"
         startIcon={<AddIcon />}
+        onClick={onAddNew}
         sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5, mb: 1 }}
       >
         Add New

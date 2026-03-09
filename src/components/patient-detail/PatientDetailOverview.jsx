@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
 import PatientDetailActions from './PatientDetailActions';
+import MyChartProfileModal from './MyChartProfileModal';
 import PatientSummaryCard from './PatientSummaryCard';
 import PatientDetailsSection from './PatientDetailsSection';
 import AdditionalInformationSection from './AdditionalInformationSection';
@@ -43,9 +45,17 @@ export default function PatientDetailOverview({
   onConvertToNonPatient,
   onBalance,
   onDocuments,
+  onAddFamilyMember,
 }) {
+  const [myChartModalOpen, setMyChartModalOpen] = useState(false);
+
   return (
     <Box sx={{ maxWidth: 1280, position: 'relative' }}>
+      <MyChartProfileModal
+        open={myChartModalOpen}
+        onClose={() => setMyChartModalOpen(false)}
+        patient={patient}
+      />
       <Paper
         variant="outlined"
         sx={{
@@ -65,7 +75,11 @@ export default function PatientDetailOverview({
             gap: 2,
           }}
         >
-          <PatientSummaryCard patient={patient} onBalance={onBalance} />
+          <PatientSummaryCard
+            patient={patient}
+            onBalance={onBalance}
+            onProfileClick={() => setMyChartModalOpen(true)}
+          />
           <PatientDetailActions
             onEdit={onEdit}
             onRefresh={onRefresh}
@@ -151,7 +165,7 @@ export default function PatientDetailOverview({
           preferredHygienists={preferredHygienists}
         />
         <Box sx={{ mt: 3 }}>
-          <FamilyMembersSection patient={patient} />
+          <FamilyMembersSection patient={patient} onAddNew={onAddFamilyMember} />
         </Box>
       </Paper>
     </Box>

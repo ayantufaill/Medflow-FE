@@ -143,6 +143,9 @@ const theme = createTheme({
       main: '#dc004e',
     },
   },
+  typography: {
+    fontFamily: '"Manrope", "Segoe UI", sans-serif',
+  },
 });
 
 /**
@@ -476,6 +479,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
                       <EditPatientPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/view"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <ViewPatientPage />
                     </Layout>
                   </ProtectedRoute>
                 }
