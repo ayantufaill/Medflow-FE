@@ -66,7 +66,6 @@ const DetailRow = ({ label, value }) => (
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Mock insurance plan options – replace with API when backend is ready
 const DEDUCTIBLE_CATEGORIES = ['Standard', 'Preventative', 'Basic', 'Major', 'Orthodontics'];
 const DEDUCTIBLE_FREQUENCIES = ['Annual', 'Per Visit', 'Lifetime'];
 
@@ -92,41 +91,6 @@ const COVERAGE_ITEMS = [
   { service: 'Adjunctive General Services Standard', pct: 50 },
 ];
 
-const PLAN_FEE_GUIDE_OPTIONS = [
-  'None',
-  'Copay fees',
-  'Delta Dental PPO',
-  'Metlife',
-  'BC of WA',
-  'tetst',
-  'Office Fees 2020',
-  'discount plan',
-  'Test Test %',
-];
-
-const INSURANCE_PLAN_OPTIONS = [
-  'PPO Plan',
-  'HMO Plan',
-  'Dental PPO',
-  'Dental HMO',
-  'Delta Dental PPO',
-  'Delta Dental Premier',
-  'Delta Dental Premier Plus',
-  'Basic Dental Plan',
-  'Comprehensive Dental',
-  'Preventive Plus',
-  'Family Dental Plan',
-  'Individual Dental Plan',
-  'Employer Group Plan',
-  'Medicare Advantage Dental',
-  'Medicaid Dental',
-  'Vision & Dental Combo',
-  'Orthodontic Coverage',
-  'Implant Coverage Plan',
-  'High Deductible Dental',
-  'Supplemental Dental',
-];
-
 export default function ImportedCoverageModal({
   open,
   onClose,
@@ -136,7 +100,8 @@ export default function ImportedCoverageModal({
   onSavePlan,
   creating,
   savingPlan,
-  isMockData = false,
+  insurancePlans = [],
+  coverageTemplates = [],
 }) {
   const firstId = inactiveInsurances[0]?._id || inactiveInsurances[0]?.id || null;
   const [expandedId, setExpandedId] = useState(firstId);
@@ -177,6 +142,22 @@ export default function ImportedCoverageModal({
       frequency: 'Annual',
       standard: cat !== 'Preventative',
     }))
+  );
+
+  const resolvedPlanFeeGuideOptions = Array.from(
+    new Set(
+      ['None', ...insurancePlans.map((plan) => plan?.feeSched).filter(Boolean)]
+    )
+  );
+
+  const resolvedPlanOptions = Array.from(
+    new Set(
+      [
+        ...savedPlans,
+        ...insurancePlans.map((plan) => plan?.name).filter(Boolean),
+        ...coverageTemplates.map((template) => template?.name).filter(Boolean),
+      ]
+    )
   );
 
   useEffect(() => {
@@ -227,7 +208,7 @@ export default function ImportedCoverageModal({
     const planName = ins?.planName;
     const base = [...savedPlans];
     if (planName && !base.includes(planName)) base.unshift(planName);
-    const rest = INSURANCE_PLAN_OPTIONS.filter((o) => !base.includes(o));
+    const rest = resolvedPlanOptions.filter((o) => !base.includes(o));
     return [...base, ...rest];
   })();
 
@@ -418,7 +399,7 @@ export default function ImportedCoverageModal({
                       sx={{ fontFamily: TYPO.fontFamily }}
                       MenuProps={{ PaperProps: { sx: { maxHeight: 320 } } }}
                     >
-                      {PLAN_FEE_GUIDE_OPTIONS.map((opt) => (
+                      {resolvedPlanFeeGuideOptions.map((opt) => (
                         <MenuItem key={opt} value={opt} sx={{ fontFamily: TYPO.fontFamily }}>
                           {opt}
                         </MenuItem>
@@ -551,7 +532,9 @@ export default function ImportedCoverageModal({
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
                 <Button variant="outlined" onClick={() => setShowCreatePlanForm(false)} sx={{ fontFamily: TYPO.fontFamily, ...TYPO.button, borderColor: '#9e9e9e', color: '#616161' }}>Cancel</Button>
                 <Button variant="contained" color="primary" onClick={() => setShowEditCoverage(!showEditCoverage)} sx={{ fontFamily: TYPO.fontFamily, ...TYPO.button, textTransform: 'none' }}>Edit Coverage</Button>
-                <Button variant="contained" color="primary" sx={{ fontFamily: TYPO.fontFamily, ...TYPO.button, textTransform: 'none' }}>Coverage Book</Button>
+                <Button variant="contained" color="primary" sx={{ fontFamily: TYPO.fontFamily, ...TYPO.button, textTransform: 'none' }}>
+                  Coverage Book{coverageTemplates.length ? ` (${coverageTemplates.length})` : ''}
+                </Button>
                 <Button variant="contained" color="primary" onClick={handleSaveNewPlan} disabled={savingPlan} sx={{ fontFamily: TYPO.fontFamily, ...TYPO.button, textTransform: 'none', bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}>{savingPlan ? 'Saving...' : 'Save Plan'}</Button>
               </Box>
             </Box>

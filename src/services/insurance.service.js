@@ -76,3 +76,26 @@ export const insuranceCompanyService = {
   },
 };
 
+export const insurancePlanService = {
+  async getInsurancePlans(page = 1, limit = 100, search = '') {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    if (search) {
+      params.append('search', search);
+    }
+
+    const response = await apiClient.get(`/insurance-plans?${params.toString()}`);
+    return response.data.data;
+  },
+
+  async getInsurancePlanById(planId) {
+    const response = await apiClient.get(`/insurance-plans/${planId}`);
+    return response.data.data.plan;
+  },
+
+  async getCoverageTemplates() {
+    const response = await apiClient.get('/coverage-templates');
+    return response.data.data;
+  },
+};

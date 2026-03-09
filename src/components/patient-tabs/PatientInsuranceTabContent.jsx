@@ -25,12 +25,11 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
-import { insuranceCompanyService } from '../../services/insurance.service';
+import { insuranceCompanyService, insurancePlanService } from '../../services/insurance.service';
 import InsuranceDialog from '../insurance/InsuranceDialog';
 import ImportedCoverageModal from '../insurance/ImportedCoverageModal';
 import EditCoverageModal from '../insurance/EditCoverageModal';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
-import { MOCK_IMPORTED_COVERAGE } from '../../data/mockImportedCoverage';
 
 export default function PatientInsuranceTabContent({ patientId }) {
   const navigate = useNavigate();
@@ -46,69 +45,21 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const [editCoverageModal, setEditCoverageModal] = useState({ open: false, insurance: null, mode: 'edit' });
   const [creatingPolicy, setCreatingPolicy] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
-  const [optimisticInsurances, setOptimisticInsurances] = useState([]);
-
-  const getStorageKey = () => `medflow-optimistic-insurances-${patientId || 'unknown'}`;
-
-  const loadOptimisticFromStorage = () => {
-    if (!patientId) return [];
-    try {
-      const stored = localStorage.getItem(getStorageKey());
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch (e) {
-      console.warn('Failed to load optimistic insurances from storage', e);
-    }
-    return [];
-  };
-
-  const saveOptimisticToStorage = (list) => {
-    try {
-      const key = getStorageKey();
-      if (list.length > 0) {
-        localStorage.setItem(key, JSON.stringify(list));
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch (e) {
-      console.warn('Failed to save optimistic insurances to storage', e);
-    }
-  };
-
-  useEffect(() => {
-    if (patientId) {
-      let loaded = loadOptimisticFromStorage();
-      if (loaded.length === 0) {
-        loaded = MOCK_IMPORTED_COVERAGE.slice(0, 2).map((m, i) => ({
-          _id: `optimistic-seed-${Date.now()}-${i}`,
-          id: `optimistic-seed-${Date.now()}-${i}`,
-          isActive: true,
-          insuranceType: m.insuranceType || 'primary',
-          insuranceCompanyId: m.insuranceCompanyId,
-          employerName: m.employerName || m.planName?.split(' by ')[0],
-          planName: m.planName,
-          policyNumber: m.policyNumber,
-          groupNumber: m.groupNumber,
-          usedAmount: 0,
-          individualAnnualMax: 1500,
-          deductibleAmount: 1500,
-        }));
-        saveOptimisticToStorage(loaded);
-      }
-      setOptimisticInsurances(loaded);
-    }
-  }, [patientId]);
+  const [planCatalog, setPlanCatalog] = useState([]);
+  const [coverageTemplates, setCoverageTemplates] = useState([]);
 
   const fetchInsurancesAndCompanies = async () => {
     try {
-      const [insList, companies] = await Promise.all([
+      const [insList, companies, plans, templates] = await Promise.all([
         patientService.getPatientInsurances(patientId, undefined),
         insuranceCompanyService.getAllInsuranceCompanies(1, 500),
+        insurancePlanService.getInsurancePlans(1, 100, ''),
+        insurancePlanService.getCoverageTemplates(),
       ]);
       setInsurances(insList || []);
       setAllCompanies(companies || { companies: [] });
+      setPlanCatalog(plans?.plans || []);
+      setCoverageTemplates(templates?.templates || []);
     } catch (err) {
       console.error('Failed to load insurance data', err);
     }
@@ -129,7 +80,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
     return 'Unknown';
   };
 
-  const displayInsurances = [...optimisticInsurances, ...insurances];
+  const displayInsurances = insurances;
   const hasActiveCoverage = displayInsurances.some((i) => i.isActive);
   const inactiveInsurances = insurances.filter((i) => !i.isActive);
 
@@ -157,18 +108,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
   };
   const handleInsuranceDeactivate = async (insurance) => {
     setInsuranceMenu({ anchorEl: null, insurance: null });
-    const id = insurance._id || insurance.id;
-    if (String(id).startsWith('optimistic-')) {
-      setOptimisticInsurances((prev) => {
-        const next = prev.filter((i) => (i._id || i.id) !== id);
-        saveOptimisticToStorage(next);
-        return next;
-      });
-      showSnackbar('Coverage removed', 'success');
-      return;
-    }
     try {
-      await patientService.updatePatientInsurance(patientId, id, { isActive: false });
+      await patientService.updatePatientInsurance(patientId, insurance._id || insurance.id, { isActive: false });
       showSnackbar('Insurance deactivated successfully', 'success');
       await fetchInsurancesAndCompanies();
     } catch (err) {
@@ -213,38 +154,9 @@ export default function PatientInsuranceTabContent({ patientId }) {
         isActive: true,
         verificationStatus: 'pending',
       };
-      try {
-        await patientService.createPatientInsurance(patientId, payload);
-        showSnackbar('Plan saved successfully', 'success');
-        await fetchInsurancesAndCompanies();
-      } catch (apiErr) {
-        const isInvalidCompany = (apiErr.response?.data?.error?.message || apiErr.response?.data?.message || '').toLowerCase().includes('insurance company');
-        const companyObj = planData.insuranceCompanyIdObj || (typeof planData.insuranceCompanyId === 'object' ? planData.insuranceCompanyId : null);
-        if (isInvalidCompany && companyObj) {
-          const newItem = {
-            _id: `optimistic-${Date.now()}`,
-            id: `optimistic-${Date.now()}`,
-            isActive: true,
-            insuranceType: planData.insuranceType || 'primary',
-            insuranceCompanyId: companyObj,
-            employerName: planData.employerName || planData.planName?.split(' by ')[0],
-            planName: planData.planName,
-            policyNumber: planData.policyNumber,
-            groupNumber: planData.groupNumber,
-            usedAmount: 0,
-            individualAnnualMax: planData.individualAnnualMax ?? 1500,
-            deductibleAmount: planData.individualAnnualMax ?? 1500,
-          };
-          setOptimisticInsurances((prev) => {
-            const next = [newItem, ...prev];
-            saveOptimisticToStorage(next);
-            return next;
-          });
-          showSnackbar('Plan saved (demo mode – will sync when backend is connected)', 'success');
-        } else {
-          throw apiErr;
-        }
-      }
+      await patientService.createPatientInsurance(patientId, payload);
+      showSnackbar('Plan saved successfully', 'success');
+      await fetchInsurancesAndCompanies();
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save plan', 'error');
       throw err;
@@ -578,13 +490,14 @@ export default function PatientInsuranceTabContent({ patientId }) {
       <ImportedCoverageModal
         open={importedCoverageModalOpen}
         onClose={() => setImportedCoverageModalOpen(false)}
-        inactiveInsurances={inactiveInsurances.length > 0 ? inactiveInsurances : MOCK_IMPORTED_COVERAGE}
+        inactiveInsurances={inactiveInsurances}
         getInsuranceCompanyName={getInsuranceCompanyName}
         onCreatePolicy={handleCreatePolicyFromImported}
         onSavePlan={handleSavePlan}
         creating={creatingPolicy}
         savingPlan={savingPlan}
-        isMockData={inactiveInsurances.length === 0}
+        insurancePlans={planCatalog}
+        coverageTemplates={coverageTemplates}
       />
 
       <ConfirmationDialog

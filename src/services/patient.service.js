@@ -137,6 +137,11 @@ export const patientService = {
     return response.data.data;
   },
 
+  async updateDentalHistory(patientId, payload) {
+    const response = await apiClient.patch(`/patients/${patientId}/dental-history`, payload);
+    return response.data.data;
+  },
+
   // ---------------- Patient Insurance ----------------
 
   /**
