@@ -8,17 +8,22 @@ const sectionTitleSx = {
   mb: 1.5,
 };
 
-export default function FinancialResponsibilitySection() {
+export default function FinancialResponsibilitySection({ patient }) {
+  const responsibility = patient?.financialResponsibility || {};
+  const value = responsibility?.type || 'hoh';
   return (
     <Box>
       <Typography variant="subtitle1" sx={sectionTitleSx}>
         <InfoIcon sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
         Financial Responsibility
       </Typography>
-      <RadioGroup defaultValue="hoh" name="financialResponsibility" sx={{ mt: 0.5 }}>
+      <RadioGroup value={value} name="financialResponsibility" sx={{ mt: 0.5 }}>
         <FormControlLabel value="self" control={<Radio size="small" />} label="Self" />
         <FormControlLabel value="hoh" control={<Radio size="small" />} label="HOH responsible" />
       </RadioGroup>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        {responsibility?.name || responsibility?.displayName || 'No responsible party selected'}
+      </Typography>
     </Box>
   );
 }

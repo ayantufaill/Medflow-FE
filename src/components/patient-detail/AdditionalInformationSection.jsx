@@ -30,9 +30,9 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
             Spouse Information
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <InlineFieldRow label="Spouse Name" value="" />
-            <InlineFieldRow label="Spouse Phone" value="" />
-            <InlineFieldRow label="Email Address" value="" />
+            <InlineFieldRow label="Spouse Name" value={patient?.spouseInfo?.name || ''} />
+            <InlineFieldRow label="Spouse Phone" value={patient?.spouseInfo?.phone || ''} />
+            <InlineFieldRow label="Email Address" value={patient?.spouseInfo?.email || ''} />
           </Box>
         </>
       )}

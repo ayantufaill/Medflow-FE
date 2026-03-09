@@ -15,7 +15,21 @@ const sectionTitleSx = {
 export default function FamilyMembersSection({ patient, onAddNew }) {
   const name = patient ? `${patient.firstName} ${patient.lastName}` : '';
   const preferred = patient?.preferredName || name;
-  const displayName = name + (preferred && preferred !== name ? ` (${preferred})` : '');
+  const selfDisplayName = name + (preferred && preferred !== name ? ` (${preferred})` : '');
+  const householdMembers = Array.isArray(patient?.household) ? patient.household : [];
+  const householdNames = householdMembers.length
+    ? householdMembers
+        .map((member) => {
+          const memberName =
+            member?.displayName ||
+            member?.name ||
+            [member?.firstName, member?.lastName].filter(Boolean).join(' ').trim();
+          if (!memberName) return null;
+          return member?.relationship ? `${memberName} (${member.relationship})` : memberName;
+        })
+        .filter(Boolean)
+    : [];
+  const members = householdNames.length ? householdNames : [selfDisplayName].filter(Boolean);
 
   return (
     <Box>
@@ -32,9 +46,11 @@ export default function FamilyMembersSection({ patient, onAddNew }) {
         Add New
       </Button>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-        <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
-          {displayName || 'Anna Ricco (Annie)'}
-        </Typography>
+        {members.map((member) => (
+          <Typography key={member} variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
+            {member}
+          </Typography>
+        ))}
       </Box>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
         (One HOH per family)

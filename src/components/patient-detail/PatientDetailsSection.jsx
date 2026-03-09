@@ -16,7 +16,8 @@ import { InlineFieldRow, standardFieldSx, labelWidth } from './InlineField';
  * Label left, input right; radio groups for Sex at Birth and Gender Identity.
  */
 export default function PatientDetailsSection({ patient, patientNumber }) {
-  const gender = patient?.gender?.toLowerCase?.() || '';
+  const sexAtBirth = patient?.sexAtBirth?.toLowerCase?.() || patient?.gender?.toLowerCase?.() || '';
+  const genderIdentity = patient?.genderIdentity?.toLowerCase?.() || patient?.gender?.toLowerCase?.() || '';
 
   return (
     <Box>
@@ -72,7 +73,7 @@ export default function PatientDetailsSection({ patient, patientNumber }) {
             Sex at Birth:
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-            <RadioGroup row value={gender === 'male' ? 'male' : gender === 'female' ? 'female' : ''}>
+            <RadioGroup row value={sexAtBirth === 'male' ? 'male' : sexAtBirth === 'female' ? 'female' : ''}>
               <FormControlLabel value="male" control={<Radio size="small" />} label="Male" />
               <FormControlLabel value="female" control={<Radio size="small" />} label="Female" />
             </RadioGroup>
@@ -93,7 +94,7 @@ export default function PatientDetailsSection({ patient, patientNumber }) {
             Gender Identity:
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-            <RadioGroup value={gender === 'male' ? 'male' : gender === 'female' ? 'female' : ''}>
+            <RadioGroup value={genderIdentity === 'male' ? 'male' : genderIdentity === 'female' ? 'female' : ''}>
               <FormControlLabel value="male" control={<Radio size="small" />} label="Male/Man" />
               <FormControlLabel value="female" control={<Radio size="small" />} label="Female/Woman" />
             </RadioGroup>

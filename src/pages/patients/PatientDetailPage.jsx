@@ -6,6 +6,7 @@ import { PatientDetailOverview } from '../../components/patient-detail';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
 import { PatientInsuranceTabContent } from '../../components/patient-tabs';
 import { patientService } from '../../services/patient.service';
+import { providerService } from '../../services/provider.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
@@ -29,6 +30,8 @@ const PatientDetailPage = () => {
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, patientName: '' });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [adjacentIds, setAdjacentIds] = useState({ prev: null, next: null });
+  const [preferredDentists, setPreferredDentists] = useState([]);
+  const [preferredHygienists, setPreferredHygienists] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,10 +56,30 @@ const PatientDetailPage = () => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    patientService
-      .getPatientById(patientId)
-      .then((data) => {
-        if (!cancelled && data) setPatient(data);
+    Promise.all([
+      patientService.getPatientWorkspace(patientId),
+      providerService.getAllProviders(1, 100, '', true).catch(() => ({ providers: [] })),
+    ])
+      .then(([data, providerData]) => {
+        if (!cancelled && data) {
+          setPatient(data);
+        }
+        if (!cancelled) {
+          const providers = Array.isArray(providerData?.providers) ? providerData.providers : [];
+          const options = providers.map((provider) => {
+            const providerUser = provider?.userId || {};
+            const name =
+              [providerUser.firstName, providerUser.lastName].filter(Boolean).join(' ').trim() ||
+              provider.providerCode ||
+              `Provider ${provider._id}`;
+            return {
+              id: String(provider._id),
+              name,
+            };
+          });
+          setPreferredDentists(options);
+          setPreferredHygienists(options);
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -72,7 +95,20 @@ const PatientDetailPage = () => {
 
   const fetchPatient = () => {
     if (!patientId) return;
-    patientService.getPatientById(patientId).then((data) => data && setPatient(data));
+    patientService.getPatientWorkspace(patientId).then((data) => data && setPatient(data));
+  };
+
+  const handleSendUpdateRequest = async (payload) => {
+    try {
+      await patientService.createPatientUpdateRequest(patientId, payload);
+      showSnackbar('Patient update request sent', 'success');
+    } catch (err) {
+      const message =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        'Failed to send update request';
+      showSnackbar(message, 'error');
+    }
   };
 
   const handleDeactivateConfirm = async () => {
@@ -133,8 +169,8 @@ const PatientDetailPage = () => {
             <PatientDetailOverview
               patient={patient}
               patientNumber={patient?.patientCode ?? patientId}
-              preferredDentists={[]}
-              preferredHygienists={[]}
+              preferredDentists={preferredDentists}
+              preferredHygienists={preferredHygienists}
               onEdit={() => navigate(`/patients/${patientId}/edit`)}
               onRefresh={fetchPatient}
               onDeactivate={() =>
@@ -147,6 +183,7 @@ const PatientDetailPage = () => {
               onBalance={() => navigate(`/patients/details/${patientId}?tab=insurance`)}
               onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
               onAddFamilyMember={() => showSnackbar('Add family member — coming soon', 'info')}
+              onSendUpdateRequest={handleSendUpdateRequest}
             />
           )}
         </ErrorBoundary>

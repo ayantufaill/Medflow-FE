@@ -14,15 +14,19 @@ import EmergencyContactSection from './EmergencyContactSection';
 import { InlineFieldRow } from './InlineField';
 
 function SpouseInformationSection() {
+  return null;
+}
+
+function SpouseInformationSectionContent({ patient }) {
   return (
     <Box>
       <Typography variant="subtitle1" sx={{ fontSize: '0.95rem', fontWeight: 700, color: 'primary.main', mb: 1.5 }}>
         Spouse Information
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <InlineFieldRow label="Spouse Name" value="" />
-        <InlineFieldRow label="Spouse Phone" value="" />
-        <InlineFieldRow label="Email Address" value="" />
+        <InlineFieldRow label="Spouse Name" value={patient?.spouseInfo?.name || ''} />
+        <InlineFieldRow label="Spouse Phone" value={patient?.spouseInfo?.phone || ''} />
+        <InlineFieldRow label="Email Address" value={patient?.spouseInfo?.email || ''} />
       </Box>
     </Box>
   );
@@ -46,6 +50,7 @@ export default function PatientDetailOverview({
   onBalance,
   onDocuments,
   onAddFamilyMember,
+  onSendUpdateRequest,
 }) {
   const [myChartModalOpen, setMyChartModalOpen] = useState(false);
 
@@ -85,6 +90,7 @@ export default function PatientDetailOverview({
             onRefresh={onRefresh}
             onDeactivate={onDeactivate}
             onConvertToNonPatient={onConvertToNonPatient}
+            onSendUpdateRequest={onSendUpdateRequest}
           />
         </Box>
       </Paper>
@@ -133,12 +139,12 @@ export default function PatientDetailOverview({
           <Box>
             <ContactInformationSection patient={patient} />
             <Box sx={{ mt: 3 }}>
-              <SpouseInformationSection />
+              <SpouseInformationSectionContent patient={patient} />
             </Box>
           </Box>
           {/* Col 3: Financial Responsibility | Head of communication | Emergency contact */}
           <Box>
-            <FinancialResponsibilitySection />
+            <FinancialResponsibilitySection patient={patient} />
             <Box sx={{ mt: 3 }}>
               <HeadOfCommunicationSection patient={patient} />
             </Box>

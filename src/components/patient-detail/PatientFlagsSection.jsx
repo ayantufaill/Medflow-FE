@@ -11,6 +11,9 @@ const sectionTitleSx = {
  * Patient flags, Preferred Dentist/Hygienist, Patient Profile (Pediatric/Adult) – screenshot style.
  */
 export default function PatientFlagsSection({ patient, preferredDentists = [], preferredHygienists = [] }) {
+  const patientProfile = patient?.patientProfileType === 'pediatric' ? 'pediatric' : 'adult';
+  const flags = Array.isArray(patient?.patientFlags) ? patient.patientFlags : [];
+
   return (
     <Box>
       <Box sx={{ mb: 1 }}>
@@ -54,10 +57,13 @@ export default function PatientFlagsSection({ patient, preferredDentists = [], p
       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 600 }}>
         Patient Profile
       </Typography>
-      <RadioGroup row defaultValue="adult" name="patientProfile">
+      <RadioGroup row value={patientProfile} name="patientProfile">
         <FormControlLabel value="pediatric" control={<Radio size="small" />} label="Pediatric" />
         <FormControlLabel value="adult" control={<Radio size="small" />} label="Adult" />
       </RadioGroup>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        {flags.length ? flags.map((flag) => flag?.label || flag?.name || String(flag)).join(', ') : 'No flags added'}
+      </Typography>
     </Box>
   );
 }

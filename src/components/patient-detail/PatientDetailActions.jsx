@@ -15,6 +15,7 @@ export default function PatientDetailActions({
   onEdit,
   onDeactivate,
   onConvertToNonPatient,
+  onSendUpdateRequest,
 }) {
   const [requestMenuAnchor, setRequestMenuAnchor] = useState(null);
   const [requestChecks, setRequestChecks] = useState({
@@ -31,6 +32,30 @@ export default function PatientDetailActions({
 
   const toggleRequest = (key) => {
     setRequestChecks((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSendRequest = async () => {
+    const sectionMap = {
+      dentalHistory: 'dental-history',
+      medicalHistory: 'medical-history',
+      hipaa: 'hipaa',
+      confidential: 'consent',
+      tdsFinancial: 'custom-form',
+      hipaa2026: 'custom-form',
+    };
+
+    const sections = Object.entries(requestChecks)
+      .filter(([, checked]) => checked)
+      .map(([key]) => sectionMap[key])
+      .filter(Boolean);
+
+    if (!sections.length || !onSendUpdateRequest) {
+      handleRequestClose();
+      return;
+    }
+
+    await onSendUpdateRequest(sections);
+    handleRequestClose();
   };
 
   return (
@@ -156,6 +181,7 @@ export default function PatientDetailActions({
             variant="contained"
             size="small"
             endIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
+            onClick={handleSendRequest}
             sx={{
               bgcolor: '#ed6c02',
               color: 'white',
