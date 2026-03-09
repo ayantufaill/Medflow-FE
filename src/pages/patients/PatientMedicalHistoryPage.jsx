@@ -7,11 +7,17 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  InputAdornment,
   Link,
   Paper,
   Radio,
   RadioGroup,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   Tabs,
   TextField,
   Typography,
@@ -28,7 +34,9 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { clinicalNoteService } from '../../services/clinical-note.service';
 import { documentService } from '../../services/document.service';
+import { getCachedPatient, setCachedPatient } from '../../utils/patientCache';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
+import SignaturePad from '../../components/shared/SignaturePad';
 
 const formatVisitDate = (dateStr) => {
   if (!dateStr) return '';
@@ -63,19 +71,16 @@ const GENERAL_INFO = {
   physicianSpecialty: 'Internal Medicine',
 };
 
-const QUESTION_1_NOTE =
-  'Hospitalized in 2022 for knee surgery. No complications; full recovery.';
-
-const QUESTION_1_ADDITIONAL = [
-  'Verify that previous hospitalization for illness or injury is consistent with any other “yes” answers indicated in Medical History Form.',
-  'If the patient reports a head and neck injury, concern for TMD co-morbidity for 1-3 years post-injury.',
-];
-
-const QUESTION_50_ADDITIONAL = [
-  'Taking dietary supplements, vitamins, and/or probiotics',
-  'Risk factor for sleep disorder if the medication was for weight loss.',
-  'Vitamin C, iron tonic, and amino-acid supplements have been implicated in Bohar Maes...',
-];
+const MOCK_MEDICAL_HISTORY = {
+  personalHistory: [
+    { id: 1, question: 'Hospitalization for illness or injury', answer: 'No', note: 'Chad Hogen', additionalInfo: 'Hospitalized in 2022 for knee surgery. No complications; full recovery. Verify that previous hospitalization is consistent with any other "yes" answers in Medical History Form. If head and neck injury, concern for TMD co-morbidity for 1-3 years post-injury.' },
+    { id: 2, question: 'Heart disease or heart attack', answer: 'Yes', note: '', additionalInfo: 'Assess cardiac risk before dental procedures. May require antibiotic prophylaxis or consultation with physician.' },
+    { id: 3, question: 'High blood pressure', answer: 'Yes', note: '', additionalInfo: 'Monitor blood pressure at each visit. Some medications may cause dry mouth or gingival hyperplasia.' },
+    { id: 4, question: 'Diabetes', answer: 'No', note: '', additionalInfo: 'Diabetic patients may have delayed wound healing and increased risk of infection. Monitor glycemic control.' },
+    { id: 5, question: 'Asthma or breathing problems', answer: 'Yes', note: '', additionalInfo: 'Avoid aspirin if asthma is aspirin-sensitive. Consider stress reduction techniques for anxious patients.' },
+    { id: 6, question: 'Taking any of the following Supplements', answer: 'Yes', note: '', additionalInfo: 'Taking dietary supplements, vitamins, and/or probiotics. Risk factor for sleep disorder if medication was for weight loss. Vitamin C, iron tonic, and amino-acid supplements have been implicated in Bohar Maes...' },
+  ],
+};
 
 const INITIAL_MEDICATIONS = [
   { id: 1, drug: 'Lisinopril', dosage: '10 mg', purpose: 'Blood pressure' },
@@ -175,6 +180,13 @@ const PatientMedicalHistoryPage = () => {
   const [medications, setMedications] = useState(INITIAL_MEDICATIONS);
   const [supplements, setSupplements] = useState(INITIAL_SUPPLEMENTS);
   const [visitDates, setVisitDates] = useState([]); // from backend medical history timeline
+  const [generalInfo, setGeneralInfo] = useState({ ...GENERAL_INFO });
+  const [premed, setPremed] = useState('no');
+  const [signature, setSignature] = useState(null);
+
+  const updateGeneralInfo = (field, value) => {
+    setGeneralInfo((prev) => ({ ...prev, [field]: value }));
+  };
 
   const addMedication = () => {
     const nextId = Math.max(0, ...medications.map((m) => m.id)) + 1;
@@ -206,16 +218,24 @@ const PatientMedicalHistoryPage = () => {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = getCachedPatient(patientId);
+    if (cached) {
+      setPatient(cached);
+      setLoading(false);
+    }
 
     const fetchData = async () => {
       try {
-        setLoading(true);
+        if (!cached) setLoading(true);
         setError('');
         const [patientData, medicalHistory] = await Promise.all([
           patientService.getPatientById(patientId),
           clinicalNoteService.getPatientMedicalHistory(patientId).catch(() => null),
         ]);
-        if (!cancelled) setPatient(patientData);
+        if (!cancelled) {
+          setPatient(patientData);
+          setCachedPatient(patientId, patientData);
+        }
 
         if (!cancelled && medicalHistory?.timeline?.length) {
           const dateStrings = medicalHistory.timeline
@@ -297,28 +317,21 @@ const PatientMedicalHistoryPage = () => {
     input.click();
   };
 
-  if (loading && !patient) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <PageContainer>
-        <Card>
-          <Typography color="error">{error}</Typography>
-        </Card>
-      </PageContainer>
-    );
-  }
+  const showContent = !loading || patient;
 
   return (
     <PageContainer>
       <PatientSectionTabs activeTab="medical" patientId={patientId} />
-
+      {error ? (
+        <Card sx={{ p: 2 }}>
+          <Typography color="error">{error}</Typography>
+        </Card>
+      ) : !showContent ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
       <FloatingActions>
         <FloatingActionButton onClick={handleAddDocument} disabled={uploading}>
           <CameraIcon fontSize="small" />
@@ -478,182 +491,110 @@ const PatientMedicalHistoryPage = () => {
 
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                What is your estimate of your general health?
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {GENERAL_INFO.healthEstimate}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="What is your estimate of your general health?"
+              value={generalInfo.healthEstimate}
+              onChange={(e) => updateGeneralInfo('healthEstimate', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Physician Name
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {GENERAL_INFO.physicianName}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Physician Name"
+              value={generalInfo.physicianName}
+              onChange={(e) => updateGeneralInfo('physicianName', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Date of most recent physical examination
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {GENERAL_INFO.lastExamDate}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label="Date of most recent physical examination"
+              value={generalInfo.lastExamDate ? generalInfo.lastExamDate.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$1-$2') : ''}
+              onChange={(e) => {
+                const d = e.target.value;
+                if (d) {
+                  const [y, m, day] = d.split('-');
+                  updateGeneralInfo('lastExamDate', `${m}/${day}/${y}`);
+                } else {
+                  updateGeneralInfo('lastExamDate', '');
+                }
+              }}
+              InputLabelProps={{ shrink: true }}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Purpose
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {GENERAL_INFO.purpose}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Purpose"
+              value={generalInfo.purpose}
+              onChange={(e) => updateGeneralInfo('purpose', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={6} sm={3} md={2}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Weight
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  bgcolor: '#ffffff',
-                }}
-              >
-                <span>{GENERAL_INFO.weight}</span>
-                <Typography
-                  variant="caption"
-                  sx={{ color: '#9e9e9e', ml: 1 }}
-                >
-                  {GENERAL_INFO.weightUnit}
-                </Typography>
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Weight"
+              type="number"
+              value={generalInfo.weight}
+              onChange={(e) => updateGeneralInfo('weight', e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Typography variant="caption" sx={{ color: '#9e9e9e' }}>
+                      {generalInfo.weightUnit}
+                    </Typography>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={6} sm={3} md={2}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Height
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  bgcolor: '#ffffff',
-                }}
-              >
-                <span>{GENERAL_INFO.height}</span>
-                <Typography
-                  variant="caption"
-                  sx={{ color: '#9e9e9e', ml: 1 }}
-                >
-                  {GENERAL_INFO.heightUnit}
-                </Typography>
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Height"
+              type="number"
+              value={generalInfo.height}
+              onChange={(e) => updateGeneralInfo('height', e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Typography variant="caption" sx={{ color: '#9e9e9e' }}>
+                      {generalInfo.heightUnit}
+                    </Typography>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Physician specialty
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {GENERAL_INFO.physicianSpecialty}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Physician specialty"
+              value={generalInfo.physicianSpecialty}
+              onChange={(e) => updateGeneralInfo('physicianSpecialty', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12}>
@@ -674,12 +615,18 @@ const PatientMedicalHistoryPage = () => {
               </Typography>
               <RadioGroup
                 row
-                defaultValue="no"
+                value={premed}
+                onChange={(e) => setPremed(e.target.value)}
                 sx={{
                   '& .MuiFormControlLabel-root': { mr: 2 },
                   '& .MuiTypography-root': { fontSize: 14 },
                 }}
               >
+                <FormControlLabel
+                  value="premed"
+                  control={<Radio size="small" />}
+                  label="Premed"
+                />
                 <FormControlLabel
                   value="yes"
                   control={<Radio size="small" />}
@@ -727,199 +674,85 @@ const PatientMedicalHistoryPage = () => {
 
         {historyTab === 0 && (
           <Box>
-            {/* Q1 block – header row + content row */}
-            <Box sx={{ mb: 3 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  borderBottom: '1px solid #ef9a9a',
-                  pb: 0.5,
-                  mb: 0.75,
-                }}
-              >
-                <Box sx={{ flex: 1, pr: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 600, color: '#616161' }}
-                  >
-                    Do you have or have you ever had:
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: 1, pl: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 600, color: '#616161' }}
-                  >
-                    Additional information
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 3 }}>
-                <Box
-                  sx={{
-                    flex: 1,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 1,
-                    p: 2,
-                    bgcolor: '#ffffff',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 2,
-                    }}
-                  >
-                    <Box>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: 600, color: '#424242' }}
-                      >
-                        1. hospitalization for illness or injury
+            <Paper
+              variant="outlined"
+              sx={{
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                bgcolor: '#ffffff',
+              }}
+            >
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ background: '#fafafa' }}>
+                    <TableCell sx={{ width: '55%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#616161' }}>Personal History</Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Typography variant="caption">🟢 Low</Typography>
+                          <Typography variant="caption">🟡 Moderate</Typography>
+                          <Typography variant="caption">🔴 High</Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ width: '10%' }} align="center" />
+                    <TableCell sx={{ width: '35%' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#616161' }}>
+                        Additional information
                       </Typography>
-                      <Typography
-                        variant="caption"
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {MOCK_MEDICAL_HISTORY.personalHistory.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      sx={{
+                        borderBottom: '2px solid #e0e0e0',
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#424242' }}>
+                          {item.id}. {item.question}
+                        </Typography>
+                        {item.scale && (
+                          <Typography variant="caption" sx={{ display: 'block', color: '#9e9e9e', mt: 0.5 }}>
+                            on a scale of 1 to 10: {item.scale}
+                          </Typography>
+                        )}
+                        {item.note && (
+                          <Typography variant="caption" display="block" sx={{ color: '#9e9e9e', mt: 0.5 }}>
+                            Doctor&apos;s Note: {item.note}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            color: '#43a047',
+                          }}
+                        >
+                          {item.answer}
+                        </Typography>
+                      </TableCell>
+                      <TableCell
                         sx={{
-                          display: 'block',
-                          color: '#9e9e9e',
-                          mt: 0.5,
+                          background: '#f5f5f5',
+                          maxHeight: 120,
+                          overflow: 'auto',
                         }}
                       >
-                        Doctor&apos;s Note: Chad Hogen
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: '#616161', mt: 1 }}
-                      >
-                        {QUESTION_1_NOTE}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        color: '#43a047',
-                        flexShrink: 0,
-                      }}
-                    >
-                      No
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box
-                  sx={{
-                    flex: 1,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 1,
-                    p: 2,
-                    bgcolor: '#ffffff',
-                  }}
-                >
-                  <Box component="ul" sx={{ m: 0, pl: 3 }}>
-                    {QUESTION_1_ADDITIONAL.map((item, index) => (
-                      <Typography
-                        key={index}
-                        component="li"
-                        variant="body2"
-                        sx={{ color: '#616161', mb: 0.5 }}
-                      >
-                        {item}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Q50 block – header row + content row (Are you? + Additional info aligned) */}
-            <Box>
-              <Box
-                sx={{
-                  display: 'flex',
-                  borderBottom: '1px solid #ef9a9a',
-                  pb: 0.5,
-                  mb: 0.75,
-                }}
-              >
-                <Box sx={{ flex: 1, pr: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 600, color: '#616161' }}
-                  >
-                    Are you?
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: 1, pl: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 600, color: '#616161' }}
-                  >
-                    Additional information
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 3 }}>
-                <Box
-                  sx={{
-                    flex: 1,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 1,
-                    p: 2,
-                    bgcolor: '#ffffff',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 2,
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 600, color: '#424242' }}
-                    >
-                      50. taking any of the following Supplements
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        color: '#43a047',
-                        flexShrink: 0,
-                      }}
-                    >
-                      Yes
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box
-                  sx={{
-                    flex: 1,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 1,
-                    p: 2,
-                    bgcolor: '#ffffff',
-                  }}
-                >
-                  <Box component="ul" sx={{ m: 0, pl: 3 }}>
-                    {QUESTION_50_ADDITIONAL.map((item, index) => (
-                      <Typography
-                        key={index}
-                        component="li"
-                        variant="body2"
-                        sx={{ color: '#616161', mb: 0.5 }}
-                      >
-                        {item}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
+                        <Typography variant="body2" sx={{ color: '#616161' }}>
+                          {item.additionalInfo}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
           </Box>
         )}
 
@@ -1162,40 +995,21 @@ const PatientMedicalHistoryPage = () => {
       </Card>
 
       {/* Signature */}
-      <Card
-        sx={{
-          mb: 0,
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: '#9e9e9e', mb: 0.5, display: 'block' }}
-            >
-              Patient/Guardian Signature:
-            </Typography>
-            <Box
-              sx={{
-                width: 240,
-                height: 72,
-                borderRadius: 1,
-                border: '1px solid #e0e0e0',
-                bgcolor: '#fafafa',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{ color: '#bdbdbd' }}
-              >
-                Signature
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+      <Card sx={{ mb: 0 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: '#757575', mb: 0.5, display: 'block' }}
+        >
+          Patient/Guardian Signature:
+        </Typography>
+        <SignaturePad
+          width={320}
+          height={80}
+          value={signature}
+          onChange={setSignature}
+          showClearButton
+          sx={{ mt: 0.5 }}
+        />
       </Card>
 
       <Typography
@@ -1209,6 +1023,8 @@ const PatientMedicalHistoryPage = () => {
       >
         Layout only — hook this form up to your medical history data when ready.
       </Typography>
+        </>
+      )}
     </PageContainer>
   );
 };

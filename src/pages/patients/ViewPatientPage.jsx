@@ -679,24 +679,6 @@ const ViewPatientPage = () => {
                           }}
                         >
                           <Button
-                            component="span"
-                            sx={{
-                              textTransform: 'uppercase',
-                              fontWeight: 600,
-                              color: 'primary.main',
-                              textDecoration: 'underline',
-                              minWidth: 0,
-                              p: 0,
-                              '&:hover': {
-                                bgcolor: 'transparent',
-                                textDecoration: 'underline',
-                              },
-                            }}
-                            onClick={handleInsuranceAdd}
-                          >
-                            Add Patient Insurance
-                          </Button>
-                          <Button
                             variant="contained"
                             size="medium"
                             startIcon={<SecurityIcon />}

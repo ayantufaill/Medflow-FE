@@ -20,6 +20,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  TextField,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -27,10 +28,13 @@ import {
   Edit as EditIcon,
   CheckCircle as CheckCircleIcon,
   Check as CheckIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 
 import { patientService } from "../../services/patient.service";
+import { getCachedPatient, setCachedPatient } from "../../utils/patientCache";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
+import SignaturePad from "../../components/shared/SignaturePad";
 
 const MOCK_DENTAL_HISTORY = {
   generalInfo: {
@@ -100,6 +104,14 @@ const MOCK_DENTAL_HISTORY = {
   lastUpdateDate: "Mar 26, 2020",
 };
 
+const MOCK_VISIT_DATES = [
+  "Feb 20, 2025",
+  "Feb 25, 2025",
+  "Apr 08, 2025",
+  "Jun 17, 2025",
+  "Sep 04, 2025",
+];
+
 const PatientDentalHistoryPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
@@ -107,16 +119,33 @@ const PatientDentalHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  const [dentalHistory] = useState(MOCK_DENTAL_HISTORY);
+  const [dentalHistory, setDentalHistory] = useState(MOCK_DENTAL_HISTORY);
+  const [visitDates, setVisitDates] = useState(MOCK_VISIT_DATES);
+  const [signature, setSignature] = useState(null);
+
+  const updateGeneralInfo = (field, value) => {
+    setDentalHistory((prev) => ({
+      ...prev,
+      generalInfo: { ...prev.generalInfo, [field]: value },
+    }));
+  };
 
   useEffect(() => {
     let cancelled = false;
+    const cached = getCachedPatient(patientId);
+    if (cached) {
+      setPatient(cached);
+      setLoading(false);
+    }
 
     const fetchData = async () => {
       try {
-        setLoading(true);
+        if (!cached) setLoading(true);
         const patientData = await patientService.getPatientById(patientId);
-        if (!cancelled) setPatient(patientData);
+        if (!cancelled) {
+          setPatient(patientData);
+          setCachedPatient(patientId, patientData);
+        }
       } catch {
         if (!cancelled) setPatient(null);
       } finally {
@@ -131,13 +160,7 @@ const PatientDentalHistoryPage = () => {
     };
   }, [patientId]);
 
-  if (loading && !patient) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const showContent = !loading || patient;
 
   return (
     <Box
@@ -149,7 +172,12 @@ const PatientDentalHistoryPage = () => {
       }}
     >
       <PatientSectionTabs activeTab="dental" patientId={patientId} />
-
+      {!showContent ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
       {/* HEADER */}
 
       <Box
@@ -223,6 +251,67 @@ const PatientDentalHistoryPage = () => {
         </Box>
       </Box>
 
+      {/* Timeline – visit dates */}
+      <Paper
+        variant="outlined"
+        sx={{
+          py: 1.5,
+          px: 2,
+          mb: 2,
+          borderRadius: 1,
+          border: "1px solid #e0e0e0",
+          bgcolor: "#ffffff",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 1.5,
+          }}
+        >
+          {visitDates.map((label, index) => {
+            const isLast = index === visitDates.length - 1;
+            return (
+              <Box
+                key={`${label}-${index}`}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: isLast ? 14 : 10,
+                    height: isLast ? 14 : 10,
+                    borderRadius: "50%",
+                    bgcolor: isLast ? "#1976d2" : "#bdbdbd",
+                  }}
+                />
+                <Typography variant="body2" sx={{ color: "#757575" }}>
+                  {label}
+                </Typography>
+                {isLast && (
+                  <CloseIcon
+                    sx={{ fontSize: 14, color: "#e53935", cursor: "pointer" }}
+                    onClick={() =>
+                      setVisitDates((prev) => prev.slice(0, -1))
+                    }
+                  />
+                )}
+              </Box>
+            );
+          })}
+          {visitDates.length === 0 && (
+            <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
+              No visit dates from dental history
+            </Typography>
+          )}
+        </Box>
+      </Paper>
+
       {/* GENERAL INFORMATION */}
 
       <Paper
@@ -251,141 +340,73 @@ const PatientDentalHistoryPage = () => {
         <Grid container spacing={2}>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                How would you rate the condition of your mouth?
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {dentalHistory.generalInfo.mouthCondition}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="How would you rate the condition of your mouth?"
+              value={dentalHistory.generalInfo.mouthCondition}
+              onChange={(e) => updateGeneralInfo('mouthCondition', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Previous Dentist
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {dentalHistory.generalInfo.previousDentist}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Previous Dentist"
+              value={dentalHistory.generalInfo.previousDentist}
+              onChange={(e) => updateGeneralInfo('previousDentist', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Date of most recent dental exam
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {dentalHistory.generalInfo.recentExamDate}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label="Date of most recent dental exam"
+              value={dentalHistory.generalInfo.recentExamDate || ''}
+              onChange={(e) => updateGeneralInfo('recentExamDate', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Recent treatment date
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {dentalHistory.generalInfo.recentTreatmentDate}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label="Recent treatment date"
+              value={dentalHistory.generalInfo.recentTreatmentDate || ''}
+              onChange={(e) => updateGeneralInfo('recentTreatmentDate', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Immediate concern
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {dentalHistory.generalInfo.immediateConcern}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Immediate concern"
+              value={dentalHistory.generalInfo.immediateConcern}
+              onChange={(e) => updateGeneralInfo('immediateConcern', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', color: '#757575', mb: 0.5 }}
-              >
-                Patient since
-              </Typography>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 0.5,
-                  px: 1.5,
-                  py: 1,
-                  fontSize: 14,
-                  bgcolor: '#ffffff',
-                }}
-              >
-                {dentalHistory.generalInfo.patientSince}
-              </Box>
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Patient since"
+              value={dentalHistory.generalInfo.patientSince}
+              onChange={(e) => updateGeneralInfo('patientSince', e.target.value)}
+              sx={{ '& .MuiInputLabel-root': { fontSize: 13 }, '& .MuiInputBase-input': { fontSize: 13 } }}
+            />
           </Grid>
 
           <Grid item xs={12}>
@@ -407,6 +428,7 @@ const PatientDentalHistoryPage = () => {
               <RadioGroup
                 row
                 value={dentalHistory.generalInfo.dentistVisitFrequency}
+                onChange={(e) => updateGeneralInfo('dentistVisitFrequency', e.target.value)}
                 sx={{
                   '& .MuiFormControlLabel-root': { mr: 2 },
                   '& .MuiTypography-root': { fontSize: 14 },
@@ -579,7 +601,7 @@ const PatientDentalHistoryPage = () => {
                        variant="body2"
                         sx={{
                           fontWeight: 600,
-                          color: item.answer === "Yes" ? "#ef5350" : '#616161',
+                          color: '#43a047',
                         }}
                       >
                         {item.answer}
@@ -626,47 +648,34 @@ const PatientDentalHistoryPage = () => {
       {/* Signature */}
       <Box sx={{ mt: 2 }}>
         <Paper
-        variant="outlined"
-        sx={{
-          p: 3,
-          mb: 0,
-          borderRadius: 1,
-          border: '1px solid #e0e0e0',
-          bgcolor: '#ffffff',
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: '#9e9e9e', mb: 0.5, display: 'block' }}
-            >
-              Patient/Guardian Signature:
-            </Typography>
-            <Box
-              sx={{
-                width: 240,
-                height: 72,
-                borderRadius: 1,
-                border: '1px solid #e0e0e0',
-                bgcolor: '#fafafa',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{ color: '#bdbdbd' }}
-              >
-                Signature
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Paper>
+          variant="outlined"
+          sx={{
+            p: 3,
+            mb: 0,
+            borderRadius: 1,
+            border: '1px solid #e0e0e0',
+            bgcolor: '#ffffff',
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{ color: '#757575', mb: 0.5, display: 'block' }}
+          >
+            Patient/Guardian Signature:
+          </Typography>
+          <SignaturePad
+            width={320}
+            height={80}
+            value={signature}
+            onChange={setSignature}
+            showClearButton
+            sx={{ mt: 0.5 }}
+          />
+        </Paper>
       </Box>
 
+        </>
+      )}
     </Box>
   );
 };

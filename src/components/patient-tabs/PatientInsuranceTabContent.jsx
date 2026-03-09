@@ -13,7 +13,6 @@ import {
   ListItemText,
 } from '@mui/material';
 import {
-  Add as AddIcon,
   MoreVert as MoreVertIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -29,6 +28,7 @@ import { patientService } from '../../services/patient.service';
 import { insuranceCompanyService } from '../../services/insurance.service';
 import InsuranceDialog from '../insurance/InsuranceDialog';
 import ImportedCoverageModal from '../insurance/ImportedCoverageModal';
+import EditCoverageModal from '../insurance/EditCoverageModal';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 import { MOCK_IMPORTED_COVERAGE } from '../../data/mockImportedCoverage';
 
@@ -43,9 +43,63 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const [insuranceDeleteDialog, setInsuranceDeleteDialog] = useState({ open: false, insurance: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [importedCoverageModalOpen, setImportedCoverageModalOpen] = useState(false);
+  const [editCoverageModal, setEditCoverageModal] = useState({ open: false, insurance: null, mode: 'edit' });
   const [creatingPolicy, setCreatingPolicy] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [optimisticInsurances, setOptimisticInsurances] = useState([]);
+
+  const getStorageKey = () => `medflow-optimistic-insurances-${patientId || 'unknown'}`;
+
+  const loadOptimisticFromStorage = () => {
+    if (!patientId) return [];
+    try {
+      const stored = localStorage.getItem(getStorageKey());
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.warn('Failed to load optimistic insurances from storage', e);
+    }
+    return [];
+  };
+
+  const saveOptimisticToStorage = (list) => {
+    try {
+      const key = getStorageKey();
+      if (list.length > 0) {
+        localStorage.setItem(key, JSON.stringify(list));
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.warn('Failed to save optimistic insurances to storage', e);
+    }
+  };
+
+  useEffect(() => {
+    if (patientId) {
+      let loaded = loadOptimisticFromStorage();
+      if (loaded.length === 0) {
+        loaded = MOCK_IMPORTED_COVERAGE.slice(0, 2).map((m, i) => ({
+          _id: `optimistic-seed-${Date.now()}-${i}`,
+          id: `optimistic-seed-${Date.now()}-${i}`,
+          isActive: true,
+          insuranceType: m.insuranceType || 'primary',
+          insuranceCompanyId: m.insuranceCompanyId,
+          employerName: m.employerName || m.planName?.split(' by ')[0],
+          planName: m.planName,
+          policyNumber: m.policyNumber,
+          groupNumber: m.groupNumber,
+          usedAmount: 0,
+          individualAnnualMax: 1500,
+          deductibleAmount: 1500,
+        }));
+        saveOptimisticToStorage(loaded);
+      }
+      setOptimisticInsurances(loaded);
+    }
+  }, [patientId]);
 
   const fetchInsurancesAndCompanies = async () => {
     try {
@@ -81,8 +135,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
 
   const handleInsuranceAdd = () => setInsuranceDialog({ open: true, mode: 'add', insurance: null });
   const handleInsuranceEdit = (insurance) => {
-    setInsuranceDialog({ open: true, mode: 'edit', insurance });
+    setEditCoverageModal({ open: true, insurance, mode: 'edit' });
     setInsuranceMenu({ anchorEl: null, insurance: null });
+  };
+  const handleViewPlan = (insurance) => {
+    setEditCoverageModal({ open: true, insurance, mode: 'view' });
   };
   const handleInsuranceDelete = (insurance) => {
     setInsuranceDeleteDialog({ open: true, insurance });
@@ -102,7 +159,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
     setInsuranceMenu({ anchorEl: null, insurance: null });
     const id = insurance._id || insurance.id;
     if (String(id).startsWith('optimistic-')) {
-      setOptimisticInsurances((prev) => prev.filter((i) => (i._id || i.id) !== id));
+      setOptimisticInsurances((prev) => {
+        const next = prev.filter((i) => (i._id || i.id) !== id);
+        saveOptimisticToStorage(next);
+        return next;
+      });
       showSnackbar('Coverage removed', 'success');
       return;
     }
@@ -160,23 +221,25 @@ export default function PatientInsuranceTabContent({ patientId }) {
         const isInvalidCompany = (apiErr.response?.data?.error?.message || apiErr.response?.data?.message || '').toLowerCase().includes('insurance company');
         const companyObj = planData.insuranceCompanyIdObj || (typeof planData.insuranceCompanyId === 'object' ? planData.insuranceCompanyId : null);
         if (isInvalidCompany && companyObj) {
-          setOptimisticInsurances((prev) => [
-            {
-              _id: `optimistic-${Date.now()}`,
-              id: `optimistic-${Date.now()}`,
-              isActive: true,
-              insuranceType: planData.insuranceType || 'primary',
-              insuranceCompanyId: companyObj,
-              employerName: planData.employerName || planData.planName?.split(' by ')[0],
-              planName: planData.planName,
-              policyNumber: planData.policyNumber,
-              groupNumber: planData.groupNumber,
-              usedAmount: 0,
-              individualAnnualMax: planData.individualAnnualMax ?? 1500,
-              deductibleAmount: planData.individualAnnualMax ?? 1500,
-            },
-            ...prev,
-          ]);
+          const newItem = {
+            _id: `optimistic-${Date.now()}`,
+            id: `optimistic-${Date.now()}`,
+            isActive: true,
+            insuranceType: planData.insuranceType || 'primary',
+            insuranceCompanyId: companyObj,
+            employerName: planData.employerName || planData.planName?.split(' by ')[0],
+            planName: planData.planName,
+            policyNumber: planData.policyNumber,
+            groupNumber: planData.groupNumber,
+            usedAmount: 0,
+            individualAnnualMax: planData.individualAnnualMax ?? 1500,
+            deductibleAmount: planData.individualAnnualMax ?? 1500,
+          };
+          setOptimisticInsurances((prev) => {
+            const next = [newItem, ...prev];
+            saveOptimisticToStorage(next);
+            return next;
+          });
           showSnackbar('Plan saved (demo mode – will sync when backend is connected)', 'success');
         } else {
           throw apiErr;
@@ -235,23 +298,6 @@ export default function PatientInsuranceTabContent({ patientId }) {
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'center', alignItems: 'center' }}>
                 <Button
-                  component="span"
-                  sx={{
-                    fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    color: '#1976d2',
-                    textDecoration: 'underline',
-                    minWidth: 0,
-                    p: 0,
-                    textTransform: 'uppercase',
-                    '&:hover': { bgcolor: 'transparent', textDecoration: 'underline', color: '#1565c0' },
-                  }}
-                  onClick={handleInsuranceAdd}
-                >
-                  Add Patient Insurance
-                </Button>
-                <Button
                   variant="contained"
                   size="small"
                   onClick={() => setImportedCoverageModalOpen(true)}
@@ -269,8 +315,6 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 <Button
                   variant="contained"
                   size="small"
-                  startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-                  onClick={handleInsuranceAdd}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
@@ -280,7 +324,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                     px: 1.5,
                   }}
                 >
-                  + New Coverage
+                  New Coverage
                 </Button>
               </Box>
               {inactiveInsurances.length > 0 && (
@@ -342,23 +386,6 @@ export default function PatientInsuranceTabContent({ patientId }) {
             <>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center', justifyContent: 'center', mb: 2 }}>
                 <Button
-                  component="span"
-                  sx={{
-                    fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    color: '#1976d2',
-                    textDecoration: 'underline',
-                    minWidth: 0,
-                    p: 0,
-                    textTransform: 'uppercase',
-                    '&:hover': { bgcolor: 'transparent', textDecoration: 'underline', color: '#1565c0' },
-                  }}
-                  onClick={handleInsuranceAdd}
-                >
-                  Add Patient Insurance
-                </Button>
-                <Button
                   variant="contained"
                   size="small"
                   onClick={() => setImportedCoverageModalOpen(true)}
@@ -376,8 +403,6 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 <Button
                   variant="contained"
                   size="small"
-                  startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-                  onClick={handleInsuranceAdd}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
@@ -387,7 +412,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                     px: 1.5,
                   }}
                 >
-                  + New Coverage
+                  New Coverage
                 </Button>
               </Box>
               <Typography
@@ -450,7 +475,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                           size="small"
                           variant="contained"
                           color="primary"
-                          onClick={() => {}}
+                          onClick={() => handleViewPlan(ins)}
                           sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.75rem', textTransform: 'none' }}
                         >
                           View Plan
@@ -537,6 +562,18 @@ export default function PatientInsuranceTabContent({ patientId }) {
           <ListItemText>Delete</ListItemText>
         </MuiMenuItem>
       </Menu>
+
+      <EditCoverageModal
+        open={editCoverageModal.open}
+        onClose={() => setEditCoverageModal({ open: false, insurance: null, mode: 'edit' })}
+        insurance={editCoverageModal.insurance}
+        getInsuranceCompanyName={getInsuranceCompanyName}
+        mode={editCoverageModal.mode || 'edit'}
+        onSave={() => {
+          showSnackbar('Coverage updated', 'success');
+          setEditCoverageModal({ open: false, insurance: null, mode: 'edit' });
+        }}
+      />
 
       <ImportedCoverageModal
         open={importedCoverageModalOpen}
