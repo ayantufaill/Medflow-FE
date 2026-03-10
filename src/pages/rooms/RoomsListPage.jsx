@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -42,94 +43,56 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { roomService } from '../../services/room.service';
+import {
+  fetchRooms as fetchRoomsAction,
+  selectRoomList,
+  selectRoomPagination,
+  selectRoomListLoading,
+  selectRoomListError,
+  invalidateRooms,
+  removeRoomFromList,
+  updateRoomInList,
+} from '../../store/slices/roomSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const RoomsListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+
+  // Redux state
+  const rooms = useSelector(selectRoomList);
+  const pagination = useSelector(selectRoomPagination);
+  const loading = useSelector(selectRoomListLoading);
+  const reduxError = useSelector(selectRoomListError);
+
   const [error, setError] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRooms, setTotalRooms] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    roomId: null,
-    roomName: '',
-  });
-  const [actionMenu, setActionMenu] = useState({
-    anchorEl: null,
-    roomId: null,
-    roomName: '',
-    isActive: null,
-  });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, roomId: null, roomName: '' });
+  const [actionMenu, setActionMenu] = useState({ anchorEl: null, roomId: null, roomName: '', isActive: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
-  const previousSearchRef = useRef('');
   const searchDebounceTimerRef = useRef(null);
+  const totalRooms = pagination?.total || 0;
 
-  const fetchRooms = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      let isActive = undefined;
-      if (statusFilter === 'active') {
-        isActive = true;
-      } else if (statusFilter === 'inactive') {
-        isActive = false;
-      }
-
-      const result = await roomService.getAllRooms(
-        page + 1,
-        rowsPerPage,
-        search,
-        isActive
-      );
-      setRooms(result.rooms || []);
-      setTotalRooms(result.pagination?.total || 0);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch rooms. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, search, statusFilter]);
+  // Fetch via Redux
+  const doFetch = useCallback(() => {
+    let isActive = null;
+    if (statusFilter === 'active') isActive = true;
+    else if (statusFilter === 'inactive') isActive = false;
+    dispatch(fetchRoomsAction({ page: page + 1, limit: rowsPerPage, search, isActive }));
+  }, [dispatch, page, rowsPerPage, search, statusFilter]);
 
   useEffect(() => {
-    fetchRooms();
-  }, [fetchRooms]);
+    if (searchDebounceTimerRef.current) clearTimeout(searchDebounceTimerRef.current);
+    searchDebounceTimerRef.current = setTimeout(() => doFetch(), search ? 500 : 0);
+    return () => { if (searchDebounceTimerRef.current) clearTimeout(searchDebounceTimerRef.current); };
+  }, [doFetch, search]);
 
-  useEffect(() => {
-    if (search === previousSearchRef.current) {
-      return;
-    }
-    previousSearchRef.current = search;
-
-    if (searchDebounceTimerRef.current) {
-      clearTimeout(searchDebounceTimerRef.current);
-    }
-
-    searchDebounceTimerRef.current = setTimeout(() => {
-      if (page === 0) {
-        fetchRooms();
-      } else {
-        setPage(0);
-      }
-    }, 500);
-
-    return () => {
-      if (searchDebounceTimerRef.current) {
-        clearTimeout(searchDebounceTimerRef.current);
-      }
-    };
-  }, [search, fetchRooms, page]);
+  useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -153,20 +116,12 @@ const RoomsListPage = () => {
       setDeleteLoading(true);
       await roomService.deleteRoom(deleteDialog.roomId);
       showSnackbar('Room deleted successfully', 'success');
+      dispatch(removeRoomFromList(deleteDialog.roomId));
       setDeleteDialog({ open: false, roomId: null, roomName: '' });
-      await fetchRooms();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete room. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete room. Please try again.',
-        'error'
-      );
+      const msg = err.response?.data?.error?.message || 'Failed to delete room.';
+      setError(msg);
+      showSnackbar(msg, 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -224,24 +179,20 @@ const RoomsListPage = () => {
     try {
       setToggleLoading(true);
       const newStatus = !currentStatus;
-      await roomService.updateRoom(roomId, {
-        isActive: newStatus,
-      });
-      showSnackbar(
-        `Room ${newStatus ? 'activated' : 'deactivated'} successfully`,
-        'success'
-      );
+      await roomService.updateRoom(roomId, { isActive: newStatus });
+      showSnackbar(`Room ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+      dispatch(updateRoomInList({ _id: roomId, isActive: newStatus }));
       handleActionMenuClose();
-      await fetchRooms();
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to update room status. Please try again.';
-      showSnackbar(errorMessage, 'error');
+      showSnackbar(err.response?.data?.error?.message || 'Failed to update room status.', 'error');
     } finally {
       setToggleLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    dispatch(invalidateRooms());
+    doFetch();
   };
 
   return (
@@ -338,7 +289,7 @@ const RoomsListPage = () => {
               )}
               <Tooltip title="Refresh">
                 <IconButton
-                  onClick={fetchRooms}
+                  onClick={handleRefresh}
                   disabled={loading}
                   color="primary"
                 >

@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Grid,
@@ -27,7 +28,11 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { providerValidations } from '../../validations/providerValidations';
 import { useUsersByRole } from '../../hooks/queries/useUsers';
-import { providerService } from '../../services/provider.service';
+import {
+  fetchSpecialties,
+  selectSpecialties,
+  selectSpecialtiesLoading,
+} from '../../store/slices/providerSlice';
 
 // Only log in development
 const isDevelopment = import.meta.env.DEV;
@@ -46,60 +51,59 @@ const ProviderForm = ({
   formId,
   externalUsers = null,
 }) => {
+  const dispatch = useDispatch();
+  const specialties = useSelector(selectSpecialties);
+  const specialtiesLoading = useSelector(selectSpecialtiesLoading);
+
   const [userSearch, setUserSearch] = useState('');
   const userSearchTimerRef = useRef(null);
   const [specialtySearch, setSpecialtySearch] = useState('');
-  const specialtySearchTimerRef = useRef(null);
-  const [specialties, setSpecialties] = useState([]);
-  const [specialtiesLoading, setSpecialtiesLoading] = useState(false);
 
-  // Use React Query to fetch and cache users - optimized with caching
+  // In edit mode, user dropdown is disabled - no need to fetch all users.
+  // Just build a display-only entry from the provider's existing data.
+  const skipUsersFetch = isEditMode && initialData?.userId;
+
   const {
     data: allUsers = [],
-    isLoading: usersLoading,
+    isLoading: fetchingUsers,
     error: usersError,
   } = useUsersByRole('Provider', {
-    limit: 500,
+    limit: 100,
     status: 'active',
-    excludeWithProvider: false, // Fetch all first, filter on frontend
-    enabled: externalUsers === null, // Only fetch if externalUsers not provided
+    excludeWithProvider: false,
+    enabled: !skipUsersFetch && externalUsers === null,
   });
 
-  // Memoized: Filter users based on edit mode and search - only recalculates when dependencies change
+  const usersLoading = skipUsersFetch ? false : fetchingUsers;
+
   const users = useMemo(() => {
-    // Use external users if provided
-    if (externalUsers !== null) {
-      return externalUsers;
+    if (skipUsersFetch) {
+      const u = initialData.userId;
+      if (typeof u === 'object' && u !== null) {
+        return [{ _id: u._id || u.id, firstName: u.firstName, lastName: u.lastName, email: u.email }];
+      }
+      return [{ _id: u, firstName: '', lastName: '', email: '' }];
     }
+
+    if (externalUsers !== null) return externalUsers;
 
     let filteredUsers = [...allUsers];
 
-    // If creating new provider (not edit mode), filter out users who already have providers
     if (!isEditMode) {
-      filteredUsers = filteredUsers.filter(user => {
-        return !user.hasProvider && !user.providerId;
-      });
+      filteredUsers = filteredUsers.filter(user => !user.hasProvider && !user.providerId);
     }
 
-    // Apply search filter if search term is provided
     if (userSearch && userSearch.trim()) {
       const searchLower = userSearch.toLowerCase().trim();
-      filteredUsers = filteredUsers.filter(user => 
+      filteredUsers = filteredUsers.filter(user =>
         (user.firstName?.toLowerCase().includes(searchLower)) ||
         (user.lastName?.toLowerCase().includes(searchLower)) ||
         (user.email?.toLowerCase().includes(searchLower))
       );
     }
 
-    debugLog('ProviderForm - Filtered users:', {
-      total: filteredUsers.length,
-      allUsers: allUsers.length,
-      excludeWithProvider: !isEditMode,
-      search: userSearch || '(empty)',
-    });
-
     return filteredUsers;
-  }, [allUsers, isEditMode, userSearch, externalUsers]);
+  }, [allUsers, isEditMode, userSearch, externalUsers, skipUsersFetch, initialData]);
 
   // Log errors only in development
   useEffect(() => {
@@ -108,29 +112,16 @@ const ProviderForm = ({
     }
   }, [usersError]);
 
-  const searchSpecialties = useCallback(async (search = '') => {
-    try {
-      setSpecialtiesLoading(true);
-      const result = await providerService.getSpecialties();
-      const specialtiesList = result.specialties || [];
-      if (search) {
-        const filtered = specialtiesList.filter(s => 
-          s.toLowerCase().includes(search.toLowerCase())
-        );
-        setSpecialties(filtered);
-      } else {
-        setSpecialties(specialtiesList);
-      }
-    } catch (err) {
-      console.error('Error searching specialties:', err);
-    } finally {
-      setSpecialtiesLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    searchSpecialties('');
-  }, [searchSpecialties]);
+    dispatch(fetchSpecialties());
+  }, [dispatch]);
+
+  const filteredSpecialties = useMemo(() => {
+    if (!specialtySearch) return specialties;
+    return specialties.filter(s =>
+      s.toLowerCase().includes(specialtySearch.toLowerCase())
+    );
+  }, [specialties, specialtySearch]);
 
   // Helper function to parse time string to dayjs
   const parseTime = (timeString) => {
@@ -557,19 +548,14 @@ const ProviderForm = ({
               render={({ field }) => (
                 <Autocomplete
                   multiple
-                  options={specialties}
+                  options={filteredSpecialties}
                   value={field.value || []}
                   onChange={(event, newValue) => field.onChange(newValue)}
                   onInputChange={(event, newInputValue, reason) => {
                     if (reason === 'input') {
-                      if (specialtySearchTimerRef.current) {
-                        clearTimeout(specialtySearchTimerRef.current);
-                      }
-                      specialtySearchTimerRef.current = setTimeout(() => {
-                        searchSpecialties(newInputValue);
-                      }, 300);
+                      setSpecialtySearch(newInputValue);
                     } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
-                      searchSpecialties('');
+                      setSpecialtySearch('');
                     }
                   }}
                   isOptionEqualToValue={(option, value) => option === value}

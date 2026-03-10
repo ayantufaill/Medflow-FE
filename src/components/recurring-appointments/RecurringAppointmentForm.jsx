@@ -37,11 +37,10 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { recurringAppointmentValidations } from '../../validations/recurringAppointmentValidations';
 import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
-import { appointmentTypeService } from '../../services/appointment-type.service';
 import { recurringAppointmentService } from '../../services/recurring-appointment.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { waitlistService } from '../../services/waitlist.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 
 const RecurringAppointmentForm = ({
   onSubmit,
@@ -51,9 +50,15 @@ const RecurringAppointmentForm = ({
   hideButtons = false,
   formId,
 }) => {
+  // Redux cached dropdown data
+  const {
+    providers,
+    appointmentTypes,
+    providersLoading: providerSearchLoading,
+    appointmentTypesLoading: appointmentTypeSearchLoading,
+  } = useDropdownData({ providers: true, appointmentTypes: true });
+
   const [patients, setPatients] = useState([]);
-  const [providers, setProviders] = useState([]);
-  const [appointmentTypes, setAppointmentTypes] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -64,8 +69,6 @@ const RecurringAppointmentForm = ({
   const [waitlistLoading, setWaitlistLoading] = useState({});
   const [addedToWaitlist, setAddedToWaitlist] = useState({});
   const [patientSearchLoading, setPatientSearchLoading] = useState(false);
-  const [providerSearchLoading, setProviderSearchLoading] = useState(false);
-  const [appointmentTypeSearchLoading, setAppointmentTypeSearchLoading] = useState(false);
   const { showSnackbar } = useSnackbar();
 
   const debounce = useCallback((func, wait) => {
@@ -91,49 +94,17 @@ const RecurringAppointmentForm = ({
     [debounce]
   );
 
-  const searchProviders = useCallback(
-    debounce(async (searchTerm) => {
-      try {
-        setProviderSearchLoading(true);
-        const result = await providerService.getAllProviders(1, 20, searchTerm, true);
-        setProviders(result.providers || []);
-      } catch (err) {
-        console.error('Error searching providers:', err);
-      } finally {
-        setProviderSearchLoading(false);
-      }
-    }, 300),
-    [debounce]
-  );
-
-  const searchAppointmentTypes = useCallback(
-    debounce(async (searchTerm) => {
-      try {
-        setAppointmentTypeSearchLoading(true);
-        const result = await appointmentTypeService.getAllAppointmentTypes(1, 20, searchTerm, true);
-        setAppointmentTypes(result.appointmentTypes || []);
-      } catch (err) {
-        console.error('Error searching appointment types:', err);
-      } finally {
-        setAppointmentTypeSearchLoading(false);
-      }
-    }, 300),
-    [debounce]
-  );
+  // Providers and types come from Redux cache - no separate fetch needed
+  const searchProviders = useCallback(() => {}, []);
+  const searchAppointmentTypes = useCallback(() => {}, []);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoadingData(true);
-        const [patientsResult, providersResult, typesResult] =
-          await Promise.all([
-            patientService.getAllPatients(1, 20, '', 'active'),
-            providerService.getAllProviders(1, 20, '', true),
-            appointmentTypeService.getAllAppointmentTypes(1, 20, '', true),
-          ]);
+        // Only fetch patients — providers & types come from Redux
+        const patientsResult = await patientService.getAllPatients(1, 20, '', 'active');
         setPatients(patientsResult.patients || []);
-        setProviders(providersResult.providers || []);
-        setAppointmentTypes(typesResult.appointmentTypes || []);
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {

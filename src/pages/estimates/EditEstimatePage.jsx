@@ -28,7 +28,7 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { estimateService } from '../../services/estimate.service';
 import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft' },
@@ -42,13 +42,15 @@ const EditEstimatePage = () => {
   const navigate = useNavigate();
   const { estimateId } = useParams();
   const { showSnackbar } = useSnackbar();
+
+  // Providers from Redux cache
+  const { providers, providersLoading: loadingProviders } = useDropdownData({ providers: true });
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [patients, setPatients] = useState([]);
-  const [providers, setProviders] = useState([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
-  const [loadingProviders, setLoadingProviders] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [estimate, setEstimate] = useState(null);
@@ -86,15 +88,14 @@ const EditEstimatePage = () => {
         setLoading(true);
         setError('');
 
-        const [estimateData, patientsResult, providersResult] = await Promise.all([
+        // Providers come from Redux cache — only fetch estimate & patients
+        const [estimateData, patientsResult] = await Promise.all([
           estimateService.getEstimateById(estimateId),
           patientService.getAllPatients(1, 100),
-          providerService.getAllProviders(1, 100),
         ]);
 
         setEstimate(estimateData);
         setPatients(patientsResult.patients || []);
-        setProviders(providersResult.providers || []);
 
         const patient = estimateData.patient || estimateData.patientId;
         const patientIdStr = patient ? String(patient._id || patient.id || estimateData.patientId) : null;
@@ -106,7 +107,7 @@ const EditEstimatePage = () => {
 
         const providerIdStr = estimateData.providerId ? String(estimateData.providerId) : null;
         const providerObj = providerIdStr
-          ? providersResult.providers?.find(
+          ? providers?.find(
               (p) => String(p._id || p.id) === providerIdStr
             ) || null
           : null;

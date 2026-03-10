@@ -58,6 +58,8 @@ import {
   Visibility as VisibilityIcon,
   History as HistoryIcon,
   CameraAlt as CameraAltIcon,
+  Security as SecurityIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -77,6 +79,7 @@ import {
   PatientNotesTab,
   PatientDocumentsTab,
 } from '../../components/patient-tabs';
+import { PatientDetailOverview } from '../../components/patient-detail';
 
 const ViewPatientPage = () => {
   const navigate = useNavigate();
@@ -95,6 +98,12 @@ const ViewPatientPage = () => {
                      searchParams.get('tab') === 'vitals' ? 4 : 0;
   const [tabValue, setTabValue] = useState(initialTab);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deactivateDialog, setDeactivateDialog] = useState({
+    open: false,
+    patientId: null,
+    patientName: '',
+  });
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
 
   // Insurance state
   const [insurances, setInsurances] = useState([]);
@@ -217,6 +226,22 @@ const ViewPatientPage = () => {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleDeactivateConfirm = async () => {
+    if (!deactivateDialog.patientId) return;
+    try {
+      setDeactivateLoading(true);
+      await patientService.updatePatient(deactivateDialog.patientId, { isActive: false });
+      showSnackbar('Patient deactivated', 'success');
+      setDeactivateDialog({ open: false, patientId: null, patientName: '' });
+      setPatient((prev) => (prev ? { ...prev, isActive: false } : null));
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate';
+      showSnackbar(msg, 'error');
+    } finally {
+      setDeactivateLoading(false);
+    }
   };
 
   const getPatientInitials = (firstName, lastName) => {
@@ -595,524 +620,319 @@ const ViewPatientPage = () => {
             </Tabs>
           </Box>
 
-          {/* Details Tab */}
+          {/* Details Tab - component-based layout (reference UI) */}
           {tabValue === 0 && (
             <Box sx={{ p: 3 }}>
-              {/* Personal Information Card */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 3,
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
-                  Personal Information
-                </Typography>
-              </Box>
-              <Grid container spacing={3} sx={{ mb: 3 }}>
-                {/* Personal Information */}
-                <Grid item size={{ xs: 12, sm: 12 }}>
-                  {/* <Card sx={{ p: 2.5, height: '100%' }}> */}
-                  <Grid container spacing={2}>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        First Name
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.firstName || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Last Name
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.lastName || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Middle Name
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.middleName || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Preferred Name
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.preferredName || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Date of Birth
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {formatDate(patient.dateOfBirth)}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Gender
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.gender
-                          ? patient.gender
-                              .split('_')
-                              .map(
-                                (word) =>
-                                  word.charAt(0).toUpperCase() +
-                                  word.slice(1).toLowerCase()
-                              )
-                              .join(' ')
-                          : '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        SSN
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.ssn
-                          ? patient.ssn.replace(
-                              /(\d{3})(\d{2})(\d{4})/,
-                              '$1-$2-$3'
-                            )
-                          : '-'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                  {/* </Card> */}
-                </Grid>
-
-                {/* Contact Information */}
-                <Grid item size={{ xs: 12, sm: 12 }}>
-                  {/* <Card sx={{ p: 2.5, height: '100%' }}> */}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}
-                  >
-                    Contact Information
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Primary Phone
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.phonePrimary || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Secondary Phone
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.phoneSecondary || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Email
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.email || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Preferred Language
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.preferredLanguage
-                          ? patient.preferredLanguage.toUpperCase()
-                          : '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Communication Preference
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.communicationPreference
-                          ? patient.communicationPreference
-                              .charAt(0)
-                              .toUpperCase() +
-                            patient.communicationPreference
-                              .slice(1)
-                              .toLowerCase()
-                          : '-'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                  {/* </Card> */}
-                </Grid>
-
-                {/* Address */}
-                <Grid item size={{ xs: 12, md: 12 }}>
-                  {/* <Card sx={{ p: 2.5, height: '100%' }}> */}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}
-                  >
-                    Address
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Address Line 1
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.address?.line1 || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Address Line 2
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.address?.line2 || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        City
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.address?.city || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        State
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.address?.state || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Postal Code
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.address?.postalCode || '-'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                  {/* </Card> */}
-                </Grid>
-
-                {/* Emergency Contact */}
-                <Grid item size={{ xs: 12, md: 12 }}>
-                  {/* <Card sx={{ p: 2.5, height: '100%' }}> */}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}
-                  >
-                    Emergency Contact
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Name
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.emergencyContact?.name || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Relationship
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.emergencyContact?.relationship || '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Phone
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.emergencyContact?.phone || '-'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                  {/* </Card> */}
-                </Grid>
-
-                {/* Additional Information */}
-                <Grid item size={{ xs: 12, md: 12 }}>
-                  {/* <Card sx={{ p: 2.5, height: '100%' }}> */}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}
-                  >
-                    Additional Information
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Portal Access Enabled
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.portalAccessEnabled ? 'Yes' : 'No'}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Last Visit Date
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {formatDate(patient.lastVisitDate)}
-                      </Typography>
-                    </Grid>
-                    <Grid item size={{ xs: 3, md: 3 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Referral Source
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {patient.referralSource || '-'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                  {/* </Card> */}
-                </Grid>
-
-                {/* Notes */}
-                <Grid item size={{ xs: 12, md: 12 }}>
-                  {/* <Card sx={{ p: 2.5, height: '100%' }}> */}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}
-                  >
-                    Notes
-                  </Typography>
-                  <Typography variant="body2" fontWeight="medium">
-                    {patient.notes || '-'}
-                  </Typography>
-                  {/* </Card> */}
-                </Grid>
-                {/* Custom Fields */}
-                {patient.customFields &&
-                  Object.keys(patient.customFields).length > 0 && (
-                    <Grid item size={{ xs: 12, md: 12 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontWeight: 'bold',
-                          mb: 2,
-                          color: 'primary.main',
-                        }}
-                      >
-                        Custom Fields
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 2,
-                        }}
-                      >
-                        {Object.entries(patient.customFields).map(
-                          ([key, value]) => (
-                            <Box
-                              key={key}
-                              sx={{
-                                p: 2,
-                                bgcolor: 'background.default',
-                                borderRadius: 1,
-                                border: 1,
-                                borderColor: 'divider',
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                                gutterBottom
-                              >
-                                {key}
-                              </Typography>
-                              <Typography variant="body2" fontWeight="medium">
-                                {String(value || '-')}
-                              </Typography>
-                            </Box>
-                          )
-                        )}
-                      </Box>
-                    </Grid>
-                  )}
-              </Grid>
+              <PatientDetailOverview
+                patient={patient}
+                patientNumber={patient?.patientCode ?? patientId}
+                preferredDentists={[]}
+                preferredHygienists={[]}
+                onEdit={() => navigate(`/patients/${patientId}/edit`)}
+                onRefresh={fetchPatient}
+                onDeactivate={() => setDeactivateDialog({ open: true, patientId, patientName: `${patient.firstName} ${patient.lastName}` })}
+                onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
+                onBalance={() => setTabValue(1)}
+                onDocuments={() => setTabValue(5)}
+                onAddFamilyMember={() => showSnackbar('Add family member — coming soon', 'info')}
+              />
             </Box>
           )}
 
           {/* Insurance Tab */}
           {tabValue === 1 && (
-            <Box sx={{ p: 3 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
-                  Insurance
-                </Typography>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={handleInsuranceAdd}
-                >
-                  Add Insurance
-                </Button>
-              </Box>
-              <Grid
-                container
-                spacing={2}
-                sx={{ mb: 3, alignItems: 'flex-end' }}
-              >
-                <Grid size={9}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Search insurance..."
-                    value={insuranceSearch}
-                    onChange={(e) => setInsuranceSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon />
-                        </InputAdornment>
-                      ),
-                      endAdornment: insuranceSearch && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => setInsuranceSearch('')}
-                            edge="end"
-                          >
-                            <ClearIcon />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                <Grid size={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="insurance-status-filter-label">
-                      Status
-                    </InputLabel>
-                    <Select
-                      labelId="insurance-status-filter-label"
-                      value={insuranceStatusFilter}
-                      label="Status"
-                      onChange={(e) => setInsuranceStatusFilter(e.target.value)}
-                    >
-                      <MenuItem value="">
-                        <em>All</em>
-                      </MenuItem>
-                      <MenuItem value="active">Active</MenuItem>
-                      <MenuItem value="inactive">Inactive</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="insurance-verification-filter-label">
-                      Verification
-                    </InputLabel>
-                    <Select
-                      labelId="insurance-verification-filter-label"
-                      value={insuranceVerificationFilter}
-                      label="Verification"
-                      onChange={(e) =>
-                        setInsuranceVerificationFilter(e.target.value)
-                      }
-                    >
-                      <MenuItem value="">
-                        <em>All</em>
-                      </MenuItem>
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="verified">Verified</MenuItem>
-                      <MenuItem value="failed">Failed</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={3.5}>
-                  <DatePicker
-                    label="Effective From"
-                    value={insuranceEffectiveDateStart}
-                    onChange={(newValue) =>
-                      setInsuranceEffectiveDateStart(newValue)
-                    }
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: 'small',
-                      },
-                    }}
-                    maxDate={insuranceEffectiveDateEnd || undefined}
-                  />
-                </Grid>
-                <Grid size={3.5}>
-                  <DatePicker
-                    label="Effective To"
-                    value={insuranceEffectiveDateEnd}
-                    onChange={(newValue) =>
-                      setInsuranceEffectiveDateEnd(newValue)
-                    }
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: 'small',
-                      },
-                    }}
-                    minDate={insuranceEffectiveDateStart || undefined}
-                  />
-                </Grid>
-                <Grid size={2}>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}
-                  >
-                    <Tooltip title="Clear Filters">
-                      <span>
-                        <IconButton
-                          onClick={handleResetInsuranceFilters}
-                          disabled={!hasInsuranceFilters}
-                          color="primary"
-                        >
-                          <FilterAltOff />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Refresh">
-                      <span>
-                        <IconButton
-                          onClick={fetchInsurancesAndCompanies}
-                          color="primary"
-                        >
-                          <RefreshIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                </Grid>
-              </Grid>
+            <Box sx={{ p: 3, display: 'flex', gap: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                {(() => {
+                  const hasActiveCoverage = insurances.some((i) => i.isActive);
+                  const inactiveInsurances = insurances.filter((i) => !i.isActive);
 
-              {filteredInsurances.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No insurance records found.
-                </Typography>
-              ) : (
+                  if (!hasActiveCoverage) {
+                    return (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: 320,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            color: 'error.main',
+                            fontWeight: 600,
+                            mb: 3,
+                          }}
+                        >
+                          Patient has no active coverage.
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Button
+                            variant="contained"
+                            size="medium"
+                            startIcon={<SecurityIcon />}
+                            onClick={() =>
+                              inactiveInsurances.length > 0
+                                ? document
+                                    .getElementById('imported-coverage-list')
+                                    ?.scrollIntoView({
+                                      behavior: 'smooth',
+                                      block: 'nearest',
+                                    })
+                                : showSnackbar(
+                                    'No imported coverage available',
+                                    'info'
+                                  )
+                            }
+                            sx={{
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Imported Coverage
+                          </Button>
+                          <Button
+                            variant="contained"
+                            size="medium"
+                            startIcon={<AddIcon />}
+                            onClick={handleInsuranceAdd}
+                            sx={{
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                            }}
+                          >
+                            New Coverage
+                          </Button>
+                        </Box>
+                        {inactiveInsurances.length > 0 && (
+                          <Box
+                            id="imported-coverage-list"
+                            sx={{ mt: 4, width: '100%', maxWidth: 500 }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                              sx={{ mb: 1.5, textAlign: 'left' }}
+                            >
+                              Inactive coverage (activate to use)
+                            </Typography>
+                            <Stack spacing={1}>
+                              {inactiveInsurances.map((ins) => (
+                                <Paper
+                                  key={ins._id || ins.id}
+                                  variant="outlined"
+                                  sx={{
+                                    p: 1.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                  }}
+                                >
+                                  <Typography variant="body2">
+                                    {getInsuranceCompanyName(
+                                      ins.insuranceCompanyId
+                                    )}{' '}
+                                    – {ins.insuranceType || 'Unknown'}
+                                  </Typography>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="success"
+                                    onClick={() =>
+                                      handleInsuranceActivate(ins)
+                                    }
+                                  >
+                                    Activate
+                                  </Button>
+                                </Paper>
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+                      </Box>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          mb: 2,
+                        }}
+                      >
+                        <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+                          Insurance
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={handleInsuranceAdd}
+                        >
+                          Add Insurance
+                        </Button>
+                      </Box>
+                      <Grid
+                        container
+                        spacing={2}
+                        sx={{ mb: 3, alignItems: 'flex-end' }}
+                      >
+                        <Grid size={9}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Search insurance..."
+                            value={insuranceSearch}
+                            onChange={(e) =>
+                              setInsuranceSearch(e.target.value)
+                            }
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <SearchIcon />
+                                </InputAdornment>
+                              ),
+                              endAdornment: insuranceSearch && (
+                                <InputAdornment position="end">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setInsuranceSearch('')}
+                                    edge="end"
+                                  >
+                                    <ClearIcon />
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+                        <Grid size={3}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel id="insurance-status-filter-label">
+                              Status
+                            </InputLabel>
+                            <Select
+                              labelId="insurance-status-filter-label"
+                              value={insuranceStatusFilter}
+                              label="Status"
+                              onChange={(e) =>
+                                setInsuranceStatusFilter(e.target.value)
+                              }
+                            >
+                              <MenuItem value="">
+                                <em>All</em>
+                              </MenuItem>
+                              <MenuItem value="active">Active</MenuItem>
+                              <MenuItem value="inactive">Inactive</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={3}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel id="insurance-verification-filter-label">
+                              Verification
+                            </InputLabel>
+                            <Select
+                              labelId="insurance-verification-filter-label"
+                              value={insuranceVerificationFilter}
+                              label="Verification"
+                              onChange={(e) =>
+                                setInsuranceVerificationFilter(e.target.value)
+                              }
+                            >
+                              <MenuItem value="">
+                                <em>All</em>
+                              </MenuItem>
+                              <MenuItem value="pending">Pending</MenuItem>
+                              <MenuItem value="verified">Verified</MenuItem>
+                              <MenuItem value="failed">Failed</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={3.5}>
+                          <DatePicker
+                            label="Effective From"
+                            value={insuranceEffectiveDateStart}
+                            onChange={(newValue) =>
+                              setInsuranceEffectiveDateStart(newValue)
+                            }
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                size: 'small',
+                              },
+                            }}
+                            maxDate={insuranceEffectiveDateEnd || undefined}
+                          />
+                        </Grid>
+                        <Grid size={3.5}>
+                          <DatePicker
+                            label="Effective To"
+                            value={insuranceEffectiveDateEnd}
+                            onChange={(newValue) =>
+                              setInsuranceEffectiveDateEnd(newValue)
+                            }
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                size: 'small',
+                              },
+                            }}
+                            minDate={insuranceEffectiveDateStart || undefined}
+                          />
+                        </Grid>
+                        <Grid size={2}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              gap: 1,
+                            }}
+                          >
+                            <Tooltip title="Clear Filters">
+                              <span>
+                                <IconButton
+                                  onClick={handleResetInsuranceFilters}
+                                  disabled={!hasInsuranceFilters}
+                                  color="primary"
+                                >
+                                  <FilterAltOff />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Refresh">
+                              <span>
+                                <IconButton
+                                  onClick={fetchInsurancesAndCompanies}
+                                  color="primary"
+                                >
+                                  <RefreshIcon />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {filteredInsurances.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No insurance records found.
+                        </Typography>
+                      ) : (
                 <TableContainer>
                   <Table sx={{ minWidth: 650 }}>
                     <TableHead>
@@ -1225,6 +1045,54 @@ const ViewPatientPage = () => {
                   </Table>
                 </TableContainer>
               )}
+                    </>
+                  );
+                })()}
+              </Box>
+              {/* Right sidebar utility icons - shown when no active coverage */}
+              {tabValue === 1 &&
+                !insurances.some((i) => i.isActive) && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Tooltip title="Scan insurance card">
+                      <IconButton
+                        color="primary"
+                        onClick={handleInsuranceAdd}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'primary.main',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <CameraAltIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Verification checklist">
+                      <IconButton
+                        color="primary"
+                        onClick={() =>
+                          showSnackbar(
+                            'Verification checklist — coming soon',
+                            'info'
+                          )
+                        }
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'primary.main',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <AssignmentIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
             </Box>
           )}
 
@@ -1693,6 +1561,18 @@ const ViewPatientPage = () => {
           cancelText="Cancel"
           confirmColor="error"
           loading={deleteLoading}
+        />
+
+        <ConfirmationDialog
+          open={deactivateDialog.open}
+          onClose={() => setDeactivateDialog({ open: false, patientId: null, patientName: '' })}
+          onConfirm={handleDeactivateConfirm}
+          title="Deactivate Patient"
+          message={`Deactivate "${deactivateDialog.patientName}"? They will be marked inactive.`}
+          confirmText="Deactivate"
+          cancelText="Cancel"
+          confirmColor="error"
+          loading={deactivateLoading}
         />
       </Box>
     </LocalizationProvider>

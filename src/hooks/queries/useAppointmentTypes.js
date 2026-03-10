@@ -19,11 +19,11 @@ import { appointmentTypeService } from '../../services/appointment-type.service'
  * Query key factory for appointment types
  */
 export const appointmentTypeKeys = {
-  all: ['appointmentTypes'] as const,
-  lists: () => [...appointmentTypeKeys.all, 'list'] as const,
-  list: (filters) => [...appointmentTypeKeys.lists(), { filters }] as const,
-  details: () => [...appointmentTypeKeys.all, 'detail'] as const,
-  detail: (id) => [...appointmentTypeKeys.details(), id] as const,
+  all: ['appointmentTypes'],
+  lists: () => [...appointmentTypeKeys.all, 'list'],
+  list: (filters) => [...appointmentTypeKeys.lists(), { filters }],
+  details: () => [...appointmentTypeKeys.all, 'detail'],
+  detail: (id) => [...appointmentTypeKeys.details(), id],
 };
 
 /**

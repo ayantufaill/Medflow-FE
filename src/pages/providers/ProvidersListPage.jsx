@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useDebouncedCallback } from 'use-debounce';
+import { useState, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -44,114 +45,74 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { providerService } from '../../services/provider.service';
+import {
+  fetchProviders,
+  selectProviderList,
+  selectProviderPagination,
+  selectProviderListLoading,
+  selectProviderListError,
+  invalidateProviders,
+  removeProviderFromList,
+  updateProviderInList,
+} from '../../store/slices/providerSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const ProvidersListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [providers, setProviders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const dispatch = useDispatch();
+
+  // ─── Redux State ─────────────────────────────────────────
+  const providers = useSelector(selectProviderList);
+  const pagination = useSelector(selectProviderPagination);
+  const loading = useSelector(selectProviderListLoading);
+  const reduxError = useSelector(selectProviderListError);
+
+  // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalProviders, setTotalProviders] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    providerId: null,
-    providerName: '',
-  });
-  const [actionMenu, setActionMenu] = useState({
-    anchorEl: null,
-    providerId: null,
-    providerName: '',
-    isActive: null,
-  });
+  const [error, setError] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, providerId: null, providerName: '' });
+  const [actionMenu, setActionMenu] = useState({ anchorEl: null, providerId: null, providerName: '', isActive: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [debouncedSearch] = useDebounce(search, 500);
+  const totalProviders = pagination?.total || 0;
+  const hasActiveFilters = search || statusFilter;
 
   const formatSpecialty = (value) => {
     if (!value) return '-';
     if (Array.isArray(value)) {
-      const cleaned = value
-        .map((v) => (typeof v === 'string' ? v.trim() : ''))
-        .filter((v) => v.length > 0);
+      const cleaned = value.map((v) => (typeof v === 'string' ? v.trim() : '')).filter((v) => v.length > 0);
       return cleaned.length ? cleaned.join(', ') : '-';
     }
     if (typeof value === 'string') return value.trim() || '-';
     return '-';
   };
 
-  const handleResetFilters = () => {
-    setSearch('');
-    setStatusFilter('');
-    setPage(0);
-  };
-
-  const hasActiveFilters = search || statusFilter;
-
-  const fetchProviders = useCallback(async (searchValue) => {
-    try {
-      setLoading(true);
-      setError('');
-
-      let isActive = undefined;
-      if (statusFilter === 'active') {
-        isActive = true;
-      } else if (statusFilter === 'inactive') {
-        isActive = false;
-      }
-
-      const result = await providerService.getAllProviders(
-        page + 1,
-        rowsPerPage,
-        searchValue?.trim(),
-        isActive
-      );
-      setProviders(result.providers || []);
-      setTotalProviders(result.pagination?.total || 0);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch providers. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, statusFilter]);
-
-  const debouncedFetch = useDebouncedCallback((searchValue) => {
-    if (page === 0) {
-      fetchProviders(searchValue);
-    } else {
-      setPage(0);
-    }
-  }, 500);
-
+  // ─── Single fetch via Redux (fires once per param change) ───
   useEffect(() => {
-    fetchProviders(search);
-  }, [page, rowsPerPage, statusFilter]);
+    let isActive = null;
+    if (statusFilter === 'active') isActive = true;
+    else if (statusFilter === 'inactive') isActive = false;
 
-  useEffect(() => {
-    debouncedFetch(search);
-  }, [search, debouncedFetch]);
+    dispatch(fetchProviders({
+      page: page + 1,
+      limit: rowsPerPage,
+      search: debouncedSearch.trim(),
+      isActive,
+    }));
+  }, [dispatch, page, rowsPerPage, debouncedSearch, statusFilter]);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const handleResetFilters = () => { setSearch(''); setStatusFilter(''); setPage(0); };
+  const handleChangePage = (event, newPage) => { setPage(newPage); };
+  const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
 
   const handleDeleteClick = (providerId, providerName) => {
-    setDeleteDialog({
-      open: true,
-      providerId,
-      providerName,
-    });
+    setDeleteDialog({ open: true, providerId, providerName });
   };
 
   const handleDeleteConfirm = async () => {
@@ -159,176 +120,86 @@ const ProvidersListPage = () => {
       setDeleteLoading(true);
       await providerService.deleteProvider(deleteDialog.providerId);
       showSnackbar('Provider deleted successfully', 'success');
+      dispatch(removeProviderFromList(deleteDialog.providerId));
       setDeleteDialog({ open: false, providerId: null, providerName: '' });
-      await fetchProviders();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete provider. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete provider. Please try again.',
-        'error'
-      );
+      const msg = err.response?.data?.error?.message || 'Failed to delete provider.';
+      setError(msg);
+      showSnackbar(msg, 'error');
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const handleDeleteCancel = () => {
-    setDeleteDialog({ open: false, providerId: null, providerName: '' });
-  };
-
-  const handleActionMenuOpen = (event, providerId, providerName, isActive) => {
-    setActionMenu({
-      anchorEl: event.currentTarget,
-      providerId,
-      providerName,
-      isActive,
-    });
-  };
-
-  const handleActionMenuClose = () => {
-    setActionMenu((prev) => ({ ...prev, anchorEl: null }));
-  };
-
-  const handleViewDetails = (providerId) => {
-    handleActionMenuClose();
-    navigate(`/providers/${providerId}`);
-  };
-
-  const handleEdit = (providerId) => {
-    handleActionMenuClose();
-    navigate(`/providers/${providerId}/edit`);
-  };
-
-  const handleDelete = (providerId, providerName) => {
-    handleActionMenuClose();
-    handleDeleteClick(providerId, providerName);
-  };
+  const handleDeleteCancel = () => { setDeleteDialog({ open: false, providerId: null, providerName: '' }); };
+  const handleActionMenuOpen = (event, providerId, providerName, isActive) => { setActionMenu({ anchorEl: event.currentTarget, providerId, providerName, isActive }); };
+  const handleActionMenuClose = () => { setActionMenu((prev) => ({ ...prev, anchorEl: null })); };
+  const handleViewDetails = (providerId) => { handleActionMenuClose(); navigate(`/providers/${providerId}`); };
+  const handleEdit = (providerId) => { handleActionMenuClose(); navigate(`/providers/${providerId}/edit`); };
+  const handleDelete = (providerId, providerName) => { handleActionMenuClose(); handleDeleteClick(providerId, providerName); };
 
   const handleActivate = async (providerId, providerName) => {
     handleActionMenuClose();
     try {
-      setLoading(true);
       await providerService.activateProvider(providerId);
       showSnackbar(`Provider "${providerName}" activated successfully`, 'success');
-      await fetchProviders(search);
+      dispatch(updateProviderInList({ _id: providerId, isActive: true }));
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to activate provider. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to activate provider. Please try again.',
-        'error'
-      );
-    } finally {
-      setLoading(false);
+      const msg = err.response?.data?.error?.message || 'Failed to activate provider.';
+      setError(msg);
+      showSnackbar(msg, 'error');
     }
   };
 
   const handleDeactivate = async (providerId, providerName) => {
     handleActionMenuClose();
     try {
-      setLoading(true);
       await providerService.deactivateProvider(providerId);
       showSnackbar(`Provider "${providerName}" deactivated successfully`, 'success');
-      await fetchProviders(search);
+      dispatch(updateProviderInList({ _id: providerId, isActive: false }));
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to deactivate provider. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to deactivate provider. Please try again.',
-        'error'
-      );
-    } finally {
-      setLoading(false);
+      const msg = err.response?.data?.error?.message || 'Failed to deactivate provider.';
+      setError(msg);
+      showSnackbar(msg, 'error');
     }
+  };
+
+  const handleRefresh = () => {
+    dispatch(invalidateProviders());
+    // The useEffect will re-fire because invalidateProviders changes lastFetched
+    // Force re-dispatch by toggling a trivial state or re-dispatching directly
+    let isActive = null;
+    if (statusFilter === 'active') isActive = true;
+    else if (statusFilter === 'inactive') isActive = false;
+    dispatch(fetchProviders({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), isActive }));
   };
 
   return (
     <Box>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4" fontWeight="bold">
-          Providers
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/providers/new')}
-        >
-          Add Provider
-        </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" fontWeight="bold">Providers</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/providers/new')}>Add Provider</Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Grid container spacing={2} sx={{ mb: 3, alignItems: 'center' }}>
           <Grid size={7}>
             <TextField
-              fullWidth
-              placeholder="Search by name, title, NPI, specialty..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
+              fullWidth placeholder="Search by name, title, NPI, specialty..." value={search}
+              onChange={(e) => setSearch(e.target.value)} size="small"
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  search.length > 0 && (
-                    <IconButton size="small" onClick={() => setSearch('')}>
-                      <Clear />
-                    </IconButton>
-                  )
-                ),
+                startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+                endAdornment: search.length > 0 && <IconButton size="small" onClick={() => setSearch('')}><Clear /></IconButton>,
               }}
             />
           </Grid>
           <Grid size={3}>
             <FormControl fullWidth size="small">
               <InputLabel id="status-filter-label">Filter by Status</InputLabel>
-              <Select
-                labelId="status-filter-label"
-                id="status-filter"
-                value={statusFilter}
-                label="Filter by Status"
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">
-                  <em>All Status</em>
-                </MenuItem>
+              <Select labelId="status-filter-label" value={statusFilter} label="Filter by Status" onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
+                <MenuItem value=""><em>All Status</em></MenuItem>
                 <MenuItem value="active">Active</MenuItem>
                 <MenuItem value="inactive">Inactive</MenuItem>
               </Select>
@@ -336,36 +207,14 @@ const ProvidersListPage = () => {
           </Grid>
           <Grid size={2}>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
-              <Tooltip title="Clear Filters">
-                <span>
-                  <IconButton
-                    onClick={handleResetFilters}
-                    disabled={loading || !hasActiveFilters}
-                    color="primary"
-                  >
-                    <FilterAltOff />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title="Refresh">
-                <span>
-                  <IconButton
-                    onClick={() => fetchProviders(search)}
-                    disabled={loading}
-                    color="primary"
-                  >
-                    <RefreshIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <Tooltip title="Clear Filters"><span><IconButton onClick={handleResetFilters} disabled={loading || !hasActiveFilters} color="primary"><FilterAltOff /></IconButton></span></Tooltip>
+              <Tooltip title="Refresh"><span><IconButton onClick={handleRefresh} disabled={loading} color="primary"><RefreshIcon /></IconButton></span></Tooltip>
             </Box>
           </Grid>
         </Grid>
 
         {loading ? (
-          <Box display="flex" justifyContent="center" p={4}>
-            <CircularProgress />
-          </Box>
+          <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
         ) : (
           <>
             <TableContainer>
@@ -383,47 +232,18 @@ const ProvidersListPage = () => {
                 </TableHead>
                 <TableBody>
                   {providers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">
-                          No providers found
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={7} align="center" sx={{ py: 4 }}><Typography color="text.secondary">No providers found</Typography></TableCell></TableRow>
                   ) : (
                     providers.map((provider) => (
                       <TableRow key={provider._id || provider.id} hover>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {provider.userId?.firstName}{' '}
-                            {provider.userId?.lastName}
-                          </Typography>
-                        </TableCell>
+                        <TableCell><Typography variant="body2">{provider.userId?.firstName} {provider.userId?.lastName}</Typography></TableCell>
                         <TableCell>{provider.providerCode || '-'}</TableCell>
                         <TableCell>{provider.npiNumber || '-'}</TableCell>
-                        <TableCell>
-                          {formatSpecialty(provider.specialty)}
-                        </TableCell>
+                        <TableCell>{formatSpecialty(provider.specialty)}</TableCell>
                         <TableCell>{provider.title || '-'}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={provider.isActive ? 'Active' : 'Inactive'}
-                            color={provider.isActive ? 'success' : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
+                        <TableCell><Chip label={provider.isActive ? 'Active' : 'Inactive'} color={provider.isActive ? 'success' : 'default'} size="small" /></TableCell>
                         <TableCell align="right">
-                          <IconButton
-                            size="small"
-                            onClick={(e) =>
-                              handleActionMenuOpen(
-                                e,
-                                provider._id || provider.id,
-                                `${provider.userId?.firstName} ${provider.userId?.lastName}`,
-                                provider.isActive
-                              )
-                            }
-                          >
+                          <IconButton size="small" onClick={(e) => handleActionMenuOpen(e, provider._id || provider.id, `${provider.userId?.firstName} ${provider.userId?.lastName}`, provider.isActive)}>
                             <MoreVertIcon />
                           </IconButton>
                         </TableCell>
@@ -433,93 +253,29 @@ const ProvidersListPage = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              component="div"
-              count={totalProviders}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-            />
+            <TablePagination component="div" count={totalProviders} page={page} onPageChange={handleChangePage} rowsPerPage={rowsPerPage} onRowsPerPageChange={handleChangeRowsPerPage} rowsPerPageOptions={[5, 10, 25, 50]} />
           </>
         )}
       </Paper>
 
-      <Menu
-        anchorEl={actionMenu.anchorEl}
-        open={Boolean(actionMenu.anchorEl)}
-        onClose={handleActionMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-      >
-        <MenuItem onClick={() => handleViewDetails(actionMenu.providerId)}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View Details</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleEdit(actionMenu.providerId)}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
+      <Menu anchorEl={actionMenu.anchorEl} open={Boolean(actionMenu.anchorEl)} onClose={handleActionMenuClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <MenuItem onClick={() => handleViewDetails(actionMenu.providerId)}><ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon><ListItemText>View Details</ListItemText></MenuItem>
+        <MenuItem onClick={() => handleEdit(actionMenu.providerId)}><ListItemIcon><EditIcon fontSize="small" /></ListItemIcon><ListItemText>Edit</ListItemText></MenuItem>
         {actionMenu.isActive ? (
-          <MenuItem
-            onClick={() =>
-              handleDeactivate(actionMenu.providerId, actionMenu.providerName)
-            }
-            sx={{ color: 'warning.main' }}
-          >
-            <ListItemIcon>
-              <CancelIcon fontSize="small" color="warning" />
-            </ListItemIcon>
-            <ListItemText>Deactivate</ListItemText>
+          <MenuItem onClick={() => handleDeactivate(actionMenu.providerId, actionMenu.providerName)} sx={{ color: 'warning.main' }}>
+            <ListItemIcon><CancelIcon fontSize="small" color="warning" /></ListItemIcon><ListItemText>Deactivate</ListItemText>
           </MenuItem>
         ) : (
-          <MenuItem
-            onClick={() =>
-              handleActivate(actionMenu.providerId, actionMenu.providerName)
-            }
-            sx={{ color: 'success.main' }}
-          >
-            <ListItemIcon>
-              <CheckCircleIcon fontSize="small" color="success" />
-            </ListItemIcon>
-            <ListItemText>Activate</ListItemText>
+          <MenuItem onClick={() => handleActivate(actionMenu.providerId, actionMenu.providerName)} sx={{ color: 'success.main' }}>
+            <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon><ListItemText>Activate</ListItemText>
           </MenuItem>
         )}
-        <MenuItem
-          onClick={() =>
-            handleDelete(actionMenu.providerId, actionMenu.providerName)
-          }
-          sx={{ color: 'error.main' }}
-        >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+        <MenuItem onClick={() => handleDelete(actionMenu.providerId, actionMenu.providerName)} sx={{ color: 'error.main' }}>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon><ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
 
-      <ConfirmationDialog
-        open={deleteDialog.open}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Provider Permanently"
-        message={`Are you sure you want to permanently delete provider "${deleteDialog.providerName}"? This action cannot be undone and all associated data will be lost.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        confirmColor="error"
-        loading={deleteLoading}
-      />
+      <ConfirmationDialog open={deleteDialog.open} onClose={handleDeleteCancel} onConfirm={handleDeleteConfirm} title="Delete Provider Permanently" message={`Are you sure you want to permanently delete provider "${deleteDialog.providerName}"?`} confirmText="Delete" cancelText="Cancel" confirmColor="error" loading={deleteLoading} />
     </Box>
   );
 };

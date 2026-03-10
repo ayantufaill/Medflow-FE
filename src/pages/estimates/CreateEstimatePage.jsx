@@ -24,17 +24,19 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { estimateService } from '../../services/estimate.service';
 import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 
 const CreateEstimatePage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+
+  // Providers from Redux cache
+  const { providers, providersLoading: loadingProviders } = useDropdownData({ providers: true });
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [patients, setPatients] = useState([]);
-  const [providers, setProviders] = useState([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
-  const [loadingProviders, setLoadingProviders] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
 
@@ -66,20 +68,13 @@ const CreateEstimatePage = () => {
     const fetchData = async () => {
       try {
         setLoadingPatients(true);
-        setLoadingProviders(true);
-        
-        const [patientsResult, providersResult] = await Promise.all([
-          patientService.getAllPatients(1, 100),
-          providerService.getAllProviders(1, 100),
-        ]);
-        
+        // Providers come from Redux cache — only fetch patients
+        const patientsResult = await patientService.getAllPatients(1, 100);
         setPatients(patientsResult.patients || []);
-        setProviders(providersResult.providers || []);
       } catch (err) {
         // Error handled silently
       } finally {
         setLoadingPatients(false);
-        setLoadingProviders(false);
       }
     };
     fetchData();
