@@ -40,6 +40,7 @@ import ViewPatientAllergyPage from './pages/patients/ViewPatientAllergyPage';
 import PatientMedicalHistoryPage from './pages/patients/PatientMedicalHistoryPage';
 import PatientSignedDocumentsPage from './pages/patients/PatientSignedDocumentsPage';
 import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage';
+import PatientAdditionalDocumentsPage from './pages/patients/PatientAdditionalDocumentsPage';
 import PatientDetailPage from './pages/patients/PatientDetailPage';
 import AllergiesListPage from './pages/allergies/AllergiesListPage';
 import CreateAllergyPage from './pages/allergies/CreateAllergyPage';
@@ -549,6 +550,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
                     <Layout>
                       <PatientDentalHistoryPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/additional-documents"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientAdditionalDocumentsPage />
                     </Layout>
                   </ProtectedRoute>
                 }

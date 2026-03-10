@@ -27,12 +27,17 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { providerValidations } from '../../validations/providerValidations';
+<<<<<<< Updated upstream
 import { useUsersByRole } from '../../hooks/queries/useUsers';
 import {
   fetchSpecialties,
   selectSpecialties,
   selectSpecialtiesLoading,
 } from '../../store/slices/providerSlice';
+=======
+import { useUsers } from '../../hooks/queries/useUsers';
+import { providerService } from '../../services/provider.service';
+>>>>>>> Stashed changes
 
 // Only log in development
 const isDevelopment = import.meta.env.DEV;
@@ -58,6 +63,7 @@ const ProviderForm = ({
   const [userSearch, setUserSearch] = useState('');
   const userSearchTimerRef = useRef(null);
   const [specialtySearch, setSpecialtySearch] = useState('');
+<<<<<<< Updated upstream
 
   // In edit mode, user dropdown is disabled - no need to fetch all users.
   // Just build a display-only entry from the provider's existing data.
@@ -76,6 +82,31 @@ const ProviderForm = ({
 
   const usersLoading = skipUsersFetch ? false : fetchingUsers;
 
+=======
+  const specialtySearchTimerRef = useRef(null);
+  const [specialties, setSpecialties] = useState([]);
+  const [specialtiesLoading, setSpecialtiesLoading] = useState(false);
+
+  // Use React Query to fetch and cache users - optimized with caching
+  // Fetch all users (not just 'Doctor' role) so any user can be assigned as a provider
+  // Note: Backend limit is max 100, so we use 100 instead of 500
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    error: usersError,
+  } = useUsers({
+    page: 1,
+    limit: 100,
+    search: '',
+    roleId: '',
+    status: 'active',
+    enabled: externalUsers === null, // Only fetch if externalUsers not provided
+  });
+
+  const allUsers = usersData?.users || [];
+
+  // Memoized: Filter users based on edit mode and search - only recalculates when dependencies change
+>>>>>>> Stashed changes
   const users = useMemo(() => {
     if (skipUsersFetch) {
       const u = initialData.userId;
@@ -112,6 +143,36 @@ const ProviderForm = ({
     }
   }, [usersError]);
 
+<<<<<<< Updated upstream
+=======
+  const searchSpecialties = useCallback(async (search = '') => {
+    try {
+      setSpecialtiesLoading(true);
+      const result = await providerService.getSpecialties();
+      debugLog('getSpecialties result:', result);
+      // Handle both array response and object with specialties property
+      const specialtiesList = Array.isArray(result) 
+        ? result 
+        : (result.specialties || []);
+      debugLog('Specialties list:', specialtiesList);
+      if (search) {
+        const filtered = specialtiesList.filter(s => 
+          s.toLowerCase().includes(search.toLowerCase())
+        );
+        setSpecialties(filtered);
+      } else {
+        setSpecialties(specialtiesList);
+      }
+    } catch (err) {
+      console.error('Error searching specialties:', err);
+      debugLog('Specialties error details:', err.response?.data || err.message);
+      setSpecialties([]); // Set empty array on error
+    } finally {
+      setSpecialtiesLoading(false);
+    }
+  }, []);
+
+>>>>>>> Stashed changes
   useEffect(() => {
     dispatch(fetchSpecialties());
   }, [dispatch]);

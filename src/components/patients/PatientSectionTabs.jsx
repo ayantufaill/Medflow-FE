@@ -44,8 +44,8 @@ const PatientSectionTabs = ({ activeTab, patientId = '' }) => {
       return;
     }
     if (tabId === 'additional_docs') {
-      if (patientId) navigate('/patients');
-      else navigate(`/patients?tab=${tabId}`, { replace: true });
+      if (patientId) navigate(`/patients/${patientId}/additional-documents`);
+      else navigate('/patients?tab=additional_docs', { replace: true });
       return;
     }
     navigate('/patients', { replace: true });
