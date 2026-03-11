@@ -115,16 +115,22 @@ const SignaturePad = ({
   }, [value]);
 
   return (
-    <Box sx={{ ...sx }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        ...sx,
+      }}
+    >
       <Box
         sx={{
           position: 'relative',
-          width: '100%',
-          maxWidth: width,
+          width,
           height,
           borderRadius: 1,
           border: '1px solid #e0e0e0',
-          bgcolor: '#ffffff',
+          bgcolor: '#fafafa',
           overflow: 'hidden',
           cursor: 'crosshair',
         }}
@@ -168,7 +174,6 @@ const SignaturePad = ({
           size="small"
           onClick={clear}
           sx={{
-            mt: 0.5,
             textTransform: 'none',
             fontSize: 12,
             color: '#757575',
