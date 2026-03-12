@@ -1,22 +1,22 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
   Button,
-  CircularProgress,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentService } from '../../services/appointment.service';
-import AppointmentForm from '../../components/appointments/AppointmentForm';
+import { patientService } from '../../services/patient.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
+import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 
 const CreateAppointmentPage = () => {
   const navigate = useNavigate();
@@ -24,56 +24,81 @@ const CreateAppointmentPage = () => {
   const { showSnackbar } = useSnackbar();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const { providers } = useDropdownData({ providers: true });
 
-  const initialData = useMemo(() => {
+  const initialDateTime = useMemo(() => {
     const date = searchParams.get('date');
     const startTime = searchParams.get('startTime');
-    const endTime = searchParams.get('endTime');
-    const providerId = searchParams.get('providerId');
-
-    if (!date && !startTime && !endTime && !providerId) {
-      return null;
+    if (!date && !startTime) return null;
+    if (!date) return dayjs().hour(9).minute(5);
+    const d = dayjs(date);
+    if (startTime) {
+      const [h, m] = startTime.split(':').map(Number);
+      return d.hour(h).minute(m || 0);
     }
+    return d.hour(9).minute(5);
+  }, [searchParams]);
 
-    const parseTime = (timeString) => {
-      if (!timeString) return null;
-      const [hours, minutes] = timeString.split(':');
-      return dayjs().hour(parseInt(hours)).minute(parseInt(minutes));
-    };
+  const searchPatients = useCallback(async (search = '') => {
+    try {
+      setLoadingPatients(true);
+      const result = await patientService.getAllPatients(1, 20, search, 'active');
+      setPatients(result.patients || []);
+    } catch (err) {
+      console.error('Error searching patients:', err);
+      setPatients([]);
+    } finally {
+      setLoadingPatients(false);
+    }
+  }, []);
 
-    return {
-      appointmentDate: date ? dayjs(date) : null,
-      startTime: startTime ? parseTime(startTime) : null,
-      endTime: endTime ? parseTime(endTime) : null,
-      providerId: providerId || '',
-      patientId: '',
-      appointmentTypeId: '',
-      durationMinutes: startTime && endTime ? 
-        (parseTime(endTime)?.diff(parseTime(startTime), 'minute') || 30) : 30,
+  useEffect(() => {
+    searchPatients('');
+  }, [searchPatients]);
+
+  const handleSubmit = async (formData) => {
+    const patientId = formData.patientId;
+    if (!patientId) {
+      showSnackbar('Please select a patient.', 'warning');
+      return;
+    }
+    const start = formData.appointmentDate && formData.startTime
+      ? dayjs(`${formData.appointmentDate}T${formData.startTime}`)
+      : dayjs();
+    const duration = formData.durationMinutes || 30;
+    const end = start.add(duration, 'minute');
+    const provider = providers?.find(
+      (p) =>
+        (p.firstName &&
+          p.lastName &&
+          `${p.firstName} ${p.lastName}` === formData.providerId) ||
+        p._id === formData.providerId,
+    );
+    const effectiveProvider = provider || (providers && providers[0]);
+    const payload = {
+      patientId,
+      providerId: effectiveProvider?._id,
+      appointmentDate: start.format('YYYY-MM-DD'),
+      startTime: start.format('HH:mm'),
+      endTime: end.format('HH:mm'),
+      durationMinutes: duration,
       chiefComplaint: '',
-      notes: '',
-      roomId: '',
+      notes: formData.notes || '',
+      roomId: undefined,
       requiresInterpreter: false,
       interpreterLanguage: '',
       insuranceVerified: false,
-      copayCollected: '',
+      copayCollected: 0,
       reminderSent: false,
       customFields: {},
-      status: 'scheduled',
+      status: formData.status || 'scheduled',
     };
-  }, [searchParams]);
-
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  const handleSubmit = async (data) => {
     try {
       setSaving(true);
       setError('');
-
-      await appointmentService.createAppointment(data);
-
+      await appointmentService.createAppointment(payload);
       showSnackbar('Appointment created successfully', 'success');
       navigate('/appointments');
     } catch (err) {
@@ -89,21 +114,7 @@ const CreateAppointmentPage = () => {
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={handleBack}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Create Appointment
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Enter appointment details to schedule a new appointment.
-          </Typography>
-        </Box>
-      </Box>
-
+    <Box sx={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Dialog open={!!error} onClose={() => setError('')} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -125,35 +136,15 @@ const CreateAppointmentPage = () => {
         </DialogActions>
       </Dialog>
 
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <AppointmentForm
-          onSubmit={handleSubmit}
-          initialData={initialData}
-          loading={saving}
-          isEditMode={false}
-          hideButtons={true}
-          formId="create-appointment-form"
-        />
-
-        <Box
-          sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}
-        >
-          <Button variant="outlined" onClick={handleBack} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            type="submit"
-            form="create-appointment-form"
-            disabled={saving}
-            startIcon={
-              saving ? <CircularProgress size={20} color="inherit" /> : null
-            }
-          >
-            {saving ? 'Creating...' : 'Create Appointment'}
-          </Button>
-        </Box>
-      </Paper>
+      <AddNewPatientAppointmentForm
+        patients={patients}
+        loadingPatients={loadingPatients}
+        onPatientSearch={searchPatients}
+        onSubmit={handleSubmit}
+        onCancel={() => navigate('/appointments')}
+        loading={saving}
+        initialDateTime={initialDateTime || dayjs().hour(9).minute(5)}
+      />
     </Box>
   );
 };

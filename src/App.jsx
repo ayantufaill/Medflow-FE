@@ -66,6 +66,7 @@ import EditAppointmentPage from './pages/appointments/EditAppointmentPage';
 import ViewAppointmentPage from './pages/appointments/ViewAppointmentPage';
 import SchedulePage from './pages/appointments/SchedulePage';
 import AppointmentCalendarPage from './pages/appointments/AppointmentCalendarPage';
+import OperatorySchedulePage from './pages/appointments/OperatorySchedulePage';
 import WaitlistListPage from './pages/waitlist/WaitlistListPage';
 import CreateWaitlistPage from './pages/waitlist/CreateWaitlistPage';
 import EditWaitlistPage from './pages/waitlist/EditWaitlistPage';
@@ -796,6 +797,16 @@ function App() {
                   <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
                     <Layout>
                       <AppointmentCalendarPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/appointments/operatory-schedule"
+                element={
+                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                    <Layout>
+                      <OperatorySchedulePage />
                     </Layout>
                   </ProtectedRoute>
                 }

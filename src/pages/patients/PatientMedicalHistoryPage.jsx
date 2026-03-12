@@ -34,7 +34,8 @@ import { useSnackbar } from "../../contexts/SnackbarContext";
 import { patientService } from "../../services/patient.service";
 import { documentService } from "../../services/document.service";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
-import SignaturePad from "../../components/shared/SignaturePad";
+import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
+import MedicationListCard from "../../components/patients/MedicationListCard";
 
 const formatVisitDate = (dateStr) => {
   if (!dateStr) return "";
@@ -121,6 +122,423 @@ const FloatingActionButton = (props) => (
       ...(props.sx || {}),
     }}
   />
+);
+
+const MedicalGeneralInfoCard = ({
+  generalInfo,
+  onChangeField,
+  premedRequires,
+  onPremedChange,
+}) => (
+  <Card>
+    <Typography
+      variant="h6"
+      sx={{
+        mb: 2,
+        fontWeight: 700,
+        color: "#424242",
+        fontSize: "1.05rem",
+      }}
+    >
+      General Information
+    </Typography>
+
+    <Grid container spacing={2}>
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          fullWidth
+          size="small"
+          label="What is your estimate of your general health?"
+          value={generalInfo.healthEstimate || ""}
+          onChange={(e) => onChangeField("healthEstimate", e.target.value)}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Physician Name"
+          value={generalInfo.physicianName || ""}
+          onChange={(e) => onChangeField("physicianName", e.target.value)}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          fullWidth
+          size="small"
+          type="date"
+          label="Date of most recent physical examination"
+          value={
+            generalInfo.lastExamDate
+              ? new Date(generalInfo.lastExamDate).toISOString().split("T")[0]
+              : ""
+          }
+          onChange={(e) =>
+            onChangeField("lastExamDate", e.target.value || null)
+          }
+          InputLabelProps={{ shrink: true }}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Purpose"
+          value={generalInfo.purpose || ""}
+          onChange={(e) => onChangeField("purpose", e.target.value)}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={6} sm={3} md={2}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Weight"
+          value={generalInfo.weight || ""}
+          onChange={(e) => onChangeField("weight", e.target.value)}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Typography variant="caption" sx={{ color: "#9e9e9e" }}>
+                  {generalInfo.weightUnit || "LBS"}
+                </Typography>
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={6} sm={3} md={2}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Height"
+          value={generalInfo.height || ""}
+          onChange={(e) => onChangeField("height", e.target.value)}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Typography variant="caption" sx={{ color: "#9e9e9e" }}>
+                  {generalInfo.heightUnit || "FT/IN"}
+                </Typography>
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Physician specialty"
+          value={generalInfo.physicianSpecialty || ""}
+          onChange={(e) => onChangeField("physicianSpecialty", e.target.value)}
+          sx={{
+            "& .MuiInputLabel-root": { fontSize: 13 },
+            "& .MuiInputBase-input": { fontSize: 13 },
+          }}
+        />
+      </Grid>
+
+      <Grid item xs={12}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+            mt: 0.5,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 600, color: "#616161" }}
+          >
+            Premed
+          </Typography>
+          <RadioGroup
+            row
+            value={premedRequires ? "yes" : "no"}
+            onChange={(_, value) => onPremedChange(value === "yes")}
+            sx={{
+              "& .MuiFormControlLabel-root": { mr: 2 },
+              "& .MuiTypography-root": { fontSize: 14 },
+            }}
+          >
+            <FormControlLabel
+              value="premed"
+              control={<Radio size="small" />}
+              label="Premed"
+            />
+            <FormControlLabel
+              value="yes"
+              control={<Radio size="small" />}
+              label="Requires premed"
+            />
+            <FormControlLabel
+              value="no"
+              control={<Radio size="small" />}
+              label="No"
+            />
+          </RadioGroup>
+        </Box>
+      </Grid>
+    </Grid>
+  </Card>
+);
+
+const MedicalSummarySection = ({
+  historyTab,
+  onChangeTab,
+  summarySections,
+  onSectionChange,
+}) => (
+  <Card>
+    <Box sx={{ borderBottom: "1px solid #e0e0e0", mb: 2 }}>
+      <Tabs
+        value={historyTab}
+        onChange={(_, v) => onChangeTab(v)}
+        TabIndicatorProps={{ style: { height: 3 } }}
+      >
+        <Tab
+          label="Summary"
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: 14,
+            minHeight: 40,
+          }}
+        />
+        <Tab
+          label="Full Medical History"
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: 14,
+            minHeight: 40,
+          }}
+        />
+      </Tabs>
+    </Box>
+
+    {historyTab === 0 && (
+      <Box>
+        <Paper
+          variant="outlined"
+          sx={{
+            borderRadius: 1,
+            border: "1px solid #e0e0e0",
+            bgcolor: "#ffffff",
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ background: "#fafafa" }}>
+                <TableCell sx={{ width: "55%" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: "#616161" }}
+                    >
+                      Personal History
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Typography variant="caption">🟢 Low</Typography>
+                      <Typography variant="caption">🟡 Moderate</Typography>
+                      <Typography variant="caption">🔴 High</Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ width: "10%" }} align="center" />
+                <TableCell sx={{ width: "35%" }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 600, color: "#616161" }}
+                  >
+                    Additional information
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {summarySections.map((section, index) => (
+                <TableRow
+                  key={section.number || index}
+                  sx={{
+                    borderBottom: "2px solid #e0e0e0",
+                  }}
+                >
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, color: "#424242" }}
+                    >
+                      {section.number ? `${section.number}. ` : ""}
+                      {section.question || "No question available"}
+                    </Typography>
+                    {section.scale && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          color: "#9e9e9e",
+                          mt: 0.5,
+                        }}
+                      >
+                        on a scale of 1 to 10: {section.scale}
+                      </Typography>
+                    )}
+                    {section.doctorNote && (
+                      <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ color: "#9e9e9e", mt: 0.5 }}
+                      >
+                        Doctor&apos;s Note: {section.doctorNote}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell align="center">
+                    <TextField
+                      variant="standard"
+                      size="small"
+                      value={section.answer || ""}
+                      onChange={(e) =>
+                        onSectionChange(
+                          section.id || section.number || index,
+                          "answer",
+                          e.target.value,
+                        )
+                      }
+                      InputProps={{ disableUnderline: true }}
+                      sx={{
+                        minWidth: 120,
+                        "& .MuiInputBase-input": {
+                          textAlign: "center",
+                          fontSize: 14,
+                          py: 0,
+                        },
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      background: "#f5f5f5",
+                      maxHeight: 120,
+                      overflow: "auto",
+                    }}
+                  >
+                    <TextField
+                      variant="standard"
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      size="small"
+                      value={section.additionalInfo || section.comment || ""}
+                      onChange={(e) =>
+                        onSectionChange(
+                          section.id || section.number || index,
+                          "additionalInfo",
+                          e.target.value,
+                        )
+                      }
+                      InputProps={{ disableUnderline: true }}
+                      sx={{
+                        "& .MuiInputBase-input": {
+                          fontSize: 14,
+                          py: 0.5,
+                        },
+                        bgcolor: "transparent",
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!summarySections.length && (
+                <TableRow>
+                  <TableCell colSpan={3}>
+                    No medical history questions found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Paper>
+      </Box>
+    )}
+
+    {historyTab === 1 && (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+        {summarySections.length ? (
+          summarySections.map((section) => (
+            <Paper
+              key={`${section.number}-${section.question}`}
+              variant="outlined"
+              sx={{ p: 2, borderColor: "grey.300" }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {section.number ? `${section.number}. ` : ""}
+                {section.question}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mt: 0.5 }}
+              >
+                Answer: {section.answer || "—"}
+              </Typography>
+              {section.comment ? (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  {section.comment}
+                </Typography>
+              ) : null}
+              {section.doctorNote ? (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1 }}
+                >
+                  Doctor&apos;s Note: {section.doctorNote}
+                </Typography>
+              ) : null}
+            </Paper>
+          ))
+        ) : (
+          <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
+            Full medical history is not available for this patient yet.
+          </Typography>
+        )}
+      </Box>
+    )}
+  </Card>
 );
 
 const PatientMedicalHistoryPage = () => {
@@ -552,698 +970,41 @@ const PatientMedicalHistoryPage = () => {
         </Box>
       </Card>
 
-      {/* General Information */}
-      <Card>
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 2,
-            fontWeight: 700,
-            color: "#424242",
-            fontSize: "1.05rem",
-          }}
-        >
-          General Information
-        </Typography>
+      <MedicalGeneralInfoCard
+        generalInfo={generalInfo}
+        onChangeField={handleGeneralInfoChange}
+        premedRequires={Boolean(medicalHistory?.premed?.requiresPremed)}
+        onPremedChange={handlePremedChange}
+      />
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              label="What is your estimate of your general health?"
-              value={generalInfo.healthEstimate || ""}
-              onChange={(e) =>
-                handleGeneralInfoChange("healthEstimate", e.target.value)
-              }
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
+      <MedicalSummarySection
+        historyTab={historyTab}
+        onChangeTab={setHistoryTab}
+        summarySections={summarySections}
+        onSectionChange={handleSummarySectionChange}
+      />
 
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Physician Name"
-              value={generalInfo.physicianName || ""}
-              onChange={(e) =>
-                handleGeneralInfoChange("physicianName", e.target.value)
-              }
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              type="date"
-              label="Date of most recent physical examination"
-              value={
-                generalInfo.lastExamDate
-                  ? new Date(generalInfo.lastExamDate)
-                      .toISOString()
-                      .split("T")[0]
-                  : ""
-              }
-              onChange={(e) =>
-                handleGeneralInfoChange("lastExamDate", e.target.value || null)
-              }
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Purpose"
-              value={generalInfo.purpose || ""}
-              onChange={(e) =>
-                handleGeneralInfoChange("purpose", e.target.value)
-              }
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={6} sm={3} md={2}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Weight"
-              value={generalInfo.weight || ""}
-              onChange={(e) =>
-                handleGeneralInfoChange("weight", e.target.value)
-              }
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Typography variant="caption" sx={{ color: "#9e9e9e" }}>
-                      {generalInfo.weightUnit || "LBS"}
-                    </Typography>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={6} sm={3} md={2}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Height"
-              value={generalInfo.height || ""}
-              onChange={(e) =>
-                handleGeneralInfoChange("height", e.target.value)
-              }
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Typography variant="caption" sx={{ color: "#9e9e9e" }}>
-                      {generalInfo.heightUnit || "FT/IN"}
-                    </Typography>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Physician specialty"
-              value={generalInfo.physicianSpecialty || ""}
-              onChange={(e) =>
-                handleGeneralInfoChange("physicianSpecialty", e.target.value)
-              }
-              sx={{
-                "& .MuiInputLabel-root": { fontSize: 13 },
-                "& .MuiInputBase-input": { fontSize: 13 },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12}>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 2,
-                mt: 0.5,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: "#616161" }}
-              >
-                Premed
-              </Typography>
-              <RadioGroup
-                row
-                value={medicalHistory?.premed?.requiresPremed ? "yes" : "no"}
-                onChange={(_, value) => handlePremedChange(value === "yes")}
-                sx={{
-                  "& .MuiFormControlLabel-root": { mr: 2 },
-                  "& .MuiTypography-root": { fontSize: 14 },
-                }}
-              >
-                <FormControlLabel
-                  value="premed"
-                  control={<Radio size="small" />}
-                  label="Premed"
-                />
-                <FormControlLabel
-                  value="yes"
-                  control={<Radio size="small" />}
-                  label="Requires premed"
-                />
-                <FormControlLabel
-                  value="no"
-                  control={<Radio size="small" />}
-                  label="No"
-                />
-              </RadioGroup>
-            </Box>
-          </Grid>
-        </Grid>
-      </Card>
-
-      {/* Summary / Full Medical History */}
-      <Card>
-        <Box sx={{ borderBottom: "1px solid #e0e0e0", mb: 2 }}>
-          <Tabs
-            value={historyTab}
-            onChange={(_, v) => setHistoryTab(v)}
-            TabIndicatorProps={{ style: { height: 3 } }}
-          >
-            <Tab
-              label="Summary"
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: 14,
-                minHeight: 40,
-              }}
-            />
-            <Tab
-              label="Full Medical History"
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: 14,
-                minHeight: 40,
-              }}
-            />
-          </Tabs>
-        </Box>
-
-        {historyTab === 0 && (
-          <Box>
-            <Paper
-              variant="outlined"
-              sx={{
-                borderRadius: 1,
-                border: "1px solid #e0e0e0",
-                bgcolor: "#ffffff",
-              }}
-            >
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ background: "#fafafa" }}>
-                    <TableCell sx={{ width: "55%" }}>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: 600, color: "#616161" }}
-                        >
-                          Personal History
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Typography variant="caption">🟢 Low</Typography>
-                          <Typography variant="caption">🟡 Moderate</Typography>
-                          <Typography variant="caption">🔴 High</Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ width: "10%" }} align="center" />
-                    <TableCell sx={{ width: "35%" }}>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, color: "#616161" }}
-                      >
-                        Additional information
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {summarySections.map((section, index) => (
-                    <TableRow
-                      key={section.number || index}
-                      sx={{
-                        borderBottom: "2px solid #e0e0e0",
-                      }}
-                    >
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: 600, color: "#424242" }}
-                        >
-                          {section.number ? `${section.number}. ` : ""}
-                          {section.question || "No question available"}
-                        </Typography>
-                        {section.scale && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              display: "block",
-                              color: "#9e9e9e",
-                              mt: 0.5,
-                            }}
-                          >
-                            on a scale of 1 to 10: {section.scale}
-                          </Typography>
-                        )}
-                        {section.doctorNote && (
-                          <Typography
-                            variant="caption"
-                            display="block"
-                            sx={{ color: "#9e9e9e", mt: 0.5 }}
-                          >
-                            Doctor&apos;s Note: {section.doctorNote}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        <TextField
-                          variant="standard"
-                          size="small"
-                          value={section.answer || ""}
-                          onChange={(e) =>
-                            handleSummarySectionChange(
-                              section.id || section.number || index,
-                              "answer",
-                              e.target.value,
-                            )
-                          }
-                          InputProps={{ disableUnderline: true }}
-                          sx={{
-                            minWidth: 120,
-                            "& .MuiInputBase-input": {
-                              textAlign: "center",
-                              fontSize: 14,
-                              py: 0,
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          background: "#f5f5f5",
-                          maxHeight: 120,
-                          overflow: "auto",
-                        }}
-                      >
-                        <TextField
-                          variant="standard"
-                          fullWidth
-                          multiline
-                          minRows={3}
-                          size="small"
-                          value={
-                            section.additionalInfo || section.comment || ""
-                          }
-                          onChange={(e) =>
-                            handleSummarySectionChange(
-                              section.id || section.number || index,
-                              "additionalInfo",
-                              e.target.value,
-                            )
-                          }
-                          InputProps={{ disableUnderline: true }}
-                          sx={{
-                            "& .MuiInputBase-input": {
-                              fontSize: 14,
-                              py: 0.5,
-                            },
-                            bgcolor: "transparent",
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!summarySections.length && (
-                    <TableRow>
-                      <TableCell colSpan={3}>
-                        No medical history questions found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Paper>
-          </Box>
-        )}
-
-        {historyTab === 1 && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-            {summarySections.length ? (
-              summarySections.map((section) => (
-                <Paper
-                  key={`${section.number}-${section.question}`}
-                  variant="outlined"
-                  sx={{ p: 2, borderColor: "grey.300" }}
-                >
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {section.number ? `${section.number}. ` : ""}
-                    {section.question}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.5 }}
-                  >
-                    Answer: {section.answer || "—"}
-                  </Typography>
-                  {section.comment ? (
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      {section.comment}
-                    </Typography>
-                  ) : null}
-                  {section.doctorNote ? (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: "block", mt: 1 }}
-                    >
-                      Doctor&apos;s Note: {section.doctorNote}
-                    </Typography>
-                  ) : null}
-                </Paper>
-              ))
-            ) : (
-              <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                Full medical history is not available for this patient yet.
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Card>
-
-      {/* Medication List */}
-      <Card>
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 2,
-            fontWeight: 700,
-            color: "#424242",
-            fontSize: "1.05rem",
-          }}
-        >
-          Medication List
-        </Typography>
-
-        <Grid
-          container
-          spacing={0}
-          sx={{
-            borderBottom: "1px solid #eeeeee",
-            pb: 1,
-            mb: 1,
-          }}
-        >
-          <Grid item xs={5}>
-            <Typography
-              variant="caption"
-              sx={{ color: "#9e9e9e", fontWeight: 600 }}
-            >
-              Drug
-            </Typography>
-          </Grid>
-          <Grid item xs={3}>
-            <Typography
-              variant="caption"
-              sx={{ color: "#9e9e9e", fontWeight: 600 }}
-            >
-              Dosage
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography
-              variant="caption"
-              sx={{ color: "#9e9e9e", fontWeight: 600 }}
-            >
-              Purpose
-            </Typography>
-          </Grid>
-        </Grid>
-
-        {medications.map((row) => (
-          <Grid
-            key={row.id}
-            container
-            spacing={0}
-            sx={{
-              py: 1,
-              borderBottom: "1px solid #f0f0f0",
-              fontSize: 14,
-            }}
-          >
-            <Grid item xs={5}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="standard"
-                placeholder="Drug"
-                value={row.drug}
-                onChange={(e) =>
-                  updateMedication(row.id, "drug", e.target.value)
-                }
-                InputProps={{ disableUnderline: true }}
-                sx={{ "& input": { py: 0.5, fontSize: 14 } }}
-              />
-            </Grid>
-            <Grid item xs={3}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="standard"
-                placeholder="Dosage"
-                value={row.dosage}
-                onChange={(e) =>
-                  updateMedication(row.id, "dosage", e.target.value)
-                }
-                InputProps={{ disableUnderline: true }}
-                sx={{ "& input": { py: 0.5, fontSize: 14 } }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="standard"
-                placeholder="Purpose"
-                value={row.purpose}
-                onChange={(e) =>
-                  updateMedication(row.id, "purpose", e.target.value)
-                }
-                InputProps={{ disableUnderline: true }}
-                sx={{ "& input": { py: 0.5, fontSize: 14 } }}
-              />
-            </Grid>
-          </Grid>
-        ))}
-
-        <Link
-          component="button"
-          variant="body2"
-          onClick={addMedication}
-          sx={{
-            mt: 1,
-            color: "#1976d2",
-            cursor: "pointer",
-            textDecoration: "none",
-          }}
-        >
-          + add more
-        </Link>
-      </Card>
+      <MedicationListCard
+        title="Medication List"
+        rows={medications}
+        onChangeRow={updateMedication}
+        onAddRow={addMedication}
+      />
 
       {/* Supplements & Vitamins */}
-      <Card>
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 2,
-            fontWeight: 700,
-            color: "#424242",
-            fontSize: "1.05rem",
-          }}
-        >
-          Supplements &amp; Vitamins
-        </Typography>
-
-        <Grid
-          container
-          spacing={0}
-          sx={{
-            borderBottom: "1px solid #eeeeee",
-            pb: 1,
-            mb: 1,
-          }}
-        >
-          <Grid item xs={5}>
-            <Typography
-              variant="caption"
-              sx={{ color: "#9e9e9e", fontWeight: 600 }}
-            >
-              Drug
-            </Typography>
-          </Grid>
-          <Grid item xs={3}>
-            <Typography
-              variant="caption"
-              sx={{ color: "#9e9e9e", fontWeight: 600 }}
-            >
-              Dosage
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography
-              variant="caption"
-              sx={{ color: "#9e9e9e", fontWeight: 600 }}
-            >
-              Purpose
-            </Typography>
-          </Grid>
-        </Grid>
-
-        {supplements.map((row) => (
-          <Grid
-            key={row.id}
-            container
-            spacing={0}
-            sx={{
-              py: 1,
-              borderBottom: "1px solid #f0f0f0",
-              fontSize: 14,
-            }}
-          >
-            <Grid item xs={5}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="standard"
-                placeholder="Drug"
-                value={row.drug}
-                onChange={(e) =>
-                  updateSupplement(row.id, "drug", e.target.value)
-                }
-                InputProps={{ disableUnderline: true }}
-                sx={{ "& input": { py: 0.5, fontSize: 14 } }}
-              />
-            </Grid>
-            <Grid item xs={3}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="standard"
-                placeholder="Dosage"
-                value={row.dosage}
-                onChange={(e) =>
-                  updateSupplement(row.id, "dosage", e.target.value)
-                }
-                InputProps={{ disableUnderline: true }}
-                sx={{ "& input": { py: 0.5, fontSize: 14 } }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="standard"
-                placeholder="Purpose"
-                value={row.purpose}
-                onChange={(e) =>
-                  updateSupplement(row.id, "purpose", e.target.value)
-                }
-                InputProps={{ disableUnderline: true }}
-                sx={{ "& input": { py: 0.5, fontSize: 14 } }}
-              />
-            </Grid>
-          </Grid>
-        ))}
-
-        <Link
-          component="button"
-          variant="body2"
-          onClick={addSupplement}
-          sx={{
-            mt: 1,
-            color: "#1976d2",
-            cursor: "pointer",
-            textDecoration: "none",
-          }}
-        >
-          + add more
-        </Link>
-      </Card>
+      <MedicationListCard
+        title="Supplements & Vitamins"
+        rows={supplements}
+        onChangeRow={updateSupplement}
+        onAddRow={addSupplement}
+      />
 
       {/* Signature – aligned to the right like dental page */}
-      <Card sx={{ mb: 0 }}>
-        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: "#757575", mb: 0.5, display: "block" }}
-            >
-              Patient/Guardian Signature:
-            </Typography>
-            <SignaturePad
-              width={240}
-              height={72}
-              value={signature}
-              onChange={setSignature}
-              showClearButton
-              sx={{ mt: 0.5 }}
-            />
-            {reviewedWithPatient && (
-              <Typography
-                variant="caption"
-                sx={{ color: "#43a047", mt: 1, display: "block" }}
-              >
-                ✓ Reviewed with patient
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      </Card>
+      <PatientSignatureSection
+        value={signature}
+        onChange={setSignature}
+        reviewedWithPatient={reviewedWithPatient}
+      />
 
       <Typography
         variant="caption"

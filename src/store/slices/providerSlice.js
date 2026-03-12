@@ -57,7 +57,7 @@ export const fetchAllProvidersForDropdown = createAsyncThunk(
       if (elapsed < 10 * 60 * 1000) return null; // Still fresh, skip
     }
     try {
-      const result = await providerService.getAllProviders(1, 200, '', true);
+      const result = await providerService.getAllProviders(1, 100, '', true);
       return result.providers || [];
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch providers');

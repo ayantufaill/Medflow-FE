@@ -29,7 +29,7 @@ import {
 
 import { patientService } from "../../services/patient.service";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
-import SignaturePad from "../../components/shared/SignaturePad";
+import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 
 const EMPTY_HISTORY = {
@@ -876,35 +876,11 @@ const PatientDentalHistoryPage = () => {
           )}
 
           <Box sx={{ mt: 2 }}>
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 3,
-                mb: 0,
-                borderRadius: 1,
-                border: "1px solid #e0e0e0",
-                bgcolor: "#ffffff",
-              }}
-            >
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <Box>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "#9e9e9e", mb: 0.5, display: "block" }}
-                  >
-                    Patient/Guardian Signature:
-                  </Typography>
-                  <SignaturePad
-                    width={240}
-                    height={72}
-                    value={signature}
-                    onChange={setSignature}
-                    showClearButton
-                    sx={{ mt: 0.5 }}
-                  />
-                </Box>
-              </Box>
-            </Paper>
+            <PatientSignatureSection
+              value={signature}
+              onChange={setSignature}
+              reviewedWithPatient={dentalHistory.reviewStatus}
+            />
           </Box>
         </>
       )}
