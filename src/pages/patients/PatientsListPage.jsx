@@ -40,6 +40,7 @@ import {
   Clear as ClearIcon,
   FilterAltOff,
   Info as InfoIcon,
+  Event as CalendarIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
@@ -296,6 +297,11 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               <IconButton size="small" color="info"><InfoIcon /></IconButton>
             </Tooltip>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
+              <Button
+                startIcon={<CalendarIcon />}
+                onClick={() => navigate('/appointments/operatory-schedule')}
+              >
+              </Button>
               <Button
                 variant="contained"
                 color="warning"
