@@ -42,10 +42,39 @@ const PROCEDURE_ICONS = [
 ];
 
 const defaultProcedures = [
-  { id: 1, code: "D0150", treatment: "Comprehensive Evaluation", provider: "KIM", charge: "", checked: true },
-  { id: 2, code: "D1110", treatment: "Prophy", treatment2: "Adult", provider: "KIM", charge: "", checked: true },
-  { id: 3, code: "D0274", treatment: "Bitewing Four Xrays", provider: "KIM", charge: "", checked: true },
-  { id: 4, code: "D0330", treatment: "Panoramic Xray", provider: "KIM", charge: "", checked: false },
+  {
+    id: 1,
+    code: "D0150",
+    treatment: "Comprehensive Evaluation",
+    provider: "KIM",
+    charge: "",
+    checked: true,
+  },
+  {
+    id: 2,
+    code: "D1110",
+    treatment: "Prophy",
+    treatment2: "Adult",
+    provider: "KIM",
+    charge: "",
+    checked: true,
+  },
+  {
+    id: 3,
+    code: "D0274",
+    treatment: "Bitewing Four Xrays",
+    provider: "KIM",
+    charge: "",
+    checked: true,
+  },
+  {
+    id: 4,
+    code: "D0330",
+    treatment: "Panoramic Xray",
+    provider: "KIM",
+    charge: "",
+    checked: false,
+  },
 ];
 
 const providerOptions = ["KIM", "DR", "JOHN", "SARAH", "Hygienist Kim"];
@@ -84,12 +113,16 @@ const AddNewPatientAppointmentForm = ({
   initialDateTime = null,
 }) => {
   const [patient, setPatient] = useState(initialPatient || null);
-  const [dateTime, setDateTime] = useState(initialDateTime || dayjs().hour(9).minute(5));
+  const [dateTime, setDateTime] = useState(
+    initialDateTime || dayjs().hour(9).minute(5),
+  );
   const [visitType, setVisitType] = useState("Treatment");
   const [procedures, setProcedures] = useState(defaultProcedures);
   const [status, setStatus] = useState("confirmed");
   const [durationMins, setDurationMins] = useState(90);
-  const [providerTimes, setProviderTimes] = useState([{ provider: "Hygienist Kim", mins: 60 }]);
+  const [providerTimes, setProviderTimes] = useState([
+    { provider: "Hygienist Kim", mins: 60 },
+  ]);
   const [roomId, setRoomId] = useState("");
   const [preferredDentist, setPreferredDentist] = useState("");
   const [preferredHygienist, setPreferredHygienist] = useState("");
@@ -98,13 +131,13 @@ const AddNewPatientAppointmentForm = ({
 
   const handleProcedureCheck = (id) => {
     setProcedures((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, checked: !p.checked } : p))
+      prev.map((p) => (p.id === id ? { ...p, checked: !p.checked } : p)),
     );
   };
 
   const handleProcedureProviderChange = (id, value) => {
     setProcedures((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, provider: value } : p))
+      prev.map((p) => (p.id === id ? { ...p, provider: value } : p)),
     );
   };
 
@@ -118,7 +151,7 @@ const AddNewPatientAppointmentForm = ({
 
   const handleProviderTimeChange = (index, field, value) => {
     setProviderTimes((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
     );
   };
 
@@ -176,16 +209,30 @@ const AddNewPatientAppointmentForm = ({
         {/* Left content */}
         <Box sx={{ flex: 1, p: 2, overflow: "auto" }}>
           {/* For Patient + Date/Time */}
-          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2, mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 2,
+              mb: 2,
+            }}
+          >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography sx={{ ...FONT_XS, color: "#475569" }}>For Patient:</Typography>
+              <Typography sx={{ ...FONT_XS, color: "#475569" }}>
+                For Patient:
+              </Typography>
               <Autocomplete
                 size="small"
                 value={patient}
                 onChange={(_, v) => setPatient(v)}
                 onInputChange={(_, v) => onPatientSearch?.(v)}
                 options={patients}
-                getOptionLabel={(o) => (o?.firstName && o?.lastName ? `${o.firstName} ${o.lastName}` : o?.name || "")}
+                getOptionLabel={(o) =>
+                  o?.firstName && o?.lastName
+                    ? `${o.firstName} ${o.lastName}`
+                    : o?.name || ""
+                }
                 sx={{ minWidth: 220 }}
                 renderInput={(params) => (
                   <TextField
@@ -193,7 +240,11 @@ const AddNewPatientAppointmentForm = ({
                     placeholder="Search patient..."
                     InputProps={{
                       ...params.InputProps,
-                      startAdornment: <SearchIcon sx={{ color: "#94a3b8", mr: 0.5, fontSize: 18 }} />,
+                      startAdornment: (
+                        <SearchIcon
+                          sx={{ color: "#94a3b8", mr: 0.5, fontSize: 18 }}
+                        />
+                      ),
                     }}
                     sx={{ "& .MuiInputBase-root": { ...FONT_XS } }}
                   />
@@ -208,15 +259,26 @@ const AddNewPatientAppointmentForm = ({
               <DateTimePicker
                 value={dateTime}
                 onChange={setDateTime}
-                slotProps={{ textField: { size: "small", sx: { "& .MuiInputBase-input": FONT_XS, width: 180 } } }}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    sx: { "& .MuiInputBase-input": FONT_XS, width: 180 },
+                  },
+                }}
               />
             </LocalizationProvider>
           </Box>
 
           {/* Type of visit */}
           <Box sx={{ mb: 2 }}>
-            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Type of visit:</Typography>
-            <RadioGroup row value={visitType} onChange={(e) => setVisitType(e.target.value)}>
+            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+              Type of visit:
+            </Typography>
+            <RadioGroup
+              row
+              value={visitType}
+              onChange={(e) => setVisitType(e.target.value)}
+            >
               <FormControlLabel
                 value="Treatment"
                 control={<Radio size="small" />}
@@ -253,24 +315,91 @@ const AddNewPatientAppointmentForm = ({
               </Box>
             ))}
           </Box>
-          <Button sx={{ color: "#1976d2", textTransform: "none", ...FONT_XS, p: 0, minHeight: 0, mb: 2 }}>
+          <Button
+            sx={{
+              color: "#1976d2",
+              textTransform: "none",
+              ...FONT_XS,
+              p: 0,
+              minHeight: 0,
+              mb: 2,
+            }}
+          >
             +Add Procedure
           </Button>
 
           {/* New Procedures */}
-          <Typography sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 1 }}>
+          <Typography
+            sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 1 }}
+          >
             New Procedures:
           </Typography>
-          <TableContainer component={Paper} variant="outlined" sx={{ border: "1px solid #e2e8f0", borderRadius: 1, mb: 2 }}>
+          <TableContainer
+            component={Paper}
+            variant="outlined"
+            sx={{ border: "1px solid #e2e8f0", borderRadius: 1, mb: 2 }}
+          >
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                  <TableCell sx={{ ...FONT_XS, fontWeight: 600, color: "#475569", py: 0.75 }} />
-                  <TableCell sx={{ ...FONT_XS, fontWeight: 600, color: "#475569", py: 0.75 }}>Procedure</TableCell>
-                  <TableCell sx={{ ...FONT_XS, fontWeight: 600, color: "#475569", py: 0.75 }}>Site</TableCell>
-                  <TableCell sx={{ ...FONT_XS, fontWeight: 600, color: "#475569", py: 0.75 }}>Treatment</TableCell>
-                  <TableCell sx={{ ...FONT_XS, fontWeight: 600, color: "#475569", py: 0.75 }}>Provider</TableCell>
-                  <TableCell sx={{ ...FONT_XS, fontWeight: 600, color: "#475569", py: 0.75 }}>Total Charge</TableCell>
+                  <TableCell
+                    sx={{
+                      ...FONT_XS,
+                      fontWeight: 600,
+                      color: "#475569",
+                      py: 0.75,
+                    }}
+                  />
+                  <TableCell
+                    sx={{
+                      ...FONT_XS,
+                      fontWeight: 600,
+                      color: "#475569",
+                      py: 0.75,
+                    }}
+                  >
+                    Procedure
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      ...FONT_XS,
+                      fontWeight: 600,
+                      color: "#475569",
+                      py: 0.75,
+                    }}
+                  >
+                    Site
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      ...FONT_XS,
+                      fontWeight: 600,
+                      color: "#475569",
+                      py: 0.75,
+                    }}
+                  >
+                    Treatment
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      ...FONT_XS,
+                      fontWeight: 600,
+                      color: "#475569",
+                      py: 0.75,
+                    }}
+                  >
+                    Provider
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      ...FONT_XS,
+                      fontWeight: 600,
+                      color: "#475569",
+                      py: 0.75,
+                    }}
+                  >
+                    Total Charge
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -284,7 +413,9 @@ const AddNewPatientAppointmentForm = ({
                         sx={{ p: 0.25 }}
                       />
                     </TableCell>
-                    <TableCell sx={{ ...FONT_XS, py: 0.5 }}>{row.code}</TableCell>
+                    <TableCell sx={{ ...FONT_XS, py: 0.5 }}>
+                      {row.code}
+                    </TableCell>
                     <TableCell sx={{ ...FONT_XS, py: 0.5 }}>-</TableCell>
                     <TableCell sx={{ py: 0.5 }}>
                       <TextField
@@ -300,8 +431,12 @@ const AddNewPatientAppointmentForm = ({
                           value={row.treatment2}
                           sx={{ ml: 0.5, ...FONT_XS, minWidth: 90, height: 32 }}
                         >
-                          <MenuItem value="Adult" sx={FONT_XS}>Adult</MenuItem>
-                          <MenuItem value="Child" sx={FONT_XS}>Child</MenuItem>
+                          <MenuItem value="Adult" sx={FONT_XS}>
+                            Adult
+                          </MenuItem>
+                          <MenuItem value="Child" sx={FONT_XS}>
+                            Child
+                          </MenuItem>
                         </Select>
                       )}
                     </TableCell>
@@ -309,17 +444,26 @@ const AddNewPatientAppointmentForm = ({
                       <FormControl size="small" sx={{ minWidth: 120 }}>
                         <Select
                           value={row.provider || ""}
-                          onChange={(e) => handleProcedureProviderChange(row.id, e.target.value)}
+                          onChange={(e) =>
+                            handleProcedureProviderChange(
+                              row.id,
+                              e.target.value,
+                            )
+                          }
                           displayEmpty
                           sx={FONT_XS}
                         >
                           {providerOptions.map((opt) => (
-                            <MenuItem key={opt} value={opt} sx={FONT_XS}>{opt}</MenuItem>
+                            <MenuItem key={opt} value={opt} sx={FONT_XS}>
+                              {opt}
+                            </MenuItem>
                           ))}
                         </Select>
                       </FormControl>
                     </TableCell>
-                    <TableCell sx={{ ...FONT_XS, py: 0.5 }}>{row.charge || ""}</TableCell>
+                    <TableCell sx={{ ...FONT_XS, py: 0.5 }}>
+                      {row.charge || ""}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -327,7 +471,9 @@ const AddNewPatientAppointmentForm = ({
           </TableContainer>
 
           {/* Treatment Plan Procedures */}
-          <Typography sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 1 }}>
+          <Typography
+            sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 1 }}
+          >
             Treatment Plan Procedures:
           </Typography>
           <Box sx={{ display: "flex", gap: 1, mb: 0.5 }}>
@@ -340,7 +486,15 @@ const AddNewPatientAppointmentForm = ({
               <Select label="Select" sx={FONT_XS} />
             </FormControl>
           </Box>
-          <Button sx={{ color: "#1976d2", textTransform: "none", ...FONT_XS, p: 0, minHeight: 0 }}>
+          <Button
+            sx={{
+              color: "#1976d2",
+              textTransform: "none",
+              ...FONT_XS,
+              p: 0,
+              minHeight: 0,
+            }}
+          >
             + add procedures from another visit
           </Button>
         </Box>
@@ -390,7 +544,9 @@ const AddNewPatientAppointmentForm = ({
           </FormControl>
 
           <Box>
-            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Appt Duration:</Typography>
+            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+              Appt Duration:
+            </Typography>
             <TextField
               type="number"
               size="small"
@@ -399,22 +555,49 @@ const AddNewPatientAppointmentForm = ({
               sx={{ "& .MuiInputBase-input": FONT_XS }}
               inputProps={{ min: 5, step: 5 }}
             />
-            <Typography component="span" sx={{ ...FONT_XS, ml: 0.5, color: "#64748b" }}>mins</Typography>
+            <Typography
+              component="span"
+              sx={{ ...FONT_XS, ml: 0.5, color: "#64748b" }}
+            >
+              mins
+            </Typography>
           </Box>
 
           <Box>
-            <Typography sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 0.5 }}>Provider</Typography>
-            <Typography sx={{ ...FONT_XS, color: "#64748b", mb: 0.5 }}>Time</Typography>
+            <Typography
+              sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 0.5 }}
+            >
+              Provider
+            </Typography>
+            <Typography sx={{ ...FONT_XS, color: "#64748b", mb: 0.5 }}>
+              Time
+            </Typography>
             {providerTimes.map((row, index) => (
-              <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+              <Box
+                key={index}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  mb: 0.5,
+                }}
+              >
                 <FormControl size="small" sx={{ minWidth: 140 }}>
                   <Select
                     value={row.provider}
-                    onChange={(e) => handleProviderTimeChange(index, "provider", e.target.value)}
+                    onChange={(e) =>
+                      handleProviderTimeChange(
+                        index,
+                        "provider",
+                        e.target.value,
+                      )
+                    }
                     sx={FONT_XS}
                   >
                     {providerOptions.map((opt) => (
-                      <MenuItem key={opt} value={opt} sx={FONT_XS}>{opt}</MenuItem>
+                      <MenuItem key={opt} value={opt} sx={FONT_XS}>
+                        {opt}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -422,41 +605,76 @@ const AddNewPatientAppointmentForm = ({
                   type="number"
                   size="small"
                   value={row.mins}
-                  onChange={(e) => handleProviderTimeChange(index, "mins", Number(e.target.value))}
+                  onChange={(e) =>
+                    handleProviderTimeChange(
+                      index,
+                      "mins",
+                      Number(e.target.value),
+                    )
+                  }
                   sx={{ width: 70, "& .MuiInputBase-input": FONT_XS }}
                 />
-                <Typography sx={{ ...FONT_XS, color: "#64748b" }}>mins</Typography>
-                <IconButton size="small" onClick={() => handleRemoveProviderTime(index)}>
+                <Typography sx={{ ...FONT_XS, color: "#64748b" }}>
+                  mins
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => handleRemoveProviderTime(index)}
+                >
                   <DeleteOutlineIcon fontSize="small" />
                 </IconButton>
               </Box>
             ))}
             <FormControl size="small" fullWidth sx={{ mt: 0.5 }}>
               <InputLabel sx={FONT_XS}>Add Provider/Assistant:</InputLabel>
-              <Select label="Add Provider/Assistant:" sx={FONT_XS} onOpen={() => handleAddProviderTime()}>
-                <MenuItem value="" sx={FONT_XS}>Add...</MenuItem>
+              <Select
+                label="Add Provider/Assistant:"
+                sx={FONT_XS}
+                onOpen={() => handleAddProviderTime()}
+              >
+                <MenuItem value="" sx={FONT_XS}>
+                  Add...
+                </MenuItem>
               </Select>
             </FormControl>
           </Box>
 
           <Box>
-            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Patient's Preferred Dentist:</Typography>
+            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+              Patient's Preferred Dentist:
+            </Typography>
             <FormControl size="small" fullWidth>
-              <Select value={preferredDentist} onChange={(e) => setPreferredDentist(e.target.value)} sx={FONT_XS}>
-                <MenuItem value="" sx={FONT_XS}>Select</MenuItem>
+              <Select
+                value={preferredDentist}
+                onChange={(e) => setPreferredDentist(e.target.value)}
+                sx={FONT_XS}
+              >
+                <MenuItem value="" sx={FONT_XS}>
+                  Select
+                </MenuItem>
               </Select>
             </FormControl>
           </Box>
           <Box>
-            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Patient's Preferred Hygienist:</Typography>
+            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+              Patient's Preferred Hygienist:
+            </Typography>
             <FormControl size="small" fullWidth>
-              <Select value={preferredHygienist} onChange={(e) => setPreferredHygienist(e.target.value)} sx={FONT_XS}>
-                <MenuItem value="" sx={FONT_XS}>Select</MenuItem>
+              <Select
+                value={preferredHygienist}
+                onChange={(e) => setPreferredHygienist(e.target.value)}
+                sx={FONT_XS}
+              >
+                <MenuItem value="" sx={FONT_XS}>
+                  Select
+                </MenuItem>
               </Select>
             </FormControl>
           </Box>
           <Box>
-            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Notes</Typography>
+            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+              Notes
+            </Typography>
             <TextField
               size="small"
               fullWidth
@@ -469,7 +687,9 @@ const AddNewPatientAppointmentForm = ({
             />
           </Box>
           <Box>
-            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Tags</Typography>
+            <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+              Tags
+            </Typography>
             <Button
               variant="contained"
               size="small"
@@ -486,7 +706,9 @@ const AddNewPatientAppointmentForm = ({
           </Box>
 
           <Box sx={{ flex: 1 }} />
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}
+          >
             <Button
               variant="contained"
               size="small"

@@ -30,6 +30,7 @@ const CompleteProceduresDialog = ({
   handleTreatmentChange,
   handleProviderChange,
   onAddProcedure,
+  onCompleteAll,
 }) => {
   return (
     <Dialog
@@ -194,6 +195,11 @@ const CompleteProceduresDialog = ({
           </Button>
           <Button
             variant="contained"
+            onClick={() => {
+              if (onCompleteAll) {
+                onCompleteAll(proceduresData);
+              }
+            }}
             sx={{
               textTransform: "none",
               borderRadius: 1.5,

@@ -2,6 +2,9 @@ import dayjs from "dayjs";
 import { Box, Paper, Typography, Button } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import EventNoteIcon from "@mui/icons-material/EventNote";
+import PersonIcon from "@mui/icons-material/Person";
+import NotesIcon from "@mui/icons-material/Notes";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const OperatoryScheduleGrid = ({
   OPERATORY_COLUMNS,
@@ -188,6 +191,8 @@ const OperatoryScheduleGrid = ({
                           SLOT_MINUTES) *
                         SLOT_HEIGHT;
 
+                      const statusColor = getStatusColor ? getStatusColor(a.status, a.color) : a.color;
+
                       return (
                         <Paper
                           key={a.id}
@@ -203,62 +208,118 @@ const OperatoryScheduleGrid = ({
                             top: topPx + 4,
                             height: Math.max(68, heightPx - 8),
                             borderRadius: 1.5,
-                            bgcolor: getStatusColor ? getStatusColor(a.status, a.color) : a.color,
-                            color: "#ffffff",
+                            bgcolor: "#ffffff",
+                            color: "#000000",
                             p: 1,
                             cursor: "pointer",
                             transition: "transform 0.1s, box-shadow 0.1s",
+                            overflow: "hidden",
                             "&:hover": {
-                              transform: "scale(1.01)",
-                              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                              transform: "scale(1.02)",
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
                             },
                             display: "flex",
                             flexDirection: "column",
-                            border: "2px solid rgba(255,255,255,0.7)",
+                            border: "2px solid #e0e0e0",
                           }}
                         >
+                          {/* Animated Zebra Stripe Band */}
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: "12px",
+                              background: `repeating-linear-gradient(
+                                90deg,
+                                ${statusColor} 0px,
+                                ${statusColor} 12px,
+                                transparent 12px,
+                                transparent 24px
+                              )`,
+                              animation: "slide 1s linear infinite",
+                              "@keyframes slide": {
+                                "0%": {
+                                  backgroundPosition: "0 0",
+                                },
+                                "100%": {
+                                  backgroundPosition: "24px 0",
+                                },
+                              },
+                            }}
+                          />
                           <Box
                             sx={{
                               mb: 0.5,
                               px: 0.6,
                               py: 0.2,
                               borderRadius: 999,
-                              border: "1px solid rgba(255,255,255,0.9)",
+                              border: "1px solid rgba(0,0,0,0.3)",
                               fontSize: 9,
                               fontWeight: 600,
                               letterSpacing: 0.4,
                               textTransform: "uppercase",
                               display: "inline-flex",
+                              alignItems: "center",
+                              gap: 0.3,
+                              mt: 1.5,
                             }}
                           >
+                            <CheckCircleIcon sx={{ fontSize: 10 }} />
                             {(a.status || "unconfirmed").toUpperCase()}
                           </Box>
-                          <Typography
+                          <Box
                             sx={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              lineHeight: 1.3,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              mb: 0.25,
                             }}
                           >
-                            {a.patientName}
-                          </Typography>
-                          <Typography
+                            <PersonIcon sx={{ fontSize: 12, color: "#757575" }} />
+                            <Typography
+                              sx={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                lineHeight: 1.3,
+                                color: "#212121",
+                              }}
+                            >
+                              {a.patientName}
+                            </Typography>
+                          </Box>
+                          <Box
                             sx={{
-                              fontSize: 10,
-                              opacity: 0.95,
-                              lineHeight: 1.3,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              mb: 0.25,
                             }}
                           >
-                            {a.title}
-                          </Typography>
+                            <NotesIcon sx={{ fontSize: 12, color: "#757575" }} />
+                            <Typography
+                              sx={{
+                                fontSize: 10,
+                                lineHeight: 1.3,
+                                color: "#424242",
+                              }}
+                            >
+                              {a.title}
+                            </Typography>
+                          </Box>
                           {a.note && (
                             <Typography
                               sx={{
                                 mt: 0.25,
                                 fontSize: 9,
-                                color: "#e3f2fd",
+                                color: "#757575",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.3,
                               }}
                             >
+                              <EventNoteIcon sx={{ fontSize: 9 }} />
                               {a.note}
                             </Typography>
                           )}
@@ -297,24 +358,6 @@ const OperatoryScheduleGrid = ({
           justifyContent: "flex-end",
         }}
       >
-        <Button
-          variant="contained"
-          onClick={() =>
-            onScheduleAppointmentClick
-              ? onScheduleAppointmentClick()
-              : onSlotClick && onSlotClick("op1", 0)
-          }
-          startIcon={<EventNoteIcon />}
-          sx={{
-            textTransform: "none",
-            borderRadius: 2,
-            bgcolor: "#1976d2",
-            px: 3,
-            "&:hover": { bgcolor: "#1565c0" },
-          }}
-        >
-          Schedule Appointment
-        </Button>
       </Box>
     </Paper>
   );

@@ -64,9 +64,10 @@ const StyledDateCalendar = ({ value, onChange }) => (
             },
           },
           "&.MuiPickersDay-today": {
-            border: "1px solid #1976d2",
-            backgroundColor: "transparent",
-            fontWeight: 600,
+            border: "2px solid #1976d2",
+            backgroundColor: "#e3f2fd",
+            fontWeight: 700,
+            color: "#1976d2",
           },
         },
         "& .MuiDayCalendar-header": {
@@ -107,6 +108,14 @@ const OperatorySidebar = ({
   onCompleteBillClick,
   onPurchaseProductsClick,
 }) => {
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [checkInChecklist, setCheckInChecklist] = useState({
+    patientArrived: null,
+    copayCollected: null,
+    formsCompleted: null,
+    insuranceVerified: null,
+  });
+  const [checkInExpanded, setCheckInExpanded] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
   const [newDob, setNewDob] = useState("");
@@ -115,18 +124,32 @@ const OperatorySidebar = ({
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   const [isNewPatient, setIsNewPatient] = useState(true);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
+
+  const handleCheckInSelection = (item, selectionType) => {
+    setCheckInChecklist((prev) => ({
+      ...prev,
+      [item]: prev[item] === selectionType ? null : selectionType,
+    }));
+  };
 
   useEffect(() => {
+    // Don't hide the create form if user is actively filling it out
+    if (isCreatingPatient) return;
+    
+    // Only show quick create if there's a query and no results
     if (!patientQuery?.trim()) {
       setShowQuickCreate(false);
+      setIsCreatingPatient(false);
       return;
     }
+    
     if (!loadingPatients && (!patients || patients.length === 0)) {
       setShowQuickCreate(true);
     } else if (patients && patients.length > 0) {
       setShowQuickCreate(false);
     }
-  }, [patientQuery, loadingPatients, patients]);
+  }, [patientQuery, loadingPatients, patients, isCreatingPatient]);
 
   const handleCreatePatientClick = async () => {
     if (!onCreatePatient) return;
@@ -163,18 +186,34 @@ const OperatorySidebar = ({
           size="small"
           options={patients}
           loading={loadingPatients}
+          value={selectedPatient}
           getOptionLabel={(o) =>
             o?.firstName && o?.lastName
               ? `${o.firstName} ${o.lastName}`
               : o?.name || ""
           }
           onChange={(_, value) => {
+            setSelectedPatient(value);
             onPatientSelect?.(value || null);
+            if (value) {
+              setPatientQuery(
+                value.firstName && value.lastName
+                  ? `${value.firstName} ${value.lastName}`
+                  : value.name || ""
+              );
+            }
           }}
           inputValue={patientQuery}
-          onInputChange={(_, value) => {
-            setPatientQuery(value);
-            onPatientSearch?.(value);
+          onInputChange={(_, value, reason) => {
+            // Only trigger search on 'input' reason, not on 'blur' or 'reset'
+            if (reason === 'input') {
+              setPatientQuery(value);
+              onPatientSearch?.(value);
+            } else if (reason === 'clear') {
+              setPatientQuery('');
+              setSelectedPatient(null);
+              onPatientSearch?.('');
+            }
           }}
           renderInput={(params) => (
             <TextField
@@ -194,7 +233,11 @@ const OperatorySidebar = ({
       </Box>
 
       {showQuickCreate && (
-        <Box sx={{ px: 2, pb: 2, pt: 1.5 }}>
+        <Box
+          sx={{ px: 2, pb: 2, pt: 1.5 }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <Typography sx={{ fontSize: 11, color: "#9ca3af", mb: 0.5 }}>
             no match found
           </Typography>
@@ -203,7 +246,11 @@ const OperatorySidebar = ({
             size="small"
             label="First Name"
             value={newFirstName}
-            onChange={(e) => setNewFirstName(e.target.value)}
+            onChange={(e) => {
+              setNewFirstName(e.target.value);
+              setIsCreatingPatient(true);
+            }}
+            onBlur={() => setIsCreatingPatient(false)}
             sx={{ mb: 0.75 }}
           />
           <TextField
@@ -211,7 +258,11 @@ const OperatorySidebar = ({
             size="small"
             label="Last Name"
             value={newLastName}
-            onChange={(e) => setNewLastName(e.target.value)}
+            onChange={(e) => {
+              setNewLastName(e.target.value);
+              setIsCreatingPatient(true);
+            }}
+            onBlur={() => setIsCreatingPatient(false)}
             sx={{ mb: 0.75 }}
           />
           <TextField
@@ -220,7 +271,11 @@ const OperatorySidebar = ({
             label="Date of Birth"
             type="date"
             value={newDob}
-            onChange={(e) => setNewDob(e.target.value)}
+            onChange={(e) => {
+              setNewDob(e.target.value);
+              setIsCreatingPatient(true);
+            }}
+            onBlur={() => setIsCreatingPatient(false)}
             InputLabelProps={{ shrink: true }}
             sx={{ mb: 0.75 }}
           />
@@ -229,7 +284,11 @@ const OperatorySidebar = ({
             size="small"
             label="Mobile Phone"
             value={newPhone}
-            onChange={(e) => setNewPhone(e.target.value)}
+            onChange={(e) => {
+              setNewPhone(e.target.value);
+              setIsCreatingPatient(true);
+            }}
+            onBlur={() => setIsCreatingPatient(false)}
             sx={{ mb: 0.75 }}
           />
           <TextField
@@ -237,7 +296,11 @@ const OperatorySidebar = ({
             size="small"
             label="Email"
             value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
+            onChange={(e) => {
+              setNewEmail(e.target.value);
+              setIsCreatingPatient(true);
+            }}
+            onBlur={() => setIsCreatingPatient(false)}
             sx={{ mb: 0.75 }}
           />
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
@@ -264,7 +327,10 @@ const OperatorySidebar = ({
             fullWidth
             variant="contained"
             size="small"
-            onClick={handleCreatePatientClick}
+            onClick={() => {
+              setIsCreatingPatient(false);
+              handleCreatePatientClick();
+            }}
             sx={{
               textTransform: "none",
               bgcolor: "#e0a15a",
@@ -373,22 +439,22 @@ const OperatorySidebar = ({
             <Box sx={{ pt: 1 }}>
               {[
                 { key: "importHistory", label: "Import History", naColor: "#ef4444" },
-                { key: "importRecord", label: "Import Record", naColor: "#10b981" },
-                { key: "apptReminder", label: "Appt Reminder", naColor: "#10b981" },
+                { key: "importRecord", label: "Import Record", naColor: "#ef4444" },
+                { key: "apptReminder", label: "Appt Reminder", naColor: "#ef4444" },
                 {
                   key: "verifyInsurance",
                   label: "Verify Insurance Eligibility",
-                  naColor: "#10b981",
+                  naColor: "#ef4444",
                 },
                 {
                   key: "premedicationReminder",
                   label: "Premedication Reminder",
-                  naColor: "#10b981",
+                  naColor: "#ef4444",
                 },
                 {
                   key: "labCaseReceived",
                   label: "Lab Case Received",
-                  naColor: "#10b981",
+                  naColor: "#ef4444",
                 },
               ].map((item) => (
                 <Box
@@ -544,12 +610,13 @@ const OperatorySidebar = ({
                 {
                   key: "completeAndBillProcedures",
                   label: "Complete & Bill Procedures",
+                  naColor: "#ef4444",
                 },
-                { key: "purchaseProducts", label: "Purchase Products" },
-                { key: "shareClinicalReports", label: "Share Clinical Reports" },
-                { key: "prescription", label: "Prescription" },
-                { key: "scheduleNextAppt", label: "Schedule Next Appt" },
-                { key: "sendLabCase", label: "Send Lab Case" },
+                { key: "purchaseProducts", label: "Purchase Products", naColor: "#ef4444" },
+                { key: "shareClinicalReports", label: "Share Clinical Reports", naColor: "#ef4444" },
+                { key: "prescription", label: "Prescription", naColor: "#ef4444" },
+                { key: "scheduleNextAppt", label: "Schedule Next Appt", naColor: "#ef4444" },
+                { key: "sendLabCase", label: "Send Lab Case", naColor: "#ef4444" },
               ].map((item) => (
                 <Box
                   key={item.key}
@@ -602,7 +669,7 @@ const OperatorySidebar = ({
                         borderRadius: "14px",
                         bgcolor:
                           checkOutChecklist[item.key] === "na"
-                            ? "#10b981"
+                            ? item.naColor
                             : "#f1f5f9",
                         color:
                           checkOutChecklist[item.key] === "na"
@@ -612,7 +679,7 @@ const OperatorySidebar = ({
                         "&:hover": {
                           bgcolor:
                             checkOutChecklist[item.key] === "na"
-                              ? "#059669"
+                              ? item.naColor
                               : "#e2e8f0",
                         },
                         cursor: "pointer",
@@ -659,32 +726,159 @@ const OperatorySidebar = ({
           )}
         </Box>
 
-        {/* Simple dropdowns */}
+        {/* Check-in Checklist */}
         <Box sx={{ mb: 2 }}>
-          <FormControl fullWidth size="small">
-            <InputLabel sx={{ fontSize: 13 }}>Check-in Checklist</InputLabel>
-            <Select
-              label="Check-in Checklist"
-              defaultValue=""
-              sx={{ borderRadius: 1.5, fontSize: 13, mb: 1 }}
+          <Box
+            onClick={() => setCheckInExpanded(!checkInExpanded)}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              py: 1,
+              px: 1.5,
+              borderRadius: 1.5,
+              bgcolor: "#f8fafc",
+              cursor: "pointer",
+              transition: "background-color 0.2s ease",
+              "&:hover": {
+                bgcolor: "#f1f5f9",
+              },
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: "#10b981",
+                }}
+              />
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#475569",
+                }}
+              >
+                Check-in Checklist
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                transform: checkInExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s ease",
+                color: "#64748b",
+              }}
             >
-              <MenuItem value="" disabled>
-                Select check-in task
-              </MenuItem>
-              <MenuItem value="arrived" sx={{ fontSize: 13 }}>
-                Patient Arrived
-              </MenuItem>
-              <MenuItem value="copay" sx={{ fontSize: 13 }}>
-                Co-payment Collected
-              </MenuItem>
-              <MenuItem value="forms" sx={{ fontSize: 13 }}>
-                Forms Completed
-              </MenuItem>
-              <MenuItem value="insuranceCard" sx={{ fontSize: 13 }}>
-                Insurance Card Verified
-              </MenuItem>
-            </Select>
-          </FormControl>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </Box>
+          </Box>
+
+          {checkInExpanded && (
+            <Box sx={{ pt: 1 }}>
+              {[
+                { key: "patientArrived", label: "Patient Arrived", naColor: "#ef4444" },
+                { key: "copayCollected", label: "Co-payment Collected", naColor: "#ef4444" },
+                { key: "formsCompleted", label: "Forms Completed", naColor: "#ef4444" },
+                { key: "insuranceVerified", label: "Insurance Card Verified", naColor: "#ef4444" },
+              ].map((item) => (
+                <Box
+                  key={item.key}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    py: 0.75,
+                    px: 1,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 12, color: "#475569" }}>
+                    {item.label}
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Chip
+                      label="N/A"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCheckInSelection(item.key, "na");
+                      }}
+                      sx={{
+                        minWidth: 48,
+                        height: 28,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        borderRadius: "14px",
+                        bgcolor:
+                          checkInChecklist[item.key] === "na"
+                            ? item.naColor
+                            : "#f1f5f9",
+                        color:
+                          checkInChecklist[item.key] === "na"
+                            ? "#ffffff"
+                            : "#64748b",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          bgcolor:
+                            checkInChecklist[item.key] === "na"
+                              ? item.naColor
+                              : "#e2e8f0",
+                        },
+                        cursor: "pointer",
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCheckInSelection(item.key, "checked");
+                      }}
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor:
+                          checkInChecklist[item.key] === "checked"
+                            ? "#10b981"
+                            : "#cbd5e1",
+                        bgcolor:
+                          checkInChecklist[item.key] === "checked"
+                            ? "#10b981"
+                            : "transparent",
+                        color: "#ffffff",
+                        padding: 0,
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          borderColor: "#10b981",
+                          bgcolor:
+                            checkInChecklist[item.key] === "checked"
+                              ? "#059669"
+                              : "#f1f5f9",
+                        },
+                        cursor: "pointer",
+                      }}
+                    >
+                      <CheckIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
         </Box>
 
         <Box sx={{ mb: 2 }}>
