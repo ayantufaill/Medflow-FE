@@ -665,12 +665,7 @@ const OperatorySchedulePage = () => {
   };
 
   const handleGridClick = (columnId, minutesFromStart) => {
-    const start = selectedDate
-      .startOf("day")
-      .hour(START_HOUR)
-      .minute(0)
-      .add(minutesFromStart, "minute");
-    openCreateDialog({ columnId, startIso: start.toISOString() });
+    // Grid click functionality disabled - appointments can only be created via the "Schedule Appointment" button
   };
 
   return (

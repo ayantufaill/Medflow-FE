@@ -524,12 +524,8 @@ const OperatoryScheduleGrid = ({
                         const startMin = minutesSinceStart(a.start);
                         const endMin = minutesSinceStart(a.end);
                         const duration = endMin - startMin;
-                        const isShortAppointment = duration <= 30;
                         const slotIndex = Math.floor(startMin / 30);
                         const slotHeight = (duration / 30) * SLOT_HEIGHT_WEEK_MONTH;
-                        
-                        const minCardHeight = duration <= 15 ? 72 : duration <= 30 ? 80 : 68;
-                        const finalHeight = Math.max(minCardHeight, slotHeight);
                         
                         const statusColor = getStatusColor ? getStatusColor(a.status, a.color) : a.color;
                         
@@ -544,13 +540,13 @@ const OperatoryScheduleGrid = ({
                             sx={{
                               position: "absolute",
                               top: slotIndex * SLOT_HEIGHT_WEEK_MONTH + 2,
-                              left: 4,
-                              right: 4,
-                              height: finalHeight - 4,
+                              left: 2,
+                              right: 2,
+                              height: Math.max(68, slotHeight - 2),
                               borderRadius: 1.5,
                               bgcolor: "#ffffff",
                               color: "#000000",
-                              p: 1,
+                              p: 0.75,
                               cursor: "pointer",
                               transition: "transform 0.1s, box-shadow 0.1s",
                               overflow: "hidden",
@@ -558,7 +554,7 @@ const OperatoryScheduleGrid = ({
                               zIndex: 1,
                               "&:hover": {
                                 transform: "scale(1.02)",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                               },
                               display: "flex",
                               flexDirection: "column",
@@ -591,6 +587,7 @@ const OperatoryScheduleGrid = ({
                               }}
                             />
                             
+                            {/* Status Badge */}
                             <Box
                               sx={{
                                 mb: 0.5,
@@ -598,7 +595,7 @@ const OperatoryScheduleGrid = ({
                                 py: 0.3,
                                 borderRadius: 999,
                                 border: "1px solid rgba(0,0,0,0.3)",
-                                fontSize: isShortAppointment ? 8.5 : 10,
+                                fontSize: 9,
                                 fontWeight: 600,
                                 letterSpacing: 0.4,
                                 textTransform: "uppercase",
@@ -608,15 +605,16 @@ const OperatoryScheduleGrid = ({
                                 mt: 0.5,
                               }}
                             >
-                              <CheckCircleIcon sx={{ fontSize: isShortAppointment ? 9 : 11 }} />
+                              <CheckCircleIcon sx={{ fontSize: 10 }} />
                               {(a.status || "unconfirmed").toUpperCase()}
                             </Box>
                             
+                            {/* Patient Name */}
                             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.2 }}>
-                              <PersonIcon sx={{ fontSize: isShortAppointment ? 10 : 12, color: "#757575" }} />
+                              <PersonIcon sx={{ fontSize: 11, color: "#757575" }} />
                               <Typography
                                 sx={{
-                                  fontSize: isShortAppointment ? 9.5 : 11,
+                                  fontSize: 10,
                                   fontWeight: 700,
                                   lineHeight: 1.2,
                                   color: "#212121",
@@ -629,11 +627,12 @@ const OperatoryScheduleGrid = ({
                               </Typography>
                             </Box>
                             
+                            {/* Appointment Title */}
                             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.2 }}>
-                              <NotesIcon sx={{ fontSize: isShortAppointment ? 10 : 12, color: "#757575" }} />
+                              <NotesIcon sx={{ fontSize: 11, color: "#757575" }} />
                               <Typography
                                 sx={{
-                                  fontSize: isShortAppointment ? 9 : 10,
+                                  fontSize: 9,
                                   lineHeight: 1.2,
                                   color: "#424242",
                                   overflow: "hidden",
@@ -645,11 +644,12 @@ const OperatoryScheduleGrid = ({
                               </Typography>
                             </Box>
                             
+                            {/* Note (if exists) */}
                             {a.note && (
                               <Typography
                                 sx={{
                                   mt: 0.2,
-                                  fontSize: isShortAppointment ? 8 : 9,
+                                  fontSize: 8,
                                   color: "#757575",
                                   display: "flex",
                                   alignItems: "center",
@@ -659,14 +659,15 @@ const OperatoryScheduleGrid = ({
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                <EventNoteIcon sx={{ fontSize: isShortAppointment ? 8 : 9 }} />
+                                <EventNoteIcon sx={{ fontSize: 8 }} />
                                 {a.note}
                               </Typography>
                             )}
                             
+                            {/* Time */}
                             <Box sx={{ mt: "auto", pt: 0.5, display: "flex", alignItems: "center", gap: 0.5 }}>
-                              <AccessTimeIcon sx={{ fontSize: isShortAppointment ? 9 : 11 }} />
-                              <Typography sx={{ fontSize: isShortAppointment ? 8 : 9, opacity: 0.9, lineHeight: 1 }}>
+                              <AccessTimeIcon sx={{ fontSize: 10 }} />
+                              <Typography sx={{ fontSize: 8.5, opacity: 0.9, lineHeight: 1 }}>
                                 {dayjs(a.start).format("h:mm")} - {dayjs(a.end).format("h:mm")}
                               </Typography>
                             </Box>

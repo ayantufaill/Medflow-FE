@@ -551,7 +551,22 @@ const AddNewPatientAppointmentForm = ({
               type="number"
               size="small"
               value={durationMins}
-              onChange={(e) => setDurationMins(Number(e.target.value) || 0)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string during editing, but convert to 0 only on blur if still empty
+                if (value === "") {
+                  setDurationMins("");
+                } else {
+                  setDurationMins(Number(value) || 0);
+                }
+              }}
+              onBlur={(e) => {
+                // On blur, ensure we have a valid number (minimum 5)
+                const value = Number(e.target.value);
+                if (!value || value < 5) {
+                  setDurationMins(5);
+                }
+              }}
               sx={{ "& .MuiInputBase-input": FONT_XS }}
               inputProps={{ min: 5, step: 5 }}
             />
