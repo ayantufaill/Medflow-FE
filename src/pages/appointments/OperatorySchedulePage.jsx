@@ -9,6 +9,8 @@ import {
   Typography,
   Chip,
   IconButton,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -79,6 +81,7 @@ const OperatorySchedulePage = () => {
   const { showSnackbar } = useSnackbar();
   const { providers } = useDropdownData({ providers: true });
   const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
   const [patientQuery, setPatientQuery] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [sidebarPatients, setSidebarPatients] = useState([]);
@@ -144,6 +147,19 @@ const OperatorySchedulePage = () => {
 
   const handlePurchaseProductsClick = () => {
     setPurchaseProductsDialogOpen(true);
+  };
+
+  const handleViewModeChange = (event, newMode) => {
+    if (newMode) {
+      setViewMode(newMode);
+      // Automatically focus on current date when changing views
+      const today = dayjs();
+      setSelectedDate(today);
+      
+      // For week view, ensure we're viewing the week that contains today
+      // For month view, ensure we're viewing the month that contains today
+      // This is already handled by setting selectedDate to today
+    }
   };
 
   const handleScheduleAppointmentClick = () => {
@@ -227,6 +243,31 @@ const OperatorySchedulePage = () => {
     if (addAppointmentFormOpen) searchFormPatients("");
   }, [addAppointmentFormOpen, searchFormPatients]);
 
+  // Load initial patients on mount
+  useEffect(() => {
+    searchSidebarPatients("");
+  }, []);
+
+  // Auto-select first patient when sidebar patients are loaded
+  useEffect(() => {
+    if (sidebarPatients.length > 0 && !selectedPatientId) {
+      const firstPatient = sidebarPatients[0];
+      const patientId = firstPatient._id || firstPatient.id;
+      const patientName = firstPatient.firstName && firstPatient.lastName
+        ? `${firstPatient.firstName} ${firstPatient.lastName}`
+        : firstPatient.name || "";
+      
+      setSelectedPatientId(patientId);
+      setPatientQuery(patientName);
+      
+      console.log("Auto-selected first patient:", {
+        id: patientId,
+        name: patientName,
+        totalPatients: sidebarPatients.length
+      });
+    }
+  }, [sidebarPatients]);
+
   const initialFormDateTime = useMemo(
     () =>
       selectedDate
@@ -300,13 +341,19 @@ const OperatorySchedulePage = () => {
                   ? (providerNum - 1) % OPERATORY_COLUMNS.length
                   : 0;
               const derivedColumnId = OPERATORY_COLUMNS[colIndex]?.id || "op1";
+              
+              // Use the operatoryId if available from the appointment, otherwise derive from provider
+              const assignedColumnId = 
+                a.operatoryId || 
+                (formData?.operatoryId) ||
+                derivedColumnId;
 
               return {
                 id: a._id || a.id,
                 appointmentDate: a.appointmentDate,
                 date: dateOnly,
                 patientId: mappedPatientId,
-                columnId: derivedColumnId,
+                columnId: assignedColumnId,
                 title:
                   a.chiefComplaint ||
                   a.appointmentTypeId?.name ||
@@ -412,7 +459,8 @@ const OperatorySchedulePage = () => {
       date: start.format("YYYY-MM-DD"),
       title: formData.chiefComplaint || "Appointment",
       patientInitials: (formData.patientName || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || "PT",
-      columnId: 'op1', // Default column
+      // Use roomId from form as columnId, or default to first operatory
+      columnId: formData.roomId || OPERATORY_COLUMNS[0]?.id || "op1",
       color: '#1976d2',
     };
     
@@ -536,16 +584,38 @@ const OperatorySchedulePage = () => {
     [sidebarPatients, selectedPatientId],
   );
 
-  const dayAppointments = useMemo(
-    () =>
-      appointments.filter((a) => {
+  // Filter appointments based on view mode
+  const dayAppointments = useMemo(() => {
+    if (viewMode === "day") {
+      // For day view, only show appointments for selected date
+      return appointments.filter((a) => {
         if (!a.date) return false;
         const apptKey = String(a.date).slice(0, 10);
         const selectedKey = selectedDate.format("YYYY-MM-DD");
         return apptKey === selectedKey;
-      }),
-    [appointments, selectedDate],
-  );
+      });
+    } else if (viewMode === "week") {
+      // For week view, show appointments for the entire week
+      const weekStart = selectedDate.clone().startOf("week");
+      const weekEnd = selectedDate.clone().endOf("week");
+      return appointments.filter((a) => {
+        if (!a.date) return false;
+        const apptDate = dayjs(a.date);
+        return (apptDate.isSame(weekStart, "day") || apptDate.isAfter(weekStart, "day")) && 
+               (apptDate.isSame(weekEnd, "day") || apptDate.isBefore(weekEnd, "day"));
+      });
+    } else {
+      // For month view, show appointments for the entire month
+      const monthStart = selectedDate.clone().startOf("month");
+      const monthEnd = selectedDate.clone().endOf("month");
+      return appointments.filter((a) => {
+        if (!a.date) return false;
+        const apptDate = dayjs(a.date);
+        return (apptDate.isSame(monthStart, "day") || apptDate.isAfter(monthStart, "day")) && 
+               (apptDate.isSame(monthEnd, "day") || apptDate.isBefore(monthEnd, "day"));
+      });
+    }
+  }, [appointments, selectedDate, viewMode]);
 
   const openCreateDialog = ({ columnId, startIso }) => {
     const start = dayjs(startIso);
@@ -645,8 +715,45 @@ const OperatorySchedulePage = () => {
             border: "1px solid #eef2f6",
           }}
         >
+          {/* View Mode Toggle */}
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            size="small"
+            sx={{
+              mr: 1.5,
+              bgcolor: "white",
+              border: "1px solid #cbd5e1",
+              borderRadius: 2,
+              "& .MuiToggleButton-root": {
+                border: "none",
+                px: 1.5,
+                py: 0.5,
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#64748b",
+                transition: "all 0.2s ease",
+                "&.Mui-selected": {
+                  bgcolor: "#1976d2",
+                  color: "white",
+                  "&:hover": {
+                    bgcolor: "#1565c0",
+                  },
+                },
+                "&:hover": {
+                  bgcolor: "#f1f5f9",
+                },
+              },
+            }}
+          >
+            <ToggleButton value="day">Day</ToggleButton>
+            <ToggleButton value="week">Week</ToggleButton>
+            <ToggleButton value="month">Month</ToggleButton>
+          </ToggleButtonGroup>
+
           <IconButton
-            onClick={() => setSelectedDate(selectedDate.subtract(1, "day"))}
+            onClick={() => setSelectedDate(selectedDate.subtract(1, viewMode === "month" ? "month" : viewMode === "week" ? "week" : "day"))}
             size="medium"
             sx={{
               width: 40,
@@ -668,7 +775,13 @@ const OperatorySchedulePage = () => {
             <KeyboardArrowLeftIcon />
           </IconButton>
           <Chip
-            label={selectedDate.format("dddd, MMMM D, YYYY")}
+            label={
+              viewMode === "day"
+                ? selectedDate.format("dddd, MMMM D, YYYY")
+                : viewMode === "week"
+                ? `${selectedDate.clone().startOf("week").format("MMM D")} - ${selectedDate.clone().endOf("week").format("MMM D, YYYY")}`
+                : selectedDate.format("MMMM YYYY")
+            }
             icon={<EventNoteIcon />}
             sx={{
               bgcolor: "#e3f2fd",
@@ -681,7 +794,7 @@ const OperatorySchedulePage = () => {
             }}
           />
           <IconButton
-            onClick={() => setSelectedDate(selectedDate.add(1, "day"))}
+            onClick={() => setSelectedDate(selectedDate.add(1, viewMode === "month" ? "month" : viewMode === "week" ? "week" : "day"))}
             size="medium"
             sx={{
               width: 40,
@@ -709,7 +822,7 @@ const OperatorySchedulePage = () => {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "360px 1fr" },
+          gridTemplateColumns: { xs: "1fr", md: "280px 1fr" },
           gap: 2.5,
           alignItems: "start",
         }}
@@ -745,6 +858,7 @@ const OperatorySchedulePage = () => {
         <OperatoryScheduleGrid
           OPERATORY_COLUMNS={OPERATORY_COLUMNS}
           dayAppointments={dayAppointments}
+          viewMode={viewMode}
           START_HOUR={START_HOUR}
           END_HOUR={END_HOUR}
           SLOT_MINUTES={SLOT_MINUTES}

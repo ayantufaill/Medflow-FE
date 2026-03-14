@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import {
+  Autocomplete,
   Box,
   Button,
   Chip,
   Checkbox,
   Divider,
   FormControl,
+  Grid,
   IconButton,
   InputAdornment,
   InputLabel,
@@ -14,11 +16,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import Autocomplete from "@mui/material/Autocomplete";
-import CheckIcon from "@mui/icons-material/Check";
 import SearchIcon from "@mui/icons-material/Search";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import PersonIcon from "@mui/icons-material/Person";
+import CheckIcon from "@mui/icons-material/Check";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -153,11 +154,15 @@ const OperatorySidebar = ({
 
   const handleCreatePatientClick = async () => {
     if (!onCreatePatient) return;
+    
+    // Extract only digits from the formatted phone number
+    const cleanPhone = newPhone.replace(/\D/g, '');
+    
     const payload = {
       firstName: newFirstName || patientQuery || "",
       lastName: newLastName || "",
       dateOfBirth: newDob || "",
-      mobilePhone: newPhone || "",
+      mobilePhone: cleanPhone || "",
       email: newEmail || "",
       sendWelcomeEmail,
       isNewPatient,
@@ -233,112 +238,191 @@ const OperatorySidebar = ({
       </Box>
 
       {showQuickCreate && (
-        <Box
-          sx={{ px: 2, pb: 2, pt: 1.5 }}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <Typography sx={{ fontSize: 11, color: "#9ca3af", mb: 0.5 }}>
-            no match found
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            label="First Name"
-            value={newFirstName}
-            onChange={(e) => {
-              setNewFirstName(e.target.value);
-              setIsCreatingPatient(true);
-            }}
-            onBlur={() => setIsCreatingPatient(false)}
-            sx={{ mb: 0.75 }}
-          />
-          <TextField
-            fullWidth
-            size="small"
-            label="Last Name"
-            value={newLastName}
-            onChange={(e) => {
-              setNewLastName(e.target.value);
-              setIsCreatingPatient(true);
-            }}
-            onBlur={() => setIsCreatingPatient(false)}
-            sx={{ mb: 0.75 }}
-          />
-          <TextField
-            fullWidth
-            size="small"
-            label="Date of Birth"
-            type="date"
-            value={newDob}
-            onChange={(e) => {
-              setNewDob(e.target.value);
-              setIsCreatingPatient(true);
-            }}
-            onBlur={() => setIsCreatingPatient(false)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ mb: 0.75 }}
-          />
-          <TextField
-            fullWidth
-            size="small"
-            label="Mobile Phone"
-            value={newPhone}
-            onChange={(e) => {
-              setNewPhone(e.target.value);
-              setIsCreatingPatient(true);
-            }}
-            onBlur={() => setIsCreatingPatient(false)}
-            sx={{ mb: 0.75 }}
-          />
-          <TextField
-            fullWidth
-            size="small"
-            label="Email"
-            value={newEmail}
-            onChange={(e) => {
-              setNewEmail(e.target.value);
-              setIsCreatingPatient(true);
-            }}
-            onBlur={() => setIsCreatingPatient(false)}
-            sx={{ mb: 0.75 }}
-          />
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-            <Checkbox
-              size="small"
-              checked={sendWelcomeEmail}
-              onChange={(e) => setSendWelcomeEmail(e.target.checked)}
-            />
-            <Typography sx={{ fontSize: 12, color: "#475569" }}>
-              send welcome email
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-            <Checkbox
-              size="small"
-              checked={isNewPatient}
-              onChange={(e) => setIsNewPatient(e.target.checked)}
-            />
-            <Typography sx={{ fontSize: 12, color: "#475569" }}>
-              new patient
-            </Typography>
-          </Box>
-          <Button
-            fullWidth
-            variant="contained"
-            size="small"
-            onClick={() => {
-              setIsCreatingPatient(false);
-              handleCreatePatientClick();
-            }}
-            sx={{
-              textTransform: "none",
-              bgcolor: "#e0a15a",
-              "&:hover": { bgcolor: "#cf8f49" },
-            }}
-          >
+        <Box sx={{ p: 2 }}>
+          <Typography sx={{ fontSize: 13, color: "#64748b", mb: 1.5, fontWeight: 500 }}>
             Create New Patient
-          </Button>
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                variant="standard"
+                size="small"
+                label="First Name *"
+                value={newFirstName}
+                onChange={(e) => {
+                  setNewFirstName(e.target.value);
+                  setIsCreatingPatient(true);
+                }}
+                onBlur={() => setIsCreatingPatient(false)}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
+                  "& .MuiInputBase-input": { 
+                    fontSize: "0.88rem",
+                    py: 0.35,
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                variant="standard"
+                size="small"
+                label="Last Name *"
+                value={newLastName}
+                onChange={(e) => {
+                  setNewLastName(e.target.value);
+                  setIsCreatingPatient(true);
+                }}
+                onBlur={() => setIsCreatingPatient(false)}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
+                  "& .MuiInputBase-input": { 
+                    fontSize: "0.88rem",
+                    py: 0.35,
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                variant="standard"
+                size="small"
+                label="Date of Birth"
+                type="date"
+                value={newDob}
+                onChange={(e) => {
+                  setNewDob(e.target.value);
+                  setIsCreatingPatient(true);
+                }}
+                onBlur={() => setIsCreatingPatient(false)}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
+                  "& .MuiInputBase-input": { 
+                    fontSize: "0.88rem",
+                    py: 0.35,
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                variant="standard"
+                size="small"
+                label="Mobile Phone"
+                value={newPhone}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  let formatted = '';
+                  if (digits.length <= 3) {
+                    formatted = digits;
+                  } else if (digits.length <= 6) {
+                    formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                  } else {
+                    formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                  }
+                  setNewPhone(formatted);
+                  setIsCreatingPatient(true);
+                }}
+                onBlur={() => setIsCreatingPatient(false)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  inputMode: 'numeric',
+                  maxLength: 14,
+                  style: { paddingLeft: '24px' }
+                }}
+                placeholder="(201) 555-0123"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start" sx={{ ml: 0.5 }}>
+                      <span style={{ fontSize: '16px', color: '#616161' }}>☎</span>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
+                  "& .MuiInputBase-input": { 
+                    fontSize: "0.88rem",
+                    py: 0.35,
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                variant="standard"
+                size="small"
+                label="Email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => {
+                  setNewEmail(e.target.value);
+                  setIsCreatingPatient(true);
+                }}
+                onBlur={() => setIsCreatingPatient(false)}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
+                  "& .MuiInputBase-input": { 
+                    fontSize: "0.88rem",
+                    py: 0.35,
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Checkbox
+                    size="small"
+                    checked={sendWelcomeEmail}
+                    onChange={(e) => setSendWelcomeEmail(e.target.checked)}
+                  />
+                  <Typography sx={{ fontSize: "0.64rem", color: "#475569", fontWeight: 600 }}>
+                    Send welcome email
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Checkbox
+                    size="small"
+                    checked={isNewPatient}
+                    onChange={(e) => setIsNewPatient(e.target.checked)}
+                  />
+                  <Typography sx={{ fontSize: "0.64rem", color: "#475569", fontWeight: 600 }}>
+                    New patient
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="small"
+                onClick={() => {
+                  setIsCreatingPatient(false);
+                  handleCreatePatientClick();
+                }}
+                sx={{
+                  textTransform: "none",
+                  bgcolor: "#d8b16b",
+                  "&:hover": { bgcolor: "#c49c56" },
+                  fontSize: "0.88rem",
+                  py: 0.65,
+                  mt: 1,
+                }}
+              >
+                Create Patient
+              </Button>
+            </Grid>
+          </Grid>
         </Box>
       )}
 
@@ -1002,4 +1086,3 @@ const OperatorySidebar = ({
 };
 
 export default OperatorySidebar;
-
