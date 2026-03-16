@@ -1,9 +1,4 @@
-import { Box, Typography, Avatar, IconButton } from '@mui/material';
-import {
-  AttachMoney as DollarIcon,
-  Person as PersonIcon,
-  CalendarToday as CalendarIcon,
-} from '@mui/icons-material';
+import { Box, Typography, Avatar } from '@mui/material';
 import { getInitials, computeAge } from './utils';
 
 /**
@@ -33,51 +28,6 @@ export default function PatientSummaryCard({ patient, onBalance, onProfileClick 
         <Typography variant="body2" sx={{ mt: 0.5, color: 'grey.600' }}>
           {patient?.email || '–'}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5, mt: 1.25 }}>
-          {onBalance && (
-            <IconButton
-              size="small"
-              onClick={onBalance}
-              title="Balance"
-              sx={{
-                color: 'grey.600',
-                border: '1px solid',
-                borderColor: 'grey.300',
-                borderRadius: 1,
-                p: 0.6,
-              }}
-            >
-              <DollarIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          )}
-          <IconButton
-            size="small"
-            title="MyChart Profile"
-            onClick={onProfileClick}
-            sx={{
-              color: 'grey.600',
-              border: '1px solid',
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              p: 0.6,
-            }}
-          >
-            <PersonIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-          <IconButton
-            size="small"
-            title="Calendar"
-            sx={{
-              color: 'grey.600',
-              border: '1px solid',
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              p: 0.6,
-            }}
-          >
-            <CalendarIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
       </Box>
     </Box>
   );

@@ -42,6 +42,12 @@ import PatientSignedDocumentsPage from './pages/patients/PatientSignedDocumentsP
 import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage';
 import PatientAdditionalDocumentsPage from './pages/patients/PatientAdditionalDocumentsPage';
 import PatientDetailPage from './pages/patients/PatientDetailPage';
+import PatientReportPage from './pages/patient-reports/PatientReportPage';
+import PatientReportsPage from './pages/patient-reports/PatientReportsPage';
+import RiskAssessmentPage from './pages/patient-reports/RiskAssessmentPage';
+import HomeCarePage from './pages/patient-reports/HomeCarePage';
+import ConcernsPage from './pages/patient-reports/ConcernsPage';
+import ShowcasePage from './pages/patient-reports/ShowcasePage';
 import AllergiesListPage from './pages/allergies/AllergiesListPage';
 import CreateAllergyPage from './pages/allergies/CreateAllergyPage';
 import EditAllergyPage from './pages/allergies/EditAllergyPage';
@@ -561,6 +567,66 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
                     <Layout>
                       <PatientAdditionalDocumentsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientReportPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/risk"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <RiskAssessmentPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/homecare"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <HomeCarePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/concerns"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <ConcernsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/showcase"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <ShowcasePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patient-reports"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientReportsPage />
                     </Layout>
                   </ProtectedRoute>
                 }

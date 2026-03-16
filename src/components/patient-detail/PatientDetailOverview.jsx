@@ -5,7 +5,6 @@ import MyChartProfileModal from './MyChartProfileModal';
 import PatientSummaryCard from './PatientSummaryCard';
 import PatientDetailsSection from './PatientDetailsSection';
 import AdditionalInformationSection from './AdditionalInformationSection';
-import PatientFlagsSection from './PatientFlagsSection';
 import ContactInformationSection from './ContactInformationSection';
 import FamilyMembersSection from './FamilyMembersSection';
 import FinancialResponsibilitySection from './FinancialResponsibilitySection';
@@ -155,7 +154,7 @@ export default function PatientDetailOverview({
         </Box>
       </Paper>
 
-      {/* Patient Flags + Family Members — full width row */}
+      {/* Family Members — full width row */}
       <Paper
         variant="outlined"
         sx={{
@@ -165,11 +164,6 @@ export default function PatientDetailOverview({
           bgcolor: 'white',
         }}
       >
-        <PatientFlagsSection
-          patient={patient}
-          preferredDentists={preferredDentists}
-          preferredHygienists={preferredHygienists}
-        />
         <Box sx={{ mt: 3 }}>
           <FamilyMembersSection patient={patient} onAddNew={onAddFamilyMember} />
         </Box>

@@ -49,62 +49,62 @@ const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
   // { text: 'Patients', icon: <People />, path: '/patients' },
-  { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },
-  {
+  // { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },
+  /*{
     text: 'Appointment Types',
     icon: <CalendarToday />,
     path: '/appointment-types',
     adminOnly: true,
-  },
-  {
+  },*/
+  /*{
     text: 'Rooms',
     icon: <MeetingRoom />,
     path: '/rooms',
     requiredRoles: ['Admin'],
-  },
-  { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
+  },*/
+ // { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
   {
     text: 'Patients',
     icon: <People />,
     path: '/patients',
     requiredRoles: ['Admin', 'Receptionist', 'Doctor'],
   },
-  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
+  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments/operatory-schedule', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
   // {
   //   text: 'Calendar',
   //   icon: <CalendarMonth />,
   //   path: '/appointments/calendar',
   // },
-  {
+  /*{
     text: 'Waitlist',
     icon: <Queue />,
     path: '/waitlist',
     requiredRoles: ['Admin', 'Receptionist'],
-  },
-  {
+  },*/
+  /*{
     text: 'Recurring Appointments',
     icon: <EventRepeat />,
     path: '/recurring-appointments',
     requiredRoles: ['Admin', 'Receptionist'],
-  },
-  {
+  },*/
+  /*{
     text: 'Portal Messages',
     icon: <Forum />,
     path: '/portal-messages',
     requiredRoles: ['Admin', 'Provider', 'Doctor'],
-  },
-  {
+  },*/
+  /*{
     text: 'Note Templates',
     icon: <Note />,
     path: '/note-templates',
     requiredRoles: ['Admin', 'Doctor'],
-  },
-  {
+  },*/
+  /*{
     text: 'Clinical Notes',
     icon: <Description />,
     path: '/clinical-notes',
     requiredRoles: ['Admin', 'Doctor'],
-  },
+  },*/
   // {
   //   text: 'Vital Signs',
   //   icon: <MonitorHeart />,
@@ -117,7 +117,7 @@ const menuItems = [
   //   path: '/documents',
   //   requiredRoles: ['Admin', 'Doctor', 'Nurse'],
   // },
-  {
+  /*{
     text: 'Service Catalog',
     icon: <MedicalServices />,
     path: '/services',
@@ -128,54 +128,55 @@ const menuItems = [
     icon: <Receipt />,
     path: '/invoices',
     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-  },
-  {
+  },*/
+ /* {
     text: 'Payments',
     icon: <Payment />,
     path: '/payments',
     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-  },
-  {
+  },*/
+  /*{
     text: 'Estimates',
     icon: <RequestQuote />,
     path: '/estimates',
     requiredRoles: ['Admin', 'Billing', 'Doctor'],
-  },
-  { text: 'Reports', icon: <Assessment />, path: '/reports' },
-  { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
-  {
+  },*/
+  //{ text: 'Reports', icon: <Assessment />, path: '/reports' },
+  { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
+ // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
+  /*{
     text: 'Practice Info',
     icon: <Business />,
     path: '/practice-info',
     requiredRoles: ['Admin'],
-  },
-  {
+  },*/
+  /*{
     text: 'Insurance Companies',
     icon: <AccountBalance />,
     path: '/insurance-companies',
     requiredRoles: ['Admin'],
-  },
+  },*/
   // Sprint 6 - Claims Management
-  {
+  /*{
     text: 'Claims',
     icon: <Assignment />,
     path: '/claims',
     requiredRoles: ['Admin', 'Billing'],
-  },
+  },*/
   // Sprint 6 - ERA/EOB Processing
-  {
+  /*{
     text: 'ERA/EOB',
     icon: <CloudUpload />,
     path: '/era',
     requiredRoles: ['Admin', 'Billing'],
-  },
+  },*/
   // Sprint 6 - Authorization Management
-  {
+  /*{
     text: 'Authorizations',
     icon: <VerifiedUser />,
     path: '/authorizations',
     requiredRoles: ['Admin', 'Billing', 'Front Desk'],
-  },
+  },*/
 ];
 
 const Sidebar = ({ open, onClose, mobileOpen }) => {

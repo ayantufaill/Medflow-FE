@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams, Navigate } from 'react-router-dom';
 import { Box, Button, CircularProgress, Alert } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { PatientDetailOverview } from '../../components/patient-detail';
