@@ -89,6 +89,20 @@ import ClinicalNotesListPage from './pages/clinical-notes/ClinicalNotesListPage'
 import CreateClinicalNotePage from './pages/clinical-notes/CreateClinicalNotePage';
 import EditClinicalNotePage from './pages/clinical-notes/EditClinicalNotePage';
 import ViewClinicalNotePage from './pages/clinical-notes/ViewClinicalNotePage';
+import ClinicalPage from './pages/clinical/ClinicalPage';
+import ExamPage from './pages/clinical/ExamPage';
+import DiagnosticOpinionPage from './pages/clinical/DiagnosticOpinionPage';
+import PeriodontalPage from './pages/clinical/PeriodontalPage';
+import BiomechanicalPage from './pages/clinical/BiomechanicalPage';
+import FunctionalPage from './pages/clinical/FunctionalPage';
+import DentofacialPage from './pages/clinical/DentofacialPage';
+import TreatmentPlanPage from './pages/clinical/TreatmentPlanPage';
+import AdjunctiveTherapyPage from './pages/clinical/AdjunctiveTherapyPage';
+import RXPage from './pages/clinical/RXPage';
+import ReferralPage from './pages/clinical/ReferralPage';
+import ProgressNotesPage from './pages/clinical/ProgressNotesPage';
+import LabCasePage from './pages/clinical/LabCasePage';
+import AIConversationPage from './pages/clinical/AIConversationPage';
 import VitalSignsListPage from './pages/vital-signs/VitalSignsListPage';
 import CreateVitalSignPage from './pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from './pages/vital-signs/EditVitalSignPage';
@@ -1023,6 +1037,147 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
                     <Layout>
                       <ClinicalNotesListPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Clinical Page Routes */}
+              <Route
+                path="/clinical"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ClinicalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ExamPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <DiagnosticOpinionPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/periodontal"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <PeriodontalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/biomechanical"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <BiomechanicalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/functional"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <FunctionalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/dentofacial"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <DentofacialPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/treatment-plan"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <TreatmentPlanPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/adjunctive-therapy"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <AdjunctiveTherapyPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/rx"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <RXPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/referral"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ReferralPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/progress-notes"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ProgressNotesPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/lab-case"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <LabCasePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/ai-conversation"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <AIConversationPage />
                     </Layout>
                   </ProtectedRoute>
                 }

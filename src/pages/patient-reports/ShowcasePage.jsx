@@ -16,9 +16,30 @@ const ShowcasePage = () => {
 
   // Mock data - replace with actual API calls
   const mockTreatments = [
-    { id: 1, title: 'Teeth Whitening', date: '2024-01-15', beforeImage: '/api/before-1.jpg', afterImage: '/api/after-1.jpg', description: 'Professional whitening treatment - 3 shades lighter' },
-    { id: 2, title: 'Composite Filling', date: '2024-01-10', beforeImage: '/api/before-2.jpg', afterImage: '/api/after-2.jpg', description: 'Tooth-colored restoration on molar' },
-    { id: 3, title: 'Crown Placement', date: '2023-12-20', beforeImage: '/api/before-3.jpg', afterImage: '/api/after-3.jpg', description: 'Porcelain crown on premolar' },
+    { 
+      id: 1, 
+      title: 'Teeth Whitening', 
+      date: '2024-01-15', 
+      beforeImage: '/Damaged_teeth.png',
+      afterImage: '/White_teeth.png',
+      description: 'Professional whitening treatment - 3 shades lighter' 
+    },
+    { 
+      id: 2, 
+      title: 'Composite Filling', 
+      date: '2024-01-10', 
+      beforeImage: '/cavity_teeth.png',
+      afterImage: '/repaired_teeth.png',
+      description: 'Tooth-colored restoration on molar' 
+    },
+    { 
+      id: 3, 
+      title: 'Dental Crown', 
+      date: '2023-12-20', 
+      beforeImage: '/before_treatment.png',
+      afterImage: '/repaired_teeth.png',
+      description: 'Porcelain crown on premolar' 
+    },
   ];
 
   return (
@@ -89,36 +110,38 @@ const ShowcasePage = () => {
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 6 }}>
-                      <Box sx={{ 
-                        bgcolor: 'grey.200', 
-                        borderRadius: 1, 
-                        p: 2, 
-                        textAlign: 'center',
-                        mb: 1
-                      }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Before
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          [Before Image]
-                        </Typography>
-                      </Box>
+                      <Typography variant="subtitle2" gutterBottom textAlign="center">
+                        Before
+                      </Typography>
+                      <Box 
+                        component="img"
+                        src={treatment.beforeImage}
+                        alt={`Before ${treatment.title}`}
+                        sx={{ 
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                          mb: 1
+                        }}
+                      />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
-                      <Box sx={{ 
-                        bgcolor: 'grey.200', 
-                        borderRadius: 1, 
-                        p: 2, 
-                        textAlign: 'center',
-                        mb: 1
-                      }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          After
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          [After Image]
-                        </Typography>
-                      </Box>
+                      <Typography variant="subtitle2" gutterBottom textAlign="center">
+                        After
+                      </Typography>
+                      <Box 
+                        component="img"
+                        src={treatment.afterImage}
+                        alt={`After ${treatment.title}`}
+                        sx={{ 
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                          mb: 1
+                        }}
+                      />
                     </Grid>
                   </Grid>
                 </CardContent>

@@ -3,9 +3,8 @@ import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import FindingsListContent from './FindingsListContent';
 
 const mockClinicalImages = [
-  { id: 1, url: '/api/images/intraoral-1.jpg', type: 'Intraoral Photo', date: '2024-01-15' },
-  { id: 2, url: '/api/images/xray-1.jpg', type: 'Bitewing X-ray', date: '2024-01-15' },
-  { id: 3, url: '/api/images/panoramic.jpg', type: 'Panoramic X-ray', date: '2024-01-10' },
+  { id: 1, url: '/Damaged_teeth.png', type: 'Bitewing X-ray', date: '2024-01-15' },
+  { id: 2, url: '/cavity_teeth.png', type: 'Panoramic X-ray', date: '2024-01-10' },
 ];
 
 /**
@@ -108,30 +107,31 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
         </Box>
       )}
 
-      {/* Clinical Images - Only show for Periodontal Health */}
-      {category.title === 'Periodontal Health' && (
+      {/* Clinical Images - Show for Periodontal Health OR when footerTitle exists */}
+      {(category.title === 'Periodontal Health' || category.footerTitle) && (
         <>
           <Divider sx={{ my: 3 }} />
 
           <Typography variant="h6" fontWeight={400} gutterBottom sx={{ fontSize: '0.95rem', color: '#1976d2', fontFamily: 'Roboto, sans-serif' }}>
-            Your Teeth 
+            {category.footerTitle || 'Your Teeth'} 
           </Typography>
           <Grid container spacing={2}>
             {mockClinicalImages.map((image) => (
-              <Grid item xs={12} sm={6} md={4} key={image.id}>
+              <Grid item xs={12} sm={6} key={image.id}>
                 <Card sx={{ cursor: 'pointer', '&:hover': { transform: 'scale(1.02)', transition: '0.2s' } }}>
                   <CardContent>
-                    <Box sx={{ 
-                      height: 150, 
-                      bgcolor: 'grey.200', 
-                      borderRadius: 1,
-                      mb: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Typography color="text.secondary">Image Placeholder</Typography>
-                    </Box>
+                    <Box 
+                      component="img"
+                      src={image.url}
+                      alt={image.type}
+                      sx={{ 
+                        width: '100%',
+                        height: 150,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                        mb: 1
+                      }}
+                    />
                     <Typography variant="subtitle2" fontWeight="600">
                       {image.type}
                     </Typography>
@@ -143,16 +143,6 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
               </Grid>
             ))}
           </Grid>
-        </>
-      )}
-
-      {/* Footer Title / Diagram Label (if present) */}
-      {category.footerTitle && category.title !== 'Periodontal Health' && (
-        <>
-          <Divider sx={{ my: 3 }} />
-          <Typography variant="h6" fontWeight={400} gutterBottom sx={{ fontSize: '0.95rem', color: '#1976d2', fontFamily: 'Roboto, sans-serif' }}>
-            {category.footerTitle}
-          </Typography>
         </>
       )}
     </Box>

@@ -143,6 +143,7 @@ const menuItems = [
   },*/
   //{ text: 'Reports', icon: <Assessment />, path: '/reports' },
   { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
+  { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
  // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
   /*{
     text: 'Practice Info',
