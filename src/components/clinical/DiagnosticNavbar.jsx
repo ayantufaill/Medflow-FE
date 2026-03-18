@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, Button } from '@mui/material';
+import { Box, Tabs, Tab } from '@mui/material';
 
 const DiagnosticNavbar = () => {
   const navigate = useNavigate();
@@ -10,48 +10,45 @@ const DiagnosticNavbar = () => {
     const pathname = location.pathname;
     if (pathname.includes('/diagnostic-opinion/')) {
       const subsection = pathname.split('/diagnostic-opinion/')[1];
-      return subsection || 'periodontal';
+      return subsection || 'biomechanical';
     }
-    return 'periodontal';
+    return 'biomechanical';
   };
   
   const activeSubsection = getSubsectionFromPathname();
 
   // Navigation subsections for Diagnostic Opinion
   const diagnosticSubsections = [
-    { id: 'periodontal', label: 'Periodontal', path: '/clinical/diagnostic-opinion/periodontal' },
     { id: 'biomechanical', label: 'Biomechanical', path: '/clinical/diagnostic-opinion/biomechanical' },
     { id: 'functional', label: 'Functional', path: '/clinical/diagnostic-opinion/functional' },
     { id: 'dentofacial', label: 'Dentofacial', path: '/clinical/diagnostic-opinion/dentofacial' },
+    { id: 'periodontal', label: 'Periodontal', path: '/clinical/diagnostic-opinion/periodontal' },
   ];
 
+  // Find index of active subsection
+  const tabIndex = diagnosticSubsections.findIndex(sub => sub.id === activeSubsection);
+
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-      {diagnosticSubsections.map((subsection) => (
-        <Button
-          key={subsection.id}
-          variant="text"
-          size="small"
-          onClick={() => navigate(subsection.path)}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.75rem',
-            letterSpacing: '0.02em',
-            py: 1,
-            px: 1.5,
-            borderRadius: 1,
-            bgcolor: activeSubsection === subsection.id ? 'primary.main' : 'grey.100',
-            color: activeSubsection === subsection.id ? 'primary.contrastText' : 'text.primary',
-            minWidth: 'auto',
-            '&:hover': {
-              bgcolor: activeSubsection === subsection.id ? 'primary.dark' : 'grey.200',
-            },
-          }}
-        >
-          {subsection.label}
-        </Button>
-      ))}
+    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, px: 4 }}>
+      <Tabs 
+        value={tabIndex >= 0 ? tabIndex : 0} 
+        onChange={(e, newValue) => navigate(diagnosticSubsections[newValue].path)}
+        variant="scrollable"
+        scrollButtons="auto"
+      >
+        {diagnosticSubsections.map((subsection) => (
+          <Tab 
+            key={subsection.id}
+            label={subsection.label}
+            sx={{ 
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: '0.875rem',
+              minHeight: '48px'
+            }} 
+          />
+        ))}
+      </Tabs>
     </Box>
   );
 };

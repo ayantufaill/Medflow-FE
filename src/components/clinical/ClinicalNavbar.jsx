@@ -47,7 +47,7 @@ const ClinicalNavbar = () => {
   ];
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0, mb: 3 }}>
       {clinicalSections.map((section) => (
         <Button
           key={section.id}
@@ -61,7 +61,7 @@ const ClinicalNavbar = () => {
             letterSpacing: '0.02em',
             py: 1,
             px: 1.5,
-            borderRadius: 1,
+            borderRadius: 0,
             bgcolor: activeSection === section.id ? 'primary.main' : 'grey.100',
             color: activeSection === section.id ? 'primary.contrastText' : 'text.primary',
             minWidth: 'auto',

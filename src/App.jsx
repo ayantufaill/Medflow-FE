@@ -1067,7 +1067,7 @@ function App() {
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
                     <Layout>
-                      <DiagnosticOpinionPage />
+                      <BiomechanicalPage />
                     </Layout>
                   </ProtectedRoute>
                 }
