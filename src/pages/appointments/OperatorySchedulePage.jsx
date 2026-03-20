@@ -11,7 +11,15 @@ import {
   IconButton,
   ToggleButtonGroup,
   ToggleButton,
+  Tabs,
+  Tab,
 } from "@mui/material";
+import { 
+  PostAdd, Group, Science, Description, FilterAlt, 
+  VisibilityOff, SpeakerNotesOff, Print, History, 
+  Person, AttachMoney, MoreVert, CalendarMonth,
+  KeyboardArrowLeft, KeyboardArrowRight, EventNote
+} from '@mui/icons-material';
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
@@ -80,6 +88,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const OperatorySchedulePage = () => {
   const { showSnackbar } = useSnackbar();
   const { providers } = useDropdownData({ providers: true });
+  const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
   const [patientQuery, setPatientQuery] = useState("");
@@ -160,6 +169,10 @@ const OperatorySchedulePage = () => {
       // For month view, ensure we're viewing the month that contains today
       // This is already handled by setting selectedDate to today
     }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   const handleScheduleAppointmentClick = () => {
@@ -677,141 +690,112 @@ const OperatorySchedulePage = () => {
       }}
     >
       {/* Header */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 3,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 2,
-          borderRadius: 2,
-          border: "1px solid #eef2f6",
-          background: "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
-        }}
+     <Paper
+  elevation={0}
+  sx={{
+    p: 1, // Compact padding
+    mb: 3,
+    borderRadius: 2,
+    border: "1px solid #eef2f6",
+    background: "rgba(255, 255, 255, 0.9)",
+    backdropFilter: "blur(10px)",
+  }}
+>
+  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0.5 }}>
+    
+    {/* 1. Tabs Section */}
+    <Tabs value={activeTab} onChange={handleTabChange} sx={{ minHeight: '32px', flexShrink: 0 }}>
+      {['Patients', 'Pending', 'Search', 'Productivity'].map((label) => (
+        <Tab 
+          key={label}
+          label={label} 
+          sx={{ 
+            minHeight: '32px', py: 0.5, px: 0.75, minWidth: 'auto',
+            textTransform: 'none', fontWeight: 600, fontSize: '0.7rem',
+          }} 
+        />
+      ))}
+    </Tabs>
+
+    {/* 2. Date Navigation Section */}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+      <ToggleButtonGroup
+        value={viewMode}
+        exclusive
+        onChange={handleViewModeChange}
+        size="small"
+        sx={{ "& .MuiToggleButton-root": { px: 1, py: 0.2, fontSize: "11px", height: 32 } }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <EventNoteIcon sx={{ color: "#1976d2", fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "#1e293b" }}>
-            Schedule Overview
-          </Typography>
-        </Box>
-        <Box
+        <ToggleButton value="day">Day</ToggleButton>
+        <ToggleButton value="week">Week</ToggleButton>
+        <ToggleButton value="month">Month</ToggleButton>
+      </ToggleButtonGroup>
+
+      <IconButton 
+        size="small" 
+        onClick={() => setSelectedDate(selectedDate.subtract(1, viewMode))}
+        sx={{ width: 32, height: 32, border: "1px solid #cbd5e1" }}
+      >
+        <KeyboardArrowLeft fontSize="small" />
+      </IconButton>
+
+      <Chip
+        label={
+          viewMode === "day" 
+            ? selectedDate.format("MMM D, YYYY")
+            : viewMode === "week"
+            ? `${selectedDate.clone().startOf('week').format('MMM D')} - ${selectedDate.clone().endOf('week').format('MMM D, YYYY')}`
+            : selectedDate.format("MMMM YYYY")
+        }
+        size="small"
+        icon={<EventNote style={{ fontSize: 16 }} />}
+        sx={{ fontWeight: 600, fontSize: "11px", height: 32, px: 0.5 }}
+      />
+
+      <IconButton 
+        size="small"
+        onClick={() => setSelectedDate(selectedDate.add(1, viewMode))}
+        sx={{ width: 32, height: 32, border: "1px solid #cbd5e1" }}
+      >
+        <KeyboardArrowRight fontSize="small" />
+      </IconButton>
+    </Box>
+
+    {/* 3. Your Action Icons (Mapped from the image) */}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexGrow: 1, justifyContent: 'flex-end' }}>
+      {[
+        { icon: <PostAdd /> },         // Form/Entry
+        { icon: <Group /> },           // Patients/Group
+        { icon: <Science /> },         // Lab
+        { icon: <Description /> },     // Document
+        { icon: <FilterAlt /> },       // Filter
+        { icon: <VisibilityOff /> },   // Hide
+        { icon: <SpeakerNotesOff /> }, // No Notes
+        { icon: <Print /> },           // Print
+        { icon: <History /> },         // History
+        { icon: <Person /> },          // Profile
+        { icon: <AttachMoney /> },     // Billing
+        { icon: <MoreVert /> },        // More
+        { icon: <CalendarMonth /> }    // Calendar
+      ].map((item, idx) => (
+        <IconButton
+          key={idx}
           sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-            bgcolor: "#f8fafc",
-            p: 0.75,
-            borderRadius: 2,
+            width: 30, // Extra slim to fit all
+            height: 30,
+            borderRadius: 1.5,
             border: "1px solid #eef2f6",
+            color: "#001e3c", // Dark blue from your image
+            "& svg": { fontSize: 18 },
+            "&:hover": { bgcolor: "#f1f5f9" }
           }}
         >
-          {/* View Mode Toggle */}
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={handleViewModeChange}
-            size="small"
-            sx={{
-              mr: 1.5,
-              bgcolor: "white",
-              border: "1px solid #cbd5e1",
-              borderRadius: 2,
-              "& .MuiToggleButton-root": {
-                border: "none",
-                px: 1.5,
-                py: 0.5,
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#64748b",
-                transition: "all 0.2s ease",
-                "&.Mui-selected": {
-                  bgcolor: "#1976d2",
-                  color: "white",
-                  "&:hover": {
-                    bgcolor: "#1565c0",
-                  },
-                },
-                "&:hover": {
-                  bgcolor: "#f1f5f9",
-                },
-              },
-            }}
-          >
-            <ToggleButton value="day">Day</ToggleButton>
-            <ToggleButton value="week">Week</ToggleButton>
-            <ToggleButton value="month">Month</ToggleButton>
-          </ToggleButtonGroup>
-
-          <IconButton
-            onClick={() => setSelectedDate(selectedDate.subtract(1, viewMode === "month" ? "month" : viewMode === "week" ? "week" : "day"))}
-            size="medium"
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: "white",
-              border: "1px solid #cbd5e1",
-              color: "#475569",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-              transition: "all 0.2s ease",
-              "&:hover": {
-                bgcolor: "#1976d2",
-                borderColor: "#1976d2",
-                color: "white",
-                boxShadow: "0 2px 8px rgba(25, 118, 210, 0.3)",
-                transform: "translateX(-2px)",
-              },
-            }}
-          >
-            <KeyboardArrowLeftIcon />
-          </IconButton>
-          <Chip
-            label={
-              viewMode === "day"
-                ? selectedDate.format("dddd, MMMM D, YYYY")
-                : viewMode === "week"
-                ? `${selectedDate.clone().startOf("week").format("MMM D")} - ${selectedDate.clone().endOf("week").format("MMM D, YYYY")}`
-                : selectedDate.format("MMMM YYYY")
-            }
-            icon={<EventNoteIcon />}
-            sx={{
-              bgcolor: "#e3f2fd",
-              color: "#1976d2",
-              fontWeight: 600,
-              px: 1.5,
-              fontSize: "14px",
-              "& .MuiChip-icon": { color: "#1976d2" },
-              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-            }}
-          />
-          <IconButton
-            onClick={() => setSelectedDate(selectedDate.add(1, viewMode === "month" ? "month" : viewMode === "week" ? "week" : "day"))}
-            size="medium"
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: "white",
-              border: "1px solid #cbd5e1",
-              color: "#475569",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-              transition: "all 0.2s ease",
-              "&:hover": {
-                bgcolor: "#1976d2",
-                borderColor: "#1976d2",
-                color: "white",
-                boxShadow: "0 2px 8px rgba(25, 118, 210, 0.3)",
-                transform: "translateX(2px)",
-              },
-            }}
-          >
-            <KeyboardArrowRightIcon />
-          </IconButton>
-        </Box>
-      </Paper>
+          {item.icon}
+        </IconButton>
+      ))}
+    </Box>
+  </Box>
+</Paper>
 
       {/* Main Grid */}
       <Box
@@ -820,6 +804,7 @@ const OperatorySchedulePage = () => {
           gridTemplateColumns: { xs: "1fr", md: "280px 1fr" },
           gap: 2.5,
           alignItems: "start",
+          height: "fit-content",
         }}
       >
         <OperatorySidebar
@@ -848,6 +833,7 @@ const OperatorySchedulePage = () => {
           onScheduleAppointmentClick={handleScheduleAppointmentClick}
           onCompleteBillClick={handleCompleteBillClick}
           onPurchaseProductsClick={handlePurchaseProductsClick}
+          getStatusColor={getStatusColor}
         />
 
         <OperatoryScheduleGrid

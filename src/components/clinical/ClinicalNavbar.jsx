@@ -35,19 +35,19 @@ const ClinicalNavbar = () => {
 
   // Navigation sections for the clinical page
   const clinicalSections = [
-    { id: 'exam', label: 'Exam', path: '/clinical/exam' },
-    { id: 'diagnostic', label: 'Diagnostic Opinion', path: '/clinical/diagnostic-opinion' },
-    { id: 'treatment', label: 'Treatment Plan', path: '/clinical/treatment-plan' },
-    { id: 'adjunctive', label: 'Adjunctive Therapy', path: '/clinical/adjunctive-therapy' },
+    { id: 'exam', label: 'EXAM', path: '/clinical/exam' },
+    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion' },
+    { id: 'treatment', label: 'TREATMENT PLAN', path: '/clinical/treatment-plan' },
+    { id: 'adjunctive', label: 'ADJUNCTIVE THERAPY', path: '/clinical/adjunctive-therapy' },
     { id: 'rx', label: 'RX', path: '/clinical/rx' },
-    { id: 'referral', label: 'Referral', path: '/clinical/referral' },
-    { id: 'progress', label: 'Progress Notes', path: '/clinical/progress-notes' },
-    { id: 'lab', label: 'Lab Case', path: '/clinical/lab-case' },
-    { id: 'ai', label: 'AI Conversation', path: '/clinical/ai-conversation' },
+    { id: 'referral', label: 'REFERRAL', path: '/clinical/referral' },
+    { id: 'progress', label: 'PROGRESS NOTES', path: '/clinical/progress-notes' },
+    { id: 'lab', label: 'LAB CASE', path: '/clinical/lab-case' },
+    { id: 'ai', label: 'AI CONVERSATION', path: '/clinical/ai-conversation' },
   ];
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0, mb: 3 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
       {clinicalSections.map((section) => (
         <Button
           key={section.id}
@@ -55,13 +55,13 @@ const ClinicalNavbar = () => {
           size="small"
           onClick={() => navigate(section.path)}
           sx={{
-            textTransform: 'none',
+            textTransform: 'uppercase',
             fontWeight: 600,
             fontSize: '0.75rem',
             letterSpacing: '0.02em',
             py: 1,
             px: 1.5,
-            borderRadius: 0,
+            borderRadius: 1,
             bgcolor: activeSection === section.id ? 'primary.main' : 'grey.100',
             color: activeSection === section.id ? 'primary.contrastText' : 'text.primary',
             minWidth: 'auto',

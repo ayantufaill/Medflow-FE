@@ -69,6 +69,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
     if (patientId) fetchInsurancesAndCompanies();
   }, [patientId]);
 
+  useEffect(() => {
+    console.log('InsuranceDialog state:', insuranceDialog);
+    console.log('patientId:', patientId);
+  }, [insuranceDialog, patientId]);
+
   const getInsuranceCompanyName = (insuranceCompanyId) => {
     if (insuranceCompanyId && typeof insuranceCompanyId === 'object') {
       return insuranceCompanyId.name || 'Unknown';
@@ -84,7 +89,10 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const hasActiveCoverage = displayInsurances.some((i) => i.isActive);
   const inactiveInsurances = insurances.filter((i) => !i.isActive);
 
-  const handleInsuranceAdd = () => setInsuranceDialog({ open: true, mode: 'add', insurance: null });
+  const handleInsuranceAdd = () => {
+    console.log('Opening insurance dialog...', patientId);
+    setInsuranceDialog({ open: true, mode: 'add', insurance: null });
+  };
   const handleInsuranceEdit = (insurance) => {
     setEditCoverageModal({ open: true, insurance, mode: 'edit' });
     setInsuranceMenu({ anchorEl: null, insurance: null });
@@ -227,6 +235,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 <Button
                   variant="contained"
                   size="small"
+                  onClick={handleInsuranceAdd}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
@@ -315,6 +324,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 <Button
                   variant="contained"
                   size="small"
+                  onClick={handleInsuranceAdd}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',

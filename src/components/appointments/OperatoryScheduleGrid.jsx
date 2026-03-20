@@ -101,8 +101,8 @@ const OperatoryScheduleGrid = ({
         overflow: "hidden"
       }}
     >
-      <Box sx={{ overflowX: "auto" }}>
-        {/* HEADER */}
+      <Box sx={{ overflow: "auto" }}>
+        {/* HEADER - Sticky Top */}
         {viewMode === "day" ? (
           <Box
             sx={{
@@ -110,10 +110,13 @@ const OperatoryScheduleGrid = ({
               gridTemplateColumns: `80px repeat(${OPERATORY_COLUMNS.length},1fr)`,
               borderBottom: "2px solid #eef2f6",
               bgcolor: "#f8fafc",
-              minWidth: 900
+              minWidth: 900,
+              position: 'sticky',
+              top: 0,
+              zIndex: 10
             }}
           >
-            <Box sx={{ p: 1.5, borderRight: "1px solid #eef2f6" }}>
+            <Box sx={{ p: 1.5, borderRight: "1px solid #eef2f6", position: 'sticky', left: 0, bgcolor: '#f8fafc', zIndex: 11 }}>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>
                 Time
               </Typography>
@@ -141,10 +144,13 @@ const OperatoryScheduleGrid = ({
               gridTemplateColumns: `80px repeat(${dateRange.length},1fr)`,
               borderBottom: "2px solid #eef2f6",
               bgcolor: "#f8fafc",
-              minWidth: Math.max(900, dateRange.length * 150)
+              minWidth: Math.max(900, dateRange.length * 150),
+              position: 'sticky',
+              top: 0,
+              zIndex: 10
             }}
           >
-            <Box sx={{ p: 1.5, borderRight: "1px solid #eef2f6" }}>
+            <Box sx={{ p: 1.5, borderRight: "1px solid #eef2f6", position: 'sticky', left: 0, bgcolor: '#f8fafc', zIndex: 11 }}>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>
                 Time
               </Typography>
@@ -196,17 +202,20 @@ const OperatoryScheduleGrid = ({
               viewMode === "day"
                 ? `80px 1fr`
                 : `80px repeat(${dateRange.length},1fr)`,
-            height: viewMode === "day" ? 640 : "auto",
+            height: 640,
             minWidth: viewMode === "day" ? 900 : Math.max(900, dateRange.length * 150),
           }}
         >
-          {/* TIME AXIS */}
+          {/* TIME AXIS - Sticky Left Column */}
           <Box
             sx={{
-              position: "relative",
+              position: "sticky",
+              left: 0,
+              top: 0,
+              zIndex: 20,
               borderRight: "1px solid #eef2f6",
               bgcolor: "#ffffff",
-              height: viewMode === "day" ? gridHeight : timeAxisHeight
+              height: viewMode === "day" ? gridHeight : timeAxisHeight,
             }}
           >
             {viewMode === "day" && (

@@ -48,6 +48,7 @@ import RiskAssessmentPage from './pages/patient-reports/RiskAssessmentPage';
 import HomeCarePage from './pages/patient-reports/HomeCarePage';
 import ConcernsPage from './pages/patient-reports/ConcernsPage';
 import ShowcasePage from './pages/patient-reports/ShowcasePage';
+import InsurancePage from './pages/insurance/InsurancePage';
 import AllergiesListPage from './pages/allergies/AllergiesListPage';
 import CreateAllergyPage from './pages/allergies/CreateAllergyPage';
 import EditAllergyPage from './pages/allergies/EditAllergyPage';
@@ -1178,6 +1179,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
                     <Layout>
                       <AIConversationPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/insurance"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                    <Layout>
+                      <InsurancePage />
                     </Layout>
                   </ProtectedRoute>
                 }

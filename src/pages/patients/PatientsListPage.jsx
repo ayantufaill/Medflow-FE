@@ -312,14 +312,6 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               </Button>
               <Button
                 variant="contained"
-                color="warning"
-                startIcon={<UploadIcon />}
-                onClick={handleImportPatient}
-              >
-                Import Patient
-              </Button>
-              <Button
-                variant="contained"
                 color="error"
                 startIcon={<PersonOffIcon />}
                 disabled={selectedIds.length === 0}

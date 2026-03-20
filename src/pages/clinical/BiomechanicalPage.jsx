@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 const BiomechanicalPage = () => {
   const [selected, setSelected] = useState({ 'Structural Compromises': true });
   const [otherText, setOtherText] = useState('');
+  const [radioValue, setRadioValue] = useState(null); // 'found' or 'not-found'
 
   const assessments = [
     { label: "Caries" },
@@ -117,11 +118,31 @@ const BiomechanicalPage = () => {
             </Box>
             {/* Radio Legend */}
             <Box sx={{ display: 'flex', gap: 2, ml: 2, fontSize: '11px', color: '#666' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4b5563' }} /> Found
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  cursor: 'pointer',
+                  opacity: radioValue === 'found' ? 1 : 0.6
+                }}
+                onClick={() => setRadioValue('found')}
+              >
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: radioValue === 'found' ? '#4b5563' : '#e5e7eb', border: radioValue === 'found' ? 'none' : '1px solid #9ca3af' }} /> 
+                Found
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid #9ca3af' }} /> Not Found
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  cursor: 'pointer',
+                  opacity: radioValue === 'not-found' ? 1 : 0.6
+                }}
+                onClick={() => setRadioValue('not-found')}
+              >
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: radioValue === 'not-found' ? '#4b5563' : '#e5e7eb', border: radioValue === 'not-found' ? 'none' : '1px solid #9ca3af' }} /> 
+                Not Found
               </Box>
             </Box>
           </Box>

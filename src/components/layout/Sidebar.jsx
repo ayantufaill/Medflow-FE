@@ -143,6 +143,7 @@ const menuItems = [
   },*/
   //{ text: 'Reports', icon: <Assessment />, path: '/reports' },
   { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
+  { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
   { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
  // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
   /*{
@@ -308,10 +309,29 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             return hasRequiredRole(item.requiredRoles);
           })
           .map((item) => {
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== '/dashboard' &&
-                location.pathname.startsWith(item.path));
+            // Special handling for paths that could conflict
+            const isExactMatch = location.pathname === item.path;
+            const isStartsWithMatch = 
+              item.path !== '/dashboard' && 
+              location.pathname.startsWith(item.path + '/');
+            
+            let isActive = false;
+            
+            if (item.path === '/patients') {
+              // Check if we're on a patient report page
+              const isPatientReport = location.pathname.match(/^\/patients\/\d+\/report/);
+              if (!isPatientReport && (isExactMatch || isStartsWithMatch)) {
+                isActive = true;
+              }
+            } else if (item.path === '/patient-reports') {
+              // Match /patient-reports OR /patients/:id/report/*
+              const isPatientReportRoute = location.pathname.match(/^\/patients\/\d+\/report/);
+              if (isExactMatch || isPatientReportRoute) {
+                isActive = true;
+              }
+            } else if (isStartsWithMatch || isExactMatch) {
+              isActive = true;
+            }
             return (
               <ListItem key={item.text} disablePadding>
                 <ListItemButton
