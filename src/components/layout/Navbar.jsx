@@ -21,7 +21,9 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
-const Navbar = ({ onMenuClick }) => {
+// onMobileMenuClick: toggles the temporary mobile drawer
+// onDesktopMenuClick: toggles the permanent desktop sidebar between expanded and collapsed
+const Navbar = ({ onMobileMenuClick, onDesktopMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -83,17 +85,16 @@ const Navbar = ({ onMenuClick }) => {
       }}
     >
       <Toolbar>
-        {isMobile && (
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="Open navigation menu"
-            onClick={onMenuClick}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-        )}
+        {/* On mobile: open the temporary drawer. On desktop: toggle collapsed/expanded sidebar. */}
+        <IconButton
+          edge="start"
+          color="inherit"
+          aria-label="Toggle navigation menu"
+          onClick={isMobile ? onMobileMenuClick : onDesktopMenuClick}
+          sx={{ mr: 2 }}
+        >
+          <MenuIcon />
+        </IconButton>
 
         <Typography
           variant="h6"
