@@ -13,7 +13,7 @@ const AIConversationPage = () => {
           AI-powered clinical conversations and assistance
         </Typography>
       </Box>
-      <Box sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 1 }}>
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <Typography variant="body1">
           Content for AI Conversation will be displayed here.
         </Typography>

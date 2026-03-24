@@ -13,7 +13,7 @@ const ExamPage = () => {
           Patient examination records and clinical findings
         </Typography>
       </Box>
-      <Box sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 1 }}>
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <Typography variant="body1">
           Content for Exam will be displayed here.
         </Typography>

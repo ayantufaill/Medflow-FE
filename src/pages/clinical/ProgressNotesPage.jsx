@@ -91,11 +91,10 @@ const ProgressNotesPage = () => {
     : notes.filter(note => note.category === selectedCategory);
 
   return (
-    <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh', "@media print": { ".no-print": { display: "none" } } }}>
+    <Box sx={{ "@media print": { ".no-print": { display: "none" } } }}>
       <Box className="no-print"><ClinicalNavbar /></Box>
 
-      <Box sx={{ px: 4, py: 2 }}>
-        <Box className="no-print" sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box className="no-print" sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
   <Box>
     <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }}>
       Progress Notes
@@ -125,6 +124,7 @@ const ProgressNotesPage = () => {
   </Button>
 </Box>
 
+<Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <Box className="no-print" sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
           <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
             <Tab label="Active Progress Notes" sx={{ textTransform: 'none' }} />

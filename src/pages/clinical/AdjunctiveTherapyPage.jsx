@@ -273,16 +273,16 @@ const AdjunctiveTherapyPage = () => {
   ];
 
   return (
-    <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <Box>
       <ClinicalNavbar />
       
-      <Box sx={{ px: 4, py: 2 }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
-            Adjunctive Therapy
-          </Typography>
-        </Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+          Adjunctive Therapy
+        </Typography>
+      </Box>
 
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         {/* Categories List */}
         <Box sx={{ borderTop: '1px solid #d1d5db' }}>
           {/* Lab Fee Section - Special Nested Structure */}

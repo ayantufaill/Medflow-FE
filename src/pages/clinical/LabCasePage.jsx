@@ -91,18 +91,18 @@ const LabCasePage = () => {
   const tableHeaders = ['Lab', 'Patient', 'Created Date', 'Due Date', 'Appointment Date', 'Shared On', 'Status', 'Notes'];
 
   return (
-    <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <Box>
       <ClinicalNavbar />
 
-      <Box sx={{ px: 4, py: 2 }}>
-        <Box sx={{ mb: 1 }}>
-          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.8rem', color: '#1a2735' }}>
-            Lab Cases
-          </Typography>
-        </Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.8rem', color: '#1a2735' }}>
+          Lab Cases
+        </Typography>
+      </Box>
 
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         {/* Sorting Controls */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 3 }}>
           <Typography sx={{ fontSize: '0.85rem', color: '#333' }}>Sort By</Typography>
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ fontSize: '0.85rem', height: '32px' }}>

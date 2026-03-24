@@ -5,9 +5,9 @@ import DiagnosticNavbar from '../../components/clinical/DiagnosticNavbar';
 
 const PeriodontalPage = () => {
   return (
-    <Box sx={{ backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
+    <Box>
       <ClinicalNavbar />
-      <Box sx={{ px: 4, py: 2 }}>
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
           Diagnostic Opinion
         </Typography>
@@ -17,7 +17,7 @@ const PeriodontalPage = () => {
       </Box>
       <DiagnosticNavbar />
 
-      <Box sx={{ px: 4, py: 6 }}>
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <Box 
           sx={{ 
             border: '2px  #d1d5db',

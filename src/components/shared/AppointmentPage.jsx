@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { 
   Box, Typography, Button, IconButton, Paper, RadioGroup, 
   FormControlLabel, FormControl, InputLabel, Radio, TextField, Select, MenuItem, 
-  Table, TableBody, TableCell, TableHead, TableRow, Checkbox, Chip, Avatar, Dialog
+  Table, TableBody, TableCell, TableHead, TableRow, Checkbox, Chip, Avatar, Dialog,
+  Popover, Grid
 } from '@mui/material';
 import { 
   DeleteOutline, MailOutline, ChatBubbleOutline, 
   Settings, Science, Mic, MoreVert, Close, InfoOutlined, CheckCircle
 } from '@mui/icons-material';
 import LabOrder from './LabOrder';
+
+const FONT_SM = { fontSize: "11px" };
+const FONT_XS = { fontSize: "10px" };
 
 const AppointmentPage = ({ patient, open, onClose, onSave }) => {
   // Mock data for the procedure icons shown in your screenshot
@@ -34,6 +38,52 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
   const [sendReminders, setSendReminders] = useState(false);
   const [operatory, setOperatory] = useState('Operatory 2');
   const [labOrderOpen, setLabOrderOpen] = useState(false);
+  const [tagsAnchorEl, setTagsAnchorEl] = useState(null);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [completedProcedures, setCompletedProcedures] = useState([true]); // Track completion status of each procedure
+  const [isCheckedOut, setIsCheckedOut] = useState(true);
+
+  const handleTagsClick = (event) => {
+    setTagsAnchorEl(event.currentTarget);
+  };
+
+  const handleTagsClose = () => {
+    setTagsAnchorEl(null);
+  };
+
+  const openTags = Boolean(tagsAnchorEl);
+
+  const handleCompleteAll = () => {
+    // Mark all procedures as completed
+    setCompletedProcedures(completedProcedures.map(() => true));
+  };
+
+  // Tag Data matching screenshot colors/labels
+  const availableTags = [
+    { icon: "🎁", bg: "#fff7ed", border: "#ffedd5" },
+    { icon: "📥", bg: "#fff7ed", border: "#ffedd5" },
+    { icon: "📤", bg: "#fff7ed", border: "#ffedd5" },
+    { icon: "🔔", bg: "#fef2f2", border: "#fee2e2" },
+    { label: "S", bg: "#fef2f2", border: "#fee2e2", color: "#ef4444" },
+    { icon: "🧬", bg: "#f0f9ff", border: "#e0f2fe" },
+    { label: "✳️", bg: "#f0fdf4", border: "#dcfce7" },
+    { icon: "🗂️", bg: "#fff7ed", border: "#ffedd5" },
+    { label: "ASAP", bg: "#f0f9ff", border: "#e0f2fe", color: "#0ea5e9" },
+    { label: "$", bg: "#f0fdf4", border: "#dcfce7", color: "#22c55e" },
+    { icon: "🪪", bg: "#f5f3ff", border: "#ede9fe" },
+    { label: "DR", bg: "#fdf2f8", border: "#fce7f3", color: "#ec4899" },
+    { icon: "👥", bg: "#fdf2f8", border: "#fce7f3" },
+    { label: "HYG", bg: "#f0fdf4", border: "#dcfce7", color: "#166534" },
+    { icon: "💳", bg: "#fef2f2", border: "#fee2e2" },
+    { label: "PRE", bg: "#fef2f2", border: "#fee2e2", color: "#991b1b" },
+    { icon: "📘", bg: "#eff6ff", border: "#dbeafe" },
+    { label: "Tx", bg: "#fffbeb", border: "#fef3c7", color: "#d97706" },
+    { label: "VER", bg: "#f0fdf4", border: "#dcfce7", color: "#22c55e" },
+    { icon: "📧", bg: "#f0f9ff", border: "#e0f2fe" },
+    { icon: "📩", bg: "#f0fdf4", border: "#dcfce7" },
+    { icon: "💉", bg: "#fdf2f8", border: "#fce7f3" },
+    { icon: "💊", bg: "#fff7ed", border: "#ffedd5" },
+  ];
 
   return (
     <Dialog 
@@ -44,7 +94,7 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
       PaperProps={{
         sx: {
           borderRadius: 2,
-          border: '1px solid #eef2f6',
+          border: 'none',
           maxHeight: '90vh',
           overflow: 'hidden'
         }
@@ -58,25 +108,27 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
           display: 'flex', alignItems: 'center', gap: 1.5, fontSize: '13px',
           position: 'relative'
         }}>
-          <Typography sx={{ fontWeight: 500, fontSize: '14px', ml: 1 }}>
-            {patient ? `${patient.firstName} ${patient.lastName}` : 'Tony Mastutus'}, Recare Appointment on 03/04/2026 @ 08:15 AM
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Button variant="contained" 
-              sx={{ bgcolor: '#d4a373', textTransform: 'none', fontSize: '11px', py: 0, height: 22, px: 1, boxShadow: 'none' }}>
-              Re-schedule
-            </Button>
-            <Button variant="contained" 
-              sx={{ bgcolor: '#d4a373', textTransform: 'none', fontSize: '11px', py: 0, height: 22, px: 1, boxShadow: 'none' }}>
-              Move to shortlist
-            </Button>
-            <Button variant="contained" 
-              sx={{ bgcolor: '#d4a373', textTransform: 'none', fontSize: '11px', py: 0, height: 22, px: 1, boxShadow: 'none' }}>
-              Copy to shortlist
-            </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, justifyContent: 'center' }}>
+            <Typography sx={{ fontWeight: 500, fontSize: '14px' }}>
+              {patient ? `${patient.firstName} ${patient.lastName}` : 'Tony Mastutus'}, Recare Appointment on 03/04/2026 @ 08:15 AM
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Button variant="contained" 
+                sx={{ bgcolor: '#d4a373', textTransform: 'none', fontSize: '11px', py: 0, height: 22, px: 1, boxShadow: 'none' }}>
+                Re-schedule
+              </Button>
+              <Button variant="contained" 
+                sx={{ bgcolor: '#d4a373', textTransform: 'none', fontSize: '11px', py: 0, height: 22, px: 1, boxShadow: 'none' }}>
+                Move to shortlist
+              </Button>
+              <Button variant="contained" 
+                sx={{ bgcolor: '#d4a373', textTransform: 'none', fontSize: '11px', py: 0, height: 22, px: 1, boxShadow: 'none' }}>
+                Copy to shortlist
+              </Button>
+            </Box>
           </Box>
           <Select size="small" value={operatory} onChange={(e) => setOperatory(e.target.value)}
-            sx={{ bgcolor: 'white', height: 24, ml: 'auto', fontSize: '12px', borderRadius: 1, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+            sx={{ bgcolor: 'white', height: 24, fontSize: '12px', borderRadius: 1, '& .MuiSelect-select': { py: 0, px: 1 } }}>
             <MenuItem value="Operatory 1">Operatory 1</MenuItem>
             <MenuItem value="Operatory 2">Operatory 2</MenuItem>
             <MenuItem value="Operatory 3">Operatory 3</MenuItem>
@@ -130,7 +182,17 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
             <Table size="small" sx={{ border: '1px solid #e2e8f0' }}>
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell padding="checkbox" sx={{ borderBottom: '2px solid #cbd5e1' }}><Checkbox size="small" checked /></TableCell>
+                  <TableCell padding="checkbox" sx={{ borderBottom: '2px solid #cbd5e1' }}>
+                    <Checkbox 
+                      size="small" 
+                      checked={completedProcedures.every(p => p === true)}
+                      indeterminate={completedProcedures.some(p => p === true) && !completedProcedures.every(p => p === true)}
+                      onChange={(e) => {
+                        const allCompleted = e.target.checked;
+                        setCompletedProcedures(completedProcedures.map(() => allCompleted));
+                      }}
+                    />
+                  </TableCell>
                   {['Procedure', 'Site', 'Treatment', 'Provider', 'Pt Part', 'Total Charge'].map(head => (
                     <TableCell key={head} sx={{ fontSize: '11px', fontWeight: 700, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>{head}</TableCell>
                   ))}
@@ -139,7 +201,17 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
               </TableHead>
               <TableBody>
                 <TableRow sx={{ '&:hover': { bgcolor: '#f1f5f9' } }}>
-                  <TableCell padding="checkbox"><Checkbox size="small" checked /></TableCell>
+                  <TableCell padding="checkbox">
+                    <Checkbox 
+                      size="small" 
+                      checked={completedProcedures[0] || false}
+                      onChange={(e) => {
+                        const newCompleted = [...completedProcedures];
+                        newCompleted[0] = e.target.checked;
+                        setCompletedProcedures(newCompleted);
+                      }}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontSize: '12px' }}>D4910</TableCell>
                   <TableCell />
                   <TableCell>
@@ -158,8 +230,8 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
                   <TableCell sx={{ fontSize: '12px' }}>$257.00</TableCell>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>$257.00</TableCell>
                   <TableCell sx={{ width: 80 }}>
-                    <Box sx={{ display: 'flex', gap: 0.5, color: '#94a3b8' }}>
-                      <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
+                    <Box sx={{ display: 'flex', gap: 3, color: '#94a3b8' }}>
+                      <CheckCircle sx={{ fontSize: 18, color: '#22c55e', mr: 1 }} />
                       <Settings sx={{ fontSize: 18, cursor: 'pointer' }} />
                     </Box>
                   </TableCell>
@@ -175,9 +247,24 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
 
             {/* Action Footer */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', mt: 2, gap: 1 }}>
-               <Button variant="contained" sx={{ bgcolor: '#4a6da7', textTransform: 'none', fontSize: '10px', px: 3 }}>Complete All</Button>
+               <Button 
+                 variant="contained" 
+                 sx={{ bgcolor: '#4a6da7', textTransform: 'none', fontSize: '10px', px: 3 }}
+                 onClick={handleCompleteAll}
+               >
+                 Complete All
+               </Button>
                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{fontSize: '12px', color: '#475569'}}>check out appointment</Typography>} />
+                  <FormControlLabel 
+                    control={
+                      <Checkbox 
+                        size="small" 
+                        checked={isCheckedOut}
+                        onChange={(e) => setIsCheckedOut(e.target.checked)}
+                      />
+                    } 
+                    label={<Typography sx={{fontSize: '12px', color: '#475569'}}>check out appointment</Typography>} 
+                  />
                   <Button sx={{ bgcolor: '#d4a373', color: 'white', textTransform: 'none', ml: 1, fontSize: '12px', px: 2 }}>Collect Payments</Button>
                </Box>
             </Box>
@@ -222,16 +309,37 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
               </FormControl>
             </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#4a6da7' }}>Appt Duration:</Typography>
-              <TextField 
+            <Box>
+              <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
+                Appt Duration:
+              </Typography>
+              <TextField
                 type="number"
-                size="small" 
-                value={durationMins} 
-                onChange={(e) => setDurationMins(Number(e.target.value))}
-                sx={{ width: 45, '& .MuiInputBase-input': { py: 0.3, px: 1, fontSize: '11px' } }} 
+                size="small"
+                value={durationMins}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "") {
+                    setDurationMins("");
+                  } else {
+                    setDurationMins(Number(value) || 0);
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = Number(e.target.value);
+                  if (!value || value < 5) {
+                    setDurationMins(5);
+                  }
+                }}
+                sx={{ "& .MuiInputBase-input": FONT_XS }}
+                inputProps={{ min: 5, step: 5 }}
               />
-              <Typography sx={{ fontSize: '11px', color: '#64748b' }}>mins</Typography>
+              <Typography
+                component="span"
+                sx={{ ...FONT_XS, ml: 0.5, color: "#64748b" }}
+              >
+                mins
+              </Typography>
             </Box>
 
             <Box>
@@ -353,7 +461,106 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
 
             <Box sx={{ mt: 'auto' }}>
               <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#4a6da7', mb: 0.3 }}>Tags</Typography>
-              <Button size="small" sx={{ bgcolor: '#d4a373', color: 'white', textTransform: 'none', width: 55, fontSize: '10px', py: 0.3 }}>Add</Button>
+              
+              {/* The Add Button */}
+              <Button 
+                size="small" 
+                onClick={handleTagsClick}
+                sx={{ 
+                  bgcolor: '#d4a373', 
+                  color: 'white', 
+                  textTransform: 'none', 
+                  minWidth: 55, 
+                  fontSize: '10px', 
+                  py: 0.3,
+                  '&:hover': { bgcolor: '#bc8a5f' }
+                }}
+              >
+                Add
+              </Button>
+
+              {/* Display selected tags */}
+              {selectedTags.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                  {selectedTags.map((tag, index) => (
+                    <Chip
+                      key={index}
+                      label={tag.label || tag.icon}
+                      size="small"
+                      onDelete={() => setSelectedTags(selectedTags.filter((_, i) => i !== index))}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '9px', 
+                        bgcolor: tag.bg, 
+                        border: `1px solid ${tag.border}`,
+                        color: tag.color || '#475569',
+                        fontWeight: tag.label ? 700 : 400,
+                        '& .MuiChip-deleteIcon': {
+                          fontSize: '12px',
+                          color: tag.color || '#94a3b8',
+                          '&:hover': {
+                            color: tag.color || '#64748b'
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+
+              {/* The Popover matching screenshot */}
+              <Popover
+                open={openTags}
+                anchorEl={tagsAnchorEl}
+                onClose={handleTagsClose}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                PaperProps={{
+                  sx: {
+                    p: 1,
+                    borderRadius: 2,
+                    boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+                    maxWidth: 350,
+                    maxHeight: 350,
+                  }
+                }}
+              >
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 0.5, maxWidth: 350 }}>
+                  {availableTags.map((tag, idx) => (
+                    <Box
+                      key={idx}
+                      onClick={() => {
+                        // Add tag to selection
+                        if (!selectedTags.some(t => JSON.stringify(t) === JSON.stringify(tag))) {
+                          setSelectedTags([...selectedTags, tag]);
+                        }
+                        handleTagsClose();
+                      }}
+                      sx={{
+                        aspectRatio: '1/1',
+                        bgcolor: tag.bg,
+                        border: `1px solid ${tag.border}`,
+                        borderRadius: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'transform 0.1s',
+                        '&:hover': { transform: 'scale(1.1)', boxShadow: 1 },
+                        minWidth: 55,
+                      }}
+                    >
+                      <Typography sx={{ 
+                        fontSize: tag.label?.length > 2 ? '13px' : '20px', 
+                        fontWeight: 700,
+                        color: tag.color || 'inherit'
+                      }}>
+                        {tag.label || tag.icon}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Popover>
             </Box>
           </Box>
         </Box>

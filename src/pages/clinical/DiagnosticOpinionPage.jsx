@@ -15,7 +15,7 @@ const DiagnosticOpinionPage = () => {
         </Typography>
       </Box>
       <DiagnosticNavbar />
-      <Box sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 1 }}>
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <Typography variant="body1">
           Please select a diagnostic subsection above.
         </Typography>

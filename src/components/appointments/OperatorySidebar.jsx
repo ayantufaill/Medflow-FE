@@ -544,9 +544,9 @@ const OperatorySidebar = ({
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        Phone: {selectedPatient?.mobilePhone || 'N/A'}
+                        Phone: {selectedPatient?.phonePrimary || selectedPatient?.mobilePhone || 'N/A'}
                       </Typography>
-                      <IconButton size="small" onClick={() => copyToClipboard(selectedPatient?.mobilePhone || '')} sx={{ p: 0.25 }}>
+                      <IconButton size="small" onClick={() => copyToClipboard(selectedPatient?.phonePrimary || selectedPatient?.mobilePhone || '')} sx={{ p: 0.25 }}>
                         <ContentCopy sx={{ fontSize: 12, color: '#94a3b8' }} />
                       </IconButton>
                     </Box>
@@ -586,8 +586,36 @@ const OperatorySidebar = ({
             <Box sx={{ p: 2 }}>
               {/* Appointment Box with Recare Info */}
               <Paper elevation={0} sx={{ border: '1px solid #cbd5e1', borderRadius: 1.5, overflow: 'hidden', mb: 2 }}>
-                <Box sx={{ bgcolor: getStatusColor ? getStatusColor(appointmentStatus, '#a78bfa') : '#a78bfa', p: 0.75, color: 'white' }}>
-                  <Typography sx={{ fontSize: '11px', fontWeight: 800, textAlign: 'center', letterSpacing: '0.5px' }}>
+                <Box sx={{ 
+                  position: 'relative',
+                  bgcolor: getStatusColor ? getStatusColor(appointmentStatus, '#a78bfa') : '#a78bfa', 
+                  p: 0.75,
+                  color: 'white',
+                  overflow: 'hidden'
+                }}>
+                  {/* Animated Zebra Stripe Pattern */}
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: `repeating-linear-gradient(
+                        90deg,
+                        transparent 0px,
+                        transparent 12px,
+                        rgba(255, 255, 255, 0.15) 12px,
+                        rgba(255, 255, 255, 0.15) 24px
+                      )`,
+                      animation: "slide 1s linear infinite",
+                      "@keyframes slide": {
+                        "0%": { backgroundPosition: "0 0" },
+                        "100%": { backgroundPosition: "24px 0" },
+                      },
+                    }}
+                  />
+                  <Typography sx={{ fontSize: '11px', fontWeight: 800, textAlign: 'center', letterSpacing: '0.5px', position: 'relative' }}>
                     RECARE 03/04/2026 @ 09:00 AM
                   </Typography>
                 </Box>

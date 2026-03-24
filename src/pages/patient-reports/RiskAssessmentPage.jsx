@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Grid, Paper, Tabs, Tab, Button } from '@mui/material';
+import { Box, Typography, Grid, Paper, Tabs, Tab, Button, Divider } from '@mui/material';
 import CategoryTabContent from '../../components/shared/CategoryTabContent';
 
 const RiskAssessmentPage = () => {
@@ -185,20 +185,26 @@ const RiskAssessmentPage = () => {
 
       {/* Unified Card with Navigation */}
       <Paper sx={{ p: 3 }}>
-        <Grid container spacing={3} alignItems="flex-start">
+        <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Side - Visual */}
-          <Grid size={{ xs: 12, lg: 5 }}>
-            <Box>
-              <img 
-                src="/report_visual.png" 
-                alt="Dental Assessment Visualization"
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              />
-            </Box>
-          </Grid>
+          <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
+            <img 
+              src="/report_visual.png" 
+              alt="Dental Assessment Visualization"
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          </Box>
+
+          {/* Vertical Divider */}
+          <Box sx={{ 
+            width: '1px', 
+            bgcolor: '#bdbdbd',
+            minHeight: '400px',
+            flexShrink: 0
+          }} />
 
           {/* Right Side - Content with Navigation */}
-          <Grid size={{ xs: 12, lg: 7 }}>
+          <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 0 }}>
             {/* Category Navigation Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
               <Tabs
@@ -229,8 +235,8 @@ const RiskAssessmentPage = () => {
                 sectionNumber={activeCategory + 1}
               />
             </Box>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
     </Box>
   );

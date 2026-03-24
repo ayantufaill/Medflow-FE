@@ -55,7 +55,7 @@ const ClinicalNavbar = () => {
           size="small"
           onClick={() => navigate(section.path)}
           sx={{
-            textTransform: 'uppercase',
+            textTransform: 'none',
             fontWeight: 600,
             fontSize: '0.75rem',
             letterSpacing: '0.02em',

@@ -39,19 +39,19 @@ const ReferralPage = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
+    <Box>
       <ClinicalNavbar />
 
-      <Box sx={{ px: 4, py: 2 }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
-            Referral
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-            Patient referrals and specialist recommendations
-          </Typography>
-        </Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+          Referral
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+          Patient referrals and specialist recommendations
+        </Typography>
+      </Box>
 
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         {/* Previous Referrals Container */}
         <Box sx={{ maxWidth: '1000px', border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden', mt: 4 }}>
           <Box sx={{ backgroundColor: '#2e3b84', py: 1, textAlign: 'center' }}>

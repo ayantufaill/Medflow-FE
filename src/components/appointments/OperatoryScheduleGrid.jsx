@@ -1,11 +1,16 @@
 import dayjs from "dayjs";
 import { useMemo, useRef, useEffect } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, IconButton } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import PersonIcon from "@mui/icons-material/Person";
 import NotesIcon from "@mui/icons-material/Notes";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CallIcon from "@mui/icons-material/Call";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
+import ScreenShareIcon from "@mui/icons-material/ScreenShare";
+import EmergencyIcon from "@mui/icons-material/Emergency";
 
 const OperatoryScheduleGrid = ({
   OPERATORY_COLUMNS,
@@ -110,7 +115,7 @@ const OperatoryScheduleGrid = ({
               gridTemplateColumns: `80px repeat(${OPERATORY_COLUMNS.length},1fr)`,
               borderBottom: "2px solid #eef2f6",
               bgcolor: "#f8fafc",
-              minWidth: 900,
+              minWidth: 1800,
               position: 'sticky',
               top: 0,
               zIndex: 10
@@ -144,7 +149,7 @@ const OperatoryScheduleGrid = ({
               gridTemplateColumns: `80px repeat(${dateRange.length},1fr)`,
               borderBottom: "2px solid #eef2f6",
               bgcolor: "#f8fafc",
-              minWidth: Math.max(900, dateRange.length * 150),
+              minWidth: Math.max(1800, dateRange.length * 300),
               position: 'sticky',
               top: 0,
               zIndex: 10
@@ -203,7 +208,7 @@ const OperatoryScheduleGrid = ({
                 ? `80px 1fr`
                 : `80px repeat(${dateRange.length},1fr)`,
             height: 640,
-            minWidth: viewMode === "day" ? 900 : Math.max(900, dateRange.length * 150),
+            minWidth: viewMode === "day" ? 1800 : Math.max(1800, dateRange.length * 300),
           }}
         >
           {/* TIME AXIS - Sticky Left Column */}
@@ -351,11 +356,11 @@ const OperatoryScheduleGrid = ({
                           }}
                           sx={{
                             position: "absolute",
-                            left: 4,
-                            right: 4,
+                            left: 0,
+                            right: 0,
                             top: topPx + 2,
                             height: finalHeight - 4,
-                            borderRadius: 1.5,
+                            borderRadius: 0,
                             bgcolor: "#ffffff",
                             color: "#000000",
                             p: 1,
@@ -367,111 +372,344 @@ const OperatoryScheduleGrid = ({
                               boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
                             },
                             display: "flex",
-                            flexDirection: "column",
+                            flexDirection: "row",
+                            gap: 0.75,
                             border: "none",
                           }}
                         >
-                          {/* Animated Zebra Stripe Band */}
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: "12px",
-                              background: `repeating-linear-gradient(
-                                90deg,
-                                ${statusColor} 0px,
-                                ${statusColor} 12px,
-                                transparent 12px,
-                                transparent 24px
-                              )`,
-                              animation: "slide 1s linear infinite",
-                              "@keyframes slide": {
-                                "0%": { backgroundPosition: "0 0" },
-                                "100%": { backgroundPosition: "24px 0" },
-                              },
-                            }}
-                          />
-                          
-                          <Box
-                            sx={{
+                          {/* Left Column - All Content */}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            {/* Header with Patient Name and Time */}
+                            <Box sx={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center", 
                               mb: 0.5,
-                              px: 0.75,
-                              py: 0.3,
-                              borderRadius: 999,
-                              border: "1px solid rgba(0,0,0,0.3)",
-                              fontSize: isShortAppointment ? 8.5 : 10,
-                              fontWeight: 600,
-                              letterSpacing: 0.4,
-                              textTransform: "uppercase",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 0.4,
-                              mt: 0.5,
-                            }}
-                          >
-                            <CheckCircleIcon sx={{ fontSize: isShortAppointment ? 9 : 11 }} />
-                            {(a.status || "unconfirmed").toUpperCase()}
-                          </Box>
-                          
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.2 }}>
-                            <PersonIcon sx={{ fontSize: isShortAppointment ? 10 : 12, color: "#757575" }} />
-                            <Typography
+                              pb: 0.5,
+                              borderBottom: "1px solid #e0e0e0",
+                            }}>
+                              <Typography
+                                sx={{
+                                  fontSize: isShortAppointment ? 10 : 11,
+                                  fontWeight: 700,
+                                  lineHeight: 1.2,
+                                  color: "#212121",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  flex: 1,
+                                  minWidth: 0,
+                                }}
+                              >
+                                {a.patientName || "John Doe"}
+                              </Typography>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.3 }}>
+                                <AccessTimeIcon sx={{ fontSize: isShortAppointment ? 9 : 11, color: "#757575" }} />
+                                <Typography sx={{ fontSize: isShortAppointment ? 8 : 9, opacity: 0.9, lineHeight: 1, color: "#424242" }}>
+                                  {dayjs(a.start).format("h:mm A")}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            
+                            {/* Animated Zebra Stripe Band with Status */}
+                            <Box
                               sx={{
-                                fontSize: isShortAppointment ? 9.5 : 11,
-                                fontWeight: 700,
-                                lineHeight: 1.2,
-                                color: "#212121",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {a.patientName}
-                            </Typography>
-                          </Box>
-                          
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.2 }}>
-                            <NotesIcon sx={{ fontSize: isShortAppointment ? 10 : 12, color: "#757575" }} />
-                            <Typography
-                              sx={{
-                                fontSize: isShortAppointment ? 9 : 10,
-                                lineHeight: 1.2,
-                                color: "#424242",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {a.title}
-                            </Typography>
-                          </Box>
-                          
-                          {a.note && (
-                            <Typography
-                              sx={{
-                                mt: 0.2,
-                                fontSize: isShortAppointment ? 8 : 9,
-                                color: "#757575",
+                                position: "relative",
+                                height: "16px",
+                                background: `repeating-linear-gradient(
+                                  90deg,
+                                  ${statusColor} 0px,
+                                  ${statusColor} 12px,
+                                  ${statusColor} 12px,
+                                  ${statusColor} 24px
+                                )`,
+                                animation: "slide 1s linear infinite",
+                                "@keyframes slide": {
+                                  "0%": { backgroundPosition: "0 0" },
+                                  "100%": { backgroundPosition: "24px 0" },
+                                },
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 0.3,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                justifyContent: "center",
                               }}
                             >
-                              <EventNoteIcon sx={{ fontSize: isShortAppointment ? 8 : 9 }} />
-                              {a.note}
-                            </Typography>
-                          )}
-                          
-                          <Box sx={{ mt: "auto", pt: 0.5, display: "flex", alignItems: "center", gap: 0.5 }}>
-                            <AccessTimeIcon sx={{ fontSize: isShortAppointment ? 9 : 11 }} />
-                            <Typography sx={{ fontSize: isShortAppointment ? 8 : 9, opacity: 0.9, lineHeight: 1 }}>
-                              {dayjs(a.start).format("h:mm")} - {dayjs(a.end).format("h:mm")}
-                            </Typography>
+                              <Box
+                                sx={{
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  background: `repeating-linear-gradient(
+                                    90deg,
+                                    transparent 0px,
+                                    transparent 12px,
+                                    rgba(255, 255, 255, 0.15) 12px,
+                                    rgba(255, 255, 255, 0.15) 24px
+                                  )`,
+                                  animation: "slide 1s linear infinite",
+                                  "@keyframes slide": {
+                                    "0%": { backgroundPosition: "0 0" },
+                                    "100%": { backgroundPosition: "24px 0" },
+                                  },
+                                }}
+                              />
+                              <Typography
+                                sx={{
+                                  fontSize: isShortAppointment ? 7 : 8,
+                                  fontWeight: 700,
+                                  letterSpacing: 0.5,
+                                  textTransform: "uppercase",
+                                  color: "#ffffff",
+                                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                                  position: "relative",
+                                }}
+                              >
+                                {(a.status || "unconfirmed").toUpperCase()}
+                              </Typography>
+                            </Box>
+                            
+                            {/* Disease/Procedure Names with Status Indicators */}
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                              <Typography
+                                sx={{
+                                  fontSize: isShortAppointment ? 9 : 10,
+                                  lineHeight: 1.2,
+                                  color: "#64748b",
+                                  textTransform: "lowercase",
+                                  flex: 1,
+                                  minWidth: 0,
+                                }}
+                              >
+                                {a.procedures || a.diseases || "hygiene, periodic ex, fl"}
+                              </Typography>
+                              
+                              {/* Status & Action Indicators */}
+                              <Box sx={{ display: "flex", gap: 0, alignItems: "center", flexShrink: 0 }}>
+                                {/* Status Indicator (Solid Circle) */}
+                                <Box
+                                  sx={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: "50%",
+                                    bgcolor: statusColor,
+                                    flexShrink: 0,
+                                    mr: 0.3,
+                                  }}
+                                />
+                                
+                                {/* Document/Note Icon */}
+                                <IconButton size="small" sx={{ p: 0.2, minWidth: 20, mx: 0 }}>
+                                  <EventNoteIcon sx={{ fontSize: isShortAppointment ? 12 : 14, color: "#757575" }} />
+                                </IconButton>
+                                
+                                {/* Dollar Sign Icon (Financial Status) */}
+                                <IconButton size="small" sx={{ p: 0.2, minWidth: 20, mx: 0 }}>
+                                  <AttachMoneyIcon sx={{ fontSize: isShortAppointment ? 12 : 14, color: "#4caf50" }} />
+                                </IconButton>
+                                
+                                {/* Tx Icon (Treatment Plan) */}
+                                <Box 
+                                  sx={{ 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    minWidth: 20,
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                      transform: "scale(1.1)",
+                                    },
+                                    transition: "transform 0.2s",
+                                  }}
+                                >
+                                  <Typography sx={{ 
+                                    fontSize: isShortAppointment ? 9 : 10, 
+                                    fontWeight: 700,
+                                    color: "#1976d2",
+                                    lineHeight: 1,
+                                  }}>
+                                    Tx
+                                  </Typography>
+                                </Box>
+                                
+                                {/* Tooth Outline Icon (Charting) - Using Teeth Emoji */}
+                                <Box 
+                                  sx={{ 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    minWidth: 20,
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                      transform: "scale(1.1)",
+                                    },
+                                    transition: "transform 0.2s",
+                                  }}
+                                >
+                                  <Typography sx={{ fontSize: isShortAppointment ? 12 : 14 }}>
+                                    🦷
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
+                            
+                            {/* Appointment Status Tags */}
+                            <Box sx={{ display: "flex", gap: 0.3, mt: 0.3, flexWrap: "wrap", alignItems: "center" }}>
+                              {/* EXM / Xray Tag */}
+                              <Box
+                                sx={{
+                                  px: 0.5,
+                                  py: 0.1,
+                                  bgcolor: "#fff3e0",
+                                  borderRadius: "2px",
+                                  border: "1px solid #ffe0b2",
+                                }}
+                              >
+                                <Typography sx={{ fontSize: isShortAppointment ? 7 : 8, fontWeight: 600, color: "#e65100", lineHeight: 1 }}>
+                                  EXM
+                                </Typography>
+                              </Box>
+                              
+                              {/* HYG / DR Tag */}
+                              <Box
+                                sx={{
+                                  px: 0.5,
+                                  py: 0.1,
+                                  bgcolor: "#e3f2fd",
+                                  borderRadius: "2px",
+                                  border: "1px solid #bbdefb",
+                                }}
+                              >
+                                <Typography sx={{ fontSize: isShortAppointment ? 7 : 8, fontWeight: 600, color: "#1565c0", lineHeight: 1 }}>
+                                  HYG
+                                </Typography>
+                              </Box>
+                              
+                              {/* ASAP Tag */}
+                              <Box
+                                sx={{
+                                  px: 0.5,
+                                  py: 0.1,
+                                  bgcolor: "#ffebee",
+                                  borderRadius: "2px",
+                                  border: "1px solid #ffcdd2",
+                                }}
+                              >
+                                <Typography sx={{ fontSize: isShortAppointment ? 7 : 8, fontWeight: 700, color: "#c62828", lineHeight: 1 }}>
+                                  ASAP
+                                </Typography>
+                              </Box>
+                              
+                              {/* PRE Tag (Pre-authorization) */}
+                              <Box
+                                sx={{
+                                  px: 0.5,
+                                  py: 0.1,
+                                  bgcolor: "#f3e5f5",
+                                  borderRadius: "2px",
+                                  border: "1px solid #e1bee7",
+                                }}
+                              >
+                                <Typography sx={{ fontSize: isShortAppointment ? 7 : 8, fontWeight: 600, color: "#6a1b9a", lineHeight: 1 }}>
+                                  PRE
+                                </Typography>
+                              </Box>
+                            </Box>
+                            
+                            {/* Emergency Icon Row */}
+                            <Box sx={{ display: "flex", mt: 0.5, justifyContent: "flex-end" }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  px: 0.5,
+                                  py: 0.2,
+                                  bgcolor: "#e0f2f1",
+                                  borderRadius: "4px",
+                                  border: "1px solid #b2dfdb",
+                                }}
+                              >
+                                <EmergencyIcon sx={{ fontSize: 16, color: "#00695c" }} />
+                              </Box>
+                            </Box>
+                            
+                            {a.note && (
+                              <Typography
+                                sx={{
+                                  mt: 0.2,
+                                  fontSize: isShortAppointment ? 8 : 9,
+                                  color: "#757575",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.3,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                <EventNoteIcon sx={{ fontSize: isShortAppointment ? 8 : 9 }} />
+                                {a.note}
+                              </Typography>
+                            )}
+                          </Box>
+
+                          {/* Right Column - Action Icons */}
+                          <Box sx={{ 
+                            display: "flex", 
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "flex-start",
+                            pt: 0.5,
+                            gap: 0.25,
+                            width: 36,
+                            flexShrink: 0,
+                            bgcolor: "#f5f5f5",
+                            borderLeft: "1px solid #e0e0e0",
+                          }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              sx={{ 
+                                p: 0.5, 
+                                minWidth: 32,
+                                height: 32,
+                                bgcolor: "transparent",
+                                borderRadius: 1.5,
+                                color: "#1976d2",
+                                "&:hover": { 
+                                  bgcolor: "rgba(25, 118, 210, 0.08)",
+                                  transform: "scale(1.1)",
+                                },
+                                transition: "all 0.2s",
+                              }}
+                            >
+                              <CallIcon sx={{ fontSize: isShortAppointment ? 14 : 16 }} />
+                            </IconButton>
+                            
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              sx={{ 
+                                p: 0.5, 
+                                minWidth: 32,
+                                height: 32,
+                                bgcolor: "transparent",
+                                borderRadius: 1.5,
+                                color: "#4a6da7",
+                                "&:hover": { 
+                                  bgcolor: "rgba(74, 109, 167, 0.08)",
+                                  transform: "scale(1.1)",
+                                },
+                                transition: "all 0.2s",
+                              }}
+                            >
+                              <ScreenShareIcon sx={{ fontSize: isShortAppointment ? 14 : 16 }} />
+                            </IconButton>
                           </Box>
                         </Paper>
                       );
@@ -549,10 +787,10 @@ const OperatoryScheduleGrid = ({
                             sx={{
                               position: "absolute",
                               top: slotIndex * SLOT_HEIGHT_WEEK_MONTH + 2,
-                              left: 2,
-                              right: 2,
+                              left: 0,
+                              right: 0,
                               height: Math.max(68, slotHeight - 2),
-                              borderRadius: 1.5,
+                              borderRadius: 0,
                               bgcolor: "#ffffff",
                               color: "#000000",
                               p: 0.75,
@@ -566,119 +804,366 @@ const OperatoryScheduleGrid = ({
                                 boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                               },
                               display: "flex",
-                              flexDirection: "column",
+                              flexDirection: "row",
+                              gap: 0.5,
                             }}
                           >
-                            {/* Animated Zebra Stripe Band */}
-                            <Box
-                              sx={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: "12px",
-                                background: `repeating-linear-gradient(
-                                  90deg,
-                                  ${statusColor} 0px,
-                                  ${statusColor} 12px,
-                                  transparent 12px,
-                                  transparent 24px
-                                )`,
-                                animation: "slide 1s linear infinite",
-                                "@keyframes slide": {
-                                  "0%": {
-                                    backgroundPosition: "0 0",
-                                  },
-                                  "100%": {
-                                    backgroundPosition: "24px 0",
-                                  },
-                                },
-                              }}
-                            />
-                            
-                            {/* Status Badge */}
-                            <Box
-                              sx={{
+                            {/* Left Column - All Content */}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              {/* Header with Patient Name and Time */}
+                              <Box sx={{ 
+                                display: "flex", 
+                                justifyContent: "space-between", 
+                                alignItems: "center", 
                                 mb: 0.5,
-                                px: 0.75,
-                                py: 0.3,
-                                borderRadius: 999,
-                                border: "1px solid rgba(0,0,0,0.3)",
-                                fontSize: 9,
-                                fontWeight: 600,
-                                letterSpacing: 0.4,
-                                textTransform: "uppercase",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 0.4,
-                                mt: 0.5,
-                              }}
-                            >
-                              <CheckCircleIcon sx={{ fontSize: 10 }} />
-                              {(a.status || "unconfirmed").toUpperCase()}
-                            </Box>
-                            
-                            {/* Patient Name */}
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.2 }}>
-                              <PersonIcon sx={{ fontSize: 11, color: "#757575" }} />
-                              <Typography
+                                pb: 0.3,
+                                borderBottom: "1px solid #e0e0e0",
+                              }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    lineHeight: 1.2,
+                                    color: "#212121",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    flex: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  {a.patientName || "Jane Smith"}
+                                </Typography>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.3 }}>
+                                  <AccessTimeIcon sx={{ fontSize: 10, color: "#757575" }} />
+                                  <Typography sx={{ fontSize: 8.5, opacity: 0.9, lineHeight: 1, color: "#424242" }}>
+                                    {dayjs(a.start).format("h:mm A")}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              
+                              {/* Animated Zebra Stripe Band with Status */}
+                              <Box
                                 sx={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  lineHeight: 1.2,
-                                  color: "#212121",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {a.patientName}
-                              </Typography>
-                            </Box>
-                            
-                            {/* Appointment Title */}
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.2 }}>
-                              <NotesIcon sx={{ fontSize: 11, color: "#757575" }} />
-                              <Typography
-                                sx={{
-                                  fontSize: 9,
-                                  lineHeight: 1.2,
-                                  color: "#424242",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {a.title}
-                              </Typography>
-                            </Box>
-                            
-                            {/* Note (if exists) */}
-                            {a.note && (
-                              <Typography
-                                sx={{
-                                  mt: 0.2,
-                                  fontSize: 8,
-                                  color: "#757575",
+                                  position: "relative",
+                                  height: "16px",
+                                  background: `repeating-linear-gradient(
+                                    90deg,
+                                    ${statusColor} 0px,
+                                    ${statusColor} 12px,
+                                    ${statusColor} 12px,
+                                    ${statusColor} 24px
+                                  )`,
+                                  animation: "slide 1s linear infinite",
+                                  "@keyframes slide": {
+                                    "0%": {
+                                      backgroundPosition: "0 0",
+                                    },
+                                    "100%": {
+                                      backgroundPosition: "24px 0",
+                                    },
+                                  },
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 0.3,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
+                                  justifyContent: "center",
                                 }}
                               >
-                                <EventNoteIcon sx={{ fontSize: 8 }} />
-                                {a.note}
-                              </Typography>
-                            )}
-                            
-                            {/* Time */}
-                            <Box sx={{ mt: "auto", pt: 0.5, display: "flex", alignItems: "center", gap: 0.5 }}>
-                              <AccessTimeIcon sx={{ fontSize: 10 }} />
-                              <Typography sx={{ fontSize: 8.5, opacity: 0.9, lineHeight: 1 }}>
-                                {dayjs(a.start).format("h:mm")} - {dayjs(a.end).format("h:mm")}
-                              </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    background: `repeating-linear-gradient(
+                                      90deg,
+                                      transparent 0px,
+                                      transparent 12px,
+                                      rgba(255, 255, 255, 0.15) 12px,
+                                      rgba(255, 255, 255, 0.15) 24px
+                                    )`,
+                                    animation: "slide 1s linear infinite",
+                                    "@keyframes slide": {
+                                      "0%": {
+                                        backgroundPosition: "0 0",
+                                      },
+                                      "100%": {
+                                        backgroundPosition: "24px 0",
+                                      },
+                                    },
+                                  }}
+                                />
+                                <Typography
+                                  sx={{
+                                    fontSize: 7,
+                                    fontWeight: 700,
+                                    letterSpacing: 0.5,
+                                    textTransform: "uppercase",
+                                    color: "#ffffff",
+                                    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                                    position: "relative",
+                                  }}
+                                >
+                                  {(a.status || "unconfirmed").toUpperCase()}
+                                </Typography>
+                              </Box>
+                              
+                              {/* Disease/Procedure Names with Status Indicators */}
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: 8,
+                                    lineHeight: 1.2,
+                                    color: "#64748b",
+                                    textTransform: "lowercase",
+                                    flex: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  {a.procedures || a.diseases || "hygiene, periodic ex, fl"}
+                                </Typography>
+                                
+                                {/* Status & Action Indicators */}
+                                <Box sx={{ display: "flex", gap: 0, alignItems: "center", flexShrink: 0 }}>
+                                  {/* Status Indicator (Solid Circle) */}
+                                  <Box
+                                    sx={{
+                                      width: 10,
+                                      height: 10,
+                                      borderRadius: "50%",
+                                      bgcolor: statusColor,
+                                      flexShrink: 0,
+                                      mr: 0.3,
+                                    }}
+                                  />
+                                  
+                                  {/* Document/Note Icon */}
+                                  <IconButton size="small" sx={{ p: 0.15, minWidth: 18, mx: 0 }}>
+                                    <EventNoteIcon sx={{ fontSize: 12, color: "#757575" }} />
+                                  </IconButton>
+                                  
+                                  {/* Dollar Sign Icon (Financial Status) */}
+                                  <IconButton size="small" sx={{ p: 0.15, minWidth: 18, mx: 0 }}>
+                                    <AttachMoneyIcon sx={{ fontSize: 12, color: "#4caf50" }} />
+                                  </IconButton>
+                                  
+                                  {/* Tx Icon (Treatment Plan) */}
+                                  <Box 
+                                    sx={{ 
+                                      display: "flex", 
+                                      alignItems: "center", 
+                                      justifyContent: "center",
+                                      minWidth: 18,
+                                      cursor: "pointer",
+                                      "&:hover": {
+                                        transform: "scale(1.1)",
+                                      },
+                                      transition: "transform 0.2s",
+                                    }}
+                                  >
+                                    <Typography sx={{ 
+                                      fontSize: 8, 
+                                      fontWeight: 700,
+                                      color: "#1976d2",
+                                      lineHeight: 1,
+                                    }}>
+                                      Tx
+                                    </Typography>
+                                  </Box>
+                                  
+                                  {/* Tooth Outline Icon (Charting) - Using Teeth Emoji */}
+                                  <Box 
+                                    sx={{ 
+                                      display: "flex", 
+                                      alignItems: "center", 
+                                      justifyContent: "center",
+                                      minWidth: 18,
+                                      cursor: "pointer",
+                                      "&:hover": {
+                                        transform: "scale(1.1)",
+                                      },
+                                      transition: "transform 0.2s",
+                                    }}
+                                  >
+                                    <Typography sx={{ fontSize: 12 }}>
+                                      🦷
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Box>
+                              
+                              {/* Appointment Status Tags */}
+                              <Box sx={{ display: "flex", gap: 0.2, mt: 0.2, flexWrap: "wrap", alignItems: "center" }}>
+                                {/* EXM / Xray Tag */}
+                                <Box
+                                  sx={{
+                                    px: 0.4,
+                                    py: 0.1,
+                                    bgcolor: "#fff3e0",
+                                    borderRadius: "2px",
+                                    border: "1px solid #ffe0b2",
+                                  }}
+                                >
+                                  <Typography sx={{ fontSize: 6.5, fontWeight: 600, color: "#e65100", lineHeight: 1 }}>
+                                    EXM
+                                  </Typography>
+                                </Box>
+                                
+                                {/* HYG / DR Tag */}
+                                <Box
+                                  sx={{
+                                    px: 0.4,
+                                    py: 0.1,
+                                    bgcolor: "#e3f2fd",
+                                    borderRadius: "2px",
+                                    border: "1px solid #bbdefb",
+                                  }}
+                                >
+                                  <Typography sx={{ fontSize: 6.5, fontWeight: 600, color: "#1565c0", lineHeight: 1 }}>
+                                    HYG
+                                  </Typography>
+                                </Box>
+                                
+                                {/* ASAP Tag */}
+                                <Box
+                                  sx={{
+                                    px: 0.4,
+                                    py: 0.1,
+                                    bgcolor: "#ffebee",
+                                    borderRadius: "2px",
+                                    border: "1px solid #ffcdd2",
+                                  }}
+                                >
+                                  <Typography sx={{ fontSize: 6.5, fontWeight: 700, color: "#c62828", lineHeight: 1 }}>
+                                    ASAP
+                                  </Typography>
+                                </Box>
+                                
+                                {/* PRE Tag (Pre-authorization) */}
+                                <Box
+                                  sx={{
+                                    px: 0.4,
+                                    py: 0.1,
+                                    bgcolor: "#f3e5f5",
+                                    borderRadius: "2px",
+                                    border: "1px solid #e1bee7",
+                                  }}
+                                >
+                                  <Typography sx={{ fontSize: 6.5, fontWeight: 600, color: "#6a1b9a", lineHeight: 1 }}>
+                                    PRE
+                                  </Typography>
+                                </Box>
+                                
+                                {/* Gift Icon (New Patient Special) */}
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 14 }}>
+                                  <Typography sx={{ fontSize: 10 }}>
+                                    🎁
+                                  </Typography>
+                                </Box>
+                                
+                                {/* Botox/Syringe Icon */}
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 14 }}>
+                                  <Typography sx={{ fontSize: 10 }}>
+                                    💉
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              
+                              {/* Emergency Icon Row */}
+                              <Box sx={{ display: "flex", mt: 0.5, justifyContent: "flex-end" }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    px: 0.4,
+                                    py: 0.15,
+                                    bgcolor: "#e0f2f1",
+                                    borderRadius: "4px",
+                                    border: "1px solid #b2dfdb",
+                                  }}
+                                >
+                                  <EmergencyIcon sx={{ fontSize: 14, color: "#00695c" }} />
+                                </Box>
+                              </Box>
+                              
+                              {/* Note (if exists) */}
+                              {a.note && (
+                                <Typography
+                                  sx={{
+                                    mt: 0.2,
+                                    fontSize: 8,
+                                    color: "#757575",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.3,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <EventNoteIcon sx={{ fontSize: 8 }} />
+                                  {a.note}
+                                </Typography>
+                              )}
+                            </Box>
+
+                            {/* Right Column - Action Icons */}
+                            <Box sx={{ 
+                              display: "flex", 
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "flex-start",
+                              pt: 0.25,
+                              gap: 0.2,
+                              width: 32,
+                              flexShrink: 0,
+                              bgcolor: "#f5f5f5",
+                              borderLeft: "1px solid #e0e0e0",
+                            }}>
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                sx={{ 
+                                  p: 0.4, 
+                                  minWidth: 28,
+                                  height: 28,
+                                  bgcolor: "transparent",
+                                  borderRadius: 1.25,
+                                  color: "#1976d2",
+                                  "&:hover": { 
+                                    bgcolor: "rgba(25, 118, 210, 0.08)",
+                                    transform: "scale(1.1)",
+                                  },
+                                  transition: "all 0.2s",
+                                }}
+                              >
+                                <CallIcon sx={{ fontSize: 12 }} />
+                              </IconButton>
+                              
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                sx={{ 
+                                  p: 0.4, 
+                                  minWidth: 28,
+                                  height: 28,
+                                  bgcolor: "transparent",
+                                  borderRadius: 1.25,
+                                  color: "#4a6da7",
+                                  "&:hover": { 
+                                    bgcolor: "rgba(74, 109, 167, 0.08)",
+                                    transform: "scale(1.1)",
+                                  },
+                                  transition: "all 0.2s",
+                                }}
+                              >
+                                <ScreenShareIcon sx={{ fontSize: 12 }} />
+                              </IconButton>
                             </Box>
                           </Paper>
                         );

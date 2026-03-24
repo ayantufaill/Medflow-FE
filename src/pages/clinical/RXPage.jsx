@@ -40,20 +40,20 @@ const RXPage = () => {
   ];
 
   return (
-    <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <Box>
       <ClinicalNavbar />
       
-      <Box sx={{ px: 4, py: 2 }}>
+      <Box sx={{ mb: 3 }}>
         {/* Header Section */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
-            RX (Prescriptions)
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-            Prescription records and medication history
-          </Typography>
-        </Box>
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+          RX (Prescriptions)
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+          Prescription records and medication history
+        </Typography>
+      </Box>
 
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <Grid container spacing={4}>
           {/* Left Column: Prescription List */}
           <Grid item xs={12} md={7}>

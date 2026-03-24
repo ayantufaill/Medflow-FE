@@ -63,9 +63,9 @@ const BiomechanicalPage = () => {
   );
 
   return (
-    <Box sx={{ backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
+    <Box>
       <ClinicalNavbar />
-      <Box sx={{ px: 4, py: 2 }}>
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
           Diagnostic Opinion
         </Typography>
@@ -76,7 +76,7 @@ const BiomechanicalPage = () => {
       <DiagnosticNavbar />
       
       {/* Risk Assessment Container */}
-      <Box sx={{ p: 4, maxWidth: 800 }}>
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         
         {/* Timeline Visualization */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 6 }}>
