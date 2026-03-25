@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -22,26 +22,27 @@ const EditUserPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
-
-  const fetchUser = async () => {
-    try {
-      const user = await userService.getUserById(userId);
-      setUser(user);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to load user data. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
-    if (userId) {
-      fetchUser();
-    }
+    if (!userId || fetchingRef.current) return;
+    fetchingRef.current = true;
+    const load = async () => {
+      try {
+        const userData = await userService.getUserById(userId);
+        setUser(userData);
+      } catch (err) {
+        setError(
+          err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            "Failed to load user data. Please try again."
+        );
+      } finally {
+        setLoading(false);
+        fetchingRef.current = false;
+      }
+    };
+    load();
   }, [userId]);
 
   const onSubmit = async (data) => {

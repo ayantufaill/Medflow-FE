@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
   Grid,
@@ -19,15 +20,19 @@ import {
   InputAdornment,
   IconButton,
   Chip,
-} from '@mui/material';
-import { Info as InfoIcon, Save as SaveIcon } from '@mui/icons-material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import dayjs from 'dayjs';
-import { providerValidations } from '../../validations/providerValidations';
-import { useUsersByRole } from '../../hooks/queries/useUsers';
-import { providerService } from '../../services/provider.service';
+} from "@mui/material";
+import { Info as InfoIcon, Save as SaveIcon } from "@mui/icons-material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import dayjs from "dayjs";
+import { providerValidations } from "../../validations/providerValidations";
+import { useUsersByRole } from "../../hooks/queries/useUsers";
+import {
+  fetchSpecialties,
+  selectSpecialties,
+  selectSpecialtiesLoading,
+} from "../../store/slices/providerSlice";
 
 // Only log in development
 const isDevelopment = import.meta.env.DEV;
@@ -46,97 +51,100 @@ const ProviderForm = ({
   formId,
   externalUsers = null,
 }) => {
-  const [userSearch, setUserSearch] = useState('');
-  const userSearchTimerRef = useRef(null);
-  const [specialtySearch, setSpecialtySearch] = useState('');
-  const specialtySearchTimerRef = useRef(null);
-  const [specialties, setSpecialties] = useState([]);
-  const [specialtiesLoading, setSpecialtiesLoading] = useState(false);
+  const dispatch = useDispatch();
+  const specialties = useSelector(selectSpecialties);
+  const specialtiesLoading = useSelector(selectSpecialtiesLoading);
 
-  // Use React Query to fetch and cache users - optimized with caching
+  const [userSearch, setUserSearch] = useState("");
+  const userSearchTimerRef = useRef(null);
+  const [specialtySearch, setSpecialtySearch] = useState("");
+
+  // In edit mode, user dropdown is disabled - no need to fetch all users.
+  // Just build a display-only entry from the provider's existing data.
+  const skipUsersFetch = isEditMode && initialData?.userId;
+
   const {
     data: allUsers = [],
-    isLoading: usersLoading,
+    isLoading: fetchingUsers,
     error: usersError,
-  } = useUsersByRole('Provider', {
-    limit: 500,
-    status: 'active',
-    excludeWithProvider: false, // Fetch all first, filter on frontend
-    enabled: externalUsers === null, // Only fetch if externalUsers not provided
+  } = useUsersByRole("Provider", {
+    limit: 100,
+    status: "active",
+    excludeWithProvider: false,
+    enabled: !skipUsersFetch && externalUsers === null,
   });
 
-  // Memoized: Filter users based on edit mode and search - only recalculates when dependencies change
+  const usersLoading = skipUsersFetch ? false : fetchingUsers;
+
   const users = useMemo(() => {
-    // Use external users if provided
-    if (externalUsers !== null) {
-      return externalUsers;
+    if (skipUsersFetch) {
+      const u = initialData.userId;
+      if (typeof u === "object" && u !== null) {
+        return [
+          {
+            _id: u._id || u.id,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email,
+          },
+        ];
+      }
+      return [{ _id: u, firstName: "", lastName: "", email: "" }];
     }
+
+    if (externalUsers !== null) return externalUsers;
 
     let filteredUsers = [...allUsers];
 
-    // If creating new provider (not edit mode), filter out users who already have providers
     if (!isEditMode) {
-      filteredUsers = filteredUsers.filter(user => {
-        return !user.hasProvider && !user.providerId;
-      });
-    }
-
-    // Apply search filter if search term is provided
-    if (userSearch && userSearch.trim()) {
-      const searchLower = userSearch.toLowerCase().trim();
-      filteredUsers = filteredUsers.filter(user => 
-        (user.firstName?.toLowerCase().includes(searchLower)) ||
-        (user.lastName?.toLowerCase().includes(searchLower)) ||
-        (user.email?.toLowerCase().includes(searchLower))
+      filteredUsers = filteredUsers.filter(
+        (user) => !user.hasProvider && !user.providerId,
       );
     }
 
-    debugLog('ProviderForm - Filtered users:', {
-      total: filteredUsers.length,
-      allUsers: allUsers.length,
-      excludeWithProvider: !isEditMode,
-      search: userSearch || '(empty)',
-    });
+    if (userSearch && userSearch.trim()) {
+      const searchLower = userSearch.toLowerCase().trim();
+      filteredUsers = filteredUsers.filter(
+        (user) =>
+          user.firstName?.toLowerCase().includes(searchLower) ||
+          user.lastName?.toLowerCase().includes(searchLower) ||
+          user.email?.toLowerCase().includes(searchLower),
+      );
+    }
 
     return filteredUsers;
-  }, [allUsers, isEditMode, userSearch, externalUsers]);
+  }, [
+    allUsers,
+    isEditMode,
+    userSearch,
+    externalUsers,
+    skipUsersFetch,
+    initialData,
+  ]);
 
   // Log errors only in development
   useEffect(() => {
     if (usersError) {
-      console.error('Error fetching users:', usersError);
+      console.error("Error fetching users:", usersError);
     }
   }, [usersError]);
 
-  const searchSpecialties = useCallback(async (search = '') => {
-    try {
-      setSpecialtiesLoading(true);
-      const result = await providerService.getSpecialties();
-      const specialtiesList = result.specialties || [];
-      if (search) {
-        const filtered = specialtiesList.filter(s => 
-          s.toLowerCase().includes(search.toLowerCase())
-        );
-        setSpecialties(filtered);
-      } else {
-        setSpecialties(specialtiesList);
-      }
-    } catch (err) {
-      console.error('Error searching specialties:', err);
-    } finally {
-      setSpecialtiesLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    searchSpecialties('');
-  }, [searchSpecialties]);
+    dispatch(fetchSpecialties());
+  }, [dispatch]);
+
+  const filteredSpecialties = useMemo(() => {
+    if (!specialtySearch) return specialties;
+    return specialties.filter((s) =>
+      s.toLowerCase().includes(specialtySearch.toLowerCase()),
+    );
+  }, [specialties, specialtySearch]);
 
   // Helper function to parse time string to dayjs
   const parseTime = (timeString) => {
     if (!timeString) return null;
     if (dayjs.isDayjs(timeString)) return timeString;
-    return dayjs(timeString, 'HH:mm');
+    return dayjs(timeString, "HH:mm");
   };
 
   const normalizeSpecialtyValue = (value) => {
@@ -144,12 +152,12 @@ const ProviderForm = ({
 
     if (Array.isArray(value)) {
       const trimmed = value
-        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .map((v) => (typeof v === "string" ? v.trim() : ""))
         .filter((v) => v.length > 0);
       return Array.from(new Set(trimmed));
     }
 
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       const trimmed = value.trim();
       return trimmed ? [trimmed] : [];
     }
@@ -160,13 +168,13 @@ const ProviderForm = ({
   // Convert backend workingHours array to frontend format (object with day keys)
   const convertWorkingHoursToFormFormat = (workingHours) => {
     const dayMap = {
-      0: 'sunday',
-      1: 'monday',
-      2: 'tuesday',
-      3: 'wednesday',
-      4: 'thursday',
-      5: 'friday',
-      6: 'saturday',
+      0: "sunday",
+      1: "monday",
+      2: "tuesday",
+      3: "wednesday",
+      4: "thursday",
+      5: "friday",
+      6: "saturday",
     };
 
     const formFormat = {
@@ -208,57 +216,77 @@ const ProviderForm = ({
   } = useForm({
     defaultValues: initialData
       ? {
-          userId: initialData.userId?._id || initialData.userId || '',
-          npiNumber: initialData.npiNumber || '',
-          licenseNumber: initialData.licenseNumber || '',
+          userId: initialData.userId?._id || initialData.userId || "",
+          npiNumber: initialData.npiNumber || "",
+          licenseNumber: initialData.licenseNumber || "",
           specialty: normalizeSpecialtyValue(initialData.specialty),
-          title: initialData.title || 'MD',
+          title: initialData.title || "MD",
           appointmentBufferMinutes: initialData.appointmentBufferMinutes || 15,
-          maxDailyAppointments: initialData.maxDailyAppointments || '',
-          consultationFee: initialData.consultationFee || '',
+          maxDailyAppointments: initialData.maxDailyAppointments || "",
+          consultationFee: initialData.consultationFee || "",
           isAcceptingNewPatients: initialData.isAcceptingNewPatients !== false,
           telehealthEnabled: initialData.telehealthEnabled || false,
           isActive: initialData.isActive !== false,
           workingHours: convertWorkingHoursToFormFormat(
-            initialData.workingHours
+            initialData.workingHours,
           ),
         }
       : {
-          userId: '',
-          npiNumber: '',
-          licenseNumber: '',
+          userId: "",
+          npiNumber: "",
+          licenseNumber: "",
           specialty: [],
-          title: 'MD',
+          title: "MD",
           appointmentBufferMinutes: 15,
-          maxDailyAppointments: '',
-          consultationFee: '',
+          maxDailyAppointments: "",
+          consultationFee: "",
           isAcceptingNewPatients: true,
           telehealthEnabled: false,
           isActive: true,
           workingHours: {
-            monday: { startTime: parseTime('09:00'), endTime: parseTime('17:00'), isAvailable: true },
-            tuesday: { startTime: parseTime('09:00'), endTime: parseTime('17:00'), isAvailable: true },
-            wednesday: { startTime: parseTime('09:00'), endTime: parseTime('17:00'), isAvailable: true },
-            thursday: { startTime: parseTime('09:00'), endTime: parseTime('17:00'), isAvailable: true },
-            friday: { startTime: parseTime('09:00'), endTime: parseTime('17:00'), isAvailable: true },
+            monday: {
+              startTime: parseTime("09:00"),
+              endTime: parseTime("17:00"),
+              isAvailable: true,
+            },
+            tuesday: {
+              startTime: parseTime("09:00"),
+              endTime: parseTime("17:00"),
+              isAvailable: true,
+            },
+            wednesday: {
+              startTime: parseTime("09:00"),
+              endTime: parseTime("17:00"),
+              isAvailable: true,
+            },
+            thursday: {
+              startTime: parseTime("09:00"),
+              endTime: parseTime("17:00"),
+              isAvailable: true,
+            },
+            friday: {
+              startTime: parseTime("09:00"),
+              endTime: parseTime("17:00"),
+              isAvailable: true,
+            },
             saturday: { startTime: null, endTime: null, isAvailable: false },
             sunday: { startTime: null, endTime: null, isAvailable: false },
           },
         },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   useEffect(() => {
     if (initialData) {
       reset({
-        userId: initialData.userId?._id || initialData.userId || '',
-        npiNumber: initialData.npiNumber || '',
-        licenseNumber: initialData.licenseNumber || '',
+        userId: initialData.userId?._id || initialData.userId || "",
+        npiNumber: initialData.npiNumber || "",
+        licenseNumber: initialData.licenseNumber || "",
         specialty: normalizeSpecialtyValue(initialData.specialty),
-        title: initialData.title || 'MD',
+        title: initialData.title || "MD",
         appointmentBufferMinutes: initialData.appointmentBufferMinutes || 15,
-        maxDailyAppointments: initialData.maxDailyAppointments || '',
-        consultationFee: initialData.consultationFee || '',
+        maxDailyAppointments: initialData.maxDailyAppointments || "",
+        consultationFee: initialData.consultationFee || "",
         isAcceptingNewPatients: initialData.isAcceptingNewPatients !== false,
         telehealthEnabled: initialData.telehealthEnabled || false,
         isActive: initialData.isActive !== false,
@@ -272,12 +300,12 @@ const ProviderForm = ({
   };
 
   const sanitizeValue = (value) =>
-    typeof value === 'string' ? value.trim() : value;
+    typeof value === "string" ? value.trim() : value;
 
   const sanitizeSpecialty = (value) => {
     const list = normalizeSpecialtyValue(value)
       .map((v) => sanitizeValue(v))
-      .filter((v) => typeof v === 'string' && v.length > 0);
+      .filter((v) => typeof v === "string" && v.length > 0);
     return Array.from(new Set(list));
   };
 
@@ -304,9 +332,9 @@ const ProviderForm = ({
         dayHours.endTime
       ) {
         const formatTime = (timeValue) => {
-          if (!timeValue) return '';
-          if (typeof timeValue === 'string') return timeValue;
-          return timeValue.format('HH:mm');
+          if (!timeValue) return "";
+          if (typeof timeValue === "string") return timeValue;
+          return timeValue.format("HH:mm");
         };
 
         backendFormat.push({
@@ -329,13 +357,13 @@ const ProviderForm = ({
 
     // Validate working hours - at least one day must be enabled
     const days = [
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-      'sunday',
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
     ];
     const hasEnabledDay = days.some((day) => {
       const dayHours = workingHours[day];
@@ -343,15 +371,15 @@ const ProviderForm = ({
       return (
         dayHours &&
         (dayHours.isAvailable === true ||
-          dayHours.isAvailable === 'true' ||
+          dayHours.isAvailable === "true" ||
           dayHours.isAvailable)
       );
     });
 
     if (!hasEnabledDay) {
-      setError('workingHours', {
-        type: 'manual',
-        message: 'At least one day must be enabled with working hours',
+      setError("workingHours", {
+        type: "manual",
+        message: "At least one day must be enabled with working hours",
       });
       return;
     }
@@ -365,35 +393,35 @@ const ProviderForm = ({
       if (
         dayHours &&
         (dayHours.isAvailable === true ||
-          dayHours.isAvailable === 'true' ||
+          dayHours.isAvailable === "true" ||
           dayHours.isAvailable)
       ) {
         if (!dayHours.startTime) {
           setError(`workingHours.${dayKey}.startTime`, {
-            type: 'manual',
-            message: 'Start time is required when day is available',
+            type: "manual",
+            message: "Start time is required when day is available",
           });
           hasWorkingHoursErrors = true;
         }
         if (!dayHours.endTime) {
           setError(`workingHours.${dayKey}.endTime`, {
-            type: 'manual',
-            message: 'End time is required when day is available',
+            type: "manual",
+            message: "End time is required when day is available",
           });
           hasWorkingHoursErrors = true;
         }
         if (dayHours.startTime && dayHours.endTime) {
           const formatTime = (timeValue) => {
-            if (!timeValue) return '';
-            if (typeof timeValue === 'string') return timeValue;
-            return timeValue.format('HH:mm');
+            if (!timeValue) return "";
+            if (typeof timeValue === "string") return timeValue;
+            return timeValue.format("HH:mm");
           };
           const startTime = formatTime(dayHours.startTime);
           const endTime = formatTime(dayHours.endTime);
           if (endTime <= startTime) {
             setError(`workingHours.${dayKey}.endTime`, {
-              type: 'manual',
-              message: 'End time must be after start time',
+              type: "manual",
+              message: "End time must be after start time",
             });
             hasWorkingHoursErrors = true;
           }
@@ -421,15 +449,14 @@ const ProviderForm = ({
     onSubmit(sanitizedData);
   };
 
-
   const daysOfWeek = [
-    { key: 'monday', label: 'Monday' },
-    { key: 'tuesday', label: 'Tuesday' },
-    { key: 'wednesday', label: 'Wednesday' },
-    { key: 'thursday', label: 'Thursday' },
-    { key: 'friday', label: 'Friday' },
-    { key: 'saturday', label: 'Saturday' },
-    { key: 'sunday', label: 'Sunday' },
+    { key: "monday", label: "Monday" },
+    { key: "tuesday", label: "Tuesday" },
+    { key: "wednesday", label: "Wednesday" },
+    { key: "thursday", label: "Thursday" },
+    { key: "friday", label: "Friday" },
+    { key: "saturday", label: "Saturday" },
+    { key: "sunday", label: "Sunday" },
   ];
 
   return (
@@ -447,7 +474,7 @@ const ProviderForm = ({
               rules={providerValidations.userId}
               render={({ field }) => {
                 const selectedUser = users.find(
-                  (u) => (u._id || u.id) === field.value
+                  (u) => (u._id || u.id) === field.value,
                 );
                 return (
                   <Autocomplete
@@ -457,28 +484,31 @@ const ProviderForm = ({
                     getOptionLabel={(option) =>
                       option
                         ? `${option.firstName} ${option.lastName} (${option.email})`
-                        : ''
+                        : ""
                     }
                     value={selectedUser || null}
                     onChange={(event, newValue) => {
                       field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
+                        newValue ? newValue._id || newValue.id : "",
                       );
                     }}
                     onInputChange={(event, newInputValue, reason) => {
                       // Debounced search - update state after 300ms of no typing
-                      if (reason === 'input') {
+                      if (reason === "input") {
                         if (userSearchTimerRef.current) {
                           clearTimeout(userSearchTimerRef.current);
                         }
                         userSearchTimerRef.current = setTimeout(() => {
                           setUserSearch(newInputValue);
                         }, 300);
-                      } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
+                      } else if (
+                        reason === "clear" ||
+                        (reason === "reset" && !newInputValue)
+                      ) {
                         if (userSearchTimerRef.current) {
                           clearTimeout(userSearchTimerRef.current);
                         }
-                        setUserSearch('');
+                        setUserSearch("");
                       }
                     }}
                     isOptionEqualToValue={(option, value) =>
@@ -505,9 +535,7 @@ const ProviderForm = ({
                       />
                     )}
                     noOptionsText={
-                      usersLoading
-                        ? 'Searching...'
-                        : 'No users found'
+                      usersLoading ? "Searching..." : "No users found"
                     }
                     filterOptions={(x) => x}
                   />
@@ -519,21 +547,29 @@ const ProviderForm = ({
             <TextField
               fullWidth
               label="NPI Number *"
-              {...register('npiNumber', providerValidations.npiNumber)}
+              {...register("npiNumber", providerValidations.npiNumber)}
               error={!!errors.npiNumber}
               helperText={errors.npiNumber?.message}
               inputProps={{ maxLength: 10 }}
               onKeyDown={(e) => {
                 if (
                   !/[0-9]/.test(e.key) &&
-                  !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) &&
+                  ![
+                    "Backspace",
+                    "Delete",
+                    "Tab",
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "Home",
+                    "End",
+                  ].includes(e.key) &&
                   !(e.ctrlKey || e.metaKey)
                 ) {
                   e.preventDefault();
                 }
               }}
               onPaste={(e) => {
-                const pastedData = e.clipboardData.getData('text');
+                const pastedData = e.clipboardData.getData("text");
                 if (!/^\d*$/.test(pastedData)) {
                   e.preventDefault();
                 }
@@ -544,7 +580,7 @@ const ProviderForm = ({
             <TextField
               fullWidth
               label="License Number *"
-              {...register('licenseNumber', providerValidations.licenseNumber)}
+              {...register("licenseNumber", providerValidations.licenseNumber)}
               error={!!errors.licenseNumber}
               helperText={errors.licenseNumber?.message}
             />
@@ -557,19 +593,17 @@ const ProviderForm = ({
               render={({ field }) => (
                 <Autocomplete
                   multiple
-                  options={specialties}
+                  options={filteredSpecialties}
                   value={field.value || []}
                   onChange={(event, newValue) => field.onChange(newValue)}
                   onInputChange={(event, newInputValue, reason) => {
-                    if (reason === 'input') {
-                      if (specialtySearchTimerRef.current) {
-                        clearTimeout(specialtySearchTimerRef.current);
-                      }
-                      specialtySearchTimerRef.current = setTimeout(() => {
-                        searchSpecialties(newInputValue);
-                      }, 300);
-                    } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
-                      searchSpecialties('');
+                    if (reason === "input") {
+                      setSpecialtySearch(newInputValue);
+                    } else if (
+                      reason === "clear" ||
+                      (reason === "reset" && !newInputValue)
+                    ) {
+                      setSpecialtySearch("");
                     }
                   }}
                   isOptionEqualToValue={(option, value) => option === value}
@@ -607,9 +641,7 @@ const ProviderForm = ({
                     />
                   )}
                   noOptionsText={
-                    specialtiesLoading
-                      ? 'Searching...'
-                      : 'No specialties found'
+                    specialtiesLoading ? "Searching..." : "No specialties found"
                   }
                   filterOptions={(x) => x}
                 />
@@ -626,7 +658,7 @@ const ProviderForm = ({
                 render={({ field }) => (
                   <Select
                     {...field}
-                    value={field.value || 'MD'}
+                    value={field.value || "MD"}
                     onChange={(e) => field.onChange(e.target.value)}
                     label="Title *"
                   >
@@ -651,8 +683,8 @@ const ProviderForm = ({
               label="Appointment Buffer (minutes) *"
               type="number"
               {...register(
-                'appointmentBufferMinutes',
-                providerValidations.appointmentBufferMinutes
+                "appointmentBufferMinutes",
+                providerValidations.appointmentBufferMinutes,
               )}
               error={!!errors.appointmentBufferMinutes}
               helperText={errors.appointmentBufferMinutes?.message}
@@ -676,8 +708,8 @@ const ProviderForm = ({
               label="Max Daily Appointments *"
               type="number"
               {...register(
-                'maxDailyAppointments',
-                providerValidations.maxDailyAppointments
+                "maxDailyAppointments",
+                providerValidations.maxDailyAppointments,
               )}
               error={!!errors.maxDailyAppointments}
               helperText={errors.maxDailyAppointments?.message}
@@ -690,8 +722,8 @@ const ProviderForm = ({
               label="Consultation Fee"
               type="number"
               {...register(
-                'consultationFee',
-                providerValidations.consultationFee
+                "consultationFee",
+                providerValidations.consultationFee,
               )}
               error={!!errors.consultationFee}
               helperText={errors.consultationFee?.message}
@@ -727,9 +759,7 @@ const ProviderForm = ({
             <FormControl fullWidth error={!!errors.isActive}>
               <FormControlLabel
                 control={
-                  <Switch
-                    defaultChecked={initialData?.isActive !== false}
-                  />
+                  <Switch defaultChecked={initialData?.isActive !== false} />
                 }
                 label="Active"
               />
@@ -743,7 +773,7 @@ const ProviderForm = ({
                 mt: 2,
                 pt: 2,
                 borderTop: 1,
-                borderColor: 'divider',
+                borderColor: "divider",
               }}
             >
               <Typography variant="h6" gutterBottom>
@@ -754,7 +784,7 @@ const ProviderForm = ({
                 day must be enabled.
               </Typography>
               {errors.workingHours &&
-                typeof errors.workingHours === 'object' &&
+                typeof errors.workingHours === "object" &&
                 errors.workingHours.message && (
                   <Typography variant="body2" color="error" sx={{ mb: 2 }}>
                     {errors.workingHours.message}
@@ -776,7 +806,7 @@ const ProviderForm = ({
                         sx={{
                           p: 2,
                           border: 1,
-                          borderColor: 'divider',
+                          borderColor: "divider",
                           borderRadius: 1,
                         }}
                       >
@@ -791,35 +821,40 @@ const ProviderForm = ({
                                   onChange={(e) => {
                                     const isChecked = e.target.checked;
                                     field.onChange(isChecked);
-                                    
+
                                     if (isChecked) {
                                       const currentValues = getValues();
-                                      const currentDayHours = currentValues.workingHours?.[dayKey];
-                                      
+                                      const currentDayHours =
+                                        currentValues.workingHours?.[dayKey];
+
                                       // Set default times if not already set
                                       const updatedWorkingHours = {
                                         ...currentValues.workingHours,
                                         [dayKey]: {
                                           isAvailable: true,
-                                          startTime: currentDayHours?.startTime || parseTime('09:00'),
-                                          endTime: currentDayHours?.endTime || parseTime('17:00'),
-                                        }
+                                          startTime:
+                                            currentDayHours?.startTime ||
+                                            parseTime("09:00"),
+                                          endTime:
+                                            currentDayHours?.endTime ||
+                                            parseTime("17:00"),
+                                        },
                                       };
-                                      
+
                                       reset({
                                         ...currentValues,
                                         workingHours: updatedWorkingHours,
                                       });
-                                      
+
                                       // Clear error when a day is enabled
                                       const days = [
-                                        'monday',
-                                        'tuesday',
-                                        'wednesday',
-                                        'thursday',
-                                        'friday',
-                                        'saturday',
-                                        'sunday',
+                                        "monday",
+                                        "tuesday",
+                                        "wednesday",
+                                        "thursday",
+                                        "friday",
+                                        "saturday",
+                                        "sunday",
                                       ];
                                       const hasEnabledDay = days.some((d) => {
                                         const dayHours = updatedWorkingHours[d];
@@ -833,7 +868,7 @@ const ProviderForm = ({
                                         hasEnabledDay &&
                                         errors.workingHours?.message
                                       ) {
-                                        clearErrors('workingHours');
+                                        clearErrors("workingHours");
                                       }
                                     }
                                   }}
@@ -868,7 +903,7 @@ const ProviderForm = ({
                                       slotProps={{
                                         textField: {
                                           fullWidth: true,
-                                          size: 'small',
+                                          size: "small",
                                           error:
                                             !!errors.workingHours?.[dayKey]
                                               ?.startTime,
@@ -899,7 +934,7 @@ const ProviderForm = ({
                                       slotProps={{
                                         textField: {
                                           fullWidth: true,
-                                          size: 'small',
+                                          size: "small",
                                           error:
                                             !!errors.workingHours?.[dayKey]
                                               ?.endTime,
@@ -925,7 +960,7 @@ const ProviderForm = ({
 
           {!hideButtons && (
             <Grid size={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
                 <Button
                   type="button"
                   variant="outlined"
@@ -947,10 +982,10 @@ const ProviderForm = ({
                   disabled={loading}
                 >
                   {loading
-                    ? 'Saving...'
+                    ? "Saving..."
                     : isEditMode
-                    ? 'Save Changes'
-                    : 'Create Provider'}
+                      ? "Save Changes"
+                      : "Create Provider"}
                 </Button>
               </Box>
             </Grid>

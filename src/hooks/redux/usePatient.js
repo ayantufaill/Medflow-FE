@@ -1,105 +1,159 @@
-/**
- * usePatient Hook - Redux + React Query Integration
- * 
- * Purpose:
- * Combines Redux state (current patient) with React Query (patient data fetching)
- * 
- * Architecture Pattern:
- * - Redux: Manages current patient selection and filters
- * - React Query: Fetches and caches patient data from API
- * - This hook: Bridges both for seamless component usage
- * 
- * Why this pattern:
- * - Redux manages which patient is selected (application state)
- * - React Query manages patient data fetching (server state)
- * - Components get both in one hook
- * 
- * @author Senior Software Engineer
- */
-
+import { useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useQuery } from '@tanstack/react-query';
 import {
+  fetchPatients,
+  fetchPatientById,
+  fetchPatientInsurances,
+  selectPatientList,
+  selectPatientPagination,
+  selectPatientFilters,
+  selectPatientListLoading,
+  selectPatientListError,
   selectCurrentPatient,
   selectSelectedPatientId,
-  selectPatientFilters,
+  selectPatientDetailLoading,
+  selectPatientDetailError,
+  selectPatientLastFetched,
+  selectPatientInsurancesCache,
   setCurrentPatient,
   setSelectedPatientId,
+  setFilters,
+  clearFilters,
+  clearCurrentPatient,
+  invalidatePatients,
+  invalidatePatientDetail,
+  invalidatePatientInsurances,
+  updatePatientInList,
+  removePatientFromList,
 } from '../../store/slices/patientSlice';
-import { patientService } from '../../services/patient.service';
 
 /**
- * Patient query keys
+ * usePatients - hook for patient list with caching
+ * 
+ * Usage:
+ * const { patients, pagination, loading, error, fetch, refetch } = usePatients();
  */
-export const patientKeys = {
-  all: ['patients'] as const,
-  lists: () => [...patientKeys.all, 'list'] as const,
-  list: (filters) => [...patientKeys.lists(), { filters }] as const,
-  details: () => [...patientKeys.all, 'detail'] as const,
-  detail: (id) => [...patientKeys.details(), id] as const,
+export const usePatients = () => {
+  const dispatch = useDispatch();
+  const patients = useSelector(selectPatientList);
+  const pagination = useSelector(selectPatientPagination);
+  const filters = useSelector(selectPatientFilters);
+  const loading = useSelector(selectPatientListLoading);
+  const error = useSelector(selectPatientListError);
+  const lastFetched = useSelector(selectPatientLastFetched);
+
+  const fetch = useCallback((params = {}) => {
+    return dispatch(fetchPatients(params));
+  }, [dispatch]);
+
+  const refetch = useCallback(() => {
+    dispatch(invalidatePatients());
+    return dispatch(fetchPatients({
+      page: pagination.page,
+      limit: pagination.limit,
+      ...filters,
+    }));
+  }, [dispatch, pagination.page, pagination.limit, filters]);
+
+  const updateFilters = useCallback((newFilters) => {
+    dispatch(setFilters(newFilters));
+  }, [dispatch]);
+
+  const resetFilters = useCallback(() => {
+    dispatch(clearFilters());
+  }, [dispatch]);
+
+  const updateInList = useCallback((patient) => {
+    dispatch(updatePatientInList(patient));
+  }, [dispatch]);
+
+  const removeFromList = useCallback((patientId) => {
+    dispatch(removePatientFromList(patientId));
+  }, [dispatch]);
+
+  return {
+    patients,
+    pagination,
+    filters,
+    loading,
+    error,
+    lastFetched,
+    fetch,
+    refetch,
+    updateFilters,
+    resetFilters,
+    updateInList,
+    removeFromList,
+  };
 };
 
 /**
- * Hook for managing current patient
- * 
- * Returns:
- * - currentPatient: Patient from Redux (if already loaded)
- * - patientData: Patient from React Query (fresh from API)
- * - isLoading: Loading state
- * - error: Error state
- * - setPatient: Function to set current patient
+ * usePatient - hook for single patient with caching
  * 
  * Usage:
- * const { currentPatient, patientData, isLoading, setPatient } = usePatient();
+ * const { patient, loading, error, setPatient } = usePatient();
  */
 export const usePatient = () => {
   const dispatch = useDispatch();
-  
-  // Get current patient from Redux
   const currentPatient = useSelector(selectCurrentPatient);
   const selectedPatientId = useSelector(selectSelectedPatientId);
-  const filters = useSelector(selectPatientFilters);
-  
-  // Fetch patient data using React Query
-  const {
-    data: patientData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: patientKeys.detail(selectedPatientId),
-    queryFn: async () => {
-      if (!selectedPatientId) return null;
-      const patient = await patientService.getPatientById(selectedPatientId);
-      return patient;
-    },
-    enabled: !!selectedPatientId, // Only fetch if ID is provided
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-  
-  // Set patient in Redux
-  const setPatient = (patient) => {
+  const loading = useSelector(selectPatientDetailLoading);
+  const error = useSelector(selectPatientDetailError);
+
+  const fetchById = useCallback((patientId) => {
+    return dispatch(fetchPatientById(patientId));
+  }, [dispatch]);
+
+  const setPatient = useCallback((patient) => {
     dispatch(setCurrentPatient(patient));
-    if (patient?._id || patient?.id) {
-      dispatch(setSelectedPatientId(patient._id || patient.id));
-    }
-  };
-  
-  // Set patient ID (triggers React Query fetch)
-  const setPatientId = (patientId) => {
-    dispatch(setSelectedPatientId(patientId));
-  };
-  
+  }, [dispatch]);
+
+  const setPatientId = useCallback((id) => {
+    dispatch(setSelectedPatientId(id));
+  }, [dispatch]);
+
+  const clear = useCallback(() => {
+    dispatch(clearCurrentPatient());
+  }, [dispatch]);
+
+  const invalidate = useCallback((patientId) => {
+    dispatch(invalidatePatientDetail(patientId));
+  }, [dispatch]);
+
   return {
-    // Use patientData from React Query if available, fallback to Redux
-    currentPatient: patientData || currentPatient,
-    patientData,
+    currentPatient,
     selectedPatientId,
-    filters,
-    isLoading,
+    loading,
     error,
+    fetchById,
     setPatient,
     setPatientId,
-    refetch,
+    clear,
+    invalidate,
   };
+};
+
+/**
+ * usePatientInsurances - hook for patient insurances with caching
+ */
+export const usePatientInsurances = () => {
+  const dispatch = useDispatch();
+  const cache = useSelector(selectPatientInsurancesCache);
+
+  const fetchInsurances = useCallback((patientId, activeOnly = false) => {
+    return dispatch(fetchPatientInsurances({ patientId, activeOnly }));
+  }, [dispatch]);
+
+  const getInsurances = useCallback((patientId) => {
+    const cached = cache[patientId];
+    if (!cached) return null;
+    if ((Date.now() - cached.timestamp) > 5 * 60 * 1000) return null; // Expired
+    return cached.data;
+  }, [cache]);
+
+  const invalidate = useCallback((patientId) => {
+    dispatch(invalidatePatientInsurances(patientId));
+  }, [dispatch]);
+
+  return { fetchInsurances, getInsurances, invalidate, cache };
 };

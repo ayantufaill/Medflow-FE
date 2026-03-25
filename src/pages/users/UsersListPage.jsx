@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import {
   Box,
   Typography,
@@ -46,7 +47,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { userService } from "../../services/user.service";
-import { roleService } from "../../services/role.service";
+import { useRoles } from "../../hooks/queries/useRoles";
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
 const UsersListPage = () => {
@@ -62,7 +63,6 @@ const UsersListPage = () => {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [roles, setRoles] = useState([]);
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     userId: null,
@@ -77,6 +77,10 @@ const UsersListPage = () => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const { data: roles = [] } = useRoles();
+  const [debouncedSearch] = useDebounce(search, 500);
+  const fetchingRef = useRef(false);
+
   const handleResetFilters = () => {
     setSearch('');
     setRoleFilter('');
@@ -86,32 +90,21 @@ const UsersListPage = () => {
 
   const hasActiveFilters = search || roleFilter || statusFilter;
 
-  // Fetch roles for filter dropdown
-  useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        const rolesData = await roleService.getAllRoles();
-        setRoles(rolesData || []);
-      } catch (err) {
-        console.error("Error fetching roles:", err);
-      }
-    };
-    fetchRoles();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       setLoading(true);
       setError("");
       const result = await userService.getAllUsers(
         page + 1,
         rowsPerPage,
-        search,
+        debouncedSearch,
         roleFilter,
         statusFilter
       );
       setUsers(result.users || []);
-      setTotalUsers(result.pagination.total || 0);
+      setTotalUsers(result.pagination?.total || 0);
     } catch (err) {
       setError(
         err.response?.data?.error?.message ||
@@ -120,24 +113,13 @@ const UsersListPage = () => {
       );
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
-  };
+  }, [page, rowsPerPage, debouncedSearch, roleFilter, statusFilter]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, rowsPerPage, roleFilter, statusFilter]);
-
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (page === 0) {
-        fetchUsers();
-      } else {
-        setPage(0);
-      }
-    }, 500);
-
-    return () => clearTimeout(debounceTimer);
-  }, [search]);
+  }, [fetchUsers]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -161,20 +143,15 @@ const UsersListPage = () => {
       setDeleteLoading(true);
       await userService.deleteUser(deleteDialog.userId);
       showSnackbar("User deleted successfully", "success");
+      setUsers((prev) => prev.filter((u) => (u._id || u.id) !== deleteDialog.userId));
+      setTotalUsers((prev) => Math.max(0, prev - 1));
       setDeleteDialog({ open: false, userId: null, userName: "" });
-      await fetchUsers();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to delete user. Please try again."
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to delete user. Please try again.",
-        "error"
-      );
+      const msg = err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        "Failed to delete user. Please try again.";
+      setError(msg);
+      showSnackbar(msg, "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -233,19 +210,13 @@ const UsersListPage = () => {
       setError("");
       await userService.activateUser(userId);
       showSnackbar(`User "${userName}" activated successfully`, "success");
-      await fetchUsers();
+      setUsers((prev) => prev.map((u) => (u._id || u.id) === userId ? { ...u, isActive: true } : u));
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to activate user. Please try again."
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to activate user. Please try again.",
-        "error"
-      );
+      const msg = err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        "Failed to activate user. Please try again.";
+      setError(msg);
+      showSnackbar(msg, "error");
     } finally {
       setStatusLoading(false);
     }
@@ -258,19 +229,13 @@ const UsersListPage = () => {
       setError("");
       await userService.deactivateUser(userId);
       showSnackbar(`User "${userName}" deactivated successfully`, "success");
-      await fetchUsers();
+      setUsers((prev) => prev.map((u) => (u._id || u.id) === userId ? { ...u, isActive: false } : u));
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to deactivate user. Please try again."
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to deactivate user. Please try again.",
-        "error"
-      );
+      const msg = err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        "Failed to deactivate user. Please try again.";
+      setError(msg);
+      showSnackbar(msg, "error");
     } finally {
       setStatusLoading(false);
     }

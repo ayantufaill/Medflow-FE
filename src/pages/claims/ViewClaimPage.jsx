@@ -93,6 +93,7 @@ const ViewClaimPage = () => {
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
 
   const fetchClaimDocuments = useCallback(async () => {
     try {
@@ -255,27 +256,7 @@ const ViewClaimPage = () => {
                     setValidationDialogOpen(true);
                     return;
                   }
-                  if (
-                    window.confirm(
-                      'Are you sure you want to submit this claim electronically? This action cannot be undone.'
-                    )
-                  ) {
-                    try {
-                      setSubmitting(true);
-                      await claimService.submitClaim(claimId);
-                      showSnackbar('Claim submitted successfully', 'success');
-                      // Refresh claim data
-                      const claimData = await claimService.getClaimById(claimId);
-                      setClaim(claimData);
-                    } catch (err) {
-                      showSnackbar(
-                        err.response?.data?.error?.message || 'Failed to submit claim',
-                        'error'
-                      );
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }
+                  setSubmitConfirmOpen(true);
                 }}
                 disabled={submitting || !validationResult || (validationResult.errors && validationResult.errors.length > 0)}
               >
@@ -740,36 +721,91 @@ const ViewClaimPage = () => {
             validationResult.errors.length === 0 && (
               <Button
                 variant="contained"
-                onClick={async () => {
+                onClick={() => {
                   setValidationDialogOpen(false);
-                  if (
-                    window.confirm(
-                      'Are you sure you want to submit this claim electronically? This action cannot be undone.'
-                    )
-                  ) {
-                    try {
-                      setSubmitting(true);
-                      await claimService.submitClaim(claimId);
-                      showSnackbar('Claim submitted successfully', 'success');
-                      const claimData = await claimService.getClaimById(claimId);
-                      setClaim(claimData);
-                      setValidationResult(null);
-                    } catch (err) {
-                      showSnackbar(
-                        err.response?.data?.error?.message || 'Failed to submit claim',
-                        'error'
-                      );
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }
+                  setSubmitConfirmOpen(true);
                 }}
                 disabled={submitting}
-                startIcon={submitting ? <CircularProgress size={20} /> : null}
               >
-                {submitting ? 'Submitting...' : 'Submit Claim'}
+                Submit Claim
               </Button>
             )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Submit Claim Confirmation Dialog */}
+      <Dialog
+        open={submitConfirmOpen}
+        onClose={() => !submitting && setSubmitConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Submit Claim to Insurance</DialogTitle>
+        <DialogContent>
+          {claim && (
+            <Box sx={{ pt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                This claim will be sent electronically to the insurance company. Once submitted, the status cannot be reverted to Draft.
+              </Typography>
+              <Box
+                component="dl"
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr',
+                  gap: '4px 16px',
+                  m: 0,
+                  '& dt': { color: 'text.secondary', typography: 'body2' },
+                  '& dd': { m: 0, typography: 'body2', fontWeight: 500 },
+                }}
+              >
+                <dt>Claim #</dt>
+                <dd>{claim.claimNumber || claim.claimCode || '—'}</dd>
+                <dt>Insurance</dt>
+                <dd>{claim.insuranceCompany?.name || claim.insuranceCompanyId?.name || '—'}</dd>
+                <dt>Amount</dt>
+                <dd>{formatCurrency(claim.submittedAmount ?? claim.claimAmount ?? claim.totalAmount ?? 0)}</dd>
+                <dt>Patient</dt>
+                <dd>
+                  {claim.patient?.firstName || claim.patientId?.firstName
+                    ? `${claim.patient?.firstName || claim.patientId?.firstName} ${claim.patient?.lastName || claim.patientId?.lastName || ''}`.trim()
+                    : '—'}
+                </dd>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Do you want to continue?
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSubmitConfirmOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              try {
+                setSubmitting(true);
+                await claimService.submitClaim(claimId);
+                setSubmitConfirmOpen(false);
+                setValidationResult(null);
+                showSnackbar('Claim submitted successfully', 'success');
+                const claimData = await claimService.getClaimById(claimId);
+                setClaim(claimData);
+              } catch (err) {
+                showSnackbar(
+                  err.response?.data?.error?.message || 'Failed to submit claim',
+                  'error'
+                );
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            disabled={submitting}
+            startIcon={submitting ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {submitting ? 'Submitting...' : 'Submit Claim'}
+          </Button>
         </DialogActions>
       </Dialog>
 

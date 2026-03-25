@@ -30,12 +30,25 @@ import CreatePracticeInfoPage from './pages/practice-info/CreatePracticeInfoPage
 import EditPracticeInfoPage from './pages/practice-info/EditPracticeInfoPage';
 import ViewPracticeInfoPage from './pages/practice-info/ViewPracticeInfoPage';
 import PatientsListPage from './pages/patients/PatientsListPage';
+import PatientManagementPage from './pages/patients/PatientManagementPage';
 import CreatePatientPage from './pages/patients/CreatePatientPage';
 import EditPatientPage from './pages/patients/EditPatientPage';
 import ViewPatientPage from './pages/patients/ViewPatientPage';
+import RedirectToPatientDetails from './pages/patients/RedirectToPatientDetails';
 import ViewPatientInsurancePage from './pages/patients/ViewPatientInsurancePage';
 import ViewPatientAllergyPage from './pages/patients/ViewPatientAllergyPage';
 import PatientMedicalHistoryPage from './pages/patients/PatientMedicalHistoryPage';
+import PatientSignedDocumentsPage from './pages/patients/PatientSignedDocumentsPage';
+import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage';
+import PatientAdditionalDocumentsPage from './pages/patients/PatientAdditionalDocumentsPage';
+import PatientDetailPage from './pages/patients/PatientDetailPage';
+import PatientReportPage from './pages/patient-reports/PatientReportPage';
+import PatientReportsPage from './pages/patient-reports/PatientReportsPage';
+import RiskAssessmentPage from './pages/patient-reports/RiskAssessmentPage';
+import HomeCarePage from './pages/patient-reports/HomeCarePage';
+import ConcernsPage from './pages/patient-reports/ConcernsPage';
+import ShowcasePage from './pages/patient-reports/ShowcasePage';
+import InsurancePage from './pages/insurance/InsurancePage';
 import AllergiesListPage from './pages/allergies/AllergiesListPage';
 import CreateAllergyPage from './pages/allergies/CreateAllergyPage';
 import EditAllergyPage from './pages/allergies/EditAllergyPage';
@@ -60,6 +73,7 @@ import EditAppointmentPage from './pages/appointments/EditAppointmentPage';
 import ViewAppointmentPage from './pages/appointments/ViewAppointmentPage';
 import SchedulePage from './pages/appointments/SchedulePage';
 import AppointmentCalendarPage from './pages/appointments/AppointmentCalendarPage';
+import OperatorySchedulePage from './pages/appointments/OperatorySchedulePage';
 import WaitlistListPage from './pages/waitlist/WaitlistListPage';
 import CreateWaitlistPage from './pages/waitlist/CreateWaitlistPage';
 import EditWaitlistPage from './pages/waitlist/EditWaitlistPage';
@@ -76,6 +90,20 @@ import ClinicalNotesListPage from './pages/clinical-notes/ClinicalNotesListPage'
 import CreateClinicalNotePage from './pages/clinical-notes/CreateClinicalNotePage';
 import EditClinicalNotePage from './pages/clinical-notes/EditClinicalNotePage';
 import ViewClinicalNotePage from './pages/clinical-notes/ViewClinicalNotePage';
+import ClinicalPage from './pages/clinical/ClinicalPage';
+import ExamPage from './pages/clinical/ExamPage';
+import DiagnosticOpinionPage from './pages/clinical/DiagnosticOpinionPage';
+import PeriodontalPage from './pages/clinical/PeriodontalPage';
+import BiomechanicalPage from './pages/clinical/BiomechanicalPage';
+import FunctionalPage from './pages/clinical/FunctionalPage';
+import DentofacialPage from './pages/clinical/DentofacialPage';
+import TreatmentPlanPage from './pages/clinical/TreatmentPlanPage';
+import AdjunctiveTherapyPage from './pages/clinical/AdjunctiveTherapyPage';
+import RXPage from './pages/clinical/RXPage';
+import ReferralPage from './pages/clinical/ReferralPage';
+import ProgressNotesPage from './pages/clinical/ProgressNotesPage';
+import LabCasePage from './pages/clinical/LabCasePage';
+import AIConversationPage from './pages/clinical/AIConversationPage';
 import VitalSignsListPage from './pages/vital-signs/VitalSignsListPage';
 import CreateVitalSignPage from './pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from './pages/vital-signs/EditVitalSignPage';
@@ -86,6 +114,7 @@ import UploadDocumentPage from './pages/documents/UploadDocumentPage';
 import EditDocumentPage from './pages/documents/EditDocumentPage';
 import ViewDocumentPage from './pages/documents/ViewDocumentPage';
 import PatientDocumentsPage from './pages/documents/PatientDocumentsPage';
+import InsuranceFormMockupPage from './pages/demo/InsuranceFormMockupPage';
 // Sprint 5 - Billing Module
 import ServicesListPage from './pages/services/ServicesListPage';
 import CreateServicePage from './pages/services/CreateServicePage';
@@ -136,6 +165,9 @@ const theme = createTheme({
     secondary: {
       main: '#dc004e',
     },
+  },
+  typography: {
+    fontFamily: '"Manrope", "Segoe UI", sans-serif',
   },
 });
 
@@ -317,6 +349,14 @@ function App() {
                 }
               />
               <Route
+                path="/demo/insurance-form"
+                element={
+                  <ProtectedRoute requireAllRoles={true}>
+                    <InsuranceFormMockupPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/profile"
                 element={
                   <ProtectedRoute requireAllRoles={true}>
@@ -431,7 +471,7 @@ function App() {
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
-                      <PatientsListPage />
+                      <PatientManagementPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -447,6 +487,16 @@ function App() {
                 }
               />
               <Route
+                path="/patients/details/:patientId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <PatientDetailPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/patients/:patientId/edit"
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
@@ -457,11 +507,21 @@ function App() {
                 }
               />
               <Route
-                path="/patients/:patientId"
+                path="/patients/:patientId/view"
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
                       <ViewPatientPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <RedirectToPatientDetails />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -492,6 +552,96 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
                     <Layout>
                       <PatientMedicalHistoryPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/signed-documents"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <PatientSignedDocumentsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/dental-history"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientDentalHistoryPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/additional-documents"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientAdditionalDocumentsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientReportPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/risk"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <RiskAssessmentPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/homecare"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <HomeCarePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/concerns"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <ConcernsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/report/showcase"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <ShowcasePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patient-reports"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                    <Layout>
+                      <PatientReportsPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -733,6 +883,16 @@ function App() {
                 }
               />
               <Route
+                path="/appointments/operatory-schedule"
+                element={
+                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                    <Layout>
+                      <OperatorySchedulePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/appointments/:appointmentId"
                 element={
                   <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
@@ -878,6 +1038,157 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
                     <Layout>
                       <ClinicalNotesListPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Clinical Page Routes */}
+              <Route
+                path="/clinical"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ClinicalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ExamPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <BiomechanicalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/periodontal"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <PeriodontalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/biomechanical"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <BiomechanicalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/functional"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <FunctionalPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/diagnostic-opinion/dentofacial"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <DentofacialPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/treatment-plan"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <TreatmentPlanPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/adjunctive-therapy"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <AdjunctiveTherapyPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/rx"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <RXPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/referral"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ReferralPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/progress-notes"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ProgressNotesPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/lab-case"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <LabCasePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/ai-conversation"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <AIConversationPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/insurance"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                    <Layout>
+                      <InsurancePage />
                     </Layout>
                   </ProtectedRoute>
                 }

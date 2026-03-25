@@ -65,6 +65,8 @@ const ViewUserPage = () => {
 
   // Menu state
   const [menuAnchor, setMenuAnchor] = useState(null);
+  const userFetchInProgressRef = useRef(false);
+  const lastFetchedUserIdRef = useRef(null);
 
   // Search and filter state for activities
   const [activitiesSearchInput, setActivitiesSearchInput] = useState('');
@@ -126,6 +128,14 @@ const ViewUserPage = () => {
   };
 
   useEffect(() => {
+    if (!userId) return;
+    if (lastFetchedUserIdRef.current !== userId) {
+      lastFetchedUserIdRef.current = userId;
+      userFetchInProgressRef.current = false;
+    }
+    if (userFetchInProgressRef.current) return;
+    userFetchInProgressRef.current = true;
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -146,12 +156,11 @@ const ViewUserPage = () => {
         );
       } finally {
         setLoading(false);
+        userFetchInProgressRef.current = false;
       }
     };
 
-    if (userId) {
-      fetchData();
-    }
+    fetchData();
   }, [userId]);
 
   // Fetch activities

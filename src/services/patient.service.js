@@ -87,6 +87,61 @@ export const patientService = {
     return response.data.data;
   },
 
+  async getPatientWorkspace(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/workspace`);
+    return response.data.data.patient;
+  },
+
+  async updatePatientWorkspace(patientId, updates) {
+    const response = await apiClient.patch(`/patients/${patientId}/workspace`, updates);
+    return response.data.data.patient;
+  },
+
+  async getPatientUpdateRequests(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/update-requests`);
+    return response.data.data.updateRequests || [];
+  },
+
+  async createPatientUpdateRequest(patientId, payload) {
+    const response = await apiClient.post(`/patients/${patientId}/update-requests`, payload);
+    return response.data.data.updateRequests || [];
+  },
+
+  async getPatientAuditHistory(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/audit-history`);
+    return response.data.data.auditEvents || [];
+  },
+
+  async getPatientCommunications(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/communications`);
+    return response.data.data.communications || [];
+  },
+
+  async createPatientCommunication(patientId, payload) {
+    const response = await apiClient.post(`/patients/${patientId}/communications/send`, payload);
+    return response.data.data.communications || [];
+  },
+
+  async getStructuredMedicalHistory(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/medical-history`);
+    return response.data.data;
+  },
+
+  async updateStructuredMedicalHistory(patientId, payload) {
+    const response = await apiClient.patch(`/patients/${patientId}/medical-history`, payload);
+    return response.data.data;
+  },
+
+  async getDentalHistory(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/dental-history`);
+    return response.data.data;
+  },
+
+  async updateDentalHistory(patientId, payload) {
+    const response = await apiClient.patch(`/patients/${patientId}/dental-history`, payload);
+    return response.data.data;
+  },
+
   // ---------------- Patient Insurance ----------------
 
   /**
@@ -233,4 +288,3 @@ export const patientService = {
     return response.data.data;
   },
 };
-

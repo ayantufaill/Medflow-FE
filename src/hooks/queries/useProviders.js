@@ -23,11 +23,11 @@ import { providerService } from '../../services/provider.service';
  * Query key factory for providers
  */
 export const providerKeys = {
-  all: ['providers'] as const,
-  lists: () => [...providerKeys.all, 'list'] as const,
-  list: (filters) => [...providerKeys.lists(), { filters }] as const,
-  details: () => [...providerKeys.all, 'detail'] as const,
-  detail: (id) => [...providerKeys.details(), id] as const,
+  all: ['providers'],
+  lists: () => [...providerKeys.all, 'list'],
+  list: (filters) => [...providerKeys.lists(), { filters }],
+  details: () => [...providerKeys.all, 'detail'],
+  detail: (id) => [...providerKeys.details(), id],
 };
 
 /**

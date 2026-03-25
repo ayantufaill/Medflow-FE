@@ -57,6 +57,7 @@ const PatientForm = ({
   isEditMode = false,
   hideButtons = false,
   formId,
+  providers = [],
 }) => {
   // State to track selected country data for phone validation
   const [selectedCountryPrimary, setSelectedCountryPrimary] = useState(null);
@@ -92,13 +93,21 @@ const PatientForm = ({
     watch,
   } = useForm({
     defaultValues: initialData || {
+      title: '',
       firstName: '',
       middleName: '',
       lastName: '',
       preferredName: '',
       dateOfBirth: null,
       gender: '',
+      sexAtBirth: '',
+      genderIdentity: '',
       ssn: '',
+      maritalStatus: '',
+      occupation: '',
+      employer: '',
+      guardianEmployer: '',
+      patientProfileType: 'adult',
       phonePrimary: '',
       phoneSecondary: '',
       email: '',
@@ -107,8 +116,18 @@ const PatientForm = ({
       portalAccessEnabled: false,
       lastVisitDate: null,
       referralSource: '',
+      preferredDentistId: '',
+      preferredHygienistId: '',
       isActive: true,
       address: {
+        line1: '',
+        line2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+      },
+      workAddress: {
+        country: '',
         line1: '',
         line2: '',
         city: '',
@@ -159,15 +178,23 @@ const PatientForm = ({
       };
 
       reset({
+        title: initialData.title || '',
         firstName: initialData.firstName || '',
         middleName: initialData.middleName || '',
         lastName: initialData.lastName || '',
         preferredName: initialData.preferredName || '',
         dateOfBirth: parseDate(initialData.dateOfBirth),
         gender: initialData.gender || '',
+        sexAtBirth: initialData.sexAtBirth || '',
+        genderIdentity: initialData.genderIdentity || '',
         ssn: initialData.ssn
           ? formatSSN(initialData.ssn.replace(/-/g, ''))
           : '',
+        maritalStatus: initialData.maritalStatus || '',
+        occupation: initialData.occupation || '',
+        employer: initialData.employer || '',
+        guardianEmployer: initialData.guardianEmployer || '',
+        patientProfileType: initialData.patientProfileType || 'adult',
         phonePrimary: initialData.phonePrimary
           ? initialData.phonePrimary.replace(/^\+/, '')
           : '',
@@ -183,6 +210,8 @@ const PatientForm = ({
             : false,
         lastVisitDate: parseDate(initialData.lastVisitDate),
         referralSource: initialData.referralSource || '',
+        preferredDentistId: initialData.preferredDentistId || '',
+        preferredHygienistId: initialData.preferredHygienistId || '',
         isActive:
           initialData.isActive !== undefined ? initialData.isActive : true,
         address: {
@@ -191,6 +220,14 @@ const PatientForm = ({
           city: initialData.address?.city || '',
           state: initialData.address?.state || '',
           postalCode: initialData.address?.postalCode || '',
+        },
+        workAddress: {
+          country: initialData.workAddress?.country || '',
+          line1: initialData.workAddress?.line1 || '',
+          line2: initialData.workAddress?.line2 || '',
+          city: initialData.workAddress?.city || '',
+          state: initialData.workAddress?.state || '',
+          postalCode: initialData.workAddress?.postalCode || '',
         },
         emergencyContact: {
           name: initialData.emergencyContact?.name || '',
@@ -525,13 +562,21 @@ const PatientForm = ({
     };
 
     const sanitizedData = {
+      title: sanitizeValue(formData.title) || '',
       firstName: sanitizeValue(formData.firstName),
       lastName: sanitizeValue(formData.lastName),
       middleName: sanitizeValue(formData.middleName) || '',
       preferredName: sanitizeValue(formData.preferredName) || '',
       dateOfBirth: formatDate(formData.dateOfBirth),
       gender: formData.gender || '',
+      sexAtBirth: formData.sexAtBirth || '',
+      genderIdentity: formData.genderIdentity || '',
       ssn: formatSSNForSubmit(formData.ssn) || '',
+      maritalStatus: sanitizeValue(formData.maritalStatus) || '',
+      occupation: sanitizeValue(formData.occupation) || '',
+      employer: sanitizeValue(formData.employer) || '',
+      guardianEmployer: sanitizeValue(formData.guardianEmployer) || '',
+      patientProfileType: sanitizeValue(formData.patientProfileType) || 'adult',
       phonePrimary: formData.phonePrimary
         ? `+${sanitizeValue(formData.phonePrimary)}`
         : '',
@@ -548,6 +593,8 @@ const PatientForm = ({
           : false,
       lastVisitDate: formatDate(formData.lastVisitDate),
       referralSource: sanitizeValue(formData.referralSource) || '',
+      preferredDentistId: formData.preferredDentistId || undefined,
+      preferredHygienistId: formData.preferredHygienistId || undefined,
       isActive: formData.isActive !== undefined ? formData.isActive : true,
       address: {
         line1: sanitizeValue(formData.address?.line1) || '',
@@ -555,6 +602,14 @@ const PatientForm = ({
         city: sanitizeValue(formData.address?.city) || '',
         state: sanitizeValue(formData.address?.state) || '',
         postalCode: sanitizeValue(formData.address?.postalCode) || '',
+      },
+      workAddress: {
+        country: sanitizeValue(formData.workAddress?.country) || '',
+        line1: sanitizeValue(formData.workAddress?.line1) || '',
+        line2: sanitizeValue(formData.workAddress?.line2) || '',
+        city: sanitizeValue(formData.workAddress?.city) || '',
+        state: sanitizeValue(formData.workAddress?.state) || '',
+        postalCode: sanitizeValue(formData.workAddress?.postalCode) || '',
       },
       emergencyContact: {
         name: sanitizeValue(formData.emergencyContact?.name) || '',
@@ -738,6 +793,13 @@ const PatientForm = ({
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
+              label="Title"
+              {...register('title')}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
               label="First Name *"
               {...register('firstName', patientValidations.firstName)}
               error={!!errors.firstName}
@@ -790,7 +852,7 @@ const PatientForm = ({
 
                 return (
                   <DatePicker
-                    label="Date of Birth *"
+                    label="Date of Birth"
                     value={dateValue}
                     onChange={(newValue) => {
                       field.onChange(newValue);
@@ -833,6 +895,44 @@ const PatientForm = ({
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Sex at Birth</InputLabel>
+              <Controller
+                name="sexAtBirth"
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label="Sex at Birth">
+                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="male">Male</MenuItem>
+                    <MenuItem value="female">Female</MenuItem>
+                    <MenuItem value="non_binary">Non-binary</MenuItem>
+                    <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
+                    <MenuItem value="unknown">Unknown</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Gender Identity</InputLabel>
+              <Controller
+                name="genderIdentity"
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label="Gender Identity">
+                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="male">Male/Man</MenuItem>
+                    <MenuItem value="female">Female/Woman</MenuItem>
+                    <MenuItem value="non_binary">Non-binary</MenuItem>
+                    <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
+                    <MenuItem value="unknown">Unknown</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="ssn"
               control={control}
@@ -855,6 +955,33 @@ const PatientForm = ({
                 />
               )}
             />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Marital Status" {...register('maritalStatus')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Occupation" {...register('occupation')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Employer" {...register('employer')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Guardian Employer" {...register('guardianEmployer')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Patient Profile Type</InputLabel>
+              <Controller
+                name="patientProfileType"
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label="Patient Profile Type">
+                    <MenuItem value="adult">Adult</MenuItem>
+                    <MenuItem value="pediatric">Pediatric</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
@@ -1183,6 +1310,32 @@ const PatientForm = ({
               variant="subtitle2"
               sx={{ mb: 1, mt: 2, fontWeight: 'medium' }}
             >
+              Work Address
+            </Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Work Country" {...register('workAddress.country')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Work Address Line 1" {...register('workAddress.line1')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Work Address Line 2" {...register('workAddress.line2')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField fullWidth label="Work City" {...register('workAddress.city')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField fullWidth label="Work State" {...register('workAddress.state')} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField fullWidth label="Work Postal Code" {...register('workAddress.postalCode')} />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{ mb: 1, mt: 2, fontWeight: 'medium' }}
+            >
               Emergency Contact
             </Typography>
           </Grid>
@@ -1353,6 +1506,48 @@ const PatientForm = ({
               })}
               error={!!errors.referralSource}
               helperText={errors.referralSource?.message}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="preferredDentistId"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth>
+                  <InputLabel>Preferred Dentist</InputLabel>
+                  <Select {...field} label="Preferred Dentist">
+                    <MenuItem value="">— None —</MenuItem>
+                    {providers.map((p) => {
+                      const u = p.userId || p;
+                      const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || p.providerCode || p._id;
+                      return (
+                        <MenuItem key={p._id} value={p._id}>{name}</MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="preferredHygienistId"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth>
+                  <InputLabel>Preferred Hygienist</InputLabel>
+                  <Select {...field} label="Preferred Hygienist">
+                    <MenuItem value="">— None —</MenuItem>
+                    {providers.map((p) => {
+                      const u = p.userId || p;
+                      const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || p.providerCode || p._id;
+                      return (
+                        <MenuItem key={p._id} value={p._id}>{name}</MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              )}
             />
           </Grid>
           <Grid size={{ xs: 12 }}>

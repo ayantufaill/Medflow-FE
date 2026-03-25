@@ -86,9 +86,8 @@ export const patientValidations = {
     },
   },
   dateOfBirth: {
-    required: 'Date of birth is required',
     validate: (value) => {
-      if (!value) return 'Date of birth is required';
+      if (!value) return true;
       const date = new Date(value);
       if (isNaN(date.getTime())) return 'Invalid date';
       const today = new Date();

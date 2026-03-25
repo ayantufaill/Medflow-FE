@@ -103,36 +103,48 @@ const RecordPaymentPage = () => {
 
   const paymentMethod = watch('paymentMethod');
 
-  // Fetch patients with pending bills
+  // Fetch patients with pending bills (include draft invoices; fetch multiple pages so no invoice is missed)
   useEffect(() => {
     const fetchPatientsWithBills = async () => {
       try {
         setLoadingPatients(true);
-        // Use limit 100 (backend maximum) instead of 1000
         const result = await patientService.getAllPatients(1, 100);
         const allPatients = result.patients || [];
-        
-        // Get all invoices to calculate outstanding balances (use limit 100)
-        const invoicesResult = await invoiceService.getAllInvoices({ page: 1, limit: 100 });
-        const allInvoices = invoicesResult.invoices || [];
-        
-        // Calculate outstanding balance for each patient
-        const patientsWithBalances = allPatients.map(patient => {
-          const patientInvoices = allInvoices.filter(
-            inv => (inv.patientId?._id || inv.patientId?.id || inv.patientId) === (patient._id || patient.id)
-          );
+
+        // Fetch multiple pages of invoices so draft/new invoices (e.g. $300) are included
+        let allInvoices = [];
+        let page = 1;
+        const maxPages = 10;
+        while (page <= maxPages) {
+          const invoicesResult = await invoiceService.getAllInvoices({ page, limit: 100 });
+          const list = invoicesResult.invoices || [];
+          allInvoices = allInvoices.concat(list);
+          if (list.length < 100) break;
+          page += 1;
+        }
+
+        const toId = (v) => (v == null ? '' : String(v));
+
+        // Calculate outstanding balance for each patient (include draft; match patientId as string)
+        const patientsWithBalances = allPatients.map((patient) => {
+          const pid = toId(patient._id || patient.id);
+          const patientInvoices = allInvoices.filter((inv) => {
+            const invPid = toId(inv.patientId?._id ?? inv.patientId?.id ?? inv.patientId);
+            return invPid === pid;
+          });
           const outstandingBalance = patientInvoices.reduce((sum, inv) => {
-            return sum + (inv.balanceDue || inv.totalAmount - (inv.paidAmount || 0));
+            const due = inv.balanceDue ?? (inv.totalAmount || 0) - (inv.paidAmount || 0);
+            return sum + (Number(due) || 0);
           }, 0);
-          
+
           return {
             ...patient,
-            outstandingBalance: outstandingBalance > 0 ? outstandingBalance : 0
+            outstandingBalance: outstandingBalance > 0 ? outstandingBalance : 0,
           };
         });
-        
+
         // Filter to only show patients with pending bills
-        const patientsWithBills = patientsWithBalances.filter(p => p.outstandingBalance > 0);
+        const patientsWithBills = patientsWithBalances.filter((p) => p.outstandingBalance > 0);
         setPatients(patientsWithBills);
       } catch (err) {
         console.error('Error fetching patients:', err);

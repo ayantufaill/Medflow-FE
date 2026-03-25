@@ -29,7 +29,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 
 const InvoiceForm = ({
   onSubmit,
@@ -39,10 +39,11 @@ const InvoiceForm = ({
   hideButtons = false,
   formId,
 }) => {
+  // Redux cached providers (no extra API call)
+  const { providers, providersLoading: loadingProviders } = useDropdownData({ providers: true });
+
   const [patients, setPatients] = useState([]);
-  const [providers, setProviders] = useState([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
-  const [loadingProviders, setLoadingProviders] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [lineItems, setLineItems] = useState(initialData?.lineItems || []);
@@ -60,7 +61,7 @@ const InvoiceForm = ({
     },
   });
 
-  // Fetch patients
+  // Fetch patients only (providers come from Redux)
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -74,22 +75,6 @@ const InvoiceForm = ({
       }
     };
     fetchPatients();
-  }, []);
-
-  // Fetch providers
-  useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        setLoadingProviders(true);
-        const result = await providerService.getAllProviders(1, 100, '', true);
-        setProviders(result.providers || []);
-      } catch (err) {
-        console.error('Error fetching providers:', err);
-      } finally {
-        setLoadingProviders(false);
-      }
-    };
-    fetchProviders();
   }, []);
 
   const handleBack = () => {

@@ -10,6 +10,7 @@ import {
   Box,
   Typography,
   Avatar,
+  Tooltip,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -43,68 +44,70 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
-const drawerWidth = 280;
+// Sidebar widths for desktop expanded and collapsed states
+const DRAWER_WIDTH_EXPANDED = 280;
+const DRAWER_WIDTH_COLLAPSED = 64;
 
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
   // { text: 'Patients', icon: <People />, path: '/patients' },
-  { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },
-  {
+  // { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },
+  /*{
     text: 'Appointment Types',
     icon: <CalendarToday />,
     path: '/appointment-types',
     adminOnly: true,
-  },
-  {
+  },*/
+  /*{
     text: 'Rooms',
     icon: <MeetingRoom />,
     path: '/rooms',
     requiredRoles: ['Admin'],
-  },
-  { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
+  },*/
+ // { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
   {
     text: 'Patients',
     icon: <People />,
     path: '/patients',
     requiredRoles: ['Admin', 'Receptionist', 'Doctor'],
   },
-  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
+  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments/operatory-schedule', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
   // {
   //   text: 'Calendar',
   //   icon: <CalendarMonth />,
   //   path: '/appointments/calendar',
   // },
-  {
+  /*{
     text: 'Waitlist',
     icon: <Queue />,
     path: '/waitlist',
     requiredRoles: ['Admin', 'Receptionist'],
-  },
-  {
+  },*/
+  /*{
     text: 'Recurring Appointments',
     icon: <EventRepeat />,
     path: '/recurring-appointments',
     requiredRoles: ['Admin', 'Receptionist'],
-  },
-  {
+  },*/
+  /*{
     text: 'Portal Messages',
     icon: <Forum />,
     path: '/portal-messages',
     requiredRoles: ['Admin', 'Provider', 'Doctor'],
-  },
-  {
+  },*/
+  /*{
     text: 'Note Templates',
     icon: <Note />,
     path: '/note-templates',
     requiredRoles: ['Admin', 'Doctor'],
-  },
-  {
+  },*/
+  /*{
     text: 'Clinical Notes',
     icon: <Description />,
     path: '/clinical-notes',
     requiredRoles: ['Admin', 'Doctor'],
-  },
+  },*/
   // {
   //   text: 'Vital Signs',
   //   icon: <MonitorHeart />,
@@ -117,7 +120,7 @@ const menuItems = [
   //   path: '/documents',
   //   requiredRoles: ['Admin', 'Doctor', 'Nurse'],
   // },
-  {
+  /*{
     text: 'Service Catalog',
     icon: <MedicalServices />,
     path: '/services',
@@ -128,56 +131,62 @@ const menuItems = [
     icon: <Receipt />,
     path: '/invoices',
     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-  },
-  {
+  },*/
+ /* {
     text: 'Payments',
     icon: <Payment />,
     path: '/payments',
     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-  },
-  {
+  },*/
+  /*{
     text: 'Estimates',
     icon: <RequestQuote />,
     path: '/estimates',
     requiredRoles: ['Admin', 'Billing', 'Doctor'],
-  },
-  { text: 'Reports', icon: <Assessment />, path: '/reports' },
-  { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
-  {
+  },*/
+  //{ text: 'Reports', icon: <Assessment />, path: '/reports' },
+  { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
+  { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
+  { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
+ // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
+  /*{
     text: 'Practice Info',
     icon: <Business />,
     path: '/practice-info',
     requiredRoles: ['Admin'],
-  },
-  {
+  },*/
+  /*{
     text: 'Insurance Companies',
     icon: <AccountBalance />,
     path: '/insurance-companies',
     requiredRoles: ['Admin'],
-  },
+  },*/
   // Sprint 6 - Claims Management
-  {
+  /*{
     text: 'Claims',
     icon: <Assignment />,
     path: '/claims',
     requiredRoles: ['Admin', 'Billing'],
-  },
+  },*/
   // Sprint 6 - ERA/EOB Processing
-  {
+  /*{
     text: 'ERA/EOB',
     icon: <CloudUpload />,
     path: '/era',
     requiredRoles: ['Admin', 'Billing'],
-  },
+  },*/
   // Sprint 6 - Authorization Management
-  {
+  /*{
     text: 'Authorizations',
     icon: <VerifiedUser />,
     path: '/authorizations',
     requiredRoles: ['Admin', 'Billing', 'Front Desk'],
-  },
+  },*/
 ];
 
+// open: controls desktop sidebar — true = expanded (full), false = collapsed (icons only)
+// mobileOpen: controls the temporary mobile drawer
+// onClose: closes the mobile drawer
 const Sidebar = ({ open, onClose, mobileOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -204,6 +213,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
 
   const handleNavigation = (path) => {
     navigate(path);
+    // On mobile, close the drawer after navigating
     if (isMobile) {
       onClose();
     }
@@ -226,17 +236,34 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
     return 'U';
   };
 
-  const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Logo Section */}
+  // Wraps an icon-only item in a Tooltip when the sidebar is collapsed on desktop.
+  // On mobile or when expanded, Tooltip is a passthrough (no title shown).
+  const WithTooltip = ({ title, children }) => {
+    const showTooltip = !isMobile && !open;
+    return showTooltip ? (
+      <Tooltip title={title} placement="right" arrow>
+        {children}
+      </Tooltip>
+    ) : (
+      children
+    );
+  };
+
+  // Shared drawer content — rendered for both mobile and desktop drawers.
+  // `isCollapsed` drives whether to show icons-only or icons+text layout.
+  const DrawerContent = ({ isCollapsed }) => (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* Logo Section — shows full brand name when expanded, icon only when collapsed */}
       <Box
         sx={{
           p: 2,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
           gap: 1,
-          // borderBottom: '1px solid',
           borderColor: 'divider',
+          minHeight: 64,
         }}
       >
         <Box
@@ -251,106 +278,143 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             color: '#fff',
             fontWeight: 'bold',
             fontSize: '1rem',
+            flexShrink: 0,
           }}
         >
           MF
         </Box>
-        <Typography variant="h6" fontWeight={600} color="primary">
-          MedFlow
-        </Typography>
+        {/* Hide brand text when collapsed */}
+        {!isCollapsed && (
+          <Typography variant="h6" fontWeight={600} color="primary" noWrap>
+            MedFlow
+          </Typography>
+        )}
       </Box>
 
-      {/* User Profile Section */}
+      {/* User Profile Section — avatar + info when expanded, avatar only when collapsed */}
       {user && (
-        <Box
-          sx={{
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <Avatar
+        <WithTooltip title={`${user.firstName} ${user.lastName}`}>
+          <Box
             sx={{
-              width: 48,
-              height: 48,
-              bgcolor: theme.palette.primary.main,
-              fontSize: '1rem',
+              p: isCollapsed ? 1 : 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              gap: 2,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
             }}
           >
-            {getUserInitials()}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" fontWeight="bold" noWrap>
-              {user.firstName} {user.lastName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {user.email}
-            </Typography>
+            <Avatar
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: theme.palette.primary.main,
+                fontSize: '1rem',
+                flexShrink: 0,
+              }}
+            >
+              {getUserInitials()}
+            </Avatar>
+            {/* Hide name/email when collapsed */}
+            {!isCollapsed && (
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="subtitle2" fontWeight="bold" noWrap>
+                  {user.firstName} {user.lastName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {user.email}
+                </Typography>
+              </Box>
+            )}
           </Box>
-        </Box>
+        </WithTooltip>
       )}
 
       {/* Navigation Menu */}
-      <List sx={{ flex: 1, pt: 1, overflowY: 'auto' }}>
+      <List sx={{ flex: 1, pt: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {menuItems
           .filter((item) => {
             // For backward compatibility
             if (item.adminOnly) {
               return hasRequiredRole(['Admin']);
             }
-
             // Check if item has role restrictions
             return hasRequiredRole(item.requiredRoles);
           })
           .map((item) => {
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== '/dashboard' &&
-                location.pathname.startsWith(item.path));
+            // Special handling for paths that could conflict
+            const isExactMatch = location.pathname === item.path;
+            const isStartsWithMatch =
+              item.path !== '/dashboard' &&
+              location.pathname.startsWith(item.path + '/');
+
+            let isActive = false;
+
+            if (item.path === '/patients') {
+              // Check if we're on a patient report page
+              const isPatientReport = location.pathname.match(/^\/patients\/\d+\/report/);
+              if (!isPatientReport && (isExactMatch || isStartsWithMatch)) {
+                isActive = true;
+              }
+            } else if (item.path === '/patient-reports') {
+              // Match /patient-reports OR /patients/:id/report/*
+              const isPatientReportRoute = location.pathname.match(/^\/patients\/\d+\/report/);
+              if (isExactMatch || isPatientReportRoute) {
+                isActive = true;
+              }
+            } else if (isStartsWithMatch || isExactMatch) {
+              isActive = true;
+            }
+
             return (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton
-                  onClick={() => handleNavigation(item.path)}
-                  selected={isActive}
-                  sx={{
-                    mx: 1,
-                    mb: 0.5,
-                    borderRadius: 1,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.primary.main + '15',
-                      color: theme.palette.primary.main,
-                      '&:hover': {
-                        backgroundColor: theme.palette.primary.main + '25',
-                      },
-                      '& .MuiListItemIcon-root': {
-                        color: theme.palette.primary.main,
-                      },
-                    },
-                  }}
-                >
-                  <ListItemIcon
+              <WithTooltip key={item.text} title={item.text}>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleNavigation(item.path)}
+                    selected={isActive}
                     sx={{
-                      color: isActive ? theme.palette.primary.main : 'inherit',
-                      minWidth: 40,
+                      // Center icons when collapsed, left-align when expanded
+                      mx: 1,
+                      mb: 0.5,
+                      borderRadius: 1,
+                      justifyContent: isCollapsed ? 'center' : 'flex-start',
+                      px: isCollapsed ? 1 : 2,
+                      '&.Mui-selected': {
+                        backgroundColor: theme.palette.primary.main + '15',
+                        color: theme.palette.primary.main,
+                        '&:hover': {
+                          backgroundColor: theme.palette.primary.main + '25',
+                        },
+                        '& .MuiListItemIcon-root': {
+                          color: theme.palette.primary.main,
+                        },
+                      },
                     }}
                   >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
+                    <ListItemIcon
+                      sx={{
+                        color: isActive ? theme.palette.primary.main : 'inherit',
+                        // Remove extra left margin when collapsed so icon is truly centered
+                        minWidth: isCollapsed ? 'unset' : 40,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    {/* Hide label when collapsed */}
+                    {!isCollapsed && <ListItemText primary={item.text} />}
+                  </ListItemButton>
+                </ListItem>
+              </WithTooltip>
             );
           })}
       </List>
 
       <Divider />
 
-      {/* Bottom Menu Items */}
+      {/* Bottom Menu Items (Profile, Change Password, Sign Out) */}
       <List>
-        {/* Define bottom menu items with role restrictions */}
         {[
           {
             text: 'My Profile',
@@ -367,38 +431,64 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
         ]
           .filter((item) => hasRequiredRole(item.requiredRoles))
           .map((item) => (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation(item.path)}
-                sx={{ mx: 1, mb: 0.5, borderRadius: 1 }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
-            </ListItem>
+            <WithTooltip key={item.text} title={item.text}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => handleNavigation(item.path)}
+                  sx={{
+                    mx: 1,
+                    mb: 0.5,
+                    borderRadius: 1,
+                    justifyContent: isCollapsed ? 'center' : 'flex-start',
+                    px: isCollapsed ? 1 : 2,
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: isCollapsed ? 'unset' : 40,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!isCollapsed && <ListItemText primary={item.text} />}
+                </ListItemButton>
+              </ListItem>
+            </WithTooltip>
           ))}
 
         <Divider sx={{ my: 1 }} />
 
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={handleLogout}
-            sx={{
-              mx: 1,
-              mb: 1,
-              borderRadius: 1,
-              color: 'error.main',
-              '&:hover': {
-                backgroundColor: 'error.main' + '15',
-              },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
-              <ExitToApp />
-            </ListItemIcon>
-            <ListItemText primary="Sign Out" />
-          </ListItemButton>
-        </ListItem>
+        {/* Sign Out button */}
+        <WithTooltip title="Sign Out">
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={handleLogout}
+              sx={{
+                mx: 1,
+                mb: 1,
+                borderRadius: 1,
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                px: isCollapsed ? 1 : 2,
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.main' + '15',
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: isCollapsed ? 'unset' : 40,
+                  justifyContent: 'center',
+                  color: 'error.main',
+                }}
+              >
+                <ExitToApp />
+              </ListItemIcon>
+              {!isCollapsed && <ListItemText primary="Sign Out" />}
+            </ListItemButton>
+          </ListItem>
+        </WithTooltip>
       </List>
     </Box>
   );
@@ -406,42 +496,50 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
   return (
     <Box
       component="nav"
-      sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
+      sx={{
+        // Desktop: reserve space for the sidebar (width animates with the drawer)
+        width: { md: open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED },
+        flexShrink: { md: 0 },
+        transition: 'width 0.2s ease',
+      }}
     >
-      {/* Mobile drawer */}
+      {/* Mobile drawer — temporary, slides in from the left */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
         onClose={onClose}
-        ModalProps={{
-          keepMounted: true,
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            width: drawerWidth,
+            width: DRAWER_WIDTH_EXPANDED,
           },
         }}
       >
-        {drawer}
+        {/* Mobile always shows full content */}
+        <DrawerContent isCollapsed={false} />
       </Drawer>
 
-      {/* Desktop drawer */}
+      {/* Desktop drawer — permanent, animates between collapsed and expanded widths */}
       <Drawer
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            width: drawerWidth,
+            // Animate the paper width for a smooth slide effect
+            width: open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED,
+            transition: 'width 0.2s ease',
+            overflowX: 'hidden',
             borderRight: '1px solid',
             borderColor: 'divider',
           },
         }}
         open
       >
-        {drawer}
+        {/* Pass isCollapsed so content adapts to show icons-only or full layout */}
+        <DrawerContent isCollapsed={!open} />
       </Drawer>
     </Box>
   );

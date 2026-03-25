@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Box,
@@ -22,7 +22,7 @@ import {
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { userValidations } from "../../validations/userValidations";
-import { roleService } from "../../services/role.service";
+import { useRoles } from "../../hooks/queries/useRoles";
 
 const UserForm = ({
   onSubmit,
@@ -37,22 +37,10 @@ const UserForm = ({
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [roles, setRoles] = useState([]);
-  // State to track selected country data for phone validation
   const [selectedCountry, setSelectedCountry] = useState(null);
 
-  useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        const allRoles = await roleService.getAllRoles();
-        setRoles(allRoles.filter((role) => role.isActive !== false));
-      } catch (err) {
-        console.error("Error fetching roles:", err);
-      }
-    };
-
-    fetchRoles();
-  }, []);
+  const { data: allRoles = [] } = useRoles();
+  const roles = useMemo(() => allRoles.filter((role) => role.isActive !== false), [allRoles]);
 
   const {
     register,

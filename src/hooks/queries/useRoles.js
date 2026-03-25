@@ -24,11 +24,11 @@ import { roleService } from '../../services/role.service';
  * Centralized query keys prevent typos and enable easy invalidation
  */
 export const roleKeys = {
-  all: ['roles'] as const,
-  lists: () => [...roleKeys.all, 'list'] as const,
-  list: (filters) => [...roleKeys.lists(), { filters }] as const,
-  details: () => [...roleKeys.all, 'detail'] as const,
-  detail: (id) => [...roleKeys.details(), id] as const,
+  all: ['roles'],
+  lists: () => [...roleKeys.all, 'list'],
+  list: (filters) => [...roleKeys.lists(), { filters }],
+  details: () => [...roleKeys.all, 'detail'],
+  detail: (id) => [...roleKeys.details(), id],
 };
 
 /**
