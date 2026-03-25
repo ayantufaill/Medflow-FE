@@ -1,12 +1,6 @@
 import { Box, Typography, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-
-const sectionTitleSx = {
-  fontSize: '0.95rem',
-  fontWeight: 700,
-  color: 'primary.main',
-  mb: 1.5,
-};
+import { sectionTitleSx } from '../../constants/styles';
 
 /**
  * Family Members (Add New, list area, "(One HOH per family)").

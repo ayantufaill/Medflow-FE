@@ -1,6 +1,7 @@
 import { Box, Typography, TextField, InputAdornment } from '@mui/material';
 import { KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material';
 import { InlineFieldRow, standardFieldSx } from './InlineField';
+import { sectionTitleSx, labelSx } from '../../constants/styles';
 
 const PhoneField = ({ value, label }) => (
   <InlineFieldRow
@@ -39,7 +40,7 @@ export default function ContactInformationSection({ patient }) {
       <Typography
         variant="subtitle1"
         fontWeight={700}
-        sx={{ mb: 2, color: 'primary.main', fontSize: '0.95rem' }}
+        sx={{ mb: 2, ...sectionTitleSx }}
       >
         Contact Information
       </Typography>
@@ -51,7 +52,7 @@ export default function ContactInformationSection({ patient }) {
         <Typography
           variant="body2"
           fontWeight={600}
-          sx={{ mt: 2.5, mb: 1, color: 'text.secondary', fontSize: '0.875rem' }}
+          sx={{ mt: 2.5, mb: 1, ...labelSx }}
         >
           Patient&apos;s Address
         </Typography>
@@ -76,7 +77,7 @@ export default function ContactInformationSection({ patient }) {
         <Typography
           variant="body2"
           fontWeight={600}
-          sx={{ mt: 2.5, mb: 1, color: 'text.secondary', fontSize: '0.875rem' }}
+          sx={{ mt: 2.5, mb: 1, ...labelSx }}
         >
           Work Address
         </Typography>

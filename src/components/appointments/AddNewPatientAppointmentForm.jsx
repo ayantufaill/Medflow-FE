@@ -32,9 +32,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import dayjs from "dayjs";
 import Autocomplete from "@mui/material/Autocomplete";
-
-const FONT_SM = { fontSize: "11px" };
-const FONT_XS = { fontSize: "10px" };
+import { FONT_SM, FONT_XS } from "../../constants/styles";
 
 // Valid status values accepted by the backend API
 const STATUS_OPTIONS = [

@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material';
 import { InlineFieldRow } from './InlineField';
+import { sectionTitleSx } from '../../constants/styles';
 
 /**
  * Emergency Contact – underlined input style.
@@ -12,7 +13,7 @@ export default function EmergencyContactSection({ patient }) {
       <Typography
         variant="subtitle1"
         fontWeight={700}
-        sx={{ mb: 2, color: 'primary.main', fontSize: '0.95rem' }}
+        sx={{ mb: 2, ...sectionTitleSx }}
       >
         Emergency Contact
       </Typography>

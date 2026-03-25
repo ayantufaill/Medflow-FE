@@ -180,7 +180,7 @@ const InsurancePage = () => {
   const currentTabData = getTabData();
 
   return (
-    <Box sx={{ p: 4, bgcolor: 'white', minHeight: '100vh' }}>
+    <Box sx={{ p: 2, bgcolor: 'white', minHeight: '100vh' }}>
       {/* Snackbar Notification */}
       {snackbar.open && (
         <Alert severity={snackbar.severity} sx={{ mb: 2 }}>
@@ -190,7 +190,7 @@ const InsurancePage = () => {
 
       {/* Top Header Section */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: '#333' }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#333' }}>
           Insurance
         </Typography>
         
@@ -222,7 +222,7 @@ const InsurancePage = () => {
               borderColor: '#ccc', 
               textTransform: 'none', 
               borderRadius: '8px',
-              fontSize: '0.85rem'
+              fontSize: '0.8rem'
             }}
           >
             View In Old Design
@@ -255,54 +255,54 @@ const InsurancePage = () => {
 
       {/* The Table */}
       <TableContainer component={Paper} elevation={0} sx={{ border: 'none' }}>
-        <Table sx={{ minWidth: 650 }}>
+        <Table size="small" sx={{ minWidth: 650 }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#fbfbfb' }}>
-              <TableCell sx={{ color: '#888', fontSize: '0.75rem', fontWeight: 600 }}>PAYER/CARRIER</TableCell>
-              <TableCell align="center" sx={{ color: '#888', fontSize: '0.75rem', fontWeight: 600 }}>PLAN</TableCell>
-              <TableCell sx={{ color: '#888', fontSize: '0.75rem', fontWeight: 600 }}>SUBSCRIBER</TableCell>
+            <TableRow sx={{ bgcolor: '#fbfbfb', '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: '#888', whiteSpace: 'nowrap' } }}>
+              <TableCell>PAYER/CARRIER</TableCell>
+              <TableCell align="center">PLAN</TableCell>
+              <TableCell>SUBSCRIBER</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
           <TableBody>
             {currentTabData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 4, color: '#999' }}>
+                <TableCell colSpan={4} align="center" sx={{ py: 3, fontSize: '0.78rem', color: '#999' }}>
                   No coverages found in this tab
                 </TableCell>
               </TableRow>
             ) : (
               currentTabData.map((row) => (
-                <TableRow key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ fontSize: '0.875rem', color: '#444' }}>
+                <TableRow key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '& .MuiTableCell-body': { py: 0.75 } }}>
+                  <TableCell sx={{ fontSize: '0.78rem', color: '#444' }}>
                     {row.payer}
                   </TableCell>
-                  
+
                   <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                      <Chip 
-                        label={row.plan} 
-                        sx={{ 
-                          bgcolor: row.status === 'active' ? '#e8f5e9' : '#fff3e0', 
-                          color: row.status === 'active' ? '#2e7d32' : '#f57c00', 
-                          fontWeight: 700, 
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+                      <Chip
+                        label={row.plan}
+                        sx={{
+                          bgcolor: row.status === 'active' ? '#e8f5e9' : '#fff3e0',
+                          color: row.status === 'active' ? '#2e7d32' : '#f57c00',
+                          fontWeight: 700,
                           fontSize: '0.65rem',
-                          height: 24
-                        }} 
+                          height: 20,
+                        }}
                       />
                       {row.dentist && (
                         <Box sx={{ textAlign: 'left' }}>
-                          <Typography component="span" sx={{ fontSize: '0.85rem', color: '#2e7d32', fontWeight: 500 }}>
-                            Check Eligibility with 
+                          <Typography component="span" sx={{ fontSize: '0.78rem', color: '#2e7d32', fontWeight: 500 }}>
+                            Check Eligibility with{' '}
                           </Typography>
-                          <Typography 
-                            component="span" 
-                            sx={{ fontSize: '0.85rem', color: '#666', ml: 0.5, textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+                          <Typography
+                            component="span"
+                            sx={{ fontSize: '0.78rem', color: '#666', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
                             onClick={() => handleCheckEligibility(row)}
                           >
-                            {row.dentist} <KeyboardArrowDownIcon sx={{ fontSize: 16, verticalAlign: 'middle' }} />
+                            {row.dentist} <KeyboardArrowDownIcon sx={{ fontSize: 14, verticalAlign: 'middle' }} />
                           </Typography>
-                          <Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#aaa' }}>
                             Eligibility Checked on {row.eligibilityChecked}
                           </Typography>
                         </Box>
@@ -317,34 +317,34 @@ const InsurancePage = () => {
                     </Box>
                   </TableCell>
 
-                  <TableCell sx={{ fontSize: '0.875rem', color: '#444' }}>
+                  <TableCell sx={{ fontSize: '0.78rem', color: '#444' }}>
                     {row.subscriber}
                   </TableCell>
 
                   <TableCell align="right">
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                      <Button 
-                        variant="outlined" 
+                    <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <Button
+                        variant="outlined"
                         size="small"
                         onClick={() => handleViewCoverage(row)}
-                        sx={{ borderRadius: '20px', textTransform: 'none', fontWeight: 700, borderColor: '#1a237e', color: '#1a237e' }}
+                        sx={{ borderRadius: '20px', textTransform: 'none', fontWeight: 700, fontSize: '0.72rem', py: 0.25, px: 1.25, borderColor: '#1a237e', color: '#1a237e' }}
                       >
                         View
                       </Button>
                       {row.status !== 'archived' && (
                         <>
-                          <Button 
-                            variant="outlined" 
+                          <Button
+                            variant="outlined"
                             size="small"
                             onClick={() => handleDeactivate(row)}
-                            sx={{ borderRadius: '20px', textTransform: 'none', fontWeight: 700, borderColor: '#ccc', color: '#888' }}
+                            sx={{ borderRadius: '20px', textTransform: 'none', fontWeight: 700, fontSize: '0.72rem', py: 0.25, px: 1.25, borderColor: '#ccc', color: '#888' }}
                           >
                             Deactivate
                           </Button>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={(e) => handleRowMenuOpen(e, row)}
-                            sx={{ border: '1px solid #ccc' }}
+                            sx={{ border: '1px solid #ccc', p: 0.25 }}
                           >
                             <KeyboardArrowDownIcon fontSize="small" />
                           </IconButton>

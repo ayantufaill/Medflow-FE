@@ -1,12 +1,6 @@
 import { Box, Typography, Avatar, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { getInitials } from './utils';
-
-const sectionTitleSx = {
-  fontSize: '0.95rem',
-  fontWeight: 700,
-  color: 'primary.main',
-  mb: 1.5,
-};
+import { sectionTitleSx } from '../../constants/styles';
 
 export default function HeadOfCommunicationSection({ patient }) {
   const head = patient?.headOfCommunication;

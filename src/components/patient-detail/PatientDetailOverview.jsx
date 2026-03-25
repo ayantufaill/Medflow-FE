@@ -19,7 +19,7 @@ function SpouseInformationSection() {
 function SpouseInformationSectionContent({ patient }) {
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ fontSize: '0.95rem', fontWeight: 700, color: 'primary.main', mb: 1.5 }}>
+      <Typography variant="subtitle1" sx={{ fontSize: '0.875rem', fontWeight: 700, color: 'primary.main', mb: 1.5 }}>
         Spouse Information
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>

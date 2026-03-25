@@ -10,6 +10,7 @@ import {
 import { CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { formatDate } from './utils';
 import { InlineFieldRow, standardFieldSx, labelWidth } from './InlineField';
+import { sectionTitleSx, labelSx } from '../../constants/styles';
 
 /**
  * Patient Details: demographics with underlined input style.
@@ -23,8 +24,7 @@ export default function PatientDetailsSection({ patient, patientNumber }) {
     <Box>
       <Typography
         variant="subtitle1"
-        fontWeight={700}
-        sx={{ mb: 2, color: 'primary.main', fontSize: '0.95rem' }}
+        sx={{ mb: 2, ...sectionTitleSx }}
       >
         Patient Details {patientNumber != null ? `(pt #${patientNumber})` : ''}
       </Typography>
@@ -65,11 +65,11 @@ export default function PatientDetailsSection({ patient, patientNumber }) {
             gridTemplateColumns: `${labelWidth}px 1fr`,
             gap: 1,
             alignItems: 'center',
-            py: 1.25,
-            minHeight: 44,
+            py: 0.75,
+            minHeight: 36,
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>
+          <Typography sx={labelSx}>
             Sex at Birth:
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
@@ -86,11 +86,11 @@ export default function PatientDetailsSection({ patient, patientNumber }) {
             gridTemplateColumns: `${labelWidth}px 1fr`,
             gap: 1,
             alignItems: 'flex-start',
-            py: 1.25,
-            minHeight: 44,
+            py: 0.75,
+            minHeight: 36,
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem', pt: 0.5 }}>
+          <Typography sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem', pt: 0.5 }}>
             Gender Identity:
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>

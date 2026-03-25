@@ -1,13 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { formatDate } from './utils';
 import { InlineFieldRow } from './InlineField';
-
-const sectionTitleSx = {
-  fontSize: '0.95rem',
-  fontWeight: 700,
-  color: 'primary.main',
-  mb: 1.5,
-};
+import { sectionTitleSx } from '../../constants/styles';
 
 /**
  * Additional Information (and optionally Spouse Information).

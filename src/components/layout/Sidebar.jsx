@@ -257,13 +257,13 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
       {/* Logo Section — shows full brand name when expanded, icon only when collapsed */}
       <Box
         sx={{
-          p: 2,
+          p: 1.5,
           display: 'flex',
           alignItems: 'center',
           justifyContent: isCollapsed ? 'center' : 'flex-start',
           gap: 1,
           borderColor: 'divider',
-          minHeight: 64,
+          minHeight: 52,
         }}
       >
         <Box
@@ -296,21 +296,21 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
         <WithTooltip title={`${user.firstName} ${user.lastName}`}>
           <Box
             sx={{
-              p: isCollapsed ? 1 : 2,
+              p: isCollapsed ? 1 : 1.5,
               display: 'flex',
               alignItems: 'center',
               justifyContent: isCollapsed ? 'center' : 'flex-start',
-              gap: 2,
+              gap: 1.5,
               borderBottom: '1px solid',
               borderColor: 'divider',
             }}
           >
             <Avatar
               sx={{
-                width: 48,
-                height: 48,
+                width: 36,
+                height: 36,
                 bgcolor: theme.palette.primary.main,
-                fontSize: '1rem',
+                fontSize: '0.875rem',
                 flexShrink: 0,
               }}
             >
@@ -332,7 +332,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
       )}
 
       {/* Navigation Menu */}
-      <List sx={{ flex: 1, pt: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      <List dense sx={{ flex: 1, pt: 0.5, overflowY: 'auto', overflowX: 'hidden' }}>
         {menuItems
           .filter((item) => {
             // For backward compatibility
@@ -375,11 +375,12 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
                     selected={isActive}
                     sx={{
                       // Center icons when collapsed, left-align when expanded
-                      mx: 1,
-                      mb: 0.5,
+                      mx: 0.5,
+                      mb: 0.25,
                       borderRadius: 1,
+                      py: 0.5,
                       justifyContent: isCollapsed ? 'center' : 'flex-start',
-                      px: isCollapsed ? 1 : 2,
+                      px: isCollapsed ? 1 : 1.5,
                       '&.Mui-selected': {
                         backgroundColor: theme.palette.primary.main + '15',
                         color: theme.palette.primary.main,
@@ -414,7 +415,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
       <Divider />
 
       {/* Bottom Menu Items (Profile, Change Password, Sign Out) */}
-      <List>
+      <List dense>
         {[
           {
             text: 'My Profile',
@@ -457,7 +458,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             </WithTooltip>
           ))}
 
-        <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 0.5 }} />
 
         {/* Sign Out button */}
         <WithTooltip title="Sign Out">

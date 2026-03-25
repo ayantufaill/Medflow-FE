@@ -22,7 +22,7 @@ export default function PatientSummaryCard({ patient, onBalance, onProfileClick 
         {getInitials(patient?.firstName, patient?.lastName)}
       </Avatar>
       <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ color: 'grey.900', lineHeight: 1.3, fontSize: '1.15rem' }}>
+        <Typography variant="h6" fontWeight={700} sx={{ color: 'grey.900', lineHeight: 1.3, fontSize: '1rem' }}>
           {patient?.firstName} {patient?.lastName}{ageText}
         </Typography>
         <Typography variant="body2" sx={{ mt: 0.5, color: 'grey.600' }}>

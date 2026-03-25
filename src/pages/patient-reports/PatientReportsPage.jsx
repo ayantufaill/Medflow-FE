@@ -80,7 +80,7 @@ const PatientReportsPage = () => {
 
   return (
     <Box>
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 2 } }}>
         {/* Row 1: Search + Status Filter */}
         <Grid container spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 7 }}>
@@ -141,9 +141,9 @@ const PatientReportsPage = () => {
         </Grid>
 
         <TableContainer>
-          <Table>
+          <Table size="small">
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' } }}>
                 <TableCell>Patient Number</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
@@ -154,35 +154,26 @@ const PatientReportsPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, fontSize: '0.8rem' }}>
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredPatients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, fontSize: '0.8rem' }}>
                     No patients found
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedPatients.map((patient) => (
-                  <TableRow key={patient._id || patient.id} hover>
+                  <TableRow key={patient._id || patient.id} hover sx={{ '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' } }}>
+                    <TableCell>{patient.patientCode || '-'}</TableCell>
                     <TableCell>
-                      {patient.patientCode || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar 
-                          sx={{ 
-                            width: 32, 
-                            height: 32, 
-                            bgcolor: 'primary.main',
-                            fontSize: '0.875rem'
-                          }}
-                        >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
                           {getPatientInitials(patient.firstName, patient.lastName)}
                         </Avatar>
-                        <Typography variant="body2">
+                        <Typography fontSize="0.78rem">
                           {patient.firstName} {patient.lastName}
                         </Typography>
                       </Box>
@@ -193,8 +184,9 @@ const PatientReportsPage = () => {
                       <Button
                         variant="outlined"
                         size="small"
-                        startIcon={<Visibility />}
+                        startIcon={<Visibility fontSize="small" />}
                         onClick={() => handleViewReport(patient._id || patient.id)}
+                        sx={{ fontSize: '0.75rem', py: 0.25, px: 1 }}
                       >
                         View Report
                       </Button>

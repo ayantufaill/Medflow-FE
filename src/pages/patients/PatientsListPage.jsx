@@ -355,11 +355,12 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                 </Box>
               )}
               <TableContainer>
-                <Table>
+                <Table size="small">
                   <TableHead>
-                    <TableRow>
+                    <TableRow sx={{ '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' } }}>
                       <TableCell padding="checkbox">
                         <Checkbox
+                          size="small"
                           indeterminate={selectedIds.length > 0 && selectedIds.length < displayPatients.length}
                           checked={displayPatients.length > 0 && selectedIds.length === displayPatients.length}
                           onChange={handleSelectAll}
@@ -379,8 +380,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                   <TableBody>
                     {displayPatients.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
-                          <Typography color="text.secondary">No patients found</Typography>
+                        <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                          <Typography color="text.secondary" fontSize="0.8rem">No patients found</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -392,22 +393,23 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                             key={pid}
                             hover
                             selected={isSelected}
-                            sx={{ cursor: 'pointer' }}
+                            sx={{ cursor: 'pointer', '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' } }}
                             onClick={() => handlePatientClick(pid, patient)}
                           >
                             <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                               <Checkbox
+                                size="small"
                                 checked={isSelected}
                                 onChange={() => handleSelectOne(pid)}
                               />
                             </TableCell>
                             <TableCell>{patient.patientCode || '-'}</TableCell>
                             <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.875rem' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
                                   {getPatientInitials(patient.firstName, patient.lastName)}
                                 </Avatar>
-                                <Typography variant="body2">{patient.firstName} {patient.lastName}</Typography>
+                                <Typography fontSize="0.78rem">{patient.firstName} {patient.lastName}</Typography>
                               </Box>
                             </TableCell>
                             <TableCell>{computeAge(patient.dateOfBirth)}</TableCell>
@@ -420,14 +422,16 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                 size="small"
                                 label={patient.isActive !== false ? 'Active' : 'Inactive'}
                                 color={patient.isActive !== false ? 'success' : 'default'}
+                                sx={{ height: 18, fontSize: '0.68rem' }}
                               />
                             </TableCell>
                             <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                               <IconButton
                                 size="small"
+                                sx={{ p: 0.25 }}
                                 onClick={(e) => handleActionMenuOpen(e, pid, `${patient.firstName} ${patient.lastName}`, patient.isActive)}
                               >
-                                <MoreVertIcon />
+                                <MoreVertIcon fontSize="small" />
                               </IconButton>
                             </TableCell>
                           </TableRow>

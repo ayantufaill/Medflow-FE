@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
 import { Button } from '@mui/material';
+import { fontSize, fontWeight } from '../../constants/styles';
 
 const PatientReportPage = () => {
   const { patientId, reportSection } = useParams();
@@ -51,10 +52,10 @@ const PatientReportPage = () => {
       
       {/* Header */}
       <Box sx={{ mb: 2 }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+        <Typography fontWeight={fontWeight.bold} sx={{ fontSize: fontSize.lg, color: '#1a2735' }} gutterBottom>
           Dental Assessment Report
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+        <Typography color="text.secondary" sx={{ fontSize: fontSize.md }}>
           Comprehensive visual dental health evaluation
         </Typography>
       </Box>

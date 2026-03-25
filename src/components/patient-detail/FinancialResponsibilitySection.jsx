@@ -1,12 +1,6 @@
 import { Box, Typography, RadioGroup, FormControlLabel, Radio } from '@mui/material';
 import { Info as InfoIcon } from '@mui/icons-material';
-
-const sectionTitleSx = {
-  fontSize: '0.95rem',
-  fontWeight: 700,
-  color: 'primary.main',
-  mb: 1.5,
-};
+import { sectionTitleSx } from '../../constants/styles';
 
 export default function FinancialResponsibilitySection({ patient }) {
   const responsibility = patient?.financialResponsibility || {};

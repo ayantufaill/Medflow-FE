@@ -33,6 +33,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import PatientChat from "../shared/PatientChat";
 import AppointmentPage from "../shared/AppointmentPage";
+import { compactInputLabelSx, compactInputValueSx, fontSize, fontWeight } from "../../constants/styles";
 
 const StyledDateCalendar = ({ value, onChange }) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -291,7 +292,7 @@ const OperatorySidebar = ({
 
         {showQuickCreate && (
           <Box sx={{ p: 2 }}>
-            <Typography sx={{ fontSize: 13, color: "#64748b", mb: 1.5, fontWeight: 500 }}>
+            <Typography sx={{ fontSize: '0.8rem', color: "#64748b", mb: 1.5, fontWeight: 500 }}>
               Create New Patient
             </Typography>
             <Grid container spacing={2}>
@@ -309,9 +310,9 @@ const OperatorySidebar = ({
                   onBlur={() => setIsCreatingPatient(false)}
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
-                    "& .MuiInputBase-input": { 
-                      fontSize: "0.88rem",
+                    "& .MuiInputLabel-root": compactInputLabelSx,
+                    "& .MuiInputBase-input": {
+                      ...compactInputValueSx,
                       py: 0.35,
                     },
                   }}
@@ -331,9 +332,9 @@ const OperatorySidebar = ({
                   onBlur={() => setIsCreatingPatient(false)}
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
-                    "& .MuiInputBase-input": { 
-                      fontSize: "0.88rem",
+                    "& .MuiInputLabel-root": compactInputLabelSx,
+                    "& .MuiInputBase-input": {
+                      ...compactInputValueSx,
                       py: 0.35,
                     },
                   }}
@@ -354,9 +355,9 @@ const OperatorySidebar = ({
                   onBlur={() => setIsCreatingPatient(false)}
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
-                    "& .MuiInputBase-input": { 
-                      fontSize: "0.88rem",
+                    "& .MuiInputLabel-root": compactInputLabelSx,
+                    "& .MuiInputBase-input": {
+                      ...compactInputValueSx,
                       py: 0.35,
                     },
                   }}
@@ -398,9 +399,9 @@ const OperatorySidebar = ({
                     ),
                   }}
                   sx={{
-                    "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
-                    "& .MuiInputBase-input": { 
-                      fontSize: "0.88rem",
+                    "& .MuiInputLabel-root": compactInputLabelSx,
+                    "& .MuiInputBase-input": {
+                      ...compactInputValueSx,
                       py: 0.35,
                     },
                   }}
@@ -421,9 +422,9 @@ const OperatorySidebar = ({
                   onBlur={() => setIsCreatingPatient(false)}
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    "& .MuiInputLabel-root": { fontSize: 13, fontWeight: 500, color: "#5f6670" },
-                    "& .MuiInputBase-input": { 
-                      fontSize: "0.88rem",
+                    "& .MuiInputLabel-root": compactInputLabelSx,
+                    "& .MuiInputBase-input": {
+                      ...compactInputValueSx,
                       py: 0.35,
                     },
                   }}
@@ -437,7 +438,7 @@ const OperatorySidebar = ({
                       checked={sendWelcomeEmail}
                       onChange={(e) => setSendWelcomeEmail(e.target.checked)}
                     />
-                    <Typography sx={{ fontSize: "0.64rem", color: "#475569", fontWeight: 600 }}>
+                    <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontWeight: 600 }}>
                       Send welcome email
                     </Typography>
                   </Box>
@@ -447,7 +448,7 @@ const OperatorySidebar = ({
                       checked={isNewPatient}
                       onChange={(e) => setIsNewPatient(e.target.checked)}
                     />
-                    <Typography sx={{ fontSize: "0.64rem", color: "#475569", fontWeight: 600 }}>
+                    <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontWeight: 600 }}>
                       New patient
                     </Typography>
                   </Box>
@@ -466,7 +467,7 @@ const OperatorySidebar = ({
                     textTransform: "none",
                     bgcolor: "#d8b16b",
                     "&:hover": { bgcolor: "#c49c56" },
-                    fontSize: "0.88rem",
+                    fontSize: "0.8rem",
                     py: 0.65,
                     mt: 1,
                   }}
@@ -505,7 +506,7 @@ const OperatorySidebar = ({
                   borderRadius: 1.5,
                   bgcolor: "#1976d2",
                   "&:hover": { bgcolor: "#1565c0" },
-                  fontSize: '0.85rem',
+                  fontSize: '0.8rem',
                   py: 0.75,
                 }}
               >
@@ -535,7 +536,7 @@ const OperatorySidebar = ({
 
                 {/* Patient Info Paper */}
                 <Paper elevation={0} sx={{ flexGrow: 1, p: 1.5, border: '1px solid #cbd5e1', borderRadius: 1.5 }}>
-                  <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#1e293b' }}>
                     {selectedPatient?.firstName && selectedPatient?.lastName 
                       ? `${selectedPatient.firstName} ${selectedPatient.lastName}` 
                       : selectedPatient?.name || 'Patient'} (#1218)
@@ -635,7 +636,7 @@ const OperatorySidebar = ({
                     onChange={(e) => setAppointmentStatus(e.target.value)}
                     size="small"
                     fullWidth
-                    sx={{ height: 32, fontSize: '0.85rem', mb: 1, borderRadius: 1 }}
+                    sx={{ height: 32, fontSize: '0.8rem', mb: 1, borderRadius: 1 }}
                   >
                     <MenuItem value="unconfirmed">Unconfirmed</MenuItem>
                     <MenuItem value="preconfirmed">Pre-Confirmed</MenuItem>
@@ -658,7 +659,7 @@ const OperatorySidebar = ({
                     </IconButton>
                   </Box>
 
-                  <Typography sx={{ fontSize: '0.85rem', color: '#1e293b', mb: 1 }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#1e293b', mb: 1 }}>
                     hygiene, periodic ex, fl
                   </Typography>
 
@@ -699,7 +700,7 @@ const OperatorySidebar = ({
                     <Typography
                       variant="subtitle2"
                       sx={{
-                        fontSize: 13,
+                        fontSize: '0.8rem',
                         fontWeight: 600,
                         color: "#475569",
                       }}
@@ -761,7 +762,7 @@ const OperatorySidebar = ({
                           px: 1,
                         }}
                       >
-                        <Typography sx={{ fontSize: 12, color: "#475569" }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: "#475569" }}>
                           {item.label}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1 }}>
@@ -868,7 +869,7 @@ const OperatorySidebar = ({
                     <Typography
                       variant="subtitle2"
                       sx={{
-                        fontSize: 13,
+                        fontSize: '0.8rem',
                         fontWeight: 600,
                         color: "#475569",
                       }}
@@ -1051,7 +1052,7 @@ const OperatorySidebar = ({
                     <Typography
                       variant="subtitle2"
                       sx={{
-                        fontSize: 13,
+                        fontSize: '0.8rem',
                         fontWeight: 600,
                         color: "#475569",
                       }}
@@ -1099,7 +1100,7 @@ const OperatorySidebar = ({
                           px: 1,
                         }}
                       >
-                        <Typography sx={{ fontSize: 12, color: "#475569" }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: "#475569" }}>
                           {item.label}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1 }}>
@@ -1177,31 +1178,31 @@ const OperatorySidebar = ({
 
               <Box sx={{ mb: 2 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: 13 }}>ReAppointment</InputLabel>
+                  <InputLabel sx={{ fontSize: '0.8rem' }}>ReAppointment</InputLabel>
                   <Select
                     label="ReAppointment"
                     defaultValue=""
-                    sx={{ borderRadius: 1.5, fontSize: 13 }}
+                    sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
                   >
                     <MenuItem value="" disabled>
                       Schedule follow-up
                     </MenuItem>
-                    <MenuItem value="1week" sx={{ fontSize: 13 }}>
+                    <MenuItem value="1week" sx={{ fontSize: '0.8rem' }}>
                       In 1 Week
                     </MenuItem>
-                    <MenuItem value="2weeks" sx={{ fontSize: 13 }}>
+                    <MenuItem value="2weeks" sx={{ fontSize: '0.8rem' }}>
                       In 2 Weeks
                     </MenuItem>
-                    <MenuItem value="1month" sx={{ fontSize: 13 }}>
+                    <MenuItem value="1month" sx={{ fontSize: '0.8rem' }}>
                       In 1 Month
                     </MenuItem>
-                    <MenuItem value="3months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="3months" sx={{ fontSize: '0.8rem' }}>
                       In 3 Months
                     </MenuItem>
-                    <MenuItem value="6months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="6months" sx={{ fontSize: '0.8rem' }}>
                       In 6 Months
                     </MenuItem>
-                    <MenuItem value="1year" sx={{ fontSize: 13 }}>
+                    <MenuItem value="1year" sx={{ fontSize: '0.8rem' }}>
                       In 1 Year
                     </MenuItem>
                   </Select>
@@ -1210,28 +1211,28 @@ const OperatorySidebar = ({
 
               <Box sx={{ mb: 2 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: 13 }}>Recare</InputLabel>
+                  <InputLabel sx={{ fontSize: '0.8rem' }}>Recare</InputLabel>
                   <Select
                     label="Recare"
                     defaultValue=""
-                    sx={{ borderRadius: 1.5, fontSize: 13 }}
+                    sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
                   >
                     <MenuItem value="" disabled>
                       Set recare interval
                     </MenuItem>
-                    <MenuItem value="3months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="3months" sx={{ fontSize: '0.8rem' }}>
                       Every 3 Months
                     </MenuItem>
-                    <MenuItem value="4months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="4months" sx={{ fontSize: '0.8rem' }}>
                       Every 4 Months
                     </MenuItem>
-                    <MenuItem value="6months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="6months" sx={{ fontSize: '0.8rem' }}>
                       Every 6 Months
                     </MenuItem>
-                    <MenuItem value="9months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="9months" sx={{ fontSize: '0.8rem' }}>
                       Every 9 Months
                     </MenuItem>
-                    <MenuItem value="12months" sx={{ fontSize: 13 }}>
+                    <MenuItem value="12months" sx={{ fontSize: '0.8rem' }}>
                       Every 12 Months
                     </MenuItem>
                   </Select>
@@ -1240,35 +1241,35 @@ const OperatorySidebar = ({
 
               <Box sx={{ mb: 2 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: 13 }}>Family Appointment</InputLabel>
+                  <InputLabel sx={{ fontSize: '0.8rem' }}>Family Appointment</InputLabel>
                   <Select
                     label="Family Appointment"
                     defaultValue=""
-                    sx={{ borderRadius: 1.5, fontSize: 13 }}
+                    sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
                   >
                     <MenuItem value="" disabled>
                       Schedule family members
                     </MenuItem>
-                    <MenuItem value="add" sx={{ fontSize: 13 }}>
+                    <MenuItem value="add" sx={{ fontSize: '0.8rem' }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <PersonIcon sx={{ fontSize: 16, color: "#64748b" }} />
                         Add Family Member
                       </Box>
                     </MenuItem>
-                    <MenuItem value="scheduleTogether" sx={{ fontSize: 13 }}>
+                    <MenuItem value="scheduleTogether" sx={{ fontSize: '0.8rem' }}>
                       Schedule Together
                     </MenuItem>
-                    <MenuItem value="backToBack" sx={{ fontSize: 13 }}>
+                    <MenuItem value="backToBack" sx={{ fontSize: '0.8rem' }}>
                       Back-to-Back Appointments
                     </MenuItem>
                     <Divider />
                     <MenuItem disabled sx={{ fontSize: 12, color: "#94a3b8" }}>
                       Family Members:
                     </MenuItem>
-                    <MenuItem value="richard" sx={{ fontSize: 13, pl: 3 }}>
+                    <MenuItem value="richard" sx={{ fontSize: '0.8rem', pl: 3 }}>
                       Richard Chen
                     </MenuItem>
-                    <MenuItem value="william" sx={{ fontSize: 13, pl: 3 }}>
+                    <MenuItem value="william" sx={{ fontSize: '0.8rem', pl: 3 }}>
                       William Taylor
                     </MenuItem>
                   </Select>

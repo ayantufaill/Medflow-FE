@@ -136,7 +136,7 @@ export default function PatientDetailActions({
             bgcolor: 'primary.main',
             color: 'white',
             fontWeight: 700,
-            fontSize: '0.9rem',
+            fontSize: '0.875rem',
             py: 1.25,
             opacity: 1,
           }}
@@ -156,7 +156,7 @@ export default function PatientDetailActions({
             <ListItemText
               primary={label}
               secondary={`(Sent ${sent})`}
-              primaryTypographyProps={{ fontSize: '0.875rem' }}
+              primaryTypographyProps={{ fontSize: '0.8rem' }}
               secondaryTypographyProps={{ color: 'grey.600', fontSize: '0.8rem' }}
             />
           </MenuItem>
@@ -168,13 +168,13 @@ export default function PatientDetailActions({
           <ListItemIcon sx={{ minWidth: 40 }}>
             <Checkbox checked={requestChecks.tdsFinancial} size="small" disableRipple />
           </ListItemIcon>
-          <ListItemText primary="TDS Financial Agreement" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+          <ListItemText primary="TDS Financial Agreement" primaryTypographyProps={{ fontSize: '0.8rem' }} />
         </MenuItem>
         <MenuItem dense onClick={() => toggleRequest('hipaa2026')} sx={{ py: 0.75 }}>
           <ListItemIcon sx={{ minWidth: 40 }}>
             <Checkbox checked={requestChecks.hipaa2026} size="small" disableRipple />
           </ListItemIcon>
-          <ListItemText primary="HIPAA 2026" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+          <ListItemText primary="HIPAA 2026" primaryTypographyProps={{ fontSize: '0.8rem' }} />
         </MenuItem>
         <Box sx={{ display: 'flex', gap: 1, p: 1.5, flexWrap: 'wrap', borderTop: 1, borderColor: 'divider' }}>
           <Button
