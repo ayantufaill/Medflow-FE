@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import {
   Box,
@@ -87,7 +87,12 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 // Main Component
 const OperatorySchedulePage = () => {
   const { showSnackbar } = useSnackbar();
-  const { providers } = useDropdownData({ providers: true });
+  // Stable ref so useEffects can call showSnackbar without it being a dependency
+  // (showSnackbar is not memoized in SnackbarContext, causing infinite loops if used in deps).
+  const showSnackbarRef = useRef(showSnackbar);
+  useEffect(() => { showSnackbarRef.current = showSnackbar; });
+
+  const { providers, rooms, appointmentTypes } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
   const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
@@ -182,12 +187,9 @@ const OperatorySchedulePage = () => {
   const searchSidebarPatients = useCallback(async (search = "") => {
     try {
       setLoadingSidebarPatients(true);
-      const result = await patientService.getAllPatients(
-        1,
-        20,
-        search,
-        "active",
-      );
+      // No status filter — matches the patients table which shows all patients
+      // regardless of isActive, so seeded/imported patients are included.
+      const result = await patientService.getAllPatients(1, 20, search, "");
       setSidebarPatients(result.patients || []);
     } catch (err) {
       console.error("Error searching sidebar patients:", err);
@@ -237,12 +239,8 @@ const OperatorySchedulePage = () => {
   const searchFormPatients = useCallback(async (search = "") => {
     try {
       setLoadingFormPatients(true);
-      const result = await patientService.getAllPatients(
-        1,
-        20,
-        search,
-        "active",
-      );
+      // No status filter — same as sidebar, includes seeded/imported patients
+      const result = await patientService.getAllPatients(1, 20, search, "");
       setFormPatients(result.patients || []);
     } catch (err) {
       console.error("Error searching patients:", err);
@@ -261,25 +259,9 @@ const OperatorySchedulePage = () => {
     searchSidebarPatients("");
   }, []);
 
-  // Auto-select first patient when sidebar patients are loaded
-  useEffect(() => {
-    if (sidebarPatients.length > 0 && !selectedPatientId) {
-      const firstPatient = sidebarPatients[0];
-      const patientId = firstPatient._id || firstPatient.id;
-      const patientName = firstPatient.firstName && firstPatient.lastName
-        ? `${firstPatient.firstName} ${firstPatient.lastName}`
-        : firstPatient.name || "";
-      
-      setSelectedPatientId(patientId);
-      setPatientQuery(patientName);
-      
-      console.log("Auto-selected first patient:", {
-        id: patientId,
-        name: patientName,
-        totalPatients: sidebarPatients.length
-      });
-    }
-  }, [sidebarPatients]);
+  // No auto-selection — the search box should start empty so the user
+  // can pick a patient manually. Auto-selecting was causing the first
+  // patient's name to appear pre-filled in the sidebar search input.
 
   const initialFormDateTime = useMemo(
     () =>
@@ -290,129 +272,93 @@ const OperatorySchedulePage = () => {
     [selectedDate],
   );
 
-  // Load real appointments for selected patient
+  // Maps a raw appointment object from the API into the shape the grid expects
+  const mapAppointment = (a) => {
+    try {
+      const iso = String(a.appointmentDate || "");
+      const dateOnly = iso.includes("T") ? iso.split("T")[0] : iso.slice(0, 10);
+      if (!dateOnly) return null;
+
+      const startObj = a.startTime ? dayjs(`${dateOnly}T${a.startTime}`) : null;
+      if (!startObj || !startObj.isValid()) return null;
+
+      const endObj = a.endTime
+        ? dayjs(`${dateOnly}T${a.endTime}`)
+        : startObj.add(a.durationMinutes || SLOT_MINUTES, "minute");
+      if (!endObj.isValid()) return null;
+
+      const fullName =
+        (a.patientId &&
+          (a.patientId.firstName || a.patientId.lastName) &&
+          `${a.patientId.firstName || ""} ${a.patientId.lastName || ""}`.trim()) ||
+        a.patientName ||
+        "";
+      const initials = fullName
+        ? fullName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+        : "PT";
+
+      // Distribute appointments across operatory columns based on providerId index
+      const rawProviderId = a.providerId && (a.providerId._id || a.providerId.id);
+      const providerNum = rawProviderId ? Number(rawProviderId) : NaN;
+      const colIndex =
+        Number.isFinite(providerNum) && providerNum > 0
+          ? (providerNum - 1) % OPERATORY_COLUMNS.length
+          : 0;
+      const columnId = a.operatoryId || OPERATORY_COLUMNS[colIndex]?.id || "op1";
+
+      return {
+        id: a._id || a.id,
+        appointmentDate: a.appointmentDate,
+        date: dateOnly,
+        patientId: (a.patientId && (a.patientId._id || a.patientId.id)) || "",
+        columnId,
+        title: a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "Appointment",
+        patientName: fullName || "Patient",
+        patientInitials: initials,
+        start: startObj.toISOString(),
+        end: endObj.toISOString(),
+        status: a.status || "scheduled",
+        note: a.notes || "",
+        color: "#1976d2",
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // Fetch appointments for the selected patient across the current year.
+  // Re-runs whenever the selected patient changes.
+  // showSnackbar is intentionally omitted from deps — it is not memoized in
+  // SnackbarContext, so including it would cause this effect to loop infinitely.
   useEffect(() => {
+    if (!selectedPatientId) {
+      setAppointments([]);
+      return;
+    }
     const fetchAppointments = async () => {
-      if (!selectedPatientId) {
-        setAppointments([]);
-        return;
-      }
       try {
-        const result = await appointmentService.getAppointmentsByPatient(
-          selectedPatientId,
+        const year = selectedDate.year();
+        const result = await appointmentService.getAllAppointments(
           1,
-          100,
+          100,                     // max allowed by backend
+          "",                      // providerId — no filter for now
+          selectedPatientId,       // patientId
+          "",                      // status — no filter for now
+          `${year}-01-01`,         // startDate — full year
+          `${year}-12-31`,         // endDate
         );
-        const raw = Array.isArray(result) ? result : result?.appointments || [];
-        const mapped = raw
-          .filter((a) => a && a.appointmentDate)
-          .map((a) => {
-            try {
-              const iso = String(a.appointmentDate || "");
-              const dateOnly = iso.includes("T")
-                ? iso.split("T")[0]
-                : iso.slice(0, 10);
-              if (!dateOnly) return null;
-
-              const startObj = a.startTime
-                ? dayjs(`${dateOnly}T${a.startTime}`)
-                : null;
-              if (!startObj || !startObj.isValid()) return null;
-
-              const endObj = a.endTime
-                ? dayjs(`${dateOnly}T${a.endTime}`)
-                : startObj.add(a.durationMinutes || SLOT_MINUTES, "minute");
-              if (!endObj.isValid()) return null;
-
-              const fullName =
-                (a.patientId &&
-                  (a.patientId.firstName || a.patientId.lastName) &&
-                  `${a.patientId.firstName || ""} ${
-                    a.patientId.lastName || ""
-                  }`.trim()) ||
-                a.patientName ||
-                "";
-              const initials = fullName
-                ? fullName
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()
-                : "PT";
-
-              const mappedPatientId =
-                (a.patientId && (a.patientId._id || a.patientId.id)) ||
-                selectedPatientId;
-
-              // Derive an operatory column from providerId (since API has no explicit operatory)
-              const rawProviderId =
-                a.providerId && (a.providerId._id || a.providerId.id);
-              const providerNum = rawProviderId ? Number(rawProviderId) : NaN;
-              const colIndex =
-                Number.isFinite(providerNum) && providerNum > 0
-                  ? (providerNum - 1) % OPERATORY_COLUMNS.length
-                  : 0;
-              const derivedColumnId = OPERATORY_COLUMNS[colIndex]?.id || "op1";
-              
-              // Use the operatoryId if available from the appointment, otherwise derive from provider
-              const assignedColumnId = 
-                a.operatoryId || 
-                (formData?.operatoryId) ||
-                derivedColumnId;
-
-              return {
-                id: a._id || a.id,
-                appointmentDate: a.appointmentDate,
-                date: dateOnly,
-                patientId: mappedPatientId,
-                columnId: assignedColumnId,
-                title:
-                  a.chiefComplaint ||
-                  a.appointmentTypeId?.name ||
-                  a.appointmentType ||
-                  "Appointment",
-                patientName: fullName || "Patient",
-                patientInitials: initials,
-                start: startObj.toISOString(),
-                end: endObj.toISOString(),
-                status: a.status || "scheduled",
-                note: a.notes || "",
-                color: "#1976d2",
-              };
-            } catch {
-              return null;
-            }
-          })
-          .filter(Boolean);
-        
-        // Load local storage appointments and merge with backend appointments
-        const localAppointments = JSON.parse(localStorage.getItem('localAppointments') || '[]');
-        // Format local appointments to match calendar structure
-        const formattedLocalAppointments = localAppointments.map(appt => ({
-          ...appt,
-          start: dayjs(`${appt.appointmentDate}T${appt.startTime}`).toISOString(),
-          end: dayjs(`${appt.appointmentDate}T${appt.endTime}`).toISOString(),
-        }));
-        const mergedAppointments = [...mapped, ...formattedLocalAppointments];
-        setAppointments(mergedAppointments);
+        const raw = Array.isArray(result)
+          ? result
+          : result?.appointments || [];
+        setAppointments(raw.map(mapAppointment).filter(Boolean));
       } catch (err) {
         console.error("Failed to load appointments for patient", err);
-        showSnackbar("Failed to load appointments for this patient.", "error");
-        
-        // Still load local appointments even if backend fails
-        const localAppointments = JSON.parse(localStorage.getItem('localAppointments') || '[]');
-        // Format local appointments to match calendar structure
-        const formattedLocalAppointments = localAppointments.map(appt => ({
-          ...appt,
-          start: dayjs(`${appt.appointmentDate}T${appt.startTime}`).toISOString(),
-          end: dayjs(`${appt.appointmentDate}T${appt.endTime}`).toISOString(),
-        }));
-        setAppointments(formattedLocalAppointments);
+        showSnackbarRef.current("Failed to load appointments.", "error");
+        setAppointments([]);
       }
     };
     fetchAppointments();
-  }, [selectedPatientId, showSnackbar]);
+  }, [selectedPatientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
@@ -426,72 +372,47 @@ const OperatorySchedulePage = () => {
         : dayjs();
     const duration = formData.durationMinutes || 30;
     const end = start.add(duration, "minute");
-    
-    // Generate a unique ID for the appointment
-    const appointmentId = `appt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Testing mode bypass - always use dummy provider
-    let providerId;
-    if (IS_TESTING_MODE) {
-      providerId = DUMMY_PROVIDER_ID;
-    } else {
-      const providerFromForm = formData.providerId;
-      const resolvedProvider =
-        providers?.find((p) => {
-          const fullName =
-            (p.firstName || p.lastName) &&
-            `${p.firstName || ""} ${p.lastName || ""}`.trim();
-          return (
-            p._id === providerFromForm ||
-            p.id === providerFromForm ||
-            fullName === providerFromForm ||
-            p.name === providerFromForm
-          );
-        }) || providers?.[0];
-      providerId =
-        (resolvedProvider && (resolvedProvider._id || resolvedProvider.id)) ||
-        DUMMY_PROVIDER_ID;
-    }
-    
-    // Create appointment object for localStorage
-    const newAppointment = {
-      id: appointmentId,
-      patientId,
-      patientName: formData.patientName || '',
-      providerId,
-      appointmentDate: start.format("YYYY-MM-DD"),
-      startTime: start.format("HH:mm"),
-      endTime: end.format("HH:mm"),
-      durationMinutes: duration,
-      chiefComplaint: "",
-      notes: formData.notes || "",
-      status: formData.status || "scheduled",
-      isLocal: true, // Mark as local storage appointment
-      createdAt: new Date().toISOString(),
-      // Format for calendar display
-      date: start.format("YYYY-MM-DD"),
-      title: formData.chiefComplaint || "Appointment",
-      patientInitials: (formData.patientName || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || "PT",
-      // Use roomId from form as columnId, or default to first operatory
-      columnId: formData.roomId || OPERATORY_COLUMNS[0]?.id || "op1",
-      color: '#1976d2',
-    };
-    
+
     try {
       setFormSaving(true);
-      
-      // Store in localStorage instead of backend
-      const existingAppointments = JSON.parse(localStorage.getItem('localAppointments') || '[]');
-      existingAppointments.push(newAppointment);
-      localStorage.setItem('localAppointments', JSON.stringify(existingAppointments));
-      
-      // Update local state to show the appointment immediately
-      setAppointments((prev) => [...prev, newAppointment]);
-      
-      showSnackbar("Appointment created successfully (local storage)", "success");
+
+      // Build the payload the backend expects.
+      // The form already resolves IDs (providerId, roomId, appointmentTypeId).
+      const payload = {
+        patientId,
+        providerId: formData.providerId,
+        appointmentDate: start.format("YYYY-MM-DD"),
+        startTime: start.format("HH:mm"),
+        endTime: end.format("HH:mm"),
+        durationMinutes: duration,
+        chiefComplaint: formData.chiefComplaint || "",
+        notes: formData.notes || "",
+        // Backend accepts: scheduled | confirmed | checked_in | completed | cancelled | no_show
+        status: formData.status || "scheduled",
+        ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
+        ...(formData.roomId && { roomId: formData.roomId }),
+        ...(formData.customFields && { customFields: formData.customFields }),
+      };
+
+      await appointmentService.createAppointment(payload);
+
+      showSnackbar("Appointment created successfully", "success");
       setAddAppointmentFormOpen(false);
+
+      // Re-fetch this patient's appointments so the grid updates immediately
+      if (patientId) {
+        const year = selectedDate.year();
+        const result = await appointmentService.getAllAppointments(
+          1, 100, "", patientId, "", `${year}-01-01`, `${year}-12-31`,
+        );
+        const raw = Array.isArray(result) ? result : result?.appointments || [];
+        setAppointments(raw.map(mapAppointment).filter(Boolean));
+      }
     } catch (err) {
-      const msg = err.message || "Failed to create appointment.";
+      const msg =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        "Failed to create appointment.";
       showSnackbar(msg, "error");
     } finally {
       setFormSaving(false);
@@ -931,6 +852,9 @@ const OperatorySchedulePage = () => {
             onCancel={() => setAddAppointmentFormOpen(false)}
             loading={formSaving}
             initialDateTime={initialFormDateTime}
+            providers={providers || []}
+            rooms={rooms || []}
+            appointmentTypes={appointmentTypes || []}
           />
         </DialogContent>
       </Dialog>

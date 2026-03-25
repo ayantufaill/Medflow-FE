@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from "../../store/slices/providerSlice";
 import {
   Box,
   Typography,
@@ -18,6 +20,8 @@ const EditPatientPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
+  const providers = useSelector(selectProviderDropdownList);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +49,7 @@ const EditPatientPage = () => {
     if (patientId) {
       fetchPatient();
     }
+    dispatch(fetchAllProvidersForDropdown());
   }, [patientId]);
 
   const onSubmit = async (data) => {
@@ -149,6 +154,7 @@ const EditPatientPage = () => {
               initialData={patient}
               loading={saving}
               isEditMode={true}
+              providers={providers}
             />
           </Paper>
         </Grid>

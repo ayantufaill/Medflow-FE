@@ -57,6 +57,7 @@ const PatientForm = ({
   isEditMode = false,
   hideButtons = false,
   formId,
+  providers = [],
 }) => {
   // State to track selected country data for phone validation
   const [selectedCountryPrimary, setSelectedCountryPrimary] = useState(null);
@@ -115,6 +116,8 @@ const PatientForm = ({
       portalAccessEnabled: false,
       lastVisitDate: null,
       referralSource: '',
+      preferredDentistId: '',
+      preferredHygienistId: '',
       isActive: true,
       address: {
         line1: '',
@@ -207,6 +210,8 @@ const PatientForm = ({
             : false,
         lastVisitDate: parseDate(initialData.lastVisitDate),
         referralSource: initialData.referralSource || '',
+        preferredDentistId: initialData.preferredDentistId || '',
+        preferredHygienistId: initialData.preferredHygienistId || '',
         isActive:
           initialData.isActive !== undefined ? initialData.isActive : true,
         address: {
@@ -588,6 +593,8 @@ const PatientForm = ({
           : false,
       lastVisitDate: formatDate(formData.lastVisitDate),
       referralSource: sanitizeValue(formData.referralSource) || '',
+      preferredDentistId: formData.preferredDentistId || undefined,
+      preferredHygienistId: formData.preferredHygienistId || undefined,
       isActive: formData.isActive !== undefined ? formData.isActive : true,
       address: {
         line1: sanitizeValue(formData.address?.line1) || '',
@@ -1499,6 +1506,48 @@ const PatientForm = ({
               })}
               error={!!errors.referralSource}
               helperText={errors.referralSource?.message}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="preferredDentistId"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth>
+                  <InputLabel>Preferred Dentist</InputLabel>
+                  <Select {...field} label="Preferred Dentist">
+                    <MenuItem value="">— None —</MenuItem>
+                    {providers.map((p) => {
+                      const u = p.userId || p;
+                      const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || p.providerCode || p._id;
+                      return (
+                        <MenuItem key={p._id} value={p._id}>{name}</MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="preferredHygienistId"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth>
+                  <InputLabel>Preferred Hygienist</InputLabel>
+                  <Select {...field} label="Preferred Hygienist">
+                    <MenuItem value="">— None —</MenuItem>
+                    {providers.map((p) => {
+                      const u = p.userId || p;
+                      const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || p.providerCode || p._id;
+                      return (
+                        <MenuItem key={p._id} value={p._id}>{name}</MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              )}
             />
           </Grid>
           <Grid size={{ xs: 12 }}>

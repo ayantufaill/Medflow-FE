@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Autocomplete,
   Box,
@@ -141,6 +141,10 @@ const OperatorySidebar = ({
   const [chatOpen, setChatOpen] = useState(false);
   const [appointmentPageOpen, setAppointmentPageOpen] = useState(false);
 
+  // Debounce ref — prevents firing a patient search API call on every keystroke.
+  // The search only triggers after the user pauses typing for 300ms.
+  const searchDebounceRef = useRef(null);
+
   const handleCheckInSelection = (item, selectionType) => {
     setCheckInChecklist((prev) => ({
       ...prev,
@@ -253,13 +257,18 @@ const OperatorySidebar = ({
             }}
             inputValue={patientQuery}
             onInputChange={(_, value, reason) => {
-              // Only trigger search on 'input' reason, not on 'blur' or 'reset'
               if (reason === 'input') {
                 setPatientQuery(value);
-                onPatientSearch?.(value);
+                // Debounce: cancel any pending search and wait 300ms after
+                // the user stops typing before firing the API call.
+                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                searchDebounceRef.current = setTimeout(() => {
+                  onPatientSearch?.(value);
+                }, 300);
               } else if (reason === 'clear') {
                 setPatientQuery('');
                 setSelectedPatient(null);
+                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
                 onPatientSearch?.('');
               }
             }}
