@@ -36,6 +36,8 @@ const EMPTY_HISTORY = {
     dentistVisitFrequency: "6mo",
   },
   personalHistory: [],
+  gumAndBone: [],
+  biteAndJawJoint: [],
   reviewStatus: false,
   lastUpdateDate: null,
   review: {
@@ -107,6 +109,8 @@ const PatientDentalHistoryPage = () => {
           ...(data?.generalInfo || {}),
         },
         personalHistory: Array.isArray(data?.personalHistory) ? data.personalHistory : [],
+        gumAndBone: Array.isArray(data?.gumAndBone) ? data.gumAndBone : [],
+        biteAndJawJoint: Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : [],
         reviewStatus: Boolean(data?.reviewStatus),
         lastUpdateDate: data?.lastUpdateDate || null,
         review: {
@@ -191,7 +195,27 @@ const PatientDentalHistoryPage = () => {
     }));
   };
 
+  const updateGumAndBone = (id, field, value) => {
+    setDentalHistory((prev) => ({
+      ...prev,
+      gumAndBone: prev.gumAndBone.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
+  const updateBiteAndJawJoint = (id, field, value) => {
+    setDentalHistory((prev) => ({
+      ...prev,
+      biteAndJawJoint: prev.biteAndJawJoint.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
   const dentalGroups = groupDentalHistoryRows(dentalHistory.personalHistory);
+  const gumAndBoneGroups = groupDentalHistoryRows(dentalHistory.gumAndBone);
+  const biteAndJawJointGroups = groupDentalHistoryRows(dentalHistory.biteAndJawJoint);
 
   const saveDentalHistory = async (reviewedWithPatient = false) => {
     if (!patientId) return;
@@ -212,6 +236,8 @@ const PatientDentalHistoryPage = () => {
       const data = await patientService.updateDentalHistory(patientId, {
         generalInfo: dentalHistory.generalInfo,
         personalHistory: dentalHistory.personalHistory,
+        gumAndBone: dentalHistory.gumAndBone,
+        biteAndJawJoint: dentalHistory.biteAndJawJoint,
         review,
       });
 
@@ -222,6 +248,8 @@ const PatientDentalHistoryPage = () => {
           ...(data?.generalInfo || {}),
         },
         personalHistory: Array.isArray(data?.personalHistory) ? data.personalHistory : [],
+        gumAndBone: Array.isArray(data?.gumAndBone) ? data.gumAndBone : [],
+        biteAndJawJoint: Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : [],
         reviewStatus: Boolean(data?.reviewStatus),
         lastUpdateDate: data?.lastUpdateDate || null,
         review: {
@@ -249,6 +277,16 @@ const PatientDentalHistoryPage = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleUpdateItem = (section, id, field, value) => {
+    if (section === 'personalHistory') {
+      updatePersonalHistory(id, field, value);
+    } else if (section === 'gumAndBone') {
+      updateGumAndBone(id, field, value);
+    } else if (section === 'biteAndJawJoint') {
+      updateBiteAndJawJoint(id, field, value);
+    }
   };
 
   return (
@@ -390,14 +428,18 @@ const PatientDentalHistoryPage = () => {
           {tabValue === 0 && (
             <DentalHistorySummary
               personalHistory={dentalHistory.personalHistory}
-              onUpdateItem={updatePersonalHistory}
+              gumAndBone={dentalHistory.gumAndBone}
+              biteAndJawJoint={dentalHistory.biteAndJawJoint}
+              onUpdateItem={handleUpdateItem}
             />
           )}
 
           {tabValue === 1 && (
             <DentalHistoryFullView
               groupedHistory={dentalGroups}
-              onUpdateItem={updatePersonalHistory}
+              gumAndBoneGrouped={gumAndBoneGroups}
+              biteAndJawJointGrouped={biteAndJawJointGroups}
+              onUpdateItem={handleUpdateItem}
             />
           )}
 
