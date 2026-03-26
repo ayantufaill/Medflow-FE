@@ -31,7 +31,7 @@ export const fetchAllRoomsForDropdown = createAsyncThunk(
       if (elapsed < 10 * 60 * 1000) return null;
     }
     try {
-      const result = await roomService.getAllRooms(1, 200, '', true);
+      const result = await roomService.getAllRooms(1, 100, '', true);
       return result.rooms || [];
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch rooms');

@@ -4,6 +4,7 @@ import {
   PersonOff as PersonOffIcon,
   ExpandMore as ExpandMoreIcon,
   Close as CloseIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
 
@@ -14,8 +15,10 @@ import { useState } from 'react';
 export default function PatientDetailActions({
   onEdit,
   onDeactivate,
+  onActivate,
   onConvertToNonPatient,
   onSendUpdateRequest,
+  isActive,
 }) {
   const [requestMenuAnchor, setRequestMenuAnchor] = useState(null);
   const [requestChecks, setRequestChecks] = useState({
@@ -77,16 +80,34 @@ export default function PatientDetailActions({
         >
           Edit
         </Button>
-        <Button
-          variant="contained"
-          color="error"
-          size="small"
-          startIcon={<PersonOffIcon />}
-          onClick={onDeactivate}
-          sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
-        >
-          Deactivate Patient
-        </Button>
+        {isActive ? (
+          <Button
+            variant="contained"
+            color="error"
+            size="small"
+            startIcon={<PersonOffIcon />}
+            onClick={onDeactivate}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
+          >
+            Deactivate Patient
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<CheckCircleIcon />}
+            onClick={onActivate}
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 600, 
+              borderRadius: 1.5,
+              bgcolor: '#43a047',
+              '&:hover': { bgcolor: '#388e3c' },
+            }}
+          >
+            Activate Patient
+          </Button>
+        )}
         <Button
           variant="contained"
           size="small"

@@ -45,6 +45,7 @@ export default function PatientDetailOverview({
   onEdit,
   onRefresh,
   onDeactivate,
+  onActivate,
   onConvertToNonPatient,
   onBalance,
   onDocuments,
@@ -88,6 +89,8 @@ export default function PatientDetailOverview({
             onEdit={onEdit}
             onRefresh={onRefresh}
             onDeactivate={onDeactivate}
+            onActivate={onActivate}
+            isActive={patient?.isActive}
             onConvertToNonPatient={onConvertToNonPatient}
             onSendUpdateRequest={onSendUpdateRequest}
           />

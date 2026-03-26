@@ -28,6 +28,7 @@ const PatientDetailPage = () => {
   const [loading, setLoading] = useState(!patientFromNav);
   const [error, setError] = useState('');
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, patientName: '' });
+  const [activateDialog, setActivateDialog] = useState({ open: false, patientName: '' });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [adjacentIds, setAdjacentIds] = useState({ prev: null, next: null });
   const [preferredDentists, setPreferredDentists] = useState([]);
@@ -126,6 +127,21 @@ const PatientDetailPage = () => {
     }
   };
 
+  const handleActivateConfirm = async () => {
+    try {
+      setDeactivateLoading(true);
+      await patientService.updatePatient(patientId, { isActive: true });
+      showSnackbar('Patient activated', 'success');
+      setActivateDialog({ open: false, patientName: '' });
+      setPatient((prev) => (prev ? { ...prev, isActive: true } : null));
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to activate';
+      showSnackbar(msg, 'error');
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
   if (loading && !patient) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -179,6 +195,12 @@ const PatientDetailPage = () => {
                   patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
                 })
               }
+              onActivate={() =>
+                setActivateDialog({
+                  open: true,
+                  patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
+                })
+              }
               onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
               onBalance={() => navigate(`/patients/details/${patientId}?tab=insurance`)}
               onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
@@ -197,6 +219,17 @@ const PatientDetailPage = () => {
         confirmText="Deactivate"
         cancelText="Cancel"
         confirmColor="error"
+        loading={deactivateLoading}
+      />
+      <ConfirmationDialog
+        open={activateDialog.open}
+        onClose={() => setActivateDialog({ open: false, patientName: '' })}
+        onConfirm={handleActivateConfirm}
+        title="Activate Patient"
+        message={`Activate "${activateDialog.patientName}"? They will be restored to active status.`}
+        confirmText="Activate"
+        cancelText="Cancel"
+        confirmColor="success"
         loading={deactivateLoading}
       />
     </Box>

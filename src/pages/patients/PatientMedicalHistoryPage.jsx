@@ -29,6 +29,7 @@ import {
   Description as DocumentIcon,
   PhotoCamera as CameraIcon,
   Print as PrintIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { patientService } from "../../services/patient.service";
@@ -36,11 +37,15 @@ import { documentService } from "../../services/document.service";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
 import MedicationListCard from "../../components/patients/MedicationListCard";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 
 const formatVisitDate = (dateStr) => {
   if (!dateStr) return "";
   try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
+    const date = new Date(dateStr);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("en-US", {
       month: "short",
       day: "2-digit",
       year: "numeric",
@@ -320,6 +325,12 @@ const MedicalSummarySection = ({
   onChangeTab,
   summarySections,
   onSectionChange,
+  medications,
+  onChangeMedication,
+  onAddMedication,
+  supplements,
+  onChangeSupplement,
+  onAddSupplement,
 }) => (
   <Card>
     <Box sx={{ borderBottom: "1px solid #e0e0e0", mb: 2 }}>
@@ -454,6 +465,7 @@ const MedicalSummarySection = ({
                       background: "#f5f5f5",
                       maxHeight: 120,
                       overflow: "auto",
+                      verticalAlign: "top",
                     }}
                   >
                     <TextField
@@ -461,6 +473,7 @@ const MedicalSummarySection = ({
                       fullWidth
                       multiline
                       minRows={3}
+                      maxRows={3}
                       size="small"
                       value={section.additionalInfo || section.comment || ""}
                       onChange={(e) =>
@@ -538,6 +551,26 @@ const MedicalSummarySection = ({
         )}
       </Box>
     )}
+
+    {/* Medication List Section */}
+    <Box sx={{ mt: 3 }}>
+      <MedicationListCard
+        title="Medication List"
+        rows={medications}
+        onChangeRow={onChangeMedication}
+        onAddRow={onAddMedication}
+      />
+    </Box>
+
+    {/* Supplements & Vitamins Section */}
+    <Box sx={{ mt: 2 }}>
+      <MedicationListCard
+        title="Supplements & Vitamins"
+        rows={supplements}
+        onChangeRow={onChangeSupplement}
+        onAddRow={onAddSupplement}
+      />
+    </Box>
   </Card>
 );
 
@@ -603,9 +636,35 @@ const PatientMedicalHistoryPage = () => {
             Array.isArray(data?.supplements) ? data.supplements : [],
           );
           setSignature(data?.review?.signatureDataUrl || null);
+          
+          // Debug: Log the raw visitDates from backend
+          console.log('Raw visitDates from backend:', data?.visitDates);
+          
           const labels = Array.isArray(data?.visitDates)
             ? data.visitDates
-                .map((date) => formatVisitDate(date))
+                .map((item, index) => {
+                  // Handle both string dates and objects with date/label properties
+                  const dateStr = typeof item === 'string' ? item : item?.date;
+                  const existingLabel = typeof item === 'object' ? item?.label : null;
+                  
+                  // If there's already a formatted label, use it
+                  if (existingLabel) {
+                    return existingLabel;
+                  }
+                  
+                  // Log for debugging
+                  if (!dateStr || dateStr === "" || dateStr === null) {
+                    console.warn(`Visit date at index ${index} is empty or null:`, item);
+                    return null;
+                  }
+                  
+                  const formatted = formatVisitDate(dateStr);
+                  if (!formatted) {
+                    console.warn(`Failed to format visit date at index ${index}:`, item);
+                  }
+                  // Only include valid formatted dates
+                  return formatted || null;
+                })
                 .filter(Boolean)
             : [];
           setVisitDates(labels);
@@ -819,6 +878,10 @@ const PatientMedicalHistoryPage = () => {
     );
   }
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (error) {
     return (
       <PageContainer>
@@ -833,7 +896,13 @@ const PatientMedicalHistoryPage = () => {
     <PageContainer>
       <PatientSectionTabs activeTab="medical" patientId={patientId} />
 
-      <FloatingActions>
+      <FloatingActions
+        sx={{
+          '@media print': {
+            display: 'none !important',
+          },
+        }}
+      >
         <FloatingActionButton onClick={handleAddDocument} disabled={uploading}>
           <CameraIcon fontSize="small" />
         </FloatingActionButton>
@@ -883,6 +952,7 @@ const PatientMedicalHistoryPage = () => {
               "&:hover": { bgcolor: "#1565c0" },
             }}
           >
+            <RefreshIcon sx={{ mr: 0.5, fontSize: 18 }} />
             Update Hx
           </Button>
           <Button
@@ -903,6 +973,7 @@ const PatientMedicalHistoryPage = () => {
             variant="outlined"
             size="small"
             startIcon={<PrintIcon />}
+            onClick={handlePrint}
             sx={{
               textTransform: "none",
               borderRadius: 1,
@@ -916,59 +987,13 @@ const PatientMedicalHistoryPage = () => {
         </Box>
       </Box>
 
-      {/* Timeline – visit dates from backend */}
-      <Card
-        sx={{
-          py: 1.5,
-          px: 2,
+      {/* Timeline – Progress Bar Style */}
+      <VisitDatesTimeline
+        visitDates={visitDates}
+        onRemoveDate={(indexToRemove) => {
+          setVisitDates((prev) => prev.slice(0, indexToRemove));
         }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 1.5,
-          }}
-        >
-          {visitDates.map((label, index) => {
-            const isLast = index === visitDates.length - 1;
-            return (
-              <Box
-                key={`${label}-${index}`}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.75,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: isLast ? 14 : 10,
-                    height: isLast ? 14 : 10,
-                    borderRadius: "50%",
-                    bgcolor: isLast ? "#1976d2" : "#bdbdbd",
-                  }}
-                />
-                <Typography variant="body2" sx={{ color: "#757575" }}>
-                  {label}
-                </Typography>
-                {isLast && (
-                  <CloseIcon
-                    sx={{ fontSize: 14, color: "#e53935", cursor: "pointer" }}
-                    onClick={() => setVisitDates((prev) => prev.slice(0, -1))}
-                  />
-                )}
-              </Box>
-            );
-          })}
-          {visitDates.length === 0 && (
-            <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-              No visit dates from medical history
-            </Typography>
-          )}
-        </Box>
-      </Card>
+      />
 
       <MedicalGeneralInfoCard
         generalInfo={generalInfo}
@@ -982,21 +1007,12 @@ const PatientMedicalHistoryPage = () => {
         onChangeTab={setHistoryTab}
         summarySections={summarySections}
         onSectionChange={handleSummarySectionChange}
-      />
-
-      <MedicationListCard
-        title="Medication List"
-        rows={medications}
-        onChangeRow={updateMedication}
-        onAddRow={addMedication}
-      />
-
-      {/* Supplements & Vitamins */}
-      <MedicationListCard
-        title="Supplements & Vitamins"
-        rows={supplements}
-        onChangeRow={updateSupplement}
-        onAddRow={addSupplement}
+        medications={medications}
+        onChangeMedication={updateMedication}
+        onAddMedication={addMedication}
+        supplements={supplements}
+        onChangeSupplement={updateSupplement}
+        onAddSupplement={addSupplement}
       />
 
       {/* Signature – aligned to the right like dental page */}

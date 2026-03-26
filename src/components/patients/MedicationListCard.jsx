@@ -1,128 +1,131 @@
-import { Grid, Link, TextField, Typography } from "@mui/material";
-import Card from "@mui/material/Paper";
+import React from 'react';
+import { Box, Typography, TextField, Button, Divider, Paper } from "@mui/material";
 
+/**
+ * MedicationListCard - Minimalist styled medication list matching the screenshot
+ */
 const MedicationListCard = ({ title, rows, onChangeRow, onAddRow }) => (
-  <Card
+  <Paper
     elevation={0}
     sx={{
       p: 3,
-      mb: 2,
+      mb: 4,
       borderRadius: 1,
       border: "1px solid #e0e0e0",
       bgcolor: "#ffffff",
+      width: '100%',
     }}
   >
+    {/* Section Title */}
     <Typography
-      variant="h6"
+      variant="body1"
       sx={{
-        mb: 2,
-        fontWeight: 700,
+        mb: 0.5,
         color: "#424242",
-        fontSize: "1.05rem",
+        fontSize: "1rem",
       }}
     >
       {title}
     </Typography>
 
-    <Grid
-      container
-      spacing={0}
-      sx={{
-        borderBottom: "1px solid #eeeeee",
-        pb: 1,
-        mb: 1,
-      }}
-    >
-      <Grid item xs={5}>
-        <Typography
-          variant="caption"
-          sx={{ color: "#9e9e9e", fontWeight: 600 }}
-        >
-          Drug
-        </Typography>
-      </Grid>
-      <Grid item xs={3}>
-        <Typography
-          variant="caption"
-          sx={{ color: "#9e9e9e", fontWeight: 600 }}
-        >
-          Dosage
-        </Typography>
-      </Grid>
-      <Grid item xs={4}>
-        <Typography
-          variant="caption"
-          sx={{ color: "#9e9e9e", fontWeight: 600 }}
-        >
-          Purpose
-        </Typography>
-      </Grid>
-    </Grid>
+    {/* Header Underline */}
+    <Divider sx={{ mb: 2, borderColor: '#9e9e9e' }} />
 
-    {rows.map((row) => (
-      <Grid
-        key={row.id}
-        container
-        spacing={0}
+    {rows.map((row, index) => (
+      <Box
+        key={row.id || index}
         sx={{
-          py: 1,
-          borderBottom: "1px solid #f0f0f0",
-          fontSize: 14,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 4,
+          mb: 1.5,
+          width: '100%'
         }}
       >
-        <Grid item xs={5}>
+        {/* Drug Field with Numbering */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-end', flex: 1, gap: 1 }}>
+          <Typography sx={{ fontSize: 14, color: '#424242', pb: 0.5, minWidth: '20px' }}>
+            {index + 1}.
+          </Typography>
           <TextField
             fullWidth
-            size="small"
             variant="standard"
-            placeholder="Drug"
+            placeholder="drug"
             value={row.drug}
             onChange={(e) => onChangeRow(row.id, "drug", e.target.value)}
-            InputProps={{ disableUnderline: true }}
-            sx={{ "& input": { py: 0.5, fontSize: 14 } }}
+            InputProps={{
+              disableUnderline: false,
+              sx: { 
+                fontSize: 14, 
+                color: '#424242',
+                '&:before': { borderBottom: '1px solid #e0e0e0' },
+                '&:after': { borderBottom: '1px solid #9e9e9e' }
+              }
+            }}
           />
-        </Grid>
-        <Grid item xs={3}>
+        </Box>
+
+        {/* Dosage Field */}
+        <Box sx={{ flex: 1 }}>
           <TextField
             fullWidth
-            size="small"
             variant="standard"
-            placeholder="Dosage"
+            placeholder="dosage"
             value={row.dosage}
             onChange={(e) => onChangeRow(row.id, "dosage", e.target.value)}
-            InputProps={{ disableUnderline: true }}
-            sx={{ "& input": { py: 0.5, fontSize: 14 } }}
+            InputProps={{
+              sx: { 
+                fontSize: 14, 
+                color: '#424242',
+                '&:before': { borderBottom: '1px solid #e0e0e0' },
+                '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #424242' },
+                '&:after': { borderBottom: '1px solid #424242' }
+              }
+            }}
           />
-        </Grid>
-        <Grid item xs={4}>
+        </Box>
+
+        {/* Purpose Field */}
+        <Box sx={{ flex: 1 }}>
           <TextField
             fullWidth
-            size="small"
             variant="standard"
-            placeholder="Purpose"
+            placeholder="purpose"
             value={row.purpose}
             onChange={(e) => onChangeRow(row.id, "purpose", e.target.value)}
-            InputProps={{ disableUnderline: true }}
-            sx={{ "& input": { py: 0.5, fontSize: 14 } }}
+            InputProps={{
+              sx: { 
+                fontSize: 14, 
+                color: '#424242',
+                '&:before': { borderBottom: '1px solid #e0e0e0' },
+                '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #424242' },
+                '&:after': { borderBottom: '1px solid #424242' }
+              }
+            }}
           />
-        </Grid>
-      </Grid>
+        </Box>
+        
+        {/* Empty Spacer to match the wide layout of the screenshot */}
+        <Box sx={{ flex: 1 }} />
+      </Box>
     ))}
 
-    <Link
-      component="button"
-      variant="body2"
+    {/* Add More Button */}
+    <Button
       onClick={onAddRow}
       sx={{
         mt: 1,
-        color: "#1976d2",
-        cursor: "pointer",
-        textDecoration: "none",
+        p: 0,
+        color: "#424242",
+        textTransform: 'lowercase',
+        fontSize: '0.875rem',
+        minWidth: 'auto',
+        '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
       }}
     >
       + add more
-    </Link>
-  </Card>
+    </Button>
+  </Paper>
 );
 
 export default MedicationListCard;

@@ -490,22 +490,13 @@ const OperatorySidebar = ({
                 variant="contained"
                 size="small"
                 startIcon={<EventNoteIcon />}
-                onClick={() =>
-                  onScheduleAppointmentClick
-                    ? onScheduleAppointmentClick()
-                    : openCreateDialog({
-                        columnId: "op1",
-                        startIso: selectedDate
-                          .startOf("day")
-                          .hour(START_HOUR)
-                          .toISOString(),
-                      })
-                }
+                onClick={onScheduleAppointmentClick}
+                disabled={!onScheduleAppointmentClick}
                 sx={{
                   textTransform: "none",
                   borderRadius: 1.5,
-                  bgcolor: "#1976d2",
-                  "&:hover": { bgcolor: "#1565c0" },
+                  bgcolor: onScheduleAppointmentClick ? "#1976d2" : "#cbd5e1",
+                  "&:hover": { bgcolor: onScheduleAppointmentClick ? "#1565c0" : "#94a3b8" },
                   fontSize: '0.8rem',
                   py: 0.75,
                 }}

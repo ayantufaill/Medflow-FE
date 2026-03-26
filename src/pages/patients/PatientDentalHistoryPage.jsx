@@ -25,11 +25,13 @@ import {
   CheckCircle as CheckCircleIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 
 import { patientService } from "../../services/patient.service";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 
 const EMPTY_HISTORY = {
@@ -130,7 +132,44 @@ const PatientDentalHistoryPage = () => {
         },
         visitDates: Array.isArray(data?.visitDates) ? data.visitDates : [],
       });
-      setVisitDates(Array.isArray(data?.visitDates) ? data.visitDates : []);
+      
+      // Process visitDates the same way as medical history
+      const labels = Array.isArray(data?.visitDates)
+        ? data.visitDates
+            .map((item, index) => {
+              // Handle both string dates and objects with date/label properties
+              const dateStr = typeof item === 'string' ? item : item?.date;
+              const existingLabel = typeof item === 'object' ? item?.label : null;
+              
+              // If there's already a formatted label, use it
+              if (existingLabel) {
+                return existingLabel;
+              }
+              
+              // Log for debugging
+              if (!dateStr || dateStr === "" || dateStr === null) {
+                console.warn(`Visit date at index ${index} is empty or null:`, item);
+                return null;
+              }
+              
+              const formatted = formatDate(dateStr);
+              if (!formatted) {
+                console.warn(`Failed to format visit date at index ${index}:`, item);
+              }
+              // Only include valid formatted dates
+              return formatted || null;
+            })
+            .filter(Boolean)
+        : [];
+      
+      // TEMPORARY: Add mock dates for testing if no data from backend
+      const testDates = labels.length > 0 ? labels : [
+        'Jan 15, 2025',
+        'Feb 20, 2025',
+        'Mar 10, 2025',
+      ];
+      setVisitDates(testDates);
+      
       setSignature(data?.review?.signatureDataUrl || null);
     } catch (err) {
       if (cancelled) return;
@@ -225,6 +264,10 @@ const PatientDentalHistoryPage = () => {
 
   const showContent = !loading || patient;
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Box
       sx={{
@@ -287,6 +330,7 @@ const PatientDentalHistoryPage = () => {
                   "&:hover": { bgcolor: "#1565c0" },
                 }}
               >
+                <RefreshIcon sx={{ mr: 0.5, fontSize: 18 }} />
                 Update Hx
               </Button>
               <Button
@@ -308,7 +352,7 @@ const PatientDentalHistoryPage = () => {
                 variant="outlined"
                 size="small"
                 startIcon={<PrintIcon />}
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 sx={{
                   textTransform: "none",
                   borderRadius: 1,
@@ -322,64 +366,10 @@ const PatientDentalHistoryPage = () => {
             </Box>
           </Box>
 
-          <Paper
-            variant="outlined"
-            sx={{
-              py: 1.5,
-              px: 2,
-              mb: 2,
-              borderRadius: 1,
-              border: "1px solid #e0e0e0",
-              bgcolor: "#ffffff",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 1.5,
-              }}
-            >
-              {visitDates.map((entry, index) => {
-                const label = entry?.label || formatDate(entry?.date);
-                const isLast = index === visitDates.length - 1;
-                return (
-                  <Box
-                    key={`${entry?.date || label}-${index}`}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: isLast ? 14 : 10,
-                        height: isLast ? 14 : 10,
-                        borderRadius: "50%",
-                        bgcolor: isLast ? "#1976d2" : "#bdbdbd",
-                      }}
-                    />
-                    <Typography variant="body2" sx={{ color: "#757575" }}>
-                      {label}
-                    </Typography>
-                    {isLast && (
-                      <CloseIcon
-                        sx={{ fontSize: 14, color: "#e53935", cursor: "pointer" }}
-                        onClick={() => setVisitDates((prev) => prev.slice(0, -1))}
-                      />
-                    )}
-                  </Box>
-                );
-              })}
-              {visitDates.length === 0 && (
-                <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                  No visit dates from dental history
-                </Typography>
-              )}
-            </Box>
-          </Paper>
+          <VisitDatesTimeline 
+            visitDates={visitDates}
+            onRemoveDate={(index) => setVisitDates((prev) => prev.slice(0, index).concat(prev.slice(index + 1)))}
+          />
 
           <Paper
             variant="outlined"
@@ -708,6 +698,7 @@ const PatientDentalHistoryPage = () => {
                         background: "#f5f5f5",
                         maxHeight: 120,
                         overflow: "auto",
+                        verticalAlign: "top",
                       }}
                     >
                       <TextField
@@ -715,6 +706,7 @@ const PatientDentalHistoryPage = () => {
                         fullWidth
                         multiline
                         minRows={3}
+                        maxRows={3}
                         size="small"
                         value={item.additionalInfo || ""}
                         onChange={(e) =>
