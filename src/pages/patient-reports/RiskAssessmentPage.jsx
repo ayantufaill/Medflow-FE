@@ -177,9 +177,18 @@ const RiskAssessmentPage = () => {
         ))}
       </Box>
 
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Comprehensive dental health risk evaluation
+
+      {/* Main Concern - Centered */}
+      <Box sx={{ mb: 2, textAlign: 'center' }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 600, 
+            fontSize: '0.90rem',
+            color: '#1976d2'
+          }}
+        >
+          Main Concern: Cracked tooth
         </Typography>
       </Box>
 

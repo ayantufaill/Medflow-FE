@@ -441,15 +441,50 @@ const AppointmentContent = ({
         sx={{
           display: "flex",
           mt: sizing.spacing.emergencyMt,
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           mr: sizing.spacing.emergencyMr,
         }}
+        
       >
+        <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mt: sizing.spacing.noteMt,
+          px: sizing.padding,
+          py: 0.2,
+          borderTop: "1px solid #e0e0e0",
+          bgcolor: "#f5f5f5",
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: sizing.fontSize.time,
+            fontWeight: 600,
+            color: "#424242",
+            display: "flex",
+            alignItems: "center",
+            gap: 0.2,
+          }}
+        >
+          <AttachMoneyIcon sx={{ fontSize: sizing.iconSize * 0.9, color: "#4caf50" }} />
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: sizing.fontSize.time,
+            fontWeight: 700,
+            color: "#1976d2",
+          }}
+        >
+          ${appointment.amount || appointment.estimatedAmount || "0.00"}
+        </Typography>
+      </Box>
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-end",
             px: sizing.padding,
             py: isUltraCompact ? 0.1 : isCompactAppointment ? 0.15 : 0.2,
             bgcolor: "#e0f2f1",

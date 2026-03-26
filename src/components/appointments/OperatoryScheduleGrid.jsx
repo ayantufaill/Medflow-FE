@@ -18,9 +18,50 @@ const OperatoryScheduleGrid = ({
   onSlotClick,
   onAppointmentClick,
   newlyCreatedAppointmentId,
+  // Dynamic configuration for breaks (can be loaded from API/practice settings)
+  BREAK_TIMES = [
+    {
+      label: "Lunch",
+      startTime: "12:00", 
+      endTime: "12:30",  
+      color: "#b0cee0ff", 
+      hoverColor: "#5e8298ff", 
+      textColor: "#fffbf8ff",  
+    }
+  ],
 }) => {
   const gridTotalMinutes = (END_HOUR - START_HOUR) * 60;
   const gridHeight = (gridTotalMinutes / SLOT_MINUTES) * SLOT_HEIGHT;
+
+  // Helper function to convert time string (HH:mm) to minutes from midnight
+  const timeToMinutes = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Helper function to get break times for a specific operatory
+  const getBreakTimesForOperatory = (columnId) => {
+    // Find the operatory column configuration
+    const column = OPERATORY_COLUMNS.find(col => col.id === columnId);
+    
+    // Priority: operatory.breakTimes > global BREAK_TIMES > empty array
+    if (column?.breakTimes && Array.isArray(column.breakTimes) && column.breakTimes.length > 0) {
+      return column.breakTimes;
+    }
+    return BREAK_TIMES;
+  };
+
+  // Helper function to check if a slot falls within any break period
+  const getBreakForSlot = (slotMinutes, breakTimes) => {
+    for (const breakTime of breakTimes) {
+      const startMin = timeToMinutes(breakTime.startTime);
+      const endMin = timeToMinutes(breakTime.endTime);
+      if (slotMinutes >= startMin && slotMinutes < endMin) {
+        return breakTime;
+      }
+    }
+    return null;
+  };
 
   const SLOT_HEIGHT_WEEK_MONTH = 50;
   const timeAxisHeight = 48 * SLOT_HEIGHT_WEEK_MONTH;
@@ -336,6 +377,7 @@ const OperatoryScheduleGrid = ({
             }}>
               {OPERATORY_COLUMNS.map((col) => {
                 const colAppointments = dayAppointments.filter(a => a.columnId === col.id);
+                const operatoryBreakTimes = getBreakTimesForOperatory(col.id);
                 
                 return (
                   <Box 
@@ -346,19 +388,45 @@ const OperatoryScheduleGrid = ({
                       bgcolor: "#ffffff",
                     }}
                   >
-                    {Array.from({ length: gridTotalMinutes / SLOT_MINUTES }).map((_, i) => (
-                      <Box
-                        key={`${col.id}-slot-${i}`}
-                        onClick={() => onSlotClick && onSlotClick(col.id, i * SLOT_MINUTES)}
-                        sx={{
-                          height: SLOT_HEIGHT,
-                          borderBottom: "1px solid #f1f5f9",
-                          cursor: "pointer",
-                          transition: "background-color 0.1s",
-                          "&:hover": { bgcolor: "#f0f9ff" },
-                        }}
-                      />
-                    ))}
+                    {Array.from({ length: gridTotalMinutes / SLOT_MINUTES }).map((_, i) => {
+                      const slotStartMinutes = i * SLOT_MINUTES;
+                      const breakInfo = getBreakForSlot(slotStartMinutes, operatoryBreakTimes);
+                      const isBreak = breakInfo !== null;
+                      
+                      return (
+                        <Box
+                          key={`${col.id}-slot-${i}`}
+                          onClick={() => onSlotClick && onSlotClick(col.id, i * SLOT_MINUTES)}
+                          sx={{
+                            height: SLOT_HEIGHT,
+                            borderBottom: "1px solid #f1f5f9",
+                            cursor: isBreak ? "not-allowed" : "pointer",
+                            transition: "background-color 0.1s",
+                            backgroundColor: isBreak ? breakInfo.color : undefined,
+                            backgroundImage: isBreak 
+                              ? 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.3) 5px, rgba(255,255,255,0.3) 10px)'
+                              : undefined,
+                            "&:hover": { 
+                              backgroundColor: isBreak ? breakInfo.hoverColor : "#f0f9ff" 
+                            },
+                          }}
+                        >
+                          {isBreak && slotStartMinutes === timeToMinutes(breakInfo.startTime) && (
+                            <Typography
+                              sx={{
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: breakInfo.textColor,
+                                textAlign: "center",
+                                py: 0.5,
+                              }}
+                            >
+                              {breakInfo.icon} {breakInfo.label}
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })}
 
                     {colAppointments.map((a) => {
                       const startMin = minutesSinceStart(a.start);
@@ -405,7 +473,7 @@ const OperatoryScheduleGrid = ({
     );
   }
 
-  // WEEK/MONTH MODE - Original structure
+  // WEEK/MONTH MODE - Unified scroll container (matching day view structure)
   return (
     <Paper
       elevation={0}
@@ -418,75 +486,100 @@ const OperatoryScheduleGrid = ({
       }}
       ref={gridContainerRef}
     >
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: `80px repeat(${dateRange.length},1fr)`,
-          borderBottom: "2px solid #eef2f6",
-          bgcolor: "#f8fafc",
-          minWidth: Math.max(1800, dateRange.length * 300)
-        }}
-      >
-        <Box sx={{ p: 1.5, borderRight: "1px solid #eef2f6", bgcolor: '#f8fafc' }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>
-            Time
-          </Typography>
-        </Box>
-        
-        {dateRange.map((date) => {
-          const isToday = date.isSame(dayjs(), "day");
-          const isSelected = date.isSame(selectedDate, "day");
-          
-          return (
-            <Box
-              key={date.format("YYYY-MM-DD")}
-              sx={{
-                p: 1.5,
-                borderLeft: "1px solid #eef2f6",
-                borderBottom: isSelected ? "3px solid #1976d2" : "3px solid transparent",
-                bgcolor: isToday ? "#e3f2fd" : isSelected ? "#bbdefb" : "transparent"
-              }}
-            >
-              <Typography sx={{ 
-                textAlign: "center", 
-                fontSize: 12,
-                fontWeight: isSelected || isToday ? 700 : 600,
-                color: isSelected || isToday ? "#1976d2" : "#64748b",
-              }}>
-                {date.format("ddd")}
-              </Typography>
-              
-              <Typography sx={{ 
-                textAlign: "center", 
-                fontWeight: 700,
-                fontSize: 16,
-                color: isSelected || isToday ? "#1976d2" : "#334155",
-                mt: 0.5
-              }}>
-                {date.format("D")}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Box>
-
+      {/* Single scrollable container for both header and body */}
       <Box sx={{ 
+        display: "flex", 
+        flexDirection: "column",
+        height: 640,
         overflowX: "auto",
-        overflowY: "hidden",
-        height: timeAxisHeight
+        overflowY: "auto"
       }}>
+        {/* HEADER - Sticky at top */}
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: `80px repeat(${dateRange.length},1fr)`,
-            height: timeAxisHeight
+            display: "flex",
+            borderBottom: "2px solid #eef2f6",
+            bgcolor: "#f8fafc",
+            position: "sticky",
+            top: 0,
+            zIndex: 999,
+            minWidth: `calc(80px + ${dateRange.length * 200}px)`
           }}
         >
+          <Box 
+            sx={{ 
+              p: 1.5, 
+              borderRight: "1px solid #eef2f6", 
+              bgcolor: '#f8fafc',
+              width: "80px",
+              flexShrink: 0,
+              position: "sticky",
+              left: 0,
+              zIndex: 101
+            }}
+          >
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>
+              Time
+            </Typography>
+          </Box>
+          
+          <Box sx={{ display: "flex", flex: 1 }}>
+            {dateRange.map((date) => {
+              const isToday = date.isSame(dayjs(), "day");
+              const isSelected = date.isSame(selectedDate, "day");
+              
+              return (
+                <Box
+                  key={date.format("YYYY-MM-DD")}
+                  sx={{
+                    p: 1.5,
+                    borderLeft: "1px solid #eef2f6",
+                    borderBottom: isSelected ? "3px solid #1976d2" : "3px solid transparent",
+                    bgcolor: isToday ? "#e3f2fd" : isSelected ? "#bbdefb" : "transparent",
+                    minWidth: "200px",
+                    flexShrink: 0
+                  }}
+                >
+                  <Typography sx={{ 
+                    textAlign: "center", 
+                    fontSize: 12,
+                    fontWeight: isSelected || isToday ? 700 : 600,
+                    color: isSelected || isToday ? "#1976d2" : "#64748b",
+                  }}>
+                    {date.format("ddd")}
+                  </Typography>
+                  
+                  <Typography sx={{ 
+                    textAlign: "center", 
+                    fontWeight: 700,
+                    fontSize: 16,
+                    color: isSelected || isToday ? "#1976d2" : "#334155",
+                    mt: 0.5
+                  }}>
+                    {date.format("D")}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+
+        {/* BODY - Scrolls with header */}
+        <Box sx={{ 
+          display: "flex",
+          height: timeAxisHeight,
+          minWidth: `calc(80px + ${dateRange.length * 200}px)`
+        }}>
           <Box
             sx={{
+              position: "sticky",
+              left: 0,
+              zIndex: 20,
               borderRight: "1px solid #eef2f6",
               bgcolor: "#ffffff",
               height: timeAxisHeight,
+              flexShrink: 0,
+              width: "80px"
             }}
           >
             {Array.from({ length: 48 }).map((_, slotIdx) => {
@@ -520,36 +613,72 @@ const OperatoryScheduleGrid = ({
             })}
           </Box>
           
-          {dateRange.map((date) => {
-            const dateStr = date.format("YYYY-MM-DD");
-            const dateAppointments = appointmentsByDate[dateStr] || [];
-            const isToday = date.isSame(dayjs(), "day");
-            
-            return (
-              <Box
-                key={dateStr}
-                ref={date.isSame(dayjs(), "day") ? currentDateColumnRef : null}
-                sx={{
-                  position: "relative",
-                  borderLeft: "1px solid #eef2f6",
-                  bgcolor: isToday ? "#f5f9ff" : "#ffffff",
-                  height: "100%",
-                }}
-              >
-                {Array.from({ length: 48 }).map((_, i) => (
-                  <Box
-                    key={`${dateStr}-slot-${i}`}
-                    sx={{
-                      position: "absolute",
-                      top: i * SLOT_HEIGHT_WEEK_MONTH,
-                      height: SLOT_HEIGHT_WEEK_MONTH,
-                      left: 0,
-                      right: 0,
-                      borderBottom: i < 47 ? "1px solid #f1f5f9" : "none",
-                      pointerEvents: "none"
-                    }}
-                  />
-                ))}
+          <Box sx={{ display: "flex", flex: 1 }}>
+            {dateRange.map((date) => {
+              const dateStr = date.format("YYYY-MM-DD");
+              const dateAppointments = appointmentsByDate[dateStr] || [];
+              const isToday = date.isSame(dayjs(), "day");
+              
+              // For week/month view, use the break times from the first operatory
+              // This provides a consistent reference point across all dates
+              const operatoryBreakTimes = OPERATORY_COLUMNS.length > 0 
+                ? getBreakTimesForOperatory(OPERATORY_COLUMNS[0].id)
+                : BREAK_TIMES;
+              
+              return (
+                <Box
+                  key={dateStr}
+                  ref={date.isSame(dayjs(), "day") ? currentDateColumnRef : null}
+                  sx={{
+                    position: "relative",
+                    borderLeft: "1px solid #eef2f6",
+                    bgcolor: isToday ? "#f5f9ff" : "#ffffff",
+                    height: "100%",
+                    minHeight: timeAxisHeight,
+                    minWidth: "200px",
+                    flexShrink: 0
+                  }}
+                >
+                {Array.from({ length: 48 }).map((_, i) => {
+                  const slotStartMinutes = i * 30;
+                  const breakInfo = getBreakForSlot(slotStartMinutes, operatoryBreakTimes);
+                  const isBreak = breakInfo !== null && breakInfo !== undefined;
+                  
+                  return (
+                    <Box
+                      key={`${dateStr}-slot-${i}`}
+                      sx={{
+                        position: "absolute",
+                        top: i * SLOT_HEIGHT_WEEK_MONTH,
+                        height: SLOT_HEIGHT_WEEK_MONTH,
+                        left: 0,
+                        right: 0,
+                        borderBottom: i < 47 ? "1px solid #f1f5f9" : "none",
+                        pointerEvents: "none",
+                        backgroundColor: isBreak ? breakInfo?.color : undefined,
+                        backgroundImage: isBreak 
+                          ? 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.3) 5px, rgba(255,255,255,0.3) 10px)'
+                          : undefined,
+                      }}
+                    >
+                      {isBreak && slotStartMinutes === timeToMinutes(breakInfo.startTime) && (
+                        <Typography
+                          sx={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: breakInfo?.textColor || "#e65100",
+                            textAlign: "center",
+                            py: 0.5,
+                            position: "relative",
+                            zIndex: 10,
+                          }}
+                        >
+                          {breakInfo?.icon || "🍽️"} {breakInfo?.label || "Break"}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
                 
                 {dateAppointments.map((a) => {
                   const startMin = minutesSinceStart(a.start);
@@ -583,9 +712,10 @@ const OperatoryScheduleGrid = ({
               </Box>
             );
           })}
+          </Box>
         </Box>
-      </Box>
-    </Paper>
+        </Box>
+      </Paper>
   );
 };
 

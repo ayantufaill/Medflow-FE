@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   Box, Typography, IconButton, TextField, Select, MenuItem,
-  Button, Divider, Checkbox, FormControlLabel, Paper, InputAdornment, Modal, ToggleButton, ToggleButtonGroup, ClickAwayListener
+  Button, Divider, Checkbox, FormControlLabel, Paper, InputAdornment, Modal, ToggleButton, ToggleButtonGroup, ClickAwayListener, Popover
 } from '@mui/material';
 import {
   Close, DeleteOutline, CalendarToday, Add, 
   CloudUploadOutlined, Undo, Redo, FormatBold, 
   FormatItalic, FormatListBulleted, FormatAlignLeft, 
-  FormatAlignCenter, FormatAlignRight, SentimentSatisfiedAlt, LightbulbOutlined
+  FormatAlignCenter, FormatAlignRight, SentimentSatisfiedAlt, LightbulbOutlined,
+  FormatColorText, FormatColorFill
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import SignaturePad from './SignaturePad';
@@ -43,6 +44,13 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
   const [italic, setItalic] = useState(false);
   const [bulletList, setBulletList] = useState(false);
   const [alignment, setAlignment] = useState('left');
+  const [paragraphStyle, setParagraphStyle] = useState('p');
+  const [fontSize, setFontSize] = useState('3');
+  const [fontFamily, setFontFamily] = useState('Arial');
+  const [textColor, setTextColor] = useState('#000000');
+  const [highlightColor, setHighlightColor] = useState('transparent');
+  const [textColorAnchor, setTextColorAnchor] = useState(null);
+  const [highlightColorAnchor, setHighlightColorAnchor] = useState(null);
   const editorRef = useRef(null);
   const isComposing = useRef(false);
   const initialized = useRef(false);
@@ -131,6 +139,48 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
       setInstructions(editorRef.current.innerHTML);
     }
   };
+
+  const handleParagraphChange = (event) => {
+    const tag = event.target.value;
+    setParagraphStyle(tag);
+    handleFormat('formatBlock', tag);
+  };
+
+  const handleFontSizeChange = (event) => {
+    const size = event.target.value;
+    setFontSize(size);
+    handleFormat('fontSize', size);
+  };
+
+  const handleFontFamilyChange = (event) => {
+    const font = event.target.value;
+    setFontFamily(font);
+    handleFormat('fontName', font);
+  };
+
+  const handleTextColorChange = (color) => {
+    setTextColor(color);
+    handleFormat('foreColor', color);
+    setTextColorAnchor(null);
+  };
+
+  const handleHighlightColorChange = (color) => {
+    setHighlightColor(color);
+    handleFormat('hiliteColor', color);
+    setHighlightColorAnchor(null);
+  };
+
+  // Common color palettes
+  const standardColors = [
+    '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
+    '#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff',
+    '#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc',
+    '#dd7e6b', '#ea9999', '#f9cb9c', '#ffe599', '#b6d7a8', '#a2c4c9', '#b4a7d6', '#9fc5e8', '#b4a7d6', '#d5a6bd',
+    '#cc4125', '#e06666', '#f6b26b', '#ffd966', '#93c47d', '#76a5af', '#8e7cc3', '#6fa8dc', '#8e7cc3', '#c27ba0',
+    '#a61c00', '#c00', '#e69138', '#f1c232', '#6aa84f', '#45818e', '#674ea7', '#3d85c6', '#674ea7', '#a64d79',
+    '#85200c', '#990a00', '#b45f06', '#bf9000', '#38761d', '#134f5c', '#351c75', '#0b5394', '#351c75', '#741b47',
+    '#5b0f00', '#660000', '#783f04', '#7f6000', '#274e13', '#0c343d', '#20124d', '#073763', '#20124d', '#4c1130',
+  ];
 
   const handleAlignmentChange = (event, newAlignment) => {
     if (newAlignment !== null) {
@@ -311,8 +361,152 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                 </ToggleButton>
               </ToggleButtonGroup>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-              <Typography sx={{ fontSize: '12px', alignSelf: 'center', px: 1, color: '#94a3b8' }}>Rich Text Editor</Typography>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+              
+              {/* Paragraph Style */}
+              <Select
+                size="small"
+                value={paragraphStyle}
+                onChange={handleParagraphChange}
+                sx={{ minWidth: 100, height: 28, fontSize: '12px' }}
+                variant="outlined"
+              >
+                <MenuItem value="p">Paragraph</MenuItem>
+                <MenuItem value="h1">Heading 1</MenuItem>
+                <MenuItem value="h2">Heading 2</MenuItem>
+                <MenuItem value="h3">Heading 3</MenuItem>
+                <MenuItem value="h4">Heading 4</MenuItem>
+                <MenuItem value="h5">Heading 5</MenuItem>
+                <MenuItem value="h6">Heading 6</MenuItem>
+              </Select>
+              
+              {/* Font Size */}
+              <Select
+                size="small"
+                value={fontSize}
+                onChange={handleFontSizeChange}
+                sx={{ minWidth: 70, height: 28, fontSize: '12px' }}
+                variant="outlined"
+              >
+                <MenuItem value="1">8pt</MenuItem>
+                <MenuItem value="2">10pt</MenuItem>
+                <MenuItem value="3">12pt</MenuItem>
+                <MenuItem value="4">14pt</MenuItem>
+                <MenuItem value="5">18pt</MenuItem>
+                <MenuItem value="6">24pt</MenuItem>
+                <MenuItem value="7">36pt</MenuItem>
+              </Select>
+              
+              {/* Font Family */}
+              <Select
+                size="small"
+                value={fontFamily}
+                onChange={handleFontFamilyChange}
+                sx={{ minWidth: 120, height: 28, fontSize: '12px' }}
+                variant="outlined"
+              >
+                <MenuItem value="Arial">Arial</MenuItem>
+                <MenuItem value="Times New Roman">Times New Roman</MenuItem>
+                <MenuItem value="Courier New">Courier New</MenuItem>
+                <MenuItem value="Georgia">Georgia</MenuItem>
+                <MenuItem value="Verdana">Verdana</MenuItem>
+                <MenuItem value="Trebuchet MS">Trebuchet MS</MenuItem>
+                <MenuItem value="Impact">Impact</MenuItem>
+              </Select>
+              
+              {/* Text Color */}
+              <Box sx={{ position: 'relative' }}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setTextColorAnchor(e.currentTarget)}
+                  sx={{ 
+                    minWidth: 28, 
+                    height: 28,
+                    color: textColor,
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                  }}
+                  title="Text Color"
+                >
+                  <FormatColorText fontSize="inherit" />
+                </IconButton>
+                <Popover
+                  open={Boolean(textColorAnchor)}
+                  anchorEl={textColorAnchor}
+                  onClose={() => setTextColorAnchor(null)}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                  }}
+                  sx={{ '& .MuiPaper-root': { p: 1, borderRadius: 1 } }}
+                >
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 0.5 }}>
+                    {standardColors.map((color) => (
+                      <Box
+                        key={color}
+                        onClick={() => handleTextColorChange(color)}
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          bgcolor: color,
+                          border: color === '#ffffff' ? '1px solid #ccc' : 'none',
+                          cursor: 'pointer',
+                          '&:hover': { transform: 'scale(1.2)', zIndex: 1 }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Popover>
+              </Box>
+              
+              {/* Highlight/Background Color */}
+              <Box sx={{ position: 'relative' }}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setHighlightColorAnchor(e.currentTarget)}
+                  sx={{ 
+                    minWidth: 28, 
+                    height: 28,
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                  }}
+                  title="Highlight Color"
+                >
+                  <FormatColorFill sx={{ fontSize: 24, color: highlightColor === 'transparent' ? '#000000' : highlightColor }} />
+                </IconButton>
+                <Popover
+                  open={Boolean(highlightColorAnchor)}
+                  anchorEl={highlightColorAnchor}
+                  onClose={() => setHighlightColorAnchor(null)}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                  }}
+                  sx={{ '& .MuiPaper-root': { p: 1, borderRadius: 1 } }}
+                >
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 0.5 }}>
+                    {standardColors.map((color) => (
+                      <Box
+                        key={color}
+                        onClick={() => handleHighlightColorChange(color)}
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          bgcolor: color,
+                          border: color === '#ffffff' ? '1px solid #ccc' : 'none',
+                          cursor: 'pointer',
+                          '&:hover': { transform: 'scale(1.2)', zIndex: 1 }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Popover>
+              </Box>
               <IconButton 
                 size="small" 
                 onClick={() => insertEmoji('😊')}

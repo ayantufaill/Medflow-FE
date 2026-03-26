@@ -278,8 +278,8 @@ const InsurancePage = () => {
                     {row.payer}
                   </TableCell>
 
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+                  <TableCell sx={{ fontSize: '0.78rem', color: '#444', py: 0.75 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Chip
                         label={row.plan}
                         sx={{
