@@ -370,4 +370,20 @@ export const patientValidations = {
       message: 'Notes must not exceed 1000 characters',
     },
   },
+  lastVisitDate: {
+    validate: (value) => {
+      if (!value) return true; // Optional field
+      
+      // Check if it's a valid date format
+      const date = new Date(value);
+      if (isNaN(date.getTime())) return 'Last visit date must be a valid date';
+      
+      // Check if date is not in the future
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (date > today) return 'Last visit date cannot be in the future';
+      
+      return true;
+    },
+  },
 };

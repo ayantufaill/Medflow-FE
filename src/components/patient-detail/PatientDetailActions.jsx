@@ -5,8 +5,15 @@ import {
   ExpandMore as ExpandMoreIcon,
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
+  Sync as SyncIcon,
+  ChatBubbleOutline as ChatIcon,
+  MailOutline as MailIcon,
+  PrintOutlined as PrintIcon,
+  DescriptionOutlined as FileIcon,
+  AccountBox as AccountBoxIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
+import MyChartFileDialog from './MyChartFileDialog';
 
 /**
  * Screenshot: Edit (white, pencil, light gray text), then 5 small utility icons (refresh, document, envelope, printer, person+), then Deactivate (red), Convert (blue), Request Patient Updates.
@@ -14,11 +21,15 @@ import { useState } from 'react';
  */
 export default function PatientDetailActions({
   onEdit,
+  onSave,
+  onCancelEdit,
   onDeactivate,
   onActivate,
   onConvertToNonPatient,
   onSendUpdateRequest,
   isActive,
+  patient,
+  isEditMode = false,
 }) {
   const [requestMenuAnchor, setRequestMenuAnchor] = useState(null);
   const [requestChecks, setRequestChecks] = useState({
@@ -29,9 +40,12 @@ export default function PatientDetailActions({
     tdsFinancial: true,
     hipaa2026: false,
   });
+  const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
 
   const handleRequestOpen = (e) => setRequestMenuAnchor(e.currentTarget);
   const handleRequestClose = () => setRequestMenuAnchor(null);
+  const handleMyChartFileOpen = () => setMyChartFileDialogOpen(true);
+  const handleMyChartFileClose = () => setMyChartFileDialogOpen(false);
 
   const toggleRequest = (key) => {
     setRequestChecks((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -64,22 +78,119 @@ export default function PatientDetailActions({
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<EditIcon fontSize="small" />}
-          onClick={onEdit}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            borderRadius: 1.5,
-            borderColor: 'grey.300',
-            color: 'grey.700',
-            bgcolor: 'white',
-          }}
-        >
-          Edit
-        </Button>
+        {isEditMode ? (
+          <>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<CheckCircleIcon />}
+              onClick={onSave}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 1.5,
+                bgcolor: '#43a047',
+                '&:hover': { bgcolor: '#388e3c' },
+              }}
+            >
+              Save
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CloseIcon />}
+              onClick={onCancelEdit}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 1.5,
+                borderColor: 'grey.300',
+                color: 'grey.700',
+                bgcolor: 'white',
+              }}
+            >
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<EditIcon fontSize="small" />}
+            onClick={onEdit}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: 1.5,
+              borderColor: 'grey.300',
+              color: 'grey.700',
+              bgcolor: 'white',
+            }}
+          >
+            Edit
+          </Button>
+        )}
+        
+        {/* Icon Toolbar - Small utility icons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+          {/* Hx (History) Icon */}
+          <IconButton size="small" sx={{ p: 0.5 }}>
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <SyncIcon sx={{ fontSize: 28, color: '#1a237e' }} />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '7px',
+                  fontWeight: 'bold',
+                  color: '#4db6ac',
+                }}
+              >
+                Hx
+              </Box>
+            </Box>
+          </IconButton>
+
+          {/* Chat Icon */}
+          <IconButton size="small" sx={{ p: 0.5 }}>
+            <ChatIcon sx={{ fontSize: 20, color: '#1a237e' }} />
+          </IconButton>
+
+          {/* Email with Check Icon */}
+          <IconButton size="small" sx={{ p: 0.5 }}>
+            <Box sx={{ position: 'relative' }}>
+              <MailIcon sx={{ fontSize: 20, color: '#1a237e' }} />
+              <CheckCircleIcon 
+                sx={{ 
+                  position: 'absolute', 
+                  bottom: -2, 
+                  right: -2, 
+                  fontSize: 10, 
+                  fontWeight: 'bold',
+                  color: '#1a237e' 
+                }} 
+              />
+            </Box>
+          </IconButton>
+
+          {/* Print Icon */}
+          <IconButton size="small" sx={{ p: 0.5 }}>
+            <PrintIcon sx={{ fontSize: 20, color: '#1a237e' }} />
+          </IconButton>
+
+          {/* Document/File Icon */}
+          <IconButton size="small" sx={{ p: 0.5 }}>
+            <FileIcon sx={{ fontSize: 20, color: '#1a237e' }} />
+          </IconButton>
+
+          {/* Profile/User Icon */}
+          <IconButton size="small" sx={{ p: 0.5 }} onClick={handleMyChartFileOpen}>
+            <AccountBoxIcon sx={{ fontSize: 22, color: '#1a237e' }} />
+          </IconButton>
+        </Box>
+
         {isActive ? (
           <Button
             variant="contained"
@@ -231,6 +342,13 @@ export default function PatientDetailActions({
           </Button>
         </Box>
       </Menu>
+      
+      {/* MyChart File Dialog */}
+      <MyChartFileDialog 
+        open={myChartFileDialogOpen} 
+        onClose={handleMyChartFileClose}
+        patient={patient}
+      />
     </>
   );
 }

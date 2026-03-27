@@ -88,7 +88,9 @@ export const patientService = {
   },
 
   async getPatientWorkspace(patientId) {
+    console.log('🌐 API CALL - getPatientWorkspace for ID:', patientId);
     const response = await apiClient.get(`/patients/${patientId}/workspace`);
+    console.log('📨 API RESPONSE from /patients/:id/workspace:', response.data.data.patient);
     return response.data.data.patient;
   },
 

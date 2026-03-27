@@ -42,7 +42,10 @@ export default function PatientDetailOverview({
   patientNumber,
   preferredDentists = [],
   preferredHygienists = [],
+  isEditMode = false,
   onEdit,
+  onSave,
+  onCancelEdit,
   onRefresh,
   onDeactivate,
   onActivate,
@@ -51,6 +54,7 @@ export default function PatientDetailOverview({
   onDocuments,
   onAddFamilyMember,
   onSendUpdateRequest,
+  onPatientDataChange,
 }) {
   const [myChartModalOpen, setMyChartModalOpen] = useState(false);
 
@@ -87,12 +91,16 @@ export default function PatientDetailOverview({
           />
           <PatientDetailActions
             onEdit={onEdit}
+            onSave={onSave}
+            onCancelEdit={onCancelEdit}
             onRefresh={onRefresh}
             onDeactivate={onDeactivate}
             onActivate={onActivate}
             isActive={patient?.isActive}
             onConvertToNonPatient={onConvertToNonPatient}
             onSendUpdateRequest={onSendUpdateRequest}
+            patient={patient}
+            isEditMode={isEditMode}
           />
         </Box>
       </Paper>
@@ -132,26 +140,52 @@ export default function PatientDetailOverview({
         >
           {/* Col 1: Patient details | Additional information */}
           <Box>
-            <PatientDetailsSection patient={patient} patientNumber={patientNumber} />
+            <PatientDetailsSection 
+              patient={patient} 
+              patientNumber={patientNumber}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
             <Box sx={{ mt: 3 }}>
-              <AdditionalInformationSection patient={patient} showSpouse={false} />
+              <AdditionalInformationSection 
+                patient={patient} 
+                showSpouse={false}
+                isEditMode={isEditMode}
+                onPatientDataChange={onPatientDataChange}
+              />
             </Box>
           </Box>
           {/* Col 2: Contact information | Spouse information */}
           <Box>
-            <ContactInformationSection patient={patient} />
+            <ContactInformationSection 
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
             <Box sx={{ mt: 3 }}>
               <SpouseInformationSectionContent patient={patient} />
             </Box>
           </Box>
           {/* Col 3: Financial Responsibility | Head of communication | Emergency contact */}
           <Box>
-            <FinancialResponsibilitySection patient={patient} />
+            <FinancialResponsibilitySection 
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
             <Box sx={{ mt: 3 }}>
-              <HeadOfCommunicationSection patient={patient} />
+              <HeadOfCommunicationSection 
+                patient={patient}
+                isEditMode={isEditMode}
+                onPatientDataChange={onPatientDataChange}
+              />
             </Box>
             <Box sx={{ mt: 3 }}>
-              <EmergencyContactSection patient={patient} />
+              <EmergencyContactSection 
+                patient={patient}
+                isEditMode={isEditMode}
+                onPatientDataChange={onPatientDataChange}
+              />
             </Box>
           </Box>
         </Box>

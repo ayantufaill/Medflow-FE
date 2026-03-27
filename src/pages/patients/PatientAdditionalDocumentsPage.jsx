@@ -3,48 +3,25 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Typography,
-  Paper,
   Button,
   CircularProgress,
   Alert,
-  IconButton,
-  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
   FormControl,
   Select,
   MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Chip,
-  Stack,
-  Link,
+  Paper,
 } from "@mui/material";
-import {
-  Description as DocIcon,
-  PhotoCamera as CameraIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  InfoOutlined as InfoIcon,
-  Add as AddIcon,
-  Assignment as ChecklistIcon,
-  Close as CloseIcon,
-  Check as CheckIcon,
-} from "@mui/icons-material";
+import { Add as AddIcon } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { documentService } from "../../services/document.service";
 import { patientService } from "../../services/patient.service";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, FloatingActions } from "../../components/patients";
 
+// Utility functions
 const formatDate = (dateVal) => {
   if (!dateVal) return "";
   const d = new Date(dateVal);
@@ -55,12 +32,7 @@ const formatDate = (dateVal) => {
   });
 };
 
-const truncateLabel = (value, max = 30) => {
-  if (!value) return "";
-  if (value.length <= max) return value;
-  return `${value.slice(0, max - 3)}...`;
-};
-
+// Styled components
 const PageContainer = (props) => (
   <Box
     {...props}
@@ -89,127 +61,88 @@ const Card = (props) => (
   />
 );
 
-const FloatingActions = (props) => (
-  <Box
-    {...props}
-    sx={{
-      position: "fixed",
-      right: 16,
-      top: "50%",
-      transform: "translateY(-50%)",
-      display: "flex",
-      flexDirection: "column",
-      gap: 8,
-      zIndex: 10,
-      ...(props.sx || {}),
-    }}
-  />
-);
-
-const FloatingActionButton = (props) => (
-  <IconButton
-    {...props}
-    sx={{
-      bgcolor: "#ffffff",
-      borderRadius: "50%",
-      border: "1px solid #e0e0e0",
-      boxShadow: "0px 1px 3px rgba(0,0,0,0.15)",
-      "&:hover": {
-        bgcolor: "#fafafa",
-      },
-      ...(props.sx || {}),
-    }}
-  />
-);
-
-const INITIAL_CUSTOM_FORMS = [
-  {
-    id: "form-1",
-    title: "Consent for Braces\nRemoval -Orthodontic\nRetention - 02/18/2026",
-    status: "Not Signed",
-  },
-  {
-    id: "form-2",
-    title: "Retainer Consent Form\n02/18/2026",
-    status: "Signed",
-  },
-  {
-    id: "form-3",
-    title: "TDS Form",
-    status: "Signed",
-  },
-];
-
-const INITIAL_DEMO_CLAIM_ATTACHMENTS = [
-  {
-    id: "demo-1",
-    name: "Progress Notes 1",
-    uploadedBy: "B.M",
-    uploadedDate: "03/18/2026",
-    status: "Open",
-    type: "IMAGE",
-  },
-  {
-    id: "demo-2",
-    name: "Perio Chart 1",
-    uploadedBy: "B.M",
-    uploadedDate: "02/19/2026",
-    status: "Open",
-    type: "PDF",
-  },
-];
-
-const INITIAL_DEMO_CONSENTS = [
-  {
-    id: "demo-c1",
-    name: "Invisalign consent",
-    uploadedBy: "K.H",
-    uploadedDate: "02/19/2026",
-    status: "Open",
-    type: "PDF",
-  },
-];
-
-const EDIT_NAME_SUGGESTIONS = [
-  "BOB (Breakdown of benefits)",
-  "Insurance Fax Back",
-  "Treatment consent",
-  "N2O Consent",
-  "Signed Treatment Plan",
-  "Pre-D",
-];
-
-const EDIT_CATEGORY_SUGGESTIONS = [
-  "Insurance",
-  "Consent",
-  "Medical/Dental History",
-  "Treatment Plan",
-  "Referral",
-  "Signed Receipt",
-  "Medications",
-  "ID",
-  "Lab",
-  "Invoices",
-  "Consult",
-];
-
 const PatientAdditionalDocumentsPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  
+  // State management
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [viewMode, setViewMode] = useState("thumbnails");
+  const [sortMode, setSortMode] = useState("category");
+  
+  // Demo data state
+  const [demoClaimAttachments, setDemoClaimAttachments] = useState([
+    {
+      id: "demo-1",
+      name: "Progress Notes 1",
+      uploadedBy: "B.M",
+      uploadedDate: "03/18/2026",
+      status: "Open",
+      type: "IMAGE",
+    },
+    {
+      id: "demo-2",
+      name: "Perio Chart 1",
+      uploadedBy: "B.M",
+      uploadedDate: "02/19/2026",
+      status: "Open",
+      type: "PDF",
+    },
+  ]);
+  const [demoConsents, setDemoConsents] = useState([
+    {
+      id: "demo-c1",
+      name: "Invisalign consent",
+      uploadedBy: "K.H",
+      uploadedDate: "02/19/2026",
+      status: "Open",
+      type: "PDF",
+    },
+  ]);
+  const [customForms, setCustomForms] = useState([
+    {
+      id: "form-1",
+      title: "Consent for Braces\nRemoval -Orthodontic\nRetention - 02/18/2026",
+      status: "Not Signed",
+    },
+    {
+      id: "form-2",
+      title: "Retainer Consent Form\n02/18/2026",
+      status: "Signed",
+    },
+    {
+      id: "form-3",
+      title: "TDS Form",
+      status: "Signed",
+    },
+  ]);
+  
+  // Dialog states
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     documentId: null,
     documentName: "",
   });
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [viewMode, setViewMode] = useState("thumbnails");
-  const [sortMode, setSortMode] = useState("category");
+  const [customFormDeleteDialog, setCustomFormDeleteDialog] = useState({
+    open: false,
+    formId: null,
+    formTitle: "",
+  });
+  const [editDialog, setEditDialog] = useState({
+    open: false,
+    section: null,
+    docId: null,
+    name: "",
+    type: "",
+    category: "",
+  });
 
+  // Fetch patient and documents on mount
   useEffect(() => {
     let cancelled = false;
     const fetchData = async () => {
@@ -221,7 +154,6 @@ const PatientAdditionalDocumentsPage = () => {
         ]);
         if (!cancelled) {
           setPatient(patientData);
-          // Filter out HIPAA documents - show only additional/non-signed docs
           const allDocs = result?.documents || [];
           const nonHipaaDocs = allDocs.filter((doc) => {
             const type = (doc.documentType || "").toLowerCase();
@@ -254,6 +186,7 @@ const PatientAdditionalDocumentsPage = () => {
     return "Patient";
   };
 
+  // Upload document handler
   const handleUploadAdditionalDocument = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -323,6 +256,136 @@ const PatientAdditionalDocumentsPage = () => {
     input.click();
   };
 
+  // Document action handlers
+  const handleOpenDocument = (row) => {
+    if (row.id.startsWith("demo-")) {
+      showSnackbar(`Opening ${row.name}...`, "info");
+      return;
+    }
+    window.open(row.fileUrl || row.documentUrl, "_blank");
+  };
+
+  const handleDownloadDocument = (row) => {
+    if (row.id.startsWith("demo-")) {
+      showSnackbar(`Downloading ${row.name}...`, "info");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = row.fileUrl || row.documentUrl;
+    link.download = row.name;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showSnackbar("Document downloaded", "success");
+  };
+
+  const handleShareWithPatient = (row) => {
+    if (row.id.startsWith("demo-")) {
+      showSnackbar(`Sharing ${row.name} with patient...`, "info");
+      return;
+    }
+    showSnackbar(`${row.name} shared with patient via portal`, "success");
+  };
+
+  const handleConfirmDeleteCustomForm = () => {
+    if (!customFormDeleteDialog.formId) {
+      setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
+      return;
+    }
+    setCustomForms((prev) =>
+      prev.filter((item) => item.id !== customFormDeleteDialog.formId),
+    );
+    setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
+    showSnackbar("Custom form removed", "success");
+  };
+
+  const handleUploadCustomFormDocument = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,.pdf";
+    input.multiple = true;
+    input.onchange = async () => {
+      const files = input.files;
+      if (!files?.length || !patientId) return;
+      try {
+        setUploading(true);
+        const newForms = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("patientId", patientId);
+          formData.append("documentType", "custom_form");
+          formData.append("documentName", file.name || `Custom form ${i + 1}`);
+          await documentService.uploadDocument(formData);
+
+          newForms.push({
+            id: `form-upload-${Date.now()}-${i}`,
+            title: file.name || `Custom form ${i + 1}`,
+            status: "Not Signed",
+          });
+        }
+
+        if (newForms.length) {
+          setCustomForms((prev) => [...newForms, ...prev]);
+        }
+
+        showSnackbar(
+          `Uploaded ${files.length} custom form document(s)`,
+          "success",
+        );
+      } catch (err) {
+        showSnackbar(
+          err?.response?.data?.error?.message ||
+            err?.response?.data?.message ||
+            "Failed to upload custom form document",
+          "error",
+        );
+      } finally {
+        setUploading(false);
+      }
+    };
+    input.click();
+  };
+
+  const handleEditDocument = (section, row) => {
+    setEditDialog({
+      open: true,
+      section,
+      docId: row.id,
+      name: row.name,
+      type: row.type,
+      category: row.type || "",
+    });
+  };
+
+  const handleSaveEditDialog = () => {
+    const { section, docId, name, category } = editDialog;
+    if (!section || !docId) {
+      setEditDialog((prev) => ({ ...prev, open: false }));
+      return;
+    }
+
+    if (section === "claim") {
+      setDemoClaimAttachments((prev) =>
+        prev.map((row) =>
+          row.id === docId ? { ...row, name, type: category || row.type } : row,
+        ),
+      );
+    } else {
+      setDemoConsents((prev) =>
+        prev.map((row) =>
+          row.id === docId ? { ...row, name, type: category || row.type } : row,
+        ),
+      );
+    }
+
+    showSnackbar("Document details updated", "success");
+    setEditDialog((prev) => ({ ...prev, open: false }));
+  };
+
+  // Delete document handler
   const handleDelete = async () => {
     const { documentId } = deleteDialog;
     if (!documentId) {
@@ -382,147 +445,6 @@ const PatientAdditionalDocumentsPage = () => {
     }
   };
 
-  const [demoClaimAttachments, setDemoClaimAttachments] = useState(
-    INITIAL_DEMO_CLAIM_ATTACHMENTS,
-  );
-  const [demoConsents, setDemoConsents] = useState(INITIAL_DEMO_CONSENTS);
-  const [customForms, setCustomForms] = useState(INITIAL_CUSTOM_FORMS);
-  const [customFormDeleteDialog, setCustomFormDeleteDialog] = useState({
-    open: false,
-    formId: null,
-    formTitle: "",
-  });
-  const [editDialog, setEditDialog] = useState({
-    open: false,
-    section: null, // "claim" | "consent"
-    docId: null,
-    name: "",
-    type: "",
-    category: "",
-  });
-
-  const handleConfirmDeleteCustomForm = () => {
-    if (!customFormDeleteDialog.formId) {
-      setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
-      return;
-    }
-    setCustomForms((prev) =>
-      prev.filter((item) => item.id !== customFormDeleteDialog.formId),
-    );
-    setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
-    showSnackbar("Custom form removed", "success");
-  };
-
-  const handleUploadCustomFormDocument = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*,.pdf";
-    input.multiple = true;
-    input.onchange = async () => {
-      const files = input.files;
-      if (!files?.length || !patientId) return;
-      try {
-        setUploading(true);
-        const newForms = [];
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const displayName = file.name || `Custom form ${i + 1}`;
-
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("patientId", patientId);
-          formData.append("documentType", "custom_form");
-          formData.append("documentName", displayName);
-          await documentService.uploadDocument(formData);
-
-          newForms.push({
-            id: `form-upload-${Date.now()}-${i}`,
-            title: displayName,
-            status: "Not Signed",
-          });
-        }
-
-        if (newForms.length) {
-          setCustomForms((prev) => [...newForms, ...prev]);
-        }
-
-        showSnackbar(
-          `Uploaded ${files.length} custom form document(s)`,
-          "success",
-        );
-      } catch (err) {
-        showSnackbar(
-          err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to upload custom form document",
-          "error",
-        );
-      } finally {
-        setUploading(false);
-      }
-    };
-    input.click();
-  };
-
-  const handleOpenEditDialog = (section, row) => {
-    setEditDialog({
-      open: true,
-      section,
-      docId: row.id,
-      name: row.name,
-      type: row.type,
-      category: row.type || "",
-    });
-  };
-
-  const handleCloseEditDialog = () => {
-    setEditDialog((prev) => ({ ...prev, open: false }));
-  };
-
-  const handleSaveEditDialog = () => {
-    const { section, docId, name, category } = editDialog;
-    if (!section || !docId) {
-      handleCloseEditDialog();
-      return;
-    }
-
-    if (section === "claim") {
-      setDemoClaimAttachments((prev) =>
-        prev.map((row) =>
-          row.id === docId ? { ...row, name, type: category || row.type } : row,
-        ),
-      );
-    } else {
-      setDemoConsents((prev) =>
-        prev.map((row) =>
-          row.id === docId ? { ...row, name, type: category || row.type } : row,
-        ),
-      );
-    }
-
-    showSnackbar("Document details updated", "success");
-    handleCloseEditDialog();
-  };
-
-  const sortRowsForView = (rows) => {
-    const copy = [...rows];
-    if (sortMode === "name") {
-      copy.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    } else if (sortMode === "date") {
-      copy.sort((a, b) => {
-        const da = new Date(a.uploadedDate || 0).getTime();
-        const db = new Date(b.uploadedDate || 0).getTime();
-        return db - da;
-      });
-    } else if (sortMode === "category") {
-      copy.sort((a, b) => (a.type || "").localeCompare(b.type || ""));
-    }
-    return copy;
-  };
-
-  const sortedClaimAttachments = sortRowsForView(demoClaimAttachments);
-  const sortedConsents = sortRowsForView(demoConsents);
-
   if (loading && !patient) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -535,20 +457,7 @@ const PatientAdditionalDocumentsPage = () => {
     <PageContainer>
       <PatientSectionTabs activeTab="additional_docs" patientId={patientId} />
 
-      <FloatingActions>
-        <FloatingActionButton
-          onClick={handleUploadCustomFormDocument}
-          disabled={uploading}
-        >
-          <CameraIcon fontSize="small" />
-        </FloatingActionButton>
-        <FloatingActionButton>
-          <DocIcon fontSize="small" />
-        </FloatingActionButton>
-        <FloatingActionButton>
-          <ChecklistIcon fontSize="small" />
-        </FloatingActionButton>
-      </FloatingActions>
+      <FloatingActions onUploadCustomForm={handleUploadCustomFormDocument} />
 
       <Box
         sx={{
@@ -596,92 +505,28 @@ const PatientAdditionalDocumentsPage = () => {
         </Box>
       </Box>
 
-      <Card>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-          Custom Forms:
-        </Typography>
+      {/* Custom Forms Section */}
+      {customForms.length > 0 && (
+        <CustomFormsSection
+          customForms={customForms}
+          selectedFormId={customFormDeleteDialog.formId}
+          onFormClick={(f) =>
+            showSnackbar(
+              `Opening form: ${f.title.replace(/\n/g, " ")}`,
+              "info",
+            )
+          }
+          onFormDeleteClick={(f) =>
+            setCustomFormDeleteDialog({
+              open: true,
+              formId: f.id,
+              formTitle: f.title.replace(/\n/g, " "),
+            })
+          }
+        />
+      )}
 
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {customForms.map((f) => (
-            <Box
-              key={f.id}
-              sx={{
-                width: 190,
-                textAlign: "center",
-                cursor: "pointer",
-              }}
-              onClick={() =>
-                showSnackbar(
-                  `Opening form: ${f.title.replace(/\n/g, " ")}`,
-                  "info",
-                )
-              }
-            >
-              <Box sx={{ height: 92, display: "grid", placeItems: "center" }}>
-                <Box sx={{ position: "relative", width: 72, height: 72 }}>
-                  <DocIcon sx={{ fontSize: 68, color: "primary.main" }} />
-                  <ChecklistIcon
-                    sx={{
-                      position: "absolute",
-                      right: -4,
-                      bottom: -6,
-                      fontSize: 26,
-                      color: "#64b5f6",
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: -6,
-                      left: -6,
-                      width: 12,
-                      height: 12,
-                      bgcolor: "#ffffff",
-                      border:
-                        customFormDeleteDialog.open &&
-                        customFormDeleteDialog.formId === f.id
-                          ? "1px solid #1976d2"
-                          : "1px solid #bdbdbd",
-                      borderRadius: 0.5,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCustomFormDeleteDialog({
-                        open: true,
-                        formId: f.id,
-                        formTitle: f.title.replace(/\n/g, " "),
-                      });
-                    }}
-                  >
-                    {customFormDeleteDialog.open &&
-                      customFormDeleteDialog.formId === f.id && (
-                        <CheckIcon sx={{ fontSize: 10, color: "#1976d2" }} />
-                      )}
-                  </Box>
-                </Box>
-              </Box>
-              <Typography
-                variant="body2"
-                sx={{
-                  whiteSpace: "pre-line",
-                  fontWeight: 600,
-                  color: "#424242",
-                }}
-              >
-                {truncateLabel(f.title.replace(/\n/g, " "))}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {f.status}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Card>
-
+      {/* Additional Documents Section */}
       <Card>
         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
           Additional Documents:
@@ -790,598 +635,91 @@ const PatientAdditionalDocumentsPage = () => {
           </Paper>
         </Box>
 
-        <Divider sx={{ my: 2 }} />
-
-        {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : documents.length === 0 ? (
-          <Alert severity="info">
-            No additional documents for this patient. Click “Upload new
-            document” to add one.
-          </Alert>
-        ) : viewMode === "thumbnails" ? (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-            {sortedClaimAttachments.concat(sortedConsents).map((row) => (
-              <Box key={row.id} sx={{ minWidth: 280, maxWidth: 360 }}>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 2,
-                  }}
-                >
-                  <Box sx={{ color: "primary.main", mt: 0.25 }}>
-                    <DocIcon sx={{ fontSize: 28 }} />
-                  </Box>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {row.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Uploaded by {row.uploadedBy} — {row.uploadedDate}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {row.type}
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Box>
-            ))}
-          </Box>
-        ) : (
-          <Box>
-            {/* Claim Attachment section – demo data */}
-            <Box sx={{ mb: 3 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  mb: 0.75,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 700,
-                    color: "#616161",
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  Claim Attachment
-                </Typography>
-                <Tooltip title="Uploaded claim-related attachments">
-                  <InfoIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-                </Tooltip>
-              </Box>
-
-              <Table
-                size="small"
-                sx={{
-                  border: "1px solid",
-                  borderColor: "grey.200",
-                  borderRadius: 1,
-                }}
-              >
-                <TableBody>
-                  {sortedClaimAttachments.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            sx={{ cursor: "pointer" }}
-                            onClick={() => handleOpenEditDialog("claim", row)}
-                          >
-                            {truncateLabel(row.name)}
-                          </Typography>
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenEditDialog("claim", row)}
-                            >
-                              <EditIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ width: 220 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: "0.8rem", color: "#757575" }}
-                        >
-                          Uploaded by {row.uploadedBy} — {row.uploadedDate}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: "0.8rem", color: "#616161" }}
-                        >
-                          {row.type}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: "0.8rem",
-                            color: "#1976d2",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {row.status}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: "0.8rem",
-                            color: "#1976d2",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Download
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: "0.8rem",
-                            color: "#1976d2",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Share with patient
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right" sx={{ width: 60 }}>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            sx={{ color: "#e53935" }}
-                            onClick={() =>
-                              setDeleteDialog({
-                                open: true,
-                                documentId: row.id,
-                                documentName: row.name,
-                              })
-                            }
-                          >
-                            <DeleteIcon fontSize="inherit" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+        <Box sx={{ mt: 2 }}>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress />
             </Box>
-
-            {/* Consent section – demo data */}
-            <Box sx={{ mb: 1 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  mb: 0.75,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 700,
-                    color: "#616161",
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  Consent
-                </Typography>
-                <Tooltip title="Uploaded consent documents">
-                  <InfoIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-                </Tooltip>
-              </Box>
-
-              <Table
-                size="small"
-                sx={{
-                  border: "1px solid",
-                  borderColor: "grey.200",
-                  borderRadius: 1,
-                }}
-              >
-                <TableBody>
-                  {sortedConsents.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            sx={{ cursor: "pointer" }}
-                            onClick={() => handleOpenEditDialog("consent", row)}
-                          >
-                            {truncateLabel(row.name)}
-                          </Typography>
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() =>
-                                handleOpenEditDialog("consent", row)
-                              }
-                            >
-                              <EditIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ width: 220 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: "0.8rem", color: "#757575" }}
-                        >
-                          Uploaded by {row.uploadedBy} — {row.uploadedDate}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: "0.8rem", color: "#616161" }}
-                        >
-                          {row.type}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: "0.8rem",
-                            color: "#1976d2",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {row.status}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: "0.8rem",
-                            color: "#1976d2",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Download
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: "0.8rem",
-                            color: "#1976d2",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Share with patient
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right" sx={{ width: 60 }}>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            sx={{ color: "#e53935" }}
-                            onClick={() =>
-                              setDeleteDialog({
-                                open: true,
-                                documentId: row.id,
-                                documentName: row.name,
-                              })
-                            }
-                          >
-                            <DeleteIcon fontSize="inherit" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          ) : documents.length === 0 && 
+                    demoClaimAttachments.length === 0 && 
+                    demoConsents.length === 0 ? (
+            <Alert severity="info">
+              No additional documents for this patient. Click "Upload new
+              document" to add one.
+            </Alert>
+          ) : viewMode === "thumbnails" ? (
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+              {[...demoClaimAttachments, ...demoConsents].map((doc) => (
+                <DocumentThumbnail
+                  key={doc.id}
+                  document={doc}
+                  onOpen={handleOpenDocument}
+                  onDownload={handleDownloadDocument}
+                  onShare={handleShareWithPatient}
+                />
+              ))}
             </Box>
-          </Box>
-        )}
+          ) : (
+            <Box>
+              {/* Claim Attachment section */}
+              {demoClaimAttachments.length > 0 && (
+                <DocumentTable
+                  title="Claim Attachment"
+                  tooltipTitle="Uploaded claim-related attachments"
+                  documents={demoClaimAttachments}
+                  sortMode={sortMode}
+                  onEdit={(row) => handleEditDocument("claim", row)}
+                  onOpen={handleOpenDocument}
+                  onDownload={handleDownloadDocument}
+                  onShare={handleShareWithPatient}
+                  onDelete={(row) =>
+                    setDeleteDialog({
+                      open: true,
+                      documentId: row.id,
+                      documentName: row.name,
+                    })
+                  }
+                />
+              )}
+
+              {/* Consent section */}
+              {demoConsents.length > 0 && (
+                <DocumentTable
+                  title="Consent"
+                  tooltipTitle="Uploaded consent documents"
+                  documents={demoConsents}
+                  sortMode={sortMode}
+                  onEdit={(row) => handleEditDocument("consent", row)}
+                  onOpen={handleOpenDocument}
+                  onDownload={handleDownloadDocument}
+                  onShare={handleShareWithPatient}
+                  onDelete={(row) =>
+                    setDeleteDialog({
+                      open: true,
+                      documentId: row.id,
+                      documentName: row.name,
+                    })
+                  }
+                />
+              )}
+            </Box>
+          )}
+        </Box>
       </Card>
 
-      {/* Edit Additional Document dialog (demo only) */}
-      <Dialog
+      {/* Edit Document Dialog */}
+      <EditDocumentDialog
         open={editDialog.open}
-        onClose={handleCloseEditDialog}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{
-          sx: {
-            borderRadius: 1,
-            minWidth: 420,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            fontWeight: 700,
-            fontSize: "1rem",
-            bgcolor: "#3f5f98",
-            color: "#ffffff",
-            py: 1,
-            px: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span>Edit Additional Document</span>
-          <IconButton
-            size="small"
-            onClick={handleCloseEditDialog}
-            sx={{ color: "#ffffff" }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent
-          sx={{
-            pt: 2,
-            pb: 1,
-          }}
-        >
-          <Typography variant="body2" sx={{ mb: 1.5, color: "#616161" }}>
-            Please enter a name and category
-          </Typography>
+        section={editDialog.section}
+        docId={editDialog.docId}
+        name={editDialog.name}
+        type={editDialog.type}
+        category={editDialog.category}
+        onClose={() => setEditDialog((prev) => ({ ...prev, open: false }))}
+        onSave={handleSaveEditDialog}
+      />
 
-          {/* Name row */}
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: "flex", alignItems: "baseline", mb: 0.5 }}>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: "#333333", mr: 0.5 }}
-              >
-                Name:
-              </Typography>
-              <TextField
-                variant="standard"
-                fullWidth
-                value={editDialog.name}
-                onChange={(e) =>
-                  setEditDialog((prev) => ({ ...prev, name: e.target.value }))
-                }
-                InputProps={{
-                  disableUnderline: false,
-                }}
-                sx={{
-                  "& .MuiInputBase-input": {
-                    fontSize: "0.9rem",
-                    py: 0.25,
-                  },
-                }}
-              />
-            </Box>
-
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 1.5,
-              }}
-            >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 1,
-                    pr: 1,
-                    maxHeight: 140,
-                    overflowY: "auto",
-                  }}
-                >
-                  {EDIT_NAME_SUGGESTIONS.map((label) => (
-                    <Chip
-                      key={label}
-                      label={label}
-                      size="small"
-                      onClick={() =>
-                        setEditDialog((prev) => ({ ...prev, name: label }))
-                      }
-                      sx={{
-                        bgcolor: "#b0b0b0",
-                        color: "#ffffff",
-                        borderRadius: 0.5,
-                        fontSize: "0.7rem",
-                        px: 1,
-                        "& .MuiChip-label": {
-                          px: 1,
-                          py: 0.25,
-                          whiteSpace: "normal",
-                        },
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-              <Box
-                sx={{
-                  minWidth: 140,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-end",
-                  gap: 1,
-                }}
-              >
-                <Button
-                  variant="contained"
-                  size="small"
-                  sx={{
-                    textTransform: "none",
-                    px: 2,
-                    bgcolor: "#3f5f98",
-                    "&:hover": { bgcolor: "#344a7c" },
-                  }}
-                >
-                  Save to Defaults
-                </Button>
-                <Link
-                  component="button"
-                  variant="caption"
-                  underline="hover"
-                  sx={{ color: "#3f5f98" }}
-                >
-                  Re-order
-                </Link>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Category row */}
-          <Box sx={{ mt: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "baseline", mb: 0.5 }}>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: "#333333", mr: 0.5 }}
-              >
-                Category:
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  borderBottom: "1px solid #cccccc",
-                  minWidth: 180,
-                  pb: 0.25,
-                  fontSize: "0.9rem",
-                  color: "#333333",
-                }}
-              >
-                {editDialog.category || "Claim Attachment"}
-              </Typography>
-            </Box>
-
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 1.5,
-              }}
-            >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 1,
-                    pr: 1,
-                    maxHeight: 160,
-                    overflowY: "auto",
-                  }}
-                >
-                  {EDIT_CATEGORY_SUGGESTIONS.map((label) => (
-                    <Chip
-                      key={label}
-                      label={label}
-                      size="small"
-                      onClick={() =>
-                        setEditDialog((prev) => ({ ...prev, category: label }))
-                      }
-                      sx={{
-                        bgcolor: "#b0b0b0",
-                        color: "#ffffff",
-                        borderRadius: 0.5,
-                        fontSize: "0.7rem",
-                        px: 1,
-                        "& .MuiChip-label": {
-                          px: 1,
-                          py: 0.25,
-                          whiteSpace: "normal",
-                        },
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-              <Box
-                sx={{
-                  minWidth: 140,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-end",
-                  gap: 1,
-                }}
-              >
-                <Button
-                  variant="contained"
-                  size="small"
-                  sx={{
-                    textTransform: "none",
-                    px: 2,
-                    bgcolor: "#3f5f98",
-                    "&:hover": { bgcolor: "#344a7c" },
-                  }}
-                >
-                  Save to Defaults
-                </Button>
-                <Link
-                  component="button"
-                  variant="caption"
-                  underline="hover"
-                  sx={{ color: "#3f5f98" }}
-                >
-                  Re-order
-                </Link>
-              </Box>
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={handleCloseEditDialog}
-            size="small"
-            sx={{ textTransform: "none" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveEditDialog}
-            variant="contained"
-            size="small"
-            sx={{
-              textTransform: "none",
-              bgcolor: "#3f5f98",
-              "&:hover": { bgcolor: "#344a7c" },
-            }}
-          >
-            Ok
-          </Button>
-        </DialogActions>
-      </Dialog>
-
+      {/* Delete Confirmation Dialogs */}
       <ConfirmationDialog
         open={deleteDialog.open}
         onClose={() =>

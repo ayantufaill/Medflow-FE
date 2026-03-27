@@ -42,6 +42,7 @@ import PatientSignedDocumentsPage from './pages/patients/PatientSignedDocumentsP
 import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage';
 import PatientAdditionalDocumentsPage from './pages/patients/PatientAdditionalDocumentsPage';
 import PatientDetailPage from './pages/patients/PatientDetailPage';
+import AddCoveragePage from './pages/patients/AddCoveragePage';
 import PatientReportPage from './pages/patient-reports/PatientReportPage';
 import PatientReportsPage from './pages/patient-reports/PatientReportsPage';
 import RiskAssessmentPage from './pages/patient-reports/RiskAssessmentPage';
@@ -532,6 +533,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
                       <ViewPatientInsurancePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/:patientId/insurance/new"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <AddCoveragePage />
                     </Layout>
                   </ProtectedRoute>
                 }
