@@ -14,6 +14,7 @@ import {
 } from '@mui/icons-material';
 import { useState } from 'react';
 import MyChartFileDialog from './MyChartFileDialog';
+import AuditPatientHistoryDialog from './AuditPatientHistoryDialog';
 
 /**
  * Screenshot: Edit (white, pencil, light gray text), then 5 small utility icons (refresh, document, envelope, printer, person+), then Deactivate (red), Convert (blue), Request Patient Updates.
@@ -41,11 +42,14 @@ export default function PatientDetailActions({
     hipaa2026: false,
   });
   const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
 
   const handleRequestOpen = (e) => setRequestMenuAnchor(e.currentTarget);
   const handleRequestClose = () => setRequestMenuAnchor(null);
   const handleMyChartFileOpen = () => setMyChartFileDialogOpen(true);
   const handleMyChartFileClose = () => setMyChartFileDialogOpen(false);
+  const handleAuditDialogOpen = () => setAuditDialogOpen(true);
+  const handleAuditDialogClose = () => setAuditDialogOpen(false);
 
   const toggleRequest = (key) => {
     setRequestChecks((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -181,7 +185,7 @@ export default function PatientDetailActions({
           </IconButton>
 
           {/* Document/File Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }}>
+          <IconButton size="small" sx={{ p: 0.5 }} onClick={handleAuditDialogOpen}>
             <FileIcon sx={{ fontSize: 20, color: '#1a237e' }} />
           </IconButton>
 
@@ -348,6 +352,12 @@ export default function PatientDetailActions({
         open={myChartFileDialogOpen} 
         onClose={handleMyChartFileClose}
         patient={patient}
+      />
+      
+      {/* Audit Patient History Dialog */}
+      <AuditPatientHistoryDialog
+        open={auditDialogOpen}
+        onClose={handleAuditDialogClose}
       />
     </>
   );

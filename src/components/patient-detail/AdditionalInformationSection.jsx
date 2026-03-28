@@ -41,7 +41,7 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
   };
 
   return (
-    <Box sx={showSpouse ? { mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' } : {}}>
+    <Box>
       <Typography variant="subtitle1" sx={sectionTitleSx}>
         Additional Information
       </Typography>

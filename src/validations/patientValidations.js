@@ -8,6 +8,50 @@
 import { EMAIL_PATTERN, PHONE_PATTERN } from '../constants/global';
 
 /**
+ * Validate US phone number format
+ * Accepts formats like:
+ * - (123) 456-7890
+ * - 123-456-7890
+ * - 123.456.7890
+ * - 1234567890
+ * - +1 123 456 7890
+ * - 123 456 7890
+ * @param {string} phoneNumber - The phone number to validate
+ * @returns {object} - { valid: boolean, message: string }
+ */
+export const validateUSPhoneNumber = (phoneNumber) => {
+  if (!phoneNumber || !phoneNumber.trim()) {
+    return { valid: true, message: '' }; // Optional field
+  }
+
+  // Remove all non-digit characters except + for country code
+  const digitsOnly = phoneNumber.replace(/\D/g, '');
+  
+  // US phone number regex pattern
+  // Allows optional +1 country code followed by exactly 10 digits
+  const usPhonePattern = /^(?:1)?([0-9]{10})$/;
+  
+  // Check if it matches US format (with or without country code)
+  const match = digitsOnly.match(usPhonePattern);
+  
+  if (!match) {
+    // If doesn't match 10 digits, check if it's too short or too long
+    if (digitsOnly.length < 10) {
+      return { valid: false, message: 'Phone number must be at least 10 digits' };
+    }
+    if (digitsOnly.length > 11) {
+      return { valid: false, message: 'Phone number is too long for US format' };
+    }
+    if (digitsOnly.length === 11 && !digitsOnly.startsWith('1')) {
+      return { valid: false, message: '11-digit US numbers must start with 1' };
+    }
+    return { valid: false, message: 'Invalid US phone number format' };
+  }
+  
+  return { valid: true, message: '' };
+};
+
+/**
  * Patient Form Validations
  */
 export const patientValidations = {

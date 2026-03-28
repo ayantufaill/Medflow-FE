@@ -10,6 +10,7 @@ import { providerService } from '../../services/provider.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
+import { validateUSPhoneNumber } from '../../validations/patientValidations';
 
 /**
  * Lightweight patient details page — dedicated route like signed-documents.
@@ -148,9 +149,45 @@ const PatientDetailPage = () => {
         });
       }
       
+      console.log('📦 Final data to save includes:');
+      console.log('  - spouseInfo:', dataToSave.spouseInfo);
+      console.log('  - headOfHousehold:', dataToSave.headOfHousehold);
       console.log('Final data to save:', dataToSave);
       console.log('Date of Birth being sent:', dataToSave.dateOfBirth);
       console.log('Last Visit Date being sent:', dataToSave.lastVisitDate);
+      
+      // Validate US phone numbers before saving
+      const phoneValidationErrors = [];
+      
+      // Validate primary phone
+      if (dataToSave.phonePrimary) {
+        const primaryValidation = validateUSPhoneNumber(dataToSave.phonePrimary);
+        if (!primaryValidation.valid) {
+          phoneValidationErrors.push(`Mobile Number: ${primaryValidation.message}`);
+        }
+      }
+      
+      // Validate secondary phone
+      if (dataToSave.phoneSecondary) {
+        const secondaryValidation = validateUSPhoneNumber(dataToSave.phoneSecondary);
+        if (!secondaryValidation.valid) {
+          phoneValidationErrors.push(`Home Phone Number: ${secondaryValidation.message}`);
+        }
+      }
+      
+      // Validate emergency contact phone
+      if (dataToSave.emergencyContact?.phone) {
+        const emergencyValidation = validateUSPhoneNumber(dataToSave.emergencyContact.phone);
+        if (!emergencyValidation.valid) {
+          phoneValidationErrors.push(`Emergency Contact Phone: ${emergencyValidation.message}`);
+        }
+      }
+      
+      // If there are validation errors, show them and stop
+      if (phoneValidationErrors.length > 0) {
+        showSnackbar(phoneValidationErrors.join(', '), 'error');
+        return;
+      }
       
       const response = await patientService.updatePatient(patientId, dataToSave);
       console.log('✅ Backend response:', response);
@@ -181,11 +218,17 @@ const PatientDetailPage = () => {
   };
 
   const handlePatientDataChange = (updatedData) => {
+    console.log('📥 Child component sent updated data:', updatedData);
+    console.log('  - spouseInfo:', updatedData.spouseInfo);
+    console.log('  - headOfHousehold:', updatedData.headOfHousehold);
+    
     // Merge new updates with existing edited data
     setEditedPatientData((prev) => ({
       ...prev,
       ...updatedData,
     }));
+    
+    console.log('📝 Updated editedPatientData state');
   };
 
   const handleDeactivateConfirm = async () => {

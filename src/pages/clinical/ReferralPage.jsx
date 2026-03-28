@@ -49,11 +49,21 @@ const ReferralPage = () => {
         <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
           Patient referrals and specialist recommendations
         </Typography>
+          {/* Add New Referral Button and Container */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
+          <Button
+            onClick={handleOpen}
+            startIcon={<AddIcon sx={{ fontSize: '1.1rem !important' }} />}
+            sx={{ textTransform: 'none', color: '#5b84c1', fontSize: '0.85rem', fontWeight: 500 }}
+          >
+            Add new referral
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         {/* Previous Referrals Container */}
-        <Box sx={{ maxWidth: '1000px', border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden', mt: 4 }}>
+        <Box sx={{ border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
           <Box sx={{ backgroundColor: '#2e3b84', py: 1, textAlign: 'center' }}>
             <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>
               Previous Referrals
@@ -81,7 +91,7 @@ const ReferralPage = () => {
           </Box>
         </Box>
 
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', maxWidth: '1000px' }}>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
           <Button
             onClick={handleOpen}
             startIcon={<AddIcon sx={{ fontSize: '1.1rem !important' }} />}

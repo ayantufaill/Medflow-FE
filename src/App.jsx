@@ -43,6 +43,7 @@ import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage'
 import PatientAdditionalDocumentsPage from './pages/patients/PatientAdditionalDocumentsPage';
 import PatientDetailPage from './pages/patients/PatientDetailPage';
 import AddCoveragePage from './pages/patients/AddCoveragePage';
+import ImportPatientsPage from './pages/patients/ImportPatientsPage';
 import PatientReportPage from './pages/patient-reports/PatientReportPage';
 import PatientReportsPage from './pages/patient-reports/PatientReportsPage';
 import RiskAssessmentPage from './pages/patient-reports/RiskAssessmentPage';
@@ -483,6 +484,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
                       <CreatePatientPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/import"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <ImportPatientsPage />
                     </Layout>
                   </ProtectedRoute>
                 }

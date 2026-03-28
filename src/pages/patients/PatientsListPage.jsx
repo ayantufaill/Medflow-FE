@@ -237,7 +237,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   };
 
   const handleImportPatient = () => {
-    showSnackbar('Import Patient coming soon', 'info');
+    navigate('/patients/import');
   };
 
   const computeAge = (dateOfBirth) => {
@@ -309,6 +309,14 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                 onClick={() => navigate('/patients/new')}
               >
                 Add Patient
+              </Button>
+               <Button
+                variant="contained"
+                color="warning"
+                startIcon={<UploadIcon />}
+                onClick={handleImportPatient}
+              >
+                Import Patient
               </Button>
               <Button
                 variant="contained"

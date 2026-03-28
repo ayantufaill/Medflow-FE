@@ -355,7 +355,7 @@ const ConcernsPage = () => {
                         width: '100%', 
                         height: 'auto', 
                         display: 'block',
-                        borderRadius: '8px'
+                        borderRadius: '0'
                       }} 
                     />
                     {q.imageCaption && (
@@ -366,7 +366,8 @@ const ConcernsPage = () => {
                           fontSize: '0.75rem',
                           mt: 0.5,
                           display: 'block',
-                          fontFamily: 'Roboto, sans-serif'
+                          fontFamily: 'Roboto, sans-serif',
+                          textAlign: 'center'
                         }}
                       >
                         {q.imageCaption}
@@ -376,31 +377,26 @@ const ConcernsPage = () => {
                 )}
 
                 {q.diagramImage && (
-                  <Box sx={{ 
-                    mb: 2, 
-                    bgcolor: '#1a2735', 
-                    p: 1, 
-                    borderRadius: '8px' 
-                  }}>
+                  <Box sx={{ mb: 2 }}>
                     <img 
                       src={q.diagramImage} 
                       alt={q.diagramCaption || "Medical diagram"} 
                       style={{ 
                         width: '100%', 
                         height: 'auto', 
-                        display: 'block',
-                        borderRadius: '4px'
+                        display: 'block'
                       }} 
                     />
                     {q.diagramCaption && (
                       <Typography 
                         variant="caption" 
                         sx={{ 
-                          color: '#ffffff',
+                          color: '#666666',
                           fontSize: '0.75rem',
                           mt: 0.5,
                           display: 'block',
-                          fontFamily: 'Roboto, sans-serif'
+                          fontFamily: 'Roboto, sans-serif',
+                          textAlign: 'center'
                         }}
                       >
                         {q.diagramCaption}
@@ -418,7 +414,7 @@ const ConcernsPage = () => {
                         width: '100%', 
                         height: 'auto', 
                         display: 'block',
-                        borderRadius: '8px'
+                        borderRadius: '0'
                       }} 
                     />
                     {q.warningCaption && (
@@ -430,7 +426,8 @@ const ConcernsPage = () => {
                           mt: 0.5,
                           display: 'block',
                           fontFamily: 'Roboto, sans-serif',
-                          fontWeight: 500
+                          fontWeight: 500,
+                          textAlign: 'center'
                         }}
                       >
                         {q.warningCaption}

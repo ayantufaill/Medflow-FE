@@ -4,7 +4,7 @@ import FindingsListContent from './FindingsListContent';
 
 const mockClinicalImages = [
   { id: 1, url: '/Damaged_teeth.png', type: 'Bitewing X-ray', date: '2024-01-15' },
-  { id: 2, url: '/cavity_teeth.png', type: 'Panoramic X-ray', date: '2024-01-10' },
+  { id: 2, url: '/repaired_teeth.png', type: 'Panoramic X-ray', date: '2024-01-10' },
 ];
 
 /**
@@ -33,6 +33,23 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
 
   return (
     <Box>
+      {/* Initial Findings Header - Only for Periodontal Health */}
+      {category.title === 'Periodontal Health' && (
+        <Box sx={{ mb: 2 }}>
+          <Typography 
+            variant="h5" 
+            gutterBottom 
+            sx={{ 
+              fontSize: '1.25rem', 
+              color: '#1976d2', 
+              fontFamily: 'Roboto, sans-serif' 
+            }}
+          >
+            Initial Findings
+          </Typography>
+        </Box>
+      )}
+
       {/* Section Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" fontWeight={400} gutterBottom sx={{ fontSize: '1.125rem', color: '#1976d2', fontFamily: 'Roboto, sans-serif' }}>
@@ -117,7 +134,7 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
           </Typography>
           <Grid container spacing={2}>
             {mockClinicalImages.map((image) => (
-              <Grid item xs={12} sm={6} key={image.id}>
+              <Grid item xs={6} key={image.id}>
                 <Card sx={{ cursor: 'pointer', '&:hover': { transform: 'scale(1.02)', transition: '0.2s' } }}>
                   <CardContent>
                     <Box 
@@ -126,16 +143,16 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
                       alt={image.type}
                       sx={{ 
                         width: '100%',
-                        height: 150,
+                        height: 120,
                         objectFit: 'cover',
                         borderRadius: 1,
                         mb: 1
                       }}
                     />
-                    <Typography variant="subtitle2" fontWeight="600">
+                    <Typography variant="subtitle2" fontWeight="600" sx={{ fontSize: '0.875rem' }}>
                       {image.type}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                       {image.date}
                     </Typography>
                   </CardContent>
