@@ -167,6 +167,8 @@ import PortalFormDetailPage from './pages/portal/PortalFormDetailPage';
 import PortalProfilePage from './pages/portal/PortalProfilePage';
 import PortalNotificationsPage from './pages/portal/PortalNotificationsPage';
 import ProviderPortalMessagesPage from './pages/portal/ProviderPortalMessagesPage';
+import AdminPage from './pages/admin/AdminPage';
+import PracticeOnboardingPage from './pages/admin/PracticeOnboardingPage';
 
 const theme = createTheme({
   palette: {
@@ -383,6 +385,26 @@ function App() {
                   <ProtectedRoute requireAllRoles={true}>
                     <Layout>
                       <ChangePasswordPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <AdminPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/onboarding"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <PracticeOnboardingPage />
                     </Layout>
                   </ProtectedRoute>
                 }
