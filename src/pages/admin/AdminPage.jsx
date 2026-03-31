@@ -4,6 +4,7 @@ import { Box, Tabs, Tab, useTheme, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
 import PracticeInfoListPage from '../practice-info/PracticeInfoListPage';
+import KioskAccountsView from './KioskAccountsView';
 import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompaniesListPage';
 import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListPage';
 import ServicesListPage from '../services/ServicesListPage';
@@ -63,6 +64,7 @@ const AdminPage = () => {
       </Box>
 
       {activeTab === 0 && <UserManagementView />}
+      {/* {activeTab === 1 && <KioskAccountsView />} */}
       {activeTab === 1 && (
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
@@ -73,6 +75,42 @@ const AdminPage = () => {
               sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
             >
               Onboard New Practice
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/admin/kiosk-accounts')}
+              sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
+            >
+              Kiosk Accounts View
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/admin/my-chart-configuration')}
+              sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
+            >
+              MyChart Configuration
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/admin/office-timings')}
+              sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
+            >
+              Office Timings
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/admin/online-schedule')}
+              sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
+            >
+              Online Schedule
             </Button>
           </Box>
           <PracticeInfoListPage />
