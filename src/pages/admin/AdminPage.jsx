@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Box, Tabs, Tab, useTheme, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
@@ -10,17 +9,22 @@ import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListP
 import ServicesListPage from '../services/ServicesListPage';
 
 const TABS = [
-  { label: 'User Management' },
-  { label: 'Practice Setup' },
-  { label: 'Clinical Management' },
-  { label: 'Finance Management' },
-  { label: 'Insurance Management' },
+  { label: 'User Management', path: '/admin/user-management' },
+  { label: 'Practice Setup', path: '/admin/practice-setup' },
+  { label: 'Clinical Management', path: '/admin/clinical-management' },
+  { label: 'Finance Management', path: '/admin/finance-management' },
+  { label: 'Insurance Management', path: '/admin/insurance-management' },
 ];
 
 const AdminPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
+  const location = useLocation();
+  const activeTab = TABS.findIndex((tab) => tab.path === location.pathname);
+
+  if (location.pathname === '/admin') {
+    return <Navigate to="/admin/user-management" replace />;
+  }
 
   return (
     <Box>
@@ -36,7 +40,7 @@ const AdminPage = () => {
       >
         <Tabs
           value={activeTab}
-          onChange={(_, val) => setActiveTab(val)}
+          onChange={() => {}}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
@@ -58,7 +62,13 @@ const AdminPage = () => {
           }}
         >
           {TABS.map((tab) => (
-            <Tab key={tab.label} label={tab.label} disableRipple />
+            <Tab
+              key={tab.label}
+              label={tab.label}
+              component={Link}
+              to={tab.path}
+              disableRipple
+            />
           ))}
         </Tabs>
       </Box>

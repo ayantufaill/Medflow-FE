@@ -404,6 +404,56 @@ function App() {
                 }
               />
               <Route
+                path="/admin/user-management"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <AdminPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <AdminPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/clinical-management"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <AdminPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/finance-management"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <AdminPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/insurance-management"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <AdminPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/onboarding"
                 element={
                   <ProtectedRoute requiredRoles={['Admin']}>
