@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
   Button, Select, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
@@ -9,8 +9,10 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PrintIcon from '@mui/icons-material/Print';
 import MicIcon from '@mui/icons-material/Mic';
+import AddIcon from '@mui/icons-material/Add';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
 
 const SummaryData = [
@@ -120,6 +122,25 @@ const DiagnosticHeader = () => (
 );
 
 const PeriodontalExamPage = () => {
+  const [visitDates, setVisitDates] = useState([
+    'Dec 22, 2023',
+    'Mar 29, 2024',
+    'Jun 28, 2024',
+    'Oct 18, 2024',
+    'Feb 13, 2025',
+    'May 22, 2025',
+    'Dec 16, 2025'
+  ]);
+
+  const handleRemoveDate = (indexToRemove) => {
+    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleNewExam = () => {
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setVisitDates([...visitDates, today]);
+  };
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -134,57 +155,23 @@ const PeriodontalExamPage = () => {
       <ExamNavbar />
       <Box sx={{ p: 3, bgcolor: '#fff', minHeight: '100vh' }}>
         
-        {/* 1. TIMELINE HEADER - Refined SVG Timeline */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, px: 2 }}>
-          <IconButton size="small"><ArrowBackIosNewIcon sx={{ fontSize: 16 }} /></IconButton>
-          <Box sx={{ flex: 1, overflowX: 'auto' }}>
-            <svg 
-              width="100%" 
-              height="80" 
-              viewBox="0 0 900 80"
-              preserveAspectRatio="xMidYMid meet"
-              style={{ display: 'block' }}
+        {/* 1. TIMELINE HEADER */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, px: 2, overflowX: 'auto' }}>
+          <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowBackIosNewIcon sx={{ fontSize: 16 }} /></IconButton>
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+            <VisitDatesTimeline
+              visitDates={visitDates}
+              onRemoveDate={handleRemoveDate}
+            />
+            <Button 
+              startIcon={<AddIcon />} 
+              sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
+              onClick={handleNewExam}
             >
-              {/* Connector Line */}
-              <line 
-                x1="50" 
-                y1="25" 
-                x2="750" 
-                y2="25" 
-                stroke="#a2b9d6" 
-                strokeWidth="2" 
-              />
-
-              {['Dec 22, 2023', 'Mar 29, 2024', 'Jun 28, 2024', 'Oct 18, 2024', 'Feb 13, 2025', 'May 22, 2025', 'Dec 16, 2025'].map((date, index) => {
-                const isLast = index === 6;
-                const xPos = 50 + index * 116.67;
-                return (
-                  <g key={date}>
-                    {/* Circle */}
-                    <circle 
-                      cx={xPos} 
-                      cy="25" 
-                      r={isLast ? 16 : 6} 
-                      fill={isLast ? "#5b6d96" : "#a2b9d6"} 
-                    />
-                    {/* Date Label */}
-                    <text 
-                      x={xPos} 
-                      y="65" 
-                      textAnchor="middle" 
-                      fontFamily="'Manrope', 'Segoe UI', sans-serif"
-                      fontSize="12px"
-                      fontWeight={isLast ? fontWeight.bold : fontWeight.regular}
-                      fill={isLast ? "#333" : "#7a869a"}
-                    >
-                      {date}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
+              New Exam
+            </Button>
           </Box>
-          <IconButton size="small"><ArrowForwardIosIcon sx={{ fontSize: 16 }} /></IconButton>
+          <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowForwardIosIcon sx={{ fontSize: 16 }} /></IconButton>
           
           <Box sx={{ ml: 4, display: 'flex', gap: 1 }}>
             <Button variant="contained" sx={{ bgcolor: '#d4a373', textTransform: 'none', borderRadius: 2, fontSize: fontSize.sm, px: 3, fontWeight: fontWeight.semibold }}>New Perio Chart -</Button>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import {
   Radio,
   RadioGroup,
@@ -259,6 +260,9 @@ const FormField = ({ fieldConfig, value, onChange, onCheckboxChange }) => {
 
 const AirwayPage = () => {
   const [risk, setRisk] = useState("High");
+  const [visitDates, setVisitDates] = useState([
+    'May 22, 2025'
+  ]);
   const [formData, setFormData] = useState({
     // Left Column
     facialPattern: "Mesofacial",
@@ -287,6 +291,15 @@ const AirwayPage = () => {
     // Notes
     notes: ""
   });
+
+  const handleNewExam = () => {
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setVisitDates([...visitDates, today]);
+  };
+
+  const handleRemoveDate = (indexToRemove) => {
+    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+  };
 
   // Update form field handler
   const handleFieldChange = (field, value) => {
@@ -321,14 +334,12 @@ const AirwayPage = () => {
       <ExamNavbar />
       <Box sx={{ p: 2, bgcolor: "#fff", minHeight: "100vh", fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
       {/* Header Actions */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-        <Chip
-          icon={<CalendarIcon sx={{ fontSize: "12px !important" }} />}
-          label="05/22/2025"
-          variant="outlined"
-          sx={{ borderRadius: "16px", bgcolor: "#f0f7ff", border: "none", color: "#1976d2", height: 28 }}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
+        <VisitDatesTimeline
+          visitDates={visitDates}
+          onRemoveDate={handleRemoveDate}
         />
-        <Button startIcon={<AddIcon />} sx={{ textTransform: "none", color: "#555", minWidth: "auto", px: 1.5, py: 0.5, fontSize: fontSize.sm }}>
+        <Button startIcon={<AddIcon />} sx={{ textTransform: "none", color: "#555", minWidth: "auto", px: 1.5, py: 0.5, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleNewExam}>
           New Exam
         </Button>
       </Box>

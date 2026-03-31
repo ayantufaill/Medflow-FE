@@ -11,7 +11,9 @@ const InsuranceInformation = ({
   handleInputChange, 
   insuranceCompanies = [],
   assignmentOptions = [],
-  onSearchChange
+  onSearchChange,
+  tinyText,
+  blueHeader
 }) => {
   // Default empty arrays if props are not provided
   const companies = insuranceCompanies.length > 0 ? insuranceCompanies : [];

@@ -11,12 +11,33 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
   const LARGE_R = 16;
 
   return (
-    <Box sx={{ py: 2, overflowX: 'auto', WebkitPrintColorAdjust: 'exact' }}>
+    <Box 
+      sx={{ 
+        py: 2, 
+        overflowX: 'auto',
+        WebkitPrintColorAdjust: 'exact',
+        maxWidth: '100%',
+        '&::-webkit-scrollbar': {
+          height: '6px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: '#f1f1f1',
+          borderRadius: '3px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: '#c1c1c1',
+          borderRadius: '3px',
+          '&:hover': {
+            background: '#a8a8a8',
+          },
+        },
+      }}
+    >
       <svg 
         width={visitDates.length * ITEM_WIDTH + 40} // Added padding for the icon
         height="80" 
         viewBox={`0 0 ${visitDates.length * ITEM_WIDTH + 40} 80`}
-        style={{ display: 'block' }}
+        style={{ display: 'block', minWidth: '100%' }}
       >
         {/* 1. Continuous Connector Line */}
         <line 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
   Button, Chip, Divider, List, ListItem, ListItemText, Grid, Container
@@ -8,6 +8,7 @@ import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
 
 // Custom components to match the specific UI elements in the screenshot
@@ -53,6 +54,19 @@ const AnatomicalMapPlaceholder = ({ altText, imgSrc, position = 'absolute' }) =>
 );
 
 const DentalAnatomyExamPage = () => {
+  const [visitDates, setVisitDates] = useState([
+    'Sep 29, 2023'
+  ]);
+
+  const handleNewExam = () => {
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setVisitDates([...visitDates, today]);
+  };
+
+  const handleRemoveDate = (indexToRemove) => {
+    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+  };
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -68,13 +82,12 @@ const DentalAnatomyExamPage = () => {
       <Container maxWidth="xl" sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', fontFamily: "'Manrope', 'Segoe UI', sans-serif", display: 'flex', flexDirection: 'column' }}>
         
         {/* 1. Top Navbar / Timeline Row */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <Chip 
-            icon={<CalendarMonthIcon fontSize="small" sx={{ color: '#1976d2 !important' }} />} 
-            label="09/29/2023" 
-            sx={{ bgcolor: '#e3f2fd', color: '#1976d2', fontWeight: fontWeight.bold, fontSize: fontSize.xs, borderRadius: 1 }} 
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, overflowX: 'auto' }}>
+          <VisitDatesTimeline
+            visitDates={visitDates}
+            onRemoveDate={handleRemoveDate}
           />
-          <Button startIcon={<AddIcon />} sx={{ textTransform: 'none', color: '#777', ml: 2, fontSize: fontSize.xs }}>
+          <Button startIcon={<AddIcon />} sx={{ textTransform: 'none', color: '#777', ml: 2, fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleNewExam}>
             New Exam
           </Button>
         </Box>

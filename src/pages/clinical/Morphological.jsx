@@ -8,6 +8,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
 
 // Custom Radio with the grey/dark theme from the image
@@ -103,6 +104,13 @@ const MORPHOLOGICAL_DATA = {
 };
 
 const Morphological = () => {
+  // State for visit dates timeline
+  const [visitDates, setVisitDates] = useState([
+    'Sep 29, 2023',
+    'Apr 26, 2024',
+    'Jul 03, 2024'
+  ]);
+
   // Form state for API submission
   const [formData, setFormData] = useState({
     // Canine Classification
@@ -149,6 +157,11 @@ const Morphological = () => {
     analysisReferred: false,
     noFindings: false
   });
+
+  // Handle remove date from timeline
+  const handleRemoveDate = (indexToRemove) => {
+    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+  };
 
   // Handle field changes
   const handleFieldChange = (field, value) => {
@@ -207,6 +220,8 @@ const Morphological = () => {
 
   // Handle new exam
   const handleNewExam = () => {
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setVisitDates([...visitDates, today]);
     console.log('Create new exam');
     // TODO: Navigate to new exam form or reset form
   };
@@ -233,23 +248,14 @@ const Morphological = () => {
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         
         {/* 1. Top Navigation / Timeline */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', color: '#00bcd4' }}>
-            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#00bcd4', mr: 1 }} />
-            <Typography variant="body2" sx={{ fontSize: fontSize.xs }}>09/29/2023</Typography>
-            <Box sx={{ width: 40, height: 2, bgcolor: '#00bcd4', mx: 1 }} />
-            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#00bcd4', mr: 1 }} />
-            <Typography variant="body2" sx={{ fontSize: fontSize.xs }}>04/26/2024</Typography>
-            <Box sx={{ width: 40, height: 2, bgcolor: '#00bcd4', mx: 1 }} />
-          </Box>
-          <Chip 
-            icon={<CalendarMonthIcon fontSize="small" />} 
-            label="07/03/2024" 
-            sx={{ bgcolor: '#e3f2fd', color: '#1976d2', fontWeight: fontWeight.bold, fontSize: fontSize.xs }}  
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
+          <VisitDatesTimeline
+            visitDates={visitDates}
+            onRemoveDate={handleRemoveDate}
           />
           <Button 
             startIcon={<AddIcon />} 
-            sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs }}
+            sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
             onClick={handleNewExam}
           >
             New Exam

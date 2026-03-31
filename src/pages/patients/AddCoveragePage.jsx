@@ -284,7 +284,7 @@ const AddCoveragePage = () => {
       <Grid container spacing={1} sx={{ p: 2 }}>
         
         {/* LEFT COLUMN: Insurance & Subscriber Info */}
-        <Grid item xs={12} lg={4} sx={{ borderRight: { md: '1px solid #eee' }, pr: { md: 1.5 }, mb: { xs: 1.5, md: 0 } }}>
+        <Grid size={{ xs: 12, md: 4 }} sx={{ borderRight: { md: '1px solid #eee' }, pr: { md: 1.5 }, mb: { xs: 1.5, md: 0 } }}>
           <InsuranceInformation 
             formData={formData}
             handleInputChange={handleInputChange}
@@ -311,7 +311,7 @@ const AddCoveragePage = () => {
           {/* Advanced Section */}
           <Typography sx={{ ...sectionTitle, mt: 3, mb: 1.5, fontSize: '0.8rem' }}>Advanced</Typography>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={5.5}>
+            <Grid size={{ xs: 5.5 }}>
               <TextField 
                 fullWidth 
                 label="Member Identifier" 
@@ -325,7 +325,7 @@ const AddCoveragePage = () => {
             </Grid>
             <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', mt: 0.5 }} />
             
-            <Grid item xs={5.5}>
+            <Grid size={{ xs: 5.5 }}>
               <TextField 
                 fullWidth 
                 label="Card Sequence" 
@@ -347,9 +347,9 @@ const AddCoveragePage = () => {
         </Grid>
 
         {/* RIGHT COLUMN: Fee Guides & Tables */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Grid container spacing={1.5}>
-            <Grid item xs={12} md={6.5}>
+            <Grid size={{ xs: 12, md: 6.5 }}>
               <Typography sx={sectionTitle}>Plan Fee Guide</Typography>
               <Box sx={{ display: 'flex', gap: 0.3, alignItems: 'center' }}>
                 <TextField
@@ -385,7 +385,7 @@ const AddCoveragePage = () => {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={5.5}>
+            <Grid size={{ xs: 12, md: 5.5 }}>
               <Typography sx={sectionTitle}>
                 Coverage Type <InfoIcon sx={{ fontSize: 11, verticalAlign: 'middle', ml: 0.5, color: '#999' }} />
               </Typography>
