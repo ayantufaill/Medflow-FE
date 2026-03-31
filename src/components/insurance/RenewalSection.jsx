@@ -11,7 +11,7 @@ const RenewalSection = ({
     <Box>
       <Typography sx={{ fontWeight: 700, mt: 3, mb: 1.5, color: "#333", fontSize: '0.8rem' }}>Renewal</Typography>
       <Grid container spacing={2}>
-        <Grid item xs={4}>
+        <Grid size={{ xs: 4 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#666', mb: 0.5 }}>Policy Started *</Typography>
           <input
             type="date"
@@ -29,7 +29,7 @@ const RenewalSection = ({
             }}
           />
         </Grid>
-        <Grid item xs={4}>
+        <Grid size={{ xs: 4 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#666', mb: 0.5 }}>Policy Ends</Typography>
           <input
             type="date"
@@ -49,7 +49,7 @@ const RenewalSection = ({
         </Grid>
       </Grid>
       <Grid container spacing={2} sx={{ mt: 0.5 }}>
-        <Grid item xs={4}>
+        <Grid size={{ xs: 4 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#666', mb: 0.5 }}>Renewal Month *</Typography>
           <Select 
             fullWidth 

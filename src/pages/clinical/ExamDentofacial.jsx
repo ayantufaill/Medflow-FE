@@ -3,6 +3,7 @@ import { Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, IconBut
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { 
   Add as AddIcon, 
   CalendarToday as CalendarIcon
@@ -260,6 +261,19 @@ const examFields = {
 };
 
 const ExamDentofacial = () => {
+  const [visitDates, setVisitDates] = useState([
+    'Mar 26, 2026'
+  ]);
+
+  const handleNewExam = () => {
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setVisitDates([...visitDates, today]);
+  };
+
+  const handleRemoveDate = (indexToRemove) => {
+    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+  };
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -276,17 +290,16 @@ const ExamDentofacial = () => {
       <Box sx={{ p: 2, bgcolor: "#fff", maxWidth: "100%", fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         
         {/* 1. TOP UTILITY BAR */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-          <Chip 
-            label="03/26/2026" 
-            size="small" 
-            icon={<CalendarIcon style={{ fontSize: 12 }} />} 
-            sx={{ bgcolor: COLORS.lightBlue, color: "#1976d2", fontWeight: fontWeight.medium }} 
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
+          <VisitDatesTimeline
+            visitDates={visitDates}
+            onRemoveDate={handleRemoveDate}
           />
           <Button 
             startIcon={<AddIcon />} 
             size="small" 
-            sx={{ textTransform: "none", color: COLORS.textSecondary, fontSize: fontSize.sm }}
+            sx={{ textTransform: "none", color: COLORS.textSecondary, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }}
+            onClick={handleNewExam}
           >
             New Exam
           </Button>

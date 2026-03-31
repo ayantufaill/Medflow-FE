@@ -1,3 +1,7 @@
+import React from "react";
+import { Box, Typography, TextField, InputAdornment } from "@mui/material";
+import MicIcon from '@mui/icons-material/Mic';
+
 const PolicyNotes = ({ 
   noteTypes = ['Policy Notes', 'Eligibility Policy Notes', 'Insurance Plan Notes'],
   formData = {},

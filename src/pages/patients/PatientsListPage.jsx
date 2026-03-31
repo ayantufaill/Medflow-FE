@@ -41,6 +41,8 @@ import {
   FilterAltOff,
   Info as InfoIcon,
   Event as CalendarIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
@@ -94,6 +96,11 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, count: 0 });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [debouncedSearch] = useDebounce(search, 500);
+  
+  // Inline editing state
+  const [editingField, setEditingField] = useState(null); // { patientId, field, value }
+  const [editValue, setEditValue] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const effectiveStatus = statusFilter;
 
@@ -174,9 +181,128 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     navigate(`/patients/${patientId}/edit`);
   };
 
-  const handleDelete = (patientId, patientName) => {
+  const handleToggleInactive = async (patientId, patientName, isActive) => {
     handleActionMenuClose();
-    handleDeleteClick(patientId, patientName);
+    try {
+      setSaveLoading(true);
+      await patientService.updatePatient(patientId, { isActive: !isActive });
+      showSnackbar(`Patient ${!isActive ? 'marked inactive' : 'activated'} successfully`, 'success');
+      refetch();
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient status.';
+      setError(msg);
+      showSnackbar(msg, 'error');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  // Inline editing handlers
+  const handleDoubleClick = (e, patient, field, currentValue) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingField({ patientId: patient._id || patient.id, field, originalValue: currentValue });
+    // For name field, pass object with firstName and lastName
+    if (field === 'name') {
+      setEditValue({ firstName: currentValue.firstName || '', lastName: currentValue.lastName || '' });
+    } else {
+      setEditValue(currentValue || '');
+    }
+  };
+
+  const handleInlineCancel = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const validatePhoneNumber = (phone) => {
+    // Remove all non-digit characters
+    const digits = phone.replace(/\D/g, '');
+    // US phone numbers can be 10 digits or 11 digits with +1 country code
+    if (digits.length === 10) {
+      return true;
+    }
+    if (digits.length === 11 && digits.startsWith('1')) {
+      return true;
+    }
+    return false;
+  };
+
+  const validateDateOfBirth = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const now = new Date();
+    // Check if date is valid and not in the future
+    return !isNaN(date.getTime()) && date <= now;
+  };
+
+  const handleInlineSave = async () => {
+    try {
+      setSaveLoading(true);
+      if (!editingField) return;
+      
+      // Validate phone number if editing phonePrimary field
+      if (editingField.field === 'phonePrimary' && editValue) {
+        const digits = editValue.replace(/\D/g, '');
+        if (!validatePhoneNumber(editValue)) {
+          setError('Phone number must be 10 digits or 1 followed by 10 digits');
+          showSnackbar('Phone number must be 10 digits or 1 followed by 10 digits', 'error');
+          return;
+        }
+        // Store as digits only (backend requirement)
+        const updateData = { [editingField.field]: digits };
+        await patientService.updatePatient(editingField.patientId, updateData);
+      } else if (editingField.field === 'dateOfBirth' && editValue) {
+        // Validate date of birth
+        if (!validateDateOfBirth(editValue)) {
+          setError('Invalid date of birth');
+          showSnackbar('Invalid date of birth', 'error');
+          return;
+        }
+        // Convert to ISO-8601 format for backend
+        const isoDate = new Date(editValue).toISOString();
+        const updateData = { [editingField.field]: isoDate };
+        await patientService.updatePatient(editingField.patientId, updateData);
+      } else {
+        const updateData = { [editingField.field]: editValue };
+        await patientService.updatePatient(editingField.patientId, updateData);
+      }
+      
+      showSnackbar('Patient updated successfully', 'success');
+      refetch();
+      setEditingField(null);
+      setEditValue('');
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient.';
+      setError(msg);
+      showSnackbar(msg, 'error');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  // Special handler for name field to update both firstName and lastName
+  const handleNameSave = async () => {
+    try {
+      setSaveLoading(true);
+      if (!editingField || editingField.field !== 'name') return;
+      
+      const updateData = {
+        firstName: editValue.firstName || '',
+        lastName: editValue.lastName || ''
+      };
+      await patientService.updatePatient(editingField.patientId, updateData);
+      showSnackbar('Patient name updated successfully', 'success');
+      refetch();
+      setEditingField(null);
+      setEditValue({ firstName: '', lastName: '' });
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient name.';
+      setError(msg);
+      showSnackbar(msg, 'error');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const getPatientInitials = (firstName, lastName) => {
@@ -401,8 +527,23 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                             key={pid}
                             hover
                             selected={isSelected}
-                            sx={{ cursor: 'pointer', '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' } }}
-                            onClick={() => handlePatientClick(pid, patient)}
+                            sx={{ 
+                              cursor: 'pointer', 
+                              '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' },
+                              '& .editable-cell:hover': { 
+                                bgcolor: 'action.hover',
+                                cursor: 'cell'
+                              }
+                            }}
+                            onClick={(e) => {
+                              // Don't navigate if clicking on editable cell
+                              if (e.target.closest('.editable-cell')) {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                return;
+                              }
+                              handlePatientClick(pid, patient);
+                            }}
                           >
                             <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                               <Checkbox
@@ -412,19 +553,201 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                               />
                             </TableCell>
                             <TableCell>{patient.patientCode || '-'}</TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
-                                  {getPatientInitials(patient.firstName, patient.lastName)}
-                                </Avatar>
-                                <Typography fontSize="0.78rem">{patient.firstName} {patient.lastName}</Typography>
-                              </Box>
+                            <TableCell 
+                              className="editable-cell"
+                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'name', { firstName: patient.firstName, lastName: patient.lastName })}
+                            >
+                              {editingField?.patientId === pid && editingField?.field === 'name' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <TextField
+                                    size="small"
+                                    placeholder="First Name"
+                                    value={editValue.firstName || ''}
+                                    onChange={(e) => setEditValue({ ...editValue, firstName: e.target.value })}
+                                    onClick={(e) => e.stopPropagation()}
+                                    autoFocus
+                                    sx={{ flex: 1, fontSize: '0.78rem' }}
+                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
+                                  />
+                                  <TextField
+                                    size="small"
+                                    placeholder="Last Name"
+                                    value={editValue.lastName || ''}
+                                    onChange={(e) => setEditValue({ ...editValue, lastName: e.target.value })}
+                                    onClick={(e) => e.stopPropagation()}
+                                    sx={{ flex: 1, fontSize: '0.78rem' }}
+                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
+                                  />
+                                  <IconButton size="small" onClick={handleNameSave} disabled={saveLoading}>
+                                    <SaveIcon fontSize="small" color="success" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={handleInlineCancel}>
+                                    <CancelIcon fontSize="small" color="error" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
+                                    {getPatientInitials(patient.firstName, patient.lastName)}
+                                  </Avatar>
+                                  <Typography fontSize="0.78rem">{patient.firstName} {patient.lastName}</Typography>
+                                </Box>
+                              )}
                             </TableCell>
                             <TableCell>{computeAge(patient.dateOfBirth)}</TableCell>
-                            <TableCell>{formatDate(patient.dateOfBirth)}</TableCell>
-                            <TableCell>{patient.email || '-'}</TableCell>
-                            <TableCell>{patient.phonePrimary || '-'}</TableCell>
-                            <TableCell>{patient.gender === 'male' ? 'Male' : patient.gender === 'female' ? 'Female' : patient.gender || '-'}</TableCell>
+                            <TableCell 
+                              className="editable-cell"
+                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'dateOfBirth', patient.dateOfBirth)}
+                            >
+                              {editingField?.patientId === pid && editingField?.field === 'dateOfBirth' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <TextField
+                                    size="small"
+                                    type="date"
+                                    value={editValue ? new Date(editValue).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    autoFocus
+                                    fullWidth
+                                    inputProps={{ 
+                                      max: new Date().toISOString().split('T')[0], // Don't allow future dates
+                                      sx: { py: 0.5, fontSize: '0.78rem' }
+                                    }}
+                                    sx={{ fontSize: '0.78rem' }}
+                                  />
+                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
+                                    <SaveIcon fontSize="small" color="success" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={handleInlineCancel}>
+                                    <CancelIcon fontSize="small" color="error" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                formatDate(patient.dateOfBirth)
+                              )}
+                            </TableCell>
+                            <TableCell 
+                              className="editable-cell"
+                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'email', patient.email)}
+                            >
+                              {editingField?.patientId === pid && editingField?.field === 'email' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <TextField
+                                    size="small"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    autoFocus
+                                    fullWidth
+                                    type="email"
+                                    sx={{ fontSize: '0.78rem' }}
+                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
+                                  />
+                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
+                                    <SaveIcon fontSize="small" color="success" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={handleInlineCancel}>
+                                    <CancelIcon fontSize="small" color="error" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                patient.email || '-'
+                              )}
+                            </TableCell>
+                            <TableCell 
+                              className="editable-cell"
+                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'phonePrimary', patient.phonePrimary)}
+                            >
+                              {editingField?.patientId === pid && editingField?.field === 'phonePrimary' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <TextField
+                                    size="small"
+                                    value={editValue}
+                                    onChange={(e) => {
+                                      // Only allow digits
+                                      const value = e.target.value;
+                                      const digits = value.replace(/\D/g, '');
+                                      // Allow 10 digits or 11 digits starting with 1 (country code)
+                                      if (digits.length <= 11) {
+                                        // If more than 10 digits, must start with 1
+                                        if (digits.length === 11 && !digits.startsWith('1')) {
+                                          return; // Don't update if 11th digit doesn't start with 1
+                                        }
+                                        setEditValue(digits);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      // Prevent non-digit keys
+                                      const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'];
+                                      if (!/\d/.test(e.key) && !allowedKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                      }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    autoFocus
+                                    fullWidth
+                                    placeholder="1234567890 or 11234567890"
+                                    error={editValue.length > 0 && 
+                                          editValue.length !== 10 && 
+                                          !(editValue.length === 11 && editValue.startsWith('1'))}
+                                    helperText={editValue.length > 0 ? 
+                                      (editValue.length === 11 && editValue.startsWith('1') 
+                                        ? 'Valid: 1 country code included' 
+                                        : `${editValue.length}/10 or 11 digits`) 
+                                      : ''}
+                                    sx={{ fontSize: '0.78rem' }}
+                                    inputProps={{ 
+                                      sx: { py: 0.5, fontSize: '0.78rem' },
+                                      maxLength: 11,
+                                      inputMode: 'numeric',
+                                      pattern: '[0-9]*'
+                                    }}
+                                  />
+                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
+                                    <SaveIcon fontSize="small" color="success" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={handleInlineCancel}>
+                                    <CancelIcon fontSize="small" color="error" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                patient.phonePrimary || '-'
+                              )}
+                            </TableCell>
+                            <TableCell 
+                              className="editable-cell"
+                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'gender', patient.gender)}
+                            >
+                              {editingField?.patientId === pid && editingField?.field === 'gender' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <TextField
+                                    size="small"
+                                    select
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    autoFocus
+                                    fullWidth
+                                    SelectProps={{ native: true }}
+                                    sx={{ fontSize: '0.78rem' }}
+                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
+                                  >
+                                    <option value="">Select Gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                  </TextField>
+                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
+                                    <SaveIcon fontSize="small" color="success" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={handleInlineCancel}>
+                                    <CancelIcon fontSize="small" color="error" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                patient.gender === 'male' ? 'Male' : patient.gender === 'female' ? 'Female' : patient.gender || '-'
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Chip
                                 size="small"
@@ -474,9 +797,18 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleEdit(actionMenu.patientId)}>
+        {/* <MenuItem onClick={() => handleEdit(actionMenu.patientId)}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
+        </MenuItem> */}
+        <MenuItem 
+          onClick={() => handleToggleInactive(actionMenu.patientId, actionMenu.patientName, actionMenu.isActive)}
+          sx={{ color: actionMenu.isActive ? 'error.main' : 'success.main' }}
+        >
+          <ListItemIcon>
+            <PersonOffIcon fontSize="small" color={actionMenu.isActive ? 'error' : 'success'} />
+          </ListItemIcon>
+          <ListItemText>{actionMenu.isActive ? 'Mark Inactive' : 'Mark Active'}</ListItemText>
         </MenuItem>
       </Menu>
 

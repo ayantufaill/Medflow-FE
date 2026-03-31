@@ -9,6 +9,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrowDown';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
 
 // Custom Ring Radio to match the "Acceptable/Warning/Issue" style
@@ -110,6 +111,21 @@ const DentalTmdExamPage = () => {
       }
     });
   };
+
+  const [visitDates, setVisitDates] = useState([
+    'Sep 29, 2023',
+    'May 22, 2025'
+  ]);
+
+  const handleNewExam = () => {
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setVisitDates([...visitDates, today]);
+  };
+
+  const handleRemoveDate = (indexToRemove) => {
+    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+  };
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -125,16 +141,12 @@ const DentalTmdExamPage = () => {
       <Container maxWidth="xl" sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh' }}>
       
       {/* 2. Timeline and Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#00bcd4' }} />
-        <Typography variant="body2" sx={{ color: '#00bcd4' }}>09/29/2023</Typography>
-        <Box sx={{ width: 60, height: 2, bgcolor: '#e0e0e0' }} />
-        <Chip 
-          icon={<CalendarMonthIcon fontSize="small" sx={{ color: '#1976d2 !important' }}/>} 
-          label="05/22/2025" 
-          sx={{ bgcolor: '#e3f2fd', color: '#1976d2', fontWeight: 'bold' }} 
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
+        <VisitDatesTimeline
+          visitDates={visitDates}
+          onRemoveDate={handleRemoveDate}
         />
-        <Button startIcon={<AddIcon />} sx={{ textTransform: 'none', color: '#777', ml: 2 }}>New Exam</Button>
+        <Button startIcon={<AddIcon />} sx={{ textTransform: 'none', color: '#777', ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleNewExam}>New Exam</Button>
       </Box>
 
       {/* 3. MH/DH Badges */}
@@ -187,7 +199,7 @@ const DentalTmdExamPage = () => {
               {/* Row 1: Maximum Opening */}
               <Grid container alignItems="center" sx={{ mb: 2 }}>
                 <Grid item xs={3.5}>
-                  <CustomLabel text="Maximum Opening" subText="Vertical" italic />
+                  <CustomLabel text="Maximum Opening"  italic />
                 </Grid>
                 <Grid item xs={1.5}>
                   <Typography sx={{ fontSize: '13px' }}>60 mm</Typography>
@@ -210,12 +222,12 @@ const DentalTmdExamPage = () => {
               {/* Row 2: Left to Right Movement */}
               <Grid container alignItems="flex-start" sx={{ mb: 2 }}>
                 <Grid item xs={3.5}>
-                  <CustomLabel text="Left to Right Movement" subText="Horizontal" italic />
+                  <CustomLabel text="Left to Right Movement"  italic />
                 </Grid>
                 <Grid item xs={4}>
                   <Box sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
                     <Typography sx={{ fontSize: '13px', minWidth: 70 }}>Left Lateral</Typography>
-                    <Box sx={{ borderBottom: '1px solid #333', width: 50, mx: 1, textAlign: 'center' }}>&nbsp;</Box>
+                    <Box sx={{ borderBottom: '1px solid #333', width: 10, mx: 1, textAlign: 'center' }}>&nbsp;</Box>
                     <Typography sx={{ fontSize: '13px' }}>mm</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -225,7 +237,7 @@ const DentalTmdExamPage = () => {
                   </Box>
                 </Grid>
                 <Grid item xs={4.5}>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#aaa', fontStyle: 'italic', mb: 1 }}>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#aaa', fontStyle: 'italic' }}>
                     WNL &nbsp; Restricted (&lt; 10 mm)
                   </Typography>
                   <Typography sx={{ fontSize: '0.7rem', color: '#aaa', fontStyle: 'italic' }}>
@@ -241,7 +253,7 @@ const DentalTmdExamPage = () => {
                 </Grid>
                 <Grid item xs={2.5}>
                   <RadioGroup row sx={{ gap: 1 }}>
-                    <FormControlLabel value="no" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>No</Typography>} />
+                    <FormControlLabel value="no" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '14px' }} />} label={<Typography sx={{ fontSize: '13px' }}>No</Typography>} />
                     <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} defaultChecked />} label={<Typography sx={{ fontSize: '13px' }}>Yes:</Typography>} />
                   </RadioGroup>
                 </Grid>
@@ -262,8 +274,8 @@ const DentalTmdExamPage = () => {
                 </Grid>
                 <Grid item xs={2.5}>
                   <RadioGroup row sx={{ gap: 1 }}>
-                    <FormControlLabel value="no" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} defaultChecked />} label={<Typography sx={{ fontSize: '13px' }}>No</Typography>} />
-                    <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Yes:</Typography>} />
+                    <FormControlLabel value="no" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '14px' }} defaultChecked />} label={<Typography sx={{ fontSize: '13px' }}>No</Typography>} />
+                    <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '2px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Yes:</Typography>} />
                   </RadioGroup>
                 </Grid>
                 <Grid item xs={6}>
