@@ -179,6 +179,15 @@ const ProgressNotesPage = () => {
                       >
                         +Add Completed Procedures
                       </Button>
+                      <Collapse in={note.isExpanded}>
+                        {note.procedures.length > 0 && (
+                          <Box sx={{ mt: 0.5 }}>
+                            {note.procedures.map((p, i) => (
+                              <Typography key={i} sx={{ fontSize: '0.7rem', color: '#666', mb: 0.3 }}>• {p}</Typography>
+                            ))}
+                          </Box>
+                        )}
+                      </Collapse>
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.8rem' }}>{note.description}</TableCell>
                     <TableCell>
@@ -189,21 +198,6 @@ const ProgressNotesPage = () => {
                           <Typography sx={{ fontSize: '0.7rem' }}>{note.signedDate}</Typography>
                         </Box>
                       </Box>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                      <Collapse in={note.isExpanded} timeout="auto" unmountOnExit>
-                        <Box sx={{ margin: 1, ml: 10 }}>
-                          {note.procedures.length > 0 ? (
-                            note.procedures.map((p, i) => (
-                              <Typography key={i} sx={{ fontSize: '0.75rem', color: '#666', mb: 0.5 }}>• {p}</Typography>
-                            ))
-                          ) : (
-                            <Typography sx={{ fontSize: '0.75rem', color: '#999', fontStyle: 'italic' }}>No procedures added to this note.</Typography>
-                          )}
-                        </Box>
-                      </Collapse>
                     </TableCell>
                   </TableRow>
                 </React.Fragment>

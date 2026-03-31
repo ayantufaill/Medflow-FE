@@ -6,10 +6,15 @@ const PatientSignatureSection = ({ value, onChange, reviewedWithPatient }) => (
     elevation={0}
     sx={{
       p: 3,
-      mb: 0,
+      mb: 2,
       borderRadius: 1,
       border: "1px solid #e0e0e0",
       bgcolor: "#ffffff",
+      // Print styling - keep signature compact
+      '@media print': {
+        maxWidth: '400px',
+        pageBreakInside: 'avoid',
+      },
     }}
   >
     <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
@@ -25,8 +30,16 @@ const PatientSignatureSection = ({ value, onChange, reviewedWithPatient }) => (
           height={72}
           value={value}
           onChange={onChange}
-          showClearButton
-          sx={{ mt: 0.5 }}
+          showClearButton={false} // Hide clear button in print
+          sx={{ 
+            mt: 0.5,
+            // Ensure signature canvas prints
+            canvas: {
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              colorAdjust: 'exact',
+            }
+          }}
         />
         {reviewedWithPatient && (
           <Typography

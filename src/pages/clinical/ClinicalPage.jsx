@@ -1,9 +1,19 @@
-import { useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 
 const ClinicalPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { section } = useParams();
+  
+  // Redirect /clinical to /clinical/exam/radiographic
+  useEffect(() => {
+    if (location.pathname === '/clinical') {
+      navigate('/clinical/exam/radiographic', { replace: true });
+    }
+  }, [location.pathname, navigate]);
   
   // Determine active section from URL or default to 'exam'
   const activeSection = section || 'exam';

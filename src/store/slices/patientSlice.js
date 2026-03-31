@@ -69,7 +69,8 @@ const initialState = {
   insurancesCache: {}, // { [patientId]: { data, timestamp } }
 };
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Cache disabled - always fetch fresh data from backend
+const CACHE_DURATION = 0; // Disabled for development
 
 const patientSlice = createSlice({
   name: 'patient',

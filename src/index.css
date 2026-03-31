@@ -13,3 +13,93 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Print Styles - Hide navigation and show only content */
+@media print {
+  /* Hide ALL navigation elements aggressively */
+  .MuiDrawer-root,
+  .MuiAppBar-root,
+  header,
+  footer,
+  nav,
+  aside,
+  [class*="sidebar"],
+  [class*="navbar"],
+  [class*="navigation"],
+  [class*="nav"],
+  [class*="header"],
+  [class*="footer"],
+  [role="navigation"],
+  [role="banner"],
+  [role="contentinfo"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Hide all buttons including action buttons */
+  button,
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .floating-action,
+  [class*="action"] {
+    display: none !important;
+  }
+  
+  /* Ensure main content area expands */
+  body,
+  html,
+  .MuiBox-root,
+  .main-content,
+  .page-content,
+  .print-content {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* FORCE background colors for timeline dots and lines - VERY AGGRESSIVE */
+  .timeline-container,
+  .timeline-container *,
+  .timeline-container div,
+  .timeline-container [style*="background"],
+  [class*="timeline"] {
+    WebkitPrintColorAdjust: exact !important;
+    printColorAdjust: exact !important;
+    colorAdjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Force background colors on ALL elements with background styles */
+  [style*="background"],
+  [style*="bgcolor"],
+  [bgcolor] {
+    WebkitPrintColorAdjust: exact !important;
+    printColorAdjust: exact !important;
+    colorAdjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Force exact colors for printing */
+  .MuiBox-root,
+  .MuiPaper-root,
+  .MuiTypography-root,
+  div,
+  span,
+  p,
+  table,
+  tr,
+  td,
+  th {
+    WebkitPrintColorAdjust: exact !important;
+    printColorAdjust: exact !important;
+    colorAdjust: exact !important;
+  }
+  
+  /* Prevent page breaks in timeline */
+  .timeline-container {
+    page-break-inside: avoid;
+  }
+}

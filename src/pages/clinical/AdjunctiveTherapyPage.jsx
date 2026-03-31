@@ -118,15 +118,42 @@ const AdjunctiveTherapyPage = () => {
     instructions: ''
   }]);
 
-  // State for fluoride rows
-  const [fluorideRows, setFluorideRows] = useState([{
+  // State for OTC fluoride rows
+  const [otcFluorideRows, setOtcFluorideRows] = useState([{
     choice: '',
     options: [
-      { value: 'fluoride-varnish', label: 'Fluoride Varnish' },
-      { value: 'fluoride-gel', label: 'Fluoride Gel' },
-      { value: 'fluoride-foam', label: 'Fluoride Foam' },
-      { value: 'prescription-fluoride', label: 'Prescription Fluoride Toothpaste' },
-      { value: 'otc-fluoride', label: 'OTC Fluoride Treatment' }
+      { value: 'act-rinse', label: 'ACT Anticavity Fluoride Rinse' },
+      { value: 'colgate-fluorigard', label: 'Colgate FluoriGard' },
+      { value: 'listaine-total-care', label: 'Listerine Total Care' },
+      { value: 'crest-pro-health', label: 'Crest Pro-Health' }
+    ],
+    usedByPatient: false,
+    suggestedToPatient: false,
+    instructions: ''
+  }]);
+
+  // State for toothpaste 1.1% NaF rows
+  const [toothpaste11NaFRows, setToothpaste11NaFRows] = useState([{
+    choice: '',
+    options: [
+      { value: 'prevident-5000', label: 'Prevident 5000 (1.1% NaF)' },
+      { value: 'fluorocare', label: 'Fluorocare 1.1% NaF' },
+      { value: 'colgate-premax', label: 'Colgate Premax 1.1% NaF' },
+      { value: '3m-caja', label: '3M CAJA 1.1% NaF' }
+    ],
+    usedByPatient: false,
+    suggestedToPatient: false,
+    instructions: ''
+  }]);
+
+  // State for gel 1.1% NaF rows
+  const [gel11NaFRows, setGel11NaFRows] = useState([{
+    choice: '',
+    options: [
+      { value: 'neutra-cide', label: 'Neutra-Cide DSC Gel (1.1% NaF)' },
+      { value: 'fluorocare-gel', label: 'Fluorocare Gel (1.1% NaF)' },
+      { value: 'omnii-gel', label: 'Omnii Gel (1.1% NaF)' },
+      { value: '3m-fluoride-gel', label: '3M Fluoride Gel (1.1% NaF)' }
     ],
     usedByPatient: false,
     suggestedToPatient: false,
@@ -251,7 +278,7 @@ const AdjunctiveTherapyPage = () => {
     { id: 'hygieneTools', label: 'Hygiene Tools', hasSub: true },
     { id: 'patientSelfCare', label: 'Patient Self Care', hasTable: true },
     { id: 'environmentalTherapy', label: 'Environmental Therapy (Oral rinse)', hasTable: true },
-    { id: 'fluoride', label: 'Fluoride', hasTable: true },
+    { id: 'fluoride', label: 'Fluoride', hasSub: true },
     { id: 'oralMalodor', label: 'Oral Malodor Management', hasTable: true },
     { id: 'cariesManagement', label: 'Caries management system', hasTable: true },
     { id: 'erosionManagement', label: 'Erosion management system', hasTable: true },
@@ -270,6 +297,12 @@ const AdjunctiveTherapyPage = () => {
 
   const functionalSubCategories = [
     { id: 'tdsMembership', label: 'TDS Membership', hasTable: true },
+  ];
+
+  const fluorideSubCategories = [
+    { id: 'otcFluoride', label: 'Over-the-counter', hasTable: true },
+    { id: 'toothpaste11NaF', label: 'Toothpaste (1.1% NaF)', hasTable: true },
+    { id: 'gel11NaF', label: 'Gel (1.1% NaF)', hasTable: true },
   ];
 
   return (
@@ -442,6 +475,22 @@ const AdjunctiveTherapyPage = () => {
                 </Collapse>
               )}
 
+               {/* Direct Table for Functional Therapy (separate from subcategories) */}
+              {cat.hasTable && cat.hasSub && cat.id === 'functionalTherapy' && (
+                <Collapse in={expanded[cat.id]} timeout="auto" unmountOnExit>
+                  <Box sx={{ ml: 2, mb: 2, mt: 2 }}>
+                    <ProductTable 
+                      placeholderText="Select functional therapy product..."
+                      rows={functionalTherapyRows}
+                      onAddRow={(newRow) => {
+                        setFunctionalTherapyRows([...functionalTherapyRows, newRow]);
+                        console.log('New functional therapy row added:', newRow);
+                      }}
+                    />
+                  </Box>
+                </Collapse>
+              )}
+
               {/* Sub-Category Collapse (Functional Therapy) */}
               {cat.hasSub && cat.id === 'functionalTherapy' && (
                 <Collapse in={expanded[cat.id]} timeout="auto" unmountOnExit>
@@ -482,21 +531,70 @@ const AdjunctiveTherapyPage = () => {
                 </Collapse>
               )}
 
-              {/* Direct Table for Functional Therapy (separate from subcategories) */}
-              {cat.hasTable && cat.hasSub && cat.id === 'functionalTherapy' && (
+              {/* Sub-Category Collapse (Fluoride) */}
+              {cat.hasSub && cat.id === 'fluoride' && (
                 <Collapse in={expanded[cat.id]} timeout="auto" unmountOnExit>
-                  <Box sx={{ ml: 2, mb: 2, mt: 2, borderTop: '2px solid #d1d5db', pt: 2 }}>
-                    <Typography sx={{ fontSize: '0.85rem', color: '#2e3b84', fontWeight: 600, mb: 1 }}>
-                      Functional Therapy Products
-                    </Typography>
-                    <ProductTable 
-                      placeholderText="Select functional therapy product..."
-                      rows={functionalTherapyRows}
-                      onAddRow={(newRow) => {
-                        setFunctionalTherapyRows([...functionalTherapyRows, newRow]);
-                        console.log('New functional therapy row added:', newRow);
-                      }}
-                    />
+                  <Box sx={{ ml: 2 }}>
+                    {fluorideSubCategories.map((sub) => (
+                      <Box key={sub.id}>
+                        <Box 
+                          onClick={() => toggleSection(sub.id)}
+                          sx={{ display: 'flex', alignItems: 'center', py: 0.5, cursor: 'pointer' }}
+                        >
+                          {expanded[sub.id] ? 
+                            <KeyboardArrowDownIcon sx={{ fontSize: '1.1rem', color: '#5b84c1', mr: 0.5 }} /> : 
+                            <KeyboardArrowRightIcon sx={{ fontSize: '1.1rem', color: '#5b84c1', mr: 0.5 }} />
+                          }
+                          <Typography sx={{ fontSize: '0.8rem', color: '#2e3b84' }}>
+                            {sub.label}
+                          </Typography>
+                        </Box>
+
+                        {/* Product Table for Fluoride Subcategories */}
+                        {sub.hasTable && sub.id === 'otcFluoride' && (
+                          <Collapse in={expanded[sub.id]} timeout="auto" unmountOnExit>
+                            <Box sx={{ ml: 4, mb: 2, mt: 1 }}>
+                              <ProductTable 
+                                placeholderText="Select OTC fluoride product..."
+                                rows={otcFluorideRows}
+                                onAddRow={(newRow) => {
+                                  setOtcFluorideRows([...otcFluorideRows, newRow]);
+                                  console.log('New OTC fluoride row added:', newRow);
+                                }}
+                              />
+                            </Box>
+                          </Collapse>
+                        )}
+                        {sub.hasTable && sub.id === 'toothpaste11NaF' && (
+                          <Collapse in={expanded[sub.id]} timeout="auto" unmountOnExit>
+                            <Box sx={{ ml: 4, mb: 2, mt: 1 }}>
+                              <ProductTable 
+                                placeholderText="Select toothpaste (1.1% NaF)..."
+                                rows={toothpaste11NaFRows}
+                                onAddRow={(newRow) => {
+                                  setToothpaste11NaFRows([...toothpaste11NaFRows, newRow]);
+                                  console.log('New toothpaste 1.1% NaF row added:', newRow);
+                                }}
+                              />
+                            </Box>
+                          </Collapse>
+                        )}
+                        {sub.hasTable && sub.id === 'gel11NaF' && (
+                          <Collapse in={expanded[sub.id]} timeout="auto" unmountOnExit>
+                            <Box sx={{ ml: 4, mb: 2, mt: 1 }}>
+                              <ProductTable 
+                                placeholderText="Select gel (1.1% NaF)..."
+                                rows={gel11NaFRows}
+                                onAddRow={(newRow) => {
+                                  setGel11NaFRows([...gel11NaFRows, newRow]);
+                                  console.log('New gel 1.1% NaF row added:', newRow);
+                                }}
+                              />
+                            </Box>
+                          </Collapse>
+                        )}
+                      </Box>
+                    ))}
                   </Box>
                 </Collapse>
               )}
@@ -521,15 +619,6 @@ const AdjunctiveTherapyPage = () => {
                         onAddRow={(newRow) => {
                           setEnvironmentalTherapyRows([...environmentalTherapyRows, newRow]);
                           console.log('New environmental therapy row added:', newRow);
-                        }}
-                      />
-                    ) : cat.id === 'fluoride' ? (
-                      <ProductTable 
-                        placeholderText="Select fluoride treatment..."
-                        rows={fluorideRows}
-                        onAddRow={(newRow) => {
-                          setFluorideRows([...fluorideRows, newRow]);
-                          console.log('New fluoride row added:', newRow);
                         }}
                       />
                     ) : cat.id === 'oralMalodor' ? (

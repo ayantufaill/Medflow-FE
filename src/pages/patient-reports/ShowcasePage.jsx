@@ -21,7 +21,7 @@ const ShowcasePage = () => {
       title: 'Teeth Whitening', 
       date: '2024-01-15', 
       beforeImage: '/Damaged_teeth.png',
-      afterImage: '/White_teeth.png',
+      afterImage: '/white_teeth.png',
       description: 'Professional whitening treatment - 3 shades lighter' 
     },
     { 

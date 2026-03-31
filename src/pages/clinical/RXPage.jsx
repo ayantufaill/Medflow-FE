@@ -118,7 +118,7 @@ const RXPage = () => {
           </Grid>
 
           {/* Right Column: Allergies Section */}
-          <Grid item xs={12} md={3} sx={{ borderLeft: '1px solid #f1f1f1' }}>
+          <Grid item xs={12} md={3} sx={{ borderLeft: '1px solid #f1f1f1', pl: 3 }}>
             <Typography 
               sx={{ 
                 color: '#2e3b84', 

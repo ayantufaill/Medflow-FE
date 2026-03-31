@@ -10,6 +10,7 @@ import { providerService } from '../../services/provider.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
+import { validateUSPhoneNumber } from '../../validations/patientValidations';
 
 /**
  * Lightweight patient details page — dedicated route like signed-documents.
@@ -24,14 +25,19 @@ const PatientDetailPage = () => {
   const tabParam = searchParams.get('tab') || 'details';
 
   const patientFromNav = location.state?.patient;
-  const [patient, setPatient] = useState(patientFromNav ?? null);
-  const [loading, setLoading] = useState(!patientFromNav);
+  // Always start with null to force fresh fetch on mount/refresh
+  const [patient, setPatient] = useState(null);
+  // Only use loading state if we don't have patient from nav
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, patientName: '' });
+  const [activateDialog, setActivateDialog] = useState({ open: false, patientName: '' });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [adjacentIds, setAdjacentIds] = useState({ prev: null, next: null });
   const [preferredDentists, setPreferredDentists] = useState([]);
   const [preferredHygienists, setPreferredHygienists] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedPatientData, setEditedPatientData] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,20 +55,20 @@ const PatientDetailPage = () => {
 
   useEffect(() => {
     if (!patientId) return;
-    if (patientFromNav && (patientFromNav._id === patientId || patientFromNav.id === patientId)) {
-      setLoading(false);
-      return;
-    }
+    // Always fetch fresh data from API, ignore location.state.patient
     let cancelled = false;
     setLoading(true);
     setError('');
+    console.log('🔍 Fetching patient workspace for ID:', patientId);
     Promise.all([
       patientService.getPatientWorkspace(patientId),
       providerService.getAllProviders(1, 100, '', true).catch(() => ({ providers: [] })),
     ])
       .then(([data, providerData]) => {
+        console.log('📦 Raw patient data from API:', data);
         if (!cancelled && data) {
           setPatient(data);
+          console.log('✅ Patient data set in state:', data);
         }
         if (!cancelled) {
           const providers = Array.isArray(providerData?.providers) ? providerData.providers : [];
@@ -83,6 +89,7 @@ const PatientDetailPage = () => {
       })
       .catch((err) => {
         if (!cancelled) {
+          console.error('❌ Error fetching patient:', err);
           setError(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to load patient');
           setPatient(null);
         }
@@ -91,11 +98,18 @@ const PatientDetailPage = () => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [patientId, patientFromNav]);
+  }, [patientId]);
 
   const fetchPatient = () => {
     if (!patientId) return;
-    patientService.getPatientWorkspace(patientId).then((data) => data && setPatient(data));
+    console.log('🔄 Manually fetching patient workspace for ID:', patientId);
+    patientService.getPatientWorkspace(patientId).then((data) => {
+      console.log('📦 Manual fetch - Raw API response:', data);
+      console.log('📝 firstName from API:', data?.firstName);
+      console.log('📅 dateOfBirth from API:', data?.dateOfBirth);
+      data && setPatient(data);
+      console.log('✅ Patient state updated to:', data);
+    });
   };
 
   const handleSendUpdateRequest = async (payload) => {
@@ -111,6 +125,112 @@ const PatientDetailPage = () => {
     }
   };
 
+  const handleSavePatient = async (eventOrData) => {
+    try {
+      // Prevent default form submission if this was triggered by a form submit
+      if (eventOrData?.preventDefault) {
+        eventOrData.preventDefault();
+      }
+      
+      console.log('=== SAVE PATIENT ===');
+      console.log('Original patient:', patient);
+      console.log('Edited data:', editedPatientData);
+      
+      // Merge edited data with original patient data
+      // Only update fields that were actually changed
+      const dataToSave = { ...patient };
+      
+      // If we have edited data from sections, merge it
+      if (editedPatientData) {
+        Object.keys(editedPatientData).forEach(key => {
+          if (editedPatientData[key] !== undefined) {
+            dataToSave[key] = editedPatientData[key];
+          }
+        });
+      }
+      
+      console.log('📦 Final data to save includes:');
+      console.log('  - spouseInfo:', dataToSave.spouseInfo);
+      console.log('  - headOfHousehold:', dataToSave.headOfHousehold);
+      console.log('Final data to save:', dataToSave);
+      console.log('Date of Birth being sent:', dataToSave.dateOfBirth);
+      console.log('Last Visit Date being sent:', dataToSave.lastVisitDate);
+      
+      // Validate US phone numbers before saving
+      const phoneValidationErrors = [];
+      
+      // Validate primary phone
+      if (dataToSave.phonePrimary) {
+        const primaryValidation = validateUSPhoneNumber(dataToSave.phonePrimary);
+        if (!primaryValidation.valid) {
+          phoneValidationErrors.push(`Mobile Number: ${primaryValidation.message}`);
+        }
+      }
+      
+      // Validate secondary phone
+      if (dataToSave.phoneSecondary) {
+        const secondaryValidation = validateUSPhoneNumber(dataToSave.phoneSecondary);
+        if (!secondaryValidation.valid) {
+          phoneValidationErrors.push(`Home Phone Number: ${secondaryValidation.message}`);
+        }
+      }
+      
+      // Validate emergency contact phone
+      if (dataToSave.emergencyContact?.phone) {
+        const emergencyValidation = validateUSPhoneNumber(dataToSave.emergencyContact.phone);
+        if (!emergencyValidation.valid) {
+          phoneValidationErrors.push(`Emergency Contact Phone: ${emergencyValidation.message}`);
+        }
+      }
+      
+      // If there are validation errors, show them and stop
+      if (phoneValidationErrors.length > 0) {
+        showSnackbar(phoneValidationErrors.join(', '), 'error');
+        return;
+      }
+      
+      const response = await patientService.updatePatient(patientId, dataToSave);
+      console.log('✅ Backend response:', response);
+      console.log('📝 Data we sent:', dataToSave);
+      console.log('📥 Data received back:', response);
+      
+      showSnackbar('Patient information updated successfully', 'success');
+      // Wait a moment for backend to process, then refresh
+      setTimeout(() => {
+        fetchPatient();
+        console.log('🔄 Refreshed patient data from backend');
+      }, 500);
+      
+      setIsEditMode(false);
+      setEditedPatientData(null);
+    } catch (err) {
+      console.error('Update patient error:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to update patient';
+      showSnackbar(msg, 'error');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditedPatientData(null);
+  };
+
+  const handlePatientDataChange = (updatedData) => {
+    console.log('📥 Child component sent updated data:', updatedData);
+    console.log('  - spouseInfo:', updatedData.spouseInfo);
+    console.log('  - headOfHousehold:', updatedData.headOfHousehold);
+    
+    // Merge new updates with existing edited data
+    setEditedPatientData((prev) => ({
+      ...prev,
+      ...updatedData,
+    }));
+    
+    console.log('📝 Updated editedPatientData state');
+  };
+
   const handleDeactivateConfirm = async () => {
     try {
       setDeactivateLoading(true);
@@ -120,6 +240,21 @@ const PatientDetailPage = () => {
       setPatient((prev) => (prev ? { ...prev, isActive: false } : null));
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate';
+      showSnackbar(msg, 'error');
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
+  const handleActivateConfirm = async () => {
+    try {
+      setDeactivateLoading(true);
+      await patientService.updatePatient(patientId, { isActive: true });
+      showSnackbar('Patient activated', 'success');
+      setActivateDialog({ open: false, patientName: '' });
+      setPatient((prev) => (prev ? { ...prev, isActive: true } : null));
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to activate';
       showSnackbar(msg, 'error');
     } finally {
       setDeactivateLoading(false);
@@ -171,10 +306,20 @@ const PatientDetailPage = () => {
               patientNumber={patient?.patientCode ?? patientId}
               preferredDentists={preferredDentists}
               preferredHygienists={preferredHygienists}
-              onEdit={() => navigate(`/patients/${patientId}/edit`)}
+              isEditMode={isEditMode}
+              onEdit={() => setIsEditMode(true)}
+              onSave={handleSavePatient}
+              onCancelEdit={handleCancelEdit}
+              onPatientDataChange={handlePatientDataChange}
               onRefresh={fetchPatient}
               onDeactivate={() =>
                 setDeactivateDialog({
+                  open: true,
+                  patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
+                })
+              }
+              onActivate={() =>
+                setActivateDialog({
                   open: true,
                   patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
                 })
@@ -197,6 +342,17 @@ const PatientDetailPage = () => {
         confirmText="Deactivate"
         cancelText="Cancel"
         confirmColor="error"
+        loading={deactivateLoading}
+      />
+      <ConfirmationDialog
+        open={activateDialog.open}
+        onClose={() => setActivateDialog({ open: false, patientName: '' })}
+        onConfirm={handleActivateConfirm}
+        title="Activate Patient"
+        message={`Activate "${activateDialog.patientName}"? They will be restored to active status.`}
+        confirmText="Activate"
+        cancelText="Cancel"
+        confirmColor="success"
         loading={deactivateLoading}
       />
     </Box>

@@ -30,7 +30,6 @@ const RiskAssessmentPage = () => {
           { id: 2, label: 'Recession', value: 'None' },
           { id: 3, label: 'Bleeding', value: '2, 3, 4, 5, 12, 13, 14, 15, 18, 19, 20' },
           { id: 4, label: 'Missing Teeth Due To Gum Disease', value: 'None' },
-          { id: 5, label: '', value: '21, 28, 29, 30, 31' },
           { id: 6, label: 'Tooth Mobility Due To Bone Loss', value: 'None' },
         ],
         description: 'We carefully evaluated the current condition of your gums, as well as the bone that supports your teeth.',
@@ -177,9 +176,18 @@ const RiskAssessmentPage = () => {
         ))}
       </Box>
 
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Comprehensive dental health risk evaluation
+
+      {/* Main Concern - Centered */}
+      <Box sx={{ mb: 2, textAlign: 'center' }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 600, 
+            fontSize: '0.90rem',
+            color: '#1976d2'
+          }}
+        >
+          Main Concern: Cracked tooth
         </Typography>
       </Box>
 

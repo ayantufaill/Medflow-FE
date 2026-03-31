@@ -90,8 +90,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const inactiveInsurances = insurances.filter((i) => !i.isActive);
 
   const handleInsuranceAdd = () => {
-    console.log('Opening insurance dialog...', patientId);
-    setInsuranceDialog({ open: true, mode: 'add', insurance: null });
+    console.log('Navigating to Add Coverage page...', patientId);
+    navigate(`/patients/${patientId}/insurance/new`);
   };
   const handleInsuranceEdit = (insurance) => {
     setEditCoverageModal({ open: true, insurance, mode: 'edit' });

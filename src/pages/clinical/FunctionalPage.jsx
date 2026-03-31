@@ -4,29 +4,48 @@ import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DiagnosticNavbar from '../../components/clinical/DiagnosticNavbar';
 
 const FunctionalAssessmentPage = () => {
-  const [findings, setFindings] = useState({ 'attrition_normal': true });
+  const [findings, setFindings] = useState({});
   const [risks, setRisks] = useState({});
   const [otherText, setOtherText] = useState('');
   const [radioValue, setRadioValue] = useState(null); // 'found' or 'not-found'
 
-  const mainSection = [
-    { id: 'attrition_normal', label: "Attrition / Normal Force" },
-    { id: 'attrition_abnormal', label: "Abnormal Attrition/Bruxism/Excessive Force" },
-    { id: 'abfraction', label: "Abfraction" },
-    { id: 'occlusal_trauma', label: "Primary Occlusal Traumatism" },
-    { id: 'tmd', label: "TMD" },
-    { id: 'muscle', label: "Muscle" },
-    { id: 'neuromuscular', label: "Abnormal Neuromuscular Habits" },
-    { id: 'missing_teeth', label: "Missing teeth" },
-  ];
-
-  const functionalSection = [
-    { id: 'acceptable', label: "Acceptable Function", options: ['green', 'yellow'] },
-    { id: 'frictional', label: "Frictional", options: ['yellow', 'red'] },
-    { id: 'constricted', label: "Constricted Chewing Pattern", options: ['yellow', 'red'] },
-    { id: 'dysfunction', label: "Occlusal Dysfunction (OSA, UARS)", options: ['yellow', 'red'] },
-    { id: 'parafunction', label: "Parafunction (Sleep Bruxism)", options: ['red'] },
-    { id: 'neurologic', label: "Neurologic Disorders", options: ['red'] },
+  // Section definitions for dynamic rendering
+  const sectionGroups = [
+    {
+      key: 'mainFindings',
+      title: 'Main Findings',
+      fields: [
+        { id: 'attrition_normal', label: "Attrition / Normal Force" },
+        { id: 'attrition_abnormal', label: "Abnormal Attrition/Bruxism/Excessive Force" },
+        { id: 'abfraction', label: "Abfraction" },
+        { id: 'occlusal_trauma', label: "Primary Occlusal Traumatism" },
+        { id: 'tmd', label: "TMD" },
+        { id: 'muscle', label: "Muscle" },
+        { id: 'neuromuscular', label: "Abnormal Neuromuscular Habits" },
+        { id: 'missing_teeth', label: "Missing teeth" },
+      ]
+    },
+    {
+      key: 'functionalAssessment',
+      title: 'Functional Assessment',
+      isFunctional: true,
+      fields: [
+        { id: 'acceptable', label: "Acceptable Function", riskOptions: ['green', 'yellow'] },
+        { id: 'frictional', label: "Frictional", riskOptions: ['yellow', 'red'] },
+        { id: 'constricted', label: "Constricted Chewing Pattern", riskOptions: ['yellow', 'red'] },
+        { id: 'dysfunction', label: "Occlusal Dysfunction (OSA, UARS)", riskOptions: ['yellow', 'red'] },
+        { id: 'parafunction', label: "Parafunction (Sleep Bruxism)", riskOptions: ['red'] },
+        { id: 'neurologic', label: "Neurologic Disorders", riskOptions: ['red'] },
+      ]
+    },
+    {
+      key: 'additionalFindings',
+      title: 'Additional Findings',
+      fields: [
+        { id: 'labial_frenum', label: "Labial Frenum" },
+        { id: 'lingual_frenum', label: "Lingual Frenum" },
+      ]
+    }
   ];
 
   const handleToggleFinding = (id) => {
@@ -51,28 +70,41 @@ const FunctionalAssessmentPage = () => {
     );
   };
 
-  const Row = ({ id, label, isFunctional, options }) => (
+  const FieldRow = ({ field, isFunctional }) => (
     <Box sx={{ display: 'flex', alignItems: 'center', py: isFunctional ? '6px' : '2px' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
         <Box 
-          onClick={() => handleToggleFinding(id)}
+          onClick={() => handleToggleFinding(field.id)}
           sx={{ 
             width: 13, height: 13, borderRadius: '50%', border: '1px solid #9ca3af', cursor: 'pointer',
-            backgroundColor: findings[id] ? '#4b5563' : '#fff',
+            backgroundColor: findings[field.id] ? '#4b5563' : '#fff',
             transition: 'background-color 0.2s'
           }} 
         />
-        <Typography sx={{ fontSize: '13px', color: '#333', fontWeight: 400 }}>{label}</Typography>
+        <Typography sx={{ fontSize: '13px', color: '#333', fontWeight: 400 }}>{field.label}</Typography>
         <Typography sx={{ color: '#9ca3af', fontSize: '10px', cursor: 'help' }}>ⓘ</Typography>
       </Box>
 
-      {isFunctional && (
+      {isFunctional && field.riskOptions && (
         <Box sx={{ display: 'flex', gap: 1.5, mr: '20%' }}>
-          {options.map(color => (
-            <RiskCircle key={color} color={color} active={risks[id] === color} onClick={() => handleToggleRisk(id, color)} />
+          {field.riskOptions.map(color => (
+            <RiskCircle key={color} color={color} active={risks[field.id] === color} onClick={() => handleToggleRisk(field.id, color)} />
           ))}
         </Box>
       )}
+    </Box>
+  );
+
+  const SectionRenderer = ({ section }) => (
+    <Box>
+      {section.title && (
+        <Typography sx={{ fontSize: '14px', fontWeight: 'bold', color: '#333', mt: 1, mb: 1 }}>
+          {section.title}
+        </Typography>
+      )}
+      {section.fields.map((field, index) => (
+        <FieldRow key={field.id || index} field={field} isFunctional={section.isFunctional} />
+      ))}
     </Box>
   );
 
@@ -89,111 +121,121 @@ const FunctionalAssessmentPage = () => {
       </Box>
       <DiagnosticNavbar />
 
-      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
-        {/* Timeline Visualization */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 6 }}>
+      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%', position: 'relative' }}>
+        {/* Timeline Visualization - Positioned on Left */}
+        <Box sx={{ position: 'absolute', left: '32px', top: '32px' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>Jan 06, 2023</Typography>
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#8fb3d3' }} />
           </Box>
-          <Box sx={{ height: '2px', width: 60, backgroundColor: '#8fb3d3', mt: '21px', position: 'relative' }}>
-            <Box sx={{ position: 'absolute', right: -12, top: -9, width: 20, height: 20, borderRadius: '50%', backgroundColor: '#5b84c1' }} />
-            <Box sx={{ position: 'absolute', right: -15, top: 25, whiteSpace: 'nowrap' }}>
-              <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: '#000' }}>Feb 21, 2023</Typography>
-            </Box>
-          </Box>
         </Box>
 
-        {/* Legend Header - Updated to match screenshot perfectly */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, mt: 4 }}>
-          <Typography sx={{ fontSize: '15px', fontWeight: 'bold', color: '#000' }}>Risk Assessment</Typography>
-          
+        {/* Risk Assessment Legend - Centered */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2, mt: 6 }}>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', gap: 1.5, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#f1f5f9', border: '1px solid #e2e8f0' }} /> Minimal</Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#a3e635' }} /> Low</Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#fbbf24' }} /> Moderate</Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#f87171' }} /> High</Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, ml: 2, fontSize: '11px', color: '#666' }}>
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 0.5,
-                  cursor: 'pointer',
-                  opacity: radioValue === 'found' ? 1 : 0.6
-                }}
-                onClick={() => setRadioValue('found')}
-              >
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: radioValue === 'found' ? '#4b5563' : '#e5e7eb', border: radioValue === 'found' ? 'none' : '1px solid #9ca3af' }} /> 
-                Found
+            <Typography sx={{ fontSize: '15px', fontWeight: 'bold', color: '#000' }}>Risk Assessment</Typography>
+            
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              {/* Color Legend */}
+              <Box sx={{ display: 'flex', gap: 1.5, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#f1f5f9', border: '1px solid #e2e8f0' }} /> Minimal</Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#a3e635' }} /> Low</Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#fbbf24' }} /> Moderate</Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Box sx={{ width: 12, height: 12, bgcolor: '#f87171' }} /> High</Box>
               </Box>
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 0.5,
-                  cursor: 'pointer',
-                  opacity: radioValue === 'not-found' ? 1 : 0.6
-                }}
-                onClick={() => setRadioValue('not-found')}
-              >
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: radioValue === 'not-found' ? '#4b5563' : '#e5e7eb', border: radioValue === 'not-found' ? 'none' : '1px solid #9ca3af' }} /> 
-                Not Found
+              
+              {/* Radio Legend */}
+              <Box sx={{ display: 'flex', gap: 2, ml: 1, fontSize: '11px', color: '#666' }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    opacity: radioValue === 'found' ? 1 : 0.6
+                  }}
+                  onClick={() => setRadioValue('found')}
+                >
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: radioValue === 'found' ? '#4b5563' : '#e5e7eb', border: radioValue === 'found' ? 'none' : '1px solid #9ca3af' }} /> 
+                  Found
+                </Box>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    opacity: radioValue === 'not-found' ? 1 : 0.6
+                  }}
+                  onClick={() => setRadioValue('not-found')}
+                >
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: radioValue === 'not-found' ? '#4b5563' : '#e5e7eb', border: radioValue === 'not-found' ? 'none' : '1px solid #9ca3af' }} /> 
+                  Not Found
+                </Box>
               </Box>
             </Box>
           </Box>
         </Box>
 
-        {/* Checkbox Line - Positioned to match Biomechanical exactly */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, ml: '180px' }}>
+        {/* Checkbox Line - Centered */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mb: 3 }}>
           <Checkbox size="small" sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 16 } }} />
           <Typography sx={{ fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
             Risk modified by shared risk factors
           </Typography>
         </Box>
 
-        <Box sx={{ ml: 2 }}>
-          {mainSection.map((item) => <Row key={item.id} {...item} />)}
-          <Divider sx={{ my: 1.5, borderColor: '#e5e7eb' }} />
-          {functionalSection.map((item) => <Row key={item.id} {...item} isFunctional={true} />)}
-          <Divider sx={{ my: 1.5, borderColor: '#e5e7eb' }} />
-          <Row id="labial_frenum" label="Labial Frenum" />
-          <Row id="lingual_frenum" label="Lingual Frenum" />
-          <Divider sx={{ my: 4, borderColor: '#333', borderWidth: '0.5px' }} />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-            <Typography sx={{ fontSize: '13px', color: '#333', fontWeight: 400 }}>Other:</Typography>
-            <Typography sx={{ color: '#9ca3af', fontSize: '10px' }}>ⓘ</Typography>
+        {/* Form Content - Centered */}
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ width: '100%', maxWidth: '900px' }}>
+            <Box sx={{ ml: 2 }}>
+              {/* Dynamic Section Rendering */}
+              {sectionGroups.map((section, index) => (
+                <Box key={section.key}>
+                  <SectionRenderer section={section} />
+                  {index < sectionGroups.length - 1 && (
+                    <Divider sx={{ my: 1.5, borderColor: '#e5e7eb' }} />
+                  )}
+                </Box>
+              ))}
+
+              <Divider sx={{ my: 4, borderColor: '#333', borderWidth: '0.5px' }} />
+              
+              {/* Other Section */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                <Typography sx={{ fontSize: '13px', color: '#333', fontWeight: 400 }}>Other:</Typography>
+                <Typography sx={{ color: '#9ca3af', fontSize: '10px' }}>ⓘ</Typography>
+              </Box>
+              <TextField
+                value={otherText}
+                onChange={(e) => setOtherText(e.target.value)}
+                placeholder="Enter additional notes"
+                sx={{
+                  width: 220,
+                  mt: 0.5,
+                  ml: 0.5,
+                  '& .MuiInputBase-input': {
+                    fontSize: '13px',
+                    color: '#333',
+                    p: '8px 0',
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      border: 'none',
+                    },
+                    '&:hover fieldset': {
+                      border: 'none',
+                    },
+                    '&.Mui-focused fieldset': {
+                      border: 'none',
+                    },
+                    borderBottom: '1px solid #9ca3af',
+                    borderRadius: 0,
+                  },
+                }}
+              />
+            </Box>
           </Box>
-          <TextField
-            value={otherText}
-            onChange={(e) => setOtherText(e.target.value)}
-            placeholder="Enter additional notes"
-            sx={{
-              width: 220,
-              mt: 0.5,
-              ml: 0.5,
-              '& .MuiInputBase-input': {
-                fontSize: '13px',
-                color: '#333',
-                p: '8px 0',
-              },
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  border: 'none',
-                },
-                '&:hover fieldset': {
-                  border: 'none',
-                },
-                '&.Mui-focused fieldset': {
-                  border: 'none',
-                },
-                borderBottom: '1px solid #9ca3af',
-                borderRadius: 0,
-              },
-            }}
-          />
         </Box>
       </Box>
     </Box>

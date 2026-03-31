@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Box, Typography, Button, IconButton, Paper, RadioGroup, 
   FormControlLabel, FormControl, InputLabel, Radio, TextField, Select, MenuItem, 
   Table, TableBody, TableCell, TableHead, TableRow, Checkbox, Chip, Avatar, Dialog,
-  Popover, Grid
+  Popover, Grid, Autocomplete
 } from '@mui/material';
 import { 
   DeleteOutline, MailOutline, ChatBubbleOutline, 
-  Settings, Science, Mic, MoreVert, Close, InfoOutlined, CheckCircle
+  Settings, Science, Mic, MoreVert, Close, InfoOutlined, CheckCircle,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import LabOrder from './LabOrder';
 
@@ -23,6 +24,20 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
     { label: "AdX", color: "#b2bec3" }, { label: "SCN", color: "#55efc4" },
     { label: "Con", color: "#81ecec" }, { label: "Vir", color: "#00b894", font: "white" }
   ];
+
+  // Default procedure added to the table when each tag chip is selected
+  const TAG_DEFAULT_PROCEDURES = {
+    New:  { code: "D0150", treatment: "Comprehensive Evaluation",         charge: "$85.00"  },
+    Scr:  { code: "D4341", treatment: "Periodontal Scaling & Root Planing", charge: "$220.00" },
+    FULL: { code: "D2391", treatment: "Resin Composite – One Surface",     charge: "$185.00" },
+    Pano: { code: "D0330", treatment: "Panoramic Radiographic Image",      charge: "$120.00" },
+    FMX:  { code: "D0210", treatment: "Complete Series of Radiographs",    charge: "$150.00" },
+    Xray: { code: "D0220", treatment: "Periapical First Image",            charge: "$30.00"  },
+    AdX:  { code: "D0230", treatment: "Periapical Each Additional Image",  charge: "$25.00"  },
+    SCN:  { code: "D1110", treatment: "Prophy",                            charge: "$120.00" },
+    Con:  { code: "D0120", treatment: "Periodic Oral Evaluation",          charge: "$55.00"  },
+    Vir:  { code: "D9310", treatment: "Consultation – Diagnostic Service", charge: "$95.00"  },
+  };
 
   // State management
   const [visitType, setVisitType] = useState('recare');
@@ -42,6 +57,34 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [completedProcedures, setCompletedProcedures] = useState([true]); // Track completion status of each procedure
   const [isCheckedOut, setIsCheckedOut] = useState(true);
+  
+  // Procedure tags state
+  const [selectedTagLabels, setSelectedTagLabels] = useState(new Set());
+  const [tagProcedureIds, setTagProcedureIds] = useState({});
+  const [procedures, setProcedures] = useState([
+    { id: 1, code: "D4910", treatment: "Maintenance", tag: null, provider: "Dr. Masterson", charge: "$257.00", checked: true }
+  ]);
+  const nextProcedureId = useRef(2);
+  
+  // "Add Procedure" autocomplete state
+  const [addingProcedure, setAddingProcedure] = useState(false);
+  const [procedureInputValue, setProcedureInputValue] = useState("");
+  
+  // Dummy searchable procedure catalog for the "Add Procedure" autocomplete
+  const DUMMY_PROCEDURE_OPTIONS = [
+    { code: "D0120", treatment: "Periodic Oral Evaluation",           tag: { label: "Con",  color: "#81ecec" },                charge: "$55.00"  },
+    { code: "D0140", treatment: "Limited Oral Evaluation",            tag: { label: "Con",  color: "#81ecec" },                charge: "$75.00"  },
+    { code: "D0210", treatment: "Complete Series of Radiographs",     tag: { label: "FMX",  color: "#2d3436", font: "white" }, charge: "$150.00" },
+    { code: "D0220", treatment: "Periapical First Image",             tag: { label: "Xray", color: "#636e72", font: "white" }, charge: "$30.00"  },
+    { code: "D0230", treatment: "Periapical Each Additional Image",   tag: { label: "Xray", color: "#636e72", font: "white" }, charge: "$25.00"  },
+    { code: "D0330", treatment: "Panoramic Radiographic Image",       tag: { label: "Pano", color: "#636e72", font: "white" }, charge: "$120.00" },
+    { code: "D1120", treatment: "Child Prophylaxis",                  tag: { label: "SCN",  color: "#55efc4" },                charge: "$85.00"  },
+    { code: "D2140", treatment: "Amalgam – One Surface Primary",      tag: { label: "FULL", color: "#ffeaa7" },                charge: "$145.00" },
+    { code: "D2391", treatment: "Resin Composite – One Surface",      tag: { label: "FULL", color: "#ffeaa7" },                charge: "$185.00" },
+    { code: "D4341", treatment: "Periodontal Scaling & Root Planing", tag: { label: "Scr",  color: "#ff7675" },                charge: "$220.00" },
+    { code: "D7140", treatment: "Extraction – Erupted Tooth",         tag: { label: "New",  color: "#81ecec" },                charge: "$175.00" },
+    { code: "D9310", treatment: "Consultation – Diagnostic Service",  tag: { label: "Vir",  color: "#00b894", font: "white" }, charge: "$95.00"  },
+  ];
 
   const handleTagsClick = (event) => {
     setTagsAnchorEl(event.currentTarget);
@@ -56,6 +99,63 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
   const handleCompleteAll = () => {
     // Mark all procedures as completed
     setCompletedProcedures(completedProcedures.map(() => true));
+  };
+
+  // ── Procedure tag handlers ────────────────────────────────────────────────
+
+  // Toggle a tag: selecting adds its default procedure to the table; deselecting removes it
+  const handleTagClick = (label) => {
+    const isSelected = selectedTagLabels.has(label);
+
+    if (isSelected) {
+      // Deselect — remove the procedure row that was added by this tag
+      setSelectedTagLabels((prev) => { const n = new Set(prev); n.delete(label); return n; });
+      const procId = tagProcedureIds[label];
+      if (procId != null) {
+        setProcedures((prev) => prev.filter((p) => p.id !== procId));
+        setTagProcedureIds((prev) => { const { [label]: _, ...rest } = prev; return rest; });
+      }
+    } else {
+      // Select — add the tag's default procedure to the table
+      setSelectedTagLabels((prev) => new Set([...prev, label]));
+      const template = TAG_DEFAULT_PROCEDURES[label];
+      const tagInfo  = procedureIcons.find((t) => t.label === label);
+      if (template && tagInfo) {
+        const newId = nextProcedureId.current++;
+        setProcedures((prev) => [
+          ...prev,
+          {
+            id: newId,
+            code: template.code,
+            treatment: template.treatment,
+            tag: { label: tagInfo.label, color: tagInfo.color, font: tagInfo.font },
+            provider: "",
+            charge: template.charge,
+            checked: true,
+          },
+        ]);
+        setTagProcedureIds((prev) => ({ ...prev, [label]: newId }));
+      }
+    }
+  };
+
+  // Add a procedure from the autocomplete search to the scheduled procedures table
+  const handleSelectProcedure = (option) => {
+    if (!option) return;
+    setProcedures((prev) => [
+      ...prev,
+      {
+        id: nextProcedureId.current++,
+        code: option.code,
+        treatment: option.treatment,
+        tag: option.tag,
+        provider: "",
+        charge: option.charge,
+        checked: true,
+      },
+    ]);
+    setProcedureInputValue("");
+    setAddingProcedure(false);
   };
 
   // Tag Data matching screenshot colors/labels
@@ -153,17 +253,119 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3, alignItems: 'center' }}>
                {/* Dynamic Icons from your screenshot */}
                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                  {procedureIcons.map((item, idx) => (
-                    <Chip 
-                      key={idx} 
-                      label={item.label} 
-                      sx={{ 
-                        bgcolor: item.color, color: item.font || 'black', 
-                        borderRadius: '4px', height: 22, fontSize: '10px', fontWeight: 700 
-                      }} 
-                    />
-                  ))}
-                  <Typography sx={{ color: '#64748b', fontSize: '12px', ml: 1, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>+Add Procedure</Typography>
+                  {procedureIcons.map((item, idx) => {
+                    const isSelected = selectedTagLabels.has(item.label);
+                    return (
+                      <Chip 
+                        key={idx} 
+                        label={item.label} 
+                        onClick={() => handleTagClick(item.label)}
+                        sx={{ 
+                          bgcolor: item.color, 
+                          color: item.font || 'black', 
+                          borderRadius: '4px', 
+                          height: 22, 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          // Highlight selected tags with a dark border + slight shadow
+                          border: isSelected ? "2px solid #1e293b" : "2px solid transparent",
+                          boxShadow: isSelected ? "0 0 0 2px rgba(30,41,59,0.25)" : "none",
+                          transition: "border 0.1s, box-shadow 0.1s",
+                          "&:hover": { opacity: 0.85 },
+                        }} 
+                      />
+                    );
+                  })}
+
+                  {/* Inline "Add Procedure" autocomplete */}
+                  {addingProcedure ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Autocomplete
+                        autoFocus
+                        open={procedureInputValue.length > 0}
+                        options={DUMMY_PROCEDURE_OPTIONS}
+                        getOptionLabel={(o) => `${o.code} – ${o.treatment}`}
+                        inputValue={procedureInputValue}
+                        onInputChange={(_, val) => setProcedureInputValue(val)}
+                        onChange={(_, val) => handleSelectProcedure(val)}
+                        filterOptions={(opts, { inputValue }) => {
+                          const q = inputValue.toLowerCase();
+                          return opts.filter(
+                            (o) =>
+                              o.code.toLowerCase().includes(q) ||
+                              o.treatment.toLowerCase().includes(q),
+                          );
+                        }}
+                        renderOption={(props, option) => (
+                          <Box
+                            component="li"
+                            {...props}
+                            key={option.code}
+                            sx={{ display: "flex", alignItems: "center", gap: 1, py: "4px !important" }}
+                          >
+                            <Chip
+                              label={option.tag.label}
+                              size="small"
+                              sx={{
+                                bgcolor: option.tag.color,
+                                color: option.tag.font || "black",
+                                fontSize: "9px",
+                                height: 18,
+                                borderRadius: "3px",
+                                fontWeight: 700,
+                              }}
+                            />
+                            <Typography sx={{ fontSize: "11px", fontWeight: 600 }}>
+                              {option.code}
+                            </Typography>
+                            <Typography sx={{ fontSize: "11px", color: "#475569" }}>
+                              {option.treatment}
+                            </Typography>
+                            <Typography sx={{ fontSize: "11px", color: "#94a3b8", ml: "auto" }}>
+                              {option.charge}
+                            </Typography>
+                          </Box>
+                        )}
+                        sx={{ width: 280 }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            size="small"
+                            autoFocus
+                            placeholder="Search by code or name…"
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setProcedureInputValue("");
+                                setAddingProcedure(false);
+                              }
+                            }}
+                            sx={{ "& .MuiInputBase-input": { fontSize: "11px", py: "4px !important" } }}
+                          />
+                        )}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => { setProcedureInputValue(""); setAddingProcedure(false); }}
+                        sx={{ p: 0.25 }}
+                      >
+                        <CloseIcon sx={{ fontSize: 14, color: "#94a3b8" }} />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <Typography
+                      onClick={() => setAddingProcedure(true)}
+                      sx={{
+                        color: '#64748b',
+                        fontSize: '12px',
+                        ml: 1,
+                        cursor: 'pointer',
+                        '&:hover': { textDecoration: 'underline', color: '#1976d2' },
+                      }}
+                    >
+                      +Add Procedure
+                    </Typography>
+                  )}
                </Box>
             </Box>
 
@@ -200,46 +402,86 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ '&:hover': { bgcolor: '#f1f5f9' } }}>
-                  <TableCell padding="checkbox">
-                    <Checkbox 
-                      size="small" 
-                      checked={completedProcedures[0] || false}
-                      onChange={(e) => {
-                        const newCompleted = [...completedProcedures];
-                        newCompleted[0] = e.target.checked;
-                        setCompletedProcedures(newCompleted);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '12px' }}>D4910</TableCell>
-                  <TableCell />
-                  <TableCell>
-                    <Select size="small" value="Maintenance" sx={{ height: 26, fontSize: '11px', width: 140, bgcolor: 'white' }}>
-                      <MenuItem value="Maintenance">Maintenance</MenuItem>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select size="small" value="Dr. Masterson" sx={{ height: 26, fontSize: '11px', minWidth: 120, bgcolor: 'white' }}>
-                      <MenuItem value="Dr. Masterson">Dr. Masterson</MenuItem>
-                      <MenuItem value="Dr. Kim">Dr. Kim</MenuItem>
-                      <MenuItem value="Hygienist Kim">Hygienist Kim</MenuItem>
-                      <MenuItem value="Hygienist Sarah">Hygienist Sarah</MenuItem>
-                    </Select>
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '12px' }}>$257.00</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>$257.00</TableCell>
-                  <TableCell sx={{ width: 80 }}>
-                    <Box sx={{ display: 'flex', gap: 3, color: '#94a3b8' }}>
-                      <CheckCircle sx={{ fontSize: 18, color: '#22c55e', mr: 1 }} />
-                      <Settings sx={{ fontSize: 18, cursor: 'pointer' }} />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                {procedures.map((row) => (
+                  <TableRow key={row.id} sx={{ '&:hover': { bgcolor: '#f1f5f9' } }}>
+                    <TableCell padding="checkbox">
+                      <Checkbox 
+                        size="small" 
+                        checked={row.checked || false}
+                        onChange={(e) => {
+                          const newProcedures = [...procedures];
+                          const index = procedures.findIndex(p => p.id === row.id);
+                          if (index !== -1) {
+                            newProcedures[index].checked = e.target.checked;
+                            setProcedures(newProcedures);
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '12px' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        {row.tag && (
+                          <Chip
+                            label={row.tag.label}
+                            size="small"
+                            sx={{
+                              bgcolor: row.tag.color,
+                              color: row.tag.font || 'black',
+                              fontSize: '9px',
+                              height: 18,
+                              borderRadius: '3px',
+                              fontWeight: 700,
+                            }}
+                          />
+                        )}
+                        {row.code}
+                      </Box>
+                    </TableCell>
+                    <TableCell />
+                    <TableCell>
+                      <Select size="small" value={row.treatment} sx={{ height: 26, fontSize: '11px', width: 140, bgcolor: 'white' }}>
+                        <MenuItem value={row.treatment}>{row.treatment}</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select size="small" value={row.provider || ''} sx={{ height: 26, fontSize: '11px', minWidth: 120, bgcolor: 'white' }}>
+                        <MenuItem value="">— Select —</MenuItem>
+                        <MenuItem value="Dr. Masterson">Dr. Masterson</MenuItem>
+                        <MenuItem value="Dr. Kim">Dr. Kim</MenuItem>
+                        <MenuItem value="Hygienist Kim">Hygienist Kim</MenuItem>
+                        <MenuItem value="Hygienist Sarah">Hygienist Sarah</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '12px' }}>{row.charge}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{row.charge}</TableCell>
+                    <TableCell sx={{ width: 80 }}>
+                      <Box sx={{ display: 'flex', gap: 3, color: '#94a3b8' }}>
+                        <CheckCircle sx={{ fontSize: 18, color: row.checked ? '#22c55e' : '#94a3b8', mr: 1 }} />
+                        <Settings sx={{ fontSize: 18, cursor: 'pointer' }} />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
                 {/* Total Row */}
                 <TableRow>
-                  <TableCell colSpan={6} align="right" sx={{ fontSize: '12px', fontWeight: 700, py: 0.5 }}>$257.00</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 700, py: 0.5 }}>$257.00</TableCell>
+                  <TableCell colSpan={6} align="right" sx={{ fontSize: '12px', fontWeight: 700, py: 0.5 }}>
+                    $
+                    {procedures
+                      .reduce(
+                        (sum, p) => sum + parseFloat(p.charge?.replace('$', '') || '0'),
+                        0,
+                      )
+                      .toFixed(2)}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '12px', fontWeight: 700, py: 0.5 }}>
+                    $
+                    {procedures
+                      .reduce(
+                        (sum, p) => sum + parseFloat(p.charge?.replace('$', '') || '0'),
+                        0,
+                      )
+                      .toFixed(2)}
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               </TableBody>

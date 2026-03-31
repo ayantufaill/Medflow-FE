@@ -49,16 +49,25 @@ const ProductTable = ({ rows = [], placeholderText = 'Select...', onAddRow }) =>
       <Table size="small">
         <TableHead sx={{ bgcolor: 'transparent' }}>
           <TableRow sx={{ borderBottom: '1px solid #e0e0e0' }}>
-            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', width: '25%', border: 'none' }}>Product Choice</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '0.75rem', border: 'none' }}>Used by patient</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '0.75rem', border: 'none' }}>Suggested to patient</TableCell>
-            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', border: 'none' }}>Instructions</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.7rem', width: '20%', border: 'none', py: 0.5 }}>Product Choice</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '0.7rem', border: 'none', py: 0.5, px: 0.3, width: '20%' }}>Used by patient</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '0.7rem', border: 'none', py: 0.5, px: 0.3, width: '20%' }}>Suggested to patient</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', fontSize: '0.7rem', border: 'none', py: 0.5, width: '40%' }}>Instructions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {tableData.map((row, index) => (
-            <TableRow key={index} sx={{ borderBottom: '1px solid #f0f0f0' }}>
-              <TableCell sx={{ border: 'none' }}>
+            <TableRow 
+              key={index} 
+              sx={{ 
+                borderBottom: '1px solid #f0f0f0',
+                bgcolor: index % 2 === 0 ? '#f9f9f9' : '#ffffff',
+                '&:hover': {
+                  bgcolor: '#f5f5f5',
+                }
+              }}
+            >
+              <TableCell sx={{ border: 'none', py: 0.3 }}>
                 <Select 
                   value={row.choice || ''} 
                   displayEmpty 
@@ -66,8 +75,8 @@ const ProductTable = ({ rows = [], placeholderText = 'Select...', onAddRow }) =>
                   fullWidth 
                   onChange={(e) => handleSelectChange(index, e.target.value)}
                   sx={{ 
-                    fontSize: '0.75rem', 
-                    height: '30px',
+                    fontSize: '0.7rem', 
+                    height: '28px',
                     '& .MuiOutlinedInput-notchedOutline': {
                       border: 'none',
                     },
@@ -81,41 +90,48 @@ const ProductTable = ({ rows = [], placeholderText = 'Select...', onAddRow }) =>
                 >
                   <MenuItem value=""><em>{placeholderText}</em></MenuItem>
                   {row.options?.map((opt, idx) => (
-                    <MenuItem key={idx} value={opt.value}>{opt.label}</MenuItem>
+                    <MenuItem key={idx} value={opt.value} sx={{ fontSize: '0.7rem' }}>{opt.label}</MenuItem>
                   ))}
                 </Select>
               </TableCell>
-              <TableCell align="center" sx={{ border: 'none' }}>
+              <TableCell align="center" sx={{ border: 'none', py: 0.3, px: 0.5 }}>
                 <Checkbox 
                   size="small" 
                   checked={row.usedByPatient || false}
                   onChange={() => handleCheckboxChange(index, 'usedByPatient')}
+                  sx={{ padding: '4px' }}
                 />
               </TableCell>
-              <TableCell align="center" sx={{ border: 'none' }}>
+              <TableCell align="center" sx={{ border: 'none', py: 0.3, px: 0.5 }}>
                 <Checkbox 
                   size="small" 
                   checked={row.suggestedToPatient || false}
                   onChange={() => handleCheckboxChange(index, 'suggestedToPatient')}
+                  sx={{ padding: '4px' }}
                 />
               </TableCell>
-              <TableCell sx={{ border: 'none' }}>
+              <TableCell sx={{ border: 'none', py: 0.3 }}>
                 <TextField 
                   variant="standard" 
-                  fullWidth 
                   value={row.instructions || ''}
                   onChange={(e) => handleInstructionsChange(index, e.target.value)}
-                  inputProps={{ style: { fontSize: '0.75rem' } }} 
+                  inputProps={{ style: { fontSize: '0.7rem', padding: '2px 0' } }}
+                  sx={{ 
+                    maxWidth: '200px',
+                    '& .MuiInput-underline': {
+                      width: '180px',
+                    }
+                  }}
                 />
               </TableCell>
             </TableRow>
           ))}
           <TableRow>
-            <TableCell colSpan={4} sx={{ py: 0.5 }}>
+            <TableCell colSpan={4} sx={{ py: 0.2 }}>
               <Typography 
                 onClick={handleAddRow}
                 sx={{ 
-                  fontSize: '0.75rem', color: '#2e3b84', 
+                  fontSize: '0.7rem', color: '#2e3b84', 
                   cursor: 'pointer', fontWeight: 500 
                 }}
               >

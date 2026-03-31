@@ -28,9 +28,8 @@ const FONT_SM = { fontSize: "0.8125rem" };
 
 const STATUS_OPTIONS = [
   { value: "unconfirmed", label: "Unconfirmed" },
-  { value: "preconfirmed", label: "Preconfirmed" },
+  { value: "preconfirmed", label: "Pre-Confirmed" },
   { value: "confirmed", label: "Confirmed" },
-  { value: "scheduled", label: "Scheduled" },
   { value: "seated", label: "Seated" },
   { value: "call", label: "Call" },
   { value: "checkout incomplete", label: "Checkout Incomplete" },
@@ -38,7 +37,6 @@ const STATUS_OPTIONS = [
   { value: "no show", label: "No Show" },
   { value: "rescheduled", label: "Rescheduled" },
   { value: "cancelled", label: "Cancelled" },
-  { value: "pending", label: "Pending" },
 ];
 
 const providerOptions = ["KIM", "DR", "JOHN", "SARAH", "Hygienist Kim"];
@@ -50,12 +48,12 @@ const AppointmentDetailsDialog = ({
   OPERATORY_COLUMNS,
   onStatusChange,
 }) => {
-  const [status, setStatus] = useState("scheduled");
+  const [status, setStatus] = useState("unconfirmed");
 
   useEffect(() => {
     if (!selectedAppointment) return;
-    const next = (selectedAppointment.status || "scheduled").toLowerCase();
-    setStatus(STATUS_OPTIONS.some((o) => o.value === next) ? next : "scheduled");
+    const next = (selectedAppointment.status || "unconfirmed").toLowerCase();
+    setStatus(STATUS_OPTIONS.some((o) => o.value === next) ? next : "unconfirmed");
   }, [selectedAppointment?.id, selectedAppointment?.status, open]);
 
   if (!selectedAppointment) return null;

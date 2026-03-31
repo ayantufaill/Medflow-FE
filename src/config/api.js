@@ -55,12 +55,18 @@ const apiClient = axios.create({
   withCredentials: false,
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and disable caching
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Add timestamp to GET requests to prevent browser caching
+    // This avoids CORS issues with Cache-Control header
+    if (config.method === 'get') {
+      config.params = config.params || {};
+      config.params._t = Date.now();
     }
     return config;
   },
@@ -91,6 +97,11 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    // Safety check - if originalRequest doesn't exist, just reject the error
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
 
     // List of public endpoints that should not trigger auth redirect on 401
     // These endpoints use 401 for validation errors, not auth errors

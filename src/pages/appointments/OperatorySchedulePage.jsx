@@ -42,12 +42,10 @@ const END_HOUR = 24;
 const SLOT_MINUTES = 30;
 const SLOT_HEIGHT = 40;
 
-const OPERATORY_COLUMNS = [
-  { id: "op1", label: "Op 1", color: "#7e57c2" },
-  { id: "op2", label: "Op 2", color: "#26a69a" },
-  { id: "op3", label: "Op 3", color: "#ef6c00" },
-  { id: "op4", label: "Op 4", color: "#42a5f5" },
-  { id: "consult", label: "Hyg 1", color: "#8d6e63" },
+// Color palette for operatory columns (repeating)
+const OPERATORY_COLORS = [
+  "#7e57c2", "#26a69a", "#ef6c00", "#42a5f5", "#8d6e63",
+  "#ab47bc", "#29b6f6", "#66bb6a", "#ffa726", "#ec407a",
 ];
 
 // Status-based colors (background) for appointment cards
@@ -93,6 +91,119 @@ const OperatorySchedulePage = () => {
   useEffect(() => { showSnackbarRef.current = showSnackbar; });
 
   const { providers, rooms, appointmentTypes } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
+  
+  // Dynamically generate operatory columns from rooms
+  const OPERATORY_COLUMNS = useMemo(() => {
+    if (!rooms || rooms.length === 0) {
+      // Fallback to default columns if no rooms available
+      return [
+        { 
+          id: "op1", 
+          label: "Op 1", 
+          color: "#7e57c2",
+          breakTimes: [
+            {
+              label: "Lunch",
+              icon: "🍽️",
+              startTime: "12:00",
+              endTime: "12:30",
+              color: "#bbdefb",
+              hoverColor: "#64b5f6",
+              textColor: "#0d47a1",
+            }
+          ]
+        },
+        { 
+          id: "op2", 
+          label: "Op 2", 
+          color: "#26a69a",
+          breakTimes: [
+            {
+              label: "Lunch",
+              icon: "🍽️",
+              startTime: "12:30",
+              endTime: "13:00",
+              color: "#bbdefb",
+              hoverColor: "#64b5f6",
+              textColor: "#0d47a1",
+            }
+          ]
+        },
+        { 
+          id: "op3", 
+          label: "Op 3", 
+          color: "#ef6c00",
+          breakTimes: [
+            {
+              label: "Lunch",
+              icon: "🍽️",
+              startTime: "12:00",
+              endTime: "12:30",
+              color: "#bbdefb",
+              hoverColor: "#64b5f6",
+              textColor: "#0d47a1",
+            }
+          ]
+        },
+        { 
+          id: "op4", 
+          label: "Op 4", 
+          color: "#42a5f5",
+          breakTimes: [] // No breaks for this operatory
+        },
+        { 
+          id: "consult", 
+          label: "Hyg 1", 
+          color: "#8d6e63",
+          breakTimes: [
+            {
+              label: "Lunch",
+              icon: "🍽️",
+              startTime: "12:00",
+              endTime: "12:30",
+              color: "#bbdefb",
+              hoverColor: "#64b5f6",
+              textColor: "#0d47a1",
+            }
+          ]
+        },
+      ];
+    }
+    
+    return rooms.map((room, index) => {
+      // Generate staggered lunch breaks by default (each operatory gets 30 min different time)
+      // Op 1: 12:00-12:30, Op 2: 12:30-13:00, Op 3: 13:00-13:30, Op 4: 13:30-14:00, etc.
+      const totalMinutesOffset = index * 30; // Each operatory offset by 30 minutes
+      const defaultLunchStartMinutes = 12 * 60 + totalMinutesOffset; // Start at 12:00 (720 minutes) + offset
+      const defaultLunchEndMinutes = defaultLunchStartMinutes + 30; // 30 minutes duration
+      
+      const startHours = Math.floor(defaultLunchStartMinutes / 60);
+      const startMins = defaultLunchStartMinutes % 60;
+      const endHours = Math.floor(defaultLunchEndMinutes / 60);
+      const endMins = defaultLunchEndMinutes % 60;
+      
+      const startTime = `${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}`;
+      const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+      
+      return {
+        id: `op${room._id || room.id}`,
+        label: room.name || `Op ${index + 1}`,
+        color: OPERATORY_COLORS[index % OPERATORY_COLORS.length],
+        // Add break times from room data if available (from API)
+        breakTimes: room.breakTimes || [
+          {
+            label: "Lunch",
+            icon: "🍽️",
+            startTime,
+            endTime,
+            color: "#bbdefb",
+            hoverColor: "#64b5f6",
+            textColor: "#0d47a1",
+          }
+        ],
+      };
+    });
+  }, [rooms]);
   const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
@@ -105,6 +216,7 @@ const OperatorySchedulePage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [newlyCreatedAppointmentId, setNewlyCreatedAppointmentId] = useState(null); // Track newly created appointment for auto-scroll
   const [draft, setDraft] = useState({
     title: "",
     columnId: "op1",
@@ -140,6 +252,15 @@ const OperatorySchedulePage = () => {
   const [formPatients, setFormPatients] = useState([]);
   const [loadingFormPatients, setLoadingFormPatients] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
+
+  // Ensure all dialogs are closed on mount to prevent any stale state
+  useEffect(() => {
+    setCreateDialogOpen(false);
+    setDetailsDialogOpen(false);
+    setCompleteBillDialogOpen(false);
+    setPurchaseProductsDialogOpen(false);
+    setAddAppointmentFormOpen(false);
+  }, []);
 
   const handlePreAppointmentSelection = (item, selectionType) => {
     setPreAppointmentChecklist((prev) => ({
@@ -181,7 +302,16 @@ const OperatorySchedulePage = () => {
   };
 
   const handleScheduleAppointmentClick = () => {
-    setAddAppointmentFormOpen(true);
+    // Close ALL other dialogs first to prevent stacking or background dialogs
+    setCreateDialogOpen(false);
+    setDetailsDialogOpen(false);
+    setCompleteBillDialogOpen(false);
+    setPurchaseProductsDialogOpen(false);
+    
+    // Force close CreateAppointmentDialog with a small delay to ensure it's fully closed
+    setTimeout(() => {
+      setAddAppointmentFormOpen(true);
+    }, 0);
   };
 
   const searchSidebarPatients = useCallback(async (search = "") => {
@@ -297,14 +427,32 @@ const OperatorySchedulePage = () => {
         ? fullName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
         : "PT";
 
-      // Distribute appointments across operatory columns based on providerId index
-      const rawProviderId = a.providerId && (a.providerId._id || a.providerId.id);
-      const providerNum = rawProviderId ? Number(rawProviderId) : NaN;
-      const colIndex =
-        Number.isFinite(providerNum) && providerNum > 0
-          ? (providerNum - 1) % OPERATORY_COLUMNS.length
-          : 0;
-      const columnId = a.operatoryId || OPERATORY_COLUMNS[colIndex]?.id || "op1";
+      // Map roomId to operatory column
+      // If roomId exists and matches a column ID, use it; otherwise fall back to provider-based distribution
+      let columnId = "op1";
+      if (a.roomId) {
+        // Match the column ID format used in OPERATORY_COLUMNS generation
+        columnId = `op${a.roomId}`;
+        
+        // Verify this column exists in OPERATORY_COLUMNS, otherwise fallback
+        if (!OPERATORY_COLUMNS.some(col => col.id === columnId)) {
+          // Fallback: distribute based on room number modulo
+          const roomNum = Number(a.roomId);
+          if (Number.isFinite(roomNum) && roomNum > 0) {
+            const mappedColIndex = (roomNum - 1) % OPERATORY_COLUMNS.length;
+            columnId = OPERATORY_COLUMNS[mappedColIndex]?.id || "op1";
+          }
+        }
+      } else {
+        // Fallback: Distribute appointments across operatory columns based on providerId index
+        const rawProviderId = a.providerId && (a.providerId._id || a.providerId.id);
+        const providerNum = rawProviderId ? Number(rawProviderId) : NaN;
+        const colIndex =
+          Number.isFinite(providerNum) && providerNum > 0
+            ? (providerNum - 1) % OPERATORY_COLUMNS.length
+            : 0;
+        columnId = OPERATORY_COLUMNS[colIndex]?.id || "op1";
+      }
 
       return {
         id: a._id || a.id,
@@ -406,7 +554,21 @@ const OperatorySchedulePage = () => {
           1, 100, "", patientId, "", `${year}-01-01`, `${year}-12-31`,
         );
         const raw = Array.isArray(result) ? result : result?.appointments || [];
-        setAppointments(raw.map(mapAppointment).filter(Boolean));
+        const mappedAppointments = raw.map(mapAppointment).filter(Boolean);
+        setAppointments(mappedAppointments);
+        
+        // Find the newly created appointment by matching payload properties
+        const newAppt = mappedAppointments.find(appt => 
+          appt.patientId === patientId &&
+          appt.date === payload.appointmentDate &&
+          appt.start === dayjs(`${payload.appointmentDate}T${payload.startTime}`).toISOString()
+        );
+        
+        if (newAppt && newAppt.id) {
+          setNewlyCreatedAppointmentId(newAppt.id);
+          // Clear the ID after scrolling completes (handled in the grid component)
+          setTimeout(() => setNewlyCreatedAppointmentId(null), 2000);
+        }
       }
     } catch (err) {
       const msg =
@@ -640,17 +802,33 @@ const OperatorySchedulePage = () => {
 
     {/* 2. Date Navigation Section */}
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-      <ToggleButtonGroup
-        value={viewMode}
-        exclusive
-        onChange={handleViewModeChange}
-        size="small"
-        sx={{ "& .MuiToggleButton-root": { px: 1, py: 0.2, fontSize: "11px", height: 32 } }}
-      >
-        <ToggleButton value="day">Day</ToggleButton>
-        <ToggleButton value="week">Week</ToggleButton>
-        <ToggleButton value="month">Month</ToggleButton>
-      </ToggleButtonGroup>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={handleViewModeChange}
+          size="small"
+          sx={{ "& .MuiToggleButton-root": { px: 1, py: 0.2, fontSize: "11px", height: 32 } }}
+        >
+          <ToggleButton value="day">Day</ToggleButton>
+          <ToggleButton value="week">Week</ToggleButton>
+          <ToggleButton value="month">Month</ToggleButton>
+        </ToggleButtonGroup>
+
+        {/* Current System Time Display */}
+        <Chip
+          label={`Time: ${dayjs().format("h:mm A")}`}
+          size="small"
+          sx={{ 
+            fontWeight: 600, 
+            fontSize: "11px", 
+            height: 32, 
+            px: 0.5,
+            bgcolor: "#e3f2fd",
+            color: "#1976d2"
+          }}
+        />
+      </Box>
 
       <IconButton 
         size="small" 
@@ -769,6 +947,7 @@ const OperatorySchedulePage = () => {
           clamp={clamp}
           getStatusColor={getStatusColor}
           selectedDate={selectedDate}
+          newlyCreatedAppointmentId={newlyCreatedAppointmentId}
           onSlotClick={(columnId, minutesFromStart) =>
             handleGridClick(columnId, minutesFromStart)
           }
@@ -823,41 +1002,21 @@ const OperatorySchedulePage = () => {
         onClose={() => setPurchaseProductsDialogOpen(false)}
       />
 
-      <Dialog
+      {/* AddNewPatientAppointmentForm has its own Dialog wrapper */}
+      <AddNewPatientAppointmentForm
         open={addAppointmentFormOpen}
-        onClose={() => setAddAppointmentFormOpen(false)}
-        maxWidth={false}
-        fullWidth
-        PaperProps={{
-          sx: {
-            maxWidth: 1200,
-            height: "90vh",
-            borderRadius: 2,
-          },
-        }}
-      >
-        <DialogContent
-          sx={{
-            p: 0,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <AddNewPatientAppointmentForm
-            patients={formPatients}
-            loadingPatients={loadingFormPatients}
-            onPatientSearch={searchFormPatients}
-            onSubmit={handleAddAppointmentSubmit}
-            onCancel={() => setAddAppointmentFormOpen(false)}
-            loading={formSaving}
-            initialDateTime={initialFormDateTime}
-            providers={providers || []}
-            rooms={rooms || []}
-            appointmentTypes={appointmentTypes || []}
-          />
-        </DialogContent>
-      </Dialog>
+        patients={formPatients}
+        loadingPatients={loadingFormPatients}
+        onPatientSearch={searchFormPatients}
+        onSubmit={handleAddAppointmentSubmit}
+        onCancel={() => setAddAppointmentFormOpen(false)}
+        loading={formSaving}
+        initialDateTime={initialFormDateTime}
+        initialPatient={selectedPatient}
+        providers={providers || []}
+        rooms={rooms || []}
+        appointmentTypes={appointmentTypes || []}
+      />
     </Box>
   );
 };

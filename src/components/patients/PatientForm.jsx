@@ -34,6 +34,7 @@ import {
   CameraAlt as CameraAltIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -862,6 +863,21 @@ const PatientForm = ({
                         fullWidth: true,
                         error: !!errors.dateOfBirth,
                         helperText: errors.dateOfBirth?.message,
+                        InputProps: !isEditMode ? { readOnly: true } : {
+                          endAdornment: (
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                mr: 1,
+                              }}
+                              component="span"
+                            >
+                              <CalendarIcon fontSize="small" color="action" />
+                            </Box>
+                          ),
+                        },
                       },
                     }}
                     maxDate={today}
@@ -1486,6 +1502,21 @@ const PatientForm = ({
                         fullWidth: true,
                         error: !!errors.lastVisitDate,
                         helperText: errors.lastVisitDate?.message,
+                        InputProps: !isEditMode ? { readOnly: true } : {
+                          endAdornment: (
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                mr: 1,
+                              }}
+                              component="span"
+                            >
+                              <CalendarIcon fontSize="small" color="action" />
+                            </Box>
+                          ),
+                        },
                       },
                     }}
                     maxDate={today}

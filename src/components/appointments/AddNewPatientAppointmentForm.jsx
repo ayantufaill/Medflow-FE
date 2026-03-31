@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Box,
   Button,
@@ -34,14 +34,18 @@ import dayjs from "dayjs";
 import Autocomplete from "@mui/material/Autocomplete";
 import { FONT_SM, FONT_XS } from "../../constants/styles";
 
-// Valid status values accepted by the backend API
+// Status options matching OperatorySidebar appointment card
 const STATUS_OPTIONS = [
-  { value: "scheduled",   label: "Scheduled" },
-  { value: "confirmed",   label: "Confirmed" },
-  { value: "checked_in",  label: "Checked In" },
-  { value: "completed",   label: "Completed" },
-  { value: "cancelled",   label: "Cancelled" },
-  { value: "no_show",     label: "No Show" },
+  { value: "unconfirmed", label: "Unconfirmed" },
+  { value: "preconfirmed", label: "Pre-Confirmed" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "seated", label: "Seated" },
+  { value: "call", label: "Call" },
+  { value: "checkout incomplete", label: "Checkout Incomplete" },
+  { value: "checkout complete", label: "Checkout Complete" },
+  { value: "no show", label: "No Show" },
+  { value: "rescheduled", label: "Rescheduled" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 // Default procedure tags shown in the tag bar
@@ -115,11 +119,19 @@ const AddNewPatientAppointmentForm = ({
   initialDateTime = null,
   open = true,
 }) => {
+  // Initialize patient from initialPatient prop, reset when it changes
   const [patient, setPatient] = useState(initialPatient || null);
   const [dateTime, setDateTime] = useState(
     initialDateTime || dayjs().hour(9).minute(5),
   );
   const [visitType, setVisitType] = useState("treatment");
+
+  // Reset form when initialPatient changes (e.g., when opening from sidebar)
+  useEffect(() => {
+    if (initialPatient) {
+      setPatient(initialPatient);
+    }
+  }, [initialPatient]);
 
   // Scheduled procedure table rows
   const [procedures, setProcedures] = useState(DEFAULT_PROCEDURES);
@@ -137,7 +149,7 @@ const AddNewPatientAppointmentForm = ({
   const nextProcedureId = useRef(DEFAULT_PROCEDURES.length + 1);
 
   // Right-panel fields
-  const [appointmentStatus, setAppointmentStatus] = useState("scheduled");
+  const [appointmentStatus, setAppointmentStatus] = useState("unconfirmed");
   const [durationMins, setDurationMins] = useState(60);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState("");
@@ -277,12 +289,20 @@ const AddNewPatientAppointmentForm = ({
       onClose={onCancel}
       maxWidth="lg"
       fullWidth
+      disableBackdropClick
+      disableScrollLock
+      BackdropProps={{
+        sx: {
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        },
+      }}
       PaperProps={{
         sx: {
           borderRadius: 2,
           border: "1px solid #eef2f6",
           maxHeight: "90vh",
           overflow: "hidden",
+          zIndex: 1301,
         },
       }}
     >
