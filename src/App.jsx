@@ -169,6 +169,10 @@ import PortalNotificationsPage from './pages/portal/PortalNotificationsPage';
 import ProviderPortalMessagesPage from './pages/portal/ProviderPortalMessagesPage';
 import AdminPage from './pages/admin/AdminPage';
 import PracticeOnboardingPage from './pages/admin/PracticeOnboardingPage';
+import KioskAccountsView from './pages/admin/KioskAccountsView';
+import MyChartConfiguration from './pages/admin/MyChartConfiguration';
+import OfficeTimings from './pages/admin/OfficeTimings';
+import OnlineSchedule from './pages/admin/OnlineSchedule';
 
 const theme = createTheme({
   palette: {
@@ -405,6 +409,46 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin']}>
                     <Layout>
                       <PracticeOnboardingPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/kiosk-accounts"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <KioskAccountsView />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/my-chart-configuration"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <MyChartConfiguration />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/office-timings"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <OfficeTimings />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/online-schedule"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <OnlineSchedule />
                     </Layout>
                   </ProtectedRoute>
                 }
