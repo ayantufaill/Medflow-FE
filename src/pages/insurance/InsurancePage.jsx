@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { 
   Box, Typography, Button, Tabs, Tab, Table, TableBody, 
   TableCell, TableContainer, TableHead, TableRow, Paper,
@@ -13,6 +14,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
 
 const InsurancePage = () => {
+  const { patientId } = useParams();
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
@@ -103,8 +105,13 @@ const InsurancePage = () => {
 
   // Handler functions
   const handleAddCoverage = (type) => {
-    setNewCoverageType(type);
-    setAddCoverageDialogOpen(true);
+    if (type === 'Membership Plan') {
+      // Navigate to Member page for the selected patient
+      navigate(`/patients/member/${patientId}`);
+    } else {
+      setNewCoverageType(type);
+      setAddCoverageDialogOpen(true);
+    }
     handleCloseMenu();
   };
 

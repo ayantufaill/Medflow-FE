@@ -43,6 +43,7 @@ import PatientDentalHistoryPage from './pages/patients/PatientDentalHistoryPage'
 import PatientAdditionalDocumentsPage from './pages/patients/PatientAdditionalDocumentsPage';
 import PatientDetailPage from './pages/patients/PatientDetailPage';
 import AddCoveragePage from './pages/patients/AddCoveragePage';
+import MembershipPlanPage from './pages/patients/MemberPage';
 import ImportPatientsPage from './pages/patients/ImportPatientsPage';
 import PatientReportPage from './pages/patient-reports/PatientReportPage';
 import PatientReportsPage from './pages/patient-reports/PatientReportsPage';
@@ -96,9 +97,17 @@ import ClinicalPage from './pages/clinical/ClinicalPage';
 import ExamPage from './pages/clinical/ExamPage';
 import DiagnosticOpinionPage from './pages/clinical/DiagnosticOpinionPage';
 import PeriodontalPage from './pages/clinical/PeriodontalPage';
+import PeriodontalExamPage from './pages/clinical/PeriodontalExamPage';
 import BiomechanicalPage from './pages/clinical/BiomechanicalPage';
 import FunctionalPage from './pages/clinical/FunctionalPage';
 import DentofacialPage from './pages/clinical/DentofacialPage';
+import ExamDentofacial from './pages/clinical/ExamDentofacial';
+import Morphological from './pages/clinical/Morphological';
+import AirwayPage from './pages/clinical/AirwayPage';
+import DentalTmdExamPage from './pages/clinical/TMJ';
+import HeadAndNeck from './pages/clinical/HeadAndNeck';
+import TeethStructureExam from './pages/clinical/TeehthStructureExam';
+import Radiographic from './pages/clinical/Radiographic';
 import TreatmentPlanPage from './pages/clinical/TreatmentPlanPage';
 import AdjunctiveTherapyPage from './pages/clinical/AdjunctiveTherapyPage';
 import RXPage from './pages/clinical/RXPage';
@@ -554,6 +563,16 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                     <Layout>
                       <AddCoveragePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patients/member/:patientId"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                    <Layout>
+                      <MembershipPlanPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -1081,6 +1100,86 @@ function App() {
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
                     <Layout>
                       <ExamPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/head-neck"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <HeadAndNeck />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/tooth-structure"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <TeethStructureExam />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/radiographic"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <Radiographic />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/morphological"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <Morphological />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/periodontal"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <PeriodontalExamPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/dentofacial"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <ExamDentofacial />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/airway"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <AirwayPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinical/exam/tmj"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                    <Layout>
+                      <DentalTmdExamPage />
                     </Layout>
                   </ProtectedRoute>
                 }

@@ -35,8 +35,8 @@ const ClinicalNavbar = () => {
 
   // Navigation sections for the clinical page
   const clinicalSections = [
-    { id: 'exam', label: 'EXAM', path: '/clinical/exam' },
-    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion' },
+    { id: 'exam', label: 'EXAM', path: '/clinical/exam/radiographic' },
+    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion/biomechanical' },
     { id: 'treatment', label: 'TREATMENT PLAN', path: '/clinical/treatment-plan' },
     { id: 'adjunctive', label: 'ADJUNCTIVE THERAPY', path: '/clinical/adjunctive-therapy' },
     { id: 'rx', label: 'RX', path: '/clinical/rx' },

@@ -9,11 +9,18 @@ import { Search as SearchIcon, InfoOutlined as InfoIcon, PeopleOutline as People
 const InsuranceInformation = ({ 
   formData, 
   handleInputChange, 
-  ASSIGNMENT_OF_BENEFITS_OPTIONS,
-  tinyText,
-  blueHeader,
-  inputBg
+  insuranceCompanies = [],
+  assignmentOptions = [],
+  onSearchChange
 }) => {
+  // Default empty arrays if props are not provided
+  const companies = insuranceCompanies.length > 0 ? insuranceCompanies : [];
+  const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
+    { value: 1, label: 'Pay to dentist (Assignment)' },
+    { value: 2, label: 'Pay to patient (Benefit)' },
+    { value: 3, label: 'Pay to both (Split)' }
+  ];
+
   return (
     <Box>
       <Typography sx={{ fontWeight: 700, mb: 1, color: "#333", fontSize: "0.85rem" }}>Insurance Information</Typography>
@@ -22,28 +29,29 @@ const InsuranceInformation = ({
         InputProps={{ endAdornment: <SearchIcon color="disabled" fontSize="small" /> }}
         sx={{ mb: 0.75, '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 } }}
         value={formData.carrierSearch || ''}
-        onChange={(e) => handleInputChange('carrierSearch', e.target.value)}
+        onChange={(e) => onSearchChange ? onSearchChange(e.target.value) : handleInputChange('carrierSearch', e.target.value)}
       />
       <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Exclude System Carriers</Typography>} sx={{ ml: 0 }} />
 
+      {/* Display carrier info from API or fallback to display data */}
       <Box sx={{ bgcolor: blueHeader, p: 0.75, borderRadius: 1, mt: 1, mb: 1.5, overflow: 'hidden' }}>
          <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
               <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier/Payer Name</Typography>
-              <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierName || 'MetLife'}</Typography>
+              <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierName || '-'}</Typography>
             </Paper>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
               <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer ID</Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.payerId || '65978'}</Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.payerId || '-'}</Typography>
             </Paper>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
               <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier Phone</Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierPhone || '1-877-638-3379'}</Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierPhone || '-'}</Typography>
             </Paper>
          </Box>
          <Paper elevation={0} sx={{ mt: 0.5, p: 1, textAlign: 'left', bgcolor: '#fff', borderRadius: 1 }}>
             <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer Address</Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3, fontWeight: 500 }}>{formData.payerAddress || 'PO Box 981282, El Paso, TX, 79998'}</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3, fontWeight: 500 }}>{formData.payerAddress || '-'}</Typography>
          </Paper>
       </Box>
 
@@ -71,7 +79,7 @@ const InsuranceInformation = ({
                      variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
-                     value={formData.insurancePlan}
+                     value={formData.insurancePlan || ''}
                      onChange={(e) => handleInputChange('insurancePlan', e.target.value)}
                      required 
                    />
@@ -88,7 +96,7 @@ const InsuranceInformation = ({
                      variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
-                     value={formData.groupName}
+                     value={formData.groupName || ''}
                      onChange={(e) => handleInputChange('groupName', e.target.value)}
                      required 
                    />
@@ -108,7 +116,7 @@ const InsuranceInformation = ({
                      variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
-                     value={formData.groupNumber}
+                     value={formData.groupNumber || ''}
                      onChange={(e) => handleInputChange('groupNumber', e.target.value)}
                      required 
                    />
@@ -123,7 +131,7 @@ const InsuranceInformation = ({
                      variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
-                     value={formData.phoneNumber}
+                     value={formData.phoneNumber || ''}
                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                    />
                  </TableCell>
@@ -162,7 +170,7 @@ const InsuranceInformation = ({
                      onChange={(e) => handleInputChange('assignmentOfBenefits', e.target.value)}
                      sx={{ fontSize: '0.8rem' }}
                    >
-                     {ASSIGNMENT_OF_BENEFITS_OPTIONS.map(option => (
+                     {benefits.map(option => (
                        <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.75rem' }}>{option.label}</MenuItem>
                      ))}
                    </Select>
@@ -191,7 +199,7 @@ const InsuranceInformation = ({
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, mt: 2 }}>
         <PeopleIcon sx={{ fontSize: 16, color: '#1a237e' }} />
         <Typography sx={{ color: '#1976d2', fontSize: '0.7rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
-          Patients covered: 1
+          Patients covered: {formData.patientsCovered || 1}
         </Typography>
       </Box>
       <Typography variant="caption" color="textSecondary" display="block" sx={{ mb: 2, fontSize: '0.65rem' }}>

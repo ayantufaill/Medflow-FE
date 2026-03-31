@@ -14,9 +14,18 @@ const SubscriberInformation = ({
   formData, 
   handleSubscriberChange, 
   handleInputChange,
-  ASSIGNMENT_OF_BENEFITS_OPTIONS,
+  relationshipOptions = ['Self', 'Spouse', 'Child', 'Parent', 'Other'],
+  assignmentOptions = [],
   inputBg
 }) => {
+  // Use API data or default arrays
+  const relationships = relationshipOptions.length > 0 ? relationshipOptions : ['Self', 'Spouse', 'Child', 'Parent', 'Other'];
+  const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
+    { value: 1, label: 'Pay to dentist (Assignment)' },
+    { value: 2, label: 'Pay to patient (Benefit)' },
+    { value: 3, label: 'Pay to both (Split)' }
+  ];
+
   return (
     <Box>
       <Typography sx={{ fontWeight: 700, mb: 1, color: "#333", fontSize: "0.85rem" }}>Subscriber Information</Typography>
@@ -27,7 +36,7 @@ const SubscriberInformation = ({
           select
           fullWidth
           label="Patient Relationship to Subscriber *"
-          value={formData.subscriber.relationship}
+          value={formData.subscriber?.relationship || ''}
           onChange={(e) => handleSubscriberChange('relationship', e.target.value)}
           size="small"
           sx={{ 
@@ -36,11 +45,9 @@ const SubscriberInformation = ({
             '& .MuiInputLabel-root': { fontSize: '0.7rem' }
           }}
         >
-          <MenuItem value="Self" sx={{ fontSize: '0.7rem' }}>Self</MenuItem>
-          <MenuItem value="Spouse" sx={{ fontSize: '0.7rem' }}>Spouse</MenuItem>
-          <MenuItem value="Child" sx={{ fontSize: '0.7rem' }}>Child</MenuItem>
-          <MenuItem value="Parent" sx={{ fontSize: '0.7rem' }}>Parent</MenuItem>
-          <MenuItem value="Other" sx={{ fontSize: '0.7rem' }}>Other</MenuItem>
+          {relationships.map(rel => (
+            <MenuItem key={rel} value={rel} sx={{ fontSize: '0.7rem' }}>{rel}</MenuItem>
+          ))}
         </TextField>
 
         {/* Name and ID with Validation Icons */}
@@ -48,7 +55,7 @@ const SubscriberInformation = ({
           <TextField
             fullWidth
             label="Subscriber Name *"
-            value={formData.subscriber.name}
+            value={formData.subscriber?.name || ''}
             onChange={(e) => handleSubscriberChange('name', e.target.value)}
             size="small"
             sx={{ 
@@ -59,7 +66,7 @@ const SubscriberInformation = ({
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <CheckCircleIcon sx={{ color: formData.subscriber.name ? '#81c784' : '#bdbdbd', fontSize: 18 }} />
+                  <CheckCircleIcon sx={{ color: formData.subscriber?.name ? '#81c784' : '#bdbdbd', fontSize: 18 }} />
                 </InputAdornment>
               ),
             }}
@@ -67,7 +74,7 @@ const SubscriberInformation = ({
           <TextField
             fullWidth
             label="Subscriber ID *"
-            value={formData.subscriber.subscriberId}
+            value={formData.subscriber?.subscriberId || ''}
             onChange={(e) => handleSubscriberChange('subscriberId', e.target.value)}
             size="small"
             sx={{ 
@@ -87,7 +94,7 @@ const SubscriberInformation = ({
         {/* Date of Birth with Calendar Icon */}
         <input
           type="date"
-          value={formData.subscriber.dateOfBirth}
+          value={formData.subscriber?.dateOfBirth || ''}
           onChange={(e) => handleSubscriberChange('dateOfBirth', e.target.value)}
           style={{
             padding: '8px 12px',
@@ -117,7 +124,7 @@ const SubscriberInformation = ({
             '& .MuiInputLabel-root': { fontSize: '0.65rem' }
           }}
         >
-          {ASSIGNMENT_OF_BENEFITS_OPTIONS.map(option => (
+          {benefits.map(option => (
             <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.7rem' }}>{option.label}</MenuItem>
           ))}
         </TextField>
