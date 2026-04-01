@@ -14,8 +14,6 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
-  Menu,
-  MenuItem,
 } from '@mui/material';
 import {
   Dashboard,
@@ -25,7 +23,6 @@ import {
   Description,
   Receipt,
   Person,
-  AdminPanelSettings,
   Assessment,
   Lock,
   ExitToApp,
@@ -197,7 +194,6 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { logout, user } = useAuth();
-  const [settingsAnchorEl, setSettingsAnchorEl] = useState(null);
 
   // Helper function to check if user has required roles
   const hasRequiredRole = (requiredRoles) => {
@@ -231,18 +227,6 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
     navigate('/login', { replace: true });
   };
 
-  const handleSettingsClick = (event) => {
-    setSettingsAnchorEl(event.currentTarget);
-  };
-
-  const handleSettingsClose = () => {
-    setSettingsAnchorEl(null);
-  };
-
-  const handleAdminClick = () => {
-    handleSettingsClose();
-    handleNavigation('/admin');
-  };
 
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -478,46 +462,30 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
 
         {/* Settings icon — Admin only */}
         {hasRequiredRole(['Admin']) && (
-          <>
-            <WithTooltip title="Settings">
-              <ListItem disablePadding>
-                <ListItemButton
-                  onClick={handleSettingsClick}
+          <WithTooltip title="Settings">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/admin/user-management')}
+                sx={{
+                  mx: 1,
+                  mb: 0.5,
+                  borderRadius: 1,
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  px: isCollapsed ? 1 : 2,
+                }}
+              >
+                <ListItemIcon
                   sx={{
-                    mx: 1,
-                    mb: 0.5,
-                    borderRadius: 1,
-                    justifyContent: isCollapsed ? 'center' : 'flex-start',
-                    px: isCollapsed ? 1 : 2,
+                    minWidth: isCollapsed ? 'unset' : 40,
+                    justifyContent: 'center',
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: isCollapsed ? 'unset' : 40,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Settings />
-                  </ListItemIcon>
-                  {!isCollapsed && <ListItemText primary="Settings" />}
-                </ListItemButton>
-              </ListItem>
-            </WithTooltip>
-            <Menu
-              anchorEl={settingsAnchorEl}
-              open={Boolean(settingsAnchorEl)}
-              onClose={handleSettingsClose}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            >
-              <MenuItem onClick={handleAdminClick}>
-                <ListItemIcon>
-                  <AdminPanelSettings fontSize="small" />
+                  <Settings />
                 </ListItemIcon>
-                <ListItemText>Admin</ListItemText>
-              </MenuItem>
-            </Menu>
-          </>
+                {!isCollapsed && <ListItemText primary="Settings" />}
+              </ListItemButton>
+            </ListItem>
+          </WithTooltip>
         )}
 
         <Divider sx={{ my: 0.5 }} />
