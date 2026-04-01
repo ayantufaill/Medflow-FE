@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, Typography, Grid, Paper, IconButton, 
   Button, Stack, Accordion, AccordionSummary, AccordionDetails, Chip, Divider
@@ -441,6 +441,17 @@ const Tooth = ({ num, isActive = false }) => {
 };
 
 export default function TreatmentPlanPage() {
+  const [procedures, setProcedures] = useState([]);
+
+  const handleAddProcedure = () => {
+    console.log('Add new procedure');
+    // You can add logic here to add a new procedure
+  };
+
+  const handleAddVisit = () => {
+    console.log('Add new visit');
+    // You can add logic here to add a new visit
+  };
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <ClinicalNavbar />
@@ -879,7 +890,26 @@ export default function TreatmentPlanPage() {
         {/* Dental Treatment Plan - Outside the columns, full width */}
         <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>
           <DentalTreatmentPlan />
-          <ProcedureRow />
+          <ProcedureRow 
+            onAddProcedure={handleAddProcedure}
+          />
+          
+          {/* Add Visit Button */}
+          <Button
+            startIcon={<AddCircleIcon />}
+            onClick={handleAddVisit}
+            sx={{ 
+              mt: 2,
+              textTransform: 'none',
+              color: '#1976d2',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              p: 1,
+              minWidth: 'auto'
+            }}
+          >
+           Add Visit Here
+          </Button>
         </Box>
         </Box>
       </Box>
