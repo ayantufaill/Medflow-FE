@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Checkbox, FormControlLabel, TextField, Paper, Grid, Button,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
@@ -36,7 +37,18 @@ const OnlineScheduleConfiguration = () => {
 
   return (
     <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <Typography variant="caption" color="textSecondary">Practice Setup &gt; Online Schedule</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography
+          variant="caption"
+          component={RouterLink}
+          to="/admin/practice-setup"
+          sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+        >
+          Practice Setup
+        </Typography>
+        <Typography variant="caption" color="textSecondary">{'>'}</Typography>
+        <Typography variant="caption" color="textSecondary">Online Schedule</Typography>
+      </Box>
 
       {/* --- 1. SCHEDULING DETAILS --- */}
       <Box>
