@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -239,11 +240,11 @@ const KioskAccountsView = () => {
       {/* Breadcrumb */}
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <Link
-          component="button"
+          component={RouterLink}
+          to="/admin/practice-setup"
           variant="body2"
           underline="hover"
           color="primary"
-          sx={{ cursor: 'default' }}
         >
           Practice Setup
         </Link>
