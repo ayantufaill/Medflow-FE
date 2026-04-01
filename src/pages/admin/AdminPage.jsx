@@ -17,10 +17,20 @@ const TABS = [
 ];
 
 const PRACTICE_SETUP_SUB_TABS = [
-  { label: 'Kiosk Account View', path: '/admin/kiosk-accounts' },
-  { label: 'MyChart Configuration', path: '/admin/my-chart-configuration' },
-  { label: 'Office Timings', path: '/admin/office-timings' },
-  { label: 'Online Schedule', path: '/admin/online-schedule' },
+  { label: 'Kiosk Account View', path: '/admin/practice-setup/kiosk-accounts' },
+  { label: 'MyChart Configuration', path: '/admin/practice-setup/my-chart-configuration' },
+  { label: 'Office Timings', path: '/admin/practice-setup/office-timings' },
+  { label: 'Online Schedule', path: '/admin/practice-setup/online-schedule' },
+  { label: 'Operatory Setup', path: '/admin/practice-setup/operatory-setup' },
+  { label: 'Patient Flags', path: '/admin/practice-setup/patient-flags' },
+  { label: 'Document Category', path: '/admin/practice-setup/document-category-setup' },
+  { label: 'Schedule Configuration', path: '/admin/practice-setup/schedule-configuration' },
+  { label: 'Settings', path: '/admin/practice-setup/practice-settings' },
+  { label: 'Information', path: '/admin/practice-setup/practice-information' },
+];
+
+const FINANCIAL_MANAGEMENT_SUB_TABS = [
+  { label: 'Payment Terminals', path: '/admin/payment-terminals' },
 ];
 
 const AdminPage = () => {

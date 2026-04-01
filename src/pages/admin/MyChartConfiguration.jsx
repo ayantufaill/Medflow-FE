@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -46,9 +47,18 @@ const ConfigRow = ({ label, hasInfo = false, showStatus = true, defaultRequired 
 const MyChartConfiguration = () => {
   return (
     <Box sx={{ p: 4, bgcolor: '#f4f6f8', minHeight: '100vh', fontFamily: 'Roboto, sans-serif' }}>
-      <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block' }}>
-        Practice Setup &gt; MyChart Configuration
-      </Typography>
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography
+          variant="caption"
+          component={RouterLink}
+          to="/admin/practice-setup"
+          sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+        >
+          Practice Setup
+        </Typography>
+        <Typography variant="caption" color="textSecondary">{'>'}</Typography>
+        <Typography variant="caption" color="textSecondary">MyChart Configuration</Typography>
+      </Box>
 
       <Grid container spacing={3}>
         {/* LEFT COLUMN: Visuals & Payments */}

@@ -173,6 +173,13 @@ import KioskAccountsView from './pages/admin/KioskAccountsView';
 import MyChartConfiguration from './pages/admin/MyChartConfiguration';
 import OfficeTimings from './pages/admin/OfficeTimings';
 import OnlineSchedule from './pages/admin/OnlineSchedule';
+import OperatorySetup from './pages/admin/OperatorySetup';
+import PatientFlags from './pages/admin/PatientFlags';
+import PaymentTerminals from './pages/admin/PaymentTerminals';
+import DocumentCategorySetup from './pages/admin/DocumentCategorySetup';
+import ScheduleConfiguration from './pages/admin/ScheduleConfiguration';
+import PracticeSettings from './pages/admin/PracticeSettings';
+import PracticeInformation from './pages/admin/PracticeInformation';
 
 const theme = createTheme({
   palette: {
@@ -454,7 +461,7 @@ function App() {
                 }
               />
               <Route
-                path="/admin/onboarding"
+                path="/admin/practice-setup/onboarding"
                 element={
                   <ProtectedRoute requiredRoles={['Admin']}>
                     <Layout>
@@ -464,7 +471,7 @@ function App() {
                 }
               />
               <Route
-                path="/admin/kiosk-accounts"
+                path="/admin/practice-setup/kiosk-accounts"
                 element={
                   <ProtectedRoute requiredRoles={['Admin']}>
                     <Layout>
@@ -474,7 +481,7 @@ function App() {
                 }
               />
               <Route
-                path="/admin/my-chart-configuration"
+                path="/admin/practice-setup/my-chart-configuration"
                 element={
                   <ProtectedRoute requiredRoles={['Admin']}>
                     <Layout>
@@ -484,7 +491,77 @@ function App() {
                 }
               />
               <Route
-                path="/admin/office-timings"
+                path="/admin/practice-setup/operatory-setup"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <OperatorySetup />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/patient-flags"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <PatientFlags />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/financial/payment-terminals"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <PaymentTerminals />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/document-category-setup"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <DocumentCategorySetup />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/schedule-configuration"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <ScheduleConfiguration />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/practice-settings"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <PracticeSettings />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/practice-information"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin']}>
+                    <Layout>
+                      <PracticeInformation />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/practice-setup/office-timings"
                 element={
                   <ProtectedRoute requiredRoles={['Admin']}>
                     <Layout>
@@ -494,7 +571,7 @@ function App() {
                 }
               />
               <Route
-                path="/admin/online-schedule"
+                path="/admin/practice-setup/online-schedule"
                 element={
                   <ProtectedRoute requiredRoles={['Admin']}>
                     <Layout>

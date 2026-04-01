@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -32,7 +33,20 @@ const OfficeTimings = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh' }}>
-        
+        {/* Breadcrumb */}
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography
+            variant="caption"
+            component={RouterLink}
+            to="/admin/practice-setup"
+            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+          >
+            Practice Setup
+          </Typography>
+          <Typography variant="caption" color="textSecondary">{'>'}</Typography>
+          <Typography variant="caption" color="textSecondary">Office Timings</Typography>
+        </Box>
+
         {/* Header Buttons */}
         <Box display="flex" justifyContent="flex-end" gap={2} mb={4}>
           <Button variant="contained" color="success" sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}>
