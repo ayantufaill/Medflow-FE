@@ -139,7 +139,7 @@ const AdminPage = () => {
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
-                onClick={() => navigate('/admin/onboarding')}
+                onClick={() => navigate('/admin/practice-setup/onboarding')}
                 sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
               >
                 Onboard New Practice

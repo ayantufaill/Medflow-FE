@@ -31,6 +31,7 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useRoles } from '../../hooks/queries/useRoles';
 import { useUsersByRole } from '../../hooks/queries/useUsers';
 import { roomService } from '../../services/room.service';
+import { fontSize, fontWeight } from '../../constants/styles';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ const STEPS = [
   { label: 'Billing Configuration' },
 ];
 
-const NAVY = '#1a3a6b';
+const NAVY = '#1976d2';
 const GRAY_INACTIVE = '#d0d5dd';
 
 const US_STATES = [
@@ -111,12 +112,13 @@ const WizardProgressBar = ({ activeStep }) => {
         mb: 5,
         overflowX: 'auto',
         pb: 1,
+        fontFamily: "'Manrope', 'Segoe UI', sans-serif",
       }}
     >
       {STEPS.map((step, index) => {
         const isCompleted = index < activeStep;
         const isActive = index === activeStep;
-        const circleColor = isCompleted || isActive ? NAVY : GRAY_INACTIVE;
+        const circleColor = isCompleted || isActive ? '#1976d2' : GRAY_INACTIVE;
         const textColor = isCompleted || isActive ? '#fff' : '#9aa5b4';
 
         return (
@@ -127,7 +129,7 @@ const WizardProgressBar = ({ activeStep }) => {
                 sx={{
                   height: 2,
                   width: { xs: 24, sm: 40, md: 56 },
-                  bgcolor: index <= activeStep ? NAVY : GRAY_INACTIVE,
+                  bgcolor: index <= activeStep ? '#1976d2' : GRAY_INACTIVE,
                   mx: 0,
                 }}
               />
@@ -149,7 +151,7 @@ const WizardProgressBar = ({ activeStep }) => {
               >
                 <Typography
                   variant="caption"
-                  sx={{ color: textColor, fontWeight: 700, fontSize: '0.8rem' }}
+                  sx={{ color: textColor, fontWeight: 700, fontSize: fontSize.xs }}
                 >
                   {index + 1}
                 </Typography>
@@ -157,9 +159,9 @@ const WizardProgressBar = ({ activeStep }) => {
               <Typography
                 variant="caption"
                 sx={{
-                  color: isCompleted || isActive ? NAVY : '#9aa5b4',
+                  color: isCompleted || isActive ? '#1976d2' : '#9aa5b4',
                   fontWeight: isActive ? 700 : 500,
-                  fontSize: '0.7rem',
+                  fontSize: fontSize.xs,
                   textAlign: 'center',
                   maxWidth: 72,
                   lineHeight: 1.2,
@@ -182,10 +184,12 @@ const SectionHeading = ({ children }) => (
   <Typography
     variant="h6"
     sx={{
-      color: NAVY,
-      fontWeight: 700,
+      color: '#1976d2',
+      fontWeight: fontWeight.bold,
       mb: 2,
       mt: 1,
+      fontSize: fontSize.md,
+      fontFamily: "'Manrope', 'Segoe UI', sans-serif",
     }}
   >
     {children}
@@ -195,12 +199,20 @@ const SectionHeading = ({ children }) => (
 // ─── Bottom Action Buttons ────────────────────────────────────────────────────
 
 const WizardActions = ({ onFinishLater, onNext, nextLabel = 'Next', loading = false }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
     <Button
       variant="outlined"
       onClick={onFinishLater}
       disabled={loading}
-      sx={{ borderColor: NAVY, color: NAVY, '&:hover': { borderColor: NAVY, bgcolor: 'rgba(26,58,107,0.04)' } }}
+      size="small"
+      sx={{ 
+        borderColor: '#1976d2', 
+        color: '#1976d2', 
+        '&:hover': { borderColor: '#1976d2', bgcolor: 'rgba(25,118,210,0.04)' },
+        fontSize: '0.8rem',
+        px: 2,
+        py: 0.5
+      }}
     >
       Finish Later
     </Button>
@@ -208,12 +220,16 @@ const WizardActions = ({ onFinishLater, onNext, nextLabel = 'Next', loading = fa
       variant="contained"
       onClick={onNext}
       disabled={loading}
+      size="small"
       sx={{
-        bgcolor: NAVY,
-        '&:hover': { bgcolor: '#142e58' },
-        minWidth: 120,
+        bgcolor: '#1976d2',
+        '&:hover': { bgcolor: '#1565c0' },
+        minWidth: 100,
+        fontSize: '0.8rem',
+        px: 2.5,
+        py: 0.6,
       }}
-      startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+      startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
     >
       {loading ? 'Saving...' : nextLabel}
     </Button>
@@ -329,7 +345,7 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
       <SectionHeading>1. Practice Information</SectionHeading>
 
-      <Grid container spacing={2.5}>
+      <Grid container spacing={2.5} sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         {/* Row 1: Practice Name | Phone */}
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
@@ -339,6 +355,10 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             {...register('practiceName')}
             error={!!errors.practiceName}
             helperText={errors.practiceName?.message}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -346,8 +366,98 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             name="phone"
             control={control}
             render={({ field }) => (
-              <Box>
-                <Box sx={{ '& .react-tel-input': { width: '100% !important' }, '& .form-control': { width: '100% !important' } }}>
+              <Box sx={{ position: 'relative' }}>
+                <Box sx={{ 
+                  '& .react-tel-input': { 
+                    width: '100% !important',
+                    fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+                    fontSize: fontSize.sm,
+                  },
+                  '& .form-control': { 
+                    width: '100% !important',
+                    fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+                    fontSize: fontSize.sm,
+                    height: '42px',
+                    paddingTop: '10px',
+                    paddingBottom: '6px',
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                    borderRadius: 0,
+                    backgroundColor: 'transparent !important',
+                    boxShadow: 'none !important',
+                    outline: 'none !important',
+                    '&:hover': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.87) !important',
+                    },
+                    '&:focus': {
+                      borderBottom: '2px solid #1a3a6b !important',
+                      boxShadow: 'none !important',
+                    },
+                    '&::before': {
+                      borderBottom: 'none !important',
+                    },
+                    '&::after': {
+                      borderBottom: 'none !important',
+                    },
+                  },
+                  '& .react-tel-input .flag-dropdown': {
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                    borderRadius: 0,
+                    backgroundColor: 'transparent !important',
+                    height: '42px',
+                    boxShadow: 'none !important',
+                    outline: 'none !important',
+                    '&:hover': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.87) !important',
+                      backgroundColor: 'transparent !important',
+                    },
+                    '&:focus': {
+                      borderBottom: '2px solid #1a3a6b !important',
+                      backgroundColor: 'transparent !important',
+                    },
+                    '&::before': {
+                      borderBottom: 'none !important',
+                    },
+                    '&::after': {
+                      borderBottom: 'none !important',
+                    },
+                  },
+                  '& .react-tel-input .selected-flag': {
+                    width: '48px !important',
+                    backgroundColor: 'transparent !important',
+                    height: '42px',
+                    border: 'none !important',
+                    boxShadow: 'none !important',
+                  },
+                  '& .react-tel-input .form-control': {
+                    paddingLeft: '56px',
+                  },
+                  '& .react-tel-input input': {
+                    height: '42px',
+                    paddingTop: '10px',
+                    paddingBottom: '6px',
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                    borderRadius: 0,
+                    outline: 'none !important',
+                    '&:hover': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.87) !important',
+                    },
+                    '&:focus': {
+                      borderBottom: '2px solid #1a3a6b !important',
+                    },
+                  },
+                  '& .react-tel-input input:focus': {
+                    border: 'none !important',
+                    borderBottom: '2px solid #1a3a6b !important',
+                    boxShadow: 'none !important',
+                  },
+                  '& .react-tel-input .highlight': {
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                  },
+                }}>
                   <PhoneInput
                     {...field}
                     country="us"
@@ -357,10 +467,24 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
                     searchPlaceholder="Search country"
                     onChange={(value, country) => { field.onChange(value); setPhoneCountry(country); }}
                     value={field.value || ''}
-                    inputStyle={{ width: '100%' }}
+                    inputStyle={{ 
+                      width: '100%', 
+                      fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+                      fontSize: fontSize.sm,
+                      height: '42px',
+                      border: 'none !important',
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                      borderRadius: 0,
+                      outline: 'none !important',
+                      background: 'transparent !important',
+                      WebkitTapHighlightColor: 'transparent !important',
+                    }}
+                    containerStyle={{
+                      width: '100%',
+                    }}
                   />
                 </Box>
-                {errors.phone && <FormHelperText error sx={{ mt: 0.5, mx: 1.75 }}>{errors.phone.message}</FormHelperText>}
+                {errors.phone && <FormHelperText error sx={{ mt: 0.5, mx: 1.75, fontSize: fontSize.xs }}>{errors.phone.message}</FormHelperText>}
               </Box>
             )}
           />
@@ -375,6 +499,10 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             {...register('email')}
             error={!!errors.email}
             helperText={errors.email?.message}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -384,6 +512,10 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             {...register('website')}
             error={!!errors.website}
             helperText={errors.website?.message}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
 
@@ -393,6 +525,10 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             fullWidth
             label="Business Registration Number"
             {...register('businessRegistrationNumber')}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -400,6 +536,10 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             fullWidth
             label="Business Legal Name"
             {...register('businessLegalName')}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
 
@@ -409,8 +549,98 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             name="fax"
             control={control}
             render={({ field }) => (
-              <Box>
-                <Box sx={{ '& .react-tel-input': { width: '100% !important' }, '& .form-control': { width: '100% !important' } }}>
+              <Box sx={{ position: 'relative' }}>
+                <Box sx={{ 
+                  '& .react-tel-input': { 
+                    width: '100% !important',
+                    fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+                    fontSize: fontSize.sm,
+                  },
+                  '& .form-control': { 
+                    width: '100% !important',
+                    fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+                    fontSize: fontSize.sm,
+                    height: '42px',
+                    paddingTop: '10px',
+                    paddingBottom: '6px',
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                    borderRadius: 0,
+                    backgroundColor: 'transparent !important',
+                    boxShadow: 'none !important',
+                    outline: 'none !important',
+                    '&:hover': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.87) !important',
+                    },
+                    '&:focus': {
+                      borderBottom: '2px solid #1a3a6b !important',
+                      boxShadow: 'none !important',
+                    },
+                    '&::before': {
+                      borderBottom: 'none !important',
+                    },
+                    '&::after': {
+                      borderBottom: 'none !important',
+                    },
+                  },
+                  '& .react-tel-input .flag-dropdown': {
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                    borderRadius: 0,
+                    backgroundColor: 'transparent !important',
+                    height: '42px',
+                    boxShadow: 'none !important',
+                    outline: 'none !important',
+                    '&:hover': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.87) !important',
+                      backgroundColor: 'transparent !important',
+                    },
+                    '&:focus': {
+                      borderBottom: '2px solid #1a3a6b !important',
+                      backgroundColor: 'transparent !important',
+                    },
+                    '&::before': {
+                      borderBottom: 'none !important',
+                    },
+                    '&::after': {
+                      borderBottom: 'none !important',
+                    },
+                  },
+                  '& .react-tel-input .selected-flag': {
+                    width: '48px !important',
+                    backgroundColor: 'transparent !important',
+                    height: '42px',
+                    border: 'none !important',
+                    boxShadow: 'none !important',
+                  },
+                  '& .react-tel-input .form-control': {
+                    paddingLeft: '56px',
+                  },
+                  '& .react-tel-input input': {
+                    height: '42px',
+                    paddingTop: '10px',
+                    paddingBottom: '6px',
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                    borderRadius: 0,
+                    outline: 'none !important',
+                    '&:hover': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.87) !important',
+                    },
+                    '&:focus': {
+                      borderBottom: '2px solid #1a3a6b !important',
+                    },
+                  },
+                  '& .react-tel-input input:focus': {
+                    border: 'none !important',
+                    borderBottom: '2px solid #1a3a6b !important',
+                    boxShadow: 'none !important',
+                  },
+                  '& .react-tel-input .highlight': {
+                    border: 'none !important',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                  },
+                }}>
                   <PhoneInput
                     {...field}
                     country="us"
@@ -420,10 +650,24 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
                     searchPlaceholder="Search country"
                     onChange={(value, country) => { field.onChange(value); setFaxCountry(country); }}
                     value={field.value || ''}
-                    inputStyle={{ width: '100%' }}
+                    inputStyle={{ 
+                      width: '100%', 
+                      fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+                      fontSize: fontSize.sm,
+                      height: '42px',
+                      border: 'none !important',
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.42) !important',
+                      borderRadius: 0,
+                      outline: 'none !important',
+                      background: 'transparent !important',
+                      WebkitTapHighlightColor: 'transparent !important',
+                    }}
+                    containerStyle={{
+                      width: '100%',
+                    }}
                   />
                 </Box>
-                {errors.fax && <FormHelperText error sx={{ mt: 0.5, mx: 1.75 }}>{errors.fax.message}</FormHelperText>}
+                {errors.fax && <FormHelperText error sx={{ mt: 0.5, mx: 1.75, fontSize: fontSize.xs }}>{errors.fax.message}</FormHelperText>}
               </Box>
             )}
           />
@@ -435,25 +679,37 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
         <SectionHeading>Address</SectionHeading>
       </Box>
 
-      <Grid container spacing={2.5}>
+      <Grid container spacing={2.5} sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         {/* Row 1: Street | Country */}
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Street"
             {...register('address.street')}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth>
+          <FormControl fullWidth variant="standard">
             <InputLabel>Country</InputLabel>
             <Controller
               name="address.country"
               control={control}
               render={({ field }) => (
-                <Select {...field} label="Country" value={field.value || ''}>
+                <Select 
+                  {...field} 
+                  label="Country" 
+                  value={field.value || ''}
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }
+                  }}
+                >
                   {COUNTRIES.map((c) => (
-                    <MenuItem key={c} value={c}>{c}</MenuItem>
+                    <MenuItem key={c} value={c} sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>{c}</MenuItem>
                   ))}
                 </Select>
               )}
@@ -463,16 +719,24 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
 
         {/* Row 2: State | City */}
         <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth>
+          <FormControl fullWidth variant="standard">
             <InputLabel>State</InputLabel>
             <Controller
               name="address.state"
               control={control}
               render={({ field }) => (
-                <Select {...field} label="State" value={field.value || ''}>
-                  <MenuItem value=""><em>Select state</em></MenuItem>
+                <Select 
+                  {...field} 
+                  label="State" 
+                  value={field.value || ''}
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }
+                  }}
+                >
+                  <MenuItem value="" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}><em>Select state</em></MenuItem>
                   {US_STATES.map((s) => (
-                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                    <MenuItem key={s} value={s} sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>{s}</MenuItem>
                   ))}
                 </Select>
               )}
@@ -484,6 +748,10 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             fullWidth
             label="City"
             {...register('address.city')}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
 
@@ -493,114 +761,127 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
             fullWidth
             label="Zip / Postal Code"
             {...register('address.postalCode')}
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            FormHelperTextProps={{ sx: { fontSize: fontSize.xs } }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth error={!!errors.timezone}>
+          <FormControl fullWidth error={!!errors.timezone} variant="standard">
             <InputLabel>Time Zone</InputLabel>
             <Controller
               name="timezone"
               control={control}
               render={({ field }) => (
-                <Select {...field} value={field.value || 'UTC'} onChange={(e) => field.onChange(e.target.value)} label="Time Zone">
-                  <MenuItem value="UTC">UTC (Coordinated Universal Time)</MenuItem>
-                  <MenuItem disabled>────────── North America ──────────</MenuItem>
-                  <MenuItem value="America/New_York">America/New_York (Eastern Time)</MenuItem>
-                  <MenuItem value="America/Chicago">America/Chicago (Central Time)</MenuItem>
-                  <MenuItem value="America/Denver">America/Denver (Mountain Time)</MenuItem>
-                  <MenuItem value="America/Los_Angeles">America/Los_Angeles (Pacific Time)</MenuItem>
-                  <MenuItem value="America/Phoenix">America/Phoenix (Mountain Time - No DST)</MenuItem>
-                  <MenuItem value="America/Anchorage">America/Anchorage (Alaska Time)</MenuItem>
-                  <MenuItem value="America/Honolulu">America/Honolulu (Hawaii Time)</MenuItem>
-                  <MenuItem value="America/Toronto">America/Toronto (Eastern Time)</MenuItem>
-                  <MenuItem value="America/Vancouver">America/Vancouver (Pacific Time)</MenuItem>
-                  <MenuItem value="America/Montreal">America/Montreal (Eastern Time)</MenuItem>
-                  <MenuItem value="America/Winnipeg">America/Winnipeg (Central Time)</MenuItem>
-                  <MenuItem value="America/Calgary">America/Calgary (Mountain Time)</MenuItem>
-                  <MenuItem value="America/Halifax">America/Halifax (Atlantic Time)</MenuItem>
-                  <MenuItem disabled>────────── Central & South America ──────────</MenuItem>
-                  <MenuItem value="America/Mexico_City">America/Mexico_City (Central Time)</MenuItem>
-                  <MenuItem value="America/Bogota">America/Bogota (Colombia Time)</MenuItem>
-                  <MenuItem value="America/Lima">America/Lima (Peru Time)</MenuItem>
-                  <MenuItem value="America/Santiago">America/Santiago (Chile Time)</MenuItem>
-                  <MenuItem value="America/Sao_Paulo">America/Sao_Paulo (Brasilia Time)</MenuItem>
-                  <MenuItem value="America/Buenos_Aires">America/Buenos_Aires (Argentina Time)</MenuItem>
-                  <MenuItem value="America/Caracas">America/Caracas (Venezuela Time)</MenuItem>
-                  <MenuItem value="America/La_Paz">America/La_Paz (Bolivia Time)</MenuItem>
-                  <MenuItem disabled>────────── Europe ──────────</MenuItem>
-                  <MenuItem value="Europe/London">Europe/London (Greenwich Mean Time)</MenuItem>
-                  <MenuItem value="Europe/Paris">Europe/Paris (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Berlin">Europe/Berlin (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Rome">Europe/Rome (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Madrid">Europe/Madrid (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Amsterdam">Europe/Amsterdam (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Brussels">Europe/Brussels (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Vienna">Europe/Vienna (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Zurich">Europe/Zurich (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Stockholm">Europe/Stockholm (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Copenhagen">Europe/Copenhagen (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Oslo">Europe/Oslo (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Dublin">Europe/Dublin (Greenwich Mean Time)</MenuItem>
-                  <MenuItem value="Europe/Lisbon">Europe/Lisbon (Western European Time)</MenuItem>
-                  <MenuItem value="Europe/Warsaw">Europe/Warsaw (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Prague">Europe/Prague (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Budapest">Europe/Budapest (Central European Time)</MenuItem>
-                  <MenuItem value="Europe/Athens">Europe/Athens (Eastern European Time)</MenuItem>
-                  <MenuItem value="Europe/Bucharest">Europe/Bucharest (Eastern European Time)</MenuItem>
-                  <MenuItem value="Europe/Sofia">Europe/Sofia (Eastern European Time)</MenuItem>
-                  <MenuItem value="Europe/Helsinki">Europe/Helsinki (Eastern European Time)</MenuItem>
-                  <MenuItem value="Europe/Moscow">Europe/Moscow (Moscow Time)</MenuItem>
-                  <MenuItem disabled>────────── Asia ──────────</MenuItem>
-                  <MenuItem value="Asia/Dubai">Asia/Dubai (Gulf Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Riyadh">Asia/Riyadh (Arabia Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Kuwait">Asia/Kuwait (Arabia Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Qatar">Asia/Qatar (Arabia Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Bahrain">Asia/Bahrain (Arabia Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Muscat">Asia/Muscat (Gulf Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Karachi">Asia/Karachi (Pakistan Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Kolkata">Asia/Kolkata (India Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Dhaka">Asia/Dhaka (Bangladesh Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Colombo">Asia/Colombo (Sri Lanka Time)</MenuItem>
-                  <MenuItem value="Asia/Kathmandu">Asia/Kathmandu (Nepal Time)</MenuItem>
-                  <MenuItem value="Asia/Kabul">Asia/Kabul (Afghanistan Time)</MenuItem>
-                  <MenuItem value="Asia/Tehran">Asia/Tehran (Iran Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Baghdad">Asia/Baghdad (Arabia Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Jerusalem">Asia/Jerusalem (Israel Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Beirut">Asia/Beirut (Eastern European Time)</MenuItem>
-                  <MenuItem value="Asia/Amman">Asia/Amman (Eastern European Time)</MenuItem>
-                  <MenuItem value="Asia/Damascus">Asia/Damascus (Eastern European Time)</MenuItem>
-                  <MenuItem value="Asia/Bangkok">Asia/Bangkok (Indochina Time)</MenuItem>
-                  <MenuItem value="Asia/Singapore">Asia/Singapore (Singapore Time)</MenuItem>
-                  <MenuItem value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (Malaysia Time)</MenuItem>
-                  <MenuItem value="Asia/Jakarta">Asia/Jakarta (Western Indonesia Time)</MenuItem>
-                  <MenuItem value="Asia/Manila">Asia/Manila (Philippine Time)</MenuItem>
-                  <MenuItem value="Asia/Hong_Kong">Asia/Hong_Kong (Hong Kong Time)</MenuItem>
-                  <MenuItem value="Asia/Shanghai">Asia/Shanghai (China Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Taipei">Asia/Taipei (Taiwan Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Tokyo">Asia/Tokyo (Japan Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Seoul">Asia/Seoul (Korea Standard Time)</MenuItem>
-                  <MenuItem value="Asia/Almaty">Asia/Almaty (Kazakhstan Time)</MenuItem>
-                  <MenuItem value="Asia/Tashkent">Asia/Tashkent (Uzbekistan Time)</MenuItem>
-                  <MenuItem value="Asia/Baku">Asia/Baku (Azerbaijan Time)</MenuItem>
-                  <MenuItem value="Asia/Yerevan">Asia/Yerevan (Armenia Time)</MenuItem>
-                  <MenuItem value="Asia/Tbilisi">Asia/Tbilisi (Georgia Time)</MenuItem>
-                  <MenuItem disabled>────────── Africa ──────────</MenuItem>
-                  <MenuItem value="Africa/Cairo">Africa/Cairo (Eastern European Time)</MenuItem>
-                  <MenuItem value="Africa/Johannesburg">Africa/Johannesburg (South Africa Standard Time)</MenuItem>
-                  <MenuItem value="Africa/Lagos">Africa/Lagos (West Africa Time)</MenuItem>
-                  <MenuItem value="Africa/Nairobi">Africa/Nairobi (East Africa Time)</MenuItem>
-                  <MenuItem disabled>────────── Australia & Pacific ──────────</MenuItem>
-                  <MenuItem value="Australia/Sydney">Australia/Sydney (Australian Eastern Time)</MenuItem>
-                  <MenuItem value="Australia/Melbourne">Australia/Melbourne (Australian Eastern Time)</MenuItem>
-                  <MenuItem value="Australia/Brisbane">Australia/Brisbane (Australian Eastern Time)</MenuItem>
-                  <MenuItem value="Australia/Perth">Australia/Perth (Australian Western Time)</MenuItem>
-                  <MenuItem value="Australia/Adelaide">Australia/Adelaide (Australian Central Time)</MenuItem>
-                  <MenuItem value="Pacific/Auckland">Pacific/Auckland (New Zealand Time)</MenuItem>
-                  <MenuItem value="Pacific/Honolulu">Pacific/Honolulu (Hawaii Time)</MenuItem>
+                <Select 
+                  {...field} 
+                  value={field.value || 'UTC'} 
+                  onChange={(e) => field.onChange(e.target.value)} 
+                  label="Time Zone"
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }
+                  }}
+                >
+                  <MenuItem value="UTC" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>UTC (Coordinated Universal Time)</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>────────── North America ──────────</MenuItem>
+                  <MenuItem value="America/New_York" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/New_York (Eastern Time)</MenuItem>
+                  <MenuItem value="America/Chicago" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Chicago (Central Time)</MenuItem>
+                  <MenuItem value="America/Denver" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Denver (Mountain Time)</MenuItem>
+                  <MenuItem value="America/Los_Angeles" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Los_Angeles (Pacific Time)</MenuItem>
+                  <MenuItem value="America/Phoenix" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Phoenix (Mountain Time - No DST)</MenuItem>
+                  <MenuItem value="America/Anchorage" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Anchorage (Alaska Time)</MenuItem>
+                  <MenuItem value="America/Honolulu" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Honolulu (Hawaii Time)</MenuItem>
+                  <MenuItem value="America/Toronto" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Toronto (Eastern Time)</MenuItem>
+                  <MenuItem value="America/Vancouver" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Vancouver (Pacific Time)</MenuItem>
+                  <MenuItem value="America/Montreal" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Montreal (Eastern Time)</MenuItem>
+                  <MenuItem value="America/Winnipeg" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Winnipeg (Central Time)</MenuItem>
+                  <MenuItem value="America/Calgary" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Calgary (Mountain Time)</MenuItem>
+                  <MenuItem value="America/Halifax" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Halifax (Atlantic Time)</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>────────── Central & South America ──────────</MenuItem>
+                  <MenuItem value="America/Mexico_City" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Mexico_City (Central Time)</MenuItem>
+                  <MenuItem value="America/Bogota" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Bogota (Colombia Time)</MenuItem>
+                  <MenuItem value="America/Lima" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Lima (Peru Time)</MenuItem>
+                  <MenuItem value="America/Santiago" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Santiago (Chile Time)</MenuItem>
+                  <MenuItem value="America/Sao_Paulo" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Sao_Paulo (Brasilia Time)</MenuItem>
+                  <MenuItem value="America/Buenos_Aires" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Buenos_Aires (Argentina Time)</MenuItem>
+                  <MenuItem value="America/Caracas" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/Caracas (Venezuela Time)</MenuItem>
+                  <MenuItem value="America/La_Paz" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>America/La_Paz (Bolivia Time)</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>────────── Europe ──────────</MenuItem>
+                  <MenuItem value="Europe/London" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/London (Greenwich Mean Time)</MenuItem>
+                  <MenuItem value="Europe/Paris" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Paris (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Berlin" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Berlin (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Rome" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Rome (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Madrid" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Madrid (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Amsterdam" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Amsterdam (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Brussels" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Brussels (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Vienna" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Vienna (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Zurich" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Zurich (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Stockholm" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Stockholm (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Copenhagen" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Copenhagen (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Oslo" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Oslo (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Dublin" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Dublin (Greenwich Mean Time)</MenuItem>
+                  <MenuItem value="Europe/Lisbon" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Lisbon (Western European Time)</MenuItem>
+                  <MenuItem value="Europe/Warsaw" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Warsaw (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Prague" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Prague (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Budapest" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Budapest (Central European Time)</MenuItem>
+                  <MenuItem value="Europe/Athens" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Athens (Eastern European Time)</MenuItem>
+                  <MenuItem value="Europe/Bucharest" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Bucharest (Eastern European Time)</MenuItem>
+                  <MenuItem value="Europe/Sofia" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Sofia (Eastern European Time)</MenuItem>
+                  <MenuItem value="Europe/Helsinki" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Helsinki (Eastern European Time)</MenuItem>
+                  <MenuItem value="Europe/Moscow" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Europe/Moscow (Moscow Time)</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>────────── Asia ──────────</MenuItem>
+                  <MenuItem value="Asia/Dubai" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Dubai (Gulf Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Riyadh" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Riyadh (Arabia Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Kuwait" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Kuwait (Arabia Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Qatar" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Qatar (Arabia Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Bahrain" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Bahrain (Arabia Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Muscat" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Muscat (Gulf Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Karachi" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Karachi (Pakistan Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Kolkata" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Kolkata (India Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Dhaka" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Dhaka (Bangladesh Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Colombo" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Colombo (Sri Lanka Time)</MenuItem>
+                  <MenuItem value="Asia/Kathmandu" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Kathmandu (Nepal Time)</MenuItem>
+                  <MenuItem value="Asia/Kabul" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Kabul (Afghanistan Time)</MenuItem>
+                  <MenuItem value="Asia/Tehran" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Tehran (Iran Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Baghdad" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Baghdad (Arabia Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Jerusalem" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Jerusalem (Israel Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Beirut" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Beirut (Eastern European Time)</MenuItem>
+                  <MenuItem value="Asia/Amman" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Amman (Eastern European Time)</MenuItem>
+                  <MenuItem value="Asia/Damascus" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Damascus (Eastern European Time)</MenuItem>
+                  <MenuItem value="Asia/Bangkok" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Bangkok (Indochina Time)</MenuItem>
+                  <MenuItem value="Asia/Singapore" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Singapore (Singapore Time)</MenuItem>
+                  <MenuItem value="Asia/Kuala_Lumpur" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Kuala_Lumpur (Malaysia Time)</MenuItem>
+                  <MenuItem value="Asia/Jakarta" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Jakarta (Western Indonesia Time)</MenuItem>
+                  <MenuItem value="Asia/Manila" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Manila (Philippine Time)</MenuItem>
+                  <MenuItem value="Asia/Hong_Kong" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Hong_Kong (Hong Kong Time)</MenuItem>
+                  <MenuItem value="Asia/Shanghai" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Shanghai (China Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Taipei" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Taipei (Taiwan Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Tokyo" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Tokyo (Japan Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Seoul" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Seoul (Korea Standard Time)</MenuItem>
+                  <MenuItem value="Asia/Almaty" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Almaty (Kazakhstan Time)</MenuItem>
+                  <MenuItem value="Asia/Tashkent" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Tashkent (Uzbekistan Time)</MenuItem>
+                  <MenuItem value="Asia/Baku" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Baku (Azerbaijan Time)</MenuItem>
+                  <MenuItem value="Asia/Yerevan" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Yerevan (Armenia Time)</MenuItem>
+                  <MenuItem value="Asia/Tbilisi" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Asia/Tbilisi (Georgia Time)</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>────────── Africa ──────────</MenuItem>
+                  <MenuItem value="Africa/Cairo" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Africa/Cairo (Eastern European Time)</MenuItem>
+                  <MenuItem value="Africa/Johannesburg" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Africa/Johannesburg (South Africa Standard Time)</MenuItem>
+                  <MenuItem value="Africa/Lagos" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Africa/Lagos (West Africa Time)</MenuItem>
+                  <MenuItem value="Africa/Nairobi" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Africa/Nairobi (East Africa Time)</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>────────── Australia & Pacific ──────────</MenuItem>
+                  <MenuItem value="Australia/Sydney" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Australia/Sydney (Australian Eastern Time)</MenuItem>
+                  <MenuItem value="Australia/Melbourne" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Australia/Melbourne (Australian Eastern Time)</MenuItem>
+                  <MenuItem value="Australia/Brisbane" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Australia/Brisbane (Australian Eastern Time)</MenuItem>
+                  <MenuItem value="Australia/Perth" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Australia/Perth (Australian Western Time)</MenuItem>
+                  <MenuItem value="Australia/Adelaide" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Australia/Adelaide (Australian Central Time)</MenuItem>
+                  <MenuItem value="Pacific/Auckland" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Pacific/Auckland (New Zealand Time)</MenuItem>
+                  <MenuItem value="Pacific/Honolulu" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Pacific/Honolulu (Hawaii Time)</MenuItem>
                 </Select>
               )}
             />
-            {errors.timezone && <FormHelperText>{errors.timezone.message}</FormHelperText>}
+            {errors.timezone && <FormHelperText sx={{ fontSize: fontSize.xs }}>{errors.timezone.message}</FormHelperText>}
           </FormControl>
         </Grid>
       </Grid>
@@ -612,7 +893,7 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
           name="logo"
           control={control}
           render={({ field: { onChange } }) => (
-            <Box>
+            <Box sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
               <Box
                 onClick={() => fileInputRef.current?.click()}
                 sx={{
@@ -662,7 +943,14 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
                   size="small"
                   variant="text"
                   color="error"
-                  sx={{ mt: 1 }}
+                  sx={{ 
+                    mt: 0.5,
+                    fontSize: '0.75rem',
+                    px: 1.5,
+                    py: 0.4,
+                    minHeight: 'auto',
+                    height: 28
+                  }}
                   onClick={() => { setLogoPreview(null); onChange(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                 >
                   Remove logo
@@ -678,20 +966,23 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
         <SectionHeading>Social Media Links</SectionHeading>
       </Box>
 
-      <Grid container spacing={2.5}>
+      <Grid container spacing={2.5} sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         {SOCIAL_MEDIA_FIELDS.map(({ name, label }) => (
           <Grid key={name} size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label={label}
               {...register(name)}
+              variant="standard"
               InputProps={{
                 startAdornment: (
                   <Box sx={{ display: 'flex', alignItems: 'center', mr: 1, color: 'text.secondary' }}>
                     <LinkIcon fontSize="small" />
                   </Box>
                 ),
+                sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }
               }}
+              InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
             />
           </Grid>
         ))}
@@ -741,22 +1032,34 @@ const InlineProviderForm = ({ onSave, onCancel }) => {
   };
 
   return (
-    <Box sx={{ mt: 2, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+    <Box sx={{ mt: 2, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth variant="standard">
             <InputLabel>Linked User (Provider role)</InputLabel>
             <Controller
               name="userId"
               control={control}
               render={({ field }) => (
-                <Select {...field} label="Linked User (Provider role)" value={field.value || ''}>
-                  <MenuItem value=""><em>Select user</em></MenuItem>
+                <Select 
+                  {...field} 
+                  label="Linked User (Provider role)" 
+                  value={field.value || ''}
+                  variant="standard"
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInput-underline:before': { borderBottom: '1px solid rgba(0,0,0,0.42)' },
+                    '& .MuiInput-underline:after': { borderBottom: '2px solid #1976d2' },
+                    '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid rgba(0,0,0,0.87)' }
+                  }}
+                >
+                  <MenuItem value="" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}><em>Select user</em></MenuItem>
                   {usersLoading ? (
-                    <MenuItem disabled>Loading...</MenuItem>
+                    <MenuItem disabled sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>Loading...</MenuItem>
                   ) : (
                     providerUsers.map((u) => (
-                      <MenuItem key={u._id || u.id} value={u._id || u.id}>
+                      <MenuItem key={u._id || u.id} value={u._id || u.id} sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
                         {u.firstName} {u.lastName} — {u.email}
                       </MenuItem>
                     ))
@@ -767,31 +1070,66 @@ const InlineProviderForm = ({ onSave, onCancel }) => {
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth variant="standard">
             <InputLabel>Title</InputLabel>
             <Controller
               name="title"
               control={control}
               render={({ field }) => (
-                <Select {...field} label="Title" value={field.value || 'DDS'}>
-                  {TITLES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+                <Select 
+                  {...field} 
+                  label="Title" 
+                  value={field.value || 'DDS'}
+                  variant="standard"
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInput-underline:before': { borderBottom: '1px solid rgba(0,0,0,0.42)' },
+                    '& .MuiInput-underline:after': { borderBottom: '2px solid #1976d2' },
+                    '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid rgba(0,0,0,0.87)' }
+                  }}
+                >
+                  {TITLES.map((t) => <MenuItem key={t} value={t} sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>{t}</MenuItem>)}
                 </Select>
               )}
             />
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="NPI Number" {...register('npiNumber')} />
+          <TextField fullWidth label="NPI Number" {...register('npiNumber')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="License Number" {...register('licenseNumber')} />
+          <TextField fullWidth label="License Number" {...register('licenseNumber')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="Specialty" placeholder="e.g. General Dentistry" {...register('specialty')} />
+          <TextField fullWidth label="Specialty" placeholder="e.g. General Dentistry" {...register('specialty')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
       </Grid>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 2 }}>
-        <Button variant="outlined" size="small" onClick={onCancel} disabled={saving} sx={{ textTransform: 'none' }}>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={onCancel} 
+          disabled={saving} 
+          sx={{ 
+            textTransform: 'none',
+            fontSize: '0.8rem',
+            px: 2,
+            py: 0.5
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -799,8 +1137,16 @@ const InlineProviderForm = ({ onSave, onCancel }) => {
           size="small"
           onClick={handleSubmit(onSubmit)}
           disabled={saving}
-          sx={{ textTransform: 'none', bgcolor: '#4caf50', '&:hover': { bgcolor: '#388e3c' } }}
-          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+          sx={{ 
+            textTransform: 'none', 
+            bgcolor: '#1976d2', 
+            '&:hover': { bgcolor: '#1565c0' },
+            fontSize: '0.8rem',
+            px: 2.5,
+            py: 0.6,
+            minHeight: 'auto'
+          }}
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
         >
           {saving ? 'Saving...' : 'Apply'}
         </Button>
@@ -846,12 +1192,12 @@ const Step2Providers = ({ onNext, onFinishLater }) => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mb: 3, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         <SectionHeading>2. Providers</SectionHeading>
-        <Typography variant="body2" color="text.secondary">(Dentist, Hygienist or Specialist)</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ fontSize: fontSize.sm }}>(Dentist, Hygienist or Specialist)</Typography>
       </Box>
 
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Added Providers</Typography>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: fontSize.sm }}>Added Providers</Typography>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={32} /></Box>
@@ -884,7 +1230,19 @@ const Step2Providers = ({ onNext, onFinishLater }) => {
           <Button
             variant="outlined"
             onClick={() => setShowForm(true)}
-            sx={{ borderRadius: 20, textTransform: 'none', color: NAVY, borderColor: NAVY, px: 2.5, '&:hover': { bgcolor: 'rgba(26,58,107,0.06)' } }}
+            size="small"
+            sx={{ 
+              borderRadius: 20, 
+              textTransform: 'none', 
+              color: '#1976d2', 
+              borderColor: '#1976d2', 
+              px: 2, 
+              py: 0.5,
+              fontSize: '0.8rem',
+              minHeight: 'auto',
+              height: 32,
+              '&:hover': { bgcolor: 'rgba(25,118,210,0.06)' } 
+            }}
           >
             + Add Provider
           </Button>
@@ -930,19 +1288,31 @@ const InlineUserForm = ({ onSave, onCancel, providers }) => {
   };
 
   return (
-    <Box sx={{ mt: 2, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+    <Box sx={{ mt: 2, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="First Name" {...register('firstName')} />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth label="First Name" {...register('firstName')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="Last Name" {...register('lastName')} />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth label="Last Name" {...register('lastName')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="Username" {...register('username')} />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth label="Username" {...register('username')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <FormControl fullWidth size="small">
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormControl fullWidth variant="standard">
             <InputLabel>Roles</InputLabel>
             <Controller
               name="roles"
@@ -952,15 +1322,22 @@ const InlineUserForm = ({ onSave, onCancel, providers }) => {
                   {...field}
                   multiple
                   label="Roles"
-                  input={<OutlinedInput label="Roles" />}
+                  variant="standard"
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((v) => <Chip key={v} label={v} size="small" />)}
                     </Box>
                   )}
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInput-underline:before': { borderBottom: '1px solid rgba(0,0,0,0.42)' },
+                    '& .MuiInput-underline:after': { borderBottom: '2px solid #1976d2' },
+                    '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid rgba(0,0,0,0.87)' }
+                  }}
                 >
                   {allRoles.map((role) => (
-                    <MenuItem key={role._id || role.id} value={role.name}>
+                    <MenuItem key={role._id || role.id} value={role.name} sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
                       {role.name}
                     </MenuItem>
                   ))}
@@ -969,24 +1346,40 @@ const InlineUserForm = ({ onSave, onCancel, providers }) => {
             />
           </FormControl>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField fullWidth size="small" label="Email Address" type="email" {...register('email')} />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField fullWidth label="Email Address" type="email" {...register('email')} 
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+          />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <FormControl fullWidth size="small">
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormControl fullWidth variant="standard">
             <InputLabel>Provider</InputLabel>
             <Controller
               name="providerId"
               control={control}
               render={({ field }) => (
-                <Select {...field} label="Provider" value={field.value || ''}>
-                  <MenuItem value=""><em>Select Provider</em></MenuItem>
+                <Select 
+                  {...field} 
+                  label="Provider" 
+                  value={field.value || ''}
+                  variant="standard"
+                  sx={{ 
+                    '& .MuiSelect-select': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInputLabel-root': { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" },
+                    '& .MuiInput-underline:before': { borderBottom: '1px solid rgba(0,0,0,0.42)' },
+                    '& .MuiInput-underline:after': { borderBottom: '2px solid #1976d2' },
+                    '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid rgba(0,0,0,0.87)' }
+                  }}
+                >
+                  <MenuItem value="" sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}><em>Select Provider</em></MenuItem>
                   {providers.map((p) => {
                     const name = p.userId?.firstName
                       ? `${p.userId.firstName} ${p.userId.lastName || ''}`.trim()
                       : p.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : 'Unknown';
                     return (
-                      <MenuItem key={p._id || p.id} value={p._id || p.id}>{name}</MenuItem>
+                      <MenuItem key={p._id || p.id} value={p._id || p.id} sx={{ fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>{name}</MenuItem>
                     );
                   })}
                 </Select>
@@ -996,7 +1389,18 @@ const InlineUserForm = ({ onSave, onCancel, providers }) => {
         </Grid>
       </Grid>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 2 }}>
-        <Button variant="outlined" size="small" onClick={onCancel} disabled={saving} sx={{ textTransform: 'none' }}>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={onCancel} 
+          disabled={saving} 
+          sx={{ 
+            textTransform: 'none',
+            fontSize: '0.8rem',
+            px: 2,
+            py: 0.5
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -1004,8 +1408,16 @@ const InlineUserForm = ({ onSave, onCancel, providers }) => {
           size="small"
           onClick={handleSubmit(onSubmit)}
           disabled={saving}
-          sx={{ textTransform: 'none', bgcolor: '#4caf50', '&:hover': { bgcolor: '#388e3c' } }}
-          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+          sx={{ 
+            textTransform: 'none', 
+            bgcolor: '#1976d2', 
+            '&:hover': { bgcolor: '#1565c0' },
+            fontSize: '0.8rem',
+            px: 2.5,
+            py: 0.6,
+            minHeight: 'auto'
+          }}
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
         >
           {saving ? 'Saving...' : 'Apply'}
         </Button>
@@ -1048,12 +1460,12 @@ const Step3Users = ({ onNext, onFinishLater }) => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mb: 2, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         <SectionHeading>3. Users</SectionHeading>
-        <Typography variant="body2" color="text.secondary">(Front, Assistant or Manager)</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ fontSize: fontSize.sm }}>(Front, Assistant or Manager)</Typography>
       </Box>
 
-      <Box component="ul" sx={{ pl: 3, mb: 3, '& li': { mb: 0.5 } }}>
+      <Box component="ul" sx={{ pl: 3, mb: 3, '& li': { mb: 0.5 }, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         {[
           'Email address should be unique per user.',
           'The email is only used to set or reset a password. A personal email can be used.',
@@ -1062,11 +1474,11 @@ const Step3Users = ({ onNext, onFinishLater }) => {
           'Admin role allows the user to add/delete users and has access to all the pages and reports of the software (usually the office manager or owner).',
           'If the admin deactivates a user, they won\'t be able to login.',
         ].map((text, i) => (
-          <Typography key={i} component="li" variant="body2" color="text.secondary">{text}</Typography>
+          <Typography key={i} component="li" variant="body2" color="text.secondary" sx={{ fontSize: fontSize.sm }}>{text}</Typography>
         ))}
       </Box>
 
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Added Users</Typography>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: fontSize.sm }}>Added Users</Typography>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={32} /></Box>
@@ -1101,7 +1513,19 @@ const Step3Users = ({ onNext, onFinishLater }) => {
           <Button
             variant="outlined"
             onClick={() => setShowForm(true)}
-            sx={{ borderRadius: 20, textTransform: 'none', color: NAVY, borderColor: NAVY, px: 2.5, '&:hover': { bgcolor: 'rgba(26,58,107,0.06)' } }}
+            size="small"
+            sx={{ 
+              borderRadius: 20, 
+              textTransform: 'none', 
+              color: '#1976d2', 
+              borderColor: '#1976d2', 
+              px: 2, 
+              py: 0.5,
+              fontSize: '0.8rem',
+              minHeight: 'auto',
+              height: 32,
+              '&:hover': { bgcolor: 'rgba(25,118,210,0.06)' } 
+            }}
           >
             + Add User
           </Button>
@@ -1144,6 +1568,7 @@ const TimeInput = ({ value, onChange }) => {
         style={{
           border: '1px solid #ccc', borderRadius: 3, padding: '2px 4px',
           fontSize: 13, height: 26, background: '#f5f5f5', cursor: 'pointer',
+          fontFamily: "'Manrope', 'Segoe UI', sans-serif",
         }}
       >
         {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -1157,6 +1582,7 @@ const TimeInput = ({ value, onChange }) => {
         style={{
           border: '1px solid #ccc', borderRadius: 3, padding: '2px 4px',
           fontSize: 13, height: 26, background: '#f5f5f5', cursor: 'pointer',
+          fontFamily: "'Manrope', 'Segoe UI', sans-serif",
         }}
       >
         {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -1176,6 +1602,7 @@ const TimeInput = ({ value, onChange }) => {
               fontSize: 12, height: 26, cursor: 'pointer', fontWeight: isActive ? 700 : 400,
               background: isActive ? '#d0d7e6' : '#f5f5f5',
               color: isActive ? NAVY : '#555',
+              fontFamily: "'Manrope', 'Segoe UI', sans-serif",
             }}
           >
             {period}
@@ -1210,12 +1637,12 @@ const Step4OpeningHours = ({ onNext, onFinishLater }) => {
   return (
     <Box>
       <SectionHeading>4. Opening &amp; Scheduling Hours</SectionHeading>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3.5, maxWidth: 620 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3.5, maxWidth: 620, fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         Your office opening and closing time including the hours reserved for administrative tasks such as morning huddle.
         This will update your opening and scheduling times.
       </Typography>
 
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: 0.5, mb: 1, display: 'block' }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: fontWeight.semibold, letterSpacing: 0.5, mb: 1, display: 'block', fontSize: fontSize.xs }}>
         Weekdays
       </Typography>
 
@@ -1231,13 +1658,13 @@ const Step4OpeningHours = ({ onNext, onFinishLater }) => {
               }}
             >
               {/* Day name */}
-              <Typography variant="body2" sx={{ width: 90, flexShrink: 0, color: 'text.primary' }}>
+              <Typography variant="body2" sx={{ width: 90, flexShrink: 0, color: 'text.primary', fontSize: fontSize.sm }}>
                 {day}
               </Typography>
 
               {/* From */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 180 }}>
-                <Typography variant="caption" color="text.secondary">from:</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: fontSize.sm }}>from:</Typography>
                 {!row.closed && (
                   <TimeInput
                     value={{ fromHour: row.fromHour, fromMin: row.fromMin, fromPeriod: row.fromPeriod }}
@@ -1248,7 +1675,7 @@ const Step4OpeningHours = ({ onNext, onFinishLater }) => {
 
               {/* To */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 180 }}>
-                <Typography variant="caption" color="text.secondary">to:</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: fontSize.sm }}>to:</Typography>
                 {!row.closed && (
                   <TimeInput
                     value={{ fromHour: row.toHour, fromMin: row.toMin, fromPeriod: row.toPeriod }}
@@ -1273,7 +1700,7 @@ const Step4OpeningHours = ({ onNext, onFinishLater }) => {
                 />
                 <Typography
                   variant="body2"
-                  sx={{ color: row.closed ? NAVY : 'text.secondary', fontWeight: row.closed ? 600 : 400 }}
+                  sx={{ color: row.closed ? NAVY : 'text.secondary', fontWeight: row.closed ? fontWeight.semibold : fontWeight.regular, fontSize: fontSize.sm }}
                 >
                   closed
                 </Typography>
@@ -1354,7 +1781,7 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
   return (
     <Box>
       <SectionHeading>5. Schedule Setup</SectionHeading>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 620 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 620, fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         Your operatories and providers working time. During which your office is open for patients.
         This will only affect your default schedule.
       </Typography>
@@ -1364,19 +1791,45 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
           <Divider sx={{ flex: 1 }} />
           <TextField
-            size="small"
             placeholder="Operatory name"
             value={newRoomName}
             onChange={(e) => setNewRoomName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddRoom()}
             autoFocus
+            variant="standard"
+            InputLabelProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
+            InputProps={{ sx: { fontSize: fontSize.sm, fontFamily: "'Manrope', 'Segoe UI', sans-serif" } }}
             sx={{ width: 180 }}
           />
-          <Button size="small" variant="contained" onClick={handleAddRoom} disabled={savingRoom}
-            sx={{ textTransform: 'none', bgcolor: NAVY, '&:hover': { bgcolor: '#142e58' } }}>
-            {savingRoom ? <CircularProgress size={14} color="inherit" /> : 'Save'}
+          <Button 
+            size="small" 
+            variant="contained" 
+            onClick={handleAddRoom} 
+            disabled={savingRoom}
+            sx={{ 
+              textTransform: 'none', 
+              bgcolor: '#1976d2', 
+              '&:hover': { bgcolor: '#1565c0' },
+              fontSize: '0.8rem',
+              px: 2,
+              py: 0.5,
+              minHeight: 'auto',
+              height: 32
+            }}>
+            {savingRoom ? <CircularProgress size={16} color="inherit" /> : 'Save'}
           </Button>
-          <Button size="small" onClick={() => setAddingRoom(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
+          <Button 
+            size="small" 
+            onClick={() => setAddingRoom(false)} 
+            sx={{ 
+              textTransform: 'none',
+              fontSize: '0.8rem',
+              px: 2,
+              py: 0.5,
+              color: '#1976d2'
+            }}>
+            Cancel
+          </Button>
           <Divider sx={{ flex: 1 }} />
         </Box>
       ) : (
@@ -1385,7 +1838,18 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
           <Button
             variant="outlined"
             onClick={() => setAddingRoom(true)}
-            sx={{ borderRadius: 20, textTransform: 'none', color: NAVY, borderColor: NAVY, px: 2.5 }}
+            size="small"
+            sx={{ 
+              borderRadius: 20, 
+              textTransform: 'none', 
+              color: NAVY, 
+              borderColor: NAVY, 
+              px: 2,
+              py: 0.5,
+              fontSize: '0.8rem',
+              minHeight: 'auto',
+              height: 32
+            }}
           >
             + Add Operatory
           </Button>
@@ -1394,7 +1858,7 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
       )}
 
       {/* Hint */}
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mb: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mb: 1, fontSize: fontSize.xs }}>
         ⊕ Click and/or drag to create an operatory schedule entry
       </Typography>
 
@@ -1403,12 +1867,12 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
         {/* Day navigation header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, bgcolor: '#f0f4f8', py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box component="button" type="button" onClick={prevDay}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: NAVY, padding: '0 4px' }}>‹</Box>
-          <Typography variant="body2" fontWeight={600} sx={{ color: NAVY, minWidth: 160, textAlign: 'center' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: NAVY, padding: '0 4px', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>‹</Box>
+          <Typography variant="body2" fontWeight={fontWeight.semibold} sx={{ color: NAVY, minWidth: 160, textAlign: 'center', fontSize: fontSize.sm }}>
             {formatDayLabel(selectedDate)}
           </Typography>
           <Box component="button" type="button" onClick={nextDay}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: NAVY, padding: '0 4px' }}>›</Box>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: NAVY, padding: '0 4px', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>›</Box>
         </Box>
 
         {/* Column headers */}
@@ -1416,7 +1880,7 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
           <Box sx={{ bgcolor: '#f8f9fa' }} />
           {displayRooms.map((room, i) => (
             <Box key={room._id || room.id || i} sx={{ px: 1, py: 0.75, textAlign: 'center', bgcolor: '#f8f9fa', borderLeft: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="caption" fontWeight={600} color="text.secondary">{room.name}</Typography>
+              <Typography variant="caption" fontWeight={fontWeight.semibold} color="text.secondary" sx={{ fontSize: fontSize.xs }}>{room.name}</Typography>
             </Box>
           ))}
         </Box>
@@ -1437,7 +1901,7 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
               {/* Time label */}
               <Box sx={{ px: 0.5, pt: 0.25, textAlign: 'right', borderRight: '1px solid', borderColor: 'divider', bgcolor: '#fafafa' }}>
                 {slot.label && (
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>{slot.label}</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: fontSize.xs }}>{slot.label}</Typography>
                 )}
               </Box>
               {/* Operatory cells */}
@@ -1470,12 +1934,12 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
   const [billingProvider, setBillingProvider] = useState('default');
 
   return (
-    <Box>
+    <Box sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
       <SectionHeading>6. Billing Configuration</SectionHeading>
 
       {/* Question 1 */}
       <Box sx={{ mb: 3.5 }}>
-        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
+        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: fontWeight.medium, fontSize: fontSize.sm }}>
           1- Are you out of network (aka fee of service-not contracted with any insurance companies)?
         </Typography>
         {[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }].map(({ value, label }) => (
@@ -1487,14 +1951,14 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
               onChange={() => setOutOfNetwork(value)}
               style={{ width: 16, height: 16, accentColor: NAVY, cursor: 'pointer' }}
             />
-            <Typography variant="body2">{label}</Typography>
+            <Typography variant="body2" sx={{ fontSize: fontSize.sm }}>{label}</Typography>
           </Box>
         ))}
       </Box>
 
       {/* Question 2 */}
       <Box sx={{ mb: 3.5 }}>
-        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
+        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: fontWeight.medium, fontSize: fontSize.sm }}>
           2- Are you in-assignment (do you accept insurance payment directly to the office) or non-assignment
           (patient pays total amount and gets reimbursed by the insurance)?
         </Typography>
@@ -1510,7 +1974,7 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
               onChange={() => setAssignment(value)}
               style={{ width: 16, height: 16, accentColor: NAVY, cursor: 'pointer' }}
             />
-            <Typography variant="body2" sx={{ color: assignment === value ? 'primary.main' : 'text.primary' }}>
+            <Typography variant="body2" sx={{ color: assignment === value ? 'primary.main' : 'text.primary', fontSize: fontSize.sm }}>
               {label}
             </Typography>
           </Box>
@@ -1520,8 +1984,8 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
       {/* Question 3 */}
       <Box sx={{ mb: 3.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
-          <Typography variant="body2" fontWeight={500}>3- Setup Billing Provider</Typography>
-          <Typography variant="caption" sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'text.disabled', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', flexShrink: 0 }}>i</Typography>
+          <Typography variant="body2" fontWeight={fontWeight.medium} sx={{ fontSize: fontSize.sm }}>3- Setup Billing Provider</Typography>
+          <Typography variant="caption" sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'text.disabled', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fontSize.xs, flexShrink: 0, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>i</Typography>
         </Box>
         {[
           { value: 'default', label: 'Default Provider' },
@@ -1536,7 +2000,7 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
               onChange={() => setBillingProvider(value)}
               style={{ width: 16, height: 16, accentColor: NAVY, cursor: 'pointer' }}
             />
-            <Typography variant="body2" sx={{ color: billingProvider === value ? 'primary.main' : 'text.primary' }}>
+            <Typography variant="body2" sx={{ color: billingProvider === value ? 'primary.main' : 'text.primary', fontSize: fontSize.sm }}>
               {label}
             </Typography>
           </Box>
@@ -1551,11 +2015,11 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
 // ─── Coming Soon Placeholder ──────────────────────────────────────────────────
 
 const ComingSoonStep = ({ stepNumber, title, onNext, onFinishLater }) => (
-  <Box>
+  <Box sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
     <SectionHeading>{stepNumber}. {title}</SectionHeading>
     <Paper variant="outlined" sx={{ py: 8, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 2 }}>
-      <Typography variant="h6" color="text.secondary" gutterBottom>Coming Soon</Typography>
-      <Typography variant="body2" color="text.secondary">This step will be available in a future update.</Typography>
+      <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: fontSize.lg }}>Coming Soon</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ fontSize: fontSize.sm }}>This step will be available in a future update.</Typography>
     </Paper>
     <WizardActions onFinishLater={onFinishLater} onNext={onNext} />
   </Box>
@@ -1590,17 +2054,17 @@ const PracticeOnboardingPage = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 860, mx: 'auto', px: { xs: 2, sm: 3 }, py: 4 }}>
+    <Box sx={{ width: '100%', mx: 'auto', px: { xs: 2, sm: 3 }, py: 4, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
       <Typography
         variant="h5"
-        sx={{ color: NAVY, fontWeight: 700, mb: 1, textAlign: 'center' }}
+        sx={{ color: NAVY, fontWeight: fontWeight.bold, mb: 1, textAlign: 'center', fontSize: fontSize.lg }}
       >
         Practice Onboarding
       </Typography>
       <Typography
         variant="body2"
         color="text.secondary"
-        sx={{ textAlign: 'center', mb: 4 }}
+        sx={{ textAlign: 'center', mb: 4, fontSize: fontSize.sm }}
       >
         Complete the steps below to set up your practice.
       </Typography>
