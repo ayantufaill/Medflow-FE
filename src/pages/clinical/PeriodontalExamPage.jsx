@@ -25,10 +25,11 @@ const SummaryData = [
 const DiagnosticHeader = () => (
   <Box sx={{ p: 2, bgcolor: '#fff', borderTop: '1px solid #e0e0e0' }}>
     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
-        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
-      </Box>
+      {/* 3. MH/DH Badges */}
+            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+              <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
+              <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
+            </Box>
       <IconButton size="small"><PrintIcon sx={{ fontSize: 18, color: '#999' }} /></IconButton>
     </Box>
 

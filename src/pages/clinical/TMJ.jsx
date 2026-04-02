@@ -151,8 +151,8 @@ const DentalTmdExamPage = () => {
 
       {/* 3. MH/DH Badges */}
       <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: 'bold' }}>MH</Typography>
-        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: 'bold' }}>DH</Typography>
+        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
+        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
       </Box>
 
       {/* 4. Section 1: Range of Motion (Card) */}

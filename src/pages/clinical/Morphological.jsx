@@ -263,8 +263,8 @@ const Morphological = () => {
         </Box>
 
         {/* 2. Status Row */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, mr: 2, fontSize: fontSize.xs }}>DH</Typography>
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
           <FormControlLabel 
             control={
               <Checkbox 

@@ -36,18 +36,25 @@ const DiagnosticNavbar = () => {
         variant="scrollable"
         scrollButtons="auto"
       >
-        {diagnosticSubsections.map((subsection) => (
-          <Tab 
-            key={subsection.id}
-            label={subsection.label}
-            sx={{ 
-              textTransform: 'none',
-              fontWeight: 500,
-              fontSize: '0.875rem',
-              minHeight: '48px'
-            }} 
-          />
-        ))}
+        {diagnosticSubsections.map((subsection) => {
+          const isPeriodontal = subsection.id === 'periodontal';
+          return (
+            <Tab 
+              key={subsection.id}
+              label={subsection.label}
+              sx={{ 
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                minHeight: '48px',
+                color: isPeriodontal ? '#9e9e9e' : undefined,
+                '&.Mui-selected': {
+                  color: isPeriodontal ? '#616161' : undefined
+                }
+              }} 
+            />
+          );
+        })}
       </Tabs>
     </Box>
   );
