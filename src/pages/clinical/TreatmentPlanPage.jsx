@@ -19,6 +19,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DentalTreatmentPlan from '../../components/clinical/DentalTreatmentPlan';
 import ProcedureRow from '../../components/clinical/ProcedureRow';
+import TreatmentPlanEndTable from '../../components/clinical/TreatmentPlanEndTable';
 import { fontSize, fontWeight } from "../../constants/styles";
 
 // --- Custom SVG Tooth Icons for Headers ---
@@ -441,16 +442,89 @@ const Tooth = ({ num, isActive = false }) => {
 };
 
 export default function TreatmentPlanPage() {
-  const [procedures, setProcedures] = useState([]);
+  const [visits, setVisits] = useState(() => [
+    {
+      id: 'v-1',
+      label: 'Visit 1',
+      procedures: [
+        {
+          id: 'p-1',
+          visitId: 'v-1',
+          name: 'crown /bu',
+          toothNumber: 15,
+          surface: '',
+          code: 'D0120',
+          treatmentName: 'Periodic Evaluation',
+          options: '',
+          patientAmount: '$0.00',
+          insuranceAmount: '$0.00',
+          adjustmentPercent: '0%',
+          adjustmentAmount: '$0.00',
+          fee: '$0.00',
+          billedAmount: '$0.00',
+          providerInitials: 'SAB',
+          status: 'A',
+          date: '10/14/2025'
+        }
+      ]
+    }
+  ]);
 
-  const handleAddProcedure = () => {
-    console.log('Add new procedure');
-    // You can add logic here to add a new procedure
+  const totalProcedures = visits.reduce((sum, v) => sum + (v.procedures?.length || 0), 0);
+
+  const handleAddProcedure = (parentProcedureOrMeta) => {
+    setVisits((prev) => {
+      const explicitVisitId = parentProcedureOrMeta?.visitId;
+      const visitIdFromId =
+        typeof parentProcedureOrMeta?.id === 'string' && parentProcedureOrMeta.id.startsWith('v-')
+          ? parentProcedureOrMeta.id
+          : undefined;
+
+      const targetVisitId = explicitVisitId || visitIdFromId || prev?.[prev.length - 1]?.id;
+      const fallbackBase = prev?.[0]?.procedures?.[0];
+
+      return prev.map((v) => {
+        if (v.id !== targetVisitId) return v;
+        const nextIndex = v.procedures.length + 1;
+        const nextId = `${v.id}-p-${nextIndex}`;
+        const base =
+          (parentProcedureOrMeta && parentProcedureOrMeta.code ? parentProcedureOrMeta : null) ||
+          v.procedures[v.procedures.length - 1] ||
+          fallbackBase ||
+          {};
+
+        return {
+          ...v,
+          procedures: [
+            ...v.procedures,
+            {
+              ...base,
+              id: nextId,
+              visitId: v.id,
+              name: base?.name ?? 'New procedure',
+              code: base?.code ?? 'D0000',
+              treatmentName: base?.treatmentName ?? 'Procedure',
+              date: base?.date ?? ''
+            }
+          ]
+        };
+      });
+    });
   };
 
   const handleAddVisit = () => {
-    console.log('Add new visit');
-    // You can add logic here to add a new visit
+    setVisits((prev) => {
+      const nextIdx = prev.length + 1;
+      const newVisitId = `v-${nextIdx}`;
+      return [
+        ...prev,
+        {
+          id: newVisitId,
+          label: `Visit ${nextIdx}`,
+          procedures: []
+        }
+      ];
+    });
   };
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -474,7 +548,18 @@ export default function TreatmentPlanPage() {
             <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
             <IconButton size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
             <IconButton size="small"><PrintIcon fontSize="small" /></IconButton>
+            <Typography sx={{ fontSize: '0.8rem', color: '#6b7280', ml: 1 }}>
+              Visits: <strong>{visits.length}</strong> · Procedures: <strong>{totalProcedures}</strong>
+            </Typography>
             <Box sx={{ flexGrow: 1 }} />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => handleAddProcedure({ visitId: visits[visits.length - 1]?.id })}
+              sx={{ textTransform: 'none' }}
+            >
+              Add Procedure
+            </Button>
             <Button variant="outlined" size="small" endIcon={<ExpandMoreIcon />}>Phase 1</Button>
             <Chip label="#15 c..." color="primary" size="small" sx={{ bgcolor: '#3f51b5' }} />
           </Stack>
@@ -890,9 +975,59 @@ export default function TreatmentPlanPage() {
         {/* Dental Treatment Plan - Outside the columns, full width */}
         <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>
           <DentalTreatmentPlan />
-          <ProcedureRow 
-            onAddProcedure={handleAddProcedure}
-          />
+          {visits.map((visit, visitIdx) => (
+            <Box
+              key={visit.id}
+              sx={{
+                mt: 2,
+                border: '1px solid #d1d9e6',
+                borderRadius: 1,
+                bgcolor: '#fff',
+                overflow: 'hidden'
+              }}
+            >
+              <Box
+                sx={{
+                  px: 1.5,
+                  py: 1,
+                  bgcolor: '#f4f7fa',
+                  borderBottom: '1px solid #e8ecf1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a2735' }}>
+                  {visit.label}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => handleAddProcedure({ visitId: visit.id })}
+                  sx={{ textTransform: 'none', fontWeight: 700 }}
+                >
+                  + Add Procedure
+                </Button>
+              </Box>
+
+              {visit.procedures.length === 0 ? (
+                <Box sx={{ px: 1.5, py: 2 }}>
+                  <Typography sx={{ fontSize: '0.85rem', color: '#7a8796' }}>
+                    No procedures in this visit yet.
+                  </Typography>
+                </Box>
+              ) : (
+                visit.procedures.map((p, idx) => (
+                  <ProcedureRow
+                    key={p.id}
+                    procedure={p}
+                    defaultExpanded={visitIdx === 0 && idx === 0}
+                    onAddProcedure={handleAddProcedure}
+                  />
+                ))
+              )}
+            </Box>
+          ))}
           
           {/* Add Visit Button */}
           <Button
@@ -910,6 +1045,13 @@ export default function TreatmentPlanPage() {
           >
            Add Visit Here
           </Button>
+
+          {/* End Table (Completed / Out of Office) */}
+          <TreatmentPlanEndTable
+            completedRows={[]}
+            outOfOfficeRows={[]}
+            onReEstimateCompleted={() => {}}
+          />
         </Box>
         </Box>
       </Box>

@@ -26,16 +26,18 @@ const ProcedureRow = ({
   onToggle,
   onEdit,
   onAddNote,
+  onAddProcedure,
   onLabOrder,
   onPrint,
   onSend,
   onExpand,
-  onAmountChange
+  onAmountChange,
+  defaultExpanded = true
 }) => {
   const [checked, setChecked] = useState(procedure?.checked || false);
   const [amount, setAmount] = useState(procedure?.amount || '$0.00');
   const [duration, setDuration] = useState(procedure?.duration || '');
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [isEditing, setIsEditing] = useState(false);
   const [procedureName, setProcedureName] = useState(procedure?.name || '#15 crown /bu');
   const [anchorEl, setAnchorEl] = useState(null);
@@ -364,44 +366,11 @@ const ProcedureRow = ({
         <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Code</Typography>
         <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Treatment</Typography>
         <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Options</Typography>
-        
-        <Box>
-          <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Pt:</Typography>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>
-            {procedure?.patientAmount || '$0.00'}
-          </Typography>
-        </Box>
-        
-        <Box>
-          <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Ins:</Typography>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>
-            {procedure?.insuranceAmount || '$0.00'}
-          </Typography>
-        </Box>
-
-        <Box sx={{ textAlign: 'center' }}>
-          <Box sx={{ border: '1px solid #ccc', px: 0.5, fontSize: '0.6rem', display: 'inline-block', mb: 0.5, borderRadius: '2px' }}>
-            {procedure?.adjustmentPercent || '0%'}
-          </Box>
-          <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Adj:</Typography>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>
-            {procedure?.adjustmentAmount || '$0.00'}
-          </Typography>
-        </Box>
-
-        <Box>
-          <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Fee:</Typography>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>
-            {procedure?.fee || '$0.00'}
-          </Typography>
-        </Box>
-
-        <Box>
-          <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Billed:</Typography>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>
-            {procedure?.billedAmount || '$0.00'}
-          </Typography>
-        </Box>
+        <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Pt:</Typography>
+        <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Ins:</Typography>
+        <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, textAlign: 'center' }}>Adj:</Typography>
+        <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Fee:</Typography>
+        <Typography sx={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>Billed:</Typography>
 
         <Box sx={{ textAlign: 'center' }}>
           <Chip 
@@ -594,7 +563,16 @@ const ProcedureRow = ({
           </Box>
 
           <Link href="#" underline="none" sx={{ fontSize: '0.75rem', mt: 1, display: 'inline-block', color: '#1976d2' }}>
-            +Add Procedure
+            <Box
+              component="span"
+              onClick={(e) => {
+                e.preventDefault();
+                onAddProcedure?.(procedure);
+              }}
+              sx={{ cursor: 'pointer' }}
+            >
+              +Add Procedure
+            </Box>
           </Link>
         </>
       )}
