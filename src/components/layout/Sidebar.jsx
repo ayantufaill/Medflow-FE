@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Drawer,
@@ -22,7 +23,6 @@ import {
   Description,
   Receipt,
   Person,
-  AdminPanelSettings,
   Assessment,
   Lock,
   ExitToApp,
@@ -41,6 +41,7 @@ import {
   CloudUpload,
   VerifiedUser,
   Forum,
+  Settings,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -225,6 +226,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
     }
     navigate('/login', { replace: true });
   };
+
 
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -457,6 +459,34 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
               </ListItem>
             </WithTooltip>
           ))}
+
+        {/* Settings icon — Admin only */}
+        {hasRequiredRole(['Admin']) && (
+          <WithTooltip title="Settings">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/admin/user-management')}
+                sx={{
+                  mx: 1,
+                  mb: 0.5,
+                  borderRadius: 1,
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  px: isCollapsed ? 1 : 2,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: isCollapsed ? 'unset' : 40,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Settings />
+                </ListItemIcon>
+                {!isCollapsed && <ListItemText primary="Settings" />}
+              </ListItemButton>
+            </ListItem>
+          </WithTooltip>
+        )}
 
         <Divider sx={{ my: 0.5 }} />
 

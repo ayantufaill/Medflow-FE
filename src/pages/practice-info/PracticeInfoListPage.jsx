@@ -188,13 +188,6 @@ const PracticeInfoListPage = () => {
         <Typography variant="h4" fontWeight="bold">
           Practice Information
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/practice-info/new')}
-        >
-          Add Practice Info
-        </Button>
       </Box>
 
       {error && (
