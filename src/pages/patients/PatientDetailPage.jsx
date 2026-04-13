@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams, Navigate } from 'react-router-dom';
 import { Box, Button, CircularProgress, Alert } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { PatientDetailOverview } from '../../components/patient-detail';
+import { PatientDetailOverview, AddFamilyMemberDialog } from '../../components/patient-detail';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
 import { PatientInsuranceTabContent } from '../../components/patient-tabs';
 import { patientService } from '../../services/patient.service';
@@ -38,6 +38,7 @@ const PatientDetailPage = () => {
   const [preferredHygienists, setPreferredHygienists] = useState([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPatientData, setEditedPatientData] = useState(null);
+  const [addFamilyDialogOpen, setAddFamilyDialogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -327,7 +328,7 @@ const PatientDetailPage = () => {
               onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
               onBalance={() => navigate(`/patients/details/${patientId}?tab=insurance`)}
               onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
-              onAddFamilyMember={() => showSnackbar('Add family member — coming soon', 'info')}
+              onAddFamilyMember={() => setAddFamilyDialogOpen(true)}
               onSendUpdateRequest={handleSendUpdateRequest}
             />
           )}
@@ -354,6 +355,38 @@ const PatientDetailPage = () => {
         cancelText="Cancel"
         confirmColor="success"
         loading={deactivateLoading}
+      />
+      <AddFamilyMemberDialog
+        open={addFamilyDialogOpen}
+        onClose={() => setAddFamilyDialogOpen(false)}
+        currentPatientId={patientId}
+        onConfirm={async (selectedPatient) => {
+          try {
+            setAddFamilyDialogOpen(false);
+            const currentHousehold = Array.isArray(patient?.household) ? patient.household : [];
+            
+            // Check if already in household
+            if (currentHousehold.some(m => (m._id || m.id) === (selectedPatient._id || selectedPatient.id))) {
+              showSnackbar('This patient is already a family member', 'info');
+              return;
+            }
+
+            const newMember = {
+              id: selectedPatient._id || selectedPatient.id,
+              firstName: selectedPatient.firstName,
+              lastName: selectedPatient.lastName,
+              dateOfBirth: selectedPatient.dateOfBirth,
+              relationship: 'Family Member'
+            };
+
+            const updatedHousehold = [...currentHousehold, newMember];
+            await patientService.updatePatient(patientId, { household: updatedHousehold });
+            showSnackbar('Family member linked successfully', 'success');
+            fetchPatient();
+          } catch (err) {
+            showSnackbar('Failed to link family member', 'error');
+          }
+        }}
       />
     </Box>
   );

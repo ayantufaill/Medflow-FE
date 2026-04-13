@@ -13,10 +13,15 @@ import {
   ToggleButton,
   Tabs,
   Tab,
+  Popover,
+  Select,
+  MenuItem,
+  FormControl,
+  Link
 } from "@mui/material";
-import { 
-  PostAdd, Group, Science, Description, FilterAlt, 
-  VisibilityOff, SpeakerNotesOff, Print, History, 
+import {
+  PostAdd, Group, Science, Description, FilterAlt,
+  VisibilityOff, SpeakerNotesOff, Print, History,
   Person, AttachMoney, MoreVert, CalendarMonth,
   KeyboardArrowLeft, KeyboardArrowRight, EventNote
 } from '@mui/icons-material';
@@ -35,6 +40,9 @@ import { useSnackbar } from "../../contexts/SnackbarContext";
 import { appointmentService } from "../../services/appointment.service";
 import { patientService } from "../../services/patient.service";
 import { useDropdownData } from "../../hooks/redux/useDropdownData";
+import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
+import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
+import LabCasesDialog from "../../components/appointments/LabCasesDialog";
 
 // Constants
 const START_HOUR = 0;
@@ -91,15 +99,15 @@ const OperatorySchedulePage = () => {
   useEffect(() => { showSnackbarRef.current = showSnackbar; });
 
   const { providers, rooms, appointmentTypes } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
-  
+
   // Dynamically generate operatory columns from rooms
   const OPERATORY_COLUMNS = useMemo(() => {
     if (!rooms || rooms.length === 0) {
       // Fallback to default columns if no rooms available
       return [
-        { 
-          id: "op1", 
-          label: "Op 1", 
+        {
+          id: "op1",
+          label: "Op 1",
           color: "#7e57c2",
           breakTimes: [
             {
@@ -113,9 +121,9 @@ const OperatorySchedulePage = () => {
             }
           ]
         },
-        { 
-          id: "op2", 
-          label: "Op 2", 
+        {
+          id: "op2",
+          label: "Op 2",
           color: "#26a69a",
           breakTimes: [
             {
@@ -129,9 +137,9 @@ const OperatorySchedulePage = () => {
             }
           ]
         },
-        { 
-          id: "op3", 
-          label: "Op 3", 
+        {
+          id: "op3",
+          label: "Op 3",
           color: "#ef6c00",
           breakTimes: [
             {
@@ -145,15 +153,15 @@ const OperatorySchedulePage = () => {
             }
           ]
         },
-        { 
-          id: "op4", 
-          label: "Op 4", 
+        {
+          id: "op4",
+          label: "Op 4",
           color: "#42a5f5",
           breakTimes: [] // No breaks for this operatory
         },
-        { 
-          id: "consult", 
-          label: "Hyg 1", 
+        {
+          id: "consult",
+          label: "Hyg 1",
           color: "#8d6e63",
           breakTimes: [
             {
@@ -169,22 +177,22 @@ const OperatorySchedulePage = () => {
         },
       ];
     }
-    
+
     return rooms.map((room, index) => {
       // Generate staggered lunch breaks by default (each operatory gets 30 min different time)
       // Op 1: 12:00-12:30, Op 2: 12:30-13:00, Op 3: 13:00-13:30, Op 4: 13:30-14:00, etc.
       const totalMinutesOffset = index * 30; // Each operatory offset by 30 minutes
       const defaultLunchStartMinutes = 12 * 60 + totalMinutesOffset; // Start at 12:00 (720 minutes) + offset
       const defaultLunchEndMinutes = defaultLunchStartMinutes + 30; // 30 minutes duration
-      
+
       const startHours = Math.floor(defaultLunchStartMinutes / 60);
       const startMins = defaultLunchStartMinutes % 60;
       const endHours = Math.floor(defaultLunchEndMinutes / 60);
       const endMins = defaultLunchEndMinutes % 60;
-      
+
       const startTime = `${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}`;
       const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-      
+
       return {
         id: `op${room._id || room.id}`,
         label: room.name || `Op ${index + 1}`,
@@ -248,10 +256,20 @@ const OperatorySchedulePage = () => {
   const [completeBillDialogOpen, setCompleteBillDialogOpen] = useState(false);
   const [purchaseProductsDialogOpen, setPurchaseProductsDialogOpen] =
     useState(false);
+  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
+  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
   const [addAppointmentFormOpen, setAddAppointmentFormOpen] = useState(false);
   const [formPatients, setFormPatients] = useState([]);
   const [loadingFormPatients, setLoadingFormPatients] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
+  const [labCasesDialogOpen, setLabCasesDialogOpen] = useState(false);
+
+  // Lab Filters Popover state
+  const [labAnchorEl, setLabAnchorEl] = useState(null);
+  const [labFilters, setLabFilters] = useState({
+    providerId: 'all',
+    visitTypeId: 'all'
+  });
 
   // Ensure all dialogs are closed on mount to prevent any stale state
   useEffect(() => {
@@ -260,6 +278,8 @@ const OperatorySchedulePage = () => {
     setCompleteBillDialogOpen(false);
     setPurchaseProductsDialogOpen(false);
     setAddAppointmentFormOpen(false);
+    setBulkTextDialogOpen(false);
+    setProgressNotesOpen(false);
   }, []);
 
   const handlePreAppointmentSelection = (item, selectionType) => {
@@ -290,7 +310,7 @@ const OperatorySchedulePage = () => {
       // Automatically focus on current date when changing views
       const today = dayjs();
       setSelectedDate(today);
-      
+
       // For week view, ensure we're viewing the week that contains today
       // For month view, ensure we're viewing the month that contains today
       // This is already handled by setting selectedDate to today
@@ -307,7 +327,7 @@ const OperatorySchedulePage = () => {
     setDetailsDialogOpen(false);
     setCompleteBillDialogOpen(false);
     setPurchaseProductsDialogOpen(false);
-    
+
     // Force close CreateAppointmentDialog with a small delay to ensure it's fully closed
     setTimeout(() => {
       setAddAppointmentFormOpen(true);
@@ -433,7 +453,7 @@ const OperatorySchedulePage = () => {
       if (a.roomId) {
         // Match the column ID format used in OPERATORY_COLUMNS generation
         columnId = `op${a.roomId}`;
-        
+
         // Verify this column exists in OPERATORY_COLUMNS, otherwise fallback
         if (!OPERATORY_COLUMNS.some(col => col.id === columnId)) {
           // Fallback: distribute based on room number modulo
@@ -556,14 +576,14 @@ const OperatorySchedulePage = () => {
         const raw = Array.isArray(result) ? result : result?.appointments || [];
         const mappedAppointments = raw.map(mapAppointment).filter(Boolean);
         setAppointments(mappedAppointments);
-        
+
         // Find the newly created appointment by matching payload properties
-        const newAppt = mappedAppointments.find(appt => 
+        const newAppt = mappedAppointments.find(appt =>
           appt.patientId === patientId &&
           appt.date === payload.appointmentDate &&
           appt.start === dayjs(`${payload.appointmentDate}T${payload.startTime}`).toISOString()
         );
-        
+
         if (newAppt && newAppt.id) {
           setNewlyCreatedAppointmentId(newAppt.id);
           // Clear the ID after scrolling completes (handled in the grid component)
@@ -697,8 +717,8 @@ const OperatorySchedulePage = () => {
       return appointments.filter((a) => {
         if (!a.date) return false;
         const apptDate = dayjs(a.date);
-        return (apptDate.isSame(weekStart, "day") || apptDate.isAfter(weekStart, "day")) && 
-               (apptDate.isSame(weekEnd, "day") || apptDate.isBefore(weekEnd, "day"));
+        return (apptDate.isSame(weekStart, "day") || apptDate.isAfter(weekStart, "day")) &&
+          (apptDate.isSame(weekEnd, "day") || apptDate.isBefore(weekEnd, "day"));
       });
     } else {
       // For month view, show appointments for the entire month
@@ -707,8 +727,8 @@ const OperatorySchedulePage = () => {
       return appointments.filter((a) => {
         if (!a.date) return false;
         const apptDate = dayjs(a.date);
-        return (apptDate.isSame(monthStart, "day") || apptDate.isAfter(monthStart, "day")) && 
-               (apptDate.isSame(monthEnd, "day") || apptDate.isBefore(monthEnd, "day"));
+        return (apptDate.isSame(monthStart, "day") || apptDate.isAfter(monthStart, "day")) &&
+          (apptDate.isSame(monthEnd, "day") || apptDate.isBefore(monthEnd, "day"));
       });
     }
   }, [appointments, selectedDate, viewMode]);
@@ -773,128 +793,129 @@ const OperatorySchedulePage = () => {
       }}
     >
       {/* Header */}
-     <Paper
-  elevation={0}
-  sx={{
-    p: 1, // Compact padding
-    mb: 3,
-    borderRadius: 2,
-    border: "1px solid #eef2f6",
-    background: "rgba(255, 255, 255, 0.9)",
-    backdropFilter: "blur(10px)",
-  }}
->
-  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0.5 }}>
-    
-    {/* 1. Tabs Section */}
-    <Tabs value={activeTab} onChange={handleTabChange} sx={{ minHeight: '32px', flexShrink: 0 }}>
-      {['Patients', 'Pending', 'Search', 'Productivity'].map((label) => (
-        <Tab 
-          key={label}
-          label={label} 
-          sx={{ 
-            minHeight: '32px', py: 0.5, px: 0.75, minWidth: 'auto',
-            textTransform: 'none', fontWeight: 600, fontSize: '0.7rem',
-          }} 
-        />
-      ))}
-    </Tabs>
-
-    {/* 2. Date Navigation Section */}
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-        <ToggleButtonGroup
-          value={viewMode}
-          exclusive
-          onChange={handleViewModeChange}
-          size="small"
-          sx={{ "& .MuiToggleButton-root": { px: 1, py: 0.2, fontSize: "11px", height: 32 } }}
-        >
-          <ToggleButton value="day">Day</ToggleButton>
-          <ToggleButton value="week">Week</ToggleButton>
-          <ToggleButton value="month">Month</ToggleButton>
-        </ToggleButtonGroup>
-
-        {/* Current System Time Display */}
-        <Chip
-          label={`Time: ${dayjs().format("h:mm A")}`}
-          size="small"
-          sx={{ 
-            fontWeight: 600, 
-            fontSize: "11px", 
-            height: 32, 
-            px: 0.5,
-            bgcolor: "#e3f2fd",
-            color: "#1976d2"
-          }}
-        />
-      </Box>
-
-      <IconButton 
-        size="small" 
-        onClick={() => setSelectedDate(selectedDate.subtract(1, viewMode))}
-        sx={{ width: 32, height: 32, border: "1px solid #cbd5e1" }}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1, // Compact padding
+          mb: 3,
+          borderRadius: 2,
+          border: "1px solid #eef2f6",
+          background: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(10px)",
+        }}
       >
-        <KeyboardArrowLeft fontSize="small" />
-      </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0.5 }}>
 
-      <Chip
-        label={
-          viewMode === "day" 
-            ? selectedDate.format("MMM D, YYYY")
-            : viewMode === "week"
-            ? `${selectedDate.clone().startOf('week').format('MMM D')} - ${selectedDate.clone().endOf('week').format('MMM D, YYYY')}`
-            : selectedDate.format("MMMM YYYY")
-        }
-        size="small"
-        icon={<EventNote style={{ fontSize: 16 }} />}
-        sx={{ fontWeight: 600, fontSize: "11px", height: 32, px: 0.5 }}
-      />
+          {/* 1. Tabs Section */}
+          <Tabs value={activeTab} onChange={handleTabChange} sx={{ minHeight: '32px', flexShrink: 0 }}>
+            {['Patients', 'Pending', 'Search', 'Productivity'].map((label) => (
+              <Tab
+                key={label}
+                label={label}
+                sx={{
+                  minHeight: '32px', py: 0.5, px: 0.75, minWidth: 'auto',
+                  textTransform: 'none', fontWeight: 600, fontSize: '0.7rem',
+                }}
+              />
+            ))}
+          </Tabs>
 
-      <IconButton 
-        size="small"
-        onClick={() => setSelectedDate(selectedDate.add(1, viewMode))}
-        sx={{ width: 32, height: 32, border: "1px solid #cbd5e1" }}
-      >
-        <KeyboardArrowRight fontSize="small" />
-      </IconButton>
-    </Box>
+          {/* 2. Date Navigation Section */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={handleViewModeChange}
+                size="small"
+                sx={{ "& .MuiToggleButton-root": { px: 1, py: 0.2, fontSize: "11px", height: 32 } }}
+              >
+                <ToggleButton value="day">Day</ToggleButton>
+                <ToggleButton value="week">Week</ToggleButton>
+                <ToggleButton value="month">Month</ToggleButton>
+              </ToggleButtonGroup>
 
-    {/* 3. Your Action Icons (Mapped from the image) */}
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexGrow: 1, justifyContent: 'flex-end' }}>
-      {[
-        { icon: <PostAdd /> },         // Form/Entry
-        { icon: <Group /> },           // Patients/Group
-        { icon: <Science /> },         // Lab
-        { icon: <Description /> },     // Document
-        { icon: <FilterAlt /> },       // Filter
-        { icon: <VisibilityOff /> },   // Hide
-        { icon: <SpeakerNotesOff /> }, // No Notes
-        { icon: <Print /> },           // Print
-        { icon: <History /> },         // History
-        { icon: <Person /> },          // Profile
-        { icon: <AttachMoney /> },     // Billing
-        { icon: <MoreVert /> },        // More
-        { icon: <CalendarMonth /> }    // Calendar
-      ].map((item, idx) => (
-        <IconButton
-          key={idx}
-          sx={{
-            width: 30, // Extra slim to fit all
-            height: 30,
-            borderRadius: 1.5,
-            border: "1px solid #eef2f6",
-            color: "#001e3c", // Dark blue from your image
-            "& svg": { fontSize: 18 },
-            "&:hover": { bgcolor: "#f1f5f9" }
-          }}
-        >
-          {item.icon}
-        </IconButton>
-      ))}
-    </Box>
-  </Box>
-</Paper>
+              {/* Current System Time Display */}
+              <Chip
+                label={`Time: ${dayjs().format("h:mm A")}`}
+                size="small"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: "11px",
+                  height: 32,
+                  px: 0.5,
+                  bgcolor: "#e3f2fd",
+                  color: "#1976d2"
+                }}
+              />
+            </Box>
+
+            <IconButton
+              size="small"
+              onClick={() => setSelectedDate(selectedDate.subtract(1, viewMode))}
+              sx={{ width: 32, height: 32, border: "1px solid #cbd5e1" }}
+            >
+              <KeyboardArrowLeft fontSize="small" />
+            </IconButton>
+
+            <Chip
+              label={
+                viewMode === "day"
+                  ? selectedDate.format("MMM D, YYYY")
+                  : viewMode === "week"
+                    ? `${selectedDate.clone().startOf('week').format('MMM D')} - ${selectedDate.clone().endOf('week').format('MMM D, YYYY')}`
+                    : selectedDate.format("MMMM YYYY")
+              }
+              size="small"
+              icon={<EventNote style={{ fontSize: 16 }} />}
+              sx={{ fontWeight: 600, fontSize: "11px", height: 32, px: 0.5 }}
+            />
+
+            <IconButton
+              size="small"
+              onClick={() => setSelectedDate(selectedDate.add(1, viewMode))}
+              sx={{ width: 32, height: 32, border: "1px solid #cbd5e1" }}
+            >
+              <KeyboardArrowRight fontSize="small" />
+            </IconButton>
+          </Box>
+
+          {/* 3. Your Action Icons (Mapped from the image) */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexGrow: 1, justifyContent: 'flex-end' }}>
+            {[
+              { icon: <PostAdd />, onClick: () => setBulkTextDialogOpen(true) },         // Form/Entry
+              { icon: <Group /> },           // Patients/Group
+              { icon: <Science />, onClick: () => setLabCasesDialogOpen(true) },         // Lab
+              { icon: <Description />, onClick: () => setProgressNotesOpen(true) },     // Document
+              { icon: <FilterAlt />, onClick: (e) => setLabAnchorEl(e.currentTarget) },       // Filter
+              { icon: <VisibilityOff /> },   // Hide
+              { icon: <SpeakerNotesOff /> }, // No Notes
+              { icon: <Print /> },           // Print
+              { icon: <History /> },         // History
+              { icon: <Person /> },          // Profile
+              { icon: <AttachMoney /> },     // Billing
+              { icon: <MoreVert /> },        // More
+              { icon: <CalendarMonth /> }    // Calendar
+            ].map((item, idx) => (
+              <IconButton
+                key={idx}
+                onClick={item.onClick}
+                sx={{
+                  width: 30, // Extra slim to fit all
+                  height: 30,
+                  borderRadius: 1.5,
+                  border: "1px solid #eef2f6",
+                  color: "#001e3c", // Dark blue from your image
+                  "& svg": { fontSize: 18 },
+                  "&:hover": { bgcolor: "#f1f5f9" }
+                }}
+              >
+                {item.icon}
+              </IconButton>
+            ))}
+          </Box>
+        </Box>
+      </Paper>
 
       {/* Main Grid */}
       <Box
@@ -908,6 +929,9 @@ const OperatorySchedulePage = () => {
       >
         <OperatorySidebar
           START_HOUR={START_HOUR}
+          activeTab={activeTab} // Pass the active tab state
+          providers={providers || []}
+          rooms={rooms || []}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           patientQuery={patientQuery}
@@ -1016,6 +1040,150 @@ const OperatorySchedulePage = () => {
         providers={providers || []}
         rooms={rooms || []}
         appointmentTypes={appointmentTypes || []}
+      />
+
+      <SendBulkTextDialog
+        open={bulkTextDialogOpen}
+        onClose={() => setBulkTextDialogOpen(false)}
+        selectedDate={selectedDate}
+        providers={providers || []}
+      />
+
+      <ProgressNotesDialog
+        open={progressNotesOpen}
+        onClose={() => setProgressNotesOpen(false)}
+        providers={providers || []}
+      />
+
+      {/* Lab Filters Popover (Matching Screenshot) */}
+      <Popover
+        open={Boolean(labAnchorEl)}
+        anchorEl={labAnchorEl}
+        onClose={() => setLabAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            p: 2,
+            width: 170, // Further reduced width as requested
+            borderRadius: '4px',
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8'
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Provider Section */}
+          <Box>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
+              Provider:
+            </Typography>
+            <Select
+              fullWidth
+              size="small"
+              value={labFilters.providerId}
+              onChange={(e) => setLabFilters(prev => ({ ...prev, providerId: e.target.value }))}
+              sx={{
+                height: '32px',
+                fontSize: '0.85rem',
+                '& .MuiSelect-select': { py: 0.5 }
+              }}
+            >
+              <MenuItem value="all">All</MenuItem>
+              {providers && providers.length > 0 && providers.map(p => (
+                <MenuItem key={p._id || p.id} value={p._id || p.id}>
+                  {/* Handling nested userId structure found in ProvidersListPage.jsx */}
+                  {p.userId?.firstName || p.firstName || ''} {p.userId?.lastName || p.lastName || ''}
+                </MenuItem>
+              ))}
+            </Select>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
+              <Link
+                component="button"
+                variant="body2"
+                sx={{
+                  color: '#1976d2',
+                  fontSize: '0.8rem',
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                +Add
+              </Link>
+            </Box>
+          </Box>
+
+          {/* Visit Type Section */}
+          <Box>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
+              Visit Type:
+            </Typography>
+            <Select
+              fullWidth
+              size="small"
+              value={labFilters.visitTypeId}
+              onChange={(e) => setLabFilters(prev => ({ ...prev, visitTypeId: e.target.value }))}
+              sx={{
+                height: '32px',
+                fontSize: '0.85rem',
+                '& .MuiSelect-select': { py: 0.5 }
+              }}
+            >
+              <MenuItem value="all">All</MenuItem>
+              {appointmentTypes && appointmentTypes.length > 0 && appointmentTypes.map(at => (
+                <MenuItem key={at._id || at.id} value={at._id || at.id}>
+                  {at.name || at.title || 'Unknown'}
+                </MenuItem>
+              ))}
+            </Select>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
+              <Link
+                component="button"
+                variant="body2"
+                sx={{
+                  color: '#1976d2',
+                  fontSize: '0.8rem',
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                +Add
+              </Link>
+            </Box>
+          </Box>
+
+          {/* Bottom Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => {
+                setLabFilters({ providerId: 'all', visitTypeId: 'all' });
+                setLabAnchorEl(null);
+              }}
+              sx={{
+                color: '#f44336',
+                fontSize: '0.8rem',
+                textDecoration: 'none',
+                opacity: 0.8,
+                '&:hover': { opacity: 1, textDecoration: 'underline' }
+              }}
+            >
+              clear filter
+            </Link>
+          </Box>
+        </Box>
+      </Popover>
+      <LabCasesDialog 
+        open={labCasesDialogOpen} 
+        onClose={() => setLabCasesDialogOpen(false)} 
       />
     </Box>
   );
