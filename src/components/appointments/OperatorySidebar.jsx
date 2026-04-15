@@ -46,6 +46,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import PatientChat from "../shared/PatientChat";
 import AppointmentPage from "../shared/AppointmentPage";
 import { compactInputLabelSx, compactInputValueSx } from "../../constants/styles";
+import PatientRouteSlipDialog from "./PatientRouteSlipDialog";
 import { patientService } from "../../services/patient.service";
 import { invoiceService } from "../../services/invoice.service";
 
@@ -265,6 +266,7 @@ const OperatorySidebar = ({
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [appointmentPageOpen, setAppointmentPageOpen] = useState(false);
+  const [routeSlipOpen, setRouteSlipOpen] = useState(false);
 
   const searchDebounceRef = useRef(null);
 
@@ -287,6 +289,8 @@ const OperatorySidebar = ({
   const handleCloseChat = () => setChatOpen(false);
   const handleAppointmentPageClick = () => setAppointmentPageOpen(true);
   const handleCloseAppointmentPage = () => setAppointmentPageOpen(false);
+  const handleRouteSlipClick = () => setRouteSlipOpen(true);
+  const handleCloseRouteSlip = () => setRouteSlipOpen(false);
 
   // Fetch detailed patient data when a patient is selected
   useEffect(() => {
@@ -476,7 +480,7 @@ const OperatorySidebar = ({
 
                 {/* Action Buttons */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <ActionButton label="Route Slip" />
+                  <ActionButton label="Route Slip" onClick={handleRouteSlipClick} />
                   <ActionButton label="Family Appointments" />
                   <ActionButton label="Appointment History" />
                 </Box>
@@ -781,16 +785,24 @@ const OperatorySidebar = ({
 
       <PatientChat open={chatOpen} onClose={handleCloseChat} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
       <AppointmentPage open={appointmentPageOpen} onClose={handleCloseAppointmentPage} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
+      <PatientRouteSlipDialog 
+        open={routeSlipOpen} 
+        onClose={handleCloseRouteSlip} 
+        patient={selectedPatient}
+        patientDetails={patientDetails}
+        patientBalance={patientBalance}
+      />
     </Box>
   );
 };
 
 // --- Helper Components for the Overhaul ---
 
-const ActionButton = ({ label }) => (
+const ActionButton = ({ label, onClick }) => (
   <Button
     variant="contained"
     fullWidth
+    onClick={onClick}
     sx={{
       bgcolor: '#5c7cbc',
       borderRadius: '4px',
