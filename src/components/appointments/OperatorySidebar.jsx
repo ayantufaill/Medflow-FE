@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 import {
   Autocomplete,
   Box,
@@ -95,6 +96,93 @@ const StyledDateCalendar = ({ value, onChange }) => (
   </LocalizationProvider>
 );
 
+const ProductivityMetricCard = ({ title, amount, metrics, footer }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      p: 1.5,
+      border: "1px solid #cbd5e1",
+      borderRadius: 1.5,
+      bgcolor: "#ffffff",
+    }}
+  >
+    <Box sx={{ mb: 1 }}>
+      <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: "#475569" }}>{title}</Typography>
+      <Typography sx={{ fontSize: "0.8rem", color: "#64748b" }}>
+        S <strong>${amount.toLocaleString()}</strong>
+      </Typography>
+    </Box>
+
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+      {metrics.map((m, idx) => (
+        <Box key={idx} sx={{ display: "grid", gridTemplateColumns: "25px 50px 1fr 50px", alignItems: "center", gap: 1 }}>
+          <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b" }}>{m.label}</Typography>
+          <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, textAlign: "right", color: m.color }}>
+            ${m.value.toLocaleString()}
+          </Typography>
+          
+          <Box sx={{ position: "relative", height: 12, bgcolor: "#e2e8f0", borderRadius: 0.5, overflow: "visible" }}>
+            {/* Goal Line */}
+            {m.goal && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: "75%",
+                  top: -2,
+                  bottom: -2,
+                  width: 2,
+                  bgcolor: "#334155",
+                  zIndex: 2,
+                }}
+              />
+            )}
+            
+            {/* Indicator Triangle for P and C */}
+            {(m.label === "P" || m.label === "C") && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: `${Math.min((m.value / (m.goal || m.value * 1.5)) * 75, 100)}%`,
+                  top: -6,
+                  width: 0,
+                  height: 0,
+                  borderLeft: "4px solid transparent",
+                  borderRight: "4px solid transparent",
+                  borderTop: "6px solid #334155",
+                  transform: "translateX(-50%)",
+                  zIndex: 3,
+                }}
+              />
+            )}
+
+            {/* Actual Progress Bar */}
+            <Box
+              sx={{
+                width: `${Math.min((m.value / (m.goal || m.value * 1.5)) * 75, 100)}%`,
+                height: "100%",
+                bgcolor: m.color,
+                borderRadius: 0.5,
+              }}
+            />
+          </Box>
+
+          <Typography sx={{ fontSize: "0.7rem", color: "#94a3b8", textAlign: "right" }}>
+            {m.goal ? `$${m.goal.toLocaleString()}` : ""}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+
+    <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 0.3 }}>
+      {footer.map((f, idx) => (
+        <Typography key={idx} sx={{ fontSize: "0.7rem", color: "#64748b" }}>
+          {f.label} <strong>${f.value.toLocaleString()}</strong> (goal ${f.goal.toLocaleString()})
+        </Typography>
+      ))}
+    </Box>
+  </Paper>
+);
+
 const OperatorySidebar = ({
   START_HOUR,
   activeTab, 
@@ -137,6 +225,7 @@ const OperatorySidebar = ({
   const [searchPm, setSearchPm] = useState(true);
   const [searchDoubleBooking, setSearchDoubleBooking] = useState(false);
   const [searchRange, setSearchRange] = useState("1 month");
+  const [productivityProvider, setProductivityProvider] = useState("all");
 
   const [checkInChecklist, setCheckInChecklist] = useState({
     patientArrived: null,
@@ -465,7 +554,128 @@ const OperatorySidebar = ({
         )}
 
         {/* TAB 3: Productivity */}
-        {activeTab === 3 && <Box p={2}><Typography variant="body2" color="text.secondary">Productivity Metrics View</Typography></Box>}
+        {activeTab === 3 && (
+          <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Header Controls */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: "#1e293b" }}>Selected Provider:</Typography>
+                <Select
+                  size="small"
+                  value={productivityProvider}
+                  onChange={(e) => setProductivityProvider(e.target.value)}
+                  sx={{ height: 32, minWidth: 120, fontSize: "0.8rem" }}
+                  displayEmpty
+                >
+                  <MenuItem value="all">All</MenuItem>
+                  {providers.map((p) => {
+                    const providerId = p._id || p.id;
+                    const providerName = p.name || 
+                      (p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : "") ||
+                      (p.userId?.firstName && p.userId?.lastName ? `${p.userId.firstName} ${p.userId.lastName}` : "") ||
+                      p.providerCode || 
+                      `Provider #${providerId}`;
+                    
+                    return (
+                      <MenuItem key={providerId} value={providerId}>
+                        {providerName}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography sx={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>Date:</Typography>
+                  <TextField
+                    type="date"
+                    variant="standard"
+                    size="small"
+                    value={dayjs(selectedDate).format("YYYY-MM-DD")}
+                    onChange={(e) => onDateChange?.(dayjs(e.target.value))}
+                    InputProps={{ disableUnderline: true }}
+                    sx={{ 
+                      "& .MuiInputBase-input": { 
+                        fontSize: "0.8rem", 
+                        fontWeight: 700,
+                        color: "#1e293b",
+                        py: 0,
+                        cursor: "pointer",
+                        width: "105px"
+                      } 
+                    }}
+                  />
+                </Box>
+                <Button 
+                  variant="contained" 
+                  size="small" 
+                  sx={{ 
+                    height: 24, 
+                    px: 1.5,
+                    fontSize: "0.7rem", 
+                    textTransform: "none", 
+                    bgcolor: "#5c7cbc",
+                    borderRadius: 1,
+                    boxShadow: "none",
+                    "&:hover": { bgcolor: "#4a6496", boxShadow: "none" }
+                  }}
+                >
+                  Refresh
+                </Button>
+              </Box>
+            </Box>
+
+            <Divider />
+
+            {/* Metrics Cards */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <ProductivityMetricCard
+                title="Total"
+                amount={1294}
+                metrics={[
+                  { label: "P", value: 7115, goal: 6200, color: "#82b366" },
+                  { label: "C", value: 6458.5, goal: 6076, color: "#82b366" },
+                  { label: "GP", value: 8136, color: "#666666" },
+                  { label: "GC", value: 6458.5, color: "#b3b3b3" },
+                ]}
+                footer={[
+                  { label: "Production per hour", value: 222.34, goal: 193.7 },
+                  { label: "Production per visit", value: 1778.75, goal: 1550 },
+                ]}
+              />
+
+              <ProductivityMetricCard
+                title="Dentist"
+                amount={932}
+                metrics={[
+                  { label: "P", value: 6609, goal: 5600, color: "#82b366" },
+                  { label: "C", value: 6096.5, goal: 5488, color: "#82b366" },
+                  { label: "GP", value: 7517, color: "#666666" },
+                  { label: "GC", value: 6096.5, color: "#b3b3b3" },
+                ]}
+                footer={[
+                  { label: "Production per hour", value: 275.38, goal: 233.3 },
+                  { label: "Production per visit", value: 1652.25, goal: 1400 },
+                ]}
+              />
+
+              <ProductivityMetricCard
+                title="Hygienist"
+                amount={362}
+                metrics={[
+                  { label: "P", value: 506, goal: 600, color: "#f87171" },
+                  { label: "C", value: 362, goal: 588, color: "#f87171" },
+                  { label: "GP", value: 619, color: "#666666" },
+                  { label: "GC", value: 362, color: "#b3b3b3" },
+                ]}
+                footer={[
+                  { label: "Production per hour", value: 63.25, goal: 75 },
+                  { label: "Production per visit", value: 126.5, goal: 150 },
+                ]}
+              />
+            </Box>
+          </Box>
+        )}
       </Box>
 
       <Divider />
