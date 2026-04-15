@@ -18,6 +18,8 @@ import {
   Typography,
   Paper,
   Avatar,
+  Collapse,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import EventNoteIcon from "@mui/icons-material/EventNote";
@@ -29,12 +31,23 @@ import HistoryIcon from "@mui/icons-material/History";
 import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
+import FlagIcon from "@mui/icons-material/Flag";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import GroupIcon from "@mui/icons-material/Group";
+import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import PatientChat from "../shared/PatientChat";
 import AppointmentPage from "../shared/AppointmentPage";
 import { compactInputLabelSx, compactInputValueSx } from "../../constants/styles";
+import { patientService } from "../../services/patient.service";
+import { invoiceService } from "../../services/invoice.service";
 
 const StyledDateCalendar = ({ value, onChange }) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -213,6 +226,13 @@ const OperatorySidebar = ({
 }) => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [appointmentStatus, setAppointmentStatus] = useState("confirmed");
+  const [patientDetails, setPatientDetails] = useState(null);
+  const [patientBalance, setPatientBalance] = useState(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(true);
+  const [familyExpanded, setFamilyExpanded] = useState(true);
+  const [proceduresExpanded, setProceduresExpanded] = useState(true);
+  const [recareExpanded, setRecareExpanded] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   
   // --- Search Form State ---
   const [searchProvider, setSearchProvider] = useState(null);
@@ -268,6 +288,32 @@ const OperatorySidebar = ({
   const handleAppointmentPageClick = () => setAppointmentPageOpen(true);
   const handleCloseAppointmentPage = () => setAppointmentPageOpen(false);
 
+  // Fetch detailed patient data when a patient is selected
+  useEffect(() => {
+    if (selectedPatient?.id || selectedPatient?._id) {
+      const pid = selectedPatient.id || selectedPatient._id;
+      const fetchPatientFullDetails = async () => {
+        setLoadingDetails(true);
+        try {
+          const [details, balance] = await Promise.all([
+            patientService.getPatientWorkspace(pid),
+            invoiceService.getPatientBalance(pid)
+          ]);
+          setPatientDetails(details);
+          setPatientBalance(balance);
+        } catch (error) {
+          console.error("Error fetching patient details:", error);
+        } finally {
+          setLoadingDetails(false);
+        }
+      };
+      fetchPatientFullDetails();
+    } else {
+      setPatientDetails(null);
+      setPatientBalance(null);
+    }
+  }, [selectedPatient]);
+
   useEffect(() => {
     if (isCreatingPatient) return;
     if (!patientQuery?.trim()) {
@@ -315,9 +361,9 @@ const OperatorySidebar = ({
         
         {/* TAB 0: Patients */}
         {activeTab === 0 && (
-          <>
+          <Box sx={{ bgcolor: "#F0F4F8" }}>
             {/* Patient Search */}
-            <Box sx={{ p: 2, bgcolor: "#fafcff" }}>
+            <Box sx={{ p: 1.5, bgcolor: "#ffffff" }}>
               <Autocomplete
                 size="small"
                 options={patients}
@@ -340,19 +386,41 @@ const OperatorySidebar = ({
                   } else if (reason === 'clear') {
                     setPatientQuery('');
                     setSelectedPatient(null);
+                    setPatientDetails(null);
                     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
                     onPatientSearch?.('');
                   }
                 }}
-                renderInput={(params) => (<TextField {...params} placeholder="Search patients..." InputProps={{ ...params.InputProps, startAdornment: ( <InputAdornment position="start"><SearchIcon sx={{ color: "#94a3b8", fontSize: 20 }} /></InputAdornment> ), }} />)}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    placeholder="Search for Patients by name or ID" 
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#fafafa',
+                        borderRadius: '6px',
+                        '& fieldset': { borderColor: '#ddd' },
+                      }
+                    }}
+                    InputProps={{ 
+                      ...params.InputProps, 
+                      startAdornment: ( 
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ color: "#94a3b8", fontSize: 18 }} />
+                        </InputAdornment> 
+                      ), 
+                    }} 
+                  />
+                )}
               />
             </Box>
 
             {/* Quick Create Patient */}
             {showQuickCreate && (
-              <Box sx={{ p: 2 }}>
+              <Box sx={{ p: 2, bgcolor: 'white' }}>
                 <Typography sx={{ fontSize: '0.8rem', color: "#64748b", mb: 1.5, fontWeight: 500 }}>Create New Patient</Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={1}>
                   <Grid size={{ xs: 12 }}>
                     <TextField fullWidth variant="standard" size="small" label="First Name *" value={newFirstName} onChange={(e) => {setNewFirstName(e.target.value); setIsCreatingPatient(true);}} onBlur={() => setIsCreatingPatient(false)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}} />
                   </Grid>
@@ -360,146 +428,174 @@ const OperatorySidebar = ({
                     <TextField fullWidth variant="standard" size="small" label="Last Name *" value={newLastName} onChange={(e) => {setNewLastName(e.target.value); setIsCreatingPatient(true);}} onBlur={() => setIsCreatingPatient(false)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}} />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth variant="standard" size="small" label="Date of Birth" type="date" value={newDob} onChange={(e) => {setNewDob(e.target.value); setIsCreatingPatient(true);}} onBlur={() => setIsCreatingPatient(false)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}} />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth variant="standard" size="small" label="Mobile Phone" value={newPhone}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        let formatted = (digits.length <= 3) ? digits : (digits.length <= 6) ? `(${digits.slice(0, 3)}) ${digits.slice(3)}` : `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                        setNewPhone(formatted);
-                        setIsCreatingPatient(true);
-                      }}
-                      onBlur={() => setIsCreatingPatient(false)}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ inputMode: 'numeric', maxLength: 14, style: { paddingLeft: '24px' } }}
-                      placeholder="(201) 555-0123"
-                      InputProps={{ startAdornment: <InputAdornment position="start" sx={{ ml: 0.5 }}><span style={{ fontSize: '16px', color: '#616161' }}>☎</span></InputAdornment> }}
-                      sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth variant="standard" size="small" label="Email" type="email" value={newEmail} onChange={(e) => {setNewEmail(e.target.value); setIsCreatingPatient(true);}} onBlur={() => setIsCreatingPatient(false)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}} />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Checkbox size="small" checked={sendWelcomeEmail} onChange={(e) => setSendWelcomeEmail(e.target.checked)} />
-                        <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontWeight: 600 }}>Send welcome email</Typography>
-                      </Box>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Checkbox size="small" checked={isNewPatient} onChange={(e) => setIsNewPatient(e.target.checked)} />
-                        <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontWeight: 600 }}>New patient</Typography>
-                      </Box>
-                    </Box>
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <Button fullWidth variant="contained" size="small" onClick={() => { setIsCreatingPatient(false); handleCreatePatientClick(); }} sx={{ textTransform: "none", bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, fontSize: "0.8rem", py: 0.65, mt: 1 }}>Create Patient</Button>
+                    <Button fullWidth variant="contained" size="small" onClick={() => { setIsCreatingPatient(false); handleCreatePatientClick(); }} sx={{ textTransform: "none", bgcolor: "#1976d2", "&:hover": { bgcolor: "#1565c0" }, fontSize: "0.75rem", py: 0.5, mt: 1 }}>Create Patient</Button>
                   </Grid>
                 </Grid>
               </Box>
             )}
 
             {hasSelectedPatient && (
-              <>
-                <Divider />
-                <Box sx={{ p: 2 }}>
-                  <Button
-                    fullWidth variant="contained" size="small" startIcon={<EventNoteIcon />}
-                    onClick={onScheduleAppointmentClick} disabled={!onScheduleAppointmentClick}
-                    sx={{ textTransform: "none", borderRadius: 1.5, bgcolor: onScheduleAppointmentClick ? "#1976d2" : "#cbd5e1", "&:hover": { bgcolor: onScheduleAppointmentClick ? "#1565c0" : "#94a3b8" }, fontSize: '0.8rem', py: 0.75 }}
-                  >
-                    Schedule Appointment
-                  </Button>
-                </Box>
-                <Box sx={{ px: 2, pb: 2, bgcolor: '#f8fafc' }}>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      {[PersonOutlineIcon, ChatOutlinedIcon, ExitToAppIcon].map((Icon, i) => (
-                        <IconButton key={i} size="small" sx={{ bgcolor: '#eef2f6', borderRadius: 1.5, color: '#1e293b', p: 0.75 }} onClick={() => { if (i === 1) handleChatClick(); if (i === 2) handleAppointmentPageClick(); }}>
-                          <Icon fontSize="small" />
-                        </IconButton>
-                      ))}
+              <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1.5 }}>
+                {/* Patient Header Card */}
+                <Paper variant="outlined" sx={{ p: 1.25, borderRadius: '8px', border: '1px solid #ddd' }}>
+                  <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pt: 0.5 }}>
+                      <IconButton size="small" sx={{ p: 0.5 }} onClick={handleAppointmentPageClick}><PersonOutlineIcon sx={{ fontSize: 18, color: '#666' }} /></IconButton>
+                      <IconButton size="small" sx={{ p: 0.5 }} onClick={handleChatClick}><ChatOutlinedIcon sx={{ fontSize: 18, color: '#666' }} /></IconButton>
+                      <IconButton size="small" sx={{ p: 0.5 }}><ExitToAppIcon sx={{ fontSize: 18, color: '#666' }} /></IconButton>
                     </Box>
-                    <Paper elevation={0} sx={{ flexGrow: 1, p: 1.5, border: '1px solid #cbd5e1', borderRadius: 1.5 }}>
-                      <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#1e293b' }}>
-                        {selectedPatient?.firstName && selectedPatient?.lastName ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : selectedPatient?.name || 'Patient'} (#1218)
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a3353' }}>
+                        {selectedPatient?.firstName} {selectedPatient?.lastName} (#{selectedPatient?.patientCode || selectedPatient?._id?.slice(-4) || '---'})
                       </Typography>
-                      <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.3 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>Birthday: {selectedPatient?.dateOfBirth ? new Date(selectedPatient.dateOfBirth).toLocaleDateString() : 'N/A'}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>Phone: {selectedPatient?.phonePrimary || selectedPatient?.mobilePhone || 'N/A'}</Typography>
-                          <IconButton size="small" onClick={() => copyToClipboard(selectedPatient?.phonePrimary || selectedPatient?.mobilePhone || '')} sx={{ p: 0.25 }}> <ContentCopy sx={{ fontSize: 12, color: '#94a3b8' }} /> </IconButton>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#666', mt: 0.25 }}>
+                        Birthday: {selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '---'} (35)
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.4, mt: 1.5 }}>
+                        <Box sx={{ bgcolor: '#eee', p: 0.3, borderRadius: '4px', display: 'flex' }}><LocalHospitalIcon sx={{ fontSize: 12, color: '#999' }} /></Box>
+                        <Box sx={{ bgcolor: '#eee', p: 0.3, borderRadius: '4px', display: 'flex', position: 'relative' }}>
+                          <Typography sx={{ fontSize: '10px', color: '#999', lineHeight: 1, fontWeight: 700 }}>He</Typography>
                         </Box>
                       </Box>
-                      <Box sx={{ display: 'flex', gap: 0.5, mt: 1.5 }}>
-                        {['H', 'P', 'B', 'F', 'D'].map((char) => (
-                          <Avatar key={char} sx={{ width: 22, height: 22, fontSize: '9px', bgcolor: '#e2e8f0', color: '#64748b' }}>{char}</Avatar>
-                        ))}
-                      </Box>
-                    </Paper>
-                  </Box>
-                </Box>
-
-                <Box sx={{ p: 2 }}>
-                  {/* Appointment Card */}
-                  <Paper elevation={0} sx={{ border: '1px solid #cbd5e1', borderRadius: 1.5, overflow: 'hidden', mb: 2 }}>
-                    <Box sx={{ position: 'relative', bgcolor: getStatusColor ? getStatusColor(appointmentStatus, '#a78bfa') : '#a78bfa', p: 0.75, color: 'white', overflow: 'hidden' }}>
-                      <Box sx={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: `repeating-linear-gradient(90deg, transparent 0px, transparent 12px, rgba(255, 255, 255, 0.15) 12px, rgba(255, 255, 255, 0.15) 24px )`, animation: "slide 1s linear infinite", "@keyframes slide": { "0%": { backgroundPosition: "0 0" }, "100%": { backgroundPosition: "24px 0" } } }} />
-                      <Typography sx={{ fontSize: '11px', fontWeight: 800, textAlign: 'center', letterSpacing: '0.5px', position: 'relative' }}>RECARE 03/04/2026 @ 09:00 AM</Typography>
-                    </Box>
-                    <Box sx={{ p: 1.5 }}>
-                      <Select value={appointmentStatus} onChange={(e) => setAppointmentStatus(e.target.value)} size="small" fullWidth sx={{ height: 32, fontSize: '0.8rem', mb: 1, borderRadius: 1 }}>
-                        {['unconfirmed', 'preconfirmed', 'confirmed', 'seated', 'call', 'checkout incomplete', 'checkout complete', 'no show', 'rescheduled', 'cancelled'].map(s => <MenuItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</MenuItem>)}
-                      </Select>
-                      <Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>hygiene, periodic ex, fl</Typography>
-                    </Box>
-                  </Paper>
-
-                  {/* Pre-Appointment Checklist restored */}
-                  <Box sx={{ mb: 2 }}>
-                    <Box onClick={() => setPreAppointmentExpanded(!preAppointmentExpanded)} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 1, px: 1.5, borderRadius: 1.5, bgcolor: "#f8fafc", cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#f59e0b" }} />
-                        <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: "#475569" }}>Pre-Appointment Checklist</Typography>
-                      </Box>
-                      <Box sx={{ transform: preAppointmentExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", color: "#64748b" }}><EventNoteIcon sx={{ fontSize: 16 }} /></Box>
-                    </Box>
-                    {preAppointmentExpanded && (
-                      <Box sx={{ pt: 1 }}>
-                        {['importHistory', 'importRecord', 'apptReminder', 'verifyInsurance', 'premedicationReminder', 'labCaseReceived'].map(key => (
-                          <Box key={key} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 0.75, px: 1 }}>
-                            <Typography sx={{ fontSize: '0.75rem', color: "#475569" }}>{key.replace(/([A-Z])/g, ' $1').trim()}</Typography>
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              <Chip label="N/A" size="small" onClick={() => handlePreAppointmentSelection(key, 'na')} sx={{ minWidth: 48, height: 28, fontSize: 11, bgcolor: preAppointmentChecklist[key] === 'na' ? '#ef4444' : '#f1f5f9', color: preAppointmentChecklist[key] === 'na' ? '#fff' : '#64748b' }} />
-                              <IconButton size="small" onClick={() => handlePreAppointmentSelection(key, 'checked')} sx={{ width: 28, height: 28, border: '2px solid', borderColor: preAppointmentChecklist[key] === 'checked' ? '#10b981' : '#cbd5e1', bgcolor: preAppointmentChecklist[key] === 'checked' ? '#10b981' : 'transparent', color: '#fff' }}><CheckIcon sx={{ fontSize: 16 }} /></IconButton>
-                            </Box>
+                      <Box sx={{ display: 'flex', gap: 0.4, mt: 0.5 }}>
+                        {['B', 'R', 'F', 'D'].map(char => (
+                          <Box key={char} sx={{ width: 18, height: 18, bgcolor: '#f5f5f5', color: '#999', fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', border: '1px solid #eee' }}>
+                            {char}
                           </Box>
                         ))}
                       </Box>
-                    )}
+                    </Box>
                   </Box>
+                </Paper>
 
-                  {/* Other Dropdowns restored */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel sx={{ fontSize: '0.8rem' }}>ReAppointment</InputLabel>
-                      <Select label="ReAppointment" defaultValue="" sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}>
-                        {['1 week', '2 weeks', '1 month', '3 months', '6 months', '1 year'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                    <FormControl fullWidth size="small">
-                      <InputLabel sx={{ fontSize: '0.8rem' }}>Recare</InputLabel>
-                      <Select label="Recare" defaultValue="" sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}>
-                        {['3 months', '4 months', '6 months', '9 months', '12 months'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Box>
+                {/* Section: Procedure List Example */}
+                <Box>
+                  <HeaderAccordion title="P 1 #15 crown /bu" value="____ min" icon={KeyboardArrowRightIcon} expanded={proceduresExpanded} setExpanded={setProceduresExpanded} />
+                  <HeaderAccordion title="Recare" value="____ min" icon={EventNoteIcon} expanded={recareExpanded} setExpanded={setRecareExpanded} />
                 </Box>
-              </>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <ActionButton label="Route Slip" />
+                  <ActionButton label="Family Appointments" />
+                  <ActionButton label="Appointment History" />
+                </Box>
+
+                <Button variant="contained" fullWidth sx={{ bgcolor: '#94a3b8', borderRadius: '4px', textTransform: 'none', py: 0.75, fontSize: '0.85rem', fontWeight: 600, boxShadow: 'none' }}>
+                  Purchase Products
+                </Button>
+
+                {/* Patient Details Detail View */}
+                <DetailAccordion title="Patient Details" expanded={detailsExpanded} setExpanded={setDetailsExpanded}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
+                    <Box>
+                      <Typography className="detail-label" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>Preferred Providers <KeyboardArrowDownIcon sx={{ fontSize: 14 }} /></Typography>
+                      <Box sx={{ pl: 1, mt: 0.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>Preferred Dentist:</Typography>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#333', fontWeight: 600 }}>
+                            {patientDetails?.preferredProvider?.name || patientDetails?.preferredDentist?.name || '---'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>Preferred Hygienist:</Typography>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#333', fontWeight: 600 }}>
+                            {patientDetails?.preferredHygienist?.name || '---'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Patient Forms</Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, pl: 1 }}>
+                        {(patientDetails?.forms || ['B', 'R', 'P', 'Q']).map(form => {
+                          const char = typeof form === 'string' ? form : form.type?.[0] || '?';
+                          const isCompleted = typeof form === 'object' ? form.status === 'completed' : false;
+                          return (
+                            <Tooltip key={char} title={typeof form === 'object' ? form.name : char}>
+                              <Box sx={{ 
+                                width: 18, height: 18, 
+                                bgcolor: isCompleted ? '#10b981' : (char === 'B' ? '#ef4444' : '#f5f5f5'), 
+                                color: (isCompleted || char === 'B') ? 'white' : '#999', 
+                                fontSize: '10px', fontWeight: 800, 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' 
+                              }}>{char}</Box>
+                            </Tooltip>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label" sx={{ color: (patientDetails?.medicalAlerts?.length > 0 || patientDetails?.medicalHistory?.alerts?.length > 0) ? '#ef4444' : '#777' }}>Medical Alerts</Typography>
+                      {(patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts || []).length > 0 ? (
+                        (patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts).map((alert, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, pl: 1 }}>
+                            {typeof alert === 'string' ? alert : alert.description || alert.name}
+                          </Typography>
+                        ))
+                      ) : (
+                        <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No alerts</Typography>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Patient Flags</Typography>
+                      {(patientDetails?.flags || []).length > 0 ? (
+                        patientDetails.flags.map((flag, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, pl: 1 }}>{flag}</Typography>
+                        ))
+                      ) : (
+                        <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No flags</Typography>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Bills</Typography>
+                      <Box sx={{ pl: 1 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Last Bill: {patientBalance?.lastBillDate ? dayjs(patientBalance.lastBillDate).format('MM/DD/YYYY') : 'None'}</Typography>
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Used Amount:</Typography>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#333', pl: 1, fontWeight: 600 }}>
+                        ${patientBalance?.usedAmount?.toLocaleString() || '0.00'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </DetailAccordion>
+
+                {/* Family Details Accordion */}
+                <DetailAccordion title="Family Details" expanded={familyExpanded} setExpanded={setFamilyExpanded}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
+                    <Box>
+                      <Typography className="detail-label">Family members:</Typography>
+                      {(patientDetails?.familyMembers || []).length > 0 ? (
+                        patientDetails.familyMembers.map((member, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#333', pl: 1 }}>
+                            {member.firstName} {member.lastName} ({member.relationship || 'Member'})
+                          </Typography>
+                        ))
+                      ) : (
+                        <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No family found</Typography>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Family Bills:</Typography>
+                      <Box sx={{ pl: 1, mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Total outstanding: <strong>${patientBalance?.familyTotalOutstanding?.toLocaleString() || '0.00'}</strong></Typography>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Individual Outstanding: <strong>${patientBalance?.individualOutstanding?.toLocaleString() || '0.00'}</strong></Typography>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Insurance Outstanding: <strong>${patientBalance?.insuranceOutstanding?.toLocaleString() || '0.00'}</strong></Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </DetailAccordion>
+              </Box>
             )}
-          </>
+          </Box>
         )}
 
         {/* TAB 1: Pending */}
@@ -688,5 +784,88 @@ const OperatorySidebar = ({
     </Box>
   );
 };
+
+// --- Helper Components for the Overhaul ---
+
+const ActionButton = ({ label }) => (
+  <Button
+    variant="contained"
+    fullWidth
+    sx={{
+      bgcolor: '#5c7cbc',
+      borderRadius: '4px',
+      textTransform: 'none',
+      py: 0.6,
+      fontSize: '0.85rem',
+      fontWeight: 600,
+      boxShadow: 'none',
+      "&:hover": { bgcolor: '#4a6496', boxShadow: 'none' }
+    }}
+  >
+    {label}
+  </Button>
+);
+
+const HeaderAccordion = ({ title, value, icon: Icon, expanded, setExpanded }) => (
+  <Box sx={{ mb: 0.5 }}>
+    <Box 
+      onClick={() => setExpanded(!expanded)}
+      sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        bgcolor: 'white', 
+        border: '1px solid #ddd', 
+        borderRadius: '4px', 
+        p: 0.75, 
+        cursor: 'pointer' 
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Icon sx={{ fontSize: 16, color: '#666' }} />
+        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333' }}>{title}</Typography>
+      </Box>
+      <Typography sx={{ fontSize: '0.75rem', color: '#999' }}>{value}</Typography>
+    </Box>
+  </Box>
+);
+
+const DetailAccordion = ({ title, children, expanded, setExpanded }) => (
+  <Box sx={{ mb: 1, border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+    <Box 
+      onClick={() => setExpanded(!expanded)}
+      sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        bgcolor: '#94a3b8', 
+        p: 0.75, 
+        cursor: 'pointer' 
+      }}
+    >
+      <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <KeyboardArrowDownIcon sx={{ fontSize: 16, transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: '0.2s' }} />
+        {title}
+      </Typography>
+    </Box>
+    <Collapse in={expanded}>
+      <Box sx={{ bgcolor: 'white' }}>
+        <style>
+          {`
+            .detail-label {
+              font-size: 0.75rem;
+              font-weight: 700;
+              color: #777;
+              border-left: 2px solid #ddd;
+              padding-left: 8px;
+              margin-bottom: 4px;
+            }
+          `}
+        </style>
+        {children}
+      </Box>
+    </Collapse>
+  </Box>
+);
 
 export default OperatorySidebar;

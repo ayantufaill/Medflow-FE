@@ -162,15 +162,23 @@ const AddCoveragePage = () => {
   const fetchPatientData = async () => {
     try {
       setLoading(true);
-      const [patientData, companies] = await Promise.all([
-        patientService.getPatientWorkspace(patientId),
+      const promises = [
         insuranceCompanyService.getAllInsuranceCompanies(1, 500),
-      ]);
-      setPatient(patientData);
-      setAllCompanies(companies || { companies: [] });
+      ];
+      
+      if (patientId) {
+        promises.push(patientService.getPatientWorkspace(patientId));
+      }
+
+      const results = await Promise.all(promises);
+      
+      setAllCompanies(results[0] || { companies: [] });
+      if (patientId) {
+        setPatient(results[1]);
+      }
     } catch (err) {
-      console.error('Failed to load patient data', err);
-      showSnackbar('Failed to load patient data', 'error');
+      console.error('Failed to load data', err);
+      showSnackbar('Failed to load required data', 'error');
     } finally {
       setLoading(false);
     }
@@ -266,7 +274,7 @@ const AddCoveragePage = () => {
       {/* Top Header Bar */}
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 1.5, borderBottom: '1px solid #ddd', position: 'relative' }}>
         <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: '0.9rem' }}>
-          Add a Coverage for {patient ? `${patient.firstName} ${patient.lastName}` : 'Patient'}
+          Add a Coverage for Insurance
         </Typography>
         <Box sx={{ position: 'absolute', right: '1.5rem', display: 'flex', gap: 0.5 }}>
           <IconButton size="small"><BookIcon fontSize="small" /></IconButton>

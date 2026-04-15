@@ -222,1702 +222,1732 @@ function App() {
   return (
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <SnackbarProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route
-                path="/login"
-                element={
-                  <PublicRoute>
-                    <LoginPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <RegisterPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/forgot-password"
-                element={
-                  <PublicRoute>
-                    <ForgotPasswordPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/setup-password"
-                element={
-                  <PublicRoute>
-                    <SetupPasswordPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/register/verify"
-                element={
-                  <PublicRoute>
-                    <RegisterVerifyPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/portal/login"
-                element={
-                  <PublicRoute>
-                    <PortalLoginPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/portal/register"
-                element={
-                  <PublicRoute>
-                    <PortalRegisterPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/portal"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalDashboardPage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/appointments"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalAppointmentsPage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/appointments/:appointmentId"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalAppointmentDetailPage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/messages"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient', 'Admin', 'Provider', 'Doctor']}>
-                    <RoleBasedPortalMessagesRoute />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/forms"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalFormsPage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/forms/:formId"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalFormDetailPage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/profile"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalProfilePage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal/notifications"
-                element={
-                  <ProtectedRoute requiredRoles={['Patient']}>
-                    <PortalLayout>
-                      <PortalNotificationsPage />
-                    </PortalLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute requireAllRoles={true}>
-                    <Layout>
-                      <DashboardPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/demo/insurance-form"
-                element={
-                  <ProtectedRoute requireAllRoles={true}>
-                    <InsuranceFormMockupPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute requireAllRoles={true}>
-                    <Layout>
-                      <ProfilePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/change-password"
-                element={
-                  <ProtectedRoute requireAllRoles={true}>
-                    <Layout>
-                      <ChangePasswordPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AdminPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/user-management"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AdminPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AdminPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/clinical-management"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AdminPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/finance-management"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AdminPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/insurance-management"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AdminPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/onboarding"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <PracticeOnboardingPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/kiosk-accounts"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <KioskAccountsView />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/my-chart-configuration"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <MyChartConfiguration />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/operatory-setup"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <OperatorySetup />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/patient-flags"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <PatientFlags />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/financial/payment-terminals"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <PaymentTerminals />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/document-category-setup"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <DocumentCategorySetup />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/schedule-configuration"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ScheduleConfiguration />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/practice-settings"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <PracticeSettings />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/practice-information"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <PracticeInformation />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/office-timings"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <OfficeTimings />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/practice-setup/online-schedule"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <OnlineSchedule />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <UsersListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <CreateUserPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users/:userId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <EditUserPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users/:userId/roles"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AssignRolesPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users/:userId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ViewUserPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice-info"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <PracticeInfoListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice-info/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <CreatePracticeInfoPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice-info/:practiceInfoId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <EditPracticeInfoPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice-info/:practiceInfoId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ViewPracticeInfoPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <PatientManagementPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <CreatePatientPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/import"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <ImportPatientsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/details/:patientId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <PatientDetailPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <EditPatientPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/view"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <ViewPatientPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <RedirectToPatientDetails />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/insurance/:insuranceId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <ViewPatientInsurancePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/insurance/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <AddCoveragePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/member/:patientId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <MembershipPlanPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/allergies/:allergyId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ViewPatientAllergyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/medical-history"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <PatientMedicalHistoryPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/signed-documents"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                    <Layout>
-                      <PatientSignedDocumentsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/dental-history"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <PatientDentalHistoryPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/additional-documents"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <PatientAdditionalDocumentsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/report"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <PatientReportPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/report/risk"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <RiskAssessmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/report/homecare"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <HomeCarePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/report/concerns"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <ConcernsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients/:patientId/report/showcase"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <ShowcasePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patient-reports"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
-                    <Layout>
-                      <PatientReportsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/allergies"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={['Admin', 'Doctor', 'Receptionist']}
-                  >
-                    <Layout>
-                      <AllergiesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/allergies/new"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={['Admin', 'Doctor', 'Receptionist']}
-                  >
-                    <Layout>
-                      <CreateAllergyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/allergies/:id/edit"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={['Admin', 'Doctor', 'Receptionist']}
-                  >
-                    <Layout>
-                      <EditAllergyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/insurance-companies"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <InsuranceCompaniesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/insurance-companies/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <CreateInsuranceCompanyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/insurance-companies/:insuranceCompanyId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <EditInsuranceCompanyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/providers"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ProvidersListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/providers/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <CreateProviderPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/providers/:providerId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <EditProviderPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/providers/:providerId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ViewProviderPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointment-types"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <AppointmentTypesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointment-types/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <CreateAppointmentTypePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointment-types/:appointmentTypeId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ViewAppointmentTypePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointment-types/:appointmentTypeId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <EditAppointmentTypePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rooms"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <RoomsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rooms/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <CreateRoomPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rooms/:roomId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <ViewRoomPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rooms/:roomId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin']}>
-                    <Layout>
-                      <EditRoomPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
-                    <Layout>
-                      <AppointmentsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/portal-messages"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Provider', 'Doctor']}>
-                    <Layout>
-                      <ProviderPortalMessagesPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments/new"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <CreateAppointmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments/schedule"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <SchedulePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments/calendar"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <AppointmentCalendarPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments/operatory-schedule"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <OperatorySchedulePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments/:appointmentId"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
-                    <Layout>
-                      <ViewAppointmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/appointments/:appointmentId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <EditAppointmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/waitlist"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <WaitlistListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/waitlist/new"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <CreateWaitlistPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/waitlist/:waitlistEntryId"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <ViewWaitlistPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/waitlist/:waitlistEntryId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <EditWaitlistPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/recurring-appointments"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <RecurringAppointmentsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/recurring-appointments/new"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <CreateRecurringAppointmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/recurring-appointments/:recurringAppointmentId"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <ViewRecurringAppointmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/recurring-appointments/:recurringAppointmentId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
-                    <Layout>
-                      <EditRecurringAppointmentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/note-templates"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <NoteTemplatesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/note-templates/create"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <CreateNoteTemplatePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/note-templates/:noteTemplateId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ViewNoteTemplatePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/note-templates/:noteTemplateId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <EditNoteTemplatePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical-notes"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ClinicalNotesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* Clinical Page Routes */}
-              <Route
-                path="/clinical"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ClinicalPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ExamPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/head-neck"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <HeadAndNeck />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/tooth-structure"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <TeethStructureExam />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/radiographic"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <Radiographic />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/morphological"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <Morphological />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/periodontal"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <PeriodontalExamPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/dentofacial"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ExamDentofacial />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/airway"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <AirwayPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/exam/tmj"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <DentalTmdExamPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/diagnostic-opinion"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <BiomechanicalPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/diagnostic-opinion/periodontal"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <PeriodontalPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/diagnostic-opinion/biomechanical"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <BiomechanicalPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/diagnostic-opinion/functional"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <FunctionalPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/diagnostic-opinion/dentofacial"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <DentofacialPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/treatment-plan"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <TreatmentPlanPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/adjunctive-therapy"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <AdjunctiveTherapyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/rx"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <RXPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/referral"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ReferralPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/progress-notes"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ProgressNotesPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/lab-case"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <LabCasePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/ai-conversation"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <AIConversationPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/insurance"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <InsurancePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical-notes/create"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <CreateClinicalNotePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical-notes/:clinicalNoteId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ViewClinicalNotePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical-notes/:clinicalNoteId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <EditClinicalNotePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vital-signs"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <VitalSignsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vital-signs/create"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <CreateVitalSignPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vital-signs/:vitalSignId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ViewVitalSignPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vital-signs/:vitalSignId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <EditVitalSignPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vital-signs/patient/:patientId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <PatientVitalHistoryPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <DocumentsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents/upload"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <UploadDocumentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents/:documentId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <ViewDocumentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents/:documentId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <EditDocumentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents/patient/:patientId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-                    <Layout>
-                      <PatientDocumentsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* Sprint 5 - Billing Module Routes */}
-              <Route
-                path="/services"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ServicesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/services/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <CreateServicePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/services/:serviceId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ViewServicePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/services/:serviceId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <EditServicePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoices"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <InvoicesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoices/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <CreateInvoicePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoices/:invoiceId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <ViewInvoicePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoices/:invoiceId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <EditInvoicePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/payments"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <PaymentsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/payments/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <RecordPaymentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/payments/:paymentId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-                    <Layout>
-                      <ViewPaymentPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/estimates"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
-                    <Layout>
-                      <EstimatesListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/estimates/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
-                    <Layout>
-                      <CreateEstimatePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/estimates/:estimateId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
-                    <Layout>
-                      <EditEstimatePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/estimates/:estimateId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
-                    <Layout>
-                      <ViewEstimatePage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* Sprint 6 - Claims Module */}
-              <Route
-                path="/claims"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ClaimsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/claims/denied"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <DeniedClaimsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/claims/:claimId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ViewClaimPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/claims/:claimId/resubmit"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ResubmitClaimPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/claims/secondary"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <SecondaryClaimsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* Sprint 6 - ERA Module */}
-              <Route
-                path="/era"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ERAListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/era/import"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ImportERAPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/era/unmatched"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <UnmatchedERAItemsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/era/:eraId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-                    <Layout>
-                      <ViewERAPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* Sprint 6 - Authorization Module */}
-              <Route
-                path="/authorizations"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
-                    <Layout>
-                      <AuthorizationsListPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/authorizations/new"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
-                    <Layout>
-                      <CreateAuthorizationPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/authorizations/:authorizationId"
-                element={
-                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
-                    <Layout>
-                      <ViewAuthorizationPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/" element={<HomeRoute />} />
-              <Route path="*" element={<HomeRoute />} />
-            </Routes>
-          </BrowserRouter>
-        </SnackbarProvider>
-      </AuthProvider>
-    </ThemeProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <AuthProvider>
+            <SnackbarProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route
+                    path="/login"
+                    element={
+                      <PublicRoute>
+                        <LoginPage />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/register"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <RegisterPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/forgot-password"
+                    element={
+                      <PublicRoute>
+                        <ForgotPasswordPage />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/setup-password"
+                    element={
+                      <PublicRoute>
+                        <SetupPasswordPage />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/register/verify"
+                    element={
+                      <PublicRoute>
+                        <RegisterVerifyPage />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/login"
+                    element={
+                      <PublicRoute>
+                        <PortalLoginPage />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/register"
+                    element={
+                      <PublicRoute>
+                        <PortalRegisterPage />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalDashboardPage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/appointments"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalAppointmentsPage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/appointments/:appointmentId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalAppointmentDetailPage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/messages"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient', 'Admin', 'Provider', 'Doctor']}>
+                        <RoleBasedPortalMessagesRoute />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/forms"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalFormsPage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/forms/:formId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalFormDetailPage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/profile"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalProfilePage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal/notifications"
+                    element={
+                      <ProtectedRoute requiredRoles={['Patient']}>
+                        <PortalLayout>
+                          <PortalNotificationsPage />
+                        </PortalLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute requireAllRoles={true}>
+                        <Layout>
+                          <DashboardPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/demo/insurance-form"
+                    element={
+                      <ProtectedRoute requireAllRoles={true}>
+                        <InsuranceFormMockupPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute requireAllRoles={true}>
+                        <Layout>
+                          <ProfilePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/change-password"
+                    element={
+                      <ProtectedRoute requireAllRoles={true}>
+                        <Layout>
+                          <ChangePasswordPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AdminPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/user-management"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AdminPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AdminPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/clinical-management"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AdminPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/finance-management"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AdminPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/insurance-management"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AdminPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/onboarding"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <PracticeOnboardingPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/kiosk-accounts"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <KioskAccountsView />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/my-chart-configuration"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <MyChartConfiguration />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/operatory-setup"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <OperatorySetup />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/patient-flags"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <PatientFlags />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/financial/payment-terminals"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <PaymentTerminals />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/document-category-setup"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <DocumentCategorySetup />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/schedule-configuration"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ScheduleConfiguration />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/practice-settings"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <PracticeSettings />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/practice-information"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <PracticeInformation />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/office-timings"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <OfficeTimings />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/practice-setup/online-schedule"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <OnlineSchedule />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/users"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <UsersListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/users/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <CreateUserPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/users/:userId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <EditUserPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/users/:userId/roles"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AssignRolesPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/users/:userId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ViewUserPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/practice-info"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <PracticeInfoListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/practice-info/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <CreatePracticeInfoPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/practice-info/:practiceInfoId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <EditPracticeInfoPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/practice-info/:practiceInfoId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ViewPracticeInfoPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <PatientManagementPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <CreatePatientPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/import"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <ImportPatientsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/details/:patientId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <PatientDetailPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <EditPatientPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/view"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <ViewPatientPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <RedirectToPatientDetails />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/insurance/:insuranceId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <ViewPatientInsurancePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/insurance/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <AddCoveragePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <AddCoveragePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/member/:patientId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <MembershipPlanPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/allergies/:allergyId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ViewPatientAllergyPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/medical-history"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <PatientMedicalHistoryPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/signed-documents"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <PatientSignedDocumentsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/dental-history"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <PatientDentalHistoryPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/additional-documents"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <PatientAdditionalDocumentsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/report"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <PatientReportPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/report/risk"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <RiskAssessmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/report/homecare"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <HomeCarePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/report/concerns"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <ConcernsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patients/:patientId/report/showcase"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <ShowcasePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/patient-reports"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+                        <Layout>
+                          <PatientReportsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/allergies"
+                    element={
+                      <ProtectedRoute
+                        requiredRoles={['Admin', 'Doctor', 'Receptionist']}
+                      >
+                        <Layout>
+                          <AllergiesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/allergies/new"
+                    element={
+                      <ProtectedRoute
+                        requiredRoles={['Admin', 'Doctor', 'Receptionist']}
+                      >
+                        <Layout>
+                          <CreateAllergyPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/allergies/:id/edit"
+                    element={
+                      <ProtectedRoute
+                        requiredRoles={['Admin', 'Doctor', 'Receptionist']}
+                      >
+                        <Layout>
+                          <EditAllergyPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance-companies"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <InsuranceCompaniesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance-companies/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <CreateInsuranceCompanyPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance-companies/:insuranceCompanyId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <EditInsuranceCompanyPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/providers"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ProvidersListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/providers/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <CreateProviderPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/providers/:providerId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <EditProviderPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/providers/:providerId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ViewProviderPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointment-types"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <AppointmentTypesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointment-types/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <CreateAppointmentTypePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointment-types/:appointmentTypeId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ViewAppointmentTypePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointment-types/:appointmentTypeId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <EditAppointmentTypePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/rooms"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <RoomsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/rooms/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <CreateRoomPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/rooms/:roomId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <ViewRoomPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/rooms/:roomId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin']}>
+                        <Layout>
+                          <EditRoomPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
+                        <Layout>
+                          <AppointmentsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/portal-messages"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Provider', 'Doctor']}>
+                        <Layout>
+                          <ProviderPortalMessagesPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments/new"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <CreateAppointmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments/schedule"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <SchedulePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments/calendar"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <AppointmentCalendarPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments/operatory-schedule"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <OperatorySchedulePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments/:appointmentId"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist", "Provider", "Doctor"]}>
+                        <Layout>
+                          <ViewAppointmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/appointments/:appointmentId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <EditAppointmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/waitlist"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <WaitlistListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/waitlist/new"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <CreateWaitlistPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/waitlist/:waitlistEntryId"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <ViewWaitlistPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/waitlist/:waitlistEntryId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <EditWaitlistPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/recurring-appointments"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <RecurringAppointmentsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/recurring-appointments/new"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <CreateRecurringAppointmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/recurring-appointments/:recurringAppointmentId"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <ViewRecurringAppointmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/recurring-appointments/:recurringAppointmentId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={["Admin", "Receptionist"]}>
+                        <Layout>
+                          <EditRecurringAppointmentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/note-templates"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <NoteTemplatesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/note-templates/create"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <CreateNoteTemplatePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/note-templates/:noteTemplateId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ViewNoteTemplatePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/note-templates/:noteTemplateId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <EditNoteTemplatePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical-notes"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ClinicalNotesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Clinical Page Routes */}
+                  <Route
+                    path="/clinical"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ClinicalPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ExamPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/head-neck"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <HeadAndNeck />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/tooth-structure"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <TeethStructureExam />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/radiographic"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <Radiographic />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/morphological"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <Morphological />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/periodontal"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <PeriodontalExamPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/dentofacial"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ExamDentofacial />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/airway"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <AirwayPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/exam/tmj"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <DentalTmdExamPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/diagnostic-opinion"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <BiomechanicalPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/diagnostic-opinion/periodontal"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <PeriodontalPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/diagnostic-opinion/biomechanical"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <BiomechanicalPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/diagnostic-opinion/functional"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <FunctionalPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/diagnostic-opinion/dentofacial"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <DentofacialPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/treatment-plan"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <TreatmentPlanPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/adjunctive-therapy"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <AdjunctiveTherapyPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/rx"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <RXPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/referral"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ReferralPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/progress-notes"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ProgressNotesPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/lab-case"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <LabCasePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical/ai-conversation"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <AIConversationPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <AddCoveragePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+                        <Layout>
+                          <AddCoveragePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/insurance/:patientId?"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <InsurancePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical-notes/create"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <CreateClinicalNotePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical-notes/:clinicalNoteId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ViewClinicalNotePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clinical-notes/:clinicalNoteId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <EditClinicalNotePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/vital-signs"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <VitalSignsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/vital-signs/create"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <CreateVitalSignPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/vital-signs/:vitalSignId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ViewVitalSignPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/vital-signs/:vitalSignId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <EditVitalSignPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/vital-signs/patient/:patientId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <PatientVitalHistoryPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/documents"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <DocumentsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/documents/upload"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <UploadDocumentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/documents/:documentId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <ViewDocumentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/documents/:documentId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <EditDocumentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/documents/patient/:patientId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+                        <Layout>
+                          <PatientDocumentsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Sprint 5 - Billing Module Routes */}
+                  <Route
+                    path="/services"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ServicesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/services/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <CreateServicePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/services/:serviceId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ViewServicePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/services/:serviceId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <EditServicePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invoices"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <InvoicesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invoices/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <CreateInvoicePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invoices/:invoiceId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <ViewInvoicePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invoices/:invoiceId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <EditInvoicePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payments"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <PaymentsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payments/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <RecordPaymentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payments/:paymentId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                        <Layout>
+                          <ViewPaymentPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/estimates"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
+                        <Layout>
+                          <EstimatesListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/estimates/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
+                        <Layout>
+                          <CreateEstimatePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/estimates/:estimateId/edit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
+                        <Layout>
+                          <EditEstimatePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/estimates/:estimateId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
+                        <Layout>
+                          <ViewEstimatePage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Sprint 6 - Claims Module */}
+                  <Route
+                    path="/claims"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ClaimsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/claims/denied"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <DeniedClaimsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/claims/:claimId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ViewClaimPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/claims/:claimId/resubmit"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ResubmitClaimPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/claims/secondary"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <SecondaryClaimsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Sprint 6 - ERA Module */}
+                  <Route
+                    path="/era"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ERAListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/era/import"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ImportERAPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/era/unmatched"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <UnmatchedERAItemsPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/era/:eraId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+                        <Layout>
+                          <ViewERAPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Sprint 6 - Authorization Module */}
+                  <Route
+                    path="/authorizations"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+                        <Layout>
+                          <AuthorizationsListPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/authorizations/new"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+                        <Layout>
+                          <CreateAuthorizationPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/authorizations/:authorizationId"
+                    element={
+                      <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+                        <Layout>
+                          <ViewAuthorizationPage />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/" element={<HomeRoute />} />
+                  <Route path="*" element={<HomeRoute />} />
+                </Routes>
+              </BrowserRouter>
+            </SnackbarProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </ReduxProvider>
   );
