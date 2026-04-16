@@ -50,6 +50,7 @@ import PatientRouteSlipDialog from "./PatientRouteSlipDialog";
 import { patientService } from "../../services/patient.service";
 import { invoiceService } from "../../services/invoice.service";
 import FamilyAppointmentsDialog from "./FamilyAppointmentsDialog";
+import AppointmentHistoryDialog from "./AppointmentHistoryDialog";
 
 const StyledDateCalendar = ({ value, onChange }) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -270,6 +271,7 @@ const OperatorySidebar = ({
   const [appointmentPageOpen, setAppointmentPageOpen] = useState(false);
   const [routeSlipOpen, setRouteSlipOpen] = useState(false);
   const [familyAppointmentsOpen, setFamilyAppointmentsOpen] = useState(false);
+  const [appointmentHistoryOpen, setAppointmentHistoryOpen] = useState(false);
 
   const searchDebounceRef = useRef(null);
 
@@ -296,6 +298,8 @@ const OperatorySidebar = ({
   const handleCloseRouteSlip = () => setRouteSlipOpen(false);
   const handleFamilyAppointmentsClick = () => setFamilyAppointmentsOpen(true);
   const handleCloseFamilyAppointments = () => setFamilyAppointmentsOpen(false);
+  const handleAppointmentHistoryClick = () => setAppointmentHistoryOpen(true);
+  const handleCloseAppointmentHistory = () => setAppointmentHistoryOpen(false);
 
   // Fetch detailed patient data when a patient is selected
   useEffect(() => {
@@ -527,7 +531,7 @@ const OperatorySidebar = ({
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <ActionButton label="Route Slip" onClick={handleRouteSlipClick} />
                   <ActionButton label="Family Appointments" onClick={handleFamilyAppointmentsClick} />
-                  <ActionButton label="Appointment History" />
+                  <ActionButton label="Appointment History" onClick={handleAppointmentHistoryClick} />
                 </Box>
 
                 <Button variant="contained" fullWidth sx={{ bgcolor: '#94a3b8', borderRadius: '4px', textTransform: 'none', py: 0.75, fontSize: '0.85rem', fontWeight: 600, boxShadow: 'none' }}>
@@ -842,6 +846,11 @@ const OperatorySidebar = ({
         onClose={handleCloseFamilyAppointments}
         patient={selectedPatient}
         familyMembers={patientDetails?.familyMembers || []}
+      />
+      <AppointmentHistoryDialog
+        open={appointmentHistoryOpen}
+        onClose={handleCloseAppointmentHistory}
+        patient={selectedPatient}
       />
     </Box>
   );

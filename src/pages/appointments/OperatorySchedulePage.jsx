@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import {
   PostAdd, Group, Science, Description, FilterAlt,
-  VisibilityOff, SpeakerNotesOff, Print, History,
+  VisibilityOff, Visibility, SpeakerNotesOff, Print, History,
   Person, AttachMoney, MoreVert, CalendarMonth,
   KeyboardArrowLeft, KeyboardArrowRight, EventNote
 } from '@mui/icons-material';
@@ -100,6 +100,13 @@ const OperatorySchedulePage = () => {
 
   const { providers, rooms, appointmentTypes } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
 
+  const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
+  const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
+  const [patientQuery, setPatientQuery] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [showConsult, setShowConsult] = useState(false);
+
   // Dynamically generate operatory columns from rooms
   const OPERATORY_COLUMNS = useMemo(() => {
     if (!rooms || rooms.length === 0) {
@@ -161,7 +168,7 @@ const OperatorySchedulePage = () => {
         },
         {
           id: "consult",
-          label: "Hyg 1",
+          label: "Consult",
           color: "#8d6e63",
           breakTimes: [
             {
@@ -178,45 +185,50 @@ const OperatorySchedulePage = () => {
       ];
     }
 
-    return rooms.map((room, index) => {
-      // Generate staggered lunch breaks by default (each operatory gets 30 min different time)
-      // Op 1: 12:00-12:30, Op 2: 12:30-13:00, Op 3: 13:00-13:30, Op 4: 13:30-14:00, etc.
-      const totalMinutesOffset = index * 30; // Each operatory offset by 30 minutes
-      const defaultLunchStartMinutes = 12 * 60 + totalMinutesOffset; // Start at 12:00 (720 minutes) + offset
-      const defaultLunchEndMinutes = defaultLunchStartMinutes + 30; // 30 minutes duration
+      const cols = rooms.map((room, index) => {
+        // Generate staggered lunch breaks by default (each operatory gets 30 min different time)
+        const totalMinutesOffset = index * 30;
+        const defaultLunchStartMinutes = 12 * 60 + totalMinutesOffset;
+        const defaultLunchEndMinutes = defaultLunchStartMinutes + 30;
 
-      const startHours = Math.floor(defaultLunchStartMinutes / 60);
-      const startMins = defaultLunchStartMinutes % 60;
-      const endHours = Math.floor(defaultLunchEndMinutes / 60);
-      const endMins = defaultLunchEndMinutes % 60;
+        const startHours = Math.floor(defaultLunchStartMinutes / 60);
+        const startMins = defaultLunchStartMinutes % 60;
+        const endHours = Math.floor(defaultLunchEndMinutes / 60);
+        const endMins = defaultLunchEndMinutes % 60;
 
-      const startTime = `${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}`;
-      const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+        const startTime = `${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}`;
+        const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
 
-      return {
-        id: `op${room._id || room.id}`,
-        label: room.name || `Op ${index + 1}`,
-        color: OPERATORY_COLORS[index % OPERATORY_COLORS.length],
-        // Add break times from room data if available (from API)
-        breakTimes: room.breakTimes || [
-          {
-            label: "Lunch",
-            icon: "🍽️",
-            startTime,
-            endTime,
-            color: "#bbdefb",
-            hoverColor: "#64b5f6",
-            textColor: "#0d47a1",
-          }
-        ],
-      };
-    });
-  }, [rooms]);
-  const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
-  const [selectedDate, setSelectedDate] = useState(dayjs());
-  const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
-  const [patientQuery, setPatientQuery] = useState("");
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
+        return {
+          id: `op${room._id || room.id}`,
+          label: room.name || `Op ${index + 1}`,
+          color: OPERATORY_COLORS[index % OPERATORY_COLORS.length],
+          breakTimes: room.breakTimes || [
+            {
+              label: "Lunch",
+              icon: "🍽️",
+              startTime,
+              endTime,
+              color: "#bbdefb",
+              hoverColor: "#64b5f6",
+              textColor: "#0d47a1",
+            }
+          ],
+        };
+      });
+
+      if (showConsult) {
+        cols.push({
+          id: "consult",
+          label: "Consult",
+          color: "#8d6e63",
+          breakTimes: []
+        });
+      }
+
+      return cols;
+    }, [rooms, showConsult]);
+
   const [sidebarPatients, setSidebarPatients] = useState([]);
   const [loadingSidebarPatients, setLoadingSidebarPatients] = useState(false);
   const [creatingSidebarPatient, setCreatingSidebarPatient] = useState(false);
@@ -448,9 +460,18 @@ const OperatorySchedulePage = () => {
         : "PT";
 
       // Map roomId to operatory column
-      // If roomId exists and matches a column ID, use it; otherwise fall back to provider-based distribution
       let columnId = "op1";
-      if (a.roomId) {
+      const apptTitle = (a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "").toLowerCase();
+      const isConsultation = 
+        apptTitle.includes("consult") || 
+        apptTitle.includes("evaluation") || 
+        apptTitle.includes("cleaning") || 
+        apptTitle.includes("exam") ||
+        apptTitle.includes("hygiene");
+
+      if (isConsultation) {
+        columnId = "consult";
+      } else if (a.roomId) {
         // Match the column ID format used in OPERATORY_COLUMNS generation
         columnId = `op${a.roomId}`;
 
@@ -527,6 +548,66 @@ const OperatorySchedulePage = () => {
     };
     fetchAppointments();
   }, [selectedPatientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Add sample consult appointments when showConsult is toggled on (for demo)
+  useEffect(() => {
+    if (showConsult && appointments.length > 0) {
+      const today = selectedDate.format("YYYY-MM-DD");
+      const consultAppts = [
+        {
+          id: "consult-1",
+          columnId: "consult",
+          title: "Huddle-Oksana account review. I did not fix so everyone can learn",
+          patientName: "Consult Note",
+          start: `${today}T08:00:00`,
+          end: `${today}T08:45:00`,
+          status: "confirmed",
+          note: "Huddle-Oksana account review. I did not fix so everyone can learn",
+          color: "#6b6b6b",
+        },
+        {
+          id: "consult-2",
+          columnId: "consult",
+          title: "8AM interview inperson",
+          patientName: "Consult Note",
+          start: `${today}T09:00:00`,
+          end: `${today}T09:30:00`,
+          status: "confirmed",
+          note: "8AM interview inperson",
+          color: "#6b6b6b",
+        },
+        {
+          id: "consult-3",
+          columnId: "consult",
+          title: "send x-rays What's going on with these x-rays? 3rd day on the schedule i cant figure out how to export them",
+          patientName: "Consult Note",
+          start: `${today}T10:00:00`,
+          end: `${today}T11:00:00`,
+          status: "confirmed",
+          note: "send x-rays What's going on with these x-rays? 3rd day on the schedule i cant figure out how to export them",
+          color: "#6b6b6b",
+        },
+        {
+          id: "consult-4",
+          columnId: "consult",
+          title: "Week of April 7--let's not open 4/6 for hygiene, lots of availability on Tu-Th that week",
+          patientName: "Consult Note",
+          start: `${today}T11:15:00`,
+          end: `${today}T12:00:00`,
+          status: "confirmed",
+          note: "Week of April 7--let's not open 4/6 for hygiene, lots of availability on Tu-Th that week",
+          color: "#6b6b6b",
+        }
+      ];
+      
+      setAppointments(prev => {
+        const filtered = prev.filter(a => !String(a.id).startsWith("consult-"));
+        return [...filtered, ...consultAppts];
+      });
+    } else if (!showConsult) {
+      setAppointments(prev => prev.filter(a => !String(a.id).startsWith("consult-")));
+    }
+  }, [showConsult, selectedDate]);
 
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
@@ -762,7 +843,7 @@ const OperatorySchedulePage = () => {
       .toUpperCase();
     const newAppt = {
       id: `local-${Date.now()}`,
-      date: selectedDateKey,
+      date: selectedDate.format("YYYY-MM-DD"),
       patientId: selectedPatientId,
       columnId: draft.columnId,
       title: draft.title || "Appointment",
@@ -888,7 +969,7 @@ const OperatorySchedulePage = () => {
               { icon: <Science />, onClick: () => setLabCasesDialogOpen(true) },         // Lab
               { icon: <Description />, onClick: () => setProgressNotesOpen(true) },     // Document
               { icon: <FilterAlt />, onClick: (e) => setLabAnchorEl(e.currentTarget) },       // Filter
-              { icon: <VisibilityOff /> },   // Hide
+              { icon: showConsult ? <Visibility /> : <VisibilityOff />, onClick: () => setShowConsult(!showConsult) },   // Hide/Show Toggle
               { icon: <SpeakerNotesOff /> }, // No Notes
               { icon: <Print /> },           // Print
               { icon: <History /> },         // History
@@ -1182,9 +1263,9 @@ const OperatorySchedulePage = () => {
           </Box>
         </Box>
       </Popover>
-      <LabCasesDialog 
-        open={labCasesDialogOpen} 
-        onClose={() => setLabCasesDialogOpen(false)} 
+      <LabCasesDialog
+        open={labCasesDialogOpen}
+        onClose={() => setLabCasesDialogOpen(false)}
       />
     </Box>
   );

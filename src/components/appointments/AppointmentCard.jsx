@@ -67,6 +67,59 @@ const AppointmentCard = ({
     actionPt: isUltraCompact ? 0.2 : isCompactAppointment ? 0.3 : 0.5,
   };
 
+  const isConsult = appointment.columnId === "consult";
+
+  if (isConsult) {
+    return (
+      <Paper
+        elevation={2}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAppointmentClick && onAppointmentClick(appointment);
+        }}
+        sx={{
+          position: "absolute",
+          left: "2%",
+          right: "2%",
+          top: topPx + 2,
+          height: finalHeight - 4,
+          borderRadius: 1,
+          bgcolor: "#6b6b6b", // Dark grey sticky note
+          color: "#ffffff",
+          p: 1,
+          cursor: "pointer",
+          overflow: "hidden",
+          transition: "transform 0.1s, box-shadow 0.1s",
+          "&:hover": {
+            transform: "scale(1.02)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+            bgcolor: "#5a5a5a",
+          },
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+          border: "none"
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: isShortAppointment ? 10 : 12,
+            fontWeight: 500,
+            lineHeight: 1.2,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: isShortAppointment ? 3 : 5,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {appointment.note || appointment.title}
+        </Typography>
+      </Paper>
+    );
+  }
+
   return (
     <Paper
       elevation={2}
@@ -444,42 +497,42 @@ const AppointmentContent = ({
           justifyContent: "space-between",
           mr: sizing.spacing.emergencyMr,
         }}
-        
+
       >
         <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mt: sizing.spacing.noteMt,
-          px: sizing.padding,
-          py: 0.2,
-          borderTop: "1px solid #e0e0e0",
-          bgcolor: "#f5f5f5",
-        }}
-      >
-        <Typography
           sx={{
-            fontSize: sizing.fontSize.time,
-            fontWeight: 600,
-            color: "#424242",
             display: "flex",
             alignItems: "center",
-            gap: 0.2,
+            justifyContent: "space-between",
+            mt: sizing.spacing.noteMt,
+            px: sizing.padding,
+            py: 0.2,
+            borderTop: "1px solid #e0e0e0",
+            bgcolor: "#f5f5f5",
           }}
         >
-          <AttachMoneyIcon sx={{ fontSize: sizing.iconSize * 0.9, color: "#4caf50" }} />
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: sizing.fontSize.time,
-            fontWeight: 700,
-            color: "#1976d2",
-          }}
-        >
-          ${appointment.amount || appointment.estimatedAmount || "0.00"}
-        </Typography>
-      </Box>
+          <Typography
+            sx={{
+              fontSize: sizing.fontSize.time,
+              fontWeight: 600,
+              color: "#424242",
+              display: "flex",
+              alignItems: "center",
+              gap: 0.2,
+            }}
+          >
+            <AttachMoneyIcon sx={{ fontSize: sizing.iconSize * 0.9, color: "#4caf50" }} />
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: sizing.fontSize.time,
+              fontWeight: 700,
+              color: "#1976d2",
+            }}
+          >
+            ${appointment.amount || appointment.estimatedAmount || "0.00"}
+          </Typography>
+        </Box>
         <Box
           sx={{
             display: "flex",
