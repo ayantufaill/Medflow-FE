@@ -251,8 +251,10 @@ const OperatoryScheduleGrid = ({
     }
     
     if (viewMode === "month") {
-      const start = selectedDate.clone().startOf("month");
-      const end = selectedDate.clone().endOf("month");
+      const startOfMonth = selectedDate.clone().startOf("month");
+      const endOfMonth = selectedDate.clone().endOf("month");
+      const start = startOfMonth.startOf("week");
+      const end = endOfMonth.endOf("week");
       
       let current = start.clone();
       while (current.isSame(end, "day") || current.isBefore(end, "day")) {
@@ -473,7 +475,108 @@ const OperatoryScheduleGrid = ({
     );
   }
 
-  // WEEK/MONTH MODE - Unified scroll container (matching day view structure)
+  if (viewMode === "month") {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 2,
+          border: "1px solid #eef2f6",
+          bgcolor: "#fff",
+          overflow: "hidden",
+          width: "100%",
+          display: "flex", 
+          flexDirection: "column",
+          height: 640,
+        }}
+      >
+        {/* Day Headers */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(7, 1fr)",
+          bgcolor: "#f8fafc",
+          borderBottom: "1px solid #eef2f6"
+        }}>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+            <Box key={day} sx={{ p: 1, textAlign: "center", borderRight: "1px solid #eef2f6" }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}>{day}</Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {/* Calendar Grid */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(7, 1fr)",
+          flex: 1,
+          overflowY: "auto",
+          bgcolor: "#e2e8f0" // Grid line color
+        }}>
+          {dateRange.map((date) => {
+            const dateStr = date.format("YYYY-MM-DD");
+            const dateAppointments = appointmentsByDate[dateStr] || [];
+            const isToday = date.isSame(dayjs(), "day");
+            const isCurrentMonth = date.isSame(selectedDate, "month");
+
+            return (
+              <Box
+                key={dateStr}
+                sx={{
+                  bgcolor: isCurrentMonth ? "#ffffff" : "#f1f5f9",
+                  minHeight: "120px",
+                  p: 0.5,
+                  border: "0.5px solid #cbd5e1",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0.5,
+                  overflow: "hidden"
+                }}
+              >
+                <Typography sx={{ 
+                  fontSize: 12, 
+                  fontWeight: 700, 
+                  color: isCurrentMonth ? (isToday ? "#1976d2" : "#334155") : "#94a3b8",
+                  mb: 0.5,
+                  textAlign: "right",
+                  px: 0.5
+                }}>
+                  {date.date()}
+                </Typography>
+                <Box sx={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0.25 }}>
+                  {dateAppointments.map((a) => (
+                    <Box 
+                      key={a.id} 
+                      onClick={() => onAppointmentClick && onAppointmentClick(a)}
+                      sx={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 0.5, 
+                        px: 1, 
+                        py: 0.2, 
+                        bgcolor: "transparent",
+                        cursor: "pointer",
+                        "&:hover": { bgcolor: "#f1f5f9" }
+                      }}
+                    >
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#1976d2", flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: "10px", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" }}>
+                        {dayjs(a.start).format("h:mma")}
+                      </Typography>
+                      <Typography sx={{ fontSize: "11px", color: "#1e293b", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {a.patientName}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+      </Paper>
+    );
+  }
+
+  // WEEK MODE - Unified scroll container (matching day view structure)
   return (
     <Paper
       elevation={0}
