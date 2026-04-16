@@ -371,6 +371,29 @@ const OperatorySidebar = ({
         {/* TAB 0: Patients */}
         {activeTab === 0 && (
           <Box sx={{ bgcolor: "#F0F4F8" }}>
+            {/* Create Appointment Button */}
+            <Box sx={{ p: 1.5, pb: 0, bgcolor: "#ffffff" }}>
+              <Button
+                variant="contained"
+                fullWidth
+                startIcon={<AddIcon />}
+                onClick={onScheduleAppointmentClick}
+                sx={{
+                  bgcolor: "#1976d2",
+                  "&:hover": { bgcolor: "#1565c0" },
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  py: 1,
+                  mb: 1,
+                  borderRadius: "6px",
+                  boxShadow: "none"
+                }}
+              >
+                Create Appointment
+              </Button>
+            </Box>
+
             {/* Patient Search */}
             <Box sx={{ p: 1.5, bgcolor: "#ffffff" }}>
               <Autocomplete
