@@ -225,6 +225,7 @@ const OperatorySidebar = ({
   onCompleteBillClick,
   onPurchaseProductsClick,
   getStatusColor,
+  appointments = [],
 }) => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [appointmentStatus, setAppointmentStatus] = useState("confirmed");
@@ -480,6 +481,23 @@ const OperatorySidebar = ({
                 <Box>
                   <HeaderAccordion title="P 1 #15 crown /bu" value="____ min" icon={KeyboardArrowRightIcon} expanded={proceduresExpanded} setExpanded={setProceduresExpanded} />
                   <HeaderAccordion title="Recare" value="____ min" icon={EventNoteIcon} expanded={recareExpanded} setExpanded={setRecareExpanded} />
+                </Box>
+
+                {/* List of Scheduled Appointments (Integrated from Dialog design) */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 0.5 }}>
+                  {appointments
+                    .filter(a => dayjs(a.start).isAfter(dayjs().subtract(1, 'day')))
+                    .sort((a, b) => dayjs(a.start).diff(dayjs(b.start)))
+                    .map(appt => (
+                      <SidebarAppointmentCard 
+                        key={appt.id} 
+                        appointment={appt} 
+                        onClick={() => {
+                          if (onDateChange) onDateChange(dayjs(appt.date));
+                        }} 
+                      />
+                    ))
+                  }
                 </Box>
 
                 {/* Action Buttons */}
@@ -889,5 +907,56 @@ const DetailAccordion = ({ title, children, expanded, setExpanded }) => (
     </Collapse>
   </Box>
 );
+
+const ChecklistItem = ({ label, checked = false }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 0.3, px: 1, borderBottom: "1px solid #eee", "&:last-child": { borderBottom: "none" } }}>
+    <Typography sx={{ fontSize: "0.7rem", color: "#666", fontWeight: 500 }}>{label}</Typography>
+    {checked && <CheckIcon sx={{ fontSize: 12, color: "#999" }} />}
+  </Box>
+);
+
+const SidebarAppointmentCard = ({ appointment, onClick }) => {
+  const headerDate = dayjs(appointment.start).format("MM/DD/YYYY");
+  const headerTime = dayjs(appointment.start).format("hh:mm A");
+  const type = appointment.title || "RECARE";
+  const isRecare = type.toLowerCase().includes("recare");
+
+  return (
+    <Paper
+      elevation={0}
+      onClick={onClick}
+      sx={{ border: "1px solid #ddd", borderRadius: "4px", overflow: "hidden", cursor: "pointer", transition: "0.2s", "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.1)" } }}
+    >
+      <Box sx={{ bgcolor: isRecare ? "#a26da1" : "#5b9bae", p: 0.5, color: "#fff" }}>
+        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, textAlign: "center" }}>
+          {type.toUpperCase()} {headerDate} @ {headerTime}
+        </Typography>
+      </Box>
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#333' }}>
+            {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : "Scheduled"}
+          </Typography>
+          <Typography sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 700 }}>P1 V{appointment.id?.toString().slice(-1) || '1'}</Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+          <MailOutlineIcon sx={{ fontSize: 16, color: "#5c7cbc" }} />
+          <ChatOutlinedIcon sx={{ fontSize: 16, color: "#5c7cbc" }} />
+        </Box>
+        <Typography sx={{ fontSize: "0.75rem", color: "#333", mb: 0.5 }}>{appointment.note || "periodic ex, fl, hygiene"}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ bgcolor: "#d7ebd8", px: 0.5, borderRadius: "2px", border: "1px solid #c0e0c1" }}>
+            <Typography sx={{ fontSize: "0.6rem", fontWeight: 800, color: "#478c4a" }}>SAB</Typography>
+          </Box>
+        </Box>
+      </Box>
+      <Box sx={{ borderTop: "1px solid #ddd", bgcolor: "#f9f9f9" }}>
+        <ChecklistItem label="Pre-appt Checklist" checked />
+        <ChecklistItem label="Check-in Checklist" checked />
+        <ChecklistItem label="Check-out Checklist" checked />
+      </Box>
+    </Paper>
+  );
+};
 
 export default OperatorySidebar;

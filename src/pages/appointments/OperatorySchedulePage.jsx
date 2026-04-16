@@ -957,6 +957,7 @@ const OperatorySchedulePage = () => {
           onCompleteBillClick={handleCompleteBillClick}
           onPurchaseProductsClick={handlePurchaseProductsClick}
           getStatusColor={getStatusColor}
+          appointments={appointments}
         />
 
         <OperatoryScheduleGrid
