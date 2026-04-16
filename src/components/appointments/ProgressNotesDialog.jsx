@@ -35,6 +35,140 @@ import dayjs from "dayjs";
 import { clinicalNoteService } from "../../services/clinical-note.service";
 import { appointmentService } from "../../services/appointment.service";
 
+// ─── Mock Data ─────────────────────────────────────────────────────────────
+const MOCK_MISSING_NOTES = [
+  {
+    _id: "m1",
+    patientId: { firstName: "Emma", lastName: "Watson" },
+    appointmentDate: "2026-03-26",
+    toothNumber: "",
+    surface: "",
+    appointmentTypeId: { code: "D0220" },
+    providerId: { name: "Christine Sabour" }
+  },
+  {
+    _id: "m2",
+    patientId: { firstName: "John", lastName: "Smith" },
+    appointmentDate: "2026-03-26",
+    toothNumber: "21",
+    surface: "",
+    appointmentTypeId: { code: "D2740" },
+    providerId: { name: "Christine Sabour" }
+  },
+  {
+    _id: "m3",
+    patientId: { firstName: "Robert", lastName: "Downey" },
+    appointmentDate: "2026-03-26",
+    toothNumber: "21",
+    surface: "",
+    appointmentTypeId: { code: "D2950" },
+    providerId: { name: "Christine Sabour" }
+  },
+  {
+    _id: "m4",
+    patientId: { firstName: "Scarlett", lastName: "Johansson" },
+    appointmentDate: "2026-03-26",
+    toothNumber: "28",
+    surface: "",
+    appointmentTypeId: { code: "D2740" },
+    providerId: { name: "Christine Sabour" }
+  },
+  {
+    _id: "m5",
+    patientId: { firstName: "Chris", lastName: "Evans" },
+    appointmentDate: "2026-03-26",
+    toothNumber: "28",
+    surface: "",
+    appointmentTypeId: { code: "D2950" },
+    providerId: { name: "Christine Sabour" }
+  },
+  {
+    _id: "m6",
+    patientId: { firstName: "Mark", lastName: "Ruffalo" },
+    appointmentDate: "2026-03-26",
+    toothNumber: "27",
+    surface: "",
+    appointmentTypeId: { code: "D2740" },
+    providerId: { name: "Christine Sabour" }
+  }
+];
+
+const MOCK_UNSIGNED_NOTES = [
+  {
+    _id: "u1",
+    patientId: { firstName: "Alexis", lastName: "Quintero" },
+    createdAt: "2026-03-26",
+    noteType: "Treatment",
+    providerId: { name: "Christine Sabour" },
+    content: `CC: "I don't like the open bite" points to #23,26 when she smiles that shows black/dark spaces due to open bite\nDiscussed needing IPR to level out the lowers and reduce the open bite\nMentioned rotation #9 and lining up the midlines-I told her we can attempt and will need large vertical attachment on #9`
+  },
+  {
+    _id: "u2",
+    patientId: { firstName: "James", lastName: "Bond" },
+    createdAt: "2026-03-26",
+    noteType: "Recare",
+    providerId: { name: "Karla Riley" },
+    content: `Patient presents for Adult Prophy via Guided Biofilm Therapy, Periodic Exam, IOC, iTero, FLV. **INVISALIGN START**\n- Protective eye wear worn by patient.\n- Dr. Sabour prescribed the following X-Rays: No xrays completed today.\n- 3D Wellness Scan completed: Completed full iTero Wellness scan today.\n- Adult prophy following 8-step Guided Biofilm Therapy protocol completed today Hand Instruments only, EMS Airflow Prophylaxis Master utilized and hand instruments.\n- Assessment Ultrasonic and Hand Instruments used.\n- Perio Diagnosis: Stage 1, Grade A\n- Gingival Description healthy- stable, pink and firm, Localized, mild`
+  },
+  {
+    _id: "u3",
+    patientId: { firstName: "Steve", lastName: "Rogers" },
+    createdAt: "2026-03-26",
+    noteType: "Exam",
+    providerId: { name: "Christine Sabour" },
+    content: "Periodic oral evaluation - established patient. No significant changes in medical history. Soft tissue exam normal."
+  },
+  {
+    _id: "u4",
+    patientId: { firstName: "Natasha", lastName: "Romanoff" },
+    createdAt: "2026-03-26",
+    noteType: "Recare",
+    providerId: { name: "Karla Riley" },
+    content: "Prophylaxis - adult. Scaling and polishing completed. Patient maintained good oral hygiene."
+  }
+];
+
+const MOCK_SIGNED_NOTES = [
+  {
+    _id: "s1",
+    patientId: { firstName: "Diana", lastName: "Prince" },
+    createdAt: "2026-03-26",
+    noteType: "Recare",
+    providerId: { name: "Karla Riley" },
+    content: `Patient presents for Adult Prophy via Guided Biofilm Therapy, Periodic Exam, 4BWX + PAs, IOC, FLV.
+- HHX Review: Reviewed HHX with patient. Patient reports no changes.
+Allergies: NKDA, no reported food allergies.
+Conditions: autoimmune, HRT, homeopathic/ functional medicine for anti - inflammatory diet.
+Medications: PROGESTERONE Cream compounded, Testosterone '2', multivitamin, vit C, Pregnalone pure, probiotic BioDuph 7 plus, Vit D3, CORTROPHIN-ZINC - PRN, Osteopatite Plus, Glucosamine chondroitin Tumeric & MSM, Buffered C powder, DHEA Pure, Omega Genics, Comaplex, ADPHEN, immunity builder, oil pull- organic
+ASA: II.
+- CC: None.
+- Dr. Sabour prescribed the following X-Rays: 4BWX, PA's
+- Protective eye wear worn by patient.
+- OCS: Negative, NSF, All WNL.
+- TMJ: WNL, NSF, Patient reports no pain or discomfort. Discussed TMJ pain and NG/ retainers due to grinding and clenching.
+- iTero Scan completed: Not due for wellness scan today.
+- Adult Prophy following 8-step Guided Biofilm Therapy protocol completed today EMS Airflow prophylaxis Master utilized with Ultrasonic and hand instruments.
+- Assessment Ultrasonic and Hand Instruments used.
+- Probing: Full mouth completed, 1-4mm pockets.
+- Perio Diagnosis: Stage 1, Grade A.
+- Gingival Description Generalized, mild, moderate
+- OH = Fair to poor, Stressed importance of angling ETB lightly towards gumline and C shaped flossing at night.
+- Plaque: moderate, generalized along gingival margin and interproximal.
+- Calculus: moderate, localized lower anterior lingual.
+- Stain: slight to moderate, localized lingual.
+- Bleeding: slight to moderate, generalized along gingival margin and interproximal.
+- Disclosing + Motivation Utilized GC disclosing tri-color gel with brush, Retraction with Optragate utilized and Vaseline placed on lips
+- Airflow Settings: Water 10, Powder 2 BOOST as needed. Removed all biofilm prior to moving to calculus removal. High speed suction + saliva ejector utilized . Complete oral biofilm decontamination achieved. Powder utilized: Classic Sodium Bicarbonate 40 microns
+- Piezon Calculus removal only where calculus present. Settings: Water: 7-8 (to allow water to heat but can be dropped down if needed). Power 3-4. Boost as needed.
+- Flossed all contacts.
+- Fluoride: Applied 2.1% NaF varnish, watermelon flavor. Post op instructions given to patient.
+- Ortho/ Invisalign: She has a NG/ retainer she wears - seeing massage therapist for TMJ massages.
+- Doctor's Exam Findings: #19 WATCH - 6 week eval for possible RCT, #5 Bioclear.
+- TX: 6 week Re-eval.
+- NVH: 3-4 month recare - REC DUE TO OH - tons of calculus and stain - 6 month recare patient might stay on due to finances - stressed importance of 3-4 mo recare.`
+  }
+];
+
 /**
  * ProgressNotesDialog
  * High-fidelity implementation of "Today's Progress Notes" dashboard.
@@ -54,6 +188,10 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
   const [unsignedNotes, setUnsignedNotes] = useState([]);
   const [signedNotes, setSignedNotes] = useState([]);
   const [expandedNoteIds, setExpandedNoteIds] = useState(new Set());
+  
+  // ─── Editing State ──────────
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editingContent, setEditingContent] = useState("");
 
   const toggleNoteExpansion = (id) => {
     setExpandedNoteIds(prev => {
@@ -76,27 +214,30 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
 
       // 1 & 2. Fetch Signed and Unsigned Notes
       const [signedData, unsignedData, allAppointments] = await Promise.all([
-        clinicalNoteService.getAllClinicalNotes(1, 100, { ...filters, isSigned: true }),
-        clinicalNoteService.getAllClinicalNotes(1, 100, { ...filters, isSigned: false }),
-        appointmentService.getAllAppointments(1, 200, filters.providerId, "", "checkout complete", startDate, endDate)
+        clinicalNoteService.getAllClinicalNotes(1, 100, { ...filters, isSigned: true }).catch(() => ({ clinicalNotes: [] })),
+        clinicalNoteService.getAllClinicalNotes(1, 100, { ...filters, isSigned: false }).catch(() => ({ clinicalNotes: [] })),
+        appointmentService.getAllAppointments(1, 200, filters.providerId, "", "checkout complete", startDate, endDate).catch(() => ({ appointments: [] }))
       ]);
 
-      setSignedNotes(signedData.clinicalNotes || []);
-      setUnsignedNotes(unsignedData.clinicalNotes || []);
+      // Combine real data with mock data for demonstration
+      setSignedNotes([...(signedData.clinicalNotes || []), ...MOCK_SIGNED_NOTES]);
+      setUnsignedNotes([...(unsignedData.clinicalNotes || []), ...MOCK_UNSIGNED_NOTES]);
 
       // 3. Logic for "Missing Notes"
-      // Filter appointments that don't have a clinical note associated
-      // (Simplified logic: if appointment.clinicalNoteId is missing)
       const noteApptIds = new Set([
         ...(signedData.clinicalNotes || []).map(n => n.appointmentId?._id || n.appointmentId),
         ...(unsignedData.clinicalNotes || []).map(n => n.appointmentId?._id || n.appointmentId)
       ]);
 
       const missing = (allAppointments.appointments || []).filter(a => !noteApptIds.has(a._id || a.id));
-      setMissingNotes(missing);
+      setMissingNotes([...missing, ...MOCK_MISSING_NOTES]);
 
     } catch (err) {
       console.error("Failed to fetch progress notes data:", err);
+      // Fallback to purely mock data if error occurs
+      setSignedNotes(MOCK_SIGNED_NOTES);
+      setUnsignedNotes(MOCK_UNSIGNED_NOTES);
+      setMissingNotes(MOCK_MISSING_NOTES);
     } finally {
       setLoading(false);
     }
@@ -108,9 +249,40 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
 
   const handleApply = () => fetchData();
 
+  const handleEditStart = (n) => {
+    setEditingNoteId(n._id || n.id);
+    setEditingContent(n.content || "");
+  };
+
+  const handleEditCancel = () => {
+    setEditingNoteId(null);
+    setEditingContent("");
+  };
+
+  const handleEditSave = () => {
+    if (!editingNoteId) return;
+
+    const updater = (prev) => prev.map(n => 
+      (n._id === editingNoteId || n.id === editingNoteId) 
+        ? { ...n, content: editingContent } 
+        : n
+    );
+
+    setUnsignedNotes(updater);
+    setSignedNotes(updater);
+    
+    // In future: clinicalNoteService.updateClinicalNote(editingNoteId, { content: editingContent })
+    
+    setEditingNoteId(null);
+    setEditingContent("");
+  };
+
   const getProviderName = useCallback((pOrId) => {
     if (!pOrId) return "N/A";
     
+    // Handle mock data provider objects which might already have a name string
+    if (typeof pOrId === 'object' && pOrId.name) return pOrId.name;
+
     // Find provider if only ID was passed
     const p = typeof pOrId === 'string' ? providers.find(item => (item._id || item.id) === pOrId) : pOrId;
     if (!p) return typeof pOrId === 'string' ? `Provider #${pOrId}` : "Unknown";
@@ -216,7 +388,7 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
                   </TableHead>
                   <TableBody>
                     {missingNotes.length > 0 ? missingNotes.map((a, i) => (
-                      <TableRow key={i}>
+                      <TableRow key={a._id || i}>
                         <TableCell sx={{ ...cellSx, color: "#1976d2", fontWeight: 600 }}>{a.patientId?.firstName} {a.patientId?.lastName}</TableCell>
                         <TableCell sx={cellSx}>{dayjs(a.appointmentDate).format("MM/DD/YYYY")}</TableCell>
                         <TableCell sx={cellSx}>{a.toothNumber || "—"}</TableCell>
@@ -267,12 +439,35 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
                             <TableRow sx={{ bgcolor: "#fafcfe" }}>
                               <TableCell colSpan={5} sx={{ p: 2, borderBottom: "1px solid #edeff1" }}>
                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
-                                  <Button variant="contained" size="small" sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Edit Note</Button>
+                                  <Box sx={{ display: "flex", gap: 1 }}>
+                                    {editingNoteId === (n._id || n.id) ? (
+                                      <>
+                                        <Button variant="contained" size="small" onClick={handleEditSave} sx={{ bgcolor: "#5c7cbc", "&:hover": { bgcolor: "#4a6496" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Save</Button>
+                                        <Button variant="outlined" size="small" onClick={handleEditCancel} sx={{ color: "#666", borderColor: "#ccc", textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Cancel</Button>
+                                      </>
+                                    ) : (
+                                      <Button variant="contained" size="small" onClick={() => handleEditStart(n)} sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Edit Note</Button>
+                                    )}
+                                  </Box>
                                   <Typography sx={{ color: "#5c7cbc", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Sign Progress Note</Typography>
                                 </Box>
-                                <Typography sx={{ fontSize: "0.85rem", color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                                  {n.content || "No content available for this note."}
-                                </Typography>
+                                
+                                {editingNoteId === (n._id || n.id) ? (
+                                  <TextField 
+                                    fullWidth 
+                                    multiline 
+                                    rows={4} 
+                                    value={editingContent} 
+                                    onChange={(e) => setEditingContent(e.target.value)} 
+                                    sx={{ 
+                                      "& .MuiInputBase-root": { fontSize: "0.85rem", color: "#334155", lineHeight: 1.6, bgcolor: "#fff" } 
+                                    }} 
+                                  />
+                                ) : (
+                                  <Typography sx={{ fontSize: "0.85rem", color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                    {n.content || "No content available for this note."}
+                                  </Typography>
+                                )}
                               </TableCell>
                             </TableRow>
                           )}
@@ -320,12 +515,33 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
                           {isExpanded && (
                             <TableRow sx={{ bgcolor: "#fafcfe" }}>
                               <TableCell colSpan={5} sx={{ p: 2, borderBottom: "1px solid #edeff1" }}>
-                                <Box sx={{ mb: 1.5 }}>
-                                  <Button variant="contained" size="small" sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Edit Note</Button>
+                                <Box sx={{ mb: 1.5, display: "flex", gap: 1 }}>
+                                  {editingNoteId === (n._id || n.id) ? (
+                                    <>
+                                      <Button variant="contained" size="small" onClick={handleEditSave} sx={{ bgcolor: "#5c7cbc", "&:hover": { bgcolor: "#4a6496" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Save</Button>
+                                      <Button variant="outlined" size="small" onClick={handleEditCancel} sx={{ color: "#666", borderColor: "#ccc", textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Cancel</Button>
+                                    </>
+                                  ) : (
+                                    <Button variant="contained" size="small" onClick={() => handleEditStart(n)} sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Edit Note</Button>
+                                  )}
                                 </Box>
-                                <Typography sx={{ fontSize: "0.85rem", color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                                  {n.content || "No content available for this note."}
-                                </Typography>
+
+                                {editingNoteId === (n._id || n.id) ? (
+                                  <TextField 
+                                    fullWidth 
+                                    multiline 
+                                    rows={4} 
+                                    value={editingContent} 
+                                    onChange={(e) => setEditingContent(e.target.value)} 
+                                    sx={{ 
+                                      "& .MuiInputBase-root": { fontSize: "0.85rem", color: "#334155", lineHeight: 1.6, bgcolor: "#fff" } 
+                                    }} 
+                                  />
+                                ) : (
+                                  <Typography sx={{ fontSize: "0.85rem", color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                    {n.content || "No content available for this note."}
+                                  </Typography>
+                                )}
                               </TableCell>
                             </TableRow>
                           )}
@@ -349,5 +565,6 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
     </Dialog>
   );
 };
+
 
 export default ProgressNotesDialog;

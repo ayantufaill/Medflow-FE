@@ -31,7 +31,7 @@ export const fetchAllAppointmentTypesForDropdown = createAsyncThunk(
       if (elapsed < 10 * 60 * 1000) return null;
     }
     try {
-      const result = await appointmentTypeService.getAllAppointmentTypes(1, 200, '', true);
+      const result = await appointmentTypeService.getAllAppointmentTypes(1, 50, '', true);
       return result.appointmentTypes || [];
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointment types');

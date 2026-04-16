@@ -49,6 +49,7 @@ import { compactInputLabelSx, compactInputValueSx } from "../../constants/styles
 import PatientRouteSlipDialog from "./PatientRouteSlipDialog";
 import { patientService } from "../../services/patient.service";
 import { invoiceService } from "../../services/invoice.service";
+import FamilyAppointmentsDialog from "./FamilyAppointmentsDialog";
 
 const StyledDateCalendar = ({ value, onChange }) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -267,6 +268,7 @@ const OperatorySidebar = ({
   const [chatOpen, setChatOpen] = useState(false);
   const [appointmentPageOpen, setAppointmentPageOpen] = useState(false);
   const [routeSlipOpen, setRouteSlipOpen] = useState(false);
+  const [familyAppointmentsOpen, setFamilyAppointmentsOpen] = useState(false);
 
   const searchDebounceRef = useRef(null);
 
@@ -291,6 +293,8 @@ const OperatorySidebar = ({
   const handleCloseAppointmentPage = () => setAppointmentPageOpen(false);
   const handleRouteSlipClick = () => setRouteSlipOpen(true);
   const handleCloseRouteSlip = () => setRouteSlipOpen(false);
+  const handleFamilyAppointmentsClick = () => setFamilyAppointmentsOpen(true);
+  const handleCloseFamilyAppointments = () => setFamilyAppointmentsOpen(false);
 
   // Fetch detailed patient data when a patient is selected
   useEffect(() => {
@@ -481,7 +485,7 @@ const OperatorySidebar = ({
                 {/* Action Buttons */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <ActionButton label="Route Slip" onClick={handleRouteSlipClick} />
-                  <ActionButton label="Family Appointments" />
+                  <ActionButton label="Family Appointments" onClick={handleFamilyAppointmentsClick} />
                   <ActionButton label="Appointment History" />
                 </Box>
 
@@ -791,6 +795,12 @@ const OperatorySidebar = ({
         patient={selectedPatient}
         patientDetails={patientDetails}
         patientBalance={patientBalance}
+      />
+      <FamilyAppointmentsDialog
+        open={familyAppointmentsOpen}
+        onClose={handleCloseFamilyAppointments}
+        patient={selectedPatient}
+        familyMembers={patientDetails?.familyMembers || []}
       />
     </Box>
   );
