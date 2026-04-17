@@ -18,6 +18,7 @@ const OperatoryScheduleGrid = ({
   onSlotClick,
   onAppointmentClick,
   newlyCreatedAppointmentId,
+  privacyMode = false,
   // Dynamic configuration for breaks (can be loaded from API/practice settings)
   BREAK_TIMES = [
     {
@@ -461,6 +462,7 @@ const OperatoryScheduleGrid = ({
                             minutesSinceStart={minutesSinceStart}
                             onAppointmentClick={onAppointmentClick}
                             isNewAppointment={isNewAppointment}
+                            privacyMode={privacyMode}
                           />
                         </div>
                       );
@@ -563,7 +565,11 @@ const OperatoryScheduleGrid = ({
                         {dayjs(a.start).format("h:mma")}
                       </Typography>
                       <Typography sx={{ fontSize: "11px", color: "#1e293b", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {a.patientName}
+                        {privacyMode 
+                          ? (a.patientName?.includes('(') 
+                              ? `•••••••• ${a.patientName.substring(a.patientName.indexOf('('))}`
+                              : "••••••••")
+                          : a.patientName}
                       </Typography>
                     </Box>
                   ))}
@@ -798,6 +804,7 @@ const OperatoryScheduleGrid = ({
                       <AppointmentCard
                         appointment={a}
                         viewMode={viewMode}
+                        privacyMode={privacyMode}
                         isShortAppointment={false}
                         isUltraCompact={false}
                         isCompactAppointment={false}

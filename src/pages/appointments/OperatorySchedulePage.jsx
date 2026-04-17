@@ -17,12 +17,13 @@ import {
   Select,
   MenuItem,
   FormControl,
-  Link
+  Link,
+  Tooltip
 } from "@mui/material";
 import {
   PostAdd, Group, Science, Description, FilterAlt,
   VisibilityOff, Visibility, SpeakerNotesOff, Print, History,
-  Person, AttachMoney, MoreVert, CalendarMonth,
+  Person, PersonOff, AttachMoney, MoreVert, CalendarMonth,
   KeyboardArrowLeft, KeyboardArrowRight, EventNote
 } from '@mui/icons-material';
 import EventNoteIcon from "@mui/icons-material/EventNote";
@@ -106,6 +107,7 @@ const OperatorySchedulePage = () => {
   const [patientQuery, setPatientQuery] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [showConsult, setShowConsult] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   // Dynamically generate operatory columns from rooms
   const OPERATORY_COLUMNS = useMemo(() => {
@@ -185,49 +187,49 @@ const OperatorySchedulePage = () => {
       ];
     }
 
-      const cols = rooms.map((room, index) => {
-        // Generate staggered lunch breaks by default (each operatory gets 30 min different time)
-        const totalMinutesOffset = index * 30;
-        const defaultLunchStartMinutes = 12 * 60 + totalMinutesOffset;
-        const defaultLunchEndMinutes = defaultLunchStartMinutes + 30;
+    const cols = rooms.map((room, index) => {
+      // Generate staggered lunch breaks by default (each operatory gets 30 min different time)
+      const totalMinutesOffset = index * 30;
+      const defaultLunchStartMinutes = 12 * 60 + totalMinutesOffset;
+      const defaultLunchEndMinutes = defaultLunchStartMinutes + 30;
 
-        const startHours = Math.floor(defaultLunchStartMinutes / 60);
-        const startMins = defaultLunchStartMinutes % 60;
-        const endHours = Math.floor(defaultLunchEndMinutes / 60);
-        const endMins = defaultLunchEndMinutes % 60;
+      const startHours = Math.floor(defaultLunchStartMinutes / 60);
+      const startMins = defaultLunchStartMinutes % 60;
+      const endHours = Math.floor(defaultLunchEndMinutes / 60);
+      const endMins = defaultLunchEndMinutes % 60;
 
-        const startTime = `${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}`;
-        const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+      const startTime = `${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}`;
+      const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
 
-        return {
-          id: `op${room._id || room.id}`,
-          label: room.name || `Op ${index + 1}`,
-          color: OPERATORY_COLORS[index % OPERATORY_COLORS.length],
-          breakTimes: room.breakTimes || [
-            {
-              label: "Lunch",
-              icon: "🍽️",
-              startTime,
-              endTime,
-              color: "#bbdefb",
-              hoverColor: "#64b5f6",
-              textColor: "#0d47a1",
-            }
-          ],
-        };
+      return {
+        id: `op${room._id || room.id}`,
+        label: room.name || `Op ${index + 1}`,
+        color: OPERATORY_COLORS[index % OPERATORY_COLORS.length],
+        breakTimes: room.breakTimes || [
+          {
+            label: "Lunch",
+            icon: "🍽️",
+            startTime,
+            endTime,
+            color: "#bbdefb",
+            hoverColor: "#64b5f6",
+            textColor: "#0d47a1",
+          }
+        ],
+      };
+    });
+
+    if (showConsult) {
+      cols.push({
+        id: "consult",
+        label: "Consult",
+        color: "#8d6e63",
+        breakTimes: []
       });
+    }
 
-      if (showConsult) {
-        cols.push({
-          id: "consult",
-          label: "Consult",
-          color: "#8d6e63",
-          breakTimes: []
-        });
-      }
-
-      return cols;
-    }, [rooms, showConsult]);
+    return cols;
+  }, [rooms, showConsult]);
 
   const [sidebarPatients, setSidebarPatients] = useState([]);
   const [loadingSidebarPatients, setLoadingSidebarPatients] = useState(false);
@@ -462,10 +464,10 @@ const OperatorySchedulePage = () => {
       // Map roomId to operatory column
       let columnId = "op1";
       const apptTitle = (a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "").toLowerCase();
-      const isConsultation = 
-        apptTitle.includes("consult") || 
-        apptTitle.includes("evaluation") || 
-        apptTitle.includes("cleaning") || 
+      const isConsultation =
+        apptTitle.includes("consult") ||
+        apptTitle.includes("evaluation") ||
+        apptTitle.includes("cleaning") ||
         apptTitle.includes("exam") ||
         apptTitle.includes("hygiene");
 
@@ -599,7 +601,7 @@ const OperatorySchedulePage = () => {
           color: "#6b6b6b",
         }
       ];
-      
+
       setAppointments(prev => {
         const filtered = prev.filter(a => !String(a.id).startsWith("consult-"));
         return [...filtered, ...consultAppts];
@@ -964,35 +966,36 @@ const OperatorySchedulePage = () => {
           {/* 3. Your Action Icons (Mapped from the image) */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexGrow: 1, justifyContent: 'flex-end' }}>
             {[
-              { icon: <PostAdd />, onClick: () => setBulkTextDialogOpen(true) },         // Form/Entry
-              { icon: <Group /> },           // Patients/Group
-              { icon: <Science />, onClick: () => setLabCasesDialogOpen(true) },         // Lab
-              { icon: <Description />, onClick: () => setProgressNotesOpen(true) },     // Document
-              { icon: <FilterAlt />, onClick: (e) => setLabAnchorEl(e.currentTarget) },       // Filter
-              { icon: showConsult ? <Visibility /> : <VisibilityOff />, onClick: () => setShowConsult(!showConsult) },   // Hide/Show Toggle
-              { icon: <SpeakerNotesOff /> }, // No Notes
-              { icon: <Print /> },           // Print
-              { icon: <History /> },         // History
-              { icon: <Person /> },          // Profile
-              { icon: <AttachMoney /> },     // Billing
-              { icon: <MoreVert /> },        // More
-              { icon: <CalendarMonth /> }    // Calendar
+              { icon: <PostAdd />, label: "Form Entry", onClick: () => setBulkTextDialogOpen(true) },
+              { icon: <Group />, label: "Patients" },
+              { icon: <Science />, label: "Lab Cases", onClick: () => setLabCasesDialogOpen(true) },
+              { icon: <Description />, label: "Progress Notes", onClick: () => setProgressNotesOpen(true) },
+              { icon: <FilterAlt />, label: "Filter Labs", onClick: (e) => setLabAnchorEl(e.currentTarget) },
+              { icon: showConsult ? <Visibility /> : <VisibilityOff />, label: "Consult Column", onClick: () => setShowConsult(!showConsult) },
+              { icon: <SpeakerNotesOff />, label: "No Notes" },
+              { icon: <Print />, label: "Print" },
+              // { icon: <History />, label: "History" },
+              { icon: privacyMode ? <PersonOff /> : <Person />, label: "Privacy Mode", onClick: () => setPrivacyMode(!privacyMode) },
+              { icon: <AttachMoney />, label: "Billing" },
+              { icon: <MoreVert />, label: "More" },
+              // { icon: <CalendarMonth />, label: "Calendar" }
             ].map((item, idx) => (
-              <IconButton
-                key={idx}
-                onClick={item.onClick}
-                sx={{
-                  width: 30, // Extra slim to fit all
-                  height: 30,
-                  borderRadius: 1.5,
-                  border: "1px solid #eef2f6",
-                  color: "#001e3c", // Dark blue from your image
-                  "& svg": { fontSize: 18 },
-                  "&:hover": { bgcolor: "#f1f5f9" }
-                }}
-              >
-                {item.icon}
-              </IconButton>
+              <Tooltip key={idx} title={item.label} arrow>
+                <IconButton
+                  onClick={item.onClick}
+                  sx={{
+                    width: 30, // Extra slim to fit all
+                    height: 30,
+                    borderRadius: 1.5,
+                    border: "1px solid #eef2f6",
+                    color: "#001e3c", // Dark blue from your image
+                    "& svg": { fontSize: 18 },
+                    "&:hover": { bgcolor: "#f1f5f9" }
+                  }}
+                >
+                  {item.icon}
+                </IconButton>
+              </Tooltip>
             ))}
           </Box>
         </Box>
@@ -1062,6 +1065,7 @@ const OperatorySchedulePage = () => {
             setSelectedAppointment(appt);
             setDetailsDialogOpen(true);
           }}
+          privacyMode={privacyMode}
         />
       </Box>
 

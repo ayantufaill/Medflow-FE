@@ -36,6 +36,7 @@ const AppointmentCard = ({
   minutesSinceStart,
   onAppointmentClick,
   isNewAppointment = false,
+  privacyMode = false,
 }) => {
   // Calculate responsive sizing values
   const sizing = {
@@ -175,6 +176,7 @@ const AppointmentCard = ({
           isUltraCompact={isUltraCompact}
           isCompactAppointment={isCompactAppointment}
           sizing={sizing}
+          privacyMode={privacyMode}
         />
 
         <AppointmentStatusBand
@@ -217,6 +219,7 @@ const AppointmentHeader = ({
   isUltraCompact,
   isCompactAppointment,
   sizing,
+  privacyMode = false,
 }) => {
   return (
     <Box
@@ -254,7 +257,11 @@ const AppointmentHeader = ({
             whiteSpace: "nowrap",
           }}
         >
-          {appointment.patientName || "John Doe"}
+          {privacyMode 
+            ? (appointment.patientName?.includes('(') 
+                ? `•••• •••• ${appointment.patientName.substring(appointment.patientName.indexOf('('))}`
+                : "•••• ••••")
+            : (appointment.patientName || "John Doe")}
         </Typography>
       </Box>
 
