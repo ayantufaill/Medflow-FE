@@ -296,24 +296,6 @@ const KioskAccountsView = () => {
             }}
           />
 
-          {password && (
-            <Box>
-              <LinearProgress
-                variant="determinate"
-                value={(strength.score / 4) * 100}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: '#e2e8f0',
-                  '& .MuiLinearProgress-bar': { backgroundColor: strength.color, borderRadius: 3 },
-                }}
-              />
-              <Typography variant="caption" sx={{ color: strength.color, mt: 0.25 }}>
-                {strength.label}
-              </Typography>
-            </Box>
-          )}
-
           <TextField
             label="Confirm Password"
             type={showConfirm ? 'text' : 'password'}
@@ -333,7 +315,32 @@ const KioskAccountsView = () => {
             }}
           />
 
-          <Box>
+          {password && (
+            <Box>
+              <LinearProgress
+                variant="determinate"
+                value={(strength.score / 4) * 100}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: '#e2e8f0',
+                  '& .MuiLinearProgress-bar': { backgroundColor: strength.color, borderRadius: 3 },
+                }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
+                <Typography variant="caption" sx={{ color: strength.color, fontWeight: 600 }}>
+                  Strength: {strength.label}
+                </Typography>
+                {confirmPassword && confirmPassword === password && (
+                  <Typography variant="caption" sx={{ color: '#38a169', fontWeight: 600 }}>
+                    Passwords Match
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          <Box sx={{ mt: 1 }}>
             <Button
               variant="contained"
               size="small"
