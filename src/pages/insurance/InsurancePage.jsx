@@ -207,17 +207,20 @@ const InsurancePage = () => {
           Insurance
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button
             variant="contained"
             onClick={handleOpenMenu}
             endIcon={<KeyboardArrowDownIcon />}
             sx={{
-              bgcolor: '#2e7d32',
+              bgcolor: '#2e7d32', // Reverted to original green
+              color: '#fff',
               textTransform: 'none',
               borderRadius: '20px',
               px: 3,
-              '&:hover': { bgcolor: '#1b5e20' }
+              fontWeight: 700,
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#2fb365', boxShadow: 'none' }
             }}
           >
             Add Coverage
@@ -227,6 +230,23 @@ const InsurancePage = () => {
             <MenuItem onClick={() => handleAddCoverage('Membership Plan')}>Membership Plan</MenuItem>
           </Menu>
 
+          <Button
+            variant="contained"
+            onClick={handleViewOldDesign}
+            sx={{
+              bgcolor: '#e0e0e0',
+              color: '#444',
+              textTransform: 'none',
+              borderRadius: '20px',
+              px: 3,
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#d5d5d5', boxShadow: 'none' }
+            }}
+          >
+            View In Old Design
+          </Button>
         </Box>
       </Box>
 

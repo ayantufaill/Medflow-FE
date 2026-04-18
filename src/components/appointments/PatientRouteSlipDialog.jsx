@@ -128,7 +128,7 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
 
             {/* PATIENT SECTION */}
             <SectionHeader title="PATIENT" />
-            <Grid container spacing={2} sx={{ mb: 3, px: 1 }}>
+            <Grid container spacing={15} sx={{ mb: 3, px: 1 }}>
               <Grid item xs={7}>
                 <LabelValue label="Name" value={patientName} />
                 <LabelValue label="Address" value={formatAddress(patientDetails?.address)} />
@@ -145,18 +145,26 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
             </Grid>
 
             {/* ACCOUNT & INSURANCE ROW */}
-            <Grid container spacing={0} sx={{ mb: 3, border: '1px solid #c0cfe3' }}>
-              <Grid item xs={6} sx={{ borderRight: '1px solid #c0cfe3' }}>
-                <SectionHeader title="ACCOUNT" />
-                <Box sx={{ px: 2, pb: 2 }}>
+            <Box sx={{ display: 'flex', mb: 3, border: '1px solid #c0cfe3', width: '100%' }}>
+              <Box sx={{ flex: 1, borderRight: '1px solid #c0cfe3' }}>
+                <Box sx={{ bgcolor: '#e0e8f5', py: 0.5, borderBottom: '1px solid #c0cfe3' }}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', color: '#1a3353', textTransform: 'uppercase' }}>
+                    ACCOUNT
+                  </Typography>
+                </Box>
+                <Box sx={{ px: 2, py: 2 }}>
                   <LabelValue label="Total Outstanding" value={patientBalance?.familyTotalOutstanding ? `$${patientBalance.familyTotalOutstanding.toLocaleString()}` : '$0.00'} />
                   <LabelValue label="Individual Outstanding" value={patientBalance?.individualOutstanding ? `$${patientBalance.individualOutstanding.toLocaleString()}` : '$0.00'} />
                   <LabelValue label="Insurance Outstanding" value={patientBalance?.insuranceOutstanding ? `$${patientBalance.insuranceOutstanding.toLocaleString()}` : '$0.00'} />
                 </Box>
-              </Grid>
-              <Grid item xs={6}>
-                <SectionHeader title="INSURANCE" />
-                <Box sx={{ px: 2, pb: 2 }}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Box sx={{ bgcolor: '#e0e8f5', py: 0.5, borderBottom: '1px solid #c0cfe3' }}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', color: '#1a3353', textTransform: 'uppercase' }}>
+                    INSURANCE
+                  </Typography>
+                </Box>
+                <Box sx={{ px: 2, py: 2 }}>
                   {insurances.length > 0 ? (
                     insurances.map((ins, idx) => (
                       <Box key={idx} sx={{ mb: 1 }}>
@@ -168,8 +176,8 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
                     <Typography sx={{ fontSize: '0.75rem', color: '#999', fontStyle: 'italic' }}>No active insurance</Typography>
                   )}
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
 
             {/* APPOINTMENT OF TODAY */}
             <SectionHeader title={`APPOINTMENT OF ${dayjs().format('MM/DD/YYYY')}`} />

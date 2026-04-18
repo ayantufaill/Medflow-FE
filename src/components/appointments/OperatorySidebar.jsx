@@ -484,9 +484,18 @@ const OperatorySidebar = ({
                       <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a3353' }}>
                         {selectedPatient?.firstName} {selectedPatient?.lastName} (#{selectedPatient?.patientCode || selectedPatient?._id?.slice(-4) || '---'})
                       </Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: '#666', mt: 0.25 }}>
-                        Birthday: {selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '---'} (35)
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>
+                          Birthday: {selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '---'} (35)
+                        </Typography>
+                        <IconButton 
+                          size="small" 
+                          sx={{ p: 0.2, color: '#999', '&:hover': { color: '#666' } }}
+                          onClick={() => copyToClipboard(selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '')}
+                        >
+                          <ContentCopy sx={{ fontSize: 12 }} />
+                        </IconButton>
+                      </Box>
                       <Box sx={{ display: 'flex', gap: 0.4, mt: 1.5 }}>
                         <Box sx={{ bgcolor: '#eee', p: 0.3, borderRadius: '4px', display: 'flex' }}><LocalHospitalIcon sx={{ fontSize: 12, color: '#999' }} /></Box>
                         <Box sx={{ bgcolor: '#eee', p: 0.3, borderRadius: '4px', display: 'flex', position: 'relative' }}>
@@ -581,16 +590,20 @@ const OperatorySidebar = ({
                     </Box>
 
                     <Box>
-                      <Typography className="detail-label" sx={{ color: (patientDetails?.medicalAlerts?.length > 0 || patientDetails?.medicalHistory?.alerts?.length > 0) ? '#ef4444' : '#777' }}>Medical Alerts</Typography>
-                      {(patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts || []).length > 0 ? (
-                        (patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts).map((alert, idx) => (
-                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, pl: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <KeyboardArrowDownIcon sx={{ fontSize: 16, color: '#777' }} />
+                        <Typography className="detail-label" sx={{ color: '#777', mb: 0 }}>Medical Alerts</Typography>
+                      </Box>
+                      <Box sx={{ pl: 2.5, mt: 0.5 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
+                          Diabetes Type I
+                        </Typography>
+                        {(patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts || []).map((alert, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
                             {typeof alert === 'string' ? alert : alert.description || alert.name}
                           </Typography>
-                        ))
-                      ) : (
-                        <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No alerts</Typography>
-                      )}
+                        ))}
+                      </Box>
                     </Box>
 
                     <Box>

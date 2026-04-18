@@ -28,6 +28,7 @@ import {
   MailOutline as MailIcon,
   ChatBubbleOutline as ChatIcon,
   Check as CheckIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { appointmentService } from "../../services/appointment.service";
@@ -47,10 +48,13 @@ const ChecklistItem = ({ label, checked = false }) => (
       "&:last-child": { borderBottom: "none" },
     }}
   >
-    <Typography sx={{ fontSize: "0.75rem", color: "#666", fontWeight: 500 }}>
-      {label}
-    </Typography>
-    {checked && <CheckIcon sx={{ fontSize: 14, color: "#999" }} />}
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <KeyboardArrowDownIcon sx={{ fontSize: 14, color: "#999" }} />
+      <Typography sx={{ fontSize: "0.75rem", color: "#666", fontWeight: 500 }}>
+        {label}
+      </Typography>
+    </Box>
+    {checked && <CheckIcon sx={{ fontSize: 14, color: "#b0b0b0" }} />}
   </Box>
 );
 
@@ -59,10 +63,16 @@ const ChecklistItem = ({ label, checked = false }) => (
  * Replicates the purple-header card with checklists.
  */
 const ScheduledAppointmentCard = ({ appointment }) => {
-  const [status, setStatus] = useState(appointment.status || "unconfirmed");
+  const [status, setStatus] = useState(appointment.status || "scheduled");
 
-  const headerDate = dayjs(appointment.appointmentDate).format("MM/DD/YYYY");
-  const headerTime = dayjs(appointment.startTime || appointment.appointmentDate).format("hh:mm A");
+  const headerDate = dayjs(appointment.appointmentDate).isValid() 
+    ? dayjs(appointment.appointmentDate).format("MM/DD/YYYY") 
+    : dayjs(appointment.startTime).format("MM/DD/YYYY");
+    
+  const headerTime = dayjs(appointment.startTime || appointment.appointmentDate).isValid()
+    ? dayjs(appointment.startTime || appointment.appointmentDate).format("hh:mm A")
+    : "---";
+    
   const type = appointment.appointmentType?.name || appointment.noteType || "RECARE";
 
   return (
@@ -72,7 +82,7 @@ const ScheduledAppointmentCard = ({ appointment }) => {
         border: "1px solid #ddd",
         borderRadius: "4px",
         overflow: "hidden",
-        minWidth: "240px",
+        width: "260px",
         mb: 2,
       }}
     >
@@ -80,11 +90,11 @@ const ScheduledAppointmentCard = ({ appointment }) => {
       <Box
         sx={{
           bgcolor: "#a26da1", // Purple header color
-          p: 0.75,
+          p: 1,
           color: "#fff",
         }}
       >
-        <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, textAlign: "center" }}>
+        <Typography sx={{ fontSize: "0.8rem", fontWeight: 700, textAlign: "center" }}>
           {type.toUpperCase()} {headerDate} @ {headerTime}
         </Typography>
       </Box>
@@ -99,10 +109,11 @@ const ScheduledAppointmentCard = ({ appointment }) => {
               onChange={(e) => setStatus(e.target.value)}
               size="small"
               sx={{
-                height: 28,
+                height: 32,
                 fontSize: "0.8rem",
                 "& .MuiSelect-select": { py: 0.5, pl: 1 },
-                width: "120px",
+                width: "130px",
+                borderRadius: "4px",
               }}
             >
               <MenuItem value="scheduled">Scheduled</MenuItem>
@@ -111,29 +122,30 @@ const ScheduledAppointmentCard = ({ appointment }) => {
               <MenuItem value="rescheduled">Rescheduled</MenuItem>
               <MenuItem value="cancelled">Cancelled</MenuItem>
             </Select>
-            <Typography sx={{ fontSize: "0.8rem", color: "#999", fontWeight: 700 }}>P1</Typography>
+            <Typography sx={{ fontSize: "0.85rem", color: "#666", fontWeight: 600 }}>P1</Typography>
           </Box>
 
           {/* Icons Row */}
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <MailIcon sx={{ fontSize: 18, color: "#5c7cbc" }} />
-            <ChatIcon sx={{ fontSize: 18, color: "#5c7cbc" }} />
+          <Box sx={{ display: "flex", gap: 1.5 }}>
+            <MailIcon sx={{ fontSize: 20, color: "#5c7cbc" }} />
+            <ChatIcon sx={{ fontSize: 20, color: "#5c7cbc" }} />
           </Box>
 
           {/* Description Row */}
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <Typography sx={{ fontSize: "0.8rem", color: "#333" }}>
+            <Typography sx={{ fontSize: "0.85rem", color: "#444" }}>
               {appointment.procedures || "Maintenance, fl"}
             </Typography>
             <Box
               sx={{
                 bgcolor: "#d7ebd8",
-                px: 0.5,
+                px: 0.8,
+                py: 0.2,
                 borderRadius: "2px",
                 border: "1px solid #c0e0c1",
               }}
             >
-              <Typography sx={{ fontSize: "0.6rem", fontWeight: 800, color: "#478c4a" }}>
+              <Typography sx={{ fontSize: "0.65rem", fontWeight: 800, color: "#478c4a" }}>
                 SAB
               </Typography>
             </Box>
@@ -142,16 +154,10 @@ const ScheduledAppointmentCard = ({ appointment }) => {
       </Box>
 
       {/* CHECKLISTS SECTION */}
-      <Box sx={{ borderTop: "1px solid #ddd" }}>
-        <Box sx={{ bgcolor: "#f9f9f9", p: 0.5, borderBottom: "1px solid #eee" }}>
-          <ChecklistItem label="Pre-appt Checklist" checked />
-        </Box>
-        <Box sx={{ bgcolor: "#f9f9f9", p: 0.5, borderBottom: "1px solid #eee" }}>
-          <ChecklistItem label="Check-in Checklist" checked />
-        </Box>
-        <Box sx={{ bgcolor: "#f9f9f9", p: 0.5 }}>
-          <ChecklistItem label="Check-out Checklist" checked />
-        </Box>
+      <Box sx={{ borderTop: "1px solid #eee" }}>
+        <ChecklistItem label="Pre-appt Checklist" checked />
+        <ChecklistItem label="Check-in Checklist" checked />
+        <ChecklistItem label="Check-out Checklist" checked />
       </Box>
     </Paper>
   );
@@ -307,30 +313,72 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
             <CircularProgress />
           </Box>
         ) : tabValue === 0 ? (
-          /* SCHEDULED TAB - COLUMN BASED */
-          <Box sx={{ p: 2, flex: 1, overflowX: "auto" }}>
-            <Typography variant="h6" sx={{ textAlign: "center", textDecoration: "underline", color: "#5c7cbc", fontWeight: 600, mb: 3, fontSize: "1rem" }}>
-              Scheduled Appointments
-            </Typography>
-            
-            <Box sx={{ display: "flex", gap: 3, minWidth: "max-content", justifyContent: "center" }}>
-              {groupedAppointments.map((group, idx) => (
-                <Box key={idx} sx={{ width: "260px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <Typography sx={{ fontWeight: 700, color: "#333", mb: 1, textAlign: "center", fontSize: "0.9rem" }}>
-                    {group.name}
-                  </Typography>
-                  
-                  {group.appointments.length > 0 ? (
-                    group.appointments.map((appt, i) => (
-                      <ScheduledAppointmentCard key={appt._id || i} appointment={appt} />
+          /* SCHEDULED TAB - SPLIT VIEW */
+          <Box sx={{ display: "flex", flex: 1, height: "100%", overflow: "hidden" }}>
+            {/* Left Panel: Summary List */}
+            <Box
+              sx={{
+                width: "240px",
+                borderRight: "1px solid #eee",
+                p: 2,
+                display: "flex",
+                flexDirection: "column",
+                bgcolor: "#fbfbfb",
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, color: "#1a3353", mb: 2, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Upcoming Appointments
+              </Typography>
+              
+              {allAppointments.filter(appt => dayjs(appt.appointmentDate).isAfter(dayjs().subtract(1, "day"), "day")).length > 0 ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {allAppointments
+                    .filter(appt => dayjs(appt.appointmentDate).isAfter(dayjs().subtract(1, "day"), "day"))
+                    .sort((a, b) => dayjs(a.appointmentDate).diff(dayjs(b.appointmentDate)))
+                    .map((appt, i) => (
+                      <Box key={i}>
+                        <Typography sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1976d2" }}>
+                          {getPatientName(appt)}
+                        </Typography>
+                        <Typography sx={{ fontSize: "0.75rem", color: "#666" }}>
+                          {dayjs(appt.appointmentDate).format("ddd, MMM DD")} @ {dayjs(appt.startTime || appt.appointmentDate).format("hh:mm A")}
+                        </Typography>
+                      </Box>
                     ))
-                  ) : (
-                    <Typography sx={{ fontSize: "0.8rem", color: "#999", fontStyle: "italic", mt: 4 }}>
-                      No Upcoming Appointments
-                    </Typography>
-                  )}
+                  }
                 </Box>
-              ))}
+              ) : (
+                <Typography sx={{ fontSize: "0.8rem", color: "#999", fontStyle: "italic" }}>
+                  no upcomming appointments
+                </Typography>
+              )}
+            </Box>
+
+            {/* Right Side: Detailed Columns */}
+            <Box sx={{ p: 2, flex: 1, overflowX: "auto", overflowY: "auto" }}>
+              <Typography variant="h6" sx={{ textAlign: "center", textDecoration: "underline", color: "#5c7cbc", fontWeight: 600, mb: 4, fontSize: "1.1rem" }}>
+                Scheduled Appointments
+              </Typography>
+              
+              <Box sx={{ display: "flex", gap: 5, minWidth: "max-content", justifyContent: "center" }}>
+                {groupedAppointments.map((group, idx) => (
+                  <Box key={idx} sx={{ width: "260px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <Typography sx={{ fontWeight: 700, color: "#333", mb: 2, textAlign: "center", fontSize: "0.95rem" }}>
+                      {group.name}
+                    </Typography>
+                    
+                    {group.appointments.length > 0 ? (
+                      group.appointments.map((appt, i) => (
+                        <ScheduledAppointmentCard key={appt._id || i} appointment={appt} />
+                      ))
+                    ) : (
+                      <Typography sx={{ fontSize: "0.85rem", color: "#444", mt: 1, textAlign: "center" }}>
+                        no upcomming appointments
+                      </Typography>
+                    )}
+                  </Box>
+                ))}
+              </Box>
             </Box>
           </Box>
         ) : (
