@@ -1508,21 +1508,11 @@ function App() {
                     }
                   />
                   <Route
-                    path="/insurance/new"
+                    path="/membership-plans"
                     element={
                       <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
                         <Layout>
-                          <AddCoveragePage />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/insurance/new"
-                    element={
-                      <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-                        <Layout>
-                          <AddCoveragePage />
+                          <MembershipPlanPage />
                         </Layout>
                       </ProtectedRoute>
                     }

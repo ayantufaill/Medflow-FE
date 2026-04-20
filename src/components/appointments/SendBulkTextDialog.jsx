@@ -176,6 +176,7 @@ const SendBulkTextDialog = ({ open, onClose, providers = [], selectedDate }) => 
   const getBadgeStyle = (status) => {
     const s = String(status || "").toLowerCase().replace(/_/g, " ");
     if (s.includes("checkout") || s.includes("completed")) return { label: "CHECKEDOUT COMPLETED", bg: "#fff3e0", color: "#e65100" };
+    if (s === "arrived") return { label: "ARRIVED", bg: "#fff3e0", color: "#e65100" };
     if (s === "seated" || s === "confirmed" || s === "ready to be seated") return { label: s.toUpperCase(), bg: "#e8f5e9", color: "#2e7d32" };
     if (s === "rescheduled") return { label: "RESCHEDULED", bg: "#f5f5f5", color: "#616161" };
     if (s === "cancelled") return { label: "CANCELLED", bg: "#ffebee", color: "#c62828" };
@@ -278,7 +279,10 @@ const SendBulkTextDialog = ({ open, onClose, providers = [], selectedDate }) => 
            </Box>
            <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>Message</Typography>
            <TextField multiline rows={5} fullWidth variant="outlined" value={message} onChange={(e) => setMessage(e.target.value)} sx={{ "& .MuiOutlinedInput-root": { bgcolor: '#f5f5f5', borderRadius: '8px' } }} />
-           <Typography variant="caption" sx={{ mt: 1, fontWeight: 700 }}>{1000 - message.length} characters remaining</Typography>
+           <Typography variant="caption" sx={{ mt: 1, fontWeight: 700, display: 'block' }}>{1000 - message.length} characters remaining</Typography>
+           <Typography variant="caption" sx={{ mt: 0.5, color: '#888', display: 'block', fontStyle: 'italic' }}>
+             The system will automatically add the practice name and contact info to the end of your text message.
+           </Typography>
         </Box>
       </DialogContent>
 
@@ -320,7 +324,7 @@ const SendBulkTextDialog = ({ open, onClose, providers = [], selectedDate }) => 
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 800, color: '#999', fontSize: '0.6rem' }}>BY APPOINTMENT STATUS</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.1, mt: 0.5 }}>
-              {["unconfirmed", "preconfirmed", "confirmed", "seated", "no show", "checkout incomplete"].map(s => {
+              {["unconfirmed", "preconfirmed", "confirmed", "arrived", "seated", "no show", "checkout incomplete"].map(s => {
                 const badge = getBadgeStyle(s);
                 return (
                   <Box key={s} sx={{ display: 'flex', alignItems: 'center' }}>

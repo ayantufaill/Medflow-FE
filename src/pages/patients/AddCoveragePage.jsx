@@ -296,6 +296,7 @@ const AddCoveragePage = () => {
           <InsuranceInformation 
             formData={formData}
             handleInputChange={handleInputChange}
+            insuranceCompanies={allCompanies.companies || []}
             ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
             tinyText={tinyText}
             blueHeader={blueHeader}

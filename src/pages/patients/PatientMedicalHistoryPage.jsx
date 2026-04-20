@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { 
-  Box, 
-  Typography, 
+import {
+  Box,
+  Typography,
   Button,
   CircularProgress,
   IconButton,
@@ -176,36 +176,36 @@ const PatientMedicalHistoryPage = () => {
             Array.isArray(data?.supplements) ? data.supplements : [],
           );
           setSignature(data?.review?.signatureDataUrl || null);
-          
+
           // Debug: Log the raw visitDates from backend
           console.log('Raw visitDates from backend:', data?.visitDates);
-          
+
           const labels = Array.isArray(data?.visitDates)
             ? data.visitDates
-                .map((item, index) => {
-                  // Handle both string dates and objects with date/label properties
-                  const dateStr = typeof item === 'string' ? item : item?.date;
-                  const existingLabel = typeof item === 'object' ? item?.label : null;
-                  
-                  // If there's already a formatted label, use it
-                  if (existingLabel) {
-                    return existingLabel;
-                  }
-                  
-                  // Log for debugging
-                  if (!dateStr || dateStr === "" || dateStr === null) {
-                    console.warn(`Visit date at index ${index} is empty or null:`, item);
-                    return null;
-                  }
-                  
-                  const formatted = formatVisitDate(dateStr);
-                  if (!formatted) {
-                    console.warn(`Failed to format visit date at index ${index}:`, item);
-                  }
-                  // Only include valid formatted dates
-                  return formatted || null;
-                })
-                .filter(Boolean)
+              .map((item, index) => {
+                // Handle both string dates and objects with date/label properties
+                const dateStr = typeof item === 'string' ? item : item?.date;
+                const existingLabel = typeof item === 'object' ? item?.label : null;
+
+                // If there's already a formatted label, use it
+                if (existingLabel) {
+                  return existingLabel;
+                }
+
+                // Log for debugging
+                if (!dateStr || dateStr === "" || dateStr === null) {
+                  console.warn(`Visit date at index ${index} is empty or null:`, item);
+                  return null;
+                }
+
+                const formatted = formatVisitDate(dateStr);
+                if (!formatted) {
+                  console.warn(`Failed to format visit date at index ${index}:`, item);
+                }
+                // Only include valid formatted dates
+                return formatted || null;
+              })
+              .filter(Boolean)
             : [];
           setVisitDates(labels);
         }
@@ -213,8 +213,8 @@ const PatientMedicalHistoryPage = () => {
         if (!cancelled) {
           setError(
             err?.response?.data?.error?.message ||
-              err?.response?.data?.message ||
-              "Failed to load medical history",
+            err?.response?.data?.message ||
+            "Failed to load medical history",
           );
           showSnackbar("Failed to load medical history", "error");
         }
@@ -317,15 +317,15 @@ const PatientMedicalHistoryPage = () => {
       const baseReview = medicalHistory.review || {};
       const review = reviewedWithPatient
         ? {
-            ...baseReview,
-            reviewedWithPatient: true,
-            reviewedAt: new Date().toISOString(),
-            signatureDataUrl: signature || baseReview.signatureDataUrl || null,
-          }
+          ...baseReview,
+          reviewedWithPatient: true,
+          reviewedAt: new Date().toISOString(),
+          signatureDataUrl: signature || baseReview.signatureDataUrl || null,
+        }
         : {
-            ...baseReview,
-            signatureDataUrl: signature || baseReview.signatureDataUrl || null,
-          };
+          ...baseReview,
+          signatureDataUrl: signature || baseReview.signatureDataUrl || null,
+        };
 
       const sectionsForSave = Array.isArray(medicalHistory.sections)
         ? medicalHistory.sections
@@ -366,8 +366,8 @@ const PatientMedicalHistoryPage = () => {
     } catch (err) {
       showSnackbar(
         err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          "Failed to update medical history",
+        err?.response?.data?.message ||
+        "Failed to update medical history",
         "error",
       );
     }
@@ -401,8 +401,8 @@ const PatientMedicalHistoryPage = () => {
       } catch (err) {
         showSnackbar(
           err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to upload document",
+          err?.response?.data?.message ||
+          "Failed to upload document",
           "error",
         );
       } finally {
@@ -456,14 +456,121 @@ const PatientMedicalHistoryPage = () => {
         </FloatingActionButton>
       </FloatingActions>
 
+      {/* Header */}
+      <Box
+        sx={{
+          mt: 1.5,
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, color: "#424242", fontSize: "1.1rem" }}
+            >
+              Medical History
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#757575", mt: 0.25 }}>
+              {patientName} · {dobText}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => saveMedicalHistory(false)}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1,
+              bgcolor: "#1976d2",
+              "&:hover": { bgcolor: "#1565c0" },
+            }}
+          >
+            <RefreshIcon sx={{ mr: 0.5, fontSize: 18 }} />
+            Update Hx
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<CheckIcon />}
+            onClick={() => saveMedicalHistory(true)}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1,
+              bgcolor: "#43a047",
+              "&:hover": { bgcolor: "#388e3c" },
+            }}
+          >
+            Reviewed With Patient
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1,
+              borderColor: "#9e9e9e",
+              color: "#616161",
+              "&:hover": { borderColor: "#616161" },
+            }}
+          >
+            Print
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Timeline with Start AI Button */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <VisitDatesTimeline
+            visitDates={visitDates}
+            onRemoveDate={(indexToRemove) => {
+              setVisitDates((prev) => prev.slice(0, indexToRemove));
+            }}
+          />
+        </Box>
+        <Button
+          variant="contained"
+          size="small"
+          sx={{
+            textTransform: "none",
+            borderRadius: 1.5,
+            bgcolor: "#ffffff",
+            color: "#40B5AD",
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            boxShadow: '0px 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e0e0e0',
+            "&:hover": { bgcolor: "#f5f5f5", boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' },
+            minWidth: '100px',
+            whiteSpace: 'nowrap',
+            py: 0.5,
+            px: 2
+          }}
+        >
+          Start AI
+        </Button>
+      </Box>
+
       {isEmptyState ? (
         <Box 
           sx={{ 
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center', 
-            justifyContent: 'center', 
-            py: 20,
+            justifyContent: 'flex-start', 
+            pt: 10,
+            pb: 20,
             textAlign: 'center',
             flex: 1
           }}
@@ -492,87 +599,6 @@ const PatientMedicalHistoryPage = () => {
         </Box>
       ) : (
         <>
-          {/* Header */}
-          <Box
-            sx={{
-              mt: 1.5,
-              mb: 2,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 2,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Box>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 700, color: "#424242", fontSize: "1.1rem" }}
-                >
-                  Medical History
-                </Typography>
-                <Typography variant="body2" sx={{ color: "#757575", mt: 0.25 }}>
-                  {patientName} · {dobText}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => saveMedicalHistory(false)}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: 1,
-                  bgcolor: "#1976d2",
-                  "&:hover": { bgcolor: "#1565c0" },
-                }}
-              >
-                <RefreshIcon sx={{ mr: 0.5, fontSize: 18 }} />
-                Update Hx
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<CheckIcon />}
-                onClick={() => saveMedicalHistory(true)}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: 1,
-                  bgcolor: "#43a047",
-                  "&:hover": { bgcolor: "#388e3c" },
-                }}
-              >
-                Reviewed With Patient
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<PrintIcon />}
-                onClick={handlePrint}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: 1,
-                  borderColor: "#9e9e9e",
-                  color: "#616161",
-                  "&:hover": { borderColor: "#616161" },
-                }}
-              >
-                Print
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Timeline – Progress Bar Style */}
-          <VisitDatesTimeline
-            visitDates={visitDates}
-            onRemoveDate={(indexToRemove) => {
-              setVisitDates((prev) => prev.slice(0, indexToRemove));
-            }}
-          />
-
           <MedicalGeneralInfoCard
             generalInfo={generalInfo}
             onChangeField={handleGeneralInfoChange}

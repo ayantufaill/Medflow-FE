@@ -711,6 +711,26 @@ const OperatorySidebar = ({
               <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchAm} onChange={(e) => setSearchAm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>AM</Typography></Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchPm} onChange={(e) => setSearchPm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>PM</Typography></Box>
             </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: -1 }}>
+              <Checkbox size="small" checked={searchDoubleBooking} onChange={(e) => setSearchDoubleBooking(e.target.checked)} sx={{ p: 0.5 }} />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a678d' }}>ALLOW DOUBLE BOOKING</Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>SEARCH AVAILABILITY FOR:</Typography>
+              <Select
+                fullWidth size="small"
+                value={searchRange}
+                onChange={(e) => setSearchRange(e.target.value)}
+                sx={{ bgcolor: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
+              >
+                <MenuItem value="1 month">1 month</MenuItem>
+                <MenuItem value="2 months">2 months</MenuItem>
+                <MenuItem value="3 months">3 months</MenuItem>
+                <MenuItem value="6 months">6 months</MenuItem>
+              </Select>
+            </Box>
             <Button variant="contained" fullWidth sx={{ mt: 1, bgcolor: '#5c7cbc', textTransform: 'none', fontWeight: 700, boxShadow: 'none', "&:hover": { bgcolor: '#4a6496' } }}>Search</Button>
           </Box>
         )}

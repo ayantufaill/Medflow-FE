@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, Tabs, Tab, IconButton } from "@mui/material";
-import { Edit as EditIcon, Check as CheckIcon } from "@mui/icons-material";
+import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, Tabs, Tab, IconButton, Checkbox, FormControlLabel, Radio, RadioGroup } from "@mui/material";
+import { Edit as EditIcon, Check as CheckIcon, InfoOutlined as InfoIcon } from "@mui/icons-material";
 import Card from "../shared/Card";
 import MedicationListCard from "../patients/MedicationListCard";
 
@@ -244,8 +244,95 @@ const MedicalSummarySection = ({
 
       {historyTab === 1 && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+          {/* Personal History Header with Risk Indicators */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, borderBottom: '1px solid #e0e0e0', pb: 1, mb: 1, px: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', textTransform: 'uppercase' }}>
+              Personal History
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', border: '1.5px solid #4CAF50' }} />
+                <Typography sx={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>Low</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', border: '1.5px solid #FFC107' }} />
+                <Typography sx={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>Moderate</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', border: '1.5px solid #F44336' }} />
+                <Typography sx={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>High</Typography>
+              </Box>
+            </Box>
+          </Box>
           {summarySections.length ? (
             summarySections.map((section, index) => {
+              const isAllergyQuestion = section.number === 2;
+              
+              if (isAllergyQuestion) {
+                return (
+                  <Paper
+                    key={`${section.number}-${section.question}`}
+                    variant="outlined"
+                    sx={{ 
+                      p: 2, 
+                      borderColor: "grey.300",
+                      bgcolor: '#f8fbff', // Light blue background for emphasis
+                      position: 'relative',
+                      mb: 1.5
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#333' }}>
+                          {section.number}.
+                        </Typography>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#4A90E2', mb: 1.5 }}>
+                            {section.question}
+                          </Typography>
+                          
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, ml: -1 }}>
+                            {['aspirin', 'ibuprofen', 'acetaminophen', 'codeine', 'penicillin'].map((item) => (
+                              <FormControlLabel
+                                key={item}
+                                control={<Checkbox size="small" sx={{ py: 0.25 }} />}
+                                label={<Typography sx={{ fontSize: '0.85rem', color: '#333' }}>{item}</Typography>}
+                                sx={{ mb: -0.5 }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <InfoIcon sx={{ fontSize: '1rem', color: '#999' }} />
+                          <RadioGroup row defaultValue="no">
+                            <FormControlLabel 
+                              value="yes" 
+                              control={<Radio size="small" sx={{ p: 0.5 }} />} 
+                              label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Yes</Typography>} 
+                              labelPlacement="start"
+                              sx={{ ml: 0, mr: 1 }}
+                            />
+                            <FormControlLabel 
+                              value="no" 
+                              control={<Radio size="small" sx={{ p: 0.5 }} />} 
+                              label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>No</Typography>} 
+                              labelPlacement="start"
+                              sx={{ ml: 0 }}
+                            />
+                          </RadioGroup>
+                        </Box>
+                        <Typography sx={{ color: '#4A90E2', fontSize: '0.85rem', cursor: 'pointer', mt: 0.5 }}>
+                          Done
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                );
+              }
+
               const isEditing = editingSectionId === (section.id || section.number || index);
               
               return (
