@@ -22,6 +22,7 @@ import {
   Watch,
   ExistingRestorations,
   Wear,
+  Concerns,
   Appliances,
   ToothIcon,
   RestorationToothIcon,
@@ -140,6 +141,7 @@ const TeethStructureExam = () => {
         />
         
         <Wear />
+        <Concerns />
         <Appliances />
       </Box>
           </Box>
