@@ -53,7 +53,6 @@ const AgingTable = () => {
                   align={i === 0 ? 'left' : 'center'} 
                   sx={{ 
                     fontWeight: 'bold', 
-                    color: '#555', 
                     width: i === 0 ? '25%' : i === 6 ? '40px' : 'auto',
                     bgcolor: i === 5 ? '#e57373' : 'inherit',
                     color: i === 5 ? '#fff' : '#555',
