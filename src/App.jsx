@@ -1509,6 +1509,16 @@ function App() {
                 }
               />
               <Route
+                path="/finance"
+                element={
+                  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+                    <Layout>
+                      <FinancePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/clinical-notes/create"
                 element={
                   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>

@@ -42,6 +42,7 @@ import {
   VerifiedUser,
   Forum,
   Settings,
+  AttachMoney,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
