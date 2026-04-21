@@ -52,6 +52,7 @@ import HomeCarePage from './pages/patient-reports/HomeCarePage';
 import ConcernsPage from './pages/patient-reports/ConcernsPage';
 import ShowcasePage from './pages/patient-reports/ShowcasePage';
 import InsurancePage from './pages/insurance/InsurancePage';
+import FinancePage from './pages/finance/FinancePage';
 import AllergiesListPage from './pages/allergies/AllergiesListPage';
 import CreateAllergyPage from './pages/allergies/CreateAllergyPage';
 import EditAllergyPage from './pages/allergies/EditAllergyPage';
