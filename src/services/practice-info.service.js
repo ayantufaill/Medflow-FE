@@ -110,5 +110,46 @@ export const practiceInfoService = {
     const response = await apiClient.delete(`/practice-info/${practiceInfoId}`);
     return response.data.data;
   },
+
+  // Practice Setup Patch APIs
+  async updateOfficeTimings(practiceInfoId, officeTimingsData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/office-timings`, { officeTimings: officeTimingsData });
+    return response.data.data;
+  },
+
+  async updateOnlineSchedule(practiceInfoId, onlineScheduleData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/online-schedule`, { onlineSchedule: onlineScheduleData });
+    return response.data.data;
+  },
+
+  async updatePatientFlags(practiceInfoId, patientFlagsData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/patient-flags`, { patientFlags: patientFlagsData });
+    return response.data.data;
+  },
+
+  async updateDocumentCategories(practiceInfoId, documentCategoriesData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/document-categories`, { documentCategories: documentCategoriesData });
+    return response.data.data;
+  },
+
+  async updateScheduleConfig(practiceInfoId, scheduleConfigData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/schedule-config`, { scheduleConfig: scheduleConfigData });
+    return response.data.data;
+  },
+
+  async updatePracticeSettings(practiceInfoId, practiceSettingsData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/practice-settings`, { practiceSettings: practiceSettingsData });
+    return response.data.data;
+  },
+
+  async updateKioskSettings(practiceInfoId, kioskSettingsData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/kiosk-settings`, { kioskSettings: kioskSettingsData });
+    return response.data.data;
+  },
+
+  async updateMyChartSettings(practiceInfoId, mychartSettingsData) {
+    const response = await apiClient.patch(`/practice-info/${practiceInfoId}/mychart-settings`, { mychartSettings: mychartSettingsData });
+    return response.data.data;
+  },
 };
 
