@@ -2,7 +2,7 @@ import React from 'react';
 import { Stack, FormControlLabel, Checkbox, Typography, Button } from '@mui/material';
 import { ArrowDropDown } from '@mui/icons-material';
 
-const FinanceActions = ({ view }) => {
+const FinanceActions = ({ view, expanded, onExpandToggle }) => {
   return (
     <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ my: 1.5 }}>
       {/* Ledger Filters */}
@@ -16,7 +16,7 @@ const FinanceActions = ({ view }) => {
       {/* Action Buttons */}
       <Stack direction="row" spacing={1}>
         {[
-          { label: 'Expand Invoices', variant: 'contained', hideInFamily: true },
+          { label: expanded ? 'Collapse Invoices' : 'Expand Invoices', variant: 'contained', hideInFamily: true, action: onExpandToggle },
           { label: 'Past Statements', variant: 'contained' },
           { label: 'INS. COVERAGE', variant: 'contained', hasIcon: true },
           { label: 'Tx', variant: 'outlined', minWidth: '30px' },
@@ -25,6 +25,7 @@ const FinanceActions = ({ view }) => {
             key={btn.label}
             variant={btn.variant} 
             size="small" 
+            onClick={btn.action}
             sx={{ 
               bgcolor: btn.variant === 'contained' ? '#5c6bc0' : 'transparent', 
               color: btn.variant === 'contained' ? '#fff' : '#5c6bc0',

@@ -13,13 +13,20 @@ import AgingTable from '../../components/finance/AgingTable';
 import FinanceActions from '../../components/finance/FinanceActions';
 import LedgerList from '../../components/finance/LedgerList';
 import FamilyLedgerTable from '../../components/finance/FamilyLedgerTable';
+import NewPaymentPlan from '../../components/finance/NewPaymentPlan';
 
 const FinancePage = () => {
   const [view, setView] = useState('invoices');
+  const [expanded, setExpanded] = useState(false);
+  const [showPaymentPlan, setShowPaymentPlan] = useState(false);
 
   const handleViewChange = (event) => {
     setView(event.target.value);
   };
+
+  if (showPaymentPlan) {
+    return <NewPaymentPlan onBack={() => setShowPaymentPlan(false)} />;
+  }
 
   return (
     <Box sx={{ p: '8px 8px 8px 8px', bgcolor: '#fff', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
@@ -44,15 +51,19 @@ const FinancePage = () => {
 
       {/* Main Dashboard Section */}
       <Box sx={{ display: 'flex', width: '100%', mt: 2, alignItems: 'center' }}>
-        <PatientFinanceInfo view={view} />
+        <PatientFinanceInfo view={view} onCalendarClick={() => setShowPaymentPlan(true)} />
         <AgingTable />
       </Box>
 
       {/* Action Toolbar: Filters and Buttons */}
-      <FinanceActions view={view} />
+      <FinanceActions 
+        view={view} 
+        expanded={expanded} 
+        onExpandToggle={() => setExpanded(!expanded)} 
+      />
 
       {/* Dynamic Ledger Section */}
-      {view === 'family' ? <FamilyLedgerTable /> : <LedgerList />}
+      {view === 'family' ? <FamilyLedgerTable /> : <LedgerList expanded={expanded} />}
     </Box>
   );
 };
