@@ -1,7 +1,14 @@
 import React from 'react';
 import { Menu, MenuItem, Typography } from '@mui/material';
 
-const PrintOptionsDropdown = ({ anchorEl, open, onClose }) => {
+const PrintOptionsDropdown = ({ anchorEl, open, onClose, onSelect }) => {
+  const handleSelect = (option) => {
+    if (onSelect) {
+      onSelect(option);
+    }
+    onClose();
+  };
+
   return (
     <Menu
       anchorEl={anchorEl}
@@ -24,12 +31,12 @@ const PrintOptionsDropdown = ({ anchorEl, open, onClose }) => {
         }
       }}
     >
-      <MenuItem onClick={onClose} sx={{ py: 1 }}>
+      <MenuItem onClick={() => handleSelect('Simple Statements')} sx={{ py: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 500, color: '#333' }}>
           Simple Statements
         </Typography>
       </MenuItem>
-      <MenuItem onClick={onClose} sx={{ py: 1 }}>
+      <MenuItem onClick={() => handleSelect('Detailed Statement')} sx={{ py: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 500, color: '#333' }}>
           Detailed Statement
         </Typography>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Menu, MenuItem, Typography } from '@mui/material';
 
-const AdjustmentOptionsDropdown = ({ anchorEl, open, onClose }) => {
+const AdjustmentOptionsDropdown = ({ anchorEl, open, onClose, onSelect }) => {
   const options = [
     "Credit (subtraction)",
     "Debit (addition)",
@@ -32,7 +32,14 @@ const AdjustmentOptionsDropdown = ({ anchorEl, open, onClose }) => {
       }}
     >
       {options.map((option, index) => (
-        <MenuItem key={index} onClick={onClose} sx={{ py: 1 }}>
+        <MenuItem 
+          key={index} 
+          onClick={() => {
+            onSelect(option);
+            onClose();
+          }} 
+          sx={{ py: 1 }}
+        >
           <Typography variant="caption" sx={{ fontWeight: 500, color: '#333' }}>
             {option}
           </Typography>

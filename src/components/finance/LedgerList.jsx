@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Stack, Checkbox, Typography, Divider } from '@mui/material';
+import { Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent, DialogTitle, DialogActions, Button } from '@mui/material';
 import { 
   CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh, Reply, 
   CheckCircle, Refresh, Tune
@@ -7,6 +7,14 @@ import {
 import BackdateTransactionPopup from './BackdateTransactionPopup';
 import PrintOptionsDropdown from './PrintOptionsDropdown';
 import AdjustmentOptionsDropdown from './AdjustmentOptionsDropdown';
+import CreditSubtractionDialog from './CreditSubtractionDialog';
+import DebitAdjustmentDialog from './DebitAdjustmentDialog';
+import MembershipAdjustmentDialog from './MembershipAdjustmentDialog';
+import InsuranceWriteOffDialog from './InsuranceWriteOffDialog';
+import CourtesyCreditComponent from './CourtesyCreditComponent';
+import UndoConfirmationDialog from './UndoConfirmationDialog';
+import VoidConfirmationDialog from './VoidConfirmationDialog';
+import SimpleStatement from './SimpleStatement';
 
 // --- COMPONENT HELPERS ---
  
@@ -120,7 +128,7 @@ const SummaryLabel = ({ label, value }) => (
   </Stack>
 );
 
-const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExtendedTools }) => (
+const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExtendedTools, onVoidClick, voidData, onEditClick, editData, adjustmentType, onRefreshClick, refreshData }) => (
   <Box sx={{ 
     display: 'flex', 
     alignItems: 'center', 
@@ -144,8 +152,8 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
             {title.replace('(uncollected)', '').trim()} #{id || '14040'}: 
-            <Box component="span" sx={{ color: '#d32f2f', fontWeight: 'bold', ml: 0.5 }}>
-              Un-Collected {amount}
+            <Box component="span" sx={{ color: '#999', fontWeight: 'bold', ml: 0.5 }}>
+              {adjustmentType || 'Un-Collected'} {amount}
             </Box>
           </Typography>
         </Box>
@@ -171,9 +179,18 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
         </>
       ) : (
         <>
-          <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} />
-          <Refresh sx={{ fontSize: 18, color: '#4fc3f7', cursor: 'pointer' }} />
-          <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />
+          <Edit 
+            sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} 
+            onClick={() => onEditClick && onEditClick(editData)}
+          />
+          <Refresh 
+            sx={{ fontSize: 18, color: '#4fc3f7', cursor: 'pointer' }} 
+            onClick={() => onRefreshClick && onRefreshClick(refreshData)}
+          />
+          <NotInterested 
+            sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} 
+            onClick={() => onVoidClick && onVoidClick(voidData)}
+          />
         </>
       )}
     </Stack>
@@ -181,39 +198,25 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
 );
 
 const LedgerList = ({ expanded, items = [] }) => {
+  const [expandedItems, setExpandedItems] = React.useState({});
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [printAnchorEl, setPrintAnchorEl] = React.useState(null);
   const [adjAnchorEl, setAdjAnchorEl] = React.useState(null);
+  const [showAdjustDialog, setShowAdjustDialog] = React.useState(false);
+  const [showDebitDialog, setShowDebitDialog] = React.useState(false);
+  const [showMembershipDialog, setShowMembershipDialog] = React.useState(false);
+  const [showWriteOffDialog, setShowWriteOffDialog] = React.useState(false);
+  const [showVoidDialog, setShowVoidDialog] = React.useState(false);
+  const [voidTarget, setVoidTarget] = React.useState(null);
+  const [voidedItems, setVoidedItems] = React.useState({});
+  const [showCourtesyCredit, setShowCourtesyCredit] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState(null);
+  const [adjustmentTypes, setAdjustmentTypes] = React.useState({});
+  const [refreshedItems, setRefreshedItems] = React.useState({});
+  const [showUndoDialog, setShowUndoDialog] = React.useState(false);
+  const [undoTarget, setUndoTarget] = React.useState(null);
+  const [showSimpleStatement, setShowSimpleStatement] = React.useState(false);
   
-  const handleCalendarClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handlePrintClick = (event) => {
-    setPrintAnchorEl(event.currentTarget);
-  };
-
-  const handleAdjClick = (event) => {
-    setAdjAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handlePrintClose = () => {
-    setPrintAnchorEl(null);
-  };
-
-  const handleAdjClose = () => {
-    setAdjAnchorEl(null);
-  };
-
-  const handleBackdateDone = (date) => {
-    console.log('Backdated to:', date);
-    // Add logic here to update the transaction date if needed
-  };
-
   const ledgerItems = items.length > 0 ? items : [
     { 
       id: '24532', date: '04/10/2026', method: 'Master Card', amount: ' $184.00', color: '#5c6bc0',
@@ -251,31 +254,189 @@ const LedgerList = ({ expanded, items = [] }) => {
     },
   ];
 
+  // Sync individual states with global expanded prop
+  React.useEffect(() => {
+    if (expanded !== undefined) {
+      const allExpanded = {};
+      ledgerItems.forEach((_, idx) => {
+        allExpanded[idx] = expanded;
+      });
+      setExpandedItems(allExpanded);
+    }
+  }, [expanded]);
+
+  const handleItemClick = (idx, event) => {
+    console.log('Click on invoice:', idx);
+    setExpandedItems(prev => {
+      const newState = {
+        ...prev,
+        [idx]: !prev[idx]
+      };
+      console.log('New expanded state:', newState);
+      return newState;
+    });
+  };
+  
+  const handleCalendarClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handlePrintClick = (event) => {
+    setPrintAnchorEl(event.currentTarget);
+  };
+
+  const handleAdjClick = (event) => {
+    setAdjAnchorEl(event.currentTarget);
+  };
+
+  const handleAdjustmentSelect = (option) => {
+    if (option === 'Credit (subtraction)') {
+      setShowAdjustDialog(true);
+    } else if (option === 'Debit (addition)') {
+      setShowDebitDialog(true);
+    } else if (option === 'Membership Adjustment') {
+      setShowMembershipDialog(true);
+    } else if (option === 'Insurance Write-Off') {
+      setShowWriteOffDialog(true);
+    }
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handlePrintClose = () => {
+    setPrintAnchorEl(null);
+  };
+
+  const handleAdjClose = () => {
+    setAdjAnchorEl(null);
+  };
+
+  const handlePrintSelect = (option) => {
+    if (option === 'Simple Statements') {
+      setShowSimpleStatement(true);
+    } else if (option === 'Detailed Statement') {
+      console.log('Detailed Statement selected');
+      // Add logic for detailed statement if needed
+    }
+  };
+
+  const handleBackdateDone = (date) => {
+    console.log('Backdated to:', date);
+    // Add logic here to update the transaction date if needed
+  };
+
+  const handleVoidClick = (item) => {
+    setVoidTarget(item);
+    setShowVoidDialog(true);
+  };
+
+  const handleVoidConfirm = () => {
+    if (voidTarget) {
+      // Mark the item as voided using invoice ID and detail ID
+      const voidKey = `${voidTarget.invoiceId}-${voidTarget.id}`;
+      setVoidedItems(prev => ({
+        ...prev,
+        [voidKey]: true
+      }));
+      console.log('Voiding adjustment:', voidTarget);
+    }
+    setShowVoidDialog(false);
+    setVoidTarget(null);
+  };
+
+  const handleVoidCancel = () => {
+    setShowVoidDialog(false);
+    setVoidTarget(null);
+  };
+
+  const handleEditClick = (item) => {
+    setEditTarget(item);
+    setShowCourtesyCredit(true);
+  };
+
+  const handleCourtesyCreditSave = (data) => {
+    console.log('Saving courtesy credit:', data);
+    // Save the adjustment type
+    const key = `${data.invoiceId}-${data.id}`;
+    setAdjustmentTypes(prev => ({
+      ...prev,
+      [key]: data.adjustmentType
+    }));
+    setShowCourtesyCredit(false);
+    setEditTarget(null);
+  };
+
+  const handleCourtesyCreditCancel = () => {
+    setShowCourtesyCredit(false);
+    setEditTarget(null);
+  };
+
+  const handleRefreshClick = (data) => {
+    setUndoTarget(data);
+    setShowUndoDialog(true);
+  };
+
+  const handleUndoConfirm = () => {
+    if (undoTarget) {
+      const key = `${undoTarget.invoiceId}-${undoTarget.id}`;
+      setRefreshedItems(prev => ({
+        ...prev,
+        [key]: true
+      }));
+    }
+    setShowUndoDialog(false);
+    setUndoTarget(null);
+  };
+
+  const handleUndoCancel = () => {
+    setShowUndoDialog(false);
+    setUndoTarget(null);
+  };
+
   return (
     <Box sx={{ p: 1, bgcolor: '#f4f7f9' }}>
-      {ledgerItems.map((item, idx) => (
+      {ledgerItems.map((item, idx) => {
+        const isExpanded = expandedItems[idx] || false;
+        const isRefreshed = item.details?.some(detail => refreshedItems[`${item.id}-${detail.id}`]);
+        
+        return (
         <Box key={idx} sx={{ mb: 1.5 }}>
           <Paper 
             elevation={0} 
             sx={{ 
               p: '4px 12px', 
               border: '1px solid #a5b4fc', 
-              borderRadius: expanded && item.details ? '4px 4px 0 0' : '4px',
+              borderRadius: isExpanded && item.details ? '4px 4px 0 0' : '4px',
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              bgcolor: '#fff'
+              bgcolor: '#fff',
+              cursor: 'pointer',
+              '&:hover': { bgcolor: '#f5f5f5' }
             }}
+            onClick={(e) => handleItemClick(idx, e)}
           >
             <Stack direction="row" spacing={2} alignItems="center" sx={{ flexGrow: 1 }}>
-              {expanded ? (
-                <CheckCircle sx={{ color: '#4caf50', fontSize: 20, width: 40 }} />
+              {isExpanded ? (
+                isRefreshed ? (
+                  <Box sx={{ 
+                    width: 20, 
+                    height: 20, 
+                    borderRadius: '50%', 
+                    bgcolor: '#d32f2f',
+                    mr: 2.5 
+                  }} />
+                ) : (
+                  <CheckCircle sx={{ color: '#4caf50', fontSize: 20, width: 40 }} />
+                )
               ) : (
                 <Checkbox size="small" sx={{ p: 0, width: 40 }} />
               )}
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-                {expanded ? (
+                {isExpanded ? (
                   <Typography variant="caption" sx={{ color: item.color, fontWeight: 500, fontSize: '11px' }}>
                     Invoice #{item.id} ({item.date}): [ Patient Deposit ]{item.amount}
                   </Typography>
@@ -298,14 +459,14 @@ const LedgerList = ({ expanded, items = [] }) => {
                 )}
               </Box>
               
-              {!expanded && (
+              {!isExpanded && (
                 <Typography variant="caption" sx={{ width: 40, color: '#cfd8dc', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
                   {item.initials}
                 </Typography>
               )}
             </Stack>
 
-            {!expanded && (
+            {!isExpanded && (
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
                 {!item.success && (
                   <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />
@@ -317,7 +478,7 @@ const LedgerList = ({ expanded, items = [] }) => {
           </Paper>
 
           {/* Expanded Details Section */}
-          {expanded && item.details && (
+          {isExpanded && item.details && (
             <Box sx={{ 
               border: '1px solid #a5b4fc', 
               borderTop: 'none', 
@@ -357,7 +518,16 @@ const LedgerList = ({ expanded, items = [] }) => {
 
               <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />
 
-              {item.details.map((detail, dIdx) => (
+              {item.details.map((detail, dIdx) => {
+                const voidKey = `${item.id}-${detail.id}`;
+                const isVoided = voidedItems[voidKey];
+                const adjustmentKey = `${item.id}-${detail.id}`;
+                const currentAdjustmentType = adjustmentTypes[adjustmentKey];
+                
+                // Skip rendering if the item is voided
+                if (isVoided) return null;
+                
+                return (
                 <LedgerSubRow 
                   key={dIdx}
                   date={item.date}
@@ -366,12 +536,37 @@ const LedgerList = ({ expanded, items = [] }) => {
                   id={detail.id}
                   initials={item.initials}
                   showExtendedTools={!detail.title.includes('(uncollected)')}
+                  onVoidClick={handleVoidClick}
+                  onEditClick={handleEditClick}
+                  onRefreshClick={handleRefreshClick}
+                  adjustmentType={currentAdjustmentType}
+                  voidData={{
+                    id: detail.id,
+                    title: detail.title,
+                    amount: detail.amount,
+                    date: item.date,
+                    invoiceId: item.id
+                  }}
+                  editData={{
+                    id: detail.id,
+                    title: detail.title,
+                    amount: detail.amount,
+                    date: item.date,
+                    invoiceId: item.id
+                  }}
+                  refreshData={{
+                    idx: idx,
+                    id: detail.id,
+                    invoiceId: item.id
+                  }}
                 />
-              ))}
+                );
+              })}
             </Box>
           )}
         </Box>
-      ))}
+        );
+      })}
       <BackdateTransactionPopup 
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}
@@ -382,12 +577,127 @@ const LedgerList = ({ expanded, items = [] }) => {
         anchorEl={printAnchorEl}
         open={Boolean(printAnchorEl)}
         onClose={handlePrintClose}
+        onSelect={handlePrintSelect}
       />
       <AdjustmentOptionsDropdown 
         anchorEl={adjAnchorEl}
         open={Boolean(adjAnchorEl)}
         onClose={handleAdjClose}
+        onSelect={handleAdjustmentSelect}
       />
+
+      <Dialog 
+        open={showAdjustDialog} 
+        onClose={() => setShowAdjustDialog(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <CreditSubtractionDialog onClose={() => setShowAdjustDialog(false)} />
+        </DialogContent>
+      </Dialog>
+      <Dialog 
+        open={showDebitDialog} 
+        onClose={() => setShowDebitDialog(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <DebitAdjustmentDialog onClose={() => setShowDebitDialog(false)} />
+        </DialogContent>
+      </Dialog>
+      <Dialog 
+        open={showMembershipDialog} 
+        onClose={() => setShowMembershipDialog(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <MembershipAdjustmentDialog onClose={() => setShowMembershipDialog(false)} />
+        </DialogContent>
+      </Dialog>
+      <Dialog 
+        open={showWriteOffDialog} 
+        onClose={() => setShowWriteOffDialog(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <InsuranceWriteOffDialog onClose={() => setShowWriteOffDialog(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Void Confirmation Dialog */}
+      <VoidConfirmationDialog
+        open={showVoidDialog}
+        onClose={handleVoidCancel}
+        onConfirm={handleVoidConfirm}
+        voidTarget={voidTarget}
+      />
+
+      {/* Courtesy Credit Dialog */}
+      <Dialog
+        open={showCourtesyCredit}
+        onClose={handleCourtesyCreditCancel}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '4px',
+            overflow: 'hidden',
+            bgcolor: 'transparent',
+            boxShadow: 'none'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <CourtesyCreditComponent
+            adjustmentData={editTarget}
+            onSave={handleCourtesyCreditSave}
+            onCancel={handleCourtesyCreditCancel}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Undo Confirmation Dialog */}
+      <UndoConfirmationDialog
+        open={showUndoDialog}
+        onClose={handleUndoCancel}
+        onConfirm={handleUndoConfirm}
+      />
+
+      {/* Simple Statement Dialog */}
+      <Dialog
+        open={showSimpleStatement}
+        onClose={() => setShowSimpleStatement(false)}
+        maxWidth={false}
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            overflow: 'hidden',
+            maxHeight: '90vh',
+            margin: 0,
+            bgcolor: '#f5f5f5',
+            width: '880px',
+            maxWidth: '90vw'
+          }
+        }}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: 0,
+            maxWidth: '100%'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
+          <SimpleStatement />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,6 +9,9 @@ import {
   TableHead,
   TableRow,
   Button,
+  Menu,
+  MenuItem,
+  IconButton,
 } from '@mui/material';
 import {
   KeyboardArrowRight,
@@ -19,6 +22,34 @@ import {
 } from '@mui/icons-material';
 
 const AgingTable = () => {
+  const [familyCreditAnchor, setFamilyCreditAnchor] = useState(null);
+  const [accountCreditAnchor, setAccountCreditAnchor] = useState(null);
+  const [currentSection, setCurrentSection] = useState('individual');
+
+  const handleFamilyCreditClick = (event) => {
+    setFamilyCreditAnchor(event.currentTarget);
+  };
+
+  const handleAccountCreditClick = (event) => {
+    setAccountCreditAnchor(event.currentTarget);
+  };
+
+  const handleFamilyCreditClose = () => {
+    setFamilyCreditAnchor(null);
+  };
+
+  const handleAccountCreditClose = () => {
+    setAccountCreditAnchor(null);
+  };
+
+  const handleNextSection = () => {
+    setCurrentSection('individual');
+  };
+
+  const handlePrevSection = () => {
+    setCurrentSection('family');
+  };
+
   return (
     <Box sx={{ width: '62%', flexGrow: 1, minWidth: 0 }}>
       <TableContainer 
@@ -81,9 +112,25 @@ const AgingTable = () => {
                   <TableCell sx={{ p: 0, borderRight: 'none', bgcolor: sectionData.hasReset ? sectionData.resetBg : 'inherit', color: '#fff', textAlign: 'center' }}>
                     {sectionData.hasReset && (
                       <>
-                        {idx === 0 && <KeyboardArrowRight sx={{ fontSize: 16, mt: 0.5 }} />}
+                        {idx === 0 && (
+                          <IconButton 
+                            size="small" 
+                            onClick={handleNextSection}
+                            sx={{ color: '#fff', p: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } }}
+                          >
+                            <KeyboardArrowRight sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        )}
                         {idx === 1 && <Typography sx={{ fontSize: '8px', fontWeight: 'bold' }}>RESET</Typography>}
-                        {idx === 2 && <KeyboardArrowLeft sx={{ fontSize: 16, mb: 0.5 }} />}
+                        {idx === 2 && (
+                          <IconButton 
+                            size="small" 
+                            onClick={handlePrevSection}
+                            sx={{ color: '#fff', p: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } }}
+                          >
+                            <KeyboardArrowLeft sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        )}
                       </>
                     )}
                   </TableCell>
@@ -98,14 +145,65 @@ const AgingTable = () => {
       <Box sx={{ bgcolor: '#7e57c2', color: '#fff', p: 0.5, display: 'flex', alignItems: 'center', width: '100%' }}>
         <Box sx={{ flexGrow: 1, pl: 1 }}>
           <Typography variant="caption" display="block" sx={{ fontSize: '10px' }}>Courtesy Credit: <b>$0.00</b></Typography>
-          <Typography variant="caption" sx={{ fontSize: '10px' }}>Family Credit: <b>$200.00</b> <ArrowDropDown sx={{ fontSize: 14 }} /></Typography>
+          <Typography variant="caption" sx={{ fontSize: '10px' }}>
+            Family Credit: <b>$200.00</b> 
+            <IconButton 
+              size="small" 
+              onClick={handleFamilyCreditClick}
+              sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+            >
+              <ArrowDropDown sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Typography>
         </Box>
         <Button size="small" sx={{ bgcolor: '#5c6bc0', color: '#fff', fontSize: '10px', height: '24px', mr: 2, textTransform: 'none' }}>Refund</Button>
-        <Typography variant="caption" sx={{ fontSize: '11px', mr: 1 }}>Account Credit: <b>$200.00</b></Typography>
-        <ArrowDropDown sx={{ fontSize: 16 }} />
-        <Edit sx={{ fontSize: 14, mx: 0.5 }} />
-        <InsertDriveFile sx={{ fontSize: 14 }} />
+        <Typography variant="caption" sx={{ fontSize: '11px', mr: 1 }}>
+          Account Credit: <b>$200.00</b>
+          <IconButton 
+            size="small" 
+            onClick={handleAccountCreditClick}
+            sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+          >
+            <ArrowDropDown sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Typography>
+        <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+          <Edit sx={{ fontSize: 14 }} />
+        </IconButton>
+        <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+          <InsertDriveFile sx={{ fontSize: 14 }} />
+        </IconButton>
       </Box>
+
+      {/* Family Credit Dropdown Menu */}
+      <Menu
+        anchorEl={familyCreditAnchor}
+        open={Boolean(familyCreditAnchor)}
+        onClose={handleFamilyCreditClose}
+        PaperProps={{
+          sx: {
+            maxHeight: 300,
+            minWidth: 200,
+          }
+        }}
+      >
+        {/* Options to be added */}
+      </Menu>
+
+      {/* Account Credit Dropdown Menu */}
+      <Menu
+        anchorEl={accountCreditAnchor}
+        open={Boolean(accountCreditAnchor)}
+        onClose={handleAccountCreditClose}
+        PaperProps={{
+          sx: {
+            maxHeight: 300,
+            minWidth: 200,
+          }
+        }}
+      >
+        {/* Options to be added */}
+      </Menu>
     </Box>
   );
 };
