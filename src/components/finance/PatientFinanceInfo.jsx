@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Stack, IconButton, styled } from '@mui/material';
+import ShareDropdown from './ShareDropdown';
+import QuickPaymentRequestDialog from './QuickPaymentRequestDialog';
+import InsurancePaymentDialog from './InsurancePaymentDialog';
 
 // --- STYLED COMPONENTS FOR PIXEL-PERFECT ICONS ---
 
@@ -46,8 +49,8 @@ const IconInsurance = () => (
 );
 
 // 4. Insurance Wallet Icon
-const IconInsuranceWallet = () => (
-  <IconContainer>
+const IconInsuranceWallet = ({ onClick }) => (
+  <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
     <svg width="28" height="28" viewBox="0 0 24 24">
       <rect x="6" y="6" width="14" height="12" rx="2" fill="#8d6e63" stroke="#000" strokeWidth="1" />
       <path d="M8 8L3 10V16C3 19.1 5.4 21.8 8 23C10.6 21.8 13 19.1 13 16V10L8 8Z" fill="#cfd8dc" stroke="#000" strokeWidth="1" />
@@ -92,15 +95,45 @@ const IconPrinter = () => (
   </IconContainer>
 );
 
-// 8. Cloud Upload Icon
-const IconCloudUpload = () => (
-  <IconContainer>
-    <svg width="28" height="28" viewBox="0 0 24 24">
-      <path d="M17.5 19C15.1 19 13.1 17.4 12.6 15.2C12.1 15.4 11.6 15.5 11 15.5C8.8 15.5 7 13.7 7 11.5C7 9.3 8.8 7.5 11 7.5C11.3 7.5 11.6 7.5 11.9 7.6C12.8 5.5 14.9 4 17.5 4C20.8 4 23.5 6.7 23.5 10C23.5 13.3 20.8 16 17.5 16V19Z" fill="#fff" stroke="#000" strokeWidth="1" transform="scale(0.8)" />
-      <path d="M12 18V8M9 11L12 8L15 11" stroke="#0288d1" strokeWidth="2.5" />
-    </svg>
-  </IconContainer>
-);
+// 8. Cloud Upload Icon with Dropdown
+const IconCloudUpload = ({ onShareSelect }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSelect = (optionId) => {
+    if (onShareSelect) {
+      onShareSelect(optionId);
+    }
+    handleClose();
+  };
+
+  return (
+    <>
+      <IconContainer 
+        onClick={handleClick}
+        sx={{ cursor: 'pointer' }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24">
+          <path d="M17.5 19C15.1 19 13.1 17.4 12.6 15.2C12.1 15.4 11.6 15.5 11 15.5C8.8 15.5 7 13.7 7 11.5C7 9.3 8.8 7.5 11 7.5C11.3 7.5 11.6 7.5 11.9 7.6C12.8 5.5 14.9 4 17.5 4C20.8 4 23.5 6.7 23.5 10C23.5 13.3 20.8 16 17.5 16V19Z" fill="#fff" stroke="#000" strokeWidth="1" transform="scale(0.8)" />
+          <path d="M12 18V8M9 11L12 8L15 11" stroke="#0288d1" strokeWidth="2.5" />
+        </svg>
+      </IconContainer>
+      
+      <ShareDropdown
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        onSelect={handleSelect}
+      />
+    </>
+  );
+};
 
 // 9. Cash Plus Icon
 const IconCashPlus = () => (
@@ -142,18 +175,33 @@ const IconCalendar = () => (
   </IconContainer>
 );
 
-const PatientFinanceInfo = ({ view, onCalendarClick }) => {
+const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefreshCoinClick, onAddFlagsClick, onOpenDepositMenu }) => {
+  const [showQuickPayment, setShowQuickPayment] = useState(false);
+  const [showInsurancePayment, setShowInsurancePayment] = useState(false);
+  
+  const handleShareSelect = (optionId) => {
+    if (optionId === 'request-payment') {
+      setShowQuickPayment(true);
+    } else {
+      console.log('Share option selected:', optionId);
+    }
+  };
+
+  const handleInsuranceWalletClick = () => {
+    setShowInsurancePayment(true);
+  };
+
   const pixelIcons = [
     { Icon: IconBill },
     { Icon: IconUserWallet },
     { Icon: IconInsurance },
-    { Icon: IconInsuranceWallet },
-    { Icon: IconRefreshCoin },
-    { Icon: IconPiggyBank },
+    { Icon: IconInsuranceWallet, onClick: handleInsuranceWalletClick },
+    { Icon: IconRefreshCoin, onClick: onRefreshCoinClick },
+    { Icon: IconPiggyBank, onClick: onOpenDepositMenu },
     { Icon: IconPrinter },
-    { Icon: IconCloudUpload },
+    { Icon: IconCloudUpload, onShareSelect: handleShareSelect },
     { Icon: IconCashPlus },
-    { Icon: IconCashMinus },
+    { Icon: IconCashMinus, onClick: onCashMinusClick },
     { Icon: IconCalendar, onClick: onCalendarClick }
   ];
 
@@ -164,7 +212,8 @@ const PatientFinanceInfo = ({ view, onCalendarClick }) => {
       </Box>
       
       <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2 }}>
-        <Typography variant="caption" sx={{ color: '#5c6bc0', cursor: 'pointer' }}>Billing flags: <span style={{ color: '#1976d2' }}>+add flags</span></Typography>
+        <Typography variant="caption" sx={{ color: '#5c6bc0', cursor: 'pointer' }}>Billing flags: </Typography>
+        <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }} onClick={onAddFlagsClick}>+add flags</Typography>
         <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }}>+add account note</Typography>
       </Stack>
 
@@ -178,10 +227,80 @@ const PatientFinanceInfo = ({ view, onCalendarClick }) => {
               onClick={item.onClick}
               sx={{ '&:hover': { bgcolor: 'transparent' } }}
             >
-              <item.Icon />
+              <item.Icon onShareSelect={item.onShareSelect} />
             </IconButton>
           ))}
         </Stack>
+      )}
+
+      {/* Quick Payment Request Dialog */}
+      {showQuickPayment && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowQuickPayment(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '500px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '8px',
+              overflow: 'visible',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QuickPaymentRequestDialog 
+              onClose={() => setShowQuickPayment(false)}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {/* Insurance Payment Dialog */}
+      {showInsurancePayment && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowInsurancePayment(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '1200px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '8px',
+              overflow: 'visible',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <InsurancePaymentDialog 
+              onClose={() => setShowInsurancePayment(false)}
+            />
+          </Box>
+        </Box>
       )}
     </Box>
   );

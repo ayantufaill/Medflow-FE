@@ -12,7 +12,7 @@ import TransactionTable from './TransactionTable';
 import StatementSummary from './StatementSummary';
 import StatementFooter from './StatementFooter';
 
-const SimpleStatement = () => {
+const DetailedStatement = () => {
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [notes, setNotes] = useState('');
   
@@ -147,8 +147,6 @@ const SimpleStatement = () => {
           agingData={agingData}
         />
 
-
-
         {/* Appointments & Notes */}
         <StatementFooter 
           appointments={appointments}
@@ -199,4 +197,4 @@ const SimpleStatement = () => {
   );
 };
 
-export default SimpleStatement;
+export default DetailedStatement;

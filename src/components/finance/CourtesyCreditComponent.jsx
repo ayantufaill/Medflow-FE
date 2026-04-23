@@ -9,8 +9,12 @@ import {
   Divider,
 } from '@mui/material';
 
-const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel }) => {
+const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, showAmountSection = true }) => {
   const [adjustmentType, setAdjustmentType] = useState('Un-Collected');
+  const [creditAmount, setCreditAmount] = useState(0);
+  
+  // Determine button label based on context
+  const buttonLabel = showAmountSection ? 'Add Courtesy' : 'Edit Courtesy';
 
   // Exact options from the provided dropdown screenshot
   const options = [
@@ -44,6 +48,9 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel }) => {
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
+    }
+    if (onClose) {
+      onClose();
     }
   };
 
@@ -113,10 +120,67 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel }) => {
           </Box>
         </Stack>
 
+        {/* Courtesy Credit Amount - Only show when showAmountSection is true */}
+        {showAmountSection && (
+          <>
+            {/* Courtesy Credit Amount */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
+              <Typography 
+                sx={{ 
+                  fontSize: '0.85rem', 
+                  color: '#2c3e50', 
+                  fontWeight: 500 
+                }}
+              >
+                Courtesy Credit Amount:
+              </Typography>
+              
+              <Box 
+                sx={{ 
+                  border: '1.5px dashed #666',
+                  borderRadius: '2px',
+                  px: 1,
+                  py: 0.5,
+                  minWidth: '60px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  bgcolor: 'transparent'
+                }}
+              >
+                <Typography 
+                  sx={{ 
+                    fontSize: '0.85rem', 
+                    fontWeight: 'bold', 
+                    color: '#1a237e' 
+                  }}
+                >
+                  ${creditAmount.toFixed(2)}
+                </Typography>
+              </Box>
+            </Box>
+          </>
+        )}
+
         {/* Bottom Decorative/functional line found in legacy UI */}
         <Divider sx={{ borderBottom: '1px solid #7e57c2', opacity: 0.5, mb: 2 }} />
 
-        {/* Action Buttons - Below Divider */}
+        {/* Add Description and Actions - Below Divider */}
+        {showAmountSection && (
+          <Typography 
+            sx={{ 
+              color: '#5c7cb6', 
+              fontSize: '0.85rem', 
+              cursor: 'pointer',
+              '&:hover': { textDecoration: 'underline' },
+              mb: 2
+            }}
+          >
+            + Add description
+          </Typography>
+        )}
+
+        {/* Action Buttons - Always visible */}
         <Stack direction="row" spacing={1} justifyContent="flex-end">
           <Button 
             size="small" 
@@ -130,7 +194,7 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel }) => {
               '&:hover': { bgcolor: '#c5b396' }
             }}
           >
-            Edit Courtesy
+            {buttonLabel}
           </Button>
           <Button 
             size="small" 

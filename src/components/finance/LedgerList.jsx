@@ -15,6 +15,7 @@ import CourtesyCreditComponent from './CourtesyCreditComponent';
 import UndoConfirmationDialog from './UndoConfirmationDialog';
 import VoidConfirmationDialog from './VoidConfirmationDialog';
 import SimpleStatement from './SimpleStatement';
+import DetailedStatement from './DetailedStatement';
 
 // --- COMPONENT HELPERS ---
  
@@ -216,6 +217,7 @@ const LedgerList = ({ expanded, items = [] }) => {
   const [showUndoDialog, setShowUndoDialog] = React.useState(false);
   const [undoTarget, setUndoTarget] = React.useState(null);
   const [showSimpleStatement, setShowSimpleStatement] = React.useState(false);
+  const [showDetailedStatement, setShowDetailedStatement] = React.useState(false);
   
   const ledgerItems = items.length > 0 ? items : [
     { 
@@ -317,8 +319,7 @@ const LedgerList = ({ expanded, items = [] }) => {
     if (option === 'Simple Statements') {
       setShowSimpleStatement(true);
     } else if (option === 'Detailed Statement') {
-      console.log('Detailed Statement selected');
-      // Add logic for detailed statement if needed
+      setShowDetailedStatement(true);
     }
   };
 
@@ -659,6 +660,7 @@ const LedgerList = ({ expanded, items = [] }) => {
             adjustmentData={editTarget}
             onSave={handleCourtesyCreditSave}
             onCancel={handleCourtesyCreditCancel}
+            showAmountSection={false}
           />
         </DialogContent>
       </Dialog>
@@ -696,6 +698,35 @@ const LedgerList = ({ expanded, items = [] }) => {
       >
         <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
           <SimpleStatement />
+        </DialogContent>
+      </Dialog>
+
+      {/* Detailed Statement Dialog */}
+      <Dialog
+        open={showDetailedStatement}
+        onClose={() => setShowDetailedStatement(false)}
+        maxWidth={false}
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            overflow: 'hidden',
+            maxHeight: '90vh',
+            margin: 0,
+            bgcolor: '#f5f5f5',
+            width: '880px',
+            maxWidth: '90vw'
+          }
+        }}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: 0,
+            maxWidth: '100%'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
+          <DetailedStatement />
         </DialogContent>
       </Dialog>
     </Box>
