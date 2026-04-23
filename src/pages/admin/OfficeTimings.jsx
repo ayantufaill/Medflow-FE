@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -18,111 +17,194 @@ import {
   IconButton,
   Divider,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Breadcrumbs,
+  Link,
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import SaveIcon from '@mui/icons-material/Save';
 import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { useSnackbar } from '../../contexts/SnackbarContext';
+import dayjs from 'dayjs';
 import { practiceInfoService } from '../../services/practice-info.service';
-
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-const defaultTimings = {
-  openingHours: days.reduce((acc, day) => {
-    acc[day] = { from: '07:00 AM', to: '04:00 PM', closed: ['Saturday', 'Sunday', 'Monday'].includes(day) };
-    return acc;
-  }, {}),
-  schedulingAppt: days.reduce((acc, day) => {
-    acc[day] = { from: '08:00 AM', to: '03:00 PM', closed: ['Saturday', 'Sunday', 'Monday'].includes(day) };
-    return acc;
-  }, {})
-};
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 const OfficeTimings = () => {
-  const [tabValue, setTabValue] = useState(0);
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
-  const [timings, setTimings] = useState(defaultTimings);
-  const [loading, setLoading] = useState(true);
-  const [showAddCycle, setShowAddCycle] = useState(false);
-  const [newCycle, setNewCycle] = useState({ name: '', fromDate: '', toDate: '' });
   const { showSnackbar } = useSnackbar();
+  const [practiceId, setPracticeId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+
+  // Data structure for office timings
+  const [data, setData] = useState({
+    cycles: [
+      { id: 'default', name: 'Default', from: 'Aug 31', to: '' },
+      { id: 'april-6', name: 'April 6', from: 'Apr 6', to: 'Apr 6' }
+    ],
+    schedules: {
+      'default': {
+        openingHours: {},
+        schedulingAppt: {}
+      },
+      'april-6': {
+        openingHours: {},
+        schedulingAppt: {}
+      }
+    }
+  });
+
+  // Dialog State for adding/editing cycles
+  const [open, setOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [inputValue, setInputValue] = useState({ name: '', from: '', to: '' });
+
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const defaultOpening = { from: '07:00 AM', to: '04:00 PM', closed: false };
+  const defaultScheduling = { from: '08:00 AM', to: '03:00 PM', closed: false };
+
+  // Helper to get timing for a specific day and cycle
+  const getTiming = (type, cycleId, day) => {
+    const cycleData = data.schedules[cycleId] || { openingHours: {}, schedulingAppt: {} };
+    const dayData = cycleData[type][day];
+    
+    if (dayData) return dayData;
+    
+    // Return defaults based on the mock UI
+    const isClosedDay = ['Saturday', 'Sunday', 'Monday'].includes(day);
+    if (type === 'openingHours') {
+      return { ...defaultOpening, closed: isClosedDay };
+    } else {
+      return { ...defaultScheduling, closed: isClosedDay };
+    }
+  };
+
+  const fetchTimings = async () => {
+    setLoading(true);
+    try {
+      const practice = await practiceInfoService.getCurrentPracticeInfo();
+      setPracticeId(practice._id);
+      if (practice.officeTimings && practice.officeTimings.cycles) {
+        setData(practice.officeTimings);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      showSnackbar('Failed to load office timings', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.officeTimings && Object.keys(practiceInfo.officeTimings).length > 0) {
-            // Merge fetched settings over default settings to avoid undefined fields
-            setTimings(prev => ({
-              cycles: practiceInfo.officeTimings.cycles || prev.cycles,
-              openingHours: { ...prev.openingHours, ...practiceInfo.officeTimings.openingHours },
-              schedulingAppt: { ...prev.schedulingAppt, ...practiceInfo.officeTimings.schedulingAppt }
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch practice info:', error);
-        showSnackbar('Failed to load settings', 'error');
-      } finally {
-        setLoading(false);
-      }
+    fetchTimings();
+  }, []);
+
+  const handleSave = async (newData) => {
+    if (!practiceId) return;
+    setSaving(true);
+    try {
+      await practiceInfoService.updateOfficeTimings(practiceId, newData);
+      setData(newData);
+      showSnackbar('Office timings saved successfully', 'success');
+    } catch (err) {
+      console.error('Save error:', err);
+      showSnackbar('Failed to save timings', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTimingChange = (type, day, field, value) => {
+    const currentCycleId = data.cycles[tabValue]?.id;
+    if (!currentCycleId) return;
+
+    const newData = { ...data };
+    if (!newData.schedules[currentCycleId]) {
+      newData.schedules[currentCycleId] = { openingHours: {}, schedulingAppt: {} };
+    }
+    
+    const currentTiming = getTiming(type, currentCycleId, day);
+    newData.schedules[currentCycleId][type][day] = {
+      ...currentTiming,
+      [field]: value
     };
-    fetchSettings();
-  }, [showSnackbar]);
+    
+    handleSave(newData);
+  };
 
   const handleAddCycle = () => {
-    if (!newCycle.name) return;
-    setTimings(prev => ({
-      ...prev,
-      cycles: [...(prev.cycles || []), { id: Date.now().toString(), ...newCycle }]
-    }));
-    setNewCycle({ name: '', fromDate: '', toDate: '' });
-    setShowAddCycle(false);
+    setEditItem(null);
+    setInputValue({ name: '', from: '', to: '' });
+    setOpen(true);
   };
 
-  const handleDeleteCycle = (id) => {
-    setTimings(prev => ({
-      ...prev,
-      cycles: (prev.cycles || []).filter(c => c.id !== id)
-    }));
+  const handleEditCycle = (cycle) => {
+    setEditItem(cycle);
+    setInputValue({ name: cycle.name, from: cycle.from, to: cycle.to || '' });
+    setOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!practiceInfoId) {
-      showSnackbar('Practice Info not found', 'error');
-      return;
+  const handleDeleteCycle = (cycleId) => {
+    if (data.cycles.length <= 1) {
+        showSnackbar('Cannot delete the last cycle', 'warning');
+        return;
     }
-    try {
-      await practiceInfoService.updateOfficeTimings(practiceInfoId, timings);
-      showSnackbar('Office timings saved successfully', 'success');
-    } catch (error) {
-      console.error(error);
-      showSnackbar('Failed to save office timings', 'error');
-    }
+    
+    const newCycles = data.cycles.filter(c => c.id !== cycleId);
+    const newSchedules = { ...data.schedules };
+    delete newSchedules[cycleId];
+    
+    const newData = { ...data, cycles: newCycles, schedules: newSchedules };
+    setTabValue(0);
+    handleSave(newData);
   };
 
-  const handleTimingChange = (section, day, field, value) => {
-    setTimings((prev) => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [day]: {
-          ...prev[section][day],
-          [field]: value
+  const handleSaveCycle = () => {
+    if (!inputValue.name.trim()) return;
+    
+    let newCycles = [...data.cycles];
+    let newSchedules = { ...data.schedules };
+    
+    if (editItem) {
+      newCycles = newCycles.map(c => c.id === editItem.id ? { ...c, ...inputValue } : c);
+    } else {
+      const newId = Date.now().toString();
+      newCycles.push({ id: newId, ...inputValue });
+      newSchedules[newId] = { openingHours: {}, schedulingAppt: {} };
+    }
+    
+    const newData = { ...data, cycles: newCycles, schedules: newSchedules };
+    handleSave(newData);
+    setOpen(false);
+  };
+
+  const TimeInput = ({ value, onChange, disabled }) => (
+    <TextField
+      size="small"
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      placeholder="00:00 AM"
+      sx={{ 
+        width: 100,
+        '& .MuiInputBase-input': { 
+          fontSize: 12, 
+          textAlign: 'center',
         }
-      }
-    }));
-  };
+      }}
+    />
+  );
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -130,34 +212,35 @@ const OfficeTimings = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh' }}>
-        {/* Breadcrumb */}
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Typography
-            variant="caption"
-            component={RouterLink}
-            to="/admin/practice-setup"
-            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-          >
-            Practice Setup
-          </Typography>
-          <Typography variant="caption" color="textSecondary">{'>'}</Typography>
-          <Typography variant="caption" color="textSecondary">Office Timings</Typography>
+      <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', fontFamily: "'Manrope', sans-serif" }}>
+        
+        {/* --- BREADCRUMBS --- */}
+        <Box sx={{ mb: 4 }}>
+          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ fontSize: '0.85rem' }}>
+            <Link
+                component={RouterLink}
+                to="/admin/practice-setup"
+                variant="body2"
+                underline="hover"
+                color="primary"
+                sx={{ fontWeight: 500 }}
+                >
+                Practice Setup
+            </Link>
+            <Typography color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.875rem' }}>Office Timings</Typography>
+          </Breadcrumbs>
         </Box>
 
         {/* Header Buttons */}
         <Box display="flex" justifyContent="flex-end" gap={2} mb={4}>
-          <Button variant="outlined" color="primary" sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}>
-            Re-Generate
-          </Button>
           <Button 
             variant="contained" 
             color="success" 
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
+            onClick={fetchTimings}
+            disabled={saving}
             sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
           >
-            Save Timings
+            {saving ? <CircularProgress size={20} color="inherit" /> : 'Re-Generate'}
           </Button>
         </Box>
 
@@ -167,7 +250,7 @@ const OfficeTimings = () => {
             <Typography variant="h6" fontWeight="bold">Cycles</Typography>
             <Button 
               variant="contained" 
-              onClick={() => setShowAddCycle(true)}
+              onClick={handleAddCycle}
               sx={{ bgcolor: '#003366', borderRadius: 5, textTransform: 'none' }}
             >
               Add Cycle
@@ -176,62 +259,24 @@ const OfficeTimings = () => {
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
               <TableBody>
-                {(timings.cycles || []).map((cycle) => (
+                {data.cycles.map((cycle) => (
                   <TableRow key={cycle.id}>
                     <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>{cycle.name}</TableCell>
-                    <TableCell>
-                      {cycle.fromDate && <>From <Typography component="span" variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{cycle.fromDate}</Typography></>}
-                    </TableCell>
-                    <TableCell>
-                      {cycle.toDate && <>To <Typography component="span" variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{cycle.toDate}</Typography></>}
-                    </TableCell>
+                    <TableCell>From <Typography component="span" variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{cycle.from}</Typography></TableCell>
+                    <TableCell>{cycle.to && <>To <Typography component="span" variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{cycle.to}</Typography></>}</TableCell>
                     <TableCell align="right">
                       <Box display="flex" alignItems="center" justifyContent="flex-end">
                         <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>Show details</Typography>
                         <InfoOutlinedIcon fontSize="small" sx={{ color: '#ccc', mr: 2 }} />
-                        <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" onClick={() => handleEditCycle(cycle)}><EditIcon fontSize="small" /></IconButton>
                         <IconButton size="small" onClick={() => handleDeleteCycle(cycle.id)}><DeleteOutlineIcon fontSize="small" /></IconButton>
                       </Box>
                     </TableCell>
                   </TableRow>
                 ))}
-
-                {showAddCycle && (
-                  <TableRow>
-                    <TableCell>
-                      <TextField 
-                        size="small" 
-                        placeholder="Name (e.g. Summer)" 
-                        value={newCycle.name} 
-                        onChange={(e) => setNewCycle(p => ({ ...p, name: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField 
-                        size="small" 
-                        placeholder="From (e.g. Jun 1)" 
-                        value={newCycle.fromDate} 
-                        onChange={(e) => setNewCycle(p => ({ ...p, fromDate: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField 
-                        size="small" 
-                        placeholder="To (e.g. Aug 31)" 
-                        value={newCycle.toDate} 
-                        onChange={(e) => setNewCycle(p => ({ ...p, toDate: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button size="small" variant="contained" onClick={handleAddCycle} sx={{ mr: 1, textTransform: 'none' }}>Add</Button>
-                      <Button size="small" variant="outlined" onClick={() => setShowAddCycle(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-                    </TableCell>
-                  </TableRow>
-                )}
-
                 <TableRow>
                   <TableCell colSpan={3} sx={{ color: '#1976d2', fontWeight: 500, cursor: 'pointer' }}>+ Add Exceptions</TableCell>
-                  <TableCell align="right" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>233 Exception/s</TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>0 Exception/s</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -242,13 +287,17 @@ const OfficeTimings = () => {
         <Box>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
             <Typography variant="h6" fontWeight="bold">Schedules</Typography>
-            <Button variant="contained" sx={{ bgcolor: '#003366', borderRadius: 5, textTransform: 'none' }}>
+            <Button 
+                variant="contained" 
+                onClick={handleAddCycle}
+                sx={{ bgcolor: '#003366', borderRadius: 5, textTransform: 'none' }}
+            >
               Add Schedule
             </Button>
           </Box>
 
           <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
-            {(timings.cycles || []).map((cycle, i) => (
+            {data.cycles.map((cycle, index) => (
               <Tab key={cycle.id} label={cycle.name} sx={{ textTransform: 'none' }} />
             ))}
           </Tabs>
@@ -257,33 +306,27 @@ const OfficeTimings = () => {
             {/* Opening Hours */}
             <Typography variant="subtitle2" color="textSecondary" gutterBottom>Opening hours:</Typography>
             {days.map((day) => {
-              const rowData = timings.openingHours[day] || {};
+              const timing = getTiming('openingHours', data.cycles[tabValue]?.id, day);
               return (
                 <Box key={day} display="flex" alignItems="center" mb={1.5} sx={{ height: 40 }}>
                   <Typography variant="body2" sx={{ width: 120 }}>{day}</Typography>
                   <Box display="flex" alignItems="center" gap={2} sx={{ flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>from</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.from || ''} 
-                      onChange={(e) => handleTimingChange('openingHours', day, 'from', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
+                    <Typography variant="caption" sx={{ opacity: timing.closed ? 0.5 : 1 }}>from</Typography>
+                    <TimeInput 
+                      value={timing.from} 
+                      onChange={(val) => handleTimingChange('openingHours', day, 'from', val)}
+                      disabled={timing.closed}
                     />
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>to</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.to || ''} 
-                      onChange={(e) => handleTimingChange('openingHours', day, 'to', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
+                    <Typography variant="caption" sx={{ opacity: timing.closed ? 0.5 : 1 }}>to</Typography>
+                    <TimeInput 
+                      value={timing.to} 
+                      onChange={(val) => handleTimingChange('openingHours', day, 'to', val)}
+                      disabled={timing.closed}
                     />
                     <Box display="flex" alignItems="center" ml="auto">
                       <Checkbox 
                         size="small" 
-                        checked={!!rowData.closed}
+                        checked={timing.closed} 
                         onChange={(e) => handleTimingChange('openingHours', day, 'closed', e.target.checked)}
                       />
                       <Typography variant="caption">closed</Typography>
@@ -298,33 +341,27 @@ const OfficeTimings = () => {
             {/* Scheduling Appt */}
             <Typography variant="subtitle2" color="textSecondary" gutterBottom>Scheduling Appt:</Typography>
             {days.map((day) => {
-              const rowData = timings.schedulingAppt[day] || {};
+              const timing = getTiming('schedulingAppt', data.cycles[tabValue]?.id, day);
               return (
                 <Box key={`appt-${day}`} display="flex" alignItems="center" mb={1.5} sx={{ height: 40 }}>
                   <Typography variant="body2" sx={{ width: 120 }}>{day}</Typography>
                   <Box display="flex" alignItems="center" gap={2} sx={{ flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>from</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.from || ''} 
-                      onChange={(e) => handleTimingChange('schedulingAppt', day, 'from', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
+                    <Typography variant="caption" sx={{ opacity: timing.closed ? 0.5 : 1 }}>from</Typography>
+                    <TimeInput 
+                      value={timing.from} 
+                      onChange={(val) => handleTimingChange('schedulingAppt', day, 'from', val)}
+                      disabled={timing.closed}
                     />
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>to</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.to || ''} 
-                      onChange={(e) => handleTimingChange('schedulingAppt', day, 'to', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
+                    <Typography variant="caption" sx={{ opacity: timing.closed ? 0.5 : 1 }}>to</Typography>
+                    <TimeInput 
+                      value={timing.to} 
+                      onChange={(val) => handleTimingChange('schedulingAppt', day, 'to', val)}
+                      disabled={timing.closed}
                     />
                     <Box display="flex" alignItems="center" ml="auto">
                       <Checkbox 
                         size="small" 
-                        checked={!!rowData.closed}
+                        checked={timing.closed} 
                         onChange={(e) => handleTimingChange('schedulingAppt', day, 'closed', e.target.checked)}
                       />
                       <Typography variant="caption">closed</Typography>
@@ -335,6 +372,52 @@ const OfficeTimings = () => {
             })}
           </Paper>
         </Box>
+
+        {/* Cycle Dialog */}
+        <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle sx={{ fontWeight: 'bold' }}>{editItem ? 'Edit Cycle' : 'Add New Cycle'}</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Cycle Name"
+              fullWidth
+              variant="outlined"
+              value={inputValue.name}
+              onChange={(e) => setInputValue(p => ({ ...p, name: e.target.value }))}
+              sx={{ mt: 1, mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              label="From Date (e.g. Aug 31)"
+              fullWidth
+              variant="outlined"
+              value={inputValue.from}
+              onChange={(e) => setInputValue(p => ({ ...p, from: e.target.value }))}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              label="To Date (Optional)"
+              fullWidth
+              variant="outlined"
+              value={inputValue.to}
+              onChange={(e) => setInputValue(p => ({ ...p, to: e.target.value }))}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button 
+                onClick={handleSaveCycle} 
+                variant="contained" 
+                disabled={!inputValue.name.trim()}
+                sx={{ bgcolor: '#003366' }}
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+
       </Box>
     </LocalizationProvider>
   );

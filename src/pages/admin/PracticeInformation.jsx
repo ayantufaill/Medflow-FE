@@ -209,24 +209,63 @@ const PracticeInformation = () => {
         const data = await practiceInfoService.getCurrentPracticeInfo();
         if (data) {
           setPracticeId(data._id || data.id);
+          const settings = data.practiceSettings || {};
+          
           setForm((prev) => ({
             ...prev,
-            practiceName:  data.practiceName         || '',
-            phone:         data.phone                || '',
-            fax:           data.fax                  || '',
-            email:         data.email                || '',
-            website:       data.website              || '',
-            timezone:      data.timezone             || 'America/Chicago',
-            addressLine1:  data.address?.line1       || '',
-            addressLine2:  data.address?.line2       || '',
-            city:          data.address?.city        || '',
-            state:         data.address?.state       || '',
-            zipCode:       data.address?.postalCode  || '',
+            practiceName:         data.practiceName         || '',
+            phone:                data.phone                || '',
+            fax:                  data.fax                  || '',
+            email:                data.email                || '',
+            website:              data.website              || '',
+            timezone:             data.timezone             || 'America/Chicago',
+            addressLine1:         data.address?.line1       || '',
+            addressLine2:         data.address?.line2       || '',
+            city:                 data.address?.city        || '',
+            state:                data.address?.state       || '',
+            zipCode:              data.address?.postalCode  || '',
+            
+            // Map settings
+            extension:            settings.extension            || '',
+            feeGuidesUnit:        settings.feeGuidesUnit        || '',
+            scheduleUnit:         settings.scheduleUnit         || '10',
+            rxId:                 settings.rxId                 || '',
+            mangoId:              settings.mangoId              || '',
+            mangoAuthToken:       settings.mangoAuthToken       || '',
+            myChartLink:          settings.myChartLink          || '',
+            onlineSchedulingLink: settings.onlineSchedulingLink || '',
+            restrictIPs:          !!settings.restrictIPs,
+            twoFactorNonAuth:     !!settings.twoFactorNonAuth,
+            openEdgeToken:        settings.openEdgeToken        || '',
+            openEdgeMyChartToken: settings.openEdgeMyChartToken || '',
+            surchargeFee:         settings.surchargeFee         || '',
+            usingOryxImaging:     !!settings.usingOryxImaging,
+            xrayBridges:          settings.xrayBridges          || [],
+            country:              data.address?.country         || 'United States',
+            businessRegNumber:    settings.businessRegNumber    || '',
+            businessRegIdentifier: settings.businessRegIdentifier || '',
+            businessLegalName:    settings.businessLegalName    || '',
+            facebookUrl:          settings.facebookUrl          || '',
+            googleUrl:            settings.googleUrl            || '',
+            linkedinUrl:          settings.linkedinUrl          || '',
+            twitterUrl:           settings.twitterUrl           || '',
+            instagramUrl:         settings.instagramUrl         || '',
+            yelpUrl:              settings.yelpUrl              || '',
           }));
+
           if (data.logoPath) setLogoPreview(data.logoPath);
+          
+          // Map lists
+          if (settings.services)       setServices(settings.services);
+          if (settings.paymentMethods) setPaymentMethods(settings.paymentMethods);
+          if (settings.referrals)      setReferrals(settings.referrals);
+          if (settings.careTeam)       setCareTeam(settings.careTeam);
         }
-      } catch { /* show empty form */ }
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error('Failed to load practice info:', err);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -255,6 +294,7 @@ const PracticeInformation = () => {
     try {
       setSaving(true);
       setError('');
+      
       const payload = {
         practiceName: form.practiceName,
         phone: form.phone,
@@ -268,14 +308,48 @@ const PracticeInformation = () => {
           city: form.city,
           state: form.state,
           postalCode: form.zipCode,
+          country: form.country,
+        },
+        practiceSettings: {
+          extension:            form.extension,
+          feeGuidesUnit:        form.feeGuidesUnit,
+          scheduleUnit:         form.scheduleUnit,
+          rxId:                 form.rxId,
+          mangoId:              form.mangoId,
+          mangoAuthToken:       form.mangoAuthToken,
+          myChartLink:          form.myChartLink,
+          onlineSchedulingLink: form.onlineSchedulingLink,
+          restrictIPs:          form.restrictIPs,
+          twoFactorNonAuth:     form.twoFactorNonAuth,
+          openEdgeToken:        form.openEdgeToken,
+          openEdgeMyChartToken: form.openEdgeMyChartToken,
+          surchargeFee:         form.surchargeFee,
+          usingOryxImaging:     form.usingOryxImaging,
+          xrayBridges:          form.xrayBridges,
+          businessRegNumber:    form.businessRegNumber,
+          businessRegIdentifier: form.businessRegIdentifier,
+          businessLegalName:    form.businessLegalName,
+          facebookUrl:          form.facebookUrl,
+          googleUrl:            form.googleUrl,
+          linkedinUrl:          form.linkedinUrl,
+          twitterUrl:           form.twitterUrl,
+          instagramUrl:         form.instagramUrl,
+          yelpUrl:              form.yelpUrl,
+          // Lists
+          services,
+          paymentMethods,
+          referrals,
+          careTeam,
         },
         ...(form.logoFile ? { logo: form.logoFile } : {}),
       };
+
       if (practiceId) {
         await practiceInfoService.updatePracticeInfo(practiceId, payload);
       } else {
         await practiceInfoService.createPracticeInfo(payload);
       }
+      
       setSuccess('Saved successfully.');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -319,12 +393,24 @@ const PracticeInformation = () => {
               border: '1px solid #ccc', borderRadius: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', mb: 3, overflow: 'hidden',
+              bgcolor: '#fcfcfc',
               '&:hover': { borderColor: 'primary.main' },
             }}
           >
-            {logoPreview
-              ? <img src={logoPreview} alt="logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-              : <Typography variant="caption" color="text.disabled">Click to upload logo</Typography>}
+            {logoPreview && !logoPreview.includes('null') && logoPreview !== ''
+              ? <img 
+                  src={logoPreview} 
+                  alt="logo" 
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    setLogoPreview(null);
+                  }}
+                />
+              : <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.75rem' }}>
+                  Click to upload logo
+                </Typography>
+            }
           </Box>
           <input ref={logoRef} type="file" accept="image/*" hidden onChange={handleLogoChange} />
 

@@ -320,43 +320,17 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
 
   const sanitize = (v) => (typeof v === 'string' ? v.trim() : v);
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      const payload = {
-        practiceName: sanitize(data.practiceName),
-        phone: data.phone ? `+${sanitize(data.phone)}` : undefined,
-        email: sanitize(data.email) || undefined,
-        website: sanitize(data.website) || undefined,
-        businessRegistrationNumber: sanitize(data.businessRegistrationNumber) || undefined,
-        businessLegalName: sanitize(data.businessLegalName) || undefined,
-        fax: data.fax ? `+${sanitize(data.fax)}` : undefined,
-        address: {
-          line1: sanitize(data.address?.street) || undefined,
-          city: sanitize(data.address?.city) || undefined,
-          state: sanitize(data.address?.state) || undefined,
-          postalCode: sanitize(data.address?.postalCode) || undefined,
-          country: sanitize(data.address?.country) || undefined,
-        },
-        timezone: data.timezone || 'UTC',
-        logo: data.logo instanceof File ? data.logo : undefined,
-        facebookUrl: sanitize(data.facebookUrl) || undefined,
-        googleBusinessUrl: sanitize(data.googleBusinessUrl) || undefined,
-        linkedInUrl: sanitize(data.linkedInUrl) || undefined,
-        twitterUrl: sanitize(data.twitterUrl) || undefined,
-        instagramUrl: sanitize(data.instagramUrl) || undefined,
-        yelpUrl: sanitize(data.yelpUrl) || undefined,
-      };
-
-      const created = await practiceInfoService.createPracticeInfo(payload);
-      showSnackbar('Practice information saved successfully!', 'success');
-      onNext(created?._id || created?.id);
-    } catch (err) {
-      const msg = err.response?.data?.error?.message || err.message || 'Failed to save practice info.';
-      showSnackbar(msg, 'error');
-    } finally {
-      setLoading(false);
-    }
+  const onSubmit = (data) => {
+    // setLoading(true);
+    // try {
+    //   const result = await practiceInfoService.createPracticeInfo(data);
+    //   onNext(result?._id || result?.id);
+    // } catch (err) {
+    //   showSnackbar(err.message, 'error');
+    // } finally {
+    //   setLoading(false);
+    // }
+    onNext();
   };
 
   const handleLogoChange = (e, rhfOnChange) => {
@@ -959,19 +933,21 @@ const InlineProviderForm = ({ onSave, onCancel }) => {
   const TAX_ID_TYPES = ['SSN', 'EIN', 'ITIN'];
   const PROVIDER_COLORS = ['#FFF9C4', '#E1BEE7', '#B2DFDB', '#FFE0B2', '#F8BBD0', '#F5F5F5', '#BBDEFB', '#FFCDD2'];
 
-  const onSubmit = async (data) => {
-    setSaving(true);
-    try {
-      const payload = { ...data, specialty: data.specialty ? [data.specialty] : undefined, color: providerColor };
-      const created = await providerService.createProvider(payload);
-      showSnackbar('Provider added successfully', 'success');
-      reset();
-      onSave(created);
-    } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || 'Failed to add provider', 'error');
-    } finally {
-      setSaving(false);
-    }
+  const onSubmit = (data) => {
+    // setSaving(true);
+    // try {
+    //   const payload = { ...data, specialty: data.specialty ? [data.specialty] : undefined, color: providerColor };
+    //   const created = await providerService.createProvider(payload);
+    //   showSnackbar('Provider added successfully', 'success');
+    //   reset();
+    //   onSave(created);
+    // } catch (err) {
+    //   showSnackbar(err.response?.data?.error?.message || 'Failed to add provider', 'error');
+    // } finally {
+    //   setSaving(false);
+    // }
+    onSave({ ...data, id: Date.now() });
+    reset();
   };
 
   return (
@@ -1105,19 +1081,19 @@ const Step2Providers = ({ onNext, onFinishLater }) => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const loadProviders = async () => {
-    setLoading(true);
-    try {
-      const data = await providerService.getAllProviders(1, 100);
-      setProviders(data?.providers || data?.data || []);
-    } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || 'Failed to load providers.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const loadProviders = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const data = await providerService.getAllProviders(1, 100);
+  //     setProviders(data?.providers || data?.data || []);
+  //   } catch (err) {
+  //     showSnackbar(err.response?.data?.error?.message || 'Failed to load providers.', 'error');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  useEffect(() => { loadProviders(); }, []);
+  // useEffect(() => { loadProviders(); }, []);
 
   const getProviderName = (provider) => {
     if (provider.userId?.firstName || provider.userId?.lastName)
@@ -1207,26 +1183,21 @@ const InlineUserForm = ({ onSave, onCancel, providers }) => {
     defaultValues: { firstName: '', lastName: '', username: '', roles: [], email: '', providerId: '' },
   });
 
-  const onSubmit = async (data) => {
-    setSaving(true);
-    try {
-      const payload = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        username: data.username,
-        email: data.email,
-        roles: data.roles,
-        providerId: data.providerId || undefined,
-      };
-      const created = await userService.createUser(payload);
-      showSnackbar('User added successfully', 'success');
-      reset();
-      onSave(created?.user || created);
-    } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || 'Failed to add user', 'error');
-    } finally {
-      setSaving(false);
-    }
+  const onSubmit = (data) => {
+    // setSaving(true);
+    // try {
+    //   const payload = { ...data, ... };
+    //   const created = await userService.createUser(payload);
+    //   showSnackbar('User added successfully', 'success');
+    //   reset();
+    //   onSave(created?.user || created);
+    // } catch (err) {
+    //   showSnackbar(err.response?.data?.error?.message || 'Failed to add user', 'error');
+    // } finally {
+    //   setSaving(false);
+    // }
+    onSave({ ...data, id: Date.now() });
+    reset();
   };
 
   return (
@@ -1373,23 +1344,23 @@ const Step3Users = ({ onNext, onFinishLater }) => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [usersResult, providersResult] = await Promise.all([
-        userService.getAllUsers(1, 100),
-        providerService.getAllProviders(1, 100),
-      ]);
-      setUsers(usersResult?.users || []);
-      setProviders(providersResult?.providers || providersResult?.data || []);
-    } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || 'Failed to load data.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const loadData = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const [usersResult, providersResult] = await Promise.all([
+  //       userService.getAllUsers(1, 100),
+  //       providerService.getAllProviders(1, 100),
+  //     ]);
+  //     setUsers(usersResult?.users || []);
+  //     setProviders(providersResult?.providers || providersResult?.data || []);
+  //   } catch (err) {
+  //     showSnackbar(err.response?.data?.error?.message || 'Failed to load data.', 'error');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  useEffect(() => { loadData(); }, []);
+  // useEffect(() => { loadData(); }, []);
 
   const handleUserSaved = () => {
     setShowForm(false);
@@ -1559,27 +1530,8 @@ const TimeInput = ({ value, onChange, allowedPeriods = ['AM', 'PM'] }) => {
   );
 };
 
-const Step4OpeningHours = ({ onNext, onFinishLater, practiceInfoId }) => {
+const Step4OpeningHours = ({ onNext, onFinishLater }) => {
   const [schedule, setSchedule] = useState(DEFAULT_HOURS);
-  const [saving, setSaving] = useState(false);
-  const { showSnackbar } = useSnackbar();
-
-  const handleSaveAndNext = async () => {
-    try {
-      setSaving(true);
-      if (practiceInfoId) {
-        await practiceInfoService.updateOfficeTimings(practiceInfoId, {
-          openingHours: schedule,
-          schedulingAppt: schedule,
-        });
-      }
-      onNext();
-    } catch (err) {
-      showSnackbar(err.message || 'Failed to save timings', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const updateDay = (day, field, val) =>
     setSchedule((prev) => ({ ...prev, [day]: { ...prev[day], [field]: val } }));
@@ -1677,7 +1629,7 @@ const Step4OpeningHours = ({ onNext, onFinishLater, practiceInfoId }) => {
         })}
       </Box>
 
-      <WizardActions onFinishLater={onFinishLater} onNext={handleSaveAndNext} loading={saving} />
+      <WizardActions onFinishLater={onFinishLater} onNext={onNext} />
     </Box>
   );
 };
@@ -1703,24 +1655,9 @@ const APPT_TYPES = {
 const formatDayLabel = (date) =>
   date.toLocaleDateString('en-US', { weekday: 'long' });
 
-const Step5ScheduleSetup = ({ onNext, onFinishLater, practiceInfoId }) => {
+const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
   const { showSnackbar } = useSnackbar();
   const [rooms, setRooms] = useState([]);
-  const [savingConfig, setSavingConfig] = useState(false);
-
-  const handleSaveAndNext = async () => {
-    try {
-      setSavingConfig(true);
-      if (practiceInfoId) {
-        await practiceInfoService.updateScheduleConfig(practiceInfoId, scheduleData);
-      }
-      onNext();
-    } catch (err) {
-      showSnackbar(err.message || 'Failed to save schedule config', 'error');
-    } finally {
-      setSavingConfig(false);
-    }
-  };
   const [loading, setLoading] = useState(false);
   const [addingRoom, setAddingRoom] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
@@ -1761,15 +1698,15 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater, practiceInfoId }) => {
   const [activeDrag, setActiveDrag] = useState(null); // { roomId, apptId, initialY, initialX, initialStart, colWidth, gridRef }
   const gridRef = useRef(null);
 
-  const loadRooms = async () => {
-    setLoading(true);
-    try {
-      const data = await roomService.getAllRooms(1, 50);
-      setRooms(data?.rooms || data?.data || []);
-    } catch { /* ignore */ } finally { setLoading(false); }
-  };
+  // const loadRooms = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const data = await roomService.getAllRooms(1, 50);
+  //     setRooms(data?.rooms || data?.data || []);
+  //   } catch { /* ignore */ } finally { setLoading(false); }
+  // };
 
-  useEffect(() => { loadRooms(); }, []);
+  // useEffect(() => { loadRooms(); }, []);
 
   const handleAddRoom = async () => {
     if (!newRoomName.trim()) return;
@@ -1785,16 +1722,14 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater, practiceInfoId }) => {
     } finally { setSavingRoom(false); }
   };
 
-  const displayRooms = rooms.length > 0
-    ? [...rooms.map((r, i) => ({ id: r._id || r.id || `op${i+1}`, name: r.name, type: 'op' }))]
-    : [
-        { id: 'op1', name: 'Operatory 1', type: 'op' },
-        { id: 'op2', name: 'Operatory 2', type: 'op' },
-        { id: 'op3', name: 'Operatory 3', type: 'op' },
-        { id: 'op4', name: 'Operatory 4', type: 'op' },
-        { id: 'consult', name: 'Consult', type: 'consult' },
-        { id: 'op5', name: 'Operatory 5', type: 'op' },
-      ];
+  const displayRooms = [
+    { id: 'op1', name: 'Operatory 1', type: 'op' },
+    { id: 'op2', name: 'Operatory 2', type: 'op' },
+    { id: 'op3', name: 'Operatory 3', type: 'op' },
+    { id: 'op4', name: 'Operatory 4', type: 'op' },
+    { id: 'consult', name: 'Consult', type: 'consult' },
+    { id: 'op5', name: 'Operatory 5', type: 'op' },
+  ];
 
   const timeSlots = [];
   for (let h = START_HOUR; h <= END_HOUR; h++) {
@@ -1989,7 +1924,7 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater, practiceInfoId }) => {
       </Box>
 
       <Box sx={{ mt: 4 }}>
-        <WizardActions onFinishLater={onFinishLater} onNext={handleSaveAndNext} loading={savingConfig} />
+        <WizardActions onFinishLater={onFinishLater} onNext={onNext} />
       </Box>
     </Box>
   );
@@ -1997,30 +1932,10 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater, practiceInfoId }) => {
 
 // ─── Step 6: Billing Configuration ───────────────────────────────────────────
 
-const Step6BillingConfig = ({ onNext, onFinishLater, practiceInfoId }) => {
-  const { showSnackbar } = useSnackbar();
+const Step6BillingConfig = ({ onNext, onFinishLater }) => {
   const [outOfNetwork, setOutOfNetwork] = useState('no');
   const [assignment, setAssignment] = useState('in-assignment');
   const [billingProvider, setBillingProvider] = useState('default');
-  const [saving, setSaving] = useState(false);
-
-  const handleSaveAndNext = async () => {
-    try {
-      setSaving(true);
-      if (practiceInfoId) {
-        await practiceInfoService.updatePracticeInfo(practiceInfoId, {
-          billingOutOfNetwork: outOfNetwork,
-          billingAssignmentType: assignment,
-          billingProvider: billingProvider
-        });
-      }
-      onNext();
-    } catch (err) {
-      showSnackbar(err.message || 'Failed to save billing config', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <Box sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
@@ -2091,7 +2006,7 @@ const Step6BillingConfig = ({ onNext, onFinishLater, practiceInfoId }) => {
         </Box>
       </FormFieldWrapper>
 
-      <WizardActions onFinishLater={onFinishLater} onNext={handleSaveAndNext} nextLabel="Finish" loading={saving} />
+      <WizardActions onFinishLater={onFinishLater} onNext={onNext} nextLabel="Finish" />
     </Box>
   );
 };
@@ -2114,30 +2029,24 @@ const ComingSoonStep = ({ stepNumber, title, onNext, onFinishLater }) => (
 const PracticeOnboardingPage = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
 
   const handleFinishLater = () => navigate('/admin');
-  const advance = (id) => {
-    if (id && typeof id === 'string') {
-      setPracticeInfoId(id);
-    }
-    setActiveStep((s) => s + 1);
-  };
+  const advance = () => setActiveStep((s) => s + 1);
 
   const renderStepContent = () => {
     switch (activeStep) {
       case 0:
         return <Step1PracticeInfo onNext={advance} onFinishLater={handleFinishLater} />;
       case 1:
-        return <Step2Providers onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
+        return <Step2Providers onNext={advance} onFinishLater={handleFinishLater} />;
       case 2:
-        return <Step3Users onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
+        return <Step3Users onNext={advance} onFinishLater={handleFinishLater} />;
       case 3:
-        return <Step4OpeningHours onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
+        return <Step4OpeningHours onNext={advance} onFinishLater={handleFinishLater} />;
       case 4:
-        return <Step5ScheduleSetup onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
+        return <Step5ScheduleSetup onNext={advance} onFinishLater={handleFinishLater} />;
       case 5:
-        return <Step6BillingConfig onNext={() => navigate('/admin')} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
+        return <Step6BillingConfig onNext={() => navigate('/admin')} onFinishLater={handleFinishLater} />;
       default:
         return null;
     }
