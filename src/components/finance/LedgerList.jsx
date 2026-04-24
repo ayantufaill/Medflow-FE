@@ -16,6 +16,8 @@ import UndoConfirmationDialog from './UndoConfirmationDialog';
 import VoidConfirmationDialog from './VoidConfirmationDialog';
 import SimpleStatement from './SimpleStatement';
 import DetailedStatement from './DetailedStatement';
+import EditDeposit from './EditDeposit';
+import InvoiceModal from './InvoiceModal';
 
 // --- COMPONENT HELPERS ---
  
@@ -136,10 +138,8 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
     p: '2px 12px', 
     '&:hover': { bgcolor: '#f0f4ff' } 
   }}>
-    <Box sx={{ width: 40 }} />
     <Typography variant="caption" sx={{ color: '#555', width: 80, fontSize: '11px' }}>{date}</Typography>
-    <CalendarMonth sx={{ fontSize: 16, color: '#90a4ae' }} />
-    <Box sx={{ width: 12 }} />
+    <CalendarMonth sx={{ fontSize: 16, color: '#90a4ae', mr: 1 }} />
     <Typography variant="caption" sx={{ 
       flexGrow: 1, 
       color: isAdjustment ? '#7e57c2' : '#444', 
@@ -218,6 +218,10 @@ const LedgerList = ({ expanded, items = [] }) => {
   const [undoTarget, setUndoTarget] = React.useState(null);
   const [showSimpleStatement, setShowSimpleStatement] = React.useState(false);
   const [showDetailedStatement, setShowDetailedStatement] = React.useState(false);
+  const [showEditDeposit, setShowEditDeposit] = React.useState(false);
+  const [editDepositTarget, setEditDepositTarget] = React.useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = React.useState(false);
+  const [invoiceModalData, setInvoiceModalData] = React.useState(null);
   
   const ledgerItems = items.length > 0 ? items : [
     { 
@@ -396,6 +400,39 @@ const LedgerList = ({ expanded, items = [] }) => {
     setUndoTarget(null);
   };
 
+  const handleCollapsedEditClick = (item) => {
+    setEditDepositTarget(item);
+    setShowEditDeposit(true);
+  };
+
+  const handleEditDepositSave = (data) => {
+    console.log('Saving edit deposit:', data);
+    setShowEditDeposit(false);
+    setEditDepositTarget(null);
+  };
+
+  const handleEditDepositCancel = () => {
+    setShowEditDeposit(false);
+    setEditDepositTarget(null);
+  };
+
+  const handleAddProcedureClick = (item) => {
+    console.log('Add procedure for:', item);
+    setInvoiceModalData(item);
+    setShowInvoiceModal(true);
+  };
+
+  const handleInvoiceModalSave = (data) => {
+    console.log('Saving invoice modal:', data);
+    setShowInvoiceModal(false);
+    setInvoiceModalData(null);
+  };
+
+  const handleInvoiceModalCancel = () => {
+    setShowInvoiceModal(false);
+    setInvoiceModalData(null);
+  };
+
   return (
     <Box sx={{ p: 1, bgcolor: '#f4f7f9' }}>
       {ledgerItems.map((item, idx) => {
@@ -473,7 +510,13 @@ const LedgerList = ({ expanded, items = [] }) => {
                   <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />
                 )}
                 <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
-                <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} />
+                <Edit 
+                  sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCollapsedEditClick(item);
+                  }} 
+                />
               </Stack>
             )}
           </Paper>
@@ -563,6 +606,33 @@ const LedgerList = ({ expanded, items = [] }) => {
                 />
                 );
               })}
+              
+              {/* Show "Add Procedure" button below all procedures if any item is voided */}
+              {item.details?.some(detail => voidedItems[`${item.id}-${detail.id}`]) && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  p: '2px 12px',
+                }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => handleAddProcedureClick({ invoiceId: item.id, date: item.date })}
+                    sx={{
+                      padding: '4px 16px',
+                      borderRadius: '4px',
+                      backgroundColor: '#7788bb',
+                      fontSize: '11px',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: '#6677aa',
+                      },
+                    }}
+                  >
+                    Add Procedure
+                  </Button>
+                </Box>
+              )}
             </Box>
           )}
         </Box>
@@ -727,6 +797,55 @@ const LedgerList = ({ expanded, items = [] }) => {
       >
         <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
           <DetailedStatement />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Deposit Dialog */}
+      <Dialog
+        open={showEditDeposit}
+        onClose={handleEditDepositCancel}
+        maxWidth={false}
+        PaperProps={{
+          sx: {
+            minWidth: 220,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            bgcolor: '#fff',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <EditDeposit
+            depositData={editDepositTarget}
+            onSave={handleEditDepositSave}
+            onCancel={handleEditDepositCancel}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Modal Dialog */}
+      <Dialog
+        open={showInvoiceModal}
+        onClose={handleInvoiceModalCancel}
+        maxWidth={false}
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '2px',
+            overflow: 'hidden',
+            bgcolor: '#fff',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            border: '1px solid #ccc'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <InvoiceModal
+            invoiceData={invoiceModalData}
+            onSave={handleInvoiceModalSave}
+            onCancel={handleInvoiceModalCancel}
+          />
         </DialogContent>
       </Dialog>
     </Box>

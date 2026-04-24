@@ -10,7 +10,7 @@ const FinanceActions = ({ view, expanded, onExpandToggle }) => {
       {/* Ledger Filters */}
       <Stack direction="row" spacing={2}>
         <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Include voided transactions</Typography>} />
-        {view !== 'family' && (
+        {view !== 'family' && view !== 'individual' && (
           <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Hide billing transfers</Typography>} />
         )}
       </Stack>
@@ -18,11 +18,11 @@ const FinanceActions = ({ view, expanded, onExpandToggle }) => {
       {/* Action Buttons */}
       <Stack direction="row" spacing={1}>
         {[
-          { label: expanded ? 'Collapse Invoices' : 'Expand Invoices', variant: 'contained', hideInFamily: true, action: onExpandToggle },
+          { label: expanded ? 'Collapse Invoices' : 'Expand Invoices', variant: 'contained', hideInLedgerViews: true, action: onExpandToggle },
           { label: 'Past Statements', variant: 'contained' },
           { label: 'INS. COVERAGE', variant: 'contained', hasIcon: true },
           { label: 'Tx', variant: 'outlined', minWidth: '30px', action: () => navigate('/clinical/treatment-plan'), tooltip: 'Treatment Plan' },
-        ].filter(btn => !(btn.hideInFamily && view === 'family')).map((btn) => (
+        ].filter(btn => !(btn.hideInLedgerViews && (view === 'family' || view === 'individual'))).map((btn) => (
           <Tooltip title={btn.tooltip || ''} arrow>
           <Button 
             key={btn.label}

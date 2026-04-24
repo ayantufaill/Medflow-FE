@@ -12,6 +12,7 @@ import PatientFinanceInfo from '../../components/finance/PatientFinanceInfo';
 import AgingTable from '../../components/finance/AgingTable';
 import FinanceActions from '../../components/finance/FinanceActions';
 import LedgerList from '../../components/finance/LedgerList';
+import IndividualLedgerTable from '../../components/finance/IndividualLedgerTable';
 import FamilyLedgerTable from '../../components/finance/FamilyLedgerTable';
 import NewPaymentPlan from '../../components/finance/NewPaymentPlan';
 import AccountAdjustmentDialog from '../../components/finance/AccountAdjustmentDialog';
@@ -83,7 +84,7 @@ const FinancePage = () => {
           onAddFlagsClick={() => setShowEditFlags(true)}
           onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
         />
-        <AgingTable />
+        <AgingTable view={view} />
       </Box>
 
       {/* Action Toolbar: Filters and Buttons */}
@@ -94,7 +95,7 @@ const FinancePage = () => {
       />
 
       {/* Dynamic Ledger Section */}
-      {view === 'family' ? <FamilyLedgerTable /> : <LedgerList expanded={expanded} />}
+      {view === 'family' ? <FamilyLedgerTable /> : view === 'individual' ? <IndividualLedgerTable /> : <LedgerList expanded={expanded} />}
 
       {/* Account Adjustment Dialog */}
       {showAccountAdjustment && (
