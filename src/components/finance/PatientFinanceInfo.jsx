@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import { Box, Typography, Stack, IconButton, styled, Tooltip } from '@mui/material';
+import {
+  ReceiptOutlined,
+  AccountBalanceWalletOutlined,
+  HealthAndSafetyOutlined,
+  AccountBalanceWallet,
+  CurrencyExchangeOutlined,
+  SavingsOutlined,
+  PrintOutlined,
+  CloudUploadOutlined,
+  AddCircleOutlineOutlined,
+  RemoveCircleOutlineOutlined,
+  EventOutlined,
+} from '@mui/icons-material';
 import ShareDropdown from './ShareDropdown';
 import QuickPaymentRequestDialog from './QuickPaymentRequestDialog';
 import InsurancePaymentDialog from './InsurancePaymentDialog';
 import CashPlusMenu from './CashPlusMenu';
 import AddPaymentDialog from './AddPaymentDialog';
 
-// --- STYLED COMPONENTS FOR PIXEL-PERFECT ICONS ---
+// --- STYLED COMPONENTS ---
 
 const IconContainer = styled(Box)({
   width: 32,
@@ -17,7 +30,9 @@ const IconContainer = styled(Box)({
   position: 'relative',
 });
 
-// 1. Bill/Scroll Icon
+// --- MUI ICON COMPONENTS ---
+
+// 1. Bill/Scroll Icon - Invoices
 const IconBill = () => (
   <Tooltip title="Invoices" placement="bottom">
     <IconContainer>
@@ -30,7 +45,7 @@ const IconBill = () => (
   </Tooltip>
 );
 
-// 2. User Wallet Icon
+// 2. User Wallet Icon - Patient Payment
 const IconUserWallet = ({ onClick }) => (
   <Tooltip title="Patient Payment" placement="bottom">
     <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
@@ -44,7 +59,8 @@ const IconUserWallet = ({ onClick }) => (
   </Tooltip>
 );
 
-// 3. Insurance Shield Icon
+
+// 3. Insurance Shield Icon - Add Claim
 const IconInsurance = () => (
   <Tooltip title="Add Claim" placement="bottom">
     <IconContainer>
@@ -56,7 +72,8 @@ const IconInsurance = () => (
   </Tooltip>
 );
 
-// 4. Insurance Wallet Icon
+
+// 4. Insurance Wallet Icon - Insurance Payment
 const IconInsuranceWallet = ({ onClick }) => (
   <Tooltip title="Insurance Payment" placement="bottom">
     <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
@@ -69,49 +86,34 @@ const IconInsuranceWallet = ({ onClick }) => (
   </Tooltip>
 );
 
-// 5. Refresh Coin Icon
-const IconRefreshCoin = () => (
+// 5. Refresh Coin Icon - Courtesy Refund
+const IconRefreshCoin = ({ onClick }) => (
   <Tooltip title="Courtesy Refund" placement="bottom">
-    <IconContainer>
-      <svg width="28" height="28" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="8" fill="#ffe082" stroke="#000" strokeWidth="1" />
-        <text x="9" y="16" fill="#000" fontSize="10" fontWeight="bold">$</text>
-        <path d="M12 2C6.5 2 2 6.5 2 12" stroke="#000" strokeWidth="1" strokeDasharray="2,2" />
-        <path d="M22 12C22 17.5 17.5 22 12 22" stroke="#000" strokeWidth="1" strokeDasharray="2,2" />
-      </svg>
+    <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
+      <CurrencyExchangeOutlined sx={{ fontSize: 28, color: '#f57c00' }} />
     </IconContainer>
   </Tooltip>
 );
 
-// 6. Piggy Bank Icon
+// 6. Piggy Bank Icon - Print
 const IconPiggyBank = () => (
   <Tooltip title="Print" placement="bottom">
     <IconContainer>
-      <svg width="28" height="28" viewBox="0 0 24 24">
-        <path d="M19 12C19 15.3 16.3 18 13 18C9.7 18 7 15.3 7 12C7 8.7 9.7 6 13 6C16.3 6 19 8.7 19 12Z" fill="#f8bbd0" stroke="#000" strokeWidth="1" />
-        <rect x="12" y="3" width="2" height="4" fill="#ffd54f" stroke="#000" strokeWidth="1" />
-        <circle cx="16" cy="10" r="1" fill="#000" />
-        <path d="M6 14L4 16M20 12L22 13" stroke="#000" strokeWidth="1" />
-      </svg>
+      <SavingsOutlined sx={{ fontSize: 28, color: '#f8bbd0' }} />
     </IconContainer>
   </Tooltip>
 );
 
-// 7. Printer Icon
+// 7. Printer Icon - Share
 const IconPrinter = () => (
   <Tooltip title="Share" placement="bottom">
     <IconContainer>
-      <svg width="28" height="28" viewBox="0 0 24 24">
-        <path d="M6 8H18V14H6V8Z" fill="#4dd0e1" stroke="#000" strokeWidth="1" />
-        <path d="M8 14H16V20H8V14Z" fill="#fff" stroke="#000" strokeWidth="1" />
-        <path d="M8 4H16V8H8V4Z" fill="#eee" stroke="#000" strokeWidth="1" />
-        <rect x="17" y="10" width="2" height="2" fill="red" stroke="#000" strokeWidth="0.5" />
-      </svg>
+      <PrintOutlined sx={{ fontSize: 28, color: '#4dd0e1' }} />
     </IconContainer>
   </Tooltip>
 );
 
-// 8. Cloud Upload Icon with Dropdown
+// 8. Cloud Upload Icon with Dropdown - Share
 const IconCloudUpload = ({ onShareSelect }) => {
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -137,10 +139,7 @@ const IconCloudUpload = ({ onShareSelect }) => {
           onClick={handleClick}
           sx={{ cursor: 'pointer' }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24">
-            <path d="M17.5 19C15.1 19 13.1 17.4 12.6 15.2C12.1 15.4 11.6 15.5 11 15.5C8.8 15.5 7 13.7 7 11.5C7 9.3 8.8 7.5 11 7.5C11.3 7.5 11.6 7.5 11.9 7.6C12.8 5.5 14.9 4 17.5 4C20.8 4 23.5 6.7 23.5 10C23.5 13.3 20.8 16 17.5 16V19Z" fill="#fff" stroke="#000" strokeWidth="1" transform="scale(0.8)" />
-            <path d="M12 18V8M9 11L12 8L15 11" stroke="#0288d1" strokeWidth="2.5" />
-          </svg>
+          <CloudUploadOutlined sx={{ fontSize: 28, color: '#0288d1' }} />
         </IconContainer>
       </Tooltip>
       
@@ -153,13 +152,13 @@ const IconCloudUpload = ({ onShareSelect }) => {
   );
 };
 
-// 9. Cash Plus Icon
+// 9. Cash Plus Icon - Account Adjustment
 const IconCashPlus = ({ onClick }) => (
   <Tooltip title="Account Adjustment" placement="bottom">
-    <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
+    <IconContainer onClick={onClick} sx={{ cursor: 'pointer', position: 'relative' }}>
       <svg width="30" height="30" viewBox="0 0 24 24">
-        <rect x="2" y="8" width="16" height="8" fill="#a5d6a7" stroke="#000" strokeWidth="1" />
-        <circle cx="10" cy="12" r="3" fill="#2e7d32" opacity="0.3" />
+        <rect x="2" y="7" width="14" height="10" rx="1" fill="#a5d6a7" stroke="#000" strokeWidth="1" />
+        <text x="9" y="14" fill="#2e7d32" fontSize="8" fontWeight="bold">$</text>
         <circle cx="18" cy="16" r="5" fill="#81d4fa" stroke="#000" strokeWidth="1" />
         <path d="M18 13V19M15 16H21" stroke="#0288d1" strokeWidth="2" />
       </svg>
@@ -167,13 +166,13 @@ const IconCashPlus = ({ onClick }) => (
   </Tooltip>
 );
 
-// 10. Cash Minus Icon
+// 10. Cash Minus Icon - Account Adjustment
 const IconCashMinus = () => (
   <Tooltip title="Account Adjustment" placement="bottom">
     <IconContainer>
       <svg width="30" height="30" viewBox="0 0 24 24">
-        <rect x="2" y="8" width="16" height="8" fill="#a5d6a7" stroke="#000" strokeWidth="1" />
-        <circle cx="10" cy="12" r="3" fill="#394b39ff" opacity="0.3" />
+        <rect x="2" y="7" width="14" height="10" rx="1" fill="#a5d6a7" stroke="#000" strokeWidth="1" />
+        <text x="9" y="14" fill="#2e7d32" fontSize="8" fontWeight="bold">$</text>
         <circle cx="18" cy="16" r="5" fill="#81d4fa" stroke="#000" strokeWidth="1" />
         <path d="M15 16H21" stroke="#0288d1" strokeWidth="2" />
       </svg>
@@ -181,20 +180,11 @@ const IconCashMinus = () => (
   </Tooltip>
 );
 
-// 11. Calendar Icon
+// 11. Calendar Icon - Create Payment Plan
 const IconCalendar = () => (
   <Tooltip title="Create Payment Plan" placement="bottom">
     <IconContainer>
-      <svg width="28" height="28" viewBox="0 0 24 24">
-        <rect x="4" y="6" width="16" height="14" rx="2" fill="#bbdefb" stroke="#0288d1" strokeWidth="1.5" />
-        <path d="M4 10H20" stroke="#0288d1" strokeWidth="1.5" />
-        <path d="M8 4V8M16 4V8" stroke="#0288d1" strokeWidth="1.5" />
-        <text x="13" y="17" fill="#0288d1" fontSize="10" fontWeight="bold">$</text>
-        <rect x="7" y="12" width="2" height="2" fill="#fff" opacity="0.5" />
-        <rect x="10" y="12" width="2" height="2" fill="#fff" opacity="0.5" />
-        <rect x="7" y="15" width="2" height="2" fill="#fff" opacity="0.5" />
-        <rect x="10" y="15" width="2" height="2" fill="#fff" opacity="0.5" />
-      </svg>
+      <EventOutlined sx={{ fontSize: 28, color: '#0288d1' }} />
     </IconContainer>
   </Tooltip>
 );

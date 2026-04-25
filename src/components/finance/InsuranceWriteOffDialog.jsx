@@ -20,7 +20,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
       fontFamily: 'Arial, sans-serif' 
     }}>
       {/* Blue Header Bar */}
-      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
+      <Box sx={{ bgcolor: '#d4a537', color: '#fff', p: 1, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
           Insurance Write-Off invoice #24635
         </Typography>
@@ -44,7 +44,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
                 fontSize: '11px', 
                 bgcolor: '#fff',
                 '.MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7788bb' }
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#d4a537' }
               }}
             >
               <MenuItem value="select a claim" sx={{ fontSize: '11px' }}>select a claim</MenuItem>
@@ -55,7 +55,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
         </Stack>
 
         {/* Blue Bottom Border Line */}
-        <Divider sx={{ borderBottom: '1.5px solid #7788bb', mt: 2, mb: 3 }} />
+        <Divider sx={{ borderBottom: '1.5px solid #d4a537', mt: 2, mb: 3 }} />
 
         {/* Action Buttons Row */}
         <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -63,12 +63,13 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
             size="small" 
             variant="contained" 
             sx={{ 
-              bgcolor: '#7788bb',
+              bgcolor: '#d4a537',
               color: '#fff !important',
               textTransform: 'none', 
               fontSize: '11px',
               minWidth: 70,
-              borderRadius: '4px'
+              borderRadius: '4px',
+              '&:hover': { bgcolor: '#c4942d' }
             }}
           >
             Adjust
