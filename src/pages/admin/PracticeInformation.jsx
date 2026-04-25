@@ -344,16 +344,25 @@ const PracticeInformation = () => {
         ...(form.logoFile ? { logo: form.logoFile } : {}),
       };
 
+      let result;
       if (practiceId) {
-        await practiceInfoService.updatePracticeInfo(practiceId, payload);
+        result = await practiceInfoService.updatePracticeInfo(practiceId, payload);
       } else {
-        await practiceInfoService.createPracticeInfo(payload);
+        result = await practiceInfoService.createPracticeInfo(payload);
+      }
+      
+      if (result) {
+        setPracticeId(result._id || result.id);
+        if (result.logoPath) setLogoPreview(result.logoPath);
+        setForm(prev => ({ ...prev, logoFile: null }));
       }
       
       setSuccess('Saved successfully.');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save.');
+      console.error('Save error:', err);
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save.';
+      setError(msg);
     } finally {
       setSaving(false);
     }

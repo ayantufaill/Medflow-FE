@@ -52,14 +52,15 @@ export const practiceInfoService = {
     
     // Append all fields to FormData
     Object.keys(practiceInfoData).forEach((key) => {
-      if (key === 'logo' && practiceInfoData[key] instanceof File) {
+      const value = practiceInfoData[key];
+      if (key === 'logo' && value instanceof File) {
         // Append logo file
-        formData.append('logo', practiceInfoData[key]);
-      } else if (key === 'address' || key === 'businessHours') {
-        // Stringify nested objects
-        formData.append(key, JSON.stringify(practiceInfoData[key]));
-      } else if (practiceInfoData[key] !== null && practiceInfoData[key] !== undefined) {
-        formData.append(key, practiceInfoData[key]);
+        formData.append('logo', value);
+      } else if (value && typeof value === 'object' && !(value instanceof File)) {
+        // Stringify nested objects (address, businessHours, practiceSettings, etc.)
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== null && value !== undefined) {
+        formData.append(key, value);
       }
     });
 
@@ -82,14 +83,15 @@ export const practiceInfoService = {
     
     // Append all fields to FormData
     Object.keys(updates).forEach((key) => {
-      if (key === 'logo' && updates[key] instanceof File) {
+      const value = updates[key];
+      if (key === 'logo' && value instanceof File) {
         // Append logo file
-        formData.append('logo', updates[key]);
-      } else if (key === 'address' || key === 'businessHours') {
-        // Stringify nested objects
-        formData.append(key, JSON.stringify(updates[key]));
-      } else if (updates[key] !== null && updates[key] !== undefined) {
-        formData.append(key, updates[key]);
+        formData.append('logo', value);
+      } else if (value && typeof value === 'object' && !(value instanceof File)) {
+        // Stringify nested objects (address, businessHours, practiceSettings, etc.)
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== null && value !== undefined) {
+        formData.append(key, value);
       }
     });
 
