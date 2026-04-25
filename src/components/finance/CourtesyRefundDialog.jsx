@@ -16,8 +16,8 @@ const CourtesyRefundDialog = ({ onClose }) => {
   const [accountCredit, setAccountCredit] = useState(false);
   const [refundAmount, setRefundAmount] = useState(0);
   
-  const goldHeader = '#d4c197';
-  const goldText = '#b09b6a';
+  const blueHeader = '#7788bb';
+  const blueText = '#5c6bc0';
   const linkBlue = '#5c7cb6';
 
   // Refund amount options - can be fetched from API
@@ -30,7 +30,7 @@ const CourtesyRefundDialog = ({ onClose }) => {
   return (
     <Box sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header Bar */}
-      <Box sx={{ bgcolor: goldHeader, py: 1, textAlign: 'center' }}>
+      <Box sx={{ bgcolor: blueHeader, py: 1, textAlign: 'center' }}>
         <Typography sx={{ color: '#fff', fontWeight: 500 }}>Courtesy Refund #24633</Typography>
       </Box>
 
@@ -41,15 +41,15 @@ const CourtesyRefundDialog = ({ onClose }) => {
           alignItems: 'center', 
           flexWrap: 'nowrap', 
           gap: 1, 
-          borderBottom: '1px solid #d4c197', 
+          borderBottom: '1px solid #7788bb', 
           pb: 1,
           mb: 2 
         }}>
-          <Typography sx={{ color: goldText, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+          <Typography sx={{ color: blueText, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
             04/15/2026
           </Typography>
           
-          <Typography sx={{ color: goldText, fontSize: '0.85rem', whiteSpace: 'nowrap', ml: 1 }}>
+          <Typography sx={{ color: blueText, fontSize: '0.85rem', whiteSpace: 'nowrap', ml: 1 }}>
             Courtesy Refund #24633 from
           </Typography>
 
@@ -166,12 +166,12 @@ const CourtesyRefundDialog = ({ onClose }) => {
             <Button 
               variant="contained" 
               sx={{ 
-                bgcolor: goldHeader, 
+                bgcolor: blueHeader, 
                 color: '#fff',
                 textTransform: 'none', 
                 fontWeight: 'normal',
                 boxShadow: 'none',
-                '&:hover': { bgcolor: '#c4b187', boxShadow: 'none' } 
+                '&:hover': { bgcolor: '#6677aa', boxShadow: 'none' } 
               }}
             >
               Add Refund

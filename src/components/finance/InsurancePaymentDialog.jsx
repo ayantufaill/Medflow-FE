@@ -25,9 +25,10 @@ const InsurancePaymentDialog = ({ onClose }) => {
   const [selectedPaymentOption, setSelectedPaymentOption] = useState('swipe');
   const [rememberCard, setRememberCard] = useState(false);
   
+  const headerBackground = '#7788bb';
   const greenHeader = '#8fb884';
   const warningRed = '#c0392b';
-  const greenButton = '#8fb884';
+  const greenButton = '#7788bb';
   const tanButton = '#d4c197';
   const linkBlue = '#5c7cb6';
 
@@ -67,7 +68,7 @@ const InsurancePaymentDialog = ({ onClose }) => {
   return (
     <Box sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header Bar */}
-      <Box sx={{ bgcolor: greenHeader, py: 1, textAlign: 'center' }}>
+      <Box sx={{ bgcolor: headerBackground, py: 1, textAlign: 'center' }}>
         <Typography sx={{ color: '#fff', fontWeight: 500 }}>Add Payment</Typography>
       </Box>
 
@@ -76,11 +77,11 @@ const InsurancePaymentDialog = ({ onClose }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 2, mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CalendarMonthIcon sx={{ fontSize: '1.2rem', color: '#888' }} />
-            <Typography sx={{ color: '#8fb884', fontSize: '0.9rem', fontWeight: 500 }}>04/15/2026</Typography>
+            <Typography sx={{ color: '#7788bb', fontSize: '0.9rem', fontWeight: 500 }}>04/15/2026</Typography>
           </Box>
 
           <Typography sx={{ color: '#2c3e50', fontSize: '0.9rem' }}>
-            <span style={{ color: '#8fb884', fontWeight: 500 }}>Payment</span> claim:
+            <span style={{ color: '#7788bb', fontWeight: 500 }}>Payment</span> claim:
           </Typography>
 
           <Select

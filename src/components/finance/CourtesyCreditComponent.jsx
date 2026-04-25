@@ -63,8 +63,8 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
       borderRadius: '4px', 
       overflow: 'hidden'
     }}>
-      {/* Purple Header Bar */}
-      <Box sx={{ bgcolor: '#7e57c2', color: '#fff', p: 1, textAlign: 'center' }}>
+      {/* Blue Header Bar */}
+      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
           Courtesy Credit
         </Typography>
@@ -73,16 +73,16 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
       <Box sx={{ p: 2 }}>
         {/* Main Selection Row */}
         <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
-          <Typography variant="caption" sx={{ color: '#7e57c2', fontWeight: 'bold', pb: 0.5 }}>
+          <Typography variant="caption" sx={{ color: '#5c6bc0', fontWeight: 'bold', pb: 0.5 }}>
             {adjustmentData?.date || '04/15/2026'}
           </Typography>
           
-          <Typography variant="caption" sx={{ color: '#7e57c2', pb: 0.5 }}>
+          <Typography variant="caption" sx={{ color: '#5c6bc0', pb: 0.5 }}>
             Adjustment Type
           </Typography>
 
           {/* Underlined Dropdown Menu */}
-          <Box sx={{ flexGrow: 1, borderBottom: '1.5px solid #7e57c2' }}>
+          <Box sx={{ flexGrow: 1, borderBottom: '1.5px solid #7788bb' }}>
             <Select
               value={adjustmentType}
               onChange={(e) => setAdjustmentType(e.target.value)}
@@ -163,7 +163,7 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
         )}
 
         {/* Bottom Decorative/functional line found in legacy UI */}
-        <Divider sx={{ borderBottom: '1px solid #7e57c2', opacity: 0.5, mb: 2 }} />
+        <Divider sx={{ borderBottom: '1px solid #7788bb', opacity: 0.5, mb: 2 }} />
 
         {/* Add Description and Actions - Below Divider */}
         {showAmountSection && (

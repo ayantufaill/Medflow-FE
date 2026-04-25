@@ -18,8 +18,10 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm, voidTarget }) => {
       <DialogTitle sx={{ 
         fontSize: '16px', 
         fontWeight: 'bold', 
-        color: '#333',
-        pb: 1
+        color: '#fff',
+        pb: 1,
+        bgcolor: '#7788bb',
+        textAlign: 'center'
       }}>
         Void Adjustment
       </DialogTitle>
@@ -45,9 +47,9 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm, voidTarget }) => {
           variant="contained"
           sx={{ 
             textTransform: 'none',
-            bgcolor: '#d32f2f',
+            bgcolor: '#7788bb',
             '&:hover': {
-              bgcolor: '#b71c1c'
+              bgcolor: '#6577aa'
             }
           }}
         >

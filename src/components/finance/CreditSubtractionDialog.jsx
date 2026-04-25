@@ -58,8 +58,8 @@ const CreditSubtractionDialog = ({ onClose }) => {
       overflow: 'hidden', 
       fontFamily: 'Arial, sans-serif' 
     }}>
-      {/* Purple Header Bar */}
-      <Box sx={{ bgcolor: '#7e57c2', color: '#fff', p: 1, textAlign: 'center' }}>
+      {/* Blue Header Bar */}
+      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
           Adjust invoice {headerInfo.invoiceNum}
         </Typography>
@@ -68,12 +68,12 @@ const CreditSubtractionDialog = ({ onClose }) => {
       <Box sx={{ p: 2 }}>
         {/* Top Input Row: Date, Type, Reason */}
         <Stack direction="row" spacing={3} alignItems="flex-end" sx={{ mb: 2 }}>
-          <Typography variant="caption" sx={{ color: '#7e57c2', fontWeight: 'bold' }}>
+          <Typography variant="caption" sx={{ color: '#7788bb', fontWeight: 'bold' }}>
             {headerInfo.adjustmentDate}
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #7e57c2', pb: 0.2 }}>
-             <Typography variant="caption" sx={{ color: '#7e57c2', mr: 1, fontWeight: 'bold' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #7788bb', pb: 0.2 }}>
+             <Typography variant="caption" sx={{ color: '#7788bb', mr: 1, fontWeight: 'bold' }}>
                {headerInfo.adjustmentType}
              </Typography>
              <Typography variant="caption" sx={{ color: '#666' }}>type</Typography>
@@ -181,11 +181,11 @@ const CreditSubtractionDialog = ({ onClose }) => {
               size="small" 
               variant="contained" 
               sx={{ 
-                bgcolor: '#7e57c2', 
+                bgcolor: '#7788bb', 
                 textTransform: 'none', 
                 fontSize: '11px',
                 px: 2,
-                '&:hover': { bgcolor: '#6a4ab0' } 
+                '&:hover': { bgcolor: '#6577aa' } 
               }}
             >
               Adjust

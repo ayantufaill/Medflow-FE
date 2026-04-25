@@ -25,8 +25,8 @@ const AccountAdjustmentDialog = ({ onClose }) => {
   const patientOutstanding = 400.00;
   const courtesyCredit = 0.00;
   
-  const purpleHeader = '#8e44ad';
-  const labelPurple = '#6a1b9a';
+  const blueHeader = '#7788bb';
+  const labelBlue = '#5c6bc0';
   const adjustmentRed = '#c0392b';
   const goldButton = '#d4af37';
 
@@ -89,18 +89,18 @@ const AccountAdjustmentDialog = ({ onClose }) => {
   return (
     <Box sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header Bar */}
-      <Box sx={{ bgcolor: purpleHeader, py: 1, textAlign: 'center' }}>
+      <Box sx={{ bgcolor: blueHeader, py: 1, textAlign: 'center' }}>
         <Typography sx={{ color: '#fff', fontWeight: 500 }}>Account Adjustment</Typography>
       </Box>
 
       <Box sx={{ p: 2 }}>
         {/* First Row: Date and Adjustment Type */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, mb: 1, borderBottom: '1px solid #8e44ad', pb: 1 }}>
-          <Typography sx={{ color: labelPurple, fontSize: '0.9rem' }}>04/15/2026</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, mb: 1, borderBottom: '1px solid #7788bb', pb: 1 }}>
+          <Typography sx={{ color: labelBlue, fontSize: '0.9rem' }}>04/15/2026</Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ color: labelPurple, fontSize: '0.9rem' }}>Adjustment Type</Typography>
-            <Box sx={{ flexGrow: 1, borderBottom: '1.5px solid #8e44ad' }}>
+            <Typography sx={{ color: labelBlue, fontSize: '0.9rem' }}>Adjustment Type</Typography>
+            <Box sx={{ flexGrow: 1, borderBottom: '1.5px solid #7788bb' }}>
               <Select
                 variant="standard"
                 value={adjustmentType}
@@ -123,7 +123,7 @@ const AccountAdjustmentDialog = ({ onClose }) => {
                         borderBottom: '1px solid #eee'
                       },
                       '& .Mui-selected': {
-                        bgcolor: '#8e44ad !important',
+                        bgcolor: '#7788bb !important',
                         color: '#fff'
                       }
                     }
@@ -187,7 +187,7 @@ const AccountAdjustmentDialog = ({ onClose }) => {
                         bgcolor: outstandingType === 'specific' ? '#fff' : '#f5f5f5'
                       },
                       '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: outstandingType === 'specific' ? '#8e44ad' : '#ccc'
+                        borderColor: outstandingType === 'specific' ? '#7788bb' : '#ccc'
                       }
                     }}
                     disabled={outstandingType !== 'specific'}

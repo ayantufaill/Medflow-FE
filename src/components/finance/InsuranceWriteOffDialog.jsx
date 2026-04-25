@@ -19,8 +19,8 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
       overflow: 'hidden', 
       fontFamily: 'Arial, sans-serif' 
     }}>
-      {/* Purple Header Bar */}
-      <Box sx={{ bgcolor: '#7e57c2', color: '#fff', p: 1, textAlign: 'center' }}>
+      {/* Blue Header Bar */}
+      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
           Insurance Write-Off invoice #24635
         </Typography>
@@ -29,7 +29,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
       <Box sx={{ p: 2 }}>
         {/* Main Input Row */}
         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="caption" sx={{ color: '#7e57c2', fontWeight: 'bold' }}>
+          <Typography variant="caption" sx={{ color: '#7788bb', fontWeight: 'bold' }}>
             04/15/2026
           </Typography>
           
@@ -44,7 +44,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
                 fontSize: '11px', 
                 bgcolor: '#fff',
                 '.MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7e57c2' }
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7788bb' }
               }}
             >
               <MenuItem value="select a claim" sx={{ fontSize: '11px' }}>select a claim</MenuItem>
@@ -54,8 +54,8 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
           <Typography variant="caption" sx={{ color: '#333', ml: 1 }}>for invoice: #</Typography>
         </Stack>
 
-        {/* Purple Bottom Border Line */}
-        <Divider sx={{ borderBottom: '1.5px solid #7e57c2', mt: 2, mb: 3 }} />
+        {/* Blue Bottom Border Line */}
+        <Divider sx={{ borderBottom: '1.5px solid #7788bb', mt: 2, mb: 3 }} />
 
         {/* Action Buttons Row */}
         <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -63,7 +63,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
             size="small" 
             variant="contained" 
             sx={{ 
-              bgcolor: '#7e57c2',
+              bgcolor: '#7788bb',
               color: '#fff !important',
               textTransform: 'none', 
               fontSize: '11px',

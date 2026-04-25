@@ -21,10 +21,11 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
   const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [overpayment, setOverpayment] = useState('0.00');
   
+  const headerBackground = '#7788bb';
   const greenHeader = '#8eb378';
-  const greenText = '#8eb378';
+  const greenText = '#7788bb';
   const warningColor = '#c66d6d';
-  const applyButtonColor = '#abc49d';
+  const applyButtonColor = '#7788bb';
   const cancelButtonColor = '#a9a9a9';
   const linkBlue = '#5b7bb1';
 
@@ -74,7 +75,7 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
   return (
     <Box sx={{ width: '100%', minWidth: '1100px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: greenHeader, py: 1.25, textAlign: 'center' }}>
+      <Box sx={{ bgcolor: headerBackground, py: 1.25, textAlign: 'center' }}>
         <Typography sx={{ color: '#fff', fontSize: '1rem', fontWeight: 400 }}>
           Add Payment
         </Typography>
