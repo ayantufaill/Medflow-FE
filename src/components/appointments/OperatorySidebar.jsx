@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 import {
   Autocomplete,
   Box,
@@ -17,6 +18,8 @@ import {
   Typography,
   Paper,
   Avatar,
+  Collapse,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import EventNoteIcon from "@mui/icons-material/EventNote";
@@ -28,12 +31,26 @@ import HistoryIcon from "@mui/icons-material/History";
 import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
+import FlagIcon from "@mui/icons-material/Flag";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import GroupIcon from "@mui/icons-material/Group";
+import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import PatientChat from "../shared/PatientChat";
 import AppointmentPage from "../shared/AppointmentPage";
-import { compactInputLabelSx, compactInputValueSx, fontSize, fontWeight } from "../../constants/styles";
+import { compactInputLabelSx, compactInputValueSx } from "../../constants/styles";
+import PatientRouteSlipDialog from "./PatientRouteSlipDialog";
+import { patientService } from "../../services/patient.service";
+import { invoiceService } from "../../services/invoice.service";
+import FamilyAppointmentsDialog from "./FamilyAppointmentsDialog";
+import AppointmentHistoryDialog from "./AppointmentHistoryDialog";
 
 const StyledDateCalendar = ({ value, onChange }) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -95,8 +112,98 @@ const StyledDateCalendar = ({ value, onChange }) => (
   </LocalizationProvider>
 );
 
+const ProductivityMetricCard = ({ title, amount, metrics, footer }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      p: 1.5,
+      border: "1px solid #cbd5e1",
+      borderRadius: 1.5,
+      bgcolor: "#ffffff",
+    }}
+  >
+    <Box sx={{ mb: 1 }}>
+      <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: "#475569" }}>{title}</Typography>
+      <Typography sx={{ fontSize: "0.8rem", color: "#64748b" }}>
+        S <strong>${amount.toLocaleString()}</strong>
+      </Typography>
+    </Box>
+
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+      {metrics.map((m, idx) => (
+        <Box key={idx} sx={{ display: "grid", gridTemplateColumns: "25px 50px 1fr 50px", alignItems: "center", gap: 1 }}>
+          <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b" }}>{m.label}</Typography>
+          <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, textAlign: "right", color: m.color }}>
+            ${m.value.toLocaleString()}
+          </Typography>
+          
+          <Box sx={{ position: "relative", height: 12, bgcolor: "#e2e8f0", borderRadius: 0.5, overflow: "visible" }}>
+            {/* Goal Line */}
+            {m.goal && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: "75%",
+                  top: -2,
+                  bottom: -2,
+                  width: 2,
+                  bgcolor: "#334155",
+                  zIndex: 2,
+                }}
+              />
+            )}
+            
+            {/* Indicator Triangle for P and C */}
+            {(m.label === "P" || m.label === "C") && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: `${Math.min((m.value / (m.goal || m.value * 1.5)) * 75, 100)}%`,
+                  top: -6,
+                  width: 0,
+                  height: 0,
+                  borderLeft: "4px solid transparent",
+                  borderRight: "4px solid transparent",
+                  borderTop: "6px solid #334155",
+                  transform: "translateX(-50%)",
+                  zIndex: 3,
+                }}
+              />
+            )}
+
+            {/* Actual Progress Bar */}
+            <Box
+              sx={{
+                width: `${Math.min((m.value / (m.goal || m.value * 1.5)) * 75, 100)}%`,
+                height: "100%",
+                bgcolor: m.color,
+                borderRadius: 0.5,
+              }}
+            />
+          </Box>
+
+          <Typography sx={{ fontSize: "0.7rem", color: "#94a3b8", textAlign: "right" }}>
+            {m.goal ? `$${m.goal.toLocaleString()}` : ""}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+
+    <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 0.3 }}>
+      {footer.map((f, idx) => (
+        <Typography key={idx} sx={{ fontSize: "0.7rem", color: "#64748b" }}>
+          {f.label} <strong>${f.value.toLocaleString()}</strong> (goal ${f.goal.toLocaleString()})
+        </Typography>
+      ))}
+    </Box>
+  </Paper>
+);
+
 const OperatorySidebar = ({
   START_HOUR,
+  activeTab, 
+  providers = [],
+  rooms = [],
   selectedDate,
   onDateChange,
   patientQuery,
@@ -107,22 +214,43 @@ const OperatorySidebar = ({
   onPatientSelect,
   onCreatePatient,
   hasSelectedPatient,
-  preAppointmentChecklist,
+  preAppointmentChecklist = {},
   preAppointmentExpanded,
   setPreAppointmentExpanded,
   handlePreAppointmentSelection,
-  checkOutChecklist,
+  checkOutChecklist = {},
   checkOutExpanded,
   setCheckOutExpanded,
   handleCheckOutSelection,
-  openCreateDialog,
   onScheduleAppointmentClick,
   onCompleteBillClick,
   onPurchaseProductsClick,
   getStatusColor,
+  appointments = [],
 }) => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [appointmentStatus, setAppointmentStatus] = useState("confirmed");
+  const [patientDetails, setPatientDetails] = useState(null);
+  const [patientBalance, setPatientBalance] = useState(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(true);
+  const [familyExpanded, setFamilyExpanded] = useState(true);
+  const [proceduresExpanded, setProceduresExpanded] = useState(true);
+  const [recareExpanded, setRecareExpanded] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  
+  // --- Search Form State ---
+  const [searchProvider, setSearchProvider] = useState(null);
+  const [searchDuration, setSearchDuration] = useState(60);
+  const [searchOperatory, setSearchOperatory] = useState(null);
+  const [searchStartDate, setSearchStartDate] = useState("");
+  const [searchEndDate, setSearchEndDate] = useState("");
+  const [searchDays, setSearchDays] = useState([]);
+  const [searchAm, setSearchAm] = useState(true);
+  const [searchPm, setSearchPm] = useState(true);
+  const [searchDoubleBooking, setSearchDoubleBooking] = useState(false);
+  const [searchRange, setSearchRange] = useState("1 month");
+  const [productivityProvider, setProductivityProvider] = useState("all");
+
   const [checkInChecklist, setCheckInChecklist] = useState({
     patientArrived: null,
     copayCollected: null,
@@ -141,9 +269,10 @@ const OperatorySidebar = ({
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [appointmentPageOpen, setAppointmentPageOpen] = useState(false);
+  const [routeSlipOpen, setRouteSlipOpen] = useState(false);
+  const [familyAppointmentsOpen, setFamilyAppointmentsOpen] = useState(false);
+  const [appointmentHistoryOpen, setAppointmentHistoryOpen] = useState(false);
 
-  // Debounce ref — prevents firing a patient search API call on every keystroke.
-  // The search only triggers after the user pauses typing for 300ms.
   const searchDebounceRef = useRef(null);
 
   const handleCheckInSelection = (item, selectionType) => {
@@ -161,33 +290,50 @@ const OperatorySidebar = ({
     }
   };
 
-  const handleChatClick = () => {
-    setChatOpen(true);
-  };
+  const handleChatClick = () => setChatOpen(true);
+  const handleCloseChat = () => setChatOpen(false);
+  const handleAppointmentPageClick = () => setAppointmentPageOpen(true);
+  const handleCloseAppointmentPage = () => setAppointmentPageOpen(false);
+  const handleRouteSlipClick = () => setRouteSlipOpen(true);
+  const handleCloseRouteSlip = () => setRouteSlipOpen(false);
+  const handleFamilyAppointmentsClick = () => setFamilyAppointmentsOpen(true);
+  const handleCloseFamilyAppointments = () => setFamilyAppointmentsOpen(false);
+  const handleAppointmentHistoryClick = () => setAppointmentHistoryOpen(true);
+  const handleCloseAppointmentHistory = () => setAppointmentHistoryOpen(false);
 
-  const handleCloseChat = () => {
-    setChatOpen(false);
-  };
-
-  const handleAppointmentPageClick = () => {
-    setAppointmentPageOpen(true);
-  };
-
-  const handleCloseAppointmentPage = () => {
-    setAppointmentPageOpen(false);
-  };
+  // Fetch detailed patient data when a patient is selected
+  useEffect(() => {
+    if (selectedPatient?.id || selectedPatient?._id) {
+      const pid = selectedPatient.id || selectedPatient._id;
+      const fetchPatientFullDetails = async () => {
+        setLoadingDetails(true);
+        try {
+          const [details, balance] = await Promise.all([
+            patientService.getPatientWorkspace(pid),
+            invoiceService.getPatientBalance(pid)
+          ]);
+          setPatientDetails(details);
+          setPatientBalance(balance);
+        } catch (error) {
+          console.error("Error fetching patient details:", error);
+        } finally {
+          setLoadingDetails(false);
+        }
+      };
+      fetchPatientFullDetails();
+    } else {
+      setPatientDetails(null);
+      setPatientBalance(null);
+    }
+  }, [selectedPatient]);
 
   useEffect(() => {
-    // Don't hide the create form if user is actively filling it out
     if (isCreatingPatient) return;
-    
-    // Only show quick create if there's a query and no results
     if (!patientQuery?.trim()) {
       setShowQuickCreate(false);
       setIsCreatingPatient(false);
       return;
     }
-    
     if (!loadingPatients && (!patients || patients.length === 0)) {
       setShowQuickCreate(true);
     } else if (patients && patients.length > 0) {
@@ -197,10 +343,7 @@ const OperatorySidebar = ({
 
   const handleCreatePatientClick = async () => {
     if (!onCreatePatient) return;
-    
-    // Extract only digits from the formatted phone number
     const cleanPhone = newPhone.replace(/\D/g, '');
-    
     const payload = {
       firstName: newFirstName || patientQuery || "",
       lastName: newLastName || "",
@@ -211,11 +354,7 @@ const OperatorySidebar = ({
       isNewPatient,
     };
     await onCreatePatient(payload);
-    setNewFirstName("");
-    setNewLastName("");
-    setNewDob("");
-    setNewPhone("");
-    setNewEmail("");
+    setNewFirstName(""); setNewLastName(""); setNewDob(""); setNewPhone(""); setNewEmail("");
   };
 
   return (
@@ -228,1077 +367,660 @@ const OperatorySidebar = ({
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        height: "688px", // Header (~48px) + Body (640px) = 688px total
+        height: "688px", 
       }}
     >
-      {/* Scrollable Content Area */}
       <Box sx={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {/* Patient Search */}
-        <Box sx={{ p: 2, bgcolor: "#fafcff" }}>
-          <Autocomplete
-            size="small"
-            options={patients}
-            loading={loadingPatients}
-            value={selectedPatient}
-            getOptionLabel={(o) =>
-              o?.firstName && o?.lastName
-                ? `${o.firstName} ${o.lastName}`
-                : o?.name || ""
-            }
-            onChange={(_, value) => {
-              setSelectedPatient(value);
-              onPatientSelect?.(value || null);
-              if (value) {
-                setPatientQuery(
-                  value.firstName && value.lastName
-                    ? `${value.firstName} ${value.lastName}`
-                    : value.name || ""
-                );
-              }
-            }}
-            inputValue={patientQuery}
-            onInputChange={(_, value, reason) => {
-              if (reason === 'input') {
-                setPatientQuery(value);
-                // Debounce: cancel any pending search and wait 300ms after
-                // the user stops typing before firing the API call.
-                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                searchDebounceRef.current = setTimeout(() => {
-                  onPatientSearch?.(value);
-                }, 300);
-              } else if (reason === 'clear') {
-                setPatientQuery('');
-                setSelectedPatient(null);
-                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                onPatientSearch?.('');
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="Search patients..."
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: "#94a3b8", fontSize: 20 }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
-        </Box>
-
-        {showQuickCreate && (
-          <Box sx={{ p: 2 }}>
-            <Typography sx={{ fontSize: '0.8rem', color: "#64748b", mb: 1.5, fontWeight: 500 }}>
-              Create New Patient
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  variant="standard"
-                  size="small"
-                  label="First Name *"
-                  value={newFirstName}
-                  onChange={(e) => {
-                    setNewFirstName(e.target.value);
-                    setIsCreatingPatient(true);
-                  }}
-                  onBlur={() => setIsCreatingPatient(false)}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiInputLabel-root": compactInputLabelSx,
-                    "& .MuiInputBase-input": {
-                      ...compactInputValueSx,
-                      py: 0.35,
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  variant="standard"
-                  size="small"
-                  label="Last Name *"
-                  value={newLastName}
-                  onChange={(e) => {
-                    setNewLastName(e.target.value);
-                    setIsCreatingPatient(true);
-                  }}
-                  onBlur={() => setIsCreatingPatient(false)}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiInputLabel-root": compactInputLabelSx,
-                    "& .MuiInputBase-input": {
-                      ...compactInputValueSx,
-                      py: 0.35,
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  variant="standard"
-                  size="small"
-                  label="Date of Birth"
-                  type="date"
-                  value={newDob}
-                  onChange={(e) => {
-                    setNewDob(e.target.value);
-                    setIsCreatingPatient(true);
-                  }}
-                  onBlur={() => setIsCreatingPatient(false)}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiInputLabel-root": compactInputLabelSx,
-                    "& .MuiInputBase-input": {
-                      ...compactInputValueSx,
-                      py: 0.35,
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  variant="standard"
-                  size="small"
-                  label="Mobile Phone"
-                  value={newPhone}
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    let formatted = '';
-                    if (digits.length <= 3) {
-                      formatted = digits;
-                    } else if (digits.length <= 6) {
-                      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                    } else {
-                      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                    }
-                    setNewPhone(formatted);
-                    setIsCreatingPatient(true);
-                  }}
-                  onBlur={() => setIsCreatingPatient(false)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{
-                    inputMode: 'numeric',
-                    maxLength: 14,
-                    style: { paddingLeft: '24px' }
-                  }}
-                  placeholder="(201) 555-0123"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start" sx={{ ml: 0.5 }}>
-                        <span style={{ fontSize: '16px', color: '#616161' }}>☎</span>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    "& .MuiInputLabel-root": compactInputLabelSx,
-                    "& .MuiInputBase-input": {
-                      ...compactInputValueSx,
-                      py: 0.35,
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  variant="standard"
-                  size="small"
-                  label="Email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => {
-                    setNewEmail(e.target.value);
-                    setIsCreatingPatient(true);
-                  }}
-                  onBlur={() => setIsCreatingPatient(false)}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiInputLabel-root": compactInputLabelSx,
-                    "& .MuiInputBase-input": {
-                      ...compactInputValueSx,
-                      py: 0.35,
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Checkbox
-                      size="small"
-                      checked={sendWelcomeEmail}
-                      onChange={(e) => setSendWelcomeEmail(e.target.checked)}
-                    />
-                    <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontWeight: 600 }}>
-                      Send welcome email
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Checkbox
-                      size="small"
-                      checked={isNewPatient}
-                      onChange={(e) => setIsNewPatient(e.target.checked)}
-                    />
-                    <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontWeight: 600 }}>
-                      New patient
-                    </Typography>
-                  </Box>
-                </Box>
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="small"
-                  onClick={() => {
-                    setIsCreatingPatient(false);
-                    handleCreatePatientClick();
-                  }}
-                  sx={{
-                    textTransform: "none",
-                    bgcolor: "#d8b16b",
-                    "&:hover": { bgcolor: "#c49c56" },
-                    fontSize: "0.8rem",
-                    py: 0.65,
-                    mt: 1,
-                  }}
-                >
-                  Create Patient
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
-
-        {hasSelectedPatient && (
-          <>
-            <Divider />
-
-            {/* Schedule Appointment Button */}
-            <Box sx={{ p: 2 }}>
+        
+        {/* TAB 0: Patients */}
+        {activeTab === 0 && (
+          <Box sx={{ bgcolor: "#F0F4F8" }}>
+            {/* Create Appointment Button */}
+            <Box sx={{ p: 1.5, pb: 0, bgcolor: "#ffffff" }}>
               <Button
-                fullWidth
                 variant="contained"
-                size="small"
-                startIcon={<EventNoteIcon />}
+                fullWidth
+                startIcon={<AddIcon />}
                 onClick={onScheduleAppointmentClick}
-                disabled={!onScheduleAppointmentClick}
                 sx={{
+                  bgcolor: "#1976d2",
+                  "&:hover": { bgcolor: "#1565c0" },
                   textTransform: "none",
-                  borderRadius: 1.5,
-                  bgcolor: onScheduleAppointmentClick ? "#1976d2" : "#cbd5e1",
-                  "&:hover": { bgcolor: onScheduleAppointmentClick ? "#1565c0" : "#94a3b8" },
-                  fontSize: '0.8rem',
-                  py: 0.75,
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  py: 1,
+                  mb: 1,
+                  borderRadius: "6px",
+                  boxShadow: "none"
                 }}
               >
-                Schedule Appointment
+                Create Appointment
               </Button>
             </Box>
 
-            {/* Patient Info Card with New Styling */}
-            <Box sx={{ px: 2, pb: 2, bgcolor: '#f8fafc' }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {/* Side Action Icons */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  {[PersonOutlineIcon, ChatOutlinedIcon, ExitToAppIcon].map((Icon, i) => (
-                    <IconButton 
-                      key={i} 
-                      size="small" 
-                      sx={{ bgcolor: '#eef2f6', borderRadius: 1.5, color: '#1e293b', p: 0.75 }}
-                      onClick={() => {
-                        if (i === 1) handleChatClick();
-                        if (i === 2) handleAppointmentPageClick();
-                      }}
-                    >
-                      <Icon fontSize="small" />
-                    </IconButton>
-                  ))}
-                </Box>
+            {/* Patient Search */}
+            <Box sx={{ p: 1.5, bgcolor: "#ffffff" }}>
+              <Autocomplete
+                size="small"
+                options={patients}
+                loading={loadingPatients}
+                value={selectedPatient}
+                getOptionLabel={(o) => o?.firstName && o?.lastName ? `${o.firstName} ${o.lastName}` : o?.name || "" }
+                onChange={(_, value) => {
+                  setSelectedPatient(value);
+                  onPatientSelect?.(value || null);
+                  if (value) {
+                    setPatientQuery(value.firstName && value.lastName ? `${value.firstName} ${value.lastName}` : value.name || "");
+                  }
+                }}
+                inputValue={patientQuery}
+                onInputChange={(_, value, reason) => {
+                  if (reason === 'input') {
+                    setPatientQuery(value);
+                    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                    searchDebounceRef.current = setTimeout(() => onPatientSearch?.(value), 300);
+                  } else if (reason === 'clear') {
+                    setPatientQuery('');
+                    setSelectedPatient(null);
+                    setPatientDetails(null);
+                    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                    onPatientSearch?.('');
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    placeholder="Search for Patients by name or ID" 
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#fafafa',
+                        borderRadius: '6px',
+                        '& fieldset': { borderColor: '#ddd' },
+                      }
+                    }}
+                    InputProps={{ 
+                      ...params.InputProps, 
+                      startAdornment: ( 
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ color: "#94a3b8", fontSize: 18 }} />
+                        </InputAdornment> 
+                      ), 
+                    }} 
+                  />
+                )}
+              />
+            </Box>
 
-                {/* Patient Info Paper */}
-                <Paper elevation={0} sx={{ flexGrow: 1, p: 1.5, border: '1px solid #cbd5e1', borderRadius: 1.5 }}>
-                  <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#1e293b' }}>
-                    {selectedPatient?.firstName && selectedPatient?.lastName 
-                      ? `${selectedPatient.firstName} ${selectedPatient.lastName}` 
-                      : selectedPatient?.name || 'Patient'} (#1218)
-                  </Typography>
-                  
-                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.3 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                      Birthday: {selectedPatient?.dateOfBirth 
-                        ? new Date(selectedPatient.dateOfBirth).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric'
-                          })
-                        : 'N/A'}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        Phone: {selectedPatient?.phonePrimary || selectedPatient?.mobilePhone || 'N/A'}
-                      </Typography>
-                      <IconButton size="small" onClick={() => copyToClipboard(selectedPatient?.phonePrimary || selectedPatient?.mobilePhone || '')} sx={{ p: 0.25 }}>
-                        <ContentCopy sx={{ fontSize: 12, color: '#94a3b8' }} />
-                      </IconButton>
+            {/* Quick Create Patient */}
+            {showQuickCreate && (
+              <Box sx={{ p: 2, bgcolor: 'white' }}>
+                <Typography sx={{ fontSize: '0.8rem', color: "#64748b", mb: 1.5, fontWeight: 500 }}>Create New Patient</Typography>
+                <Grid container spacing={1}>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField fullWidth variant="standard" size="small" label="First Name *" value={newFirstName} onChange={(e) => {setNewFirstName(e.target.value); setIsCreatingPatient(true);}} onBlur={() => setIsCreatingPatient(false)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}} />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField fullWidth variant="standard" size="small" label="Last Name *" value={newLastName} onChange={(e) => {setNewLastName(e.target.value); setIsCreatingPatient(true);}} onBlur={() => setIsCreatingPatient(false)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputLabel-root": compactInputLabelSx, "& .MuiInputBase-input": { ...compactInputValueSx, py: 0.35 }}} />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Button fullWidth variant="contained" size="small" onClick={() => { setIsCreatingPatient(false); handleCreatePatientClick(); }} sx={{ textTransform: "none", bgcolor: "#1976d2", "&:hover": { bgcolor: "#1565c0" }, fontSize: "0.75rem", py: 0.5, mt: 1 }}>Create Patient</Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            {hasSelectedPatient && (
+              <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1.5 }}>
+                {/* Patient Header Card */}
+                <Paper variant="outlined" sx={{ p: 1.25, borderRadius: '8px', border: '1px solid #ddd' }}>
+                  <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pt: 0.5 }}>
+                      <IconButton size="small" sx={{ p: 0.5 }} onClick={handleAppointmentPageClick}><PersonOutlineIcon sx={{ fontSize: 18, color: '#666' }} /></IconButton>
+                      <IconButton size="small" sx={{ p: 0.5 }} onClick={handleChatClick}><ChatOutlinedIcon sx={{ fontSize: 18, color: '#666' }} /></IconButton>
+                      <IconButton size="small" sx={{ p: 0.5 }}><ExitToAppIcon sx={{ fontSize: 18, color: '#666' }} /></IconButton>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        Email: {selectedPatient?.email || 'N/A'}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a3353' }}>
+                        {selectedPatient?.firstName} {selectedPatient?.lastName} (#{selectedPatient?.patientCode || selectedPatient?._id?.slice(-4) || '---'})
                       </Typography>
-                      <IconButton size="small" onClick={() => copyToClipboard(selectedPatient?.email || '')} sx={{ p: 0.25 }}>
-                        <ContentCopy sx={{ fontSize: 12, color: '#94a3b8' }} />
-                      </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>
+                          Birthday: {selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '---'} (35)
+                        </Typography>
+                        <IconButton 
+                          size="small" 
+                          sx={{ p: 0.2, color: '#999', '&:hover': { color: '#666' } }}
+                          onClick={() => copyToClipboard(selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '')}
+                        >
+                          <ContentCopy sx={{ fontSize: 12 }} />
+                        </IconButton>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 0.4, mt: 1.5 }}>
+                        <Box sx={{ bgcolor: '#eee', p: 0.3, borderRadius: '4px', display: 'flex' }}><LocalHospitalIcon sx={{ fontSize: 12, color: '#999' }} /></Box>
+                        <Box sx={{ bgcolor: '#eee', p: 0.3, borderRadius: '4px', display: 'flex', position: 'relative' }}>
+                          <Typography sx={{ fontSize: '10px', color: '#999', lineHeight: 1, fontWeight: 700 }}>He</Typography>
+                        </Box>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 0.4, mt: 0.5 }}>
+                        {['B', 'R', 'F', 'D'].map(char => (
+                          <Box key={char} sx={{ width: 18, height: 18, bgcolor: '#f5f5f5', color: '#999', fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', border: '1px solid #eee' }}>
+                            {char}
+                          </Box>
+                        ))}
+                      </Box>
                     </Box>
-                  </Box>
-
-                  {/* Quick Actions */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-                    <IconButton size="small" sx={{ bgcolor: '#f1f5f9', borderRadius: 1, p: 0.5 }}>
-                      <MailOutlineIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" sx={{ bgcolor: '#fed7aa', borderRadius: '50%', p: 0.25 }}>
-                      <HistoryIcon sx={{ fontSize: 16, color: '#c2410c' }} />
-                    </IconButton>
-                  </Box>
-
-                  {/* Status Circles */}
-                  <Box sx={{ display: 'flex', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
-                    {['H', 'P', 'B', 'F', 'D'].map((char) => (
-                      <Avatar key={char} sx={{ width: 22, height: 22, fontSize: '9px', bgcolor: '#e2e8f0', color: '#64748b' }}>
-                        {char}
-                      </Avatar>
-                    ))}
-                    <Avatar sx={{ ml: 'auto', width: 22, height: 22, fontSize: '9px', bgcolor: '#f1f5f9', color: '#64748b' }}>MH</Avatar>
                   </Box>
                 </Paper>
+
+                {/* Section: Procedure List Example */}
+                <Box>
+                  <HeaderAccordion title="P 1 #15 crown /bu" value="____ min" icon={KeyboardArrowRightIcon} expanded={proceduresExpanded} setExpanded={setProceduresExpanded} />
+                  <HeaderAccordion title="Recare" value="____ min" icon={EventNoteIcon} expanded={recareExpanded} setExpanded={setRecareExpanded} />
+                </Box>
+
+                {/* List of Scheduled Appointments (Integrated from Dialog design) */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 0.5 }}>
+                  {appointments
+                    .filter(a => dayjs(a.start).isAfter(dayjs().subtract(1, 'day')))
+                    .sort((a, b) => dayjs(a.start).diff(dayjs(b.start)))
+                    .map(appt => (
+                      <SidebarAppointmentCard 
+                        key={appt.id} 
+                        appointment={appt} 
+                        onClick={() => {
+                          if (onDateChange) onDateChange(dayjs(appt.date));
+                        }} 
+                      />
+                    ))
+                  }
+                </Box>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <ActionButton label="Route Slip" onClick={handleRouteSlipClick} />
+                  <ActionButton label="Family Appointments" onClick={handleFamilyAppointmentsClick} />
+                  <ActionButton label="Appointment History" onClick={handleAppointmentHistoryClick} />
+                </Box>
+
+                <Button variant="contained" fullWidth sx={{ bgcolor: '#94a3b8', borderRadius: '4px', textTransform: 'none', py: 0.75, fontSize: '0.85rem', fontWeight: 600, boxShadow: 'none' }}>
+                  Purchase Products
+                </Button>
+
+                {/* Patient Details Detail View */}
+                <DetailAccordion title="Patient Details" expanded={detailsExpanded} setExpanded={setDetailsExpanded}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
+                    <Box>
+                      <Typography className="detail-label" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>Preferred Providers <KeyboardArrowDownIcon sx={{ fontSize: 14 }} /></Typography>
+                      <Box sx={{ pl: 1, mt: 0.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>Preferred Dentist:</Typography>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#333', fontWeight: 600 }}>
+                            {patientDetails?.preferredProvider?.name || patientDetails?.preferredDentist?.name || '---'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>Preferred Hygienist:</Typography>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#333', fontWeight: 600 }}>
+                            {patientDetails?.preferredHygienist?.name || '---'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Patient Forms</Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, pl: 1 }}>
+                        {(patientDetails?.forms || ['B', 'R', 'P', 'Q']).map(form => {
+                          const char = typeof form === 'string' ? form : form.type?.[0] || '?';
+                          const isCompleted = typeof form === 'object' ? form.status === 'completed' : false;
+                          return (
+                            <Tooltip key={char} title={typeof form === 'object' ? form.name : char}>
+                              <Box sx={{ 
+                                width: 18, height: 18, 
+                                bgcolor: isCompleted ? '#10b981' : (char === 'B' ? '#ef4444' : '#f5f5f5'), 
+                                color: (isCompleted || char === 'B') ? 'white' : '#999', 
+                                fontSize: '10px', fontWeight: 800, 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' 
+                              }}>{char}</Box>
+                            </Tooltip>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <KeyboardArrowDownIcon sx={{ fontSize: 16, color: '#777' }} />
+                        <Typography className="detail-label" sx={{ color: '#777', mb: 0 }}>Medical Alerts</Typography>
+                      </Box>
+                      <Box sx={{ pl: 2.5, mt: 0.5 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
+                          Diabetes Type I
+                        </Typography>
+                        {(patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts || []).map((alert, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
+                            {typeof alert === 'string' ? alert : alert.description || alert.name}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Patient Flags</Typography>
+                      {(patientDetails?.flags || []).length > 0 ? (
+                        patientDetails.flags.map((flag, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, pl: 1 }}>{flag}</Typography>
+                        ))
+                      ) : (
+                        <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No flags</Typography>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Bills</Typography>
+                      <Box sx={{ pl: 1 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Last Bill: {patientBalance?.lastBillDate ? dayjs(patientBalance.lastBillDate).format('MM/DD/YYYY') : 'None'}</Typography>
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Used Amount:</Typography>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#333', pl: 1, fontWeight: 600 }}>
+                        ${patientBalance?.usedAmount?.toLocaleString() || '0.00'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </DetailAccordion>
+
+                {/* Family Details Accordion */}
+                <DetailAccordion title="Family Details" expanded={familyExpanded} setExpanded={setFamilyExpanded}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
+                    <Box>
+                      <Typography className="detail-label">Family members:</Typography>
+                      {(patientDetails?.familyMembers || []).length > 0 ? (
+                        patientDetails.familyMembers.map((member, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#333', pl: 1 }}>
+                            {member.firstName} {member.lastName} ({member.relationship || 'Member'})
+                          </Typography>
+                        ))
+                      ) : (
+                        <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No family found</Typography>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography className="detail-label">Family Bills:</Typography>
+                      <Box sx={{ pl: 1, mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Total outstanding: <strong>${patientBalance?.familyTotalOutstanding?.toLocaleString() || '0.00'}</strong></Typography>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Individual Outstanding: <strong>${patientBalance?.individualOutstanding?.toLocaleString() || '0.00'}</strong></Typography>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#333' }}>Insurance Outstanding: <strong>${patientBalance?.insuranceOutstanding?.toLocaleString() || '0.00'}</strong></Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </DetailAccordion>
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* TAB 1: Pending */}
+        {activeTab === 1 && <Box p={2}><Typography variant="body2" color="text.secondary">Pending Appointments View</Typography></Box>}
+
+        {/* TAB 2: Search */}
+        {activeTab === 2 && (
+          <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', mb: 1 }}>Search for Empty Slots By:</Typography>
+            <Box>
+              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>PROVIDER:</Typography>
+              <Autocomplete
+                size="small"
+                options={providers}
+                getOptionLabel={(o) => {
+                  if (!o) return "";
+                  if (o.name) return o.name;
+                  const fullName = `${o.firstName || ""} ${o.lastName || ""}`.trim();
+                  if (fullName) return fullName;
+                  const userFullName = `${o.userId?.firstName || ""} ${o.userId?.lastName || ""}`.trim();
+                  if (userFullName) return userFullName;
+                  return o.providerCode || `Provider #${o._id || o.id}` || "";
+                }}
+                value={searchProvider}
+                onChange={(_, v) => setSearchProvider(v)}
+                renderInput={(params) => <TextField {...params} placeholder="Search and select providers" variant="outlined" />}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>DURATION:</Typography>
+              <TextField size="small" variant="standard" value={searchDuration} onChange={(e) => setSearchDuration(e.target.value)} sx={{ width: 40, "& .MuiInputBase-input": { textAlign: 'center', fontWeight: 600, fontSize: '0.75rem' }}} />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>mins</Typography>
+            </Box>
+            <Box>
+              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>OPERATORY:</Typography>
+              <Autocomplete size="small" options={rooms} getOptionLabel={(o) => o.name || ""} value={searchOperatory} onChange={(_, v) => setSearchOperatory(v)} renderInput={(params) => <TextField {...params} placeholder="Search Operatory" variant="outlined" />} />
+            </Box>
+            <Box>
+              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>DATE RANGE:</Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField size="small" type="date" value={searchStartDate} onChange={(e) => setSearchStartDate(e.target.value)} sx={{ "& .MuiInputBase-input": { fontSize: '0.7rem' } }} />
+                <TextField size="small" type="date" value={searchEndDate} onChange={(e) => setSearchEndDate(e.target.value)} sx={{ "& .MuiInputBase-input": { fontSize: '0.7rem' } }} />
               </Box>
             </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>TIME:</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchAm} onChange={(e) => setSearchAm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>AM</Typography></Box>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchPm} onChange={(e) => setSearchPm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>PM</Typography></Box>
+            </Box>
 
-            <Box sx={{ p: 2 }}>
-              {/* Appointment Box with Recare Info */}
-              <Paper elevation={0} sx={{ border: '1px solid #cbd5e1', borderRadius: 1.5, overflow: 'hidden', mb: 2 }}>
-                <Box sx={{ 
-                  position: 'relative',
-                  bgcolor: getStatusColor ? getStatusColor(appointmentStatus, '#a78bfa') : '#a78bfa', 
-                  p: 0.75,
-                  color: 'white',
-                  overflow: 'hidden'
-                }}>
-                  {/* Animated Zebra Stripe Pattern */}
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: `repeating-linear-gradient(
-                        90deg,
-                        transparent 0px,
-                        transparent 12px,
-                        rgba(255, 255, 255, 0.15) 12px,
-                        rgba(255, 255, 255, 0.15) 24px
-                      )`,
-                      animation: "slide 1s linear infinite",
-                      "@keyframes slide": {
-                        "0%": { backgroundPosition: "0 0" },
-                        "100%": { backgroundPosition: "24px 0" },
-                      },
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: -1 }}>
+              <Checkbox size="small" checked={searchDoubleBooking} onChange={(e) => setSearchDoubleBooking(e.target.checked)} sx={{ p: 0.5 }} />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a678d' }}>ALLOW DOUBLE BOOKING</Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>SEARCH AVAILABILITY FOR:</Typography>
+              <Select
+                fullWidth size="small"
+                value={searchRange}
+                onChange={(e) => setSearchRange(e.target.value)}
+                sx={{ bgcolor: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
+              >
+                <MenuItem value="1 month">1 month</MenuItem>
+                <MenuItem value="2 months">2 months</MenuItem>
+                <MenuItem value="3 months">3 months</MenuItem>
+                <MenuItem value="6 months">6 months</MenuItem>
+              </Select>
+            </Box>
+            <Button variant="contained" fullWidth sx={{ mt: 1, bgcolor: '#5c7cbc', textTransform: 'none', fontWeight: 700, boxShadow: 'none', "&:hover": { bgcolor: '#4a6496' } }}>Search</Button>
+          </Box>
+        )}
+
+        {/* TAB 3: Productivity */}
+        {activeTab === 3 && (
+          <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Header Controls */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: "#1e293b" }}>Selected Provider:</Typography>
+                <Select
+                  size="small"
+                  value={productivityProvider}
+                  onChange={(e) => setProductivityProvider(e.target.value)}
+                  sx={{ height: 32, minWidth: 120, fontSize: "0.8rem" }}
+                  displayEmpty
+                >
+                  <MenuItem value="all">All</MenuItem>
+                  {providers.map((p) => {
+                    const providerId = p._id || p.id;
+                    const providerName = p.name || 
+                      (p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : "") ||
+                      (p.userId?.firstName && p.userId?.lastName ? `${p.userId.firstName} ${p.userId.lastName}` : "") ||
+                      p.providerCode || 
+                      `Provider #${providerId}`;
+                    
+                    return (
+                      <MenuItem key={providerId} value={providerId}>
+                        {providerName}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography sx={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>Date:</Typography>
+                  <TextField
+                    type="date"
+                    variant="standard"
+                    size="small"
+                    value={dayjs(selectedDate).format("YYYY-MM-DD")}
+                    onChange={(e) => onDateChange?.(dayjs(e.target.value))}
+                    InputProps={{ disableUnderline: true }}
+                    sx={{ 
+                      "& .MuiInputBase-input": { 
+                        fontSize: "0.8rem", 
+                        fontWeight: 700,
+                        color: "#1e293b",
+                        py: 0,
+                        cursor: "pointer",
+                        width: "105px"
+                      } 
                     }}
                   />
-                  <Typography sx={{ fontSize: '11px', fontWeight: 800, textAlign: 'center', letterSpacing: '0.5px', position: 'relative' }}>
-                    RECARE 03/04/2026 @ 09:00 AM
-                  </Typography>
                 </Box>
-                
-                <Box sx={{ p: 1.5 }}>
-                  <Select
-                    value={appointmentStatus}
-                    onChange={(e) => setAppointmentStatus(e.target.value)}
-                    size="small"
-                    fullWidth
-                    sx={{ height: 32, fontSize: '0.8rem', mb: 1, borderRadius: 1 }}
-                  >
-                    <MenuItem value="unconfirmed">Unconfirmed</MenuItem>
-                    <MenuItem value="preconfirmed">Pre-Confirmed</MenuItem>
-                    <MenuItem value="confirmed">Confirmed</MenuItem>
-                    <MenuItem value="seated">Seated</MenuItem>
-                    <MenuItem value="call">Call</MenuItem>
-                    <MenuItem value="checkout incomplete">Checkout Incomplete</MenuItem>
-                    <MenuItem value="checkout complete">Checkout Complete</MenuItem>
-                    <MenuItem value="no show">No Show</MenuItem>
-                    <MenuItem value="rescheduled">Rescheduled</MenuItem>
-                    <MenuItem value="cancelled">Cancelled</MenuItem>
-                  </Select>
-
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1, color: '#64748b' }}>
-                    <IconButton size="small" sx={{ p: 0.25 }}>
-                      <MailOutlineIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                    <IconButton size="small" sx={{ p: 0.25 }}>
-                      <ChatOutlinedIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Box>
-
-                  <Typography sx={{ fontSize: '0.8rem', color: '#1e293b', mb: 1 }}>
-                    hygiene, periodic ex, fl
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                    <Chip label="SAB" size="small" sx={{ bgcolor: '#dcfce7', color: '#166534', height: 20, fontSize: '10px', fontWeight: 700 }} />
-                  </Box>
-                </Box>
-              </Paper>
-
-              {/* Pre-Appointment Checklist */}
-              <Box sx={{ mb: 2 }}>
-                <Box
-                  onClick={() => setPreAppointmentExpanded(!preAppointmentExpanded)}
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    py: 1,
+                <Button 
+                  variant="contained" 
+                  size="small" 
+                  sx={{ 
+                    height: 24, 
                     px: 1.5,
-                    borderRadius: 1.5,
-                    bgcolor: "#f8fafc",
-                    cursor: "pointer",
-                    transition: "background-color 0.2s ease",
-                    "&:hover": {
-                      bgcolor: "#f1f5f9",
-                    },
+                    fontSize: "0.7rem", 
+                    textTransform: "none", 
+                    bgcolor: "#5c7cbc",
+                    borderRadius: 1,
+                    boxShadow: "none",
+                    "&:hover": { bgcolor: "#4a6496", boxShadow: "none" }
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        bgcolor: "#f59e0b",
-                      }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: "#475569",
-                      }}
-                    >
-                      Pre-Appointment Checklist
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      transform: preAppointmentExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                      color: "#64748b",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </Box>
-                </Box>
-
-                {preAppointmentExpanded && (
-                  <Box sx={{ pt: 1 }}>
-                    {[
-                      { key: "importHistory", label: "Import History", naColor: "#ef4444" },
-                      { key: "importRecord", label: "Import Record", naColor: "#ef4444" },
-                      { key: "apptReminder", label: "Appt Reminder", naColor: "#ef4444" },
-                      {
-                        key: "verifyInsurance",
-                        label: "Verify Insurance Eligibility",
-                        naColor: "#ef4444",
-                      },
-                      {
-                        key: "premedicationReminder",
-                        label: "Premedication Reminder",
-                        naColor: "#ef4444",
-                      },
-                      {
-                        key: "labCaseReceived",
-                        label: "Lab Case Received",
-                        naColor: "#ef4444",
-                      },
-                    ].map((item) => (
-                      <Box
-                        key={item.key}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          py: 0.75,
-                          px: 1,
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '0.75rem', color: "#475569" }}>
-                          {item.label}
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Chip
-                            label="N/A"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePreAppointmentSelection(item.key, "na");
-                            }}
-                            sx={{
-                              minWidth: 48,
-                              height: 28,
-                              fontSize: 11,
-                              fontWeight: 500,
-                              borderRadius: "14px",
-                              bgcolor:
-                                preAppointmentChecklist[item.key] === "na"
-                                  ? item.naColor
-                                  : "#f1f5f9",
-                              color:
-                                preAppointmentChecklist[item.key] === "na"
-                                  ? "#ffffff"
-                                  : "#64748b",
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                bgcolor:
-                                  preAppointmentChecklist[item.key] === "na"
-                                    ? item.naColor
-                                    : "#e2e8f0",
-                              },
-                              cursor: "pointer",
-                            }}
-                          />
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePreAppointmentSelection(item.key, "checked");
-                            }}
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              border: "2px solid",
-                              borderColor:
-                                preAppointmentChecklist[item.key] === "checked"
-                                  ? "#10b981"
-                                  : "#cbd5e1",
-                              bgcolor:
-                                preAppointmentChecklist[item.key] === "checked"
-                                  ? "#10b981"
-                                  : "transparent",
-                              color: "#ffffff",
-                              padding: 0,
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                borderColor: "#10b981",
-                                bgcolor:
-                                  preAppointmentChecklist[item.key] === "checked"
-                                    ? "#059669"
-                                    : "#f1f5f9",
-                              },
-                              cursor: "pointer",
-                            }}
-                          >
-                            <CheckIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-
-              {/* Check-out Checklist */}
-              <Box sx={{ mb: 2 }}>
-                <Box
-                  onClick={() => setCheckOutExpanded(!checkOutExpanded)}
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    py: 1,
-                    px: 1.5,
-                    borderRadius: 1.5,
-                    bgcolor: "#f8fafc",
-                    cursor: "pointer",
-                    transition: "background-color 0.2s ease",
-                    "&:hover": {
-                      bgcolor: "#f1f5f9",
-                    },
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        bgcolor: "#8b5cf6",
-                      }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: "#475569",
-                      }}
-                    >
-                      Check-out Checklist
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      transform: checkOutExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                      color: "#64748b",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </Box>
-                </Box>
-
-                {checkOutExpanded && (
-                  <Box sx={{ pt: 1 }}>
-                    {[
-                      {
-                        key: "completeAndBillProcedures",
-                        label: "Complete & Bill Procedures",
-                        naColor: "#ef4444",
-                      },
-                      { key: "purchaseProducts", label: "Purchase Products", naColor: "#ef4444" },
-                      { key: "shareClinicalReports", label: "Share Clinical Reports", naColor: "#ef4444" },
-                      { key: "prescription", label: "Prescription", naColor: "#ef4444" },
-                      { key: "scheduleNextAppt", label: "Schedule Next Appt", naColor: "#ef4444" },
-                      { key: "sendLabCase", label: "Send Lab Case", naColor: "#ef4444" },
-                    ].map((item) => (
-                      <Box
-                        key={item.key}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          py: 0.75,
-                          px: 1,
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            color: "#475569",
-                            ...((item.key === "completeAndBillProcedures" && onCompleteBillClick) ||
-                            (item.key === "purchaseProducts" && onPurchaseProductsClick)
-                              ? {
-                                  cursor: "pointer",
-                                  "&:hover": { color: "#1976d2" },
-                                }
-                              : {}),
-                          }}
-                          onClick={(e) => {
-                            if (item.key === "completeAndBillProcedures" && onCompleteBillClick) {
-                              e.stopPropagation();
-                              onCompleteBillClick();
-                            }
-                            if (item.key === "purchaseProducts" && onPurchaseProductsClick) {
-                              e.stopPropagation();
-                              onPurchaseProductsClick();
-                            }
-                          }}
-                        >
-                          {item.label}
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Chip
-                            label="N/A"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckOutSelection(item.key, "na");
-                            }}
-                            sx={{
-                              minWidth: 48,
-                              height: 28,
-                              fontSize: 11,
-                              fontWeight: 500,
-                              borderRadius: "14px",
-                              bgcolor:
-                                checkOutChecklist[item.key] === "na"
-                                  ? item.naColor
-                                  : "#f1f5f9",
-                              color:
-                                checkOutChecklist[item.key] === "na"
-                                  ? "#ffffff"
-                                  : "#64748b",
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                bgcolor:
-                                  checkOutChecklist[item.key] === "na"
-                                    ? item.naColor
-                                    : "#e2e8f0",
-                              },
-                              cursor: "pointer",
-                            }}
-                          />
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckOutSelection(item.key, "checked");
-                            }}
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              border: "2px solid",
-                              borderColor:
-                                checkOutChecklist[item.key] === "checked"
-                                  ? "#10b981"
-                                  : "#cbd5e1",
-                              bgcolor:
-                                checkOutChecklist[item.key] === "checked"
-                                  ? "#10b981"
-                                  : "transparent",
-                              color: "#ffffff",
-                              padding: 0,
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                borderColor: "#10b981",
-                                bgcolor:
-                                  checkOutChecklist[item.key] === "checked"
-                                    ? "#059669"
-                                    : "#f1f5f9",
-                              },
-                              cursor: "pointer",
-                            }}
-                          >
-                            <CheckIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-
-              {/* Check-in Checklist */}
-              <Box sx={{ mb: 2 }}>
-                <Box
-                  onClick={() => setCheckInExpanded(!checkInExpanded)}
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    py: 1,
-                    px: 1.5,
-                    borderRadius: 1.5,
-                    bgcolor: "#f8fafc",
-                    cursor: "pointer",
-                    transition: "background-color 0.2s ease",
-                    "&:hover": {
-                      bgcolor: "#f1f5f9",
-                    },
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        bgcolor: "#10b981",
-                      }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: "#475569",
-                      }}
-                    >
-                      Check-in Checklist
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      transform: checkInExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                      color: "#64748b",
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </Box>
-                </Box>
-
-                {checkInExpanded && (
-                  <Box sx={{ pt: 1 }}>
-                    {[
-                      { key: "patientArrived", label: "Patient Arrived", naColor: "#ef4444" },
-                      { key: "copayCollected", label: "Co-payment Collected", naColor: "#ef4444" },
-                      { key: "formsCompleted", label: "Forms Completed", naColor: "#ef4444" },
-                      { key: "insuranceVerified", label: "Insurance Card Verified", naColor: "#ef4444" },
-                    ].map((item) => (
-                      <Box
-                        key={item.key}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          py: 0.75,
-                          px: 1,
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '0.75rem', color: "#475569" }}>
-                          {item.label}
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Chip
-                            label="N/A"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckInSelection(item.key, "na");
-                            }}
-                            sx={{
-                              minWidth: 48,
-                              height: 28,
-                              fontSize: 11,
-                              fontWeight: 500,
-                              borderRadius: "14px",
-                              bgcolor:
-                                checkInChecklist[item.key] === "na"
-                                  ? item.naColor
-                                  : "#f1f5f9",
-                              color:
-                                checkInChecklist[item.key] === "na"
-                                  ? "#ffffff"
-                                  : "#64748b",
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                bgcolor:
-                                  checkInChecklist[item.key] === "na"
-                                    ? item.naColor
-                                    : "#e2e8f0",
-                              },
-                              cursor: "pointer",
-                            }}
-                          />
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckInSelection(item.key, "checked");
-                            }}
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              border: "2px solid",
-                              borderColor:
-                                checkInChecklist[item.key] === "checked"
-                                  ? "#10b981"
-                                  : "#cbd5e1",
-                              bgcolor:
-                                checkInChecklist[item.key] === "checked"
-                                  ? "#10b981"
-                                  : "transparent",
-                              color: "#ffffff",
-                              padding: 0,
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                borderColor: "#10b981",
-                                bgcolor:
-                                  checkInChecklist[item.key] === "checked"
-                                    ? "#059669"
-                                    : "#f1f5f9",
-                              },
-                              cursor: "pointer",
-                            }}
-                          >
-                            <CheckIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: '0.8rem' }}>ReAppointment</InputLabel>
-                  <Select
-                    label="ReAppointment"
-                    defaultValue=""
-                    sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
-                  >
-                    <MenuItem value="" disabled>
-                      Schedule follow-up
-                    </MenuItem>
-                    <MenuItem value="1week" sx={{ fontSize: '0.8rem' }}>
-                      In 1 Week
-                    </MenuItem>
-                    <MenuItem value="2weeks" sx={{ fontSize: '0.8rem' }}>
-                      In 2 Weeks
-                    </MenuItem>
-                    <MenuItem value="1month" sx={{ fontSize: '0.8rem' }}>
-                      In 1 Month
-                    </MenuItem>
-                    <MenuItem value="3months" sx={{ fontSize: '0.8rem' }}>
-                      In 3 Months
-                    </MenuItem>
-                    <MenuItem value="6months" sx={{ fontSize: '0.8rem' }}>
-                      In 6 Months
-                    </MenuItem>
-                    <MenuItem value="1year" sx={{ fontSize: '0.8rem' }}>
-                      In 1 Year
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: '0.8rem' }}>Recare</InputLabel>
-                  <Select
-                    label="Recare"
-                    defaultValue=""
-                    sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
-                  >
-                    <MenuItem value="" disabled>
-                      Set recare interval
-                    </MenuItem>
-                    <MenuItem value="3months" sx={{ fontSize: '0.8rem' }}>
-                      Every 3 Months
-                    </MenuItem>
-                    <MenuItem value="4months" sx={{ fontSize: '0.8rem' }}>
-                      Every 4 Months
-                    </MenuItem>
-                    <MenuItem value="6months" sx={{ fontSize: '0.8rem' }}>
-                      Every 6 Months
-                    </MenuItem>
-                    <MenuItem value="9months" sx={{ fontSize: '0.8rem' }}>
-                      Every 9 Months
-                    </MenuItem>
-                    <MenuItem value="12months" sx={{ fontSize: '0.8rem' }}>
-                      Every 12 Months
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: '0.8rem' }}>Family Appointment</InputLabel>
-                  <Select
-                    label="Family Appointment"
-                    defaultValue=""
-                    sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
-                  >
-                    <MenuItem value="" disabled>
-                      Schedule family members
-                    </MenuItem>
-                    <MenuItem value="add" sx={{ fontSize: '0.8rem' }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <PersonIcon sx={{ fontSize: 16, color: "#64748b" }} />
-                        Add Family Member
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="scheduleTogether" sx={{ fontSize: '0.8rem' }}>
-                      Schedule Together
-                    </MenuItem>
-                    <MenuItem value="backToBack" sx={{ fontSize: '0.8rem' }}>
-                      Back-to-Back Appointments
-                    </MenuItem>
-                    <Divider />
-                    <MenuItem disabled sx={{ fontSize: 12, color: "#94a3b8" }}>
-                      Family Members:
-                    </MenuItem>
-                    <MenuItem value="richard" sx={{ fontSize: '0.8rem', pl: 3 }}>
-                      Richard Chen
-                    </MenuItem>
-                    <MenuItem value="william" sx={{ fontSize: '0.8rem', pl: 3 }}>
-                      William Taylor
-                    </MenuItem>
-                  </Select>
-                </FormControl>
+                  Refresh
+                </Button>
               </Box>
             </Box>
-          </>
+
+            <Divider />
+
+            {/* Metrics Cards */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <ProductivityMetricCard
+                title="Total"
+                amount={1294}
+                metrics={[
+                  { label: "P", value: 7115, goal: 6200, color: "#82b366" },
+                  { label: "C", value: 6458.5, goal: 6076, color: "#82b366" },
+                  { label: "GP", value: 8136, color: "#666666" },
+                  { label: "GC", value: 6458.5, color: "#b3b3b3" },
+                ]}
+                footer={[
+                  { label: "Production per hour", value: 222.34, goal: 193.7 },
+                  { label: "Production per visit", value: 1778.75, goal: 1550 },
+                ]}
+              />
+
+              <ProductivityMetricCard
+                title="Dentist"
+                amount={932}
+                metrics={[
+                  { label: "P", value: 6609, goal: 5600, color: "#82b366" },
+                  { label: "C", value: 6096.5, goal: 5488, color: "#82b366" },
+                  { label: "GP", value: 7517, color: "#666666" },
+                  { label: "GC", value: 6096.5, color: "#b3b3b3" },
+                ]}
+                footer={[
+                  { label: "Production per hour", value: 275.38, goal: 233.3 },
+                  { label: "Production per visit", value: 1652.25, goal: 1400 },
+                ]}
+              />
+
+              <ProductivityMetricCard
+                title="Hygienist"
+                amount={362}
+                metrics={[
+                  { label: "P", value: 506, goal: 600, color: "#f87171" },
+                  { label: "C", value: 362, goal: 588, color: "#f87171" },
+                  { label: "GP", value: 619, color: "#666666" },
+                  { label: "GC", value: 362, color: "#b3b3b3" },
+                ]}
+                footer={[
+                  { label: "Production per hour", value: 63.25, goal: 75 },
+                  { label: "Production per visit", value: 126.5, goal: 150 },
+                ]}
+              />
+            </Box>
+          </Box>
         )}
       </Box>
 
       <Divider />
-
-      {/* Fixed Calendar at Bottom */}
       <Box sx={{ p: 2, bgcolor: "#fafcff", flexShrink: 0 }}>
-        <StyledDateCalendar
-          value={selectedDate}
-          onChange={(v) => {
-            if (v && onDateChange) {
-              onDateChange(v);
-            }
-          }}
-        />
+        <StyledDateCalendar value={selectedDate} onChange={(v) => v && onDateChange && onDateChange(v)} />
       </Box>
 
-      {/* Patient Chat Dialog */}
-      <PatientChat 
-        open={chatOpen}
-        onClose={handleCloseChat}
-        patientName={selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : selectedPatient?.name}
+      <PatientChat open={chatOpen} onClose={handleCloseChat} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
+      <AppointmentPage open={appointmentPageOpen} onClose={handleCloseAppointmentPage} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
+      <PatientRouteSlipDialog 
+        open={routeSlipOpen} 
+        onClose={handleCloseRouteSlip} 
+        patient={selectedPatient}
+        patientDetails={patientDetails}
+        patientBalance={patientBalance}
       />
-
-      {/* Appointment Page Dialog */}
-      <AppointmentPage 
-        open={appointmentPageOpen}
-        onClose={handleCloseAppointmentPage}
-        patientName={selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : selectedPatient?.name}
+      <FamilyAppointmentsDialog
+        open={familyAppointmentsOpen}
+        onClose={handleCloseFamilyAppointments}
+        patient={selectedPatient}
+        familyMembers={patientDetails?.familyMembers || []}
+      />
+      <AppointmentHistoryDialog
+        open={appointmentHistoryOpen}
+        onClose={handleCloseAppointmentHistory}
+        patient={selectedPatient}
       />
     </Box>
+  );
+};
+
+// --- Helper Components for the Overhaul ---
+
+const ActionButton = ({ label, onClick }) => (
+  <Button
+    variant="contained"
+    fullWidth
+    onClick={onClick}
+    sx={{
+      bgcolor: '#5c7cbc',
+      borderRadius: '4px',
+      textTransform: 'none',
+      py: 0.6,
+      fontSize: '0.85rem',
+      fontWeight: 600,
+      boxShadow: 'none',
+      "&:hover": { bgcolor: '#4a6496', boxShadow: 'none' }
+    }}
+  >
+    {label}
+  </Button>
+);
+
+const HeaderAccordion = ({ title, value, icon: Icon, expanded, setExpanded }) => (
+  <Box sx={{ mb: 0.5 }}>
+    <Box 
+      onClick={() => setExpanded(!expanded)}
+      sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        bgcolor: 'white', 
+        border: '1px solid #ddd', 
+        borderRadius: '4px', 
+        p: 0.75, 
+        cursor: 'pointer' 
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Icon sx={{ fontSize: 16, color: '#666' }} />
+        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333' }}>{title}</Typography>
+      </Box>
+      <Typography sx={{ fontSize: '0.75rem', color: '#999' }}>{value}</Typography>
+    </Box>
+  </Box>
+);
+
+const DetailAccordion = ({ title, children, expanded, setExpanded }) => (
+  <Box sx={{ mb: 1, border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+    <Box 
+      onClick={() => setExpanded(!expanded)}
+      sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        bgcolor: '#94a3b8', 
+        p: 0.75, 
+        cursor: 'pointer' 
+      }}
+    >
+      <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <KeyboardArrowDownIcon sx={{ fontSize: 16, transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: '0.2s' }} />
+        {title}
+      </Typography>
+    </Box>
+    <Collapse in={expanded}>
+      <Box sx={{ bgcolor: 'white' }}>
+        <style>
+          {`
+            .detail-label {
+              font-size: 0.75rem;
+              font-weight: 700;
+              color: #777;
+              border-left: 2px solid #ddd;
+              padding-left: 8px;
+              margin-bottom: 4px;
+            }
+          `}
+        </style>
+        {children}
+      </Box>
+    </Collapse>
+  </Box>
+);
+
+const ChecklistItem = ({ label, checked = false }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 0.3, px: 1, borderBottom: "1px solid #eee", "&:last-child": { borderBottom: "none" } }}>
+    <Typography sx={{ fontSize: "0.7rem", color: "#666", fontWeight: 500 }}>{label}</Typography>
+    {checked && <CheckIcon sx={{ fontSize: 12, color: "#999" }} />}
+  </Box>
+);
+
+const SidebarAppointmentCard = ({ appointment, onClick }) => {
+  const headerDate = dayjs(appointment.start).format("MM/DD/YYYY");
+  const headerTime = dayjs(appointment.start).format("hh:mm A");
+  const type = appointment.title || "RECARE";
+  const isRecare = type.toLowerCase().includes("recare");
+
+  return (
+    <Paper
+      elevation={0}
+      onClick={onClick}
+      sx={{ border: "1px solid #ddd", borderRadius: "4px", overflow: "hidden", cursor: "pointer", transition: "0.2s", "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.1)" } }}
+    >
+      <Box sx={{ bgcolor: isRecare ? "#a26da1" : "#5b9bae", p: 0.5, color: "#fff" }}>
+        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, textAlign: "center" }}>
+          {type.toUpperCase()} {headerDate} @ {headerTime}
+        </Typography>
+      </Box>
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#333' }}>
+            {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : "Scheduled"}
+          </Typography>
+          <Typography sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 700 }}>P1 V{appointment.id?.toString().slice(-1) || '1'}</Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+          <MailOutlineIcon sx={{ fontSize: 16, color: "#5c7cbc" }} />
+          <ChatOutlinedIcon sx={{ fontSize: 16, color: "#5c7cbc" }} />
+        </Box>
+        <Typography sx={{ fontSize: "0.75rem", color: "#333", mb: 0.5 }}>{appointment.note || "periodic ex, fl, hygiene"}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ bgcolor: "#d7ebd8", px: 0.5, borderRadius: "2px", border: "1px solid #c0e0c1" }}>
+            <Typography sx={{ fontSize: "0.6rem", fontWeight: 800, color: "#478c4a" }}>SAB</Typography>
+          </Box>
+        </Box>
+      </Box>
+      <Box sx={{ borderTop: "1px solid #ddd", bgcolor: "#f9f9f9" }}>
+        <ChecklistItem label="Pre-appt Checklist" checked />
+        <ChecklistItem label="Check-in Checklist" checked />
+        <ChecklistItem label="Check-out Checklist" checked />
+      </Box>
+    </Paper>
   );
 };
 

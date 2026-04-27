@@ -43,7 +43,13 @@ const getStatusIconStyle = (color) => ({
 
 const CustomLabel = ({ text, subText, italic = false }) => (
   <Box>
-    <Typography sx={{ fontWeight: fontWeight.regular, fontSize: fontSize.xs, color: '#333', lineHeight: 1.2 }}>
+    <Typography sx={{ 
+      fontWeight: fontWeight.regular, 
+      fontSize: fontSize.xs, 
+      color: '#333', 
+      lineHeight: 1.2,
+      fontStyle: italic ? 'italic' : 'normal'
+    }}>
       {text}
     </Typography>
     {subText && (
@@ -198,13 +204,13 @@ const DentalTmdExamPage = () => {
               
               {/* Row 1: Maximum Opening */}
               <Grid container alignItems="center" sx={{ mb: 2 }}>
-                <Grid item xs={3.5}>
+                <Grid item xs={4.5} sx={{ pr: 2 }}>
                   <CustomLabel text="Maximum Opening"  italic />
                 </Grid>
                 <Grid item xs={1.5}>
                   <Typography sx={{ fontSize: '13px' }}>60 mm</Typography>
                 </Grid>
-                <Grid item xs={7}>
+                <Grid item xs={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
                     <Chip 
                       label="WNL" 
@@ -221,7 +227,7 @@ const DentalTmdExamPage = () => {
 
               {/* Row 2: Left to Right Movement */}
               <Grid container alignItems="flex-start" sx={{ mb: 2 }}>
-                <Grid item xs={3.5}>
+                <Grid item xs={4.5} sx={{ pr: 2 }}>
                   <CustomLabel text="Left to Right Movement"  italic />
                 </Grid>
                 <Grid item xs={4}>
@@ -236,7 +242,7 @@ const DentalTmdExamPage = () => {
                     <Typography sx={{ fontSize: '13px' }}>mm</Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={4.5}>
+                <Grid item xs={3.5}>
                   <Typography sx={{ fontSize: '0.7rem', color: '#aaa', fontStyle: 'italic' }}>
                     WNL &nbsp; Restricted (&lt; 10 mm)
                   </Typography>
@@ -248,7 +254,7 @@ const DentalTmdExamPage = () => {
 
               {/* Row 3: Deviation Upon Opening */}
               <Grid container alignItems="center" sx={{ mb: 2 }}>
-                <Grid item xs={3.5}>
+                <Grid item xs={4.5} sx={{ pr: 2 }}>
                   <Typography sx={{ fontSize: '13px', fontWeight: 400 }}>Deviation Upon Opening</Typography>
                 </Grid>
                 <Grid item xs={2.5}>
@@ -257,7 +263,7 @@ const DentalTmdExamPage = () => {
                     <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} defaultChecked />} label={<Typography sx={{ fontSize: '13px' }}>Yes:</Typography>} />
                   </RadioGroup>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={5}>
                   <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                     <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '13px', fontWeight: 400 }}>Left</Typography>} sx={{ mr: 1 }} />
                     <Typography sx={{ fontSize: '13px', fontStyle: 'italic', color: '#ccc', mr: 2 }}>w/ Reduction</Typography>
@@ -269,7 +275,7 @@ const DentalTmdExamPage = () => {
 
               {/* Row 4: Pain When in Motion */}
               <Grid container alignItems="center">
-                <Grid item xs={3.5}>
+                <Grid item xs={4.5} sx={{ pr: 2 }}>
                   <Typography sx={{ fontSize: '13px', fontWeight: 400 }}>Pain When in Motion</Typography>
                 </Grid>
                 <Grid item xs={2.5}>
@@ -278,7 +284,7 @@ const DentalTmdExamPage = () => {
                     <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '2px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Yes:</Typography>} />
                   </RadioGroup>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={5}>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
                     {['Sharp', 'Dull', 'Muscle', 'Right TMJ', 'Left TMJ'].map((text) => (
                       <FormControlLabel 
@@ -391,6 +397,12 @@ const DentalTmdExamPage = () => {
           <RadioGroup row sx={{ ml: 3, mb: 1, gap: 1 }}>
             <FormControlLabel value="no" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} defaultChecked />} label={<Typography sx={{ fontSize: '13px' }}>No</Typography>} />
             <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Yes</Typography>} />
+          </RadioGroup>
+
+          <SectionHeader title="Immobilization Test:" status="green" />
+          <RadioGroup row sx={{ ml: 3, mb: 1, gap: 1 }}>
+            <FormControlLabel value="negative" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} defaultChecked />} label={<Typography sx={{ fontSize: '13px' }}>Negative</Typography>} />
+            <FormControlLabel value="positive" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Positive</Typography>} />
           </RadioGroup>
 
           <Divider sx={{ my: 2 }} />

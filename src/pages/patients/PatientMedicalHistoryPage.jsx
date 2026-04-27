@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { 
-  Box, 
-  Typography, 
+import {
+  Box,
+  Typography,
   Button,
   CircularProgress,
   IconButton,
@@ -127,6 +127,7 @@ const PatientMedicalHistoryPage = () => {
   const [visitDates, setVisitDates] = useState([]);
   const [medicalHistory, setMedicalHistory] = useState(null);
   const [signature, setSignature] = useState(null);
+  const [isStartingNewHistory, setIsStartingNewHistory] = useState(false);
 
   const addMedication = () => {
     const nextId = Math.max(0, ...medications.map((m) => m.id)) + 1;
@@ -175,36 +176,36 @@ const PatientMedicalHistoryPage = () => {
             Array.isArray(data?.supplements) ? data.supplements : [],
           );
           setSignature(data?.review?.signatureDataUrl || null);
-          
+
           // Debug: Log the raw visitDates from backend
           console.log('Raw visitDates from backend:', data?.visitDates);
-          
+
           const labels = Array.isArray(data?.visitDates)
             ? data.visitDates
-                .map((item, index) => {
-                  // Handle both string dates and objects with date/label properties
-                  const dateStr = typeof item === 'string' ? item : item?.date;
-                  const existingLabel = typeof item === 'object' ? item?.label : null;
-                  
-                  // If there's already a formatted label, use it
-                  if (existingLabel) {
-                    return existingLabel;
-                  }
-                  
-                  // Log for debugging
-                  if (!dateStr || dateStr === "" || dateStr === null) {
-                    console.warn(`Visit date at index ${index} is empty or null:`, item);
-                    return null;
-                  }
-                  
-                  const formatted = formatVisitDate(dateStr);
-                  if (!formatted) {
-                    console.warn(`Failed to format visit date at index ${index}:`, item);
-                  }
-                  // Only include valid formatted dates
-                  return formatted || null;
-                })
-                .filter(Boolean)
+              .map((item, index) => {
+                // Handle both string dates and objects with date/label properties
+                const dateStr = typeof item === 'string' ? item : item?.date;
+                const existingLabel = typeof item === 'object' ? item?.label : null;
+
+                // If there's already a formatted label, use it
+                if (existingLabel) {
+                  return existingLabel;
+                }
+
+                // Log for debugging
+                if (!dateStr || dateStr === "" || dateStr === null) {
+                  console.warn(`Visit date at index ${index} is empty or null:`, item);
+                  return null;
+                }
+
+                const formatted = formatVisitDate(dateStr);
+                if (!formatted) {
+                  console.warn(`Failed to format visit date at index ${index}:`, item);
+                }
+                // Only include valid formatted dates
+                return formatted || null;
+              })
+              .filter(Boolean)
             : [];
           setVisitDates(labels);
         }
@@ -212,8 +213,8 @@ const PatientMedicalHistoryPage = () => {
         if (!cancelled) {
           setError(
             err?.response?.data?.error?.message ||
-              err?.response?.data?.message ||
-              "Failed to load medical history",
+            err?.response?.data?.message ||
+            "Failed to load medical history",
           );
           showSnackbar("Failed to load medical history", "error");
         }
@@ -255,6 +256,8 @@ const PatientMedicalHistoryPage = () => {
   const reviewedWithPatient = Boolean(
     medicalHistory?.review?.reviewedWithPatient,
   );
+
+  const isEmptyState = !loading && !medicalHistory?.sections?.length && !isStartingNewHistory;
 
   const dobText = patient?.dateOfBirth
     ? `DOB: ${formatDate(patient.dateOfBirth)}`
@@ -314,15 +317,15 @@ const PatientMedicalHistoryPage = () => {
       const baseReview = medicalHistory.review || {};
       const review = reviewedWithPatient
         ? {
-            ...baseReview,
-            reviewedWithPatient: true,
-            reviewedAt: new Date().toISOString(),
-            signatureDataUrl: signature || baseReview.signatureDataUrl || null,
-          }
+          ...baseReview,
+          reviewedWithPatient: true,
+          reviewedAt: new Date().toISOString(),
+          signatureDataUrl: signature || baseReview.signatureDataUrl || null,
+        }
         : {
-            ...baseReview,
-            signatureDataUrl: signature || baseReview.signatureDataUrl || null,
-          };
+          ...baseReview,
+          signatureDataUrl: signature || baseReview.signatureDataUrl || null,
+        };
 
       const sectionsForSave = Array.isArray(medicalHistory.sections)
         ? medicalHistory.sections
@@ -363,8 +366,8 @@ const PatientMedicalHistoryPage = () => {
     } catch (err) {
       showSnackbar(
         err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          "Failed to update medical history",
+        err?.response?.data?.message ||
+        "Failed to update medical history",
         "error",
       );
     }
@@ -398,8 +401,8 @@ const PatientMedicalHistoryPage = () => {
       } catch (err) {
         showSnackbar(
           err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to upload document",
+          err?.response?.data?.message ||
+          "Failed to upload document",
           "error",
         );
       } finally {
@@ -526,55 +529,119 @@ const PatientMedicalHistoryPage = () => {
         </Box>
       </Box>
 
-      {/* Timeline – Progress Bar Style */}
-      <VisitDatesTimeline
-        visitDates={visitDates}
-        onRemoveDate={(indexToRemove) => {
-          setVisitDates((prev) => prev.slice(0, indexToRemove));
-        }}
-      />
+      {/* Timeline with Start AI Button */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <VisitDatesTimeline
+            visitDates={visitDates}
+            onRemoveDate={(indexToRemove) => {
+              setVisitDates((prev) => prev.slice(0, indexToRemove));
+            }}
+          />
+        </Box>
+        <Button
+          variant="contained"
+          size="small"
+          sx={{
+            textTransform: "none",
+            borderRadius: 1.5,
+            bgcolor: "#ffffff",
+            color: "#40B5AD",
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            boxShadow: '0px 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e0e0e0',
+            "&:hover": { bgcolor: "#f5f5f5", boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' },
+            minWidth: '100px',
+            whiteSpace: 'nowrap',
+            py: 0.5,
+            px: 2
+          }}
+        >
+          Start AI
+        </Button>
+      </Box>
 
-      <MedicalGeneralInfoCard
-        generalInfo={generalInfo}
-        onChangeField={handleGeneralInfoChange}
-        premedRequires={Boolean(medicalHistory?.premed?.requiresPremed)}
-        onPremedChange={handlePremedChange}
-      />
+      {isEmptyState ? (
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'flex-start', 
+            pt: 10,
+            pb: 20,
+            textAlign: 'center',
+            flex: 1
+          }}
+        >
+          <Typography sx={{ mb: 2.5, color: '#444', fontSize: '1rem', fontWeight: 500 }}>
+            Patient doesn't have a medical history:
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => setIsStartingNewHistory(true)}
+            sx={{
+              bgcolor: '#00346a',
+              color: 'white',
+              px: 3.5,
+              py: 1,
+              borderRadius: '25px',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#00264d', boxShadow: 'none' }
+            }}
+          >
+            Start Medical History
+          </Button>
+        </Box>
+      ) : (
+        <>
+          <MedicalGeneralInfoCard
+            generalInfo={generalInfo}
+            onChangeField={handleGeneralInfoChange}
+            premedRequires={Boolean(medicalHistory?.premed?.requiresPremed)}
+            onPremedChange={handlePremedChange}
+          />
 
-      <MedicalSummarySection
-        historyTab={historyTab}
-        onChangeTab={setHistoryTab}
-        summarySections={summarySections}
-        onSectionChange={handleSummarySectionChange}
-        medications={medications}
-        onChangeMedication={updateMedication}
-        onAddMedication={addMedication}
-        supplements={supplements}
-        onChangeSupplement={updateSupplement}
-        onAddSupplement={addSupplement}
-      />
+          <MedicalSummarySection
+            historyTab={historyTab}
+            onChangeTab={setHistoryTab}
+            summarySections={summarySections}
+            onSectionChange={handleSummarySectionChange}
+            medications={medications}
+            onChangeMedication={updateMedication}
+            onAddMedication={addMedication}
+            supplements={supplements}
+            onChangeSupplement={updateSupplement}
+            onAddSupplement={addSupplement}
+          />
 
-      {/* Signature – aligned to the right like dental page */}
-      <PatientSignatureSection
-        value={signature}
-        onChange={setSignature}
-        reviewedWithPatient={reviewedWithPatient}
-      />
+          {/* Signature – aligned to the right like dental page */}
+          <PatientSignatureSection
+            value={signature}
+            onChange={setSignature}
+            reviewedWithPatient={reviewedWithPatient}
+          />
 
-      <Typography
-        variant="caption"
-        sx={{
-          display: "block",
-          textAlign: "center",
-          mt: 2,
-          color: "#bdbdbd",
-        }}
-      >
-        {risk?.asaClass ? `${risk.asaClass} · ` : ""}
-        {risk?.level
-          ? `Risk: ${risk.level}`
-          : "Medical history loaded from patient record"}
-      </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              textAlign: "center",
+              mt: 2,
+              color: "#bdbdbd",
+            }}
+          >
+            {risk?.asaClass ? `${risk.asaClass} · ` : ""}
+            {risk?.level
+              ? `Risk: ${risk.level}`
+              : "Medical history loaded from patient record"}
+          </Typography>
+        </>
+      )}
     </PageContainer>
   );
 };

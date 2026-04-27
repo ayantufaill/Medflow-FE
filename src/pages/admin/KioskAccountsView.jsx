@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -23,7 +23,7 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,6 +32,8 @@ import {
   SwapHoriz as SwapHorizIcon,
   MenuBook as MenuBookIcon,
 } from '@mui/icons-material';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+import { practiceInfoService } from '../../services/practice-info.service';
 
 const NAVY = '#1a3a6b';
 const GOLD = '#b8960c';
@@ -72,7 +74,6 @@ const MoveDataPanel = () => {
   const toggleField = (field) =>
     setCheckedFields((prev) => ({ ...prev, [field]: !prev[field] }));
 
-  // Placeholder provider options — replace with real data from providerService if needed
   const providers = [];
 
   return (
@@ -81,8 +82,7 @@ const MoveDataPanel = () => {
       sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 3, mb: 3 }}
     >
       <Grid container spacing={6}>
-        {/* Left: Move Patient Data */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid item xs={12} md={6}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2.5 }}>
             Move Patient Data
           </Typography>
@@ -142,13 +142,11 @@ const MoveDataPanel = () => {
           </Button>
         </Grid>
 
-        {/* Divider */}
-        <Grid size={{ xs: 12, md: 'auto' }} sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'stretch' }}>
+        <Grid item xs={12} md="auto" sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'stretch' }}>
           <Divider orientation="vertical" flexItem />
         </Grid>
 
-        {/* Right: Move Provider Future Data */}
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid item xs={12} md={5}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>
             Move Provider Future Data
           </Typography>
@@ -217,23 +215,85 @@ const KioskAccountsView = () => {
   const [showAddRow, setShowAddRow] = useState(false);
   const [newAccount, setNewAccount] = useState({ email: '', firstName: '', lastName: '' });
   const [showMoveData, setShowMoveData] = useState(false);
+  const [practiceInfoId, setPracticeInfoId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { showSnackbar } = useSnackbar();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
+        if (practiceInfo) {
+          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
+          if (practiceInfo.kioskAccounts && Array.isArray(practiceInfo.kioskAccounts)) {
+            setAccounts(practiceInfo.kioskAccounts.map((acc, index) => ({ ...acc, id: Date.now() + index })));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch practice info:', error);
+        showSnackbar('Failed to load settings', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [showSnackbar]);
 
   const strength = getPasswordStrength(password);
 
-  const handleSetPassword = () => {
+  const handleSetPassword = async () => {
     if (!password || password !== confirmPassword) return;
-    setPassword('');
-    setConfirmPassword('');
+    if (!practiceInfoId) {
+      showSnackbar('Practice Info not found', 'error');
+      return;
+    }
+    try {
+      await practiceInfoService.updateKioskSettings(practiceInfoId, {
+        password,
+        accounts: accounts.map(({ id, ...rest }) => rest)
+      });
+      showSnackbar('Password saved successfully', 'success');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to save password', 'error');
+    }
   };
 
-  const handleAddAccount = () => {
+  const handleAddAccount = async () => {
     if (!newAccount.email) return;
-    setAccounts((prev) => [...prev, { ...newAccount, id: Date.now() }]);
-    setNewAccount({ email: '', firstName: '', lastName: '' });
-    setShowAddRow(false);
+    if (!practiceInfoId) {
+      showSnackbar('Practice Info not found', 'error');
+      return;
+    }
+
+    const updatedAccounts = [...accounts, { ...newAccount, id: Date.now() }];
+    
+    try {
+      await practiceInfoService.updateKioskSettings(practiceInfoId, {
+        accounts: updatedAccounts.map(({ id, ...rest }) => rest)
+      });
+      setAccounts(updatedAccounts);
+      setNewAccount({ email: '', firstName: '', lastName: '' });
+      setShowAddRow(false);
+      showSnackbar('Account added successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to add account', 'error');
+    }
   };
 
   const kioskLink = `${window.location.origin}/kiosk`;
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -296,24 +356,6 @@ const KioskAccountsView = () => {
             }}
           />
 
-          {password && (
-            <Box>
-              <LinearProgress
-                variant="determinate"
-                value={(strength.score / 4) * 100}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: '#e2e8f0',
-                  '& .MuiLinearProgress-bar': { backgroundColor: strength.color, borderRadius: 3 },
-                }}
-              />
-              <Typography variant="caption" sx={{ color: strength.color, mt: 0.25 }}>
-                {strength.label}
-              </Typography>
-            </Box>
-          )}
-
           <TextField
             label="Confirm Password"
             type={showConfirm ? 'text' : 'password'}
@@ -333,7 +375,32 @@ const KioskAccountsView = () => {
             }}
           />
 
-          <Box>
+          {password && (
+            <Box>
+              <LinearProgress
+                variant="determinate"
+                value={(strength.score / 4) * 100}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: '#e2e8f0',
+                  '& .MuiLinearProgress-bar': { backgroundColor: strength.color, borderRadius: 3 },
+                }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
+                <Typography variant="caption" sx={{ color: strength.color, fontWeight: 600 }}>
+                  Strength: {strength.label}
+                </Typography>
+                {confirmPassword && confirmPassword === password && (
+                  <Typography variant="caption" sx={{ color: '#38a169', fontWeight: 600 }}>
+                    Passwords Match
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          <Box sx={{ mt: 1 }}>
             <Button
               variant="contained"
               size="small"

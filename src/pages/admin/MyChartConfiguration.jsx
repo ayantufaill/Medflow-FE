@@ -46,7 +46,16 @@ const ConfigRow = ({ label, hasInfo = false, showStatus = true, defaultRequired 
 
 const MyChartConfiguration = () => {
   return (
-    <Box sx={{ p: 4, bgcolor: '#f4f6f8', minHeight: '100vh', fontFamily: 'Roboto, sans-serif' }}>
+    <Box sx={{ 
+      p: { xs: 2, md: 4 }, 
+      bgcolor: '#f4f6f8', 
+      minHeight: '100vh', 
+      fontFamily: "'Manrope', 'Segoe UI', sans-serif",
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    }}>
+      <Box sx={{ width: '100%', maxWidth: 1400 }}>
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <Typography
           variant="caption"
@@ -129,6 +138,8 @@ const MyChartConfiguration = () => {
                   ))}
                 </Grid>
               </Box>
+
+              <ConfigRow label="Marital Status" hasInfo defaultRequired="optional" />
             </Box>
 
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 4, mb: 2 }}>Patient's Phone Number</Typography>
@@ -151,6 +162,7 @@ const MyChartConfiguration = () => {
           </Paper>
         </Grid>
       </Grid>
+      </Box>
     </Box>
   );
 };

@@ -9,6 +9,7 @@ export { default as Lesions } from './sections/Lesions';
 export { default as Watch } from './sections/Watch';
 export { default as ExistingRestorations } from './sections/ExistingRestorations';
 export { default as Wear } from './sections/Wear';
+export { default as Concerns } from './sections/Concerns';
 export { default as Appliances } from './sections/Appliances';
 
 // Tooth Chart Components

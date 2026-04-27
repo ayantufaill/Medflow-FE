@@ -22,6 +22,7 @@ import {
   Watch,
   ExistingRestorations,
   Wear,
+  Concerns,
   Appliances,
   ToothIcon,
   RestorationToothIcon,
@@ -110,8 +111,8 @@ const TeethStructureExam = () => {
             {/* Top Filter Bar */}
             <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', p: 1.5, bgcolor: '#f5f7fa', borderBottom: '1px solid #e0e0e0' }}>
               <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>Erupted | Resolve</Typography>
-              <VisibilityOutlined sx={{ fontSize: 16, color: '#1976d2', ml: 0.5 }} />
               <Box sx={{ flexGrow: 1 }} />
+              <VisibilityOutlined sx={{ fontSize: 16, color: '#1976d2', mr: 0.5 }} />
               <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>Tooth First</Typography>
               <Divider orientation="vertical" flexItem sx={{ mx: 1.5, borderColor: '#ddd' }} />
               <ElectricBolt sx={{ fontSize: 16, color: '#fbc02d', ml: 0.5 }} />
@@ -140,6 +141,7 @@ const TeethStructureExam = () => {
         />
         
         <Wear />
+        <Concerns />
         <Appliances />
       </Box>
           </Box>

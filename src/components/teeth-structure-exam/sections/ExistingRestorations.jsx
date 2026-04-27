@@ -126,7 +126,7 @@ const ExistingRestorations = ({ expanded, onToggle }) => {
               <RestorationToothIcon type="incisor" fill="#fff" />
               <RestorationToothIcon fill="#fff" />
               {/* Row 2 of icons */}
-              <Box /> <Box /> <Box /> <Box />
+              <Box /> <Box /> <Box />
               <RestorationToothIcon fill="#ffd700" />
               <RestorationToothIcon status="forbidden" fill="#999" />
               <RestorationToothIcon fill="#ffd700" />

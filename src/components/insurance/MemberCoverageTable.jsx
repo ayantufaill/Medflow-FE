@@ -232,47 +232,48 @@ const COVERAGE_DATA = {
   ],
   adjunctiveGeneral: [
     { id: 10, label: 'Basic', coverage: 80, waiting: 0 },
-    { id: 11, label: 'D9310', coverage: 50, waiting: '--*', deletable: true },
-    { id: 12, label: 'D9230', coverage: 0, waiting: '--*', deletable: true }
+    { id: 11, label: 'D9310', coverage: 50, waiting: 0, deletable: true, hasArrow: true },
+    { id: 12, label: 'D9230', coverage: 0, waiting: 0, deletable: true, hasArrow: true }
   ]
 };
 
 const CoverageSmallTable = ({ title, rows = [], onDeleteItem }) => (
-  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', mb: 1.5, borderRadius: '2px' }}>
+  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: '2px' }}>
     <Table size="small">
       <TableHead>
-        {/* Category Title Row */}
         <TableRow>
-          <TableCell colSpan={3} sx={{ ...headerCellStyle, textAlign: 'center', py: 0.6, borderBottom: '1px solid #e0e0e0', fontSize: '0.7rem', fontWeight: 700 }}>
+          <TableCell colSpan={3} sx={{ ...headerCellStyle, textAlign: 'center', py: 0.8, bgcolor: '#f1f5f9', fontSize: '0.75rem', fontWeight: 700, borderBottom: '1px solid #e0e0e0' }}>
             {title}
           </TableCell>
         </TableRow>
-        {/* Column Header Row */}
-        <TableRow sx={{ height: '28px' }}>
-          <TableCell sx={{ ...headerCellStyle, width: '45%', fontSize: '0.6rem', fontWeight: 700 }}></TableCell>
-          <TableCell sx={{ ...headerCellStyle, width: '28%', fontSize: '0.6rem', fontWeight: 700 }}>Coverage</TableCell>
-          <TableCell sx={{ ...headerCellStyle, width: '27%', fontSize: '0.6rem', fontWeight: 700 }}>Waiting Period (Month)</TableCell>
+        <TableRow sx={{ height: '32px' }}>
+          <TableCell sx={{ ...headerCellStyle, width: '40%', fontSize: '0.65rem', fontWeight: 600 }}></TableCell>
+          <TableCell sx={{ ...headerCellStyle, width: '30%', fontSize: '0.65rem', fontWeight: 600 }} align="center">Coverage</TableCell>
+          <TableCell sx={{ ...headerCellStyle, width: '30%', fontSize: '0.65rem', fontWeight: 600 }} align="center">Waiting Period (Month)</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {rows && rows.length > 0 ? rows.map((row, index) => (
-          <TableRow key={row.id || index} sx={{ '&:hover': { bgcolor: '#f9f9f9' }, height: '26px' }}>
-            <TableCell sx={{ ...cellStyle, fontSize: '0.65rem' }}>{row.label}</TableCell>
-            <TableCell sx={{ ...cellStyle, ...blueText, fontSize: '0.65rem' }}>{row.coverage}%</TableCell>
-            <TableCell sx={{ ...cellStyle, fontSize: '0.65rem' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={blueText}>{row.waiting}</span>
+          <TableRow key={row.id || index} sx={{ height: '32px' }}>
+            <TableCell sx={{ ...cellStyle, fontSize: '0.7rem', color: '#555' }}>{row.label}</TableCell>
+            <TableCell sx={{ ...cellStyle, ...blueText, fontSize: '0.7rem', textAlign: 'center' }}>{row.coverage}%</TableCell>
+            <TableCell sx={{ ...cellStyle, fontSize: '0.7rem', color: '#4A90E2', textAlign: 'center' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                <span>{row.waiting}</span>
+                {row.hasArrow && (
+                   <Typography sx={{ color: '#4A90E2', fontSize: '0.8rem', fontWeight: 'bold', ml: 0.5 }}>→</Typography>
+                )}
                 {row.deletable && (
-                  <IconButton size="small" sx={{ p: 0, color: '#ff4d4f' }}>
-                    <DeleteIcon sx={{ fontSize: 14 }} />
+                  <IconButton size="small" onClick={() => onDeleteItem && onDeleteItem(row.id)} sx={{ p: 0, color: '#ff4d4f' }}>
+                    <DeleteIcon sx={{ fontSize: 16 }} />
                   </IconButton>
                 )}
               </Box>
             </TableCell>
           </TableRow>
         )) : (
-          <TableRow>
-            <TableCell colSpan={3} sx={{ ...cellStyle, textAlign: 'center', color: '#999' }}>No data available</TableCell>
+          <TableRow sx={{ height: '32px' }}>
+            <TableCell colSpan={3} sx={{ ...cellStyle, textAlign: 'center', color: '#999', fontSize: '0.7rem' }}>No data</TableCell>
           </TableRow>
         )}
       </TableBody>
@@ -281,145 +282,161 @@ const CoverageSmallTable = ({ title, rows = [], onDeleteItem }) => (
 );
 
 const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
+  // Use dummy data if no coverageData provided
+  const data = (coverageData && Object.keys(coverageData).length > 0) ? coverageData : COVERAGE_DATA;
+
   // Handler to delete coverage item
   const handleDeleteCoverageItem = (itemId) => {
-    if (!coverageData || !setCoverageData) {
+    if (!setCoverageData) {
       console.log('Delete clicked for item:', itemId);
       return;
     }
 
     // Find and remove the item from the appropriate category
-    const updatedData = {};
-    Object.keys(coverageData).forEach(key => {
-      updatedData[key] = coverageData[key].filter(item => item.id !== itemId);
+    const updatedData = { ...data };
+    Object.keys(updatedData).forEach(key => {
+      updatedData[key] = updatedData[key].filter(item => item.id !== itemId);
     });
     
     setCoverageData(updatedData);
   };
 
-  // Get coverage arrays from data or use empty arrays as fallback
-  const diagnosticRows = coverageData?.diagnostic || [];
-  const preventativeRows = coverageData?.preventative || [];
-  const restorativeRows = coverageData?.restorative || [];
-  const implantServicesRows = coverageData?.implantServices || [];
-  const prosthodonticsRows = coverageData?.prosthodontics || [];
-  const oralSurgeryRows = coverageData?.oralSurgery || [];
-  const adjunctiveGeneralRows = coverageData?.adjunctiveGeneral || [];
-
-  // Frequency data - can be replaced with API data
-  const frequencyData = [
-    { id: 1, label: 'Fluoride', unit: 2, freq: '1 Year' },
-    { id: 2, label: 'Oral Evaluation', unit: 2, freq: '1 Year' }
-  ];
-
   return (
-    <Grid container spacing={2} sx={{ mt: 1.5, bgcolor: '#fff' }}>
-      
-      {/* COLUMN 1: Diagnostic & Preventative */}
-      <Grid item xs={12} md={4}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', mr: 1 }}>Coverage Table</Typography>
-          <Typography sx={{ color: '#4A90E2', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-            <AddIconNew sx={{ fontSize: 12, mr: 0.2 }} /> Add Coverage
+    <Grid container spacing={3} sx={{ mt: 1, bgcolor: '#fff' }}>
+      <Grid item xs={12}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#333', mr: 1 }}>Coverage Table</Typography>
+          <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
+            + Add Coverage
           </Typography>
         </Box>
-
+      </Grid>
+      
+      {/* COLUMN 1: Diagnostic, Preventative, Restorative */}
+      <Grid item xs={12} md={3.8}>
         <CoverageSmallTable 
           title="Diagnostic" 
-          rows={diagnosticRows}
+          rows={data.diagnostic}
           onDeleteItem={handleDeleteCoverageItem}
         />
-        
         <CoverageSmallTable 
           title="Preventative" 
-          rows={preventativeRows}
+          rows={data.preventative}
+          onDeleteItem={handleDeleteCoverageItem}
+        />
+        <CoverageSmallTable 
+          title="Restorative" 
+          rows={data.restorative}
           onDeleteItem={handleDeleteCoverageItem}
         />
       </Grid>
 
-      {/* COLUMN 2: Implant, Prosthodontics, Surgery */}
-      <Grid item xs={12} md={4} sx={{ mt: 3.5 }}>
+      {/* COLUMN 2: Implant, Prosthodontics, Oral Surgery, Adjunctive */}
+      <Grid item xs={12} md={3.8}>
         <CoverageSmallTable 
           title="Implant Services" 
-          rows={implantServicesRows}
+          rows={data.implantServices}
           onDeleteItem={handleDeleteCoverageItem}
         />
         <CoverageSmallTable 
           title="Prosthodontics, Fixed" 
-          rows={prosthodonticsRows.length > 0 ? prosthodonticsRows : [{ id: 100, label: 'Prosthodontics, Fixed', coverage: 0, waiting: '0' }]}
+          rows={[{ id: 100, label: 'Prosthodontics, Fixed', coverage: 50, waiting: 0 }]}
           onDeleteItem={handleDeleteCoverageItem}
         />
         <CoverageSmallTable 
           title="Oral Surgery" 
-          rows={oralSurgeryRows}
+          rows={data.oralSurgery}
           onDeleteItem={handleDeleteCoverageItem}
         />
         <CoverageSmallTable 
           title="Adjunctive General Services" 
-          rows={adjunctiveGeneralRows}
+          rows={data.adjunctiveGeneral}
           onDeleteItem={handleDeleteCoverageItem}
         />
       </Grid>
 
-      {/* COLUMN 3: Shortcuts & Frequency */}
-      <Grid item xs={12} md={4}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', mb: 1.5 }}>Coverage Book Shortcuts</Typography>
-            
-            <Typography sx={{ fontSize: '0.7rem', mb: 0.5 }}>Update groups from template</Typography>
-            <Select 
-              fullWidth 
-              size="small" 
-              displayEmpty 
-              defaultValue="" 
-              sx={{ fontSize: '0.7rem', mb: 2.5, '& .MuiSelect-select': { py: 0.4 } }}
-            >
-              <MenuItem value=""><em>Select template</em></MenuItem>
-            </Select>
+      {/* COLUMN 3: Shortcuts, Frequency, Limitations */}
+      <Grid item xs={12} md={4.4}>
+        <Box sx={{ mb: 3 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 1.5 }}>Coverage Book Shortcuts</Typography>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box sx={{ flexGrow: 1, mr: 1 }}>
+              <Typography sx={{ fontSize: '0.75rem', mb: 0.5, fontWeight: 500 }}>Update groups from template</Typography>
+              <Select 
+                fullWidth 
+                size="small" 
+                displayEmpty 
+                defaultValue="" 
+                sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
+              >
+                <MenuItem value=""><em>Select template</em></MenuItem>
+              </Select>
+            </Box>
+            <Typography sx={{ color: '#4A90E2', fontSize: '0.75rem', cursor: 'pointer', mt: 3.5, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              + Add Coverage Group
+            </Typography>
           </Box>
-          <Typography sx={{ color: '#4A90E2', fontSize: '0.7rem', cursor: 'pointer', mt: 4.5, ml: 1.5, fontWeight: 600 }}>
-            + Add Coverage Group
-          </Typography>
         </Box>
 
-        <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', mb: 0.8 }}>Frequency</Typography>
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '2px' }}>
+        {/* Frequency Table */}
+        <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', mb: 1 }}>Frequency</Typography>
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '2px', mb: 3 }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: '#fcfcfc' }}>
-                <TableCell sx={{ ...headerCellStyle, width: '55%', fontSize: '0.65rem', fontWeight: 700 }}></TableCell>
-                <TableCell sx={{ ...headerCellStyle, width: '20%', fontSize: '0.65rem', fontWeight: 700 }}>Unit</TableCell>
-                <TableCell sx={{ ...headerCellStyle, fontSize: '0.65rem', fontWeight: 700 }}>Frequency</TableCell>
+                <TableCell sx={{ ...headerCellStyle, width: '50%', fontSize: '0.7rem', fontWeight: 600 }}></TableCell>
+                <TableCell sx={{ ...headerCellStyle, width: '20%', fontSize: '0.7rem', fontWeight: 600 }} align="center">Unit</TableCell>
+                <TableCell sx={{ ...headerCellStyle, fontSize: '0.7rem', fontWeight: 600 }} align="center">Frequency</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {frequencyData && frequencyData.length > 0 ? frequencyData.map((row, idx) => (
-                <TableRow key={row.id || idx}>
-                  <TableCell sx={{ ...cellStyle, color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.65rem' }}>{row.label}</TableCell>
-                  <TableCell sx={{ ...cellStyle, fontSize: '0.65rem' }}>{row.unit}</TableCell>
-                  <TableCell sx={{ ...cellStyle, fontSize: '0.65rem' }}>
-                    <Select 
-                      size="small" 
-                      variant="standard" 
-                      defaultValue={row.freq} 
-                      sx={{ fontSize: '0.65rem', width: '100%', '&:before, &:after': { display: 'none' } }}
-                    >
-                      <MenuItem value="1 Year">1 Year</MenuItem>
-                      <MenuItem value="6 Months">6 Months</MenuItem>
-                    </Select>
+              {[
+                { label: 'Prophy', unit: 2, freq: '1 Year' },
+                { label: 'Bitewings', unit: 1, freq: '1 Year' },
+                { label: 'FMX/pano', unit: 1, freq: '36 Month' },
+                { label: 'Exam', unit: 2, freq: '1 Year' },
+                { label: 'Fluoride', unit: 2, freq: '1 Year' }
+              ].map((row, idx) => (
+                <TableRow key={idx} sx={{ height: '32px' }}>
+                  <TableCell sx={{ ...cellStyle, color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{row.label}</TableCell>
+                  <TableCell sx={{ ...cellStyle, fontSize: '0.75rem', textAlign: 'center', textDecoration: 'underline' }}>{row.unit}</TableCell>
+                  <TableCell sx={{ ...cellStyle, fontSize: '0.75rem' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography sx={{ fontSize: '0.75rem', mr: 0.5, textDecoration: 'underline' }}>{row.freq.split(' ')[0]}</Typography>
+                      <Select 
+                        size="small" 
+                        variant="standard" 
+                        defaultValue={row.freq.split(' ')[1]} 
+                        sx={{ fontSize: '0.75rem', '&:before, &:after': { display: 'none' } }}
+                      >
+                        <MenuItem value="Year">Year</MenuItem>
+                        <MenuItem value="Month">Month</MenuItem>
+                      </Select>
+                    </Box>
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={3} sx={{ ...cellStyle, textAlign: 'center', color: '#999' }}>No frequency data</TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
-      </Grid>
 
+        {/* Limitations Section */}
+        <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', mb: 1.5 }}>Limitations</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, px: 1 }}>
+          <Typography sx={{ color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>
+            Fluoride
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>Age Limit:</Typography>
+            <Typography sx={{ fontSize: '0.75rem', textDecoration: 'underline' }}>18</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>Life Limit:</Typography>
+            <Typography sx={{ fontSize: '0.75rem', textDecoration: 'underline' }}>----</Typography>
+          </Box>
+        </Box>
+      </Grid>
     </Grid>
   );
 };

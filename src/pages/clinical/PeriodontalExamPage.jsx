@@ -12,6 +12,7 @@ import MicIcon from '@mui/icons-material/Mic';
 import AddIcon from '@mui/icons-material/Add';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
+import PerioChartGrid from "../../components/clinical/PerioChartGrid";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
 
@@ -184,7 +185,7 @@ const PeriodontalExamPage = () => {
         {/* 2. DIAGNOSTIC SECTION */}
         <DiagnosticHeader />
 
-        {/* 3. TABS FOOTER */}
+        {/* 3. TABS HEADER */}
         <Box sx={{ mt: 4, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <Tabs value={0} sx={{ minHeight: 0 }}>
             <Tab label="PERIO CHART" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, minWidth: 100 }} />
@@ -199,6 +200,9 @@ const PeriodontalExamPage = () => {
             <Box sx={{ bgcolor: '#e3d5ca', p: 0.5, borderRadius: '50%' }}><MicIcon sx={{ color: 'white', fontSize: 20 }} /></Box>
           </Box>
         </Box>
+
+        {/* 4. PERIO CHART GRID */}
+        <PerioChartGrid />
 
       </Box>
     </Box>

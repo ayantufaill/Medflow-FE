@@ -79,7 +79,7 @@ import {
   PatientNotesTab,
   PatientDocumentsTab,
 } from '../../components/patient-tabs';
-import { PatientDetailOverview } from '../../components/patient-detail';
+import { PatientDetailOverview, AddFamilyMemberDialog } from '../../components/patient-detail';
 
 const ViewPatientPage = () => {
   const navigate = useNavigate();
@@ -154,6 +154,7 @@ const ViewPatientPage = () => {
     open: false,
     allergy: null,
   });
+  const [addFamilyDialogOpen, setAddFamilyDialogOpen] = useState(false);
 
   const fetchPatient = async () => {
     try {
@@ -634,7 +635,7 @@ const ViewPatientPage = () => {
                 onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
                 onBalance={() => setTabValue(1)}
                 onDocuments={() => setTabValue(5)}
-                onAddFamilyMember={() => showSnackbar('Add family member — coming soon', 'info')}
+                onAddFamilyMember={() => setAddFamilyDialogOpen(true)}
               />
             </Box>
           )}
@@ -1573,6 +1574,38 @@ const ViewPatientPage = () => {
           cancelText="Cancel"
           confirmColor="error"
           loading={deactivateLoading}
+        />
+        <AddFamilyMemberDialog
+          open={addFamilyDialogOpen}
+          onClose={() => setAddFamilyDialogOpen(false)}
+          currentPatientId={patientId}
+          onConfirm={async (selectedPatient) => {
+            try {
+              setAddFamilyDialogOpen(false);
+              const currentHousehold = Array.isArray(patient?.household) ? patient.household : [];
+              
+              // Check if already in household
+              if (currentHousehold.some(m => (m._id || m.id) === (selectedPatient._id || selectedPatient.id))) {
+                showSnackbar('This patient is already a family member', 'info');
+                return;
+              }
+
+              const newMember = {
+                id: selectedPatient._id || selectedPatient.id,
+                firstName: selectedPatient.firstName,
+                lastName: selectedPatient.lastName,
+                dateOfBirth: selectedPatient.dateOfBirth,
+                relationship: 'Family Member'
+              };
+
+              const updatedHousehold = [...currentHousehold, newMember];
+              await patientService.updatePatient(patientId, { household: updatedHousehold });
+              showSnackbar('Family member linked successfully', 'success');
+              fetchPatient();
+            } catch (err) {
+              showSnackbar('Failed to link family member', 'error');
+            }
+          }}
         />
       </Box>
     </LocalizationProvider>

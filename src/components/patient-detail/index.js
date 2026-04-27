@@ -5,6 +5,7 @@ export { default as AdditionalInformationSection } from './AdditionalInformation
 export { default as PatientFlagsSection } from './PatientFlagsSection';
 export { default as ContactInformationSection } from './ContactInformationSection';
 export { default as FamilyMembersSection } from './FamilyMembersSection';
+export { default as AddFamilyMemberDialog } from './AddFamilyMemberDialog';
 export { default as EmergencyContactSection } from './EmergencyContactSection';
 export { default as PatientDetailOverview } from './PatientDetailOverview';
 export * from './utils';

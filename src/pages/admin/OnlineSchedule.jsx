@@ -56,7 +56,7 @@ const OnlineScheduleConfiguration = () => {
         <FormControlLabel 
           control={<Checkbox defaultChecked size="small" />} 
           label={<Typography variant="body2" fontWeight={500}>Enable online scheduling</Typography>} 
-          sx={{ mb: 1, display: 'block' }} 
+          sx={{ mb: 1, display: 'flex', alignItems: 'center' }} 
         />
 
         <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -75,7 +75,7 @@ const OnlineScheduleConfiguration = () => {
         <FormControlLabel 
           control={<Checkbox defaultChecked size="small" />} 
           label={<Typography variant="body2">Require Credit Card for New Patients (for Online Booking)</Typography>} 
-          sx={{ mb: 3, display: 'block' }} 
+          sx={{ mb: 3, display: 'flex', alignItems: 'center' }} 
         />
 
         <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Rules & Restrictions:</Typography>
@@ -103,16 +103,31 @@ const OnlineScheduleConfiguration = () => {
       {/* --- 2. APPOINTMENT TYPES SETUP --- */}
       <Box sx={{ bgcolor: '#f9f9f9', p: 3, borderRadius: 1 }}>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>2. Appointment Types Setup</Typography>
-        <Grid container spacing={0}>
-          {appointmentTypes.map((type) => (
-            <Grid item xs={12} key={type}>
-              <FormControlLabel 
-                control={<Checkbox size="small" defaultChecked={['Exam', 'Emergency', 'Cleaning', 'Online Consult'].includes(type)} />} 
-                label={<Typography variant="body2">{type}</Typography>} 
-                sx={{ my: -0.5 }} 
-              />
-            </Grid>
-          ))}
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              {appointmentTypes.slice(0, 8).map((type) => (
+                <FormControlLabel 
+                  key={type}
+                  control={<Checkbox size="small" defaultChecked={['Exam', 'Emergency', 'Cleaning', 'Online Consult'].includes(type)} />} 
+                  label={<Typography variant="body2">{type}</Typography>} 
+                  sx={{ my: -0.2 }} 
+                />
+              ))}
+            </Box>
+          </Grid>
+          <Grid item xs={6}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              {appointmentTypes.slice(8).map((type) => (
+                <FormControlLabel 
+                  key={type}
+                  control={<Checkbox size="small" defaultChecked={['Exam', 'Emergency', 'Cleaning', 'Online Consult'].includes(type)} />} 
+                  label={<Typography variant="body2">{type}</Typography>} 
+                  sx={{ my: -0.2 }} 
+                />
+              ))}
+            </Box>
+          </Grid>
         </Grid>
       </Box>
 
@@ -189,9 +204,16 @@ const OnlineScheduleConfiguration = () => {
       <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
         <Box sx={{ p: 1.5, bgcolor: '#f1f3f4' }}><Typography variant="subtitle2" fontWeight="bold">4. Operatory Setup</Typography></Box>
         <Box sx={{ p: 3 }}>
-          <Box display="flex" justifyContent="space-between" mb={2}>
+          <Box display="flex" justifyContent="space-between" mb={2} alignItems="flex-start">
             <Typography variant="h6" fontSize="1rem" fontWeight="bold">Operatories</Typography>
-            <Button variant="contained" sx={{ bgcolor: '#003366', textTransform: 'none', borderRadius: 5 }}>Add Operatory</Button>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+              <Button variant="contained" sx={{ bgcolor: '#003366', textTransform: 'none', borderRadius: 5 }}>Add Operatory</Button>
+              <FormControlLabel 
+                control={<Checkbox size="small" sx={{ p: 0.5 }} />} 
+                label={<Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Show Deleted Operatories</Typography>} 
+                sx={{ mr: 0 }}
+              />
+            </Box>
           </Box>
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
@@ -219,10 +241,15 @@ const OnlineScheduleConfiguration = () => {
         <Box sx={{ p: 1.5, bgcolor: '#f1f3f4' }}><Typography variant="subtitle2" fontWeight="bold">5. Analytics Setup</Typography></Box>
         <Box sx={{ p: 3 }}>
           <Alert severity="warning" sx={{ mb: 3 }}>Please add your Google Measurement ID in Admin → Practice Info to track UTM links.</Alert>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography variant="body2" fontWeight="bold">Online Scheduling Link:</Typography>
-            <TextField fullWidth size="small" defaultValue="https://myoryx.com" InputProps={{ readOnly: true }} />
-            <Button variant="contained" startIcon={<ContentCopyIcon />} sx={{ bgcolor: '#4a90e2', textTransform: 'none', whiteSpace: 'nowrap' }}>Copy to clipboard</Button>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="caption" sx={{ alignSelf: 'flex-end', color: 'text.secondary' }}>
+              No referral analytics links found. <Box component="span" sx={{ fontWeight: 600, color: 'text.primary', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>click here to add a new link</Box>
+            </Typography>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Typography variant="body2" fontWeight="bold" sx={{ color: '#1a3a6b', whiteSpace: 'nowrap' }}>Online Scheduling Link:</Typography>
+              <TextField fullWidth size="small" defaultValue="https://mychart.myoryx.com/online-schedule/index.html?realm=tf" InputProps={{ readOnly: true }} />
+              <Button variant="contained" startIcon={<ContentCopyIcon />} sx={{ bgcolor: '#4a90e2', textTransform: 'none', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#357abd' } }}>Copy to clipboard</Button>
+            </Box>
           </Box>
         </Box>
       </Box>
