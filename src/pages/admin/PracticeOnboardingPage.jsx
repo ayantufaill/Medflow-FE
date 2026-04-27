@@ -1559,8 +1559,27 @@ const TimeInput = ({ value, onChange, allowedPeriods = ['AM', 'PM'] }) => {
   );
 };
 
-const Step4OpeningHours = ({ onNext, onFinishLater }) => {
+const Step4OpeningHours = ({ onNext, onFinishLater, practiceInfoId }) => {
   const [schedule, setSchedule] = useState(DEFAULT_HOURS);
+  const [saving, setSaving] = useState(false);
+  const { showSnackbar } = useSnackbar();
+
+  const handleSaveAndNext = async () => {
+    try {
+      setSaving(true);
+      if (practiceInfoId) {
+        await practiceInfoService.updateOfficeTimings(practiceInfoId, {
+          openingHours: schedule,
+          schedulingAppt: schedule,
+        });
+      }
+      onNext();
+    } catch (err) {
+      showSnackbar(err.message || 'Failed to save timings', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const updateDay = (day, field, val) =>
     setSchedule((prev) => ({ ...prev, [day]: { ...prev[day], [field]: val } }));
@@ -1658,7 +1677,7 @@ const Step4OpeningHours = ({ onNext, onFinishLater }) => {
         })}
       </Box>
 
-      <WizardActions onFinishLater={onFinishLater} onNext={onNext} />
+      <WizardActions onFinishLater={onFinishLater} onNext={handleSaveAndNext} loading={saving} />
     </Box>
   );
 };
@@ -1684,9 +1703,24 @@ const APPT_TYPES = {
 const formatDayLabel = (date) =>
   date.toLocaleDateString('en-US', { weekday: 'long' });
 
-const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
+const Step5ScheduleSetup = ({ onNext, onFinishLater, practiceInfoId }) => {
   const { showSnackbar } = useSnackbar();
   const [rooms, setRooms] = useState([]);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  const handleSaveAndNext = async () => {
+    try {
+      setSavingConfig(true);
+      if (practiceInfoId) {
+        await practiceInfoService.updateScheduleConfig(practiceInfoId, scheduleData);
+      }
+      onNext();
+    } catch (err) {
+      showSnackbar(err.message || 'Failed to save schedule config', 'error');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [addingRoom, setAddingRoom] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
@@ -1955,7 +1989,7 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
       </Box>
 
       <Box sx={{ mt: 4 }}>
-        <WizardActions onFinishLater={onFinishLater} onNext={onNext} />
+        <WizardActions onFinishLater={onFinishLater} onNext={handleSaveAndNext} loading={savingConfig} />
       </Box>
     </Box>
   );
@@ -1963,10 +1997,30 @@ const Step5ScheduleSetup = ({ onNext, onFinishLater }) => {
 
 // ─── Step 6: Billing Configuration ───────────────────────────────────────────
 
-const Step6BillingConfig = ({ onNext, onFinishLater }) => {
+const Step6BillingConfig = ({ onNext, onFinishLater, practiceInfoId }) => {
+  const { showSnackbar } = useSnackbar();
   const [outOfNetwork, setOutOfNetwork] = useState('no');
   const [assignment, setAssignment] = useState('in-assignment');
   const [billingProvider, setBillingProvider] = useState('default');
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveAndNext = async () => {
+    try {
+      setSaving(true);
+      if (practiceInfoId) {
+        await practiceInfoService.updatePracticeInfo(practiceInfoId, {
+          billingOutOfNetwork: outOfNetwork,
+          billingAssignmentType: assignment,
+          billingProvider: billingProvider
+        });
+      }
+      onNext();
+    } catch (err) {
+      showSnackbar(err.message || 'Failed to save billing config', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Box sx={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
@@ -2037,7 +2091,7 @@ const Step6BillingConfig = ({ onNext, onFinishLater }) => {
         </Box>
       </FormFieldWrapper>
 
-      <WizardActions onFinishLater={onFinishLater} onNext={onNext} nextLabel="Finish" />
+      <WizardActions onFinishLater={onFinishLater} onNext={handleSaveAndNext} nextLabel="Finish" loading={saving} />
     </Box>
   );
 };
@@ -2060,24 +2114,30 @@ const ComingSoonStep = ({ stepNumber, title, onNext, onFinishLater }) => (
 const PracticeOnboardingPage = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
+  const [practiceInfoId, setPracticeInfoId] = useState(null);
 
   const handleFinishLater = () => navigate('/admin');
-  const advance = () => setActiveStep((s) => s + 1);
+  const advance = (id) => {
+    if (id && typeof id === 'string') {
+      setPracticeInfoId(id);
+    }
+    setActiveStep((s) => s + 1);
+  };
 
   const renderStepContent = () => {
     switch (activeStep) {
       case 0:
         return <Step1PracticeInfo onNext={advance} onFinishLater={handleFinishLater} />;
       case 1:
-        return <Step2Providers onNext={advance} onFinishLater={handleFinishLater} />;
+        return <Step2Providers onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
       case 2:
-        return <Step3Users onNext={advance} onFinishLater={handleFinishLater} />;
+        return <Step3Users onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
       case 3:
-        return <Step4OpeningHours onNext={advance} onFinishLater={handleFinishLater} />;
+        return <Step4OpeningHours onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
       case 4:
-        return <Step5ScheduleSetup onNext={advance} onFinishLater={handleFinishLater} />;
+        return <Step5ScheduleSetup onNext={advance} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
       case 5:
-        return <Step6BillingConfig onNext={() => navigate('/admin')} onFinishLater={handleFinishLater} />;
+        return <Step6BillingConfig onNext={() => navigate('/admin')} onFinishLater={handleFinishLater} practiceInfoId={practiceInfoId} />;
       default:
         return null;
     }
