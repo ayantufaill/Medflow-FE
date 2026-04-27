@@ -16,10 +16,10 @@ const UndoConfirmationDialog = ({ open, onClose, onConfirm }) => {
       }}
     >
       <DialogTitle sx={{ 
-        fontSize: '16px', 
+        fontSize: '14px', 
         fontWeight: 'bold', 
         color: '#fff',
-        pb: 1,
+        py: 0.75,
         bgcolor: '#7788bb',
         textAlign: 'center'
       }}>
@@ -47,9 +47,10 @@ const UndoConfirmationDialog = ({ open, onClose, onConfirm }) => {
           variant="contained"
           sx={{ 
             textTransform: 'none',
-            bgcolor: '#7788bb',
+            bgcolor: '#d4af37',
+            color: '#fff',
             '&:hover': {
-              bgcolor: '#6577aa'
+              bgcolor: '#b3a247'
             }
           }}
         >

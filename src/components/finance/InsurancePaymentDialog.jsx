@@ -17,9 +17,10 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import WarningIcon from '@mui/icons-material/Warning';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
-const InsurancePaymentDialog = ({ onClose }) => {
+const InsurancePaymentDialog = ({ onClose, onSave }) => {
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
   const [paymentMethod, setPaymentMethod] = useState('Master Card');
+  const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [showSimpleBillingAlert, setShowSimpleBillingAlert] = useState(false);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [selectedPaymentOption, setSelectedPaymentOption] = useState('swipe');
@@ -57,8 +58,19 @@ const InsurancePaymentDialog = ({ onClose }) => {
   };
 
   const handleProceedPayment = () => {
+    const paymentData = {
+      selectedClaim,
+      paymentMethod,
+      paymentAmount: parseFloat(paymentAmount) || 0,
+      checkboxOptions: checkboxOptions.map(opt => opt.label),
+      date: '04/15/2026'
+    };
+    
+    if (onSave) {
+      onSave(paymentData);
+    }
+    
     setShowPaymentOptions(false);
-    // Add logic for proceeding with payment here
   };
 
   const handleCancelPayment = () => {
@@ -123,6 +135,51 @@ const InsurancePaymentDialog = ({ onClose }) => {
                 sx={{ m: 0 }}
               />
             ))}
+          </Box>
+        </Box>
+
+        {/* Payment Amount Section */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
+          <Typography 
+            sx={{ 
+              fontSize: '0.85rem', 
+              color: '#2c3e50', 
+              fontWeight: 500 
+            }}
+          >
+            Payment Amount:
+          </Typography>
+          
+          <Box 
+            sx={{ 
+              border: '1.5px dashed #666',
+              borderRadius: '2px',
+              px: 1,
+              py: 0.5,
+              minWidth: '60px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              bgcolor: 'transparent'
+            }}
+          >
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1a237e', mr: 0.5 }}>$</Typography>
+            <input
+              type="text"
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                color: '#1a237e',
+                textAlign: 'center',
+                width: '60px',
+                fontFamily: 'inherit'
+              }}
+            />
           </Box>
         </Box>
 
@@ -191,7 +248,7 @@ const InsurancePaymentDialog = ({ onClose }) => {
         fullWidth
         sx={{ '& .MuiDialog-paper': { maxWidth: '650px' } }}
       >
-        <DialogTitle sx={{ bgcolor: '#e83b4cff', color: '#fcfcfcff', fontWeight: 600, textAlign: 'center' }}>
+        <DialogTitle sx={{ bgcolor: '#e83b4cff', color: '#fcfcfcff', fontWeight: 600, textAlign: 'center', py: 1, fontSize: '16px' }}>
           Alert
         </DialogTitle>
         <DialogContent sx={{ pt: 3, pb: 2 }}>
@@ -225,7 +282,7 @@ const InsurancePaymentDialog = ({ onClose }) => {
         fullWidth
         sx={{ '& .MuiDialog-paper': { maxWidth: '500px' } }}
       >
-        <DialogTitle sx={{ bgcolor: '#8eb378', color: '#fff', fontWeight: 600, textAlign: 'center', py: 1.5 }}>
+        <DialogTitle sx={{ bgcolor: '#8eb378', color: '#fff', fontWeight: 600, textAlign: 'center', py: 1, fontSize: '16px' }}>
           Payment Options
         </DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 1 }}>
@@ -284,7 +341,7 @@ const InsurancePaymentDialog = ({ onClose }) => {
             <Button 
               onClick={handleProceedPayment}
               variant="contained"
-              sx={{ bgcolor: '#d1bc8a', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
+              sx={{ bgcolor: '#d4c197', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
             >
               Proceed
             </Button>

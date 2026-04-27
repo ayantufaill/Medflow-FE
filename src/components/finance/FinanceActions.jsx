@@ -4,9 +4,11 @@ import { ArrowDropDown } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import InsuranceCoverageDialog from './InsuranceCoverageDialog';
 
-const FinanceActions = ({ view, expanded, onExpandToggle }) => {
+const FinanceActions = ({ view, expanded, onExpandToggle, onFilterChange }) => {
   const navigate = useNavigate();
   const [showInsuranceDialog, setShowInsuranceDialog] = useState(false);
+  const [includeVoided, setIncludeVoided] = useState(false);
+  const [hideBillingTransfers, setHideBillingTransfers] = useState(false);
 
   const handleInsuranceCoverageClick = () => {
     setShowInsuranceDialog(true);
@@ -16,13 +18,35 @@ const FinanceActions = ({ view, expanded, onExpandToggle }) => {
     setShowInsuranceDialog(false);
   };
 
+  const handleVoidedChange = (e) => {
+    const newValue = e.target.checked;
+    setIncludeVoided(newValue);
+    if (onFilterChange) {
+      onFilterChange({ includeVoided: newValue, hideBillingTransfers });
+    }
+  };
+
+  const handleBillingTransfersChange = (e) => {
+    const newValue = e.target.checked;
+    setHideBillingTransfers(newValue);
+    if (onFilterChange) {
+      onFilterChange({ includeVoided, hideBillingTransfers: newValue });
+    }
+  };
+
   return (
     <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ my: 1.5 }}>
       {/* Ledger Filters */}
       <Stack direction="row" spacing={2}>
-        <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Include voided transactions</Typography>} />
+        <FormControlLabel 
+          control={<Checkbox size="small" checked={includeVoided} onChange={handleVoidedChange} />} 
+          label={<Typography variant="caption">Include voided transactions</Typography>} 
+        />
         {view !== 'family' && view !== 'individual' && (
-          <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Hide billing transfers</Typography>} />
+          <FormControlLabel 
+            control={<Checkbox size="small" checked={hideBillingTransfers} onChange={handleBillingTransfersChange} />} 
+            label={<Typography variant="caption">Hide billing transfers</Typography>} 
+          />
         )}
       </Stack>
 
@@ -41,15 +65,15 @@ const FinanceActions = ({ view, expanded, onExpandToggle }) => {
             size="small" 
             onClick={btn.action}
             sx={{ 
-              bgcolor: btn.variant === 'contained' ? '#d4a537' : 'transparent', 
-              color: btn.variant === 'contained' ? '#fff' : '#d4a537',
-              borderColor: '#d4a537',
+              bgcolor: btn.variant === 'contained' ? '#1976d2' : 'transparent', 
+              color: btn.variant === 'contained' ? '#fff' : '#1976d2',
+              borderColor: '#1976d2',
               textTransform: 'none',
               minWidth: btn.minWidth || 'auto',
               display: 'flex',
               '&:hover': {
-                bgcolor: btn.variant === 'contained' ? '#c4942d' : 'rgba(212, 165, 55, 0.04)',
-                borderColor: '#c4942d',
+                bgcolor: btn.variant === 'contained' ? '#1565c0' : 'rgba(25, 118, 210, 0.04)',
+                borderColor: '#1565c0',
               }
             }}
           >

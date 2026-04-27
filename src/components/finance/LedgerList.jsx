@@ -199,6 +199,44 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
 );
 
 const LedgerList = ({ expanded, items = [] }) => {
+  const [ledgerItems, setLedgerItems] = React.useState(
+    items.length > 0 ? items : [
+      { 
+        id: '24532', date: '04/10/2026', method: 'Master Card', amount: ' $184.00', color: '#5c6bc0',
+        initials: 'MAG', success: false,
+        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
+        details: [
+          { id: '14040', title: 'Periodic Oral Eval (uncollected)', amount: '$50.00' },
+          { id: '24636', title: 'Prophylaxis - Adult', amount: '$134.00' }
+        ]
+      },
+      { 
+        id: '24531', date: '04/10/2026', method: 'Sunbit', amount: '$92.00', color: '#5c6bc0',
+        initials: 'MAG', success: true,
+        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
+        details: [
+          { id: '24637', title: 'Amalgam - 1 Surface', amount: '$92.00' }
+        ]
+      },
+      { 
+        id: '24530', date: '04/10/2026', method: 'Sunbit', amount: '$292.00', color: '#5c6bc0', initials: 'MAG',
+        success: true,
+        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
+        details: [{ id: '24638', title: 'Composite - 2 Surfaces', amount: '$292.00' }]
+      },
+      { 
+        id: '23003', date: '01/27/2026', method: 'Master Card', amount: '- $1.00', color: '#90a4ae', initials: 'MAG',
+        success: false,
+        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
+        details: [{ id: '24639', title: 'Account Adjustment', amount: '- $1.00' }]
+      },
+      { 
+        id: '8494', date: '09/20/2023', method: 'American Express', amount: '$1.00', color: '#5c6bc0', success: true, initials: 'MAG',
+        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
+        details: [{ id: '24640', title: 'Test Transaction', amount: '$1.00' }]
+      },
+    ]
+  );
   const [expandedItems, setExpandedItems] = React.useState({});
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [printAnchorEl, setPrintAnchorEl] = React.useState(null);
@@ -222,43 +260,7 @@ const LedgerList = ({ expanded, items = [] }) => {
   const [editDepositTarget, setEditDepositTarget] = React.useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = React.useState(false);
   const [invoiceModalData, setInvoiceModalData] = React.useState(null);
-  
-  const ledgerItems = items.length > 0 ? items : [
-    { 
-      id: '24532', date: '04/10/2026', method: 'Master Card', amount: ' $184.00', color: '#5c6bc0',
-      initials: 'MAG', success: false,
-      summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-      details: [
-        { id: '14040', title: 'Periodic Oral Eval (uncollected)', amount: '$50.00' },
-        { id: '24636', title: 'Prophylaxis - Adult', amount: '$134.00' }
-      ]
-    },
-    { 
-      id: '24531', date: '04/10/2026', method: 'Sunbit', amount: '$92.00', color: '#5c6bc0',
-      initials: 'MAG', success: true,
-      summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-      details: [
-        { id: '24637', title: 'Amalgam - 1 Surface', amount: '$92.00' }
-      ]
-    },
-    { 
-      id: '24530', date: '04/10/2026', method: 'Sunbit', amount: '$292.00', color: '#5c6bc0', initials: 'MAG',
-      success: true,
-      summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-      details: [{ id: '24638', title: 'Composite - 2 Surfaces', amount: '$292.00' }]
-    },
-    { 
-      id: '23003', date: '01/27/2026', method: 'Master Card', amount: '- $1.00', color: '#90a4ae', initials: 'MAG',
-      success: false,
-      summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-      details: [{ id: '24639', title: 'Account Adjustment', amount: '- $1.00' }]
-    },
-    { 
-      id: '8494', date: '09/20/2023', method: 'American Express', amount: '$1.00', color: '#5c6bc0', success: true, initials: 'MAG',
-      summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-      details: [{ id: '24640', title: 'Test Transaction', amount: '$1.00' }]
-    },
-  ];
+
 
   // Sync individual states with global expanded prop
   React.useEffect(() => {
@@ -406,7 +408,16 @@ const LedgerList = ({ expanded, items = [] }) => {
   };
 
   const handleEditDepositSave = (data) => {
-    console.log('Saving edit deposit:', data);
+    if (editDepositTarget) {
+      // Update the ledger item with the new payment type and provider
+      setLedgerItems(prevItems => 
+        prevItems.map(item => 
+          item.id === editDepositTarget.id 
+            ? { ...item, method: data.paymentType, provider: data.provider }
+            : item
+        )
+      );
+    }
     setShowEditDeposit(false);
     setEditDepositTarget(null);
   };

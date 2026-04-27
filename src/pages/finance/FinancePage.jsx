@@ -33,9 +33,37 @@ const FinancePage = () => {
   const [depositMenuAnchor, setDepositMenuAnchor] = useState(null);
   const [depositType, setDepositType] = useState('patient-deposit');
   const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
+  const [filters, setFilters] = useState({
+    includeVoided: false,
+    hideBillingTransfers: false
+  });
 
   const handleViewChange = (event) => {
     setView(event.target.value);
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    console.log('Filters updated:', { ...filters, ...newFilters });
+    // Add logic to filter ledger data based on these filters
+  };
+
+  const handleDepositSave = (depositData) => {
+    console.log('Deposit saved:', depositData);
+    // Add API call or state update logic here
+    setShowDeposit(false);
+  };
+
+  const handleCourtesyCreditSave = (creditData) => {
+    console.log('Courtesy credit saved:', creditData);
+    // Add API call or state update logic here
+    setShowCourtesyCredit(false);
+  };
+
+  const handleEditFlagsSave = (flagsData) => {
+    console.log('Patient flags saved:', flagsData);
+    // Add API call or state update logic here
+    setShowEditFlags(false);
   };
 
   const handleDepositOptionSelect = (optionId) => {
@@ -91,7 +119,8 @@ const FinancePage = () => {
       <FinanceActions 
         view={view} 
         expanded={expanded} 
-        onExpandToggle={() => setExpanded(!expanded)} 
+        onExpandToggle={() => setExpanded(!expanded)}
+        onFilterChange={handleFilterChange}
       />
 
       {/* Dynamic Ledger Section */}
@@ -191,7 +220,10 @@ const FinancePage = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <EditPatientFlagsDialog onClose={() => setShowEditFlags(false)} />
+            <EditPatientFlagsDialog 
+              onClose={() => setShowEditFlags(false)}
+              onSave={handleEditFlagsSave}
+            />
           </Box>
         </Box>
       )}
@@ -226,6 +258,7 @@ const FinancePage = () => {
           >
             <DepositDialog 
               onClose={() => setShowDeposit(false)} 
+              onSave={handleDepositSave}
               depositType={depositType}
             />
           </Box>
@@ -269,6 +302,7 @@ const FinancePage = () => {
           >
             <CourtesyCreditComponent 
               onClose={() => setShowCourtesyCredit(false)}
+              onSave={handleCourtesyCreditSave}
             />
           </Box>
         </Box>

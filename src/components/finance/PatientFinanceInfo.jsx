@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
 import { Box, Typography, Stack, IconButton, styled, Tooltip } from '@mui/material';
 import {
-  ReceiptOutlined,
-  AccountBalanceWalletOutlined,
-  HealthAndSafetyOutlined,
-  AccountBalanceWallet,
   CurrencyExchangeOutlined,
   SavingsOutlined,
-  PrintOutlined,
+  Print,
   CloudUploadOutlined,
-  AddCircleOutlineOutlined,
-  RemoveCircleOutlineOutlined,
   EventOutlined,
 } from '@mui/icons-material';
 import ShareDropdown from './ShareDropdown';
@@ -18,6 +12,7 @@ import QuickPaymentRequestDialog from './QuickPaymentRequestDialog';
 import InsurancePaymentDialog from './InsurancePaymentDialog';
 import CashPlusMenu from './CashPlusMenu';
 import AddPaymentDialog from './AddPaymentDialog';
+import AccountNotesDialog from './AccountNotesDialog';
 
 // --- STYLED COMPONENTS ---
 
@@ -49,11 +44,12 @@ const IconBill = () => (
 const IconUserWallet = ({ onClick }) => (
   <Tooltip title="Patient Payment" placement="bottom">
     <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
-      <svg width="28" height="28" viewBox="0 0 24 24">
+      <svg width="32" height="32" viewBox="0 0 24 24">
         <rect x="4" y="6" width="16" height="12" rx="2" fill="#8d6e63" stroke="#000" strokeWidth="1" />
         <rect x="14" y="10" width="6" height="4" fill="#6d4c41" stroke="#000" strokeWidth="1" />
-        <circle cx="8" cy="14" r="5" fill="#1de9b6" stroke="#000" strokeWidth="1" />
-        <path d="M8 11C6.3 11 5 12.3 5 14H11C11 12.3 9.7 11 8 11Z" fill="#1de9b6" stroke="#000" strokeWidth="1" />
+        {/* Man icon */}
+        <circle cx="8" cy="10" r="2.5" fill="#1de9b6" stroke="#000" strokeWidth="1" />
+        <path d="M4 18C4 15.5 5.5 14 8 14C10.5 14 12 15.5 12 18" fill="#1de9b6" stroke="#000" strokeWidth="1" />
       </svg>
     </IconContainer>
   </Tooltip>
@@ -77,8 +73,9 @@ const IconInsurance = () => (
 const IconInsuranceWallet = ({ onClick }) => (
   <Tooltip title="Insurance Payment" placement="bottom">
     <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
-      <svg width="28" height="28" viewBox="0 0 24 24">
-        <rect x="6" y="6" width="14" height="12" rx="2" fill="#8d6e63" stroke="#000" strokeWidth="1" />
+      <svg width="32" height="32" viewBox="0 0 24 24">
+        <rect x="4" y="6" width="16" height="12" rx="2" fill="#8d6e63" stroke="#000" strokeWidth="1" />
+        <rect x="14" y="10" width="6" height="4" fill="#6d4c41" stroke="#000" strokeWidth="1" />
         <path d="M8 8L3 10V16C3 19.1 5.4 21.8 8 23C10.6 21.8 13 19.1 13 16V10L8 8Z" fill="#cfd8dc" stroke="#000" strokeWidth="1" />
         <path d="M8 12V20M4 16H12" stroke="#1976d2" strokeWidth="1.5" />
       </svg>
@@ -97,18 +94,18 @@ const IconRefreshCoin = ({ onClick }) => (
 
 // 6. Piggy Bank Icon - Print
 const IconPiggyBank = () => (
-  <Tooltip title="Print" placement="bottom">
+  <Tooltip title="Patient Deposit" placement="bottom">
     <IconContainer>
-      <SavingsOutlined sx={{ fontSize: 28, color: '#f8bbd0' }} />
+      <SavingsOutlined sx={{ fontSize: 32, color: '#f8bbd0' }} />
     </IconContainer>
   </Tooltip>
 );
 
-// 7. Printer Icon - Share
+// 7. Print Icon - Print
 const IconPrinter = () => (
-  <Tooltip title="Share" placement="bottom">
+  <Tooltip title="Print" placement="bottom">
     <IconContainer>
-      <PrintOutlined sx={{ fontSize: 28, color: '#4dd0e1' }} />
+      <Print sx={{ fontSize: 28, color: '#4dd0e1' }} />
     </IconContainer>
   </Tooltip>
 );
@@ -193,6 +190,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
   const [showQuickPayment, setShowQuickPayment] = useState(false);
   const [showInsurancePayment, setShowInsurancePayment] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [showAccountNotes, setShowAccountNotes] = useState(false);
   const [cashPlusAnchorEl, setCashPlusAnchorEl] = useState(null);
   
   const handleShareSelect = (optionId) => {
@@ -217,6 +215,12 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
     // This could include API calls, state updates, etc.
   };
 
+  const handleInsurancePaymentSave = (paymentData) => {
+    console.log('Insurance payment saved:', paymentData);
+    // Add API call or state update logic here
+    setShowInsurancePayment(false);
+  };
+
   const handleCashPlusClick = (event) => {
     setCashPlusAnchorEl(event.currentTarget);
   };
@@ -228,6 +232,10 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
   const handleCashPlusSelect = (item) => {
     console.log('Cash Plus option selected:', item);
     // Add logic for handling the selected option here
+  };
+
+  const handleAddAccountNoteClick = () => {
+    setShowAccountNotes(true);
   };
 
   const pixelIcons = [
@@ -253,7 +261,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
       <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2 }}>
         <Typography variant="caption" sx={{ color: '#5c6bc0', cursor: 'pointer' }}>Billing flags: </Typography>
         <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }} onClick={onAddFlagsClick}>+add flags</Typography>
-        <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }}>+add account note</Typography>
+        <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }} onClick={handleAddAccountNoteClick}>+add account note</Typography>
       </Stack>
 
       {/* Custom Pixel Icon Toolbar - Hidden in Family and Individual View */}
@@ -337,6 +345,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
           >
             <InsurancePaymentDialog 
               onClose={() => setShowInsurancePayment(false)}
+              onSave={handleInsurancePaymentSave}
             />
           </Box>
         </Box>
@@ -384,6 +393,41 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
         onClose={handleCashPlusClose}
         onSelect={handleCashPlusSelect}
       />
+
+      {/* Account Notes Dialog */}
+      {showAccountNotes && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowAccountNotes(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '800px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '8px',
+              overflow: 'visible',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AccountNotesDialog 
+              onClose={() => setShowAccountNotes(false)}
+            />
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };

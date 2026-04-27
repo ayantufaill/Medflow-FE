@@ -11,7 +11,7 @@ import {
 
 const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, showAmountSection = true }) => {
   const [adjustmentType, setAdjustmentType] = useState('Un-Collected');
-  const [creditAmount, setCreditAmount] = useState(0);
+  const [creditAmount, setCreditAmount] = useState('0.00');
   
   // Determine button label based on context
   const buttonLabel = showAmountSection ? 'Add Courtesy' : 'Edit Courtesy';
@@ -40,7 +40,9 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
     if (onSave) {
       onSave({
         ...adjustmentData,
-        adjustmentType
+        adjustmentType,
+        creditAmount: parseFloat(creditAmount) || 0,
+        date: adjustmentData?.date || '04/15/2026'
       });
     }
   };
@@ -148,15 +150,23 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
                   bgcolor: 'transparent'
                 }}
               >
-                <Typography 
-                  sx={{ 
-                    fontSize: '0.85rem', 
-                    fontWeight: 'bold', 
-                    color: '#1a237e' 
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1a237e', mr: 0.5 }}>$</Typography>
+                <input
+                  type="text"
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(e.target.value)}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    color: '#1a237e',
+                    textAlign: 'center',
+                    width: '60px',
+                    fontFamily: 'inherit'
                   }}
-                >
-                  ${creditAmount.toFixed(2)}
-                </Typography>
+                />
               </Box>
             </Box>
           </>

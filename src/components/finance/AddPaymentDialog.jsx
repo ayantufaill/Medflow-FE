@@ -216,7 +216,7 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
             onClick={handleApplyAndPay}
             disabled={parseFloat(amount) <= 0}
             sx={{ 
-              bgcolor: applyButtonColor, 
+              bgcolor: '#d4c197', 
               color: '#fff', 
               textTransform: 'none', 
               boxShadow: 'none', 
@@ -224,6 +224,9 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
               fontSize: '0.8125rem',
               '&:disabled': {
                 cursor: 'not-allowed'
+              },
+              '&:hover': {
+                bgcolor: '#c5b396'
               }
             }}
           >

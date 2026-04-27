@@ -3,7 +3,10 @@ import { Box, Typography, Button, MenuItem, Select, FormControl } from '@mui/mat
 
 const EditDeposit = ({ depositData, onSave, onCancel }) => {
   const [paymentType, setPaymentType] = React.useState(depositData?.method || 'Master Card');
-  const [provider, setProvider] = React.useState('');
+  const [provider, setProvider] = React.useState(depositData?.provider || '');
+  
+  const blueHeader = '#7788bb';
+  const goldButton = '#d4af37';
 
   return (
     <Box
@@ -18,7 +21,7 @@ const EditDeposit = ({ depositData, onSave, onCancel }) => {
       {/* Header */}
       <Box
         sx={{
-          backgroundColor: '#8eb378',
+          backgroundColor: blueHeader,
           color: 'white',
           padding: '12px',
           textAlign: 'center',
@@ -50,7 +53,7 @@ const EditDeposit = ({ depositData, onSave, onCancel }) => {
                   padding: '2px 0',
                   borderBottom: '1px solid #ccc',
                   '&:focus': {
-                    borderBottom: '1px solid #8eb378',
+                    borderBottom: '1px solid #7788bb',
                   },
                 },
               }}
@@ -85,7 +88,7 @@ const EditDeposit = ({ depositData, onSave, onCancel }) => {
                   padding: '2px 0',
                   borderBottom: '1px solid #ccc',
                   '&:focus': {
-                    borderBottom: '1px solid #8eb378',
+                    borderBottom: '1px solid #7788bb',
                   },
                 },
               }}
@@ -108,11 +111,11 @@ const EditDeposit = ({ depositData, onSave, onCancel }) => {
             sx={{
               padding: '6px 16px',
               borderRadius: '4px',
-              backgroundColor: '#d1bc8a',
+              backgroundColor: goldButton,
               fontSize: '13px',
               color: 'white',
               '&:hover': {
-                backgroundColor: '#c4ad7a',
+                backgroundColor: '#b3a247',
               },
             }}
           >

@@ -166,12 +166,12 @@ const CourtesyRefundDialog = ({ onClose }) => {
             <Button 
               variant="contained" 
               sx={{ 
-                bgcolor: blueHeader, 
+                bgcolor: '#d4c197', 
                 color: '#fff',
                 textTransform: 'none', 
                 fontWeight: 'normal',
                 boxShadow: 'none',
-                '&:hover': { bgcolor: '#6677aa', boxShadow: 'none' } 
+                '&:hover': { bgcolor: '#c5b396', boxShadow: 'none' } 
               }}
             >
               Add Refund

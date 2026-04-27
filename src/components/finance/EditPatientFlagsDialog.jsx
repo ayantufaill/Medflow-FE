@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 
-const EditPatientFlagsDialog = ({ onClose }) => {
+const EditPatientFlagsDialog = ({ onClose, onSave }) => {
   const [flags, setFlags] = useState({});
   
   const modalHeader = '#7b8ab8';
@@ -38,6 +38,12 @@ const EditPatientFlagsDialog = ({ onClose }) => {
   ];
 
   const activeFlagsCount = Object.values(flags).filter(Boolean).length;
+
+  const handleSave = () => {
+    if (onSave) {
+      onSave(flags);
+    }
+  };
 
   return (
     <Box sx={{ width: '100%', maxWidth: 800, border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', bgcolor: '#fff' }}>
@@ -111,10 +117,42 @@ const EditPatientFlagsDialog = ({ onClose }) => {
           </Grid>
         </Grid>
 
-        {/* Footer Text */}
-        <Typography sx={{ mt: 4, fontSize: '0.75rem', color: footerGrey }}>
-          You can add up to 15 flags per patient. {activeFlagsCount} flag{activeFlagsCount !== 1 ? 's' : ''} selected.
-        </Typography>
+        {/* Footer */}
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={{ fontSize: '0.75rem', color: footerGrey }}>
+            You can add up to 15 flags per patient. {activeFlagsCount} flag{activeFlagsCount !== 1 ? 's' : ''} selected.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              variant="contained" 
+              onClick={handleSave}
+              sx={{ 
+                bgcolor: '#d4c197', 
+                color: '#fff',
+                textTransform: 'none', 
+                fontWeight: 'normal',
+                boxShadow: 'none',
+                '&:hover': { bgcolor: '#c5b396', boxShadow: 'none' } 
+              }}
+            >
+              Save
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={onClose}
+              sx={{ 
+                bgcolor: '#b3b3b3', 
+                color: '#fff',
+                textTransform: 'none', 
+                fontWeight: 'normal',
+                boxShadow: 'none',
+                '&:hover': { bgcolor: '#999', boxShadow: 'none' } 
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

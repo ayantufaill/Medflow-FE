@@ -40,7 +40,8 @@ const InsuranceCoverageDialog = ({ open, onClose }) => {
         color: '#fff', 
         fontWeight: 600, 
         textAlign: 'center',
-        py: 1.5
+        py: 1,
+        fontSize: '16px'
       }}>
         Insurance Coverage
       </DialogTitle>
@@ -74,7 +75,7 @@ const InsuranceCoverageDialog = ({ open, onClose }) => {
               }
             }}
           >
-            + Add Insurance Policy
+            Add Insurance Policy
           </Button>
         </Box>
       </DialogContent>

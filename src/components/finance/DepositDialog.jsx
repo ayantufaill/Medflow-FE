@@ -9,12 +9,12 @@ import {
   Button
 } from '@mui/material';
 
-const DepositDialog = ({ onClose, depositType = 'patient-deposit' }) => {
+const DepositDialog = ({ onClose, onSave, depositType = 'patient-deposit' }) => {
   const [fromPatient, setFromPatient] = useState('test test');
   const [paymentMethod, setPaymentMethod] = useState('Do not use');
   const [toAccount, setToAccount] = useState('');
   const [policy, setPolicy] = useState('');
-  const [depositAmount, setDepositAmount] = useState(0);
+  const [depositAmount, setDepositAmount] = useState('0.00');
   
   const blueHeader = '#5c7cb6';
   const blueText = '#3a5a8c';
@@ -26,6 +26,22 @@ const DepositDialog = ({ onClose, depositType = 'patient-deposit' }) => {
     { label: 'Partial Amount', value: 50.00 },
     { label: 'Custom Amount', value: 0.00 }
   ];
+
+  const handleSave = () => {
+    const depositData = {
+      depositType,
+      fromPatient,
+      paymentMethod,
+      toAccount,
+      policy: depositType === 'insurance-deposit' ? policy : undefined,
+      depositAmount: parseFloat(depositAmount) || 0,
+      date: '04/15/2026'
+    };
+    
+    if (onSave) {
+      onSave(depositData);
+    }
+  };
 
   return (
     <Box sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
@@ -196,15 +212,23 @@ const DepositDialog = ({ onClose, depositType = 'patient-deposit' }) => {
                 bgcolor: 'transparent'
               }}
             >
-              <Typography 
-                sx={{ 
-                  fontSize: '0.85rem', 
-                  fontWeight: 'bold', 
-                  color: '#1a237e' 
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1a237e', mr: 0.5 }}>$</Typography>
+              <input
+                type="text"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  color: '#1a237e',
+                  textAlign: 'center',
+                  width: '60px',
+                  fontFamily: 'inherit'
                 }}
-              >
-                ${depositAmount.toFixed(2)}
-              </Typography>
+              />
             </Box>
           </Box>
 
@@ -224,13 +248,14 @@ const DepositDialog = ({ onClose, depositType = 'patient-deposit' }) => {
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button 
               variant="contained" 
+              onClick={handleSave}
               sx={{ 
-                bgcolor: blueHeader, 
+                bgcolor: '#d4c197', 
                 color: '#fff',
                 textTransform: 'none', 
                 fontWeight: 'normal',
                 boxShadow: 'none',
-                '&:hover': { bgcolor: '#4a6a9e', boxShadow: 'none' } 
+                '&:hover': { bgcolor: '#c5b396', boxShadow: 'none' } 
               }}
             >
               Add Deposit
