@@ -58,10 +58,12 @@ const apiClient = axios.create({
 // Request interceptor to add auth token and disable caching
 apiClient.interceptors.request.use(
   (config) => {
+    config.headers = config.headers || {};
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     // Add timestamp to GET requests to prevent browser caching
     // This avoids CORS issues with Cache-Control header
     if (config.method === 'get') {
@@ -135,16 +137,11 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized - token expired or invalid
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Check if this is a public auth endpoint - don't try to refresh token for these
-      const isPublicAuthEndpoint = publicAuthEndpoints.some((endpoint) =>
-        originalRequest.url?.includes(endpoint)
-      );
-      
       // If it's a public auth endpoint, don't try to refresh - just reject the error
       if (isPublicAuthEndpoint) {
         return Promise.reject(error);
       }
-      
+
       // If we're already refreshing, queue this request
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
