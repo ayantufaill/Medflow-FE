@@ -42,6 +42,7 @@ import {
   VerifiedUser,
   Forum,
   Settings,
+  AttachMoney,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -148,6 +149,7 @@ const menuItems = [
   //{ text: 'Reports', icon: <Assessment />, path: '/reports' },
   { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
   { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
+  { text: 'Finance', icon: <AttachMoney />, path: '/finance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
   { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
  // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
   /*{

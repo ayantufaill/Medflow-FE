@@ -16,6 +16,7 @@ import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SecurityIcon from '@mui/icons-material/Security';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DentalTreatmentPlan from '../../components/clinical/DentalTreatmentPlan';
 import ProcedureRow from '../../components/clinical/ProcedureRow';
@@ -548,9 +549,7 @@ export default function TreatmentPlanPage() {
             <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
             <IconButton size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
             <IconButton size="small"><PrintIcon fontSize="small" /></IconButton>
-            <Typography sx={{ fontSize: '0.8rem', color: '#6b7280', ml: 1 }}>
-              Visits: <strong>{visits.length}</strong> · Procedures: <strong>{totalProcedures}</strong>
-            </Typography>
+            <IconButton size="small"><VisibilityIcon fontSize="small" /></IconButton>
             <Box sx={{ flexGrow: 1 }} />
             <Button
               variant="outlined"

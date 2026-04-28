@@ -1,0 +1,245 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Menu,
+  MenuItem,
+  IconButton,
+} from '@mui/material';
+import {
+  KeyboardArrowRight,
+  KeyboardArrowLeft,
+  ArrowDropDown,
+  Edit,
+  InsertDriveFile,
+} from '@mui/icons-material';
+
+const AgingTable = ({ view = 'invoices' }) => {
+  const [familyCreditAnchor, setFamilyCreditAnchor] = useState(null);
+  const [accountCreditAnchor, setAccountCreditAnchor] = useState(null);
+  const [currentSection, setCurrentSection] = useState('individual');
+
+  const handleFamilyCreditClick = (event) => {
+    setFamilyCreditAnchor(event.currentTarget);
+  };
+
+  const handleAccountCreditClick = (event) => {
+    setAccountCreditAnchor(event.currentTarget);
+  };
+
+  const handleFamilyCreditClose = () => {
+    setFamilyCreditAnchor(null);
+  };
+
+  const handleAccountCreditClose = () => {
+    setAccountCreditAnchor(null);
+  };
+
+  const handleNextSection = () => {
+    setCurrentSection('individual');
+  };
+
+  const handlePrevSection = () => {
+    setCurrentSection('family');
+  };
+
+  return (
+    <Box sx={{ width: '62%', flexGrow: 1, minWidth: 0 }}>
+      <TableContainer 
+        sx={{ 
+          border: '1px solid #eee', 
+          borderRight: 'none', 
+          width: '100%', 
+          borderRadius: '4px 0 0 4px', 
+          bgcolor: 'white',
+          boxShadow: 'none'
+        }}
+      >
+        <Table 
+          size="small" 
+          sx={{ 
+            width: '100%', 
+            tableLayout: 'fixed',
+            borderCollapse: 'collapse', 
+            '& td, & th': { 
+              border: '1px solid #eee', 
+              fontSize: '11px', 
+              p: '4px',
+              '&:last-child': { borderRight: 'none' } 
+            } 
+          }}
+        >
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+              {['', 'Aging 0-30', '31-60', '61-90', '>90', 'Total', ''].map((head, i) => (
+                <TableCell 
+                  key={i} 
+                  align={i === 0 ? 'left' : 'center'} 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    width: i === 0 ? '25%' : i === 6 ? '40px' : 'auto',
+                    bgcolor: i === 5 ? '#e57373' : 'inherit',
+                    color: i === 5 ? '#fff' : '#555',
+                    borderRight: i === 6 ? 'none' : '1px solid #eee'
+                  }}
+                >
+                  {head}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {/* Family section - always show */}
+            {['Family Outstanding Bills', 'Family Balance', 'Insurance Balance'].map((row, idx) => (
+              <TableRow key={row}>
+                <TableCell sx={{ color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {row}
+                </TableCell>
+                {[0, 1, 2, 3].map((i) => (
+                  <TableCell key={i} align="right">$0.00</TableCell>
+                ))}
+                <TableCell align="right" sx={{ bgcolor: '#ef9a9a', color: '#fff', fontWeight: 'bold' }}>$0.00</TableCell>
+                <TableCell sx={{ p: 0, borderRight: 'none' }}></TableCell>
+              </TableRow>
+            ))}
+            
+            {/* Individual section */}
+            {['Outstanding Bills', 'Balance', 'Insurance Balance'].map((row, idx) => (
+              <TableRow key={row}>
+                <TableCell sx={{ color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold', bgcolor: '#5c6bc0' }}>
+                  {row}
+                </TableCell>
+                {[0, 1, 2, 3].map((i) => (
+                  <TableCell key={i} align="right">$0.00</TableCell>
+                ))}
+                <TableCell align="right" sx={{ bgcolor: '#ef9a9a', color: '#fff', fontWeight: 'bold' }}>$0.00</TableCell>
+                <TableCell sx={{ p: 0, borderRight: 'none', bgcolor: '#f5f5f5', textAlign: 'center' }}>
+                  {idx === 0 && (
+                    <IconButton 
+                      size="small" 
+                      onClick={handleNextSection}
+                      sx={{ color: '#000', p: 0, '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' } }}
+                    >
+                      <KeyboardArrowRight sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                  {idx === 1 && <Typography sx={{ fontSize: '8px', fontWeight: 'bold', color: '#000' }}>RESET</Typography>}
+                  {idx === 2 && (
+                    <IconButton 
+                      size="small" 
+                      onClick={handlePrevSection}
+                      sx={{ color: '#000', p: 0, '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' } }}
+                    >
+                      <KeyboardArrowLeft sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Credits Summary Footer - only show when view is 'invoices' */}
+      {view === 'invoices' && (
+        <Box sx={{ 
+          background: 'linear-gradient(to right, #7e57c2 50%, #5c6bc0 50%)', 
+          color: '#fff', 
+          p: 0.5, 
+          display: 'flex', 
+          alignItems: 'center', 
+          width: '100%' 
+        }}>
+          <Box sx={{ flexGrow: 1, pl: 1 }}>
+            <Typography variant="caption" display="block" sx={{ fontSize: '10px' }}>Courtesy Credit: <b>$0.00</b></Typography>
+            <Typography variant="caption" sx={{ fontSize: '10px' }}>
+              Family Credit: <b>$200.00</b> 
+              <IconButton 
+                size="small" 
+                onClick={handleFamilyCreditClick}
+                sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+              >
+                <ArrowDropDown sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Typography>
+          </Box>
+          <Button 
+            size="small" 
+            sx={{ 
+              bgcolor: 'transparent', 
+              color: '#fff', 
+              fontSize: '11px', 
+              height: '26px', 
+              ml: 18,
+              mr: 2,
+              textTransform: 'none',
+              textDecoration: 'underline',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+              p: 0,
+              minWidth: 'auto'
+            }}
+          >
+            Refund
+          </Button>
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ fontSize: '11px', mr: 1 }}>
+              Account Credit: <b>$200.00</b>
+              <IconButton 
+                size="small" 
+                onClick={handleAccountCreditClick}
+                sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+              >
+                <ArrowDropDown sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Typography>
+            <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+              <Edit sx={{ fontSize: 14 }} />
+            </IconButton>
+            <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+              <InsertDriveFile sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Box>
+        </Box>
+      )}
+
+      {/* Family Credit Dropdown Menu */}
+      <Menu
+        anchorEl={familyCreditAnchor}
+        open={Boolean(familyCreditAnchor)}
+        onClose={handleFamilyCreditClose}
+        PaperProps={{
+          sx: {
+            maxHeight: 300,
+            minWidth: 200,
+          }
+        }}
+      >
+        {/* Options to be added */}
+      </Menu>
+
+      {/* Account Credit Dropdown Menu */}
+      <Menu
+        anchorEl={accountCreditAnchor}
+        open={Boolean(accountCreditAnchor)}
+        onClose={handleAccountCreditClose}
+        PaperProps={{
+          sx: {
+            maxHeight: 300,
+            minWidth: 200,
+          }
+        }}
+      >
+        {/* Options to be added */}
+      </Menu>
+    </Box>
+  );
+};
+
+export default AgingTable;
