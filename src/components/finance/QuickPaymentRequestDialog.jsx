@@ -22,15 +22,15 @@ const QuickPaymentRequestDialog = ({ onClose }) => {
   const isConfirmDisabled = !amount || parseFloat(amount) <= 0;
 
   return (
-    <Box sx={{ p: 4, bgcolor: '#fff', borderRadius: '8px', maxWidth: 500, boxShadow: 1 }}>
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px', maxWidth: 400, boxShadow: 1 }}>
       {/* Title Label */}
-      <Typography sx={{ color: textBlue, fontSize: '1rem', mb: 2 }}>
+      <Typography sx={{ color: textBlue, fontSize: '0.9rem', mb: 1.5 }}>
         Please enter the requested payment amount:
       </Typography>
 
       {/* Large Amount Input */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 4 }}>
-        <Typography sx={{ fontSize: '1.5rem', color: textBlue, mt: 0.5, mr: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5 }}>
+        <Typography sx={{ fontSize: '1.2rem', color: textBlue, mt: 0.5, mr: 1 }}>
           $
         </Typography>
         <InputBase
@@ -38,7 +38,7 @@ const QuickPaymentRequestDialog = ({ onClose }) => {
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           sx={{
-            fontSize: '1.5rem',
+            fontSize: '1.2rem',
             color: amount ? textBlue : placeholderGrey,
             width: '100%',
             borderBottom: '2px solid #eee',
@@ -51,24 +51,24 @@ const QuickPaymentRequestDialog = ({ onClose }) => {
       </Box>
 
       {/* Notification Section */}
-      <Typography sx={{ color: textBlue, fontSize: '1rem', mb: 1 }}>
+      <Typography sx={{ color: textBlue, fontSize: '0.9rem', mb: 0.75 }}>
         Notify patient by:
       </Typography>
       <RadioGroup 
         row 
         value={notifyMethod} 
         onChange={(e) => setNotifyMethod(e.target.value)}
-        sx={{ mb: 4 }}
+        sx={{ mb: 2.5 }}
       >
         <FormControlLabel 
           value="sms" 
           control={<Radio size="small" sx={{ color: muiBlue, '&.Mui-checked': { color: muiBlue } }} />} 
-          label={<Typography sx={{ fontSize: '0.95rem', color: muiBlue, fontWeight: 500 }}>SMS</Typography>} 
+          label={<Typography sx={{ fontSize: '0.85rem', color: muiBlue, fontWeight: 500 }}>SMS</Typography>} 
         />
         <FormControlLabel 
           value="email" 
           control={<Radio size="small" sx={{ color: muiBlue, '&.Mui-checked': { color: muiBlue } }} />} 
-          label={<Typography sx={{ fontSize: '0.95rem', color: muiBlue, fontWeight: 500 }}>Email</Typography>} 
+          label={<Typography sx={{ fontSize: '0.85rem', color: muiBlue, fontWeight: 500 }}>Email</Typography>} 
         />
       </RadioGroup>
 

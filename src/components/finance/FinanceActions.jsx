@@ -54,7 +54,7 @@ const FinanceActions = ({ view, expanded, onExpandToggle, onFilterChange }) => {
       <Stack direction="row" spacing={1}>
         {[
           { label: expanded ? 'Collapse Invoices' : 'Expand Invoices', variant: 'contained', hideInLedgerViews: true, action: onExpandToggle },
-          { label: 'Past Statements', variant: 'contained' },
+          // { label: 'Past Statements', variant: 'contained' },
           { label: 'INS. COVERAGE', variant: 'contained', hasIcon: true, action: handleInsuranceCoverageClick },
           { label: 'Tx', variant: 'outlined', minWidth: '30px', action: () => navigate('/clinical/treatment-plan'), tooltip: 'Treatment Plan' },
         ].filter(btn => !(btn.hideInLedgerViews && (view === 'family' || view === 'individual'))).map((btn) => (

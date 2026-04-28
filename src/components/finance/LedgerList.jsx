@@ -173,10 +173,10 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
     <Stack direction="row" spacing={1} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
       {showExtendedTools ? (
         <>
-           <Settings sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+           {/* <Settings sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
            <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} />
            <AutoFixHigh sx={{ fontSize: 18, color: '#444', cursor: 'pointer' }} />
-           <Tune sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} />
+           <Tune sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} /> */}
         </>
       ) : (
         <>
@@ -517,10 +517,10 @@ const LedgerList = ({ expanded, items = [] }) => {
 
             {!isExpanded && (
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
-                {!item.success && (
+                {/* {!item.success && (
                   <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />
                 )}
-                <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+                <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} /> */}
                 <Edit 
                   sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} 
                   onClick={(e) => {
@@ -568,7 +568,7 @@ const LedgerList = ({ expanded, items = [] }) => {
                       sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
                       onClick={handlePrintClick}
                     />
-                    <IconCashMinus size={18} />
+                    {/* <IconCashMinus size={18} /> */}
                   </Stack>
                 </Box>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center' }}>
@@ -790,7 +790,7 @@ const LedgerList = ({ expanded, items = [] }) => {
         }}
       >
         <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
-          <SimpleStatement />
+          <SimpleStatement onClose={() => setShowSimpleStatement(false)} />
         </DialogContent>
       </Dialog>
 
@@ -819,7 +819,7 @@ const LedgerList = ({ expanded, items = [] }) => {
         }}
       >
         <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
-          <DetailedStatement />
+          <DetailedStatement onClose={() => setShowDetailedStatement(false)} />
         </DialogContent>
       </Dialog>
 

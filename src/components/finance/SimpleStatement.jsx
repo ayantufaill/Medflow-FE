@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,7 +12,8 @@ import TransactionTable from './TransactionTable';
 import StatementSummary from './StatementSummary';
 import StatementFooter from './StatementFooter';
 
-const SimpleStatement = () => {
+const SimpleStatement = ({ onClose }) => {
+  const contentRef = useRef(null);
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [notes, setNotes] = useState('');
   
@@ -21,6 +22,76 @@ const SimpleStatement = () => {
   const textDarkBlue = '#40548e';
   const headerBlue = '#abb8d3';
   const rowLightBlue = '#f0f4fa';
+
+  const handleClose = () => {
+    console.log('Close button clicked, onClose prop:', onClose);
+    if (onClose) {
+      console.log('Calling onClose...');
+      onClose();
+    }
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    const content = contentRef.current;
+    if (content) {
+      // Get all styles from the current document
+      const styles = Array.from(document.styleSheets)
+        .map(sheet => {
+          try {
+            return Array.from(sheet.cssRules)
+              .map(rule => rule.cssText)
+              .join('\n');
+          } catch (e) {
+            return '';
+          }
+        })
+        .join('\n');
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Patient Account Statement</title>
+            <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              body { 
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+                margin: 0; 
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              @media print { 
+                body { 
+                  margin: 0; 
+                  padding: 0; 
+                }
+                @page {
+                  margin: 0.5cm;
+                }
+              }
+              ${styles}
+            </style>
+          </head>
+          <body>
+            ${content.innerHTML}
+            <script>
+              window.onload = function() {
+                window.print();
+                window.close();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
 
   // Mock data - replace with API data
   const patientInfo = {
@@ -91,7 +162,7 @@ const SimpleStatement = () => {
   ];
 
   return (
-    <Box sx={{ bgcolor: '#fff', width: '100%', p: 0, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <Box ref={contentRef} sx={{ bgcolor: '#fff', width: '100%', p: 0, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       
       {/* Header Bar */}
       <Box sx={{ bgcolor: primaryBlue, color: '#fff', py: 1, textAlign: 'center' }}>
@@ -161,6 +232,7 @@ const SimpleStatement = () => {
               borderColor: textDarkBlue,
               minWidth: 100
             }}
+            onClick={handleClose}
           >
             Close
           </Button>
@@ -182,6 +254,7 @@ const SimpleStatement = () => {
               borderColor: textDarkBlue,
               minWidth: 100
             }}
+            onClick={handlePrint}
           >
             Print
           </Button>

@@ -22,25 +22,8 @@ import {
 } from '@mui/icons-material';
 
 const AgingTable = ({ view = 'invoices' }) => {
-  const [familyCreditAnchor, setFamilyCreditAnchor] = useState(null);
-  const [accountCreditAnchor, setAccountCreditAnchor] = useState(null);
   const [currentSection, setCurrentSection] = useState('individual');
 
-  const handleFamilyCreditClick = (event) => {
-    setFamilyCreditAnchor(event.currentTarget);
-  };
-
-  const handleAccountCreditClick = (event) => {
-    setAccountCreditAnchor(event.currentTarget);
-  };
-
-  const handleFamilyCreditClose = () => {
-    setFamilyCreditAnchor(null);
-  };
-
-  const handleAccountCreditClose = () => {
-    setAccountCreditAnchor(null);
-  };
 
   const handleNextSection = () => {
     setCurrentSection('individual');
@@ -160,17 +143,10 @@ const AgingTable = ({ view = 'invoices' }) => {
           <Box sx={{ flexGrow: 1, pl: 1 }}>
             <Typography variant="caption" display="block" sx={{ fontSize: '10px' }}>Courtesy Credit: <b>$0.00</b></Typography>
             <Typography variant="caption" sx={{ fontSize: '10px' }}>
-              Family Credit: <b>$200.00</b> 
-              <IconButton 
-                size="small" 
-                onClick={handleFamilyCreditClick}
-                sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
-              >
-                <ArrowDropDown sx={{ fontSize: 16 }} />
-              </IconButton>
+              Family Credit: <b>$200.00</b>
             </Typography>
           </Box>
-          <Button 
+         {/* <Button 
             size="small" 
             sx={{ 
               bgcolor: 'transparent', 
@@ -187,57 +163,22 @@ const AgingTable = ({ view = 'invoices' }) => {
             }}
           >
             Refund
-          </Button>
+          </Button> */}
           <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
             <Typography variant="caption" sx={{ fontSize: '11px', mr: 1 }}>
               Account Credit: <b>$200.00</b>
-              <IconButton 
-                size="small" 
-                onClick={handleAccountCreditClick}
-                sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
-              >
-                <ArrowDropDown sx={{ fontSize: 16 }} />
-              </IconButton>
             </Typography>
-            <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+            {/* <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
               <Edit sx={{ fontSize: 14 }} />
             </IconButton>
             <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
               <InsertDriveFile sx={{ fontSize: 14 }} />
-            </IconButton>
+            </IconButton> */}
           </Box>
         </Box>
       )}
 
-      {/* Family Credit Dropdown Menu */}
-      <Menu
-        anchorEl={familyCreditAnchor}
-        open={Boolean(familyCreditAnchor)}
-        onClose={handleFamilyCreditClose}
-        PaperProps={{
-          sx: {
-            maxHeight: 300,
-            minWidth: 200,
-          }
-        }}
-      >
-        {/* Options to be added */}
-      </Menu>
 
-      {/* Account Credit Dropdown Menu */}
-      <Menu
-        anchorEl={accountCreditAnchor}
-        open={Boolean(accountCreditAnchor)}
-        onClose={handleAccountCreditClose}
-        PaperProps={{
-          sx: {
-            maxHeight: 300,
-            minWidth: 200,
-          }
-        }}
-      >
-        {/* Options to be added */}
-      </Menu>
     </Box>
   );
 };

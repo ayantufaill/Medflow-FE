@@ -239,13 +239,13 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
   };
 
   const pixelIcons = [
-    { Icon: IconBill },
+    // { Icon: IconBill }, // Invoices icon disabled
     { Icon: IconUserWallet, onClick: handleUserWalletClick },
-    { Icon: IconInsurance },
+    // { Icon: IconInsurance }, // Add Claim icon disabled
     { Icon: IconInsuranceWallet, onClick: handleInsuranceWalletClick },
     { Icon: IconRefreshCoin, onClick: onRefreshCoinClick },
     { Icon: IconPiggyBank, onClick: onOpenDepositMenu },
-    { Icon: IconPrinter },
+    // { Icon: IconPrinter }, // Print icon disabled
     { Icon: IconCloudUpload, onShareSelect: handleShareSelect },
     { Icon: IconCashPlus, onClick: handleCashPlusClick },
     { Icon: IconCashMinus, onClick: onCashMinusClick },
