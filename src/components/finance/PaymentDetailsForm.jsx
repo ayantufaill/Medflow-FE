@@ -55,13 +55,7 @@ const PaymentDetailsForm = ({ onBack }) => {
   return (
     <Box sx={{ width: '100%', bgcolor: '#fff', position: 'relative', pb: 4 }}>
       {/* Header Bar */}
-      <Box sx={{ bgcolor: '#3f51b5', color: '#fff', p: 1.5, textAlign: 'center', position: 'relative' }}>
-        <IconButton 
-          onClick={onBack} 
-          sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#fff' }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
+      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1.5, textAlign: 'center', position: 'relative' }}>
         <Typography variant="body1" sx={{ fontWeight: 500 }}>
           Enter Payment Details
         </Typography>
@@ -92,7 +86,7 @@ const PaymentDetailsForm = ({ onBack }) => {
 
           {/* Right Column: Address Information */}
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" sx={{ color: '#333', fontWeight: 'bold', mb: 4 }}>
+            <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', mb: 0.5, mt: 8, display: 'block' }}>
               Address Information *
             </Typography>
 

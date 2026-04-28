@@ -60,7 +60,7 @@ const AccountAdjustmentDialog = ({ onClose }) => {
   const outstandingTypeOptions = [
     { value: 'total', label: 'Total Outstanding', amount: totalOutstanding },
     { value: 'patient', label: 'Patient Outstanding', amount: patientOutstanding },
-    { value: 'specific', label: 'Specific', amount: 0 }
+    { value: 'specific', label: 'Specific', amount: null }
   ];
 
   const calculateAdjustmentValue = () => {
@@ -171,26 +171,29 @@ const AccountAdjustmentDialog = ({ onClose }) => {
                 <FormControlLabel 
                   value={option.value} 
                   control={<Radio size="small" sx={{ color: '#666', '&.Mui-checked': { color: '#444' } }} />} 
-                  label={<Typography sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{option.label} ( <b>${option.amount.toFixed(2)}</b> )</Typography>} 
+                  label={
+                    <Typography sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {option.label}
+                      {option.amount !== null && (
+                        <> ( <b>${option.amount.toFixed(2)}</b> )</>
+                      )}
+                    </Typography>
+                  } 
                 />
                 {option.value === 'specific' && (
-                  <TextField
-                    size="small"
+                  <InputBase
                     value={specificAmount}
                     onChange={(e) => setSpecificAmount(e.target.value)}
                     placeholder="$ 0"
                     sx={{ 
                       width: 100, 
-                      '& .MuiInputBase-root': { 
-                        height: '28px', 
-                        fontSize: '0.85rem',
-                        bgcolor: outstandingType === 'specific' ? '#fff' : '#f5f5f5'
-                      },
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: outstandingType === 'specific' ? '#7788bb' : '#ccc'
+                      fontSize: '0.85rem',
+                      borderBottom: '1.5px solid #7788bb',
+                      px: 0.5,
+                      '&:focus': {
+                        borderBottomColor: '#5c6bc0'
                       }
                     }}
-                    disabled={outstandingType !== 'specific'}
                   />
                 )}
               </Box>

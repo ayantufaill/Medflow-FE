@@ -79,7 +79,7 @@ const DetailedStatement = () => {
     { label: 'Total Charges', value: '$100.00' },
     { label: 'Total Patient Payments', value: '$0.00' },
     { label: 'Total Insurance Payments', value: '$0.00' },
-    { label: 'Total Adjustment', value: '-$100.00' },
+    { label: 'Total Adjustment', value: '$100.00' },
     { label: 'Outstanding Balance', value: '$0.00' }
   ];
 

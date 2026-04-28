@@ -57,19 +57,6 @@ const SimpleStatement = () => {
       credit: '',
       balance: '$100.00',
       bgcolor: rowLightBlue
-    },
-    {
-      id: 2,
-      date: '04/14/2026',
-      description: 'Credit Adjustment #24640 Un-Collected',
-      descriptionSub: '',
-      provider: '',
-      providerSub: '',
-      amount: '',
-      amountSub: '',
-      credit: '$100.00',
-      balance: '$0.00',
-      bgcolor: 'transparent'
     }
   ];
 
@@ -79,7 +66,7 @@ const SimpleStatement = () => {
     { label: 'Total Charges', value: '$100.00' },
     { label: 'Total Patient Payments', value: '$0.00' },
     { label: 'Total Insurance Payments', value: '$0.00' },
-    { label: 'Total Adjustment', value: '-$100.00' },
+    { label: 'Total Adjustment', value: '$100.00' },
     { label: 'Outstanding Balance', value: '$0.00' }
   ];
 
@@ -117,6 +104,7 @@ const SimpleStatement = () => {
           patientInfo={patientInfo}
           statementInfo={statementInfo}
           outstandingInfo={outstandingInfo}
+          showOutstanding={false}
         />
 
         {/* Perforation Line */}
@@ -137,6 +125,9 @@ const SimpleStatement = () => {
         <TransactionTable 
           transactions={transactions}
           outstandingBalance={outstandingBalance}
+          showOutstandingBalance={false}
+          showAmount={false}
+          showBalance={false}
         />
 
         {/* Summary & Aging Boxes */}
@@ -145,6 +136,7 @@ const SimpleStatement = () => {
           insuranceSubtotals={insuranceSubtotals}
           yourPortion={yourPortion}
           agingData={agingData}
+          showOutstandingBalance={false}
         />
 
 

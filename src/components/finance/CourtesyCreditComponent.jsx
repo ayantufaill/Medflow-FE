@@ -122,6 +122,9 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
           </Box>
         </Stack>
 
+        {/* Bottom Decorative/functional line found in legacy UI */}
+        <Divider sx={{ borderBottom: '1px solid #7788bb', opacity: 0.5, mb: 2 }} />
+
         {/* Courtesy Credit Amount - Only show when showAmountSection is true */}
         {showAmountSection && (
           <>
@@ -169,25 +172,20 @@ const CourtesyCreditComponent = ({ adjustmentData, onSave, onCancel, onClose, sh
                 />
               </Box>
             </Box>
+
+            {/* Add Description */}
+            <Typography 
+              sx={{ 
+                color: '#5c7cb6', 
+                fontSize: '0.85rem', 
+                cursor: 'pointer',
+                '&:hover': { textDecoration: 'underline' },
+                mb: 2
+              }}
+            >
+              + Add description
+            </Typography>
           </>
-        )}
-
-        {/* Bottom Decorative/functional line found in legacy UI */}
-        <Divider sx={{ borderBottom: '1px solid #7788bb', opacity: 0.5, mb: 2 }} />
-
-        {/* Add Description and Actions - Below Divider */}
-        {showAmountSection && (
-          <Typography 
-            sx={{ 
-              color: '#5c7cb6', 
-              fontSize: '0.85rem', 
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' },
-              mb: 2
-            }}
-          >
-            + Add description
-          </Typography>
         )}
 
         {/* Action Buttons - Always visible */}

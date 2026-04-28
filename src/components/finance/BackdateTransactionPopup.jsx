@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,6 +12,7 @@ import { CalendarMonth } from '@mui/icons-material';
 
 const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
   const [date, setDate] = React.useState('');
+  const dateInputRef = useRef(null);
 
   const handleToday = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -42,107 +43,109 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
       }}
       PaperProps={{
         sx: {
-          p: 2,
-          width: 280,
-          borderRadius: 2,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          border: '1px solid #e0e0e0',
+          width: 320,
+          borderRadius: '4px',
+          overflow: 'hidden',
+          border: '1px solid #ccc',
           mt: 1
         }
       }}
     >
       <Box>
-        <Typography 
-          variant="subtitle2" 
-          sx={{ 
-            fontWeight: 'bold', 
-            color: '#333', 
-            mb: 2,
-            fontSize: '14px'
-          }}
-        >
-          Backdate Transaction
-        </Typography>
-
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              display: 'block', 
-              color: '#666', 
-              mb: 0.5,
-              fontWeight: 500
-            }}
-          >
-            Backdate To:
+        {/* Blue Header Bar */}
+        <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
+            Backdate Transaction
           </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <CalendarMonth sx={{ fontSize: 18, color: '#90a4ae' }} />
-                </InputAdornment>
-              ),
-              sx: { 
-                fontSize: '13px',
-                '& input::-webkit-calendar-picker-indicator': {
-                  cursor: 'pointer'
-                }
-              }
-            }}
-          />
         </Box>
 
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
-          <Button 
-            size="small" 
-            onClick={handleToday}
-            sx={{ 
-              textTransform: 'none', 
-              color: '#5c6bc0',
-              fontSize: '12px',
-              minWidth: 'auto',
-              px: 1
-            }}
-          >
-            Today
-          </Button>
-          <Button 
-            size="small" 
-            onClick={handleClear}
-            sx={{ 
-              textTransform: 'none', 
-              color: '#d32f2f',
-              fontSize: '12px',
-              minWidth: 'auto',
-              px: 1
-            }}
-          >
-            Clear
-          </Button>
-          <Button 
-            variant="contained" 
-            size="small" 
-            onClick={handleDone}
-            sx={{ 
-              textTransform: 'none', 
-              bgcolor: '#5c6bc0',
-              fontSize: '12px',
-              borderRadius: '4px',
-              px: 2,
-              '&:hover': {
-                bgcolor: '#3f51b5'
-              }
-            }}
-          >
-            Done
-          </Button>
-        </Stack>
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ mb: 3 }}>
+            <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ mb: 2 }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#5c6bc0', 
+                  fontWeight: 'bold',
+                  pb: 0.5
+                }}
+              >
+                Backdate To:
+              </Typography>
+              <Box sx={{ flexGrow: 1, borderBottom: '1.5px solid #7788bb', cursor: 'pointer' }} onClick={() => dateInputRef.current?.showPicker()}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  variant="standard"
+                  inputRef={dateInputRef}
+                  InputProps={{
+                    disableUnderline: true,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                      </InputAdornment>
+                    ),
+                    sx: { 
+                      fontSize: '13px',
+                      py: 0.5,
+                      '& input::-webkit-calendar-picker-indicator': {
+                        cursor: 'pointer'
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </Stack>
+          </Box>
+
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Button 
+              size="small" 
+              onClick={handleToday}
+              sx={{ 
+                textTransform: 'none', 
+                color: '#5c6bc0',
+                fontSize: '11px',
+                minWidth: 'auto',
+                px: 1
+              }}
+            >
+              Today
+            </Button>
+            <Button 
+              size="small" 
+              onClick={handleClear}
+              sx={{ 
+                textTransform: 'none', 
+                color: '#d32f2f',
+                fontSize: '11px',
+                minWidth: 'auto',
+                px: 1
+              }}
+            >
+              Clear
+            </Button>
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={handleDone}
+              sx={{ 
+                textTransform: 'none', 
+                bgcolor: '#d4c4a8',
+                fontSize: '11px',
+                borderRadius: '4px',
+                px: 2,
+                '&:hover': {
+                  bgcolor: '#c5b396'
+                }
+              }}
+            >
+              Done
+            </Button>
+          </Stack>
+        </Box>
       </Box>
     </Popover>
   );

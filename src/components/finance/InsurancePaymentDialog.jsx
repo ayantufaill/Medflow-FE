@@ -194,8 +194,8 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
           borderBottom: '1px solid #8fb884',
           mb: 2 
         }}>
-          <WarningIcon sx={{ color: '#d35400', fontSize: '2rem' }} />
-          <Typography sx={{ color: '#c0392b', fontSize: '1rem', fontWeight: 400 }}>
+          <WarningIcon sx={{ color: '#d35400', fontSize: '1.5rem' }} />
+          <Typography sx={{ color: '#c0392b', fontSize: '0.85rem', fontWeight: 400 }}>
             There are no claims on the patient's account. Please create one before applying insurance payment.
           </Typography>
         </Box>
@@ -248,11 +248,11 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
         fullWidth
         sx={{ '& .MuiDialog-paper': { maxWidth: '650px' } }}
       >
-        <DialogTitle sx={{ bgcolor: '#e83b4cff', color: '#fcfcfcff', fontWeight: 600, textAlign: 'center', py: 1, fontSize: '16px' }}>
+        <DialogTitle sx={{ bgcolor: '#7788bb', color: '#fff', fontWeight: 600, textAlign: 'center', py: 1, fontSize: '16px' }}>
           Alert
         </DialogTitle>
         <DialogContent sx={{ pt: 3, pb: 2 }}>
-          <Typography sx={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
+          <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.6 }}>
             In simple mode, the system will automatically assign a payment amount per procedure. By switching to simple mode, you will have no control over the way the software will split the total payment.
           </Typography>
         </DialogContent>
@@ -282,11 +282,11 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
         fullWidth
         sx={{ '& .MuiDialog-paper': { maxWidth: '500px' } }}
       >
-        <DialogTitle sx={{ bgcolor: '#8eb378', color: '#fff', fontWeight: 600, textAlign: 'center', py: 1, fontSize: '16px' }}>
+        <DialogTitle sx={{ bgcolor: '#7788bb', color: '#fff', fontWeight: 600, textAlign: 'center', py: 1, fontSize: '16px' }}>
           Payment Options
         </DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             <FormControlLabel
               control={
                 <Radio
@@ -341,7 +341,7 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
             <Button 
               onClick={handleProceedPayment}
               variant="contained"
-              sx={{ bgcolor: '#d4c197', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
+              sx={{ bgcolor: '#7788bb', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
             >
               Proceed
             </Button>

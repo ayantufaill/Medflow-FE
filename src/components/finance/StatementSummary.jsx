@@ -2,10 +2,15 @@ import React from 'react';
 import { Box, Typography, Grid } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
 
-const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingData }) => {
+const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingData, showOutstandingBalance = true }) => {
   const textDarkBlue = '#40548e';
   const headerBlue = '#abb8d3';
   const rowLightBlue = '#f0f4fa';
+
+  // Filter out Outstanding Balance if showOutstandingBalance is false
+  const filteredSummaryData = showOutstandingBalance 
+    ? summaryData 
+    : summaryData.filter(item => item.label !== 'Outstanding Balance');
 
   return (
     <>
@@ -24,7 +29,7 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
           justifyContent="space-between" 
           alignItems="center"
         >
-          {summaryData.map((item) => (
+          {filteredSummaryData.map((item) => (
             <Grid 
               item 
               key={item.label}

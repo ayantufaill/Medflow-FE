@@ -112,30 +112,30 @@ const AgingTable = ({ view = 'invoices' }) => {
             
             {/* Individual section */}
             {['Outstanding Bills', 'Balance', 'Insurance Balance'].map((row, idx) => (
-              <TableRow key={row} sx={{ bgcolor: '#5c6bc0' }}>
-                <TableCell sx={{ color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
+              <TableRow key={row}>
+                <TableCell sx={{ color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold', bgcolor: '#5c6bc0' }}>
                   {row}
                 </TableCell>
                 {[0, 1, 2, 3].map((i) => (
-                  <TableCell key={i} align="right" sx={{ color: '#fff' }}>$0.00</TableCell>
+                  <TableCell key={i} align="right">$0.00</TableCell>
                 ))}
-                <TableCell align="right" sx={{ bgcolor: '#e57373', color: '#fff', fontWeight: 'bold' }}>$0.00</TableCell>
-                <TableCell sx={{ p: 0, borderRight: 'none', bgcolor: '#7986cb', color: '#fff', textAlign: 'center' }}>
+                <TableCell align="right" sx={{ bgcolor: '#ef9a9a', color: '#fff', fontWeight: 'bold' }}>$0.00</TableCell>
+                <TableCell sx={{ p: 0, borderRight: 'none', bgcolor: '#f5f5f5', textAlign: 'center' }}>
                   {idx === 0 && (
                     <IconButton 
                       size="small" 
                       onClick={handleNextSection}
-                      sx={{ color: '#fff', p: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } }}
+                      sx={{ color: '#000', p: 0, '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' } }}
                     >
                       <KeyboardArrowRight sx={{ fontSize: 16 }} />
                     </IconButton>
                   )}
-                  {idx === 1 && <Typography sx={{ fontSize: '8px', fontWeight: 'bold' }}>RESET</Typography>}
+                  {idx === 1 && <Typography sx={{ fontSize: '8px', fontWeight: 'bold', color: '#000' }}>RESET</Typography>}
                   {idx === 2 && (
                     <IconButton 
                       size="small" 
                       onClick={handlePrevSection}
-                      sx={{ color: '#fff', p: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } }}
+                      sx={{ color: '#000', p: 0, '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' } }}
                     >
                       <KeyboardArrowLeft sx={{ fontSize: 16 }} />
                     </IconButton>
@@ -149,7 +149,14 @@ const AgingTable = ({ view = 'invoices' }) => {
 
       {/* Credits Summary Footer - only show when view is 'invoices' */}
       {view === 'invoices' && (
-        <Box sx={{ bgcolor: '#7e57c2', color: '#fff', p: 0.5, display: 'flex', alignItems: 'center', width: '100%' }}>
+        <Box sx={{ 
+          background: 'linear-gradient(to right, #7e57c2 50%, #5c6bc0 50%)', 
+          color: '#fff', 
+          p: 0.5, 
+          display: 'flex', 
+          alignItems: 'center', 
+          width: '100%' 
+        }}>
           <Box sx={{ flexGrow: 1, pl: 1 }}>
             <Typography variant="caption" display="block" sx={{ fontSize: '10px' }}>Courtesy Credit: <b>$0.00</b></Typography>
             <Typography variant="caption" sx={{ fontSize: '10px' }}>
@@ -163,23 +170,42 @@ const AgingTable = ({ view = 'invoices' }) => {
               </IconButton>
             </Typography>
           </Box>
-          <Button size="small" sx={{ bgcolor: '#5c6bc0', color: '#fff', fontSize: '10px', height: '24px', mr: 2, textTransform: 'none' }}>Refund</Button>
-          <Typography variant="caption" sx={{ fontSize: '11px', mr: 1 }}>
-            Account Credit: <b>$200.00</b>
-            <IconButton 
-              size="small" 
-              onClick={handleAccountCreditClick}
-              sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
-            >
-              <ArrowDropDown sx={{ fontSize: 16 }} />
+          <Button 
+            size="small" 
+            sx={{ 
+              bgcolor: 'transparent', 
+              color: '#fff', 
+              fontSize: '11px', 
+              height: '26px', 
+              ml: 18,
+              mr: 2,
+              textTransform: 'none',
+              textDecoration: 'underline',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+              p: 0,
+              minWidth: 'auto'
+            }}
+          >
+            Refund
+          </Button>
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ fontSize: '11px', mr: 1 }}>
+              Account Credit: <b>$200.00</b>
+              <IconButton 
+                size="small" 
+                onClick={handleAccountCreditClick}
+                sx={{ color: '#fff', p: 0, ml: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+              >
+                <ArrowDropDown sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Typography>
+            <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+              <Edit sx={{ fontSize: 14 }} />
             </IconButton>
-          </Typography>
-          <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
-            <Edit sx={{ fontSize: 14 }} />
-          </IconButton>
-          <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
-            <InsertDriveFile sx={{ fontSize: 14 }} />
-          </IconButton>
+            <IconButton size="small" sx={{ color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+              <InsertDriveFile sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Box>
         </Box>
       )}
 

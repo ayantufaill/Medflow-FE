@@ -13,7 +13,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
   };
 
   const headerStyle = {
-    backgroundColor: '#d67d5c',
+    backgroundColor: '#7788bb',
     color: 'white',
     padding: '12px',
     textAlign: 'center',
@@ -76,7 +76,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
   };
 
   const saveButtonStyle = {
-    backgroundColor: '#d67d5c',
+    backgroundColor: '#7788bb',
     color: 'white',
     border: 'none',
     padding: '6px 20px',

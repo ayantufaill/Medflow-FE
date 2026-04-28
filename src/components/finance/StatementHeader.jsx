@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, TextField, Grid, InputBase } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
 
-const StatementHeader = ({ patientInfo, statementInfo, outstandingInfo }) => {
+const StatementHeader = ({ patientInfo, statementInfo, outstandingInfo, showOutstanding = true }) => {
   const primaryBlue = '#40548e';
   const lightBlue = '#abb8d3';
 
@@ -69,10 +69,12 @@ const StatementHeader = ({ patientInfo, statementInfo, outstandingInfo }) => {
           <Box sx={{ mt: 2, border: `1px solid ${lightBlue}`, borderRadius: '6px', overflow: 'hidden', width: '100%', maxWidth: 400 }}>
             {/* Header Row */}
             <Box sx={{ bgcolor: lightBlue, display: 'flex' }}>
-              <Box sx={{ flex: 1, p: 1.5 }}>
-                <Typography sx={{ fontSize: fontSize.sm, color: '#2c3e50' }}>Outstanding:</Typography>
-                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: '#2c3e50' }}>{outstandingInfo.outstanding}</Typography>
-              </Box>
+              {showOutstanding && (
+                <Box sx={{ flex: 1, p: 1.5 }}>
+                  <Typography sx={{ fontSize: fontSize.sm, color: '#2c3e50' }}>Outstanding:</Typography>
+                  <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: '#2c3e50' }}>{outstandingInfo.outstanding}</Typography>
+                </Box>
+              )}
               <Box sx={{ flex: 1, p: 1.5 }}>
                 <Typography sx={{ fontSize: fontSize.sm, color: '#2c3e50' }}>Insurance Estimate:</Typography>
                 <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: '#2c3e50' }}>{outstandingInfo.insuranceEstimate}</Typography>

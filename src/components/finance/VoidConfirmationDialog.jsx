@@ -47,10 +47,10 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm, voidTarget }) => {
           variant="contained"
           sx={{ 
             textTransform: 'none',
-            bgcolor: '#d4af37',
+            bgcolor: '#7788bb',
             color: '#fff',
             '&:hover': {
-              bgcolor: '#b3a247'
+              bgcolor: '#6577aa'
             }
           }}
         >

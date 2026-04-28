@@ -125,10 +125,10 @@ const PixelAutoFix = () => (
 );
 
 const SummaryLabel = ({ label, value }) => (
-  <Stack direction="row" spacing={0.5}>
-    <Typography variant="caption" sx={{ color: '#777', fontSize: '10px' }}>{label}:</Typography>
+  <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 0.5 }}>
+    <Typography variant="caption" sx={{ color: '#777', fontSize: '10px', whiteSpace: 'nowrap' }}>{label}:</Typography>
     <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#444', fontSize: '10px' }}>{value}</Typography>
-  </Stack>
+  </Box>
 );
 
 const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExtendedTools, onVoidClick, voidData, onEditClick, editData, adjustmentType, onRefreshClick, refreshData }) => (
@@ -207,7 +207,7 @@ const LedgerList = ({ expanded, items = [] }) => {
         summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
         details: [
           { id: '14040', title: 'Periodic Oral Eval (uncollected)', amount: '$50.00' },
-          { id: '24636', title: 'Prophylaxis - Adult', amount: '$134.00' }
+          { id: '24636', title: 'Broken appt', amount: '$134.00' }
         ]
       },
       { 
@@ -544,31 +544,43 @@ const LedgerList = ({ expanded, items = [] }) => {
               <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />
               
               {/* Financial Summary Row from the "modern" view */}
-              <Box sx={{ display: 'flex', alignItems: 'center', px: '12px', mb: 0.5 }}>
-                <Box sx={{ display: 'flex', gap: 6, justifyContent: 'center', flexGrow: 1, ml: '40px' }}>
-                  <SummaryLabel label="Ins WO" value={item.summary?.insWo || '$0.00'} />
-                  <SummaryLabel label="Pt Balance" value={item.summary?.ptBal || '$0.00'} />
-                  <SummaryLabel label="Ins Balance" value={item.summary?.insBal || '$0.00'} />
-                  <SummaryLabel label="Invoice Balance" value={item.summary?.invBal || '$0.00'} />
+              <Box sx={{ px: '12px', mb: 0.5 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center', mb: 0.5 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
+                    <SummaryLabel label="Ins WO" value={item.summary?.insWo || '$0.00'} />
+                    <SummaryLabel label="Pt Balance" value={item.summary?.ptBal || '$0.00'} />
+                    <SummaryLabel label="Ins Balance" value={item.summary?.insBal || '$0.00'} />
+                    <SummaryLabel label="Invoice Balance" value={item.summary?.invBal || '$0.00'} />
+                  </Box>
+                  <Typography variant="caption" sx={{ color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
+                    {item.initials}
+                  </Typography>
+                  <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="flex-end">
+                    <CalendarMonth 
+                      sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
+                      onClick={handleCalendarClick}
+                    />
+                    <Tune 
+                      sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} 
+                      onClick={handleAdjClick}
+                    />
+                    <Print 
+                      sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
+                      onClick={handlePrintClick}
+                    />
+                    <IconCashMinus size={18} />
+                  </Stack>
                 </Box>
-                <Typography variant="caption" sx={{ width: 40, color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
-                  {item.initials}
-                </Typography>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
-                  <CalendarMonth 
-                    sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
-                    onClick={handleCalendarClick}
-                  />
-                  <Tune 
-                    sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} 
-                    onClick={handleAdjClick}
-                  />
-                  <Print 
-                    sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
-                    onClick={handlePrintClick}
-                  />
-                  <IconCashMinus size={18} />
-                </Stack>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center' }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
+                    <SummaryLabel label="Applied WO" value={item.summary?.appliedWo || '$0.00'} />
+                    <SummaryLabel label="Pt Paid" value={item.summary?.ptPaid || '$0.00'} />
+                    <SummaryLabel label="Ins Paid" value={item.summary?.insPaid || '$0.00'} />
+                    <Box />
+                  </Box>
+                  <Box />
+                  <Box />
+                </Box>
               </Box>
 
               <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />

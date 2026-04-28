@@ -17,7 +17,7 @@ const MembershipAdjustmentDialog = ({ onClose }) => {
       fontFamily: 'Arial, sans-serif' 
     }}>
       {/* Blue Header Bar */}
-      <Box sx={{ bgcolor: '#d4a537', color: '#fff', p: 1, textAlign: 'center' }}>
+      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
           Membership Adjustment
         </Typography>
@@ -41,11 +41,11 @@ const MembershipAdjustmentDialog = ({ onClose }) => {
               size="small" 
               variant="contained" 
               sx={{ 
-                bgcolor: '#d4a537', 
+                bgcolor: '#7788bb', 
                 textTransform: 'none', 
                 fontSize: '11px',
                 px: 2,
-                '&:hover': { bgcolor: '#c4942d' } 
+                '&:hover': { bgcolor: '#6577aa' } 
               }}
             >
               Adjust
