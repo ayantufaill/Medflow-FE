@@ -109,8 +109,13 @@ export const patientService = {
   },
 
   async getPatientUpdateRequests(patientId) {
-    const response = await apiClient.get(`/patients/${patientId}/update-requests`);
-    return response.data.data.updateRequests || [];
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/update-requests`);
+      return response.data.data.updateRequests || [];
+    } catch (error) {
+      if (error.response?.status === 404) return [];
+      throw error;
+    }
   },
 
   async createPatientUpdateRequest(patientId, payload) {
@@ -119,13 +124,23 @@ export const patientService = {
   },
 
   async getPatientAuditHistory(patientId) {
-    const response = await apiClient.get(`/patients/${patientId}/audit-history`);
-    return response.data.data.auditEvents || [];
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/audit-history`);
+      return response.data.data.auditEvents || [];
+    } catch (error) {
+      if (error.response?.status === 404) return [];
+      throw error;
+    }
   },
 
   async getPatientCommunications(patientId) {
-    const response = await apiClient.get(`/patients/${patientId}/communications`);
-    return response.data.data.communications || [];
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/communications`);
+      return response.data.data.communications || [];
+    } catch (error) {
+      if (error.response?.status === 404) return [];
+      throw error;
+    }
   },
 
   async createPatientCommunication(patientId, payload) {
@@ -134,8 +149,13 @@ export const patientService = {
   },
 
   async getStructuredMedicalHistory(patientId) {
-    const response = await apiClient.get(`/patients/${patientId}/medical-history`);
-    return response.data.data;
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/medical-history`);
+      return response.data.data;
+    } catch (error) {
+      if (error.response?.status === 404) return null;
+      throw error;
+    }
   },
 
   async updateStructuredMedicalHistory(patientId, payload) {
@@ -144,8 +164,13 @@ export const patientService = {
   },
 
   async getDentalHistory(patientId) {
-    const response = await apiClient.get(`/patients/${patientId}/dental-history`);
-    return response.data.data;
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/dental-history`);
+      return response.data.data;
+    } catch (error) {
+      if (error.response?.status === 404) return null;
+      throw error;
+    }
   },
 
   async updateDentalHistory(patientId, payload) {
@@ -171,8 +196,13 @@ export const patientService = {
       ? `/patients/${patientId}/insurance?${query}`
       : `/patients/${patientId}/insurance`;
 
-    const response = await apiClient.get(url);
-    return response.data.data.insurances || [];
+    try {
+      const response = await apiClient.get(url);
+      return response.data.data.insurances || [];
+    } catch (error) {
+      if (error.response?.status === 404) return [];
+      throw error;
+    }
   },
 
   /**
