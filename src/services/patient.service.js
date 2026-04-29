@@ -89,9 +89,18 @@ export const patientService = {
 
   async getPatientWorkspace(patientId) {
     console.log('🌐 API CALL - getPatientWorkspace for ID:', patientId);
-    const response = await apiClient.get(`/patients/${patientId}/workspace`);
-    console.log('📨 API RESPONSE from /patients/:id/workspace:', response.data.data.patient);
-    return response.data.data.patient;
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/workspace`);
+      console.log('📨 API RESPONSE from /patients/:id/workspace:', response.data.data.patient);
+      return response.data.data.patient;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        console.log('⚠️ Workspace route not found, falling back to /patients/:id');
+        const fallback = await apiClient.get(`/patients/${patientId}`);
+        return fallback.data.data?.patient ?? fallback.data.data ?? fallback.data;
+      }
+      throw error;
+    }
   },
 
   async updatePatientWorkspace(patientId, updates) {
