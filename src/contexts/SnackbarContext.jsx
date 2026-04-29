@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 
 const SnackbarContext = createContext(null);
@@ -18,20 +18,20 @@ export const SnackbarProvider = ({ children }) => {
     severity: 'success', // 'success', 'info', 'warning', 'error'
   });
 
-  const showSnackbar = (message, severity = 'success') => {
+  const showSnackbar = useCallback((message, severity = 'success') => {
     setSnackbar({
       open: true,
       message,
       severity,
     });
-  };
+  }, []);
 
-  const hideSnackbar = () => {
+  const hideSnackbar = useCallback(() => {
     setSnackbar((prev) => ({
       ...prev,
       open: false,
     }));
-  };
+  }, []);
 
   const value = {
     showSnackbar,
