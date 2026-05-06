@@ -9,6 +9,9 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import theme from './theme';
 import allRoutes from './routes';
 
+// Split App.jsx (1,937 lines) into 14 domain route files under src/routes/ plus a theme.js, 
+// reducing App.jsx to 33 lines. Build passes. Next: continue form refactoring for remaining domains (rooms,   
+// users, note templates, etc.). (disable recaps in /config)
 function App() {
   return (
     <ReduxProvider store={store}>
