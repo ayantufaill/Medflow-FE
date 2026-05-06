@@ -1,5 +1,16 @@
+export { default as CompletedProfilesTab } from './CompletedProfilesTab';
 export { CustomFormsSection } from './CustomFormsSection';
-export { DocumentThumbnail } from './DocumentThumbnail';
+export { default as DeletedProfilesTab } from './DeletedProfilesTab';
 export { DocumentTable } from './DocumentTable';
+export { DocumentThumbnail } from './DocumentThumbnail';
 export { EditDocumentDialog } from './EditDocumentDialog';
 export { FloatingActions } from './FloatingActions';
+export { default as IncompleteProfilesTab } from './IncompleteProfilesTab';
+export { default as MedicationListCard } from './MedicationListCard';
+export { default as NewPatientIntakeForm } from './NewPatientIntakeForm';
+export { default as PatientBillingTab } from './PatientBillingTab';
+export { default as PatientForm } from './PatientForm';
+export { default as PatientSectionTabs } from './PatientSectionTabs';
+export { default as PatientSignatureSection } from './PatientSignatureSection';
+export { default as SignedFormsTab } from './SignedFormsTab';
+export { default as VisitDatesTimeline } from './VisitDatesTimeline';
