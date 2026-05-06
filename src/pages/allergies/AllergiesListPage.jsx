@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -10,190 +10,91 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   IconButton,
   Chip,
   Button,
   Alert,
   CircularProgress,
-  InputAdornment,
-  Tooltip,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from "@mui/material";
+} from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon,
   Add as AddIcon,
-  Refresh as RefreshIcon,
   MoreVert as MoreVertIcon,
-} from "@mui/icons-material";
-import { useSnackbar } from "../../contexts/SnackbarContext";
-import { allergyService } from "../../services/allergy.service";
-import { patientService } from "../../services/patient.service";
-import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import dayjs from "dayjs";
+} from '@mui/icons-material';
+import { useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+import { allergyService } from '../../services/allergy.service';
+import { allergyKeys, useAllergies } from '../../hooks/queries/useAllergies';
+import { usePatient } from '../../hooks/queries/usePatients';
+import { ConfirmationDialog } from '../../components/shared';
+
+const SEVERITY_COLOR = { mild: 'success', moderate: 'warning', severe: 'error' };
 
 const AllergiesListPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const patientIdFromQuery = searchParams.get("patient_id");
+  const patientId = searchParams.get('patient_id');
   const { showSnackbar } = useSnackbar();
-  const [allergies, setAllergies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [patient, setPatient] = useState(null);
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    allergyId: null,
-    allergen: "",
-  });
-  const [actionMenu, setActionMenu] = useState({
-    anchorEl: null,
-    allergyId: null,
-    allergen: "",
-  });
+  const queryClient = useQueryClient();
+
+  const { data: patient } = usePatient(patientId);
+  const { data: allergies = [], isLoading, isError } = useAllergies(patientId);
+
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, allergyId: null, allergen: '' });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [actionMenu, setActionMenu] = useState({ anchorEl: null, allergyId: null, allergen: '' });
 
-  const fetchPatient = useCallback(async () => {
-    if (patientIdFromQuery) {
-      try {
-        const patientData = await patientService.getPatientById(patientIdFromQuery);
-        setPatient(patientData);
-      } catch (err) {
-        console.error("Error fetching patient:", err);
-      }
-    }
-  }, [patientIdFromQuery]);
+  const activeAllergies = allergies.filter((a) => a.isActive !== false);
 
-  const fetchAllergies = useCallback(async () => {
-    if (!patientIdFromQuery) {
-      setError("Patient ID is required");
-      setLoading(false);
-      return;
-    }
+  const openActionMenu = (e, allergyId, allergen) =>
+    setActionMenu({ anchorEl: e.currentTarget, allergyId, allergen });
 
-    try {
-      setLoading(true);
-      setError("");
-      const allergiesData = await allergyService.getAllergies(patientIdFromQuery);
-      setAllergies(allergiesData || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to fetch allergies. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [patientIdFromQuery]);
+  const closeActionMenu = () =>
+    setActionMenu({ anchorEl: null, allergyId: null, allergen: '' });
 
-  useEffect(() => {
-    fetchPatient();
-  }, [fetchPatient]);
-
-  useEffect(() => {
-    fetchAllergies();
-  }, [fetchAllergies]);
+  const handleEdit = (allergyId) => {
+    closeActionMenu();
+    navigate(`/allergies/${allergyId}/edit`);
+  };
 
   const handleDeleteClick = (allergyId, allergen) => {
-    setDeleteDialog({
-      open: true,
-      allergyId,
-      allergen,
-    });
+    closeActionMenu();
+    setDeleteDialog({ open: true, allergyId, allergen });
   };
 
   const handleDeleteConfirm = async () => {
     try {
       setDeleteLoading(true);
-      setError("");
-      const allergyId = deleteDialog.allergyId;
-      
-      if (!allergyId) {
-        throw new Error("Allergy ID is missing");
-      }
-      
-      await allergyService.deleteAllergy(allergyId);
-      showSnackbar("Allergy deleted successfully", "success");
-      setDeleteDialog({ open: false, allergyId: null, allergen: "" });
-      await fetchAllergies();
+      await allergyService.deleteAllergy(deleteDialog.allergyId);
+      showSnackbar('Allergy deleted successfully', 'success');
+      setDeleteDialog({ open: false, allergyId: null, allergen: '' });
+      queryClient.invalidateQueries({ queryKey: allergyKeys.byPatient(patientId) });
     } catch (err) {
-      const errorMessage =
+      const message =
         err.response?.data?.error?.message ||
         err.response?.data?.message ||
-        err.message ||
-        "Failed to delete allergy. Please try again.";
-      setError(errorMessage);
-      showSnackbar(errorMessage, "error");
+        'Failed to delete allergy. Please try again.';
+      showSnackbar(message, 'error');
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const handleDeleteCancel = () => {
-    setDeleteDialog({ open: false, allergyId: null, allergen: "" });
-  };
-
-  const handleActionMenuOpen = (event, allergyId, allergen) => {
-    setActionMenu({
-      anchorEl: event.currentTarget,
-      allergyId,
-      allergen,
-    });
-  };
-
-  const handleActionMenuClose = () => {
-    setActionMenu({
-      anchorEl: null,
-      allergyId: null,
-      allergen: "",
-    });
-  };
-
-  const handleEdit = (allergyId) => {
-    handleActionMenuClose();
-    navigate(`/allergies/${allergyId}/edit`);
-  };
-
-  const handleDelete = (allergyId, allergen) => {
-    handleActionMenuClose();
-    handleDeleteClick(allergyId, allergen);
-  };
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case "mild":
-        return "success";
-      case "moderate":
-        return "warning";
-      case "severe":
-        return "error";
-      default:
-        return "default";
-    }
-  };
+  if (!patientId) {
+    return <Alert severity="warning">Please provide a patient_id in the URL query parameters.</Alert>;
+  }
 
   return (
     <Box>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
-            Allergies
-          </Typography>
+          <Typography variant="h4" fontWeight="bold">Allergies</Typography>
           {patient && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Patient: {patient.firstName} {patient.lastName} ({patient.patientCode})
@@ -203,158 +104,114 @@ const AllergiesListPage = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() =>
-            navigate(
-              patientIdFromQuery
-                ? `/allergies/new?patient_id=${patientIdFromQuery}`
-                : "/allergies/new"
-            )
-          }
+          onClick={() => navigate(`/allergies/new?patient_id=${patientId}`)}
         >
           Add Allergy
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
-          {error}
-        </Alert>
-      )}
-
-      {!patientIdFromQuery && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          Please provide a patient_id in the URL query parameters.
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to fetch allergies. Please try again.
         </Alert>
       )}
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        {loading ? (
+        {isLoading ? (
           <Box display="flex" justifyContent="center" p={4}>
             <CircularProgress />
           </Box>
         ) : (
-          <>
-            <TableContainer>
-              <Table sx={{ minWidth: 650 }}>
-                <TableHead>
+          <TableContainer>
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Allergen</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Reaction</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Severity</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Documented By</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Documented Date</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {activeAllergies.length === 0 ? (
                   <TableRow>
-                    <TableCell sx={{ fontWeight: "bold" }}>Allergen</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Reaction</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Severity</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Documented By</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Documented Date</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: "bold" }}>Actions</TableCell>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">No allergies found</Typography>
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {allergies.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">
-                          No allergies found
-                        </Typography>
+                ) : (
+                  activeAllergies.map((allergy) => (
+                    <TableRow key={allergy._id || allergy.id} hover>
+                      <TableCell sx={{ fontWeight: 500 }}>{allergy.allergen}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ maxWidth: 300 }}>{allergy.reaction}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={allergy.severity ? allergy.severity.charAt(0).toUpperCase() + allergy.severity.slice(1) : 'Unknown'}
+                          color={SEVERITY_COLOR[allergy.severity] || 'default'}
+                          size="small"
+                          sx={{ fontWeight: 500 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {allergy.documentedBy
+                          ? `${allergy.documentedBy.firstName || ''} ${allergy.documentedBy.lastName || ''}`.trim() || '-'
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {allergy.documentedDate ? dayjs(allergy.documentedDate).format('MM/DD/YYYY') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={allergy.isActive ? 'Active' : 'Inactive'}
+                          color={allergy.isActive ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => openActionMenu(e, allergy._id || allergy.id, allergy.allergen)}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    allergies
-                      .filter((allergy) => allergy.isActive !== false)
-                      .map((allergy) => (
-                        <TableRow 
-                          key={allergy._id || allergy.id} 
-                          hover
-                          sx={{ "&:hover": { backgroundColor: "action.hover" } }}
-                        >
-                          <TableCell sx={{ fontWeight: 500 }}>
-                            {allergy.allergen}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ maxWidth: 300 }}>
-                              {allergy.reaction}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={allergy.severity?.charAt(0).toUpperCase() + allergy.severity?.slice(1) || "Unknown"}
-                              color={getSeverityColor(allergy.severity)}
-                              size="small"
-                              sx={{ fontWeight: 500 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {allergy.documentedBy
-                              ? `${allergy.documentedBy.firstName || ""} ${allergy.documentedBy.lastName || ""}`.trim() || "-"
-                              : "-"}
-                          </TableCell>
-                          <TableCell>
-                            {allergy.documentedDate
-                              ? dayjs(allergy.documentedDate).format("MM/DD/YYYY")
-                              : "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={allergy.isActive ? "Active" : "Inactive"}
-                              color={allergy.isActive ? "success" : "default"}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell align="right">
-                            <IconButton
-                              size="small"
-                              onClick={(e) =>
-                                handleActionMenuOpen(
-                                  e,
-                                  allergy._id || allergy.id,
-                                  allergy.allergen
-                                )
-                              }
-                            >
-                              <MoreVertIcon />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
       </Paper>
 
       <Menu
         anchorEl={actionMenu.anchorEl}
         open={Boolean(actionMenu.anchorEl)}
-        onClose={handleActionMenuClose}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
+        onClose={closeActionMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <MenuItem onClick={() => handleEdit(actionMenu.allergyId)}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem>
         <MenuItem
-          onClick={() => handleDelete(actionMenu.allergyId, actionMenu.allergen)}
-          sx={{ color: "error.main" }}
+          onClick={() => handleDeleteClick(actionMenu.allergyId, actionMenu.allergen)}
+          sx={{ color: 'error.main' }}
         >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
 
       <ConfirmationDialog
         open={deleteDialog.open}
-        onClose={handleDeleteCancel}
+        onClose={() => setDeleteDialog({ open: false, allergyId: null, allergen: '' })}
         onConfirm={handleDeleteConfirm}
         title="Delete Allergy"
         message={`Are you sure you want to delete allergy "${deleteDialog.allergen}"? This action cannot be undone.`}
@@ -368,4 +225,3 @@ const AllergiesListPage = () => {
 };
 
 export default AllergiesListPage;
-

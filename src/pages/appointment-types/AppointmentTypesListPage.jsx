@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Typography,
@@ -46,30 +46,14 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentTypeService } from '../../services/appointment-type.service';
-import {
-  fetchAppointmentTypes as fetchAppointmentTypesAction,
-  selectAppointmentTypeList,
-  selectAppointmentTypePagination,
-  selectAppointmentTypeListLoading,
-  selectAppointmentTypeListError,
-  invalidateAppointmentTypes,
-  removeAppointmentTypeFromList,
-  updateAppointmentTypeInList,
-} from '../../store/slices/appointmentTypeSlice';
-import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { appointmentTypeKeys, useAppointmentTypes } from '../../hooks/queries/useAppointmentTypes';
+import { ConfirmationDialog } from '../../components/shared';
 
 const AppointmentTypesListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
-  // Redux state
-  const appointmentTypes = useSelector(selectAppointmentTypeList);
-  const pagination = useSelector(selectAppointmentTypePagination);
-  const loading = useSelector(selectAppointmentTypeListLoading);
-  const reduxError = useSelector(selectAppointmentTypeListError);
-
-  const [error, setError] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
@@ -78,98 +62,42 @@ const AppointmentTypesListPage = () => {
   const [actionMenu, setActionMenu] = useState({ anchorEl: null, typeId: null, typeName: '', isActive: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
+
   const [debouncedSearch] = useDebounce(search, 500);
-  const totalTypes = pagination?.total || 0;
 
-  // ─── Single fetch via Redux (fires once per param change) ───
-  useEffect(() => {
-    let isActive = null;
-    if (statusFilter === 'active') isActive = true;
-    else if (statusFilter === 'inactive') isActive = false;
-    dispatch(fetchAppointmentTypesAction({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), isActive }));
-  }, [dispatch, page, rowsPerPage, debouncedSearch, statusFilter]);
+  const isActive = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : null;
 
-  useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
+  const { data, isLoading, isError, refetch } = useAppointmentTypes({
+    page: page + 1,
+    limit: rowsPerPage,
+    search: debouncedSearch.trim(),
+    isActive,
+  });
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  const appointmentTypes = data?.appointmentTypes || [];
+  const total = data?.total || 0;
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const invalidateList = () =>
+    queryClient.invalidateQueries({ queryKey: appointmentTypeKeys.lists() });
 
-  const handleDeleteClick = (typeId, typeName) => {
-    setDeleteDialog({
-      open: true,
-      typeId,
-      typeName,
-    });
-  };
+  const closeActionMenu = () =>
+    setActionMenu({ anchorEl: null, typeId: null, typeName: '', isActive: null });
 
   const handleDeleteConfirm = async () => {
     try {
       setDeleteLoading(true);
       await appointmentTypeService.deleteAppointmentType(deleteDialog.typeId);
       showSnackbar('Appointment type deleted successfully', 'success');
-      dispatch(removeAppointmentTypeFromList(deleteDialog.typeId));
       setDeleteDialog({ open: false, typeId: null, typeName: '' });
+      invalidateList();
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to delete appointment type.';
-      setError(msg);
-      showSnackbar(msg, 'error');
+      showSnackbar(
+        err.response?.data?.error?.message || 'Failed to delete appointment type.',
+        'error'
+      );
     } finally {
       setDeleteLoading(false);
     }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialog({ open: false, typeId: null, typeName: '' });
-  };
-
-  const handleActionMenuOpen = (event, typeId, typeName, isActive) => {
-    setActionMenu({
-      anchorEl: event.currentTarget,
-      typeId,
-      typeName,
-      isActive,
-    });
-  };
-
-  const handleActionMenuClose = () => {
-    setActionMenu({
-      anchorEl: null,
-      typeId: null,
-      typeName: '',
-      isActive: null,
-    });
-  };
-
-  const handleViewDetails = (typeId) => {
-    handleActionMenuClose();
-    navigate(`/appointment-types/${typeId}`);
-  };
-
-  const handleEdit = (typeId) => {
-    handleActionMenuClose();
-    navigate(`/appointment-types/${typeId}/edit`);
-  };
-
-  const handleDelete = (typeId, typeName) => {
-    handleActionMenuClose();
-    handleDeleteClick(typeId, typeName);
-  };
-
-  const handleClearSearch = () => {
-    setSearch('');
-    setPage(0);
-  };
-
-  const handleClearFilters = () => {
-    setSearch('');
-    setStatusFilter('');
-    setPage(0);
   };
 
   const handleToggleActive = async (typeId, currentStatus) => {
@@ -177,52 +105,33 @@ const AppointmentTypesListPage = () => {
       setToggleLoading(true);
       const newStatus = !currentStatus;
       await appointmentTypeService.updateAppointmentType(typeId, { isActive: newStatus });
-      showSnackbar(`Appointment type ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
-      dispatch(updateAppointmentTypeInList({ _id: typeId, isActive: newStatus }));
-      handleActionMenuClose();
+      showSnackbar(
+        `Appointment type ${newStatus ? 'activated' : 'deactivated'} successfully`,
+        'success'
+      );
+      invalidateList();
+      closeActionMenu();
     } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || 'Failed to update status.', 'error');
+      showSnackbar(
+        err.response?.data?.error?.message || 'Failed to update status.',
+        'error'
+      );
     } finally {
       setToggleLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    dispatch(invalidateAppointmentTypes());
-    let isActive = null;
-    if (statusFilter === 'active') isActive = true;
-    else if (statusFilter === 'inactive') isActive = false;
-    dispatch(fetchAppointmentTypesAction({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), isActive }));
-  };
-
   return (
     <Box>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4" fontWeight="bold">
-          Appointment Types
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/appointment-types/new')}
-        >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" fontWeight="bold">Appointment Types</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/appointment-types/new')}>
           Add Appointment Type
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>Failed to load appointment types. Please try again.</Alert>
       )}
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
@@ -232,21 +141,13 @@ const AppointmentTypesListPage = () => {
               fullWidth
               placeholder="Search by name..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
               size="small"
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
                 endAdornment: search ? (
                   <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={handleClearSearch}
-                      edge="end"
-                    >
+                    <IconButton size="small" onClick={() => { setSearch(''); setPage(0); }} edge="end">
                       <ClearIcon />
                     </IconButton>
                   </InputAdornment>
@@ -256,36 +157,33 @@ const AppointmentTypesListPage = () => {
           </Grid>
           <Grid size={3}>
             <FormControl fullWidth size="small">
-              <InputLabel id="status-filter-label">Filter by Status</InputLabel>
+              <InputLabel>Filter by Status</InputLabel>
               <Select
-                labelId="status-filter-label"
-                id="status-filter"
                 value={statusFilter}
                 label="Filter by Status"
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(0);
-                }}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
               >
-                <MenuItem value="">
-                  <em>All Status</em>
-                </MenuItem>
+                <MenuItem value=""><em>All Status</em></MenuItem>
                 <MenuItem value="active">Active</MenuItem>
                 <MenuItem value="inactive">Inactive</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid size={2}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
-                <IconButton onClick={handleClearFilters} color="primary" disabled={loading || !statusFilter}>
-                  <FilterAltOff />
-                </IconButton>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Tooltip title="Clear filters">
+                <span>
+                  <IconButton
+                    onClick={() => { setSearch(''); setStatusFilter(''); setPage(0); }}
+                    color="primary"
+                    disabled={isLoading || (!search && !statusFilter)}
+                  >
+                    <FilterAltOff />
+                  </IconButton>
+                </span>
+              </Tooltip>
               <Tooltip title="Refresh">
-                <IconButton
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  color="primary"
-                >
+                <IconButton onClick={refetch} disabled={isLoading} color="primary">
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
@@ -293,10 +191,8 @@ const AppointmentTypesListPage = () => {
           </Grid>
         </Grid>
 
-        {loading ? (
-          <Box display="flex" justifyContent="center" p={4}>
-            <CircularProgress />
-          </Box>
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
         ) : (
           <>
             <TableContainer>
@@ -315,9 +211,7 @@ const AppointmentTypesListPage = () => {
                   {appointmentTypes.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">
-                          No appointment types found
-                        </Typography>
+                        <Typography color="text.secondary">No appointment types found</Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -325,35 +219,18 @@ const AppointmentTypesListPage = () => {
                       <TableRow key={type._id || type.id} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar
-                              sx={{
-                                width: 32,
-                                height: 32,
-                                bgcolor: 'grey.300',
-                                color: 'grey.700',
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold',
-                              }}
-                            >
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'grey.300', color: 'grey.700', fontSize: '0.75rem', fontWeight: 'bold' }}>
                               {type.name ? type.name.substring(0, 2).toUpperCase() : 'AT'}
                             </Avatar>
-                            <Typography variant="body2" fontWeight="medium">
-                              {type.name}
-                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">{type.name}</Typography>
                           </Box>
                         </TableCell>
                         <TableCell>{type.defaultDuration || '-'}</TableCell>
-                        <TableCell>
-                          {type.defaultPrice
-                            ? `$${type.defaultPrice.toFixed(2)}`
-                            : '-'}
-                        </TableCell>
+                        <TableCell>{type.defaultPrice ? `$${type.defaultPrice.toFixed(2)}` : '-'}</TableCell>
                         <TableCell>
                           <Chip
                             label={type.requiresAuthorization ? 'Yes' : 'No'}
-                            color={
-                              type.requiresAuthorization ? 'warning' : 'default'
-                            }
+                            color={type.requiresAuthorization ? 'warning' : 'default'}
                             size="small"
                           />
                         </TableCell>
@@ -367,14 +244,7 @@ const AppointmentTypesListPage = () => {
                         <TableCell align="right">
                           <IconButton
                             size="small"
-                            onClick={(e) =>
-                              handleActionMenuOpen(
-                                e,
-                                type._id || type.id,
-                                type.name,
-                                type.isActive
-                              )
-                            }
+                            onClick={(e) => setActionMenu({ anchorEl: e.currentTarget, typeId: type._id || type.id, typeName: type.name, isActive: type.isActive })}
                           >
                             <MoreVertIcon />
                           </IconButton>
@@ -387,11 +257,11 @@ const AppointmentTypesListPage = () => {
             </TableContainer>
             <TablePagination
               component="div"
-              count={totalTypes}
+              count={total}
               page={page}
-              onPageChange={handleChangePage}
+              onPageChange={(_, newPage) => setPage(newPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
+              onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
               rowsPerPageOptions={[5, 10, 25, 50]}
             />
           </>
@@ -401,59 +271,36 @@ const AppointmentTypesListPage = () => {
       <Menu
         anchorEl={actionMenu.anchorEl}
         open={Boolean(actionMenu.anchorEl)}
-        onClose={handleActionMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        onClose={closeActionMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={() => handleViewDetails(actionMenu.typeId)}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { closeActionMenu(); navigate(`/appointment-types/${actionMenu.typeId}`); }}>
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleEdit(actionMenu.typeId)}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { closeActionMenu(); navigate(`/appointment-types/${actionMenu.typeId}/edit`); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem>
-        <MenuItem
-          onClick={() =>
-            handleToggleActive(actionMenu.typeId, actionMenu.isActive)
-          }
-          disabled={toggleLoading}
-        >
+        <MenuItem onClick={() => handleToggleActive(actionMenu.typeId, actionMenu.isActive)} disabled={toggleLoading}>
           <ListItemIcon>
-            {actionMenu.isActive ? (
-              <CancelIcon fontSize="small" />
-            ) : (
-              <CheckCircleIcon fontSize="small" />
-            )}
+            {actionMenu.isActive ? <CancelIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
           </ListItemIcon>
-          <ListItemText>
-            {actionMenu.isActive ? 'Deactivate' : 'Activate'}
-          </ListItemText>
+          <ListItemText>{actionMenu.isActive ? 'Deactivate' : 'Activate'}</ListItemText>
         </MenuItem>
         <MenuItem
-          onClick={() => handleDelete(actionMenu.typeId, actionMenu.typeName)}
+          onClick={() => { closeActionMenu(); setDeleteDialog({ open: true, typeId: actionMenu.typeId, typeName: actionMenu.typeName }); }}
           sx={{ color: 'error.main' }}
         >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
 
       <ConfirmationDialog
         open={deleteDialog.open}
-        onClose={handleDeleteCancel}
+        onClose={() => setDeleteDialog({ open: false, typeId: null, typeName: '' })}
         onConfirm={handleDeleteConfirm}
         title="Delete Appointment Type"
         message={`Are you sure you want to delete appointment type "${deleteDialog.typeName}"? This action cannot be undone.`}

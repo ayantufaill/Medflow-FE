@@ -1,23 +1,6 @@
-/**
- * useAppointmentTypes Hook - React Query
- * 
- * Purpose:
- * Fetches and caches appointment types data
- * 
- * Why React Query:
- * - Appointment types are used in multiple forms and pages
- * - Static data that benefits from caching
- * - Automatic request deduplication
- * 
- * @author Senior Software Engineer
- */
-
 import { useQuery } from '@tanstack/react-query';
 import { appointmentTypeService } from '../../services/appointment-type.service';
 
-/**
- * Query key factory for appointment types
- */
 export const appointmentTypeKeys = {
   all: ['appointmentTypes'],
   lists: () => [...appointmentTypeKeys.all, 'list'],
@@ -27,41 +10,33 @@ export const appointmentTypeKeys = {
 };
 
 /**
- * Fetch all appointment types
+ * Fetch appointment types with pagination, search, and status filter.
+ * @param {Object} options
+ * @param {number}        options.page
+ * @param {number}        options.limit
+ * @param {string}        options.search
+ * @param {boolean|null}  options.isActive  — true = active only, false = inactive only, null = all
  */
 export const useAppointmentTypes = (options = {}) => {
-  const { page = 1, limit = 100, search = '', activeOnly = false } = options;
+  const { page = 1, limit = 100, search = '', isActive = null } = options;
 
   return useQuery({
-    queryKey: appointmentTypeKeys.list({ page, limit, search, activeOnly }),
-    queryFn: async () => {
-      const result = await appointmentTypeService.getAllAppointmentTypes(
-        page,
-        limit,
-        search,
-        activeOnly
-      );
-      return result;
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes (appointment types rarely change)
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    queryKey: appointmentTypeKeys.list({ page, limit, search, isActive }),
+    queryFn: () =>
+      appointmentTypeService.getAllAppointmentTypes(page, limit, search, isActive),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 
-/**
- * Fetch appointment type by ID
- */
 export const useAppointmentType = (appointmentTypeId) => {
   return useQuery({
     queryKey: appointmentTypeKeys.detail(appointmentTypeId),
-    queryFn: async () => {
-      if (!appointmentTypeId) return null;
-      const appointmentType = await appointmentTypeService.getAppointmentTypeById(
-        appointmentTypeId
-      );
-      return appointmentType;
-    },
+    queryFn: () => appointmentTypeService.getAppointmentTypeById(appointmentTypeId),
     enabled: !!appointmentTypeId,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
