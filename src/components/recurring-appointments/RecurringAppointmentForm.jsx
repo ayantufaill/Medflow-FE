@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Box,
@@ -36,7 +36,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { recurringAppointmentValidations } from '../../validations/recurringAppointmentValidations';
-import { patientService } from '../../services/patient.service';
 import { recurringAppointmentService } from '../../services/recurring-appointment.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { waitlistService } from '../../services/waitlist.service';
@@ -49,17 +48,18 @@ const RecurringAppointmentForm = ({
   isEditMode = false,
   hideButtons = false,
   formId,
+  patients = [],
+  loadingPatients = false,
+  onPatientSearch,
 }) => {
-  // Redux cached dropdown data
   const {
     providers,
     appointmentTypes,
-    providersLoading: providerSearchLoading,
-    appointmentTypesLoading: appointmentTypeSearchLoading,
+    providersLoading,
+    appointmentTypesLoading,
   } = useDropdownData({ providers: true, appointmentTypes: true });
 
-  const [patients, setPatients] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const patientSearchTimerRef = useRef(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -68,52 +68,7 @@ const RecurringAppointmentForm = ({
   const [editingConflict, setEditingConflict] = useState(null);
   const [waitlistLoading, setWaitlistLoading] = useState({});
   const [addedToWaitlist, setAddedToWaitlist] = useState({});
-  const [patientSearchLoading, setPatientSearchLoading] = useState(false);
   const { showSnackbar } = useSnackbar();
-
-  const debounce = useCallback((func, wait) => {
-    let timeout;
-    return (...args) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  }, []);
-
-  const searchPatients = useCallback(
-    debounce(async (searchTerm) => {
-      try {
-        setPatientSearchLoading(true);
-        const result = await patientService.getAllPatients(1, 20, searchTerm, 'active');
-        setPatients(result.patients || []);
-      } catch (err) {
-        console.error('Error searching patients:', err);
-      } finally {
-        setPatientSearchLoading(false);
-      }
-    }, 300),
-    [debounce]
-  );
-
-  // Providers and types come from Redux cache - no separate fetch needed
-  const searchProviders = useCallback(() => {}, []);
-  const searchAppointmentTypes = useCallback(() => {}, []);
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoadingData(true);
-        // Only fetch patients — providers & types come from Redux
-        const patientsResult = await patientService.getAllPatients(1, 20, '', 'active');
-        setPatients(patientsResult.patients || []);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    fetchInitialData();
-  }, []);
 
   const {
     register,
@@ -162,15 +117,10 @@ const RecurringAppointmentForm = ({
       if (start.isValid() && end.isValid() && end.isAfter(start)) {
         const diffDays = end.diff(start, 'day');
         let intervalDays = 7;
-        if (frequency === 'weekly') {
-          intervalDays = 7 * (Number(frequencyValue) || 1);
-        } else if (frequency === 'monthly') {
-          intervalDays = 30 * (Number(frequencyValue) || 1);
-        } else if (frequency === 'quarterly') {
-          intervalDays = 90 * (Number(frequencyValue) || 1);
-        }
-        const calculatedTotal = Math.floor(diffDays / intervalDays) + 1;
-        const cappedTotal = Math.min(Math.max(calculatedTotal, 1), 100);
+        if (frequency === 'weekly') intervalDays = 7 * (Number(frequencyValue) || 1);
+        else if (frequency === 'monthly') intervalDays = 30 * (Number(frequencyValue) || 1);
+        else if (frequency === 'quarterly') intervalDays = 90 * (Number(frequencyValue) || 1);
+        const cappedTotal = Math.min(Math.max(Math.floor(diffDays / intervalDays) + 1, 1), 100);
         setValue('totalAppointments', cappedTotal);
       }
     }
@@ -181,15 +131,11 @@ const RecurringAppointmentForm = ({
       const parseTime = (timeString) => {
         if (!timeString) return null;
         try {
-          if (dayjs.isDayjs(timeString)) {
-            return timeString.isValid() ? timeString : null;
-          }
+          if (dayjs.isDayjs(timeString)) return timeString.isValid() ? timeString : null;
           if (typeof timeString === 'string') {
             const [hours, minutes] = timeString.split(':');
             if (hours && minutes) {
-              const parsed = dayjs()
-                .hour(parseInt(hours, 10))
-                .minute(parseInt(minutes, 10));
+              const parsed = dayjs().hour(parseInt(hours, 10)).minute(parseInt(minutes, 10));
               return parsed.isValid() ? parsed : null;
             }
           }
@@ -202,9 +148,7 @@ const RecurringAppointmentForm = ({
       const parseDate = (dateValue) => {
         if (!dateValue) return null;
         try {
-          if (dayjs.isDayjs(dateValue)) {
-            return dateValue.isValid() ? dateValue : null;
-          }
+          if (dayjs.isDayjs(dateValue)) return dateValue.isValid() ? dateValue : null;
           const parsed = dayjs(dateValue);
           return parsed.isValid() ? parsed : null;
         } catch {
@@ -215,18 +159,14 @@ const RecurringAppointmentForm = ({
       reset({
         patientId: initialData.patientId?._id || initialData.patientId || '',
         providerId: initialData.providerId?._id || initialData.providerId || '',
-        appointmentTypeId:
-          initialData.appointmentTypeId?._id ||
-          initialData.appointmentTypeId ||
-          '',
+        appointmentTypeId: initialData.appointmentTypeId?._id || initialData.appointmentTypeId || '',
         frequency: initialData.frequency || 'weekly',
         frequencyValue: initialData.frequencyValue || 1,
         startDate: parseDate(initialData.startDate),
         endDate: parseDate(initialData.endDate),
         preferredTime: parseTime(initialData.preferredTime),
         preferredDayOfWeek:
-          initialData.preferredDayOfWeek !== undefined &&
-          initialData.preferredDayOfWeek !== null
+          initialData.preferredDayOfWeek !== undefined && initialData.preferredDayOfWeek !== null
             ? initialData.preferredDayOfWeek
             : '',
         totalAppointments: initialData.totalAppointments || '',
@@ -235,15 +175,9 @@ const RecurringAppointmentForm = ({
     }
   }, [initialData, reset]);
 
-  const handleBack = () => {
-    window.history.back();
-  };
-
   const formatTimeValue = (timeValue) => {
     if (!timeValue) return undefined;
-    if (typeof timeValue === 'string') {
-      return timeValue.trim() !== '' ? timeValue : undefined;
-    }
+    if (typeof timeValue === 'string') return timeValue.trim() !== '' ? timeValue : undefined;
     try {
       return timeValue.format('HH:mm');
     } catch {
@@ -251,169 +185,135 @@ const RecurringAppointmentForm = ({
     }
   };
 
-  const buildPreviewPayload = (formData) => {
-    return {
-      providerId: formData.providerId,
-      appointmentTypeId: formData.appointmentTypeId || undefined,
-      frequency: formData.frequency,
-      frequencyValue: formData.frequencyValue,
-      startDate: formData.startDate?.format('YYYY-MM-DD'),
-      endDate: formData.endDate?.format('YYYY-MM-DD'),
-      preferredTime: formatTimeValue(formData.preferredTime),
-      preferredDayOfWeek: formData.preferredDayOfWeek !== '' && formData.preferredDayOfWeek !== null ? Number(formData.preferredDayOfWeek) : undefined,
-      totalAppointments: formData.totalAppointments ? Number(formData.totalAppointments) : undefined,
-    };
-  };
+  const buildPreviewPayload = (formData) => ({
+    providerId: formData.providerId,
+    appointmentTypeId: formData.appointmentTypeId || undefined,
+    frequency: formData.frequency,
+    frequencyValue: formData.frequencyValue,
+    startDate: formData.startDate?.format('YYYY-MM-DD'),
+    endDate: formData.endDate?.format('YYYY-MM-DD'),
+    preferredTime: formatTimeValue(formData.preferredTime),
+    preferredDayOfWeek:
+      formData.preferredDayOfWeek !== '' && formData.preferredDayOfWeek !== null
+        ? Number(formData.preferredDayOfWeek)
+        : undefined,
+    totalAppointments: formData.totalAppointments ? Number(formData.totalAppointments) : undefined,
+  });
 
   const buildSanitizedData = (formData) => {
-    const sanitizedData = {};
-
     const getStringValue = (value) => {
       if (!value) return undefined;
       const str = typeof value === 'string' ? value : String(value);
       return str.trim() !== '' ? str.trim() : undefined;
     };
 
+    const sanitizedData = {};
+
     const patientId = getStringValue(formData.patientId);
     if (patientId) sanitizedData.patientId = patientId;
-    
+
     const providerId = getStringValue(formData.providerId);
     if (providerId) sanitizedData.providerId = providerId;
-    
+
     sanitizedData.frequency = getStringValue(formData.frequency) || 'weekly';
-    
+
     if (formData.frequencyValue) {
       const freqValue = Number(formData.frequencyValue);
       if (!isNaN(freqValue) && freqValue > 0) sanitizedData.frequencyValue = freqValue;
     }
-    
+
     if (formData.startDate) {
-      try {
-        sanitizedData.startDate = formData.startDate.format('YYYY-MM-DD');
-      } catch { /* ignore invalid date */ }
+      try { sanitizedData.startDate = formData.startDate.format('YYYY-MM-DD'); } catch { /* ignore */ }
     }
-    
+
     const formattedTime = formatTimeValue(formData.preferredTime);
     if (formattedTime) sanitizedData.preferredTime = formattedTime;
 
     const appointmentTypeId = getStringValue(formData.appointmentTypeId);
     if (appointmentTypeId) sanitizedData.appointmentTypeId = appointmentTypeId;
-    
+
     if (formData.endDate) {
-      try {
-        sanitizedData.endDate = formData.endDate.format('YYYY-MM-DD');
-      } catch { /* ignore invalid date */ }
+      try { sanitizedData.endDate = formData.endDate.format('YYYY-MM-DD'); } catch { /* ignore */ }
     }
-    
-    if (formData.preferredDayOfWeek !== '' && formData.preferredDayOfWeek !== null && formData.preferredDayOfWeek !== undefined) {
+
+    if (
+      formData.preferredDayOfWeek !== '' &&
+      formData.preferredDayOfWeek !== null &&
+      formData.preferredDayOfWeek !== undefined
+    ) {
       const dayOfWeek = Number(formData.preferredDayOfWeek);
-      if (!isNaN(dayOfWeek) && dayOfWeek >= 0 && dayOfWeek <= 6) sanitizedData.preferredDayOfWeek = dayOfWeek;
+      if (!isNaN(dayOfWeek) && dayOfWeek >= 0 && dayOfWeek <= 6) {
+        sanitizedData.preferredDayOfWeek = dayOfWeek;
+      }
     }
-    
-    if (formData.totalAppointments && formData.totalAppointments !== '' && formData.totalAppointments !== null) {
+
+    if (formData.totalAppointments && formData.totalAppointments !== '') {
       const total = Number(formData.totalAppointments);
       if (!isNaN(total) && total > 0) sanitizedData.totalAppointments = total;
     }
-    
+
     if (formData.isActive !== undefined) sanitizedData.isActive = formData.isActive;
 
     return sanitizedData;
   };
 
-  const handleFormSubmit = async (formData) => {
-    if (isEditMode) {
-      const sanitizedData = buildSanitizedData(formData);
-      onSubmit(sanitizedData);
-      return;
-    }
-
+  const runPreview = async (formData) => {
     const previewPayload = buildPreviewPayload(formData);
-    
+
     if (!previewPayload.providerId || !previewPayload.startDate || !previewPayload.preferredTime) {
       showSnackbar('Please fill in Provider, Start Date, and Preferred Time', 'warning');
-      return;
+      return null;
     }
-
     if (!previewPayload.totalAppointments && !previewPayload.endDate) {
       showSnackbar('Please provide Total Appointments or End Date', 'warning');
-      return;
+      return null;
     }
 
+    setPreviewLoading(true);
+    setPreviewError('');
     try {
-      setPreviewLoading(true);
-      setPreviewError('');
       const result = await recurringAppointmentService.previewRecurringAppointments(previewPayload);
-      setPreviewData(result);
-      setAppointmentOverrides({});
-      setAddedToWaitlist({});
-      setPreviewOpen(true);
+      return result;
     } catch (err) {
-      showSnackbar(
+      const msg =
         err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to check for conflicts',
-        'error'
-      );
+        err.response?.data?.message ||
+        'Failed to preview appointments. Please check your inputs.';
+      setPreviewError(msg);
+      showSnackbar(msg, 'error');
+      return null;
     } finally {
       setPreviewLoading(false);
     }
   };
 
+  const handleFormSubmit = async (formData) => {
+    if (isEditMode) {
+      onSubmit(buildSanitizedData(formData));
+      return;
+    }
+
+    const result = await runPreview(formData);
+    if (!result) return;
+
+    setPreviewData(result);
+    setAppointmentOverrides({});
+    setAddedToWaitlist({});
+    setPreviewOpen(true);
+  };
+
   const handlePreview = async () => {
-    const formValues = watch();
-    const previewPayload = buildPreviewPayload(formValues);
+    const result = await runPreview(watch());
+    if (!result) return;
 
-    if (!previewPayload.providerId || !previewPayload.startDate || !previewPayload.preferredTime) {
-      showSnackbar('Please fill in Provider, Start Date, and Preferred Time before previewing', 'warning');
-      return;
-    }
-
-    if (!previewPayload.totalAppointments && !previewPayload.endDate) {
-      showSnackbar('Please provide Total Appointments or End Date to preview', 'warning');
-      return;
-    }
-
-    try {
-      setPreviewLoading(true);
-      setPreviewError('');
-      const result = await recurringAppointmentService.previewRecurringAppointments(previewPayload);
-      setPreviewData(result);
-      setAppointmentOverrides({});
-      setAddedToWaitlist({});
-      setPreviewOpen(true);
-    } catch (err) {
-      setPreviewError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to preview appointments. Please check your inputs.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to preview appointments',
-        'error'
-      );
-    } finally {
-      setPreviewLoading(false);
-    }
+    setPreviewData(result);
+    setAppointmentOverrides({});
+    setAddedToWaitlist({});
+    setPreviewOpen(true);
   };
 
   const handleConfirmCreate = async () => {
     const formValues = watch();
-    
-    const formatTime = (timeValue) => {
-      if (!timeValue) return undefined;
-      if (typeof timeValue === 'string') {
-        return timeValue.trim() !== '' ? timeValue : undefined;
-      }
-      try {
-        return timeValue.format('HH:mm');
-      } catch {
-        return undefined;
-      }
-    };
-
-    // Build overrides array from state
     const overridesArray = Object.entries(appointmentOverrides).map(([key, value]) => ({
       appointmentNumber: parseInt(key),
       ...value,
@@ -427,31 +327,32 @@ const RecurringAppointmentForm = ({
       frequencyValue: formValues.frequencyValue,
       startDate: formValues.startDate?.format('YYYY-MM-DD'),
       endDate: formValues.endDate?.format('YYYY-MM-DD'),
-      preferredTime: formatTime(formValues.preferredTime),
-      preferredDayOfWeek: formValues.preferredDayOfWeek !== '' && formValues.preferredDayOfWeek !== null ? Number(formValues.preferredDayOfWeek) : undefined,
+      preferredTime: formatTimeValue(formValues.preferredTime),
+      preferredDayOfWeek:
+        formValues.preferredDayOfWeek !== '' && formValues.preferredDayOfWeek !== null
+          ? Number(formValues.preferredDayOfWeek)
+          : undefined,
       totalAppointments: formValues.totalAppointments ? Number(formValues.totalAppointments) : undefined,
       appointmentOverrides: overridesArray.length > 0 ? overridesArray : undefined,
     };
 
     setPreviewOpen(false);
-    onSubmit(payload, true); // Pass flag indicating to use with-resolution endpoint
+    onSubmit(payload, true);
   };
 
   const handleSkipConflict = (appointmentNumber) => {
-    setAppointmentOverrides(prev => ({
+    setAppointmentOverrides((prev) => ({
       ...prev,
       [appointmentNumber]: { ...prev[appointmentNumber], skip: true },
     }));
   };
 
   const handleUnskipConflict = (appointmentNumber) => {
-    setAppointmentOverrides(prev => {
+    setAppointmentOverrides((prev) => {
       const updated = { ...prev };
       if (updated[appointmentNumber]) {
         delete updated[appointmentNumber].skip;
-        if (Object.keys(updated[appointmentNumber]).length === 0) {
-          delete updated[appointmentNumber];
-        }
+        if (Object.keys(updated[appointmentNumber]).length === 0) delete updated[appointmentNumber];
       }
       return updated;
     });
@@ -468,7 +369,7 @@ const RecurringAppointmentForm = ({
 
   const handleSaveConflictEdit = () => {
     if (editingConflict) {
-      setAppointmentOverrides(prev => ({
+      setAppointmentOverrides((prev) => ({
         ...prev,
         [editingConflict.appointmentNumber]: {
           customDate: editingConflict.date.format('YYYY-MM-DD'),
@@ -478,10 +379,6 @@ const RecurringAppointmentForm = ({
       }));
       setEditingConflict(null);
     }
-  };
-
-  const handleCancelConflictEdit = () => {
-    setEditingConflict(null);
   };
 
   const getAppointmentStatus = (apt) => {
@@ -495,10 +392,9 @@ const RecurringAppointmentForm = ({
 
   const handleAddToWaitlist = async (apt) => {
     const formValues = watch();
-    const appointmentNumber = apt.appointmentNumber;
-    
-    setWaitlistLoading(prev => ({ ...prev, [appointmentNumber]: true }));
-    
+    const { appointmentNumber } = apt;
+
+    setWaitlistLoading((prev) => ({ ...prev, [appointmentNumber]: true }));
     try {
       await waitlistService.createWaitlistEntry({
         patientId: formValues.patientId,
@@ -510,49 +406,33 @@ const RecurringAppointmentForm = ({
         priority: 'normal',
         notes: `From recurring appointment - Appointment #${appointmentNumber} had a conflict`,
       });
-      
-      setAddedToWaitlist(prev => ({ ...prev, [appointmentNumber]: true }));
-      setAppointmentOverrides(prev => ({
+
+      setAddedToWaitlist((prev) => ({ ...prev, [appointmentNumber]: true }));
+      setAppointmentOverrides((prev) => ({
         ...prev,
         [appointmentNumber]: { ...prev[appointmentNumber], skip: true },
       }));
       showSnackbar(`Appointment #${appointmentNumber} added to waitlist`, 'success');
     } catch (err) {
       showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to add to waitlist',
+        err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add to waitlist',
         'error'
       );
     } finally {
-      setWaitlistLoading(prev => ({ ...prev, [appointmentNumber]: false }));
+      setWaitlistLoading((prev) => ({ ...prev, [appointmentNumber]: false }));
     }
   };
 
   const hasUnresolvedConflicts = () => {
     if (!previewData?.previewAppointments) return false;
-    return previewData.previewAppointments.some(apt => {
-      if (!apt.hasConflict) return false;
-      const status = getAppointmentStatus(apt);
-      return status === 'conflict';
-    });
-  };
-
-  if (loadingData) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
+    return previewData.previewAppointments.some(
+      (apt) => apt.hasConflict && getAppointmentStatus(apt) === 'conflict'
     );
-  }
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box
-        component="form"
-        id={formId}
-        onSubmit={handleSubmit(handleFormSubmit)}
-      >
+      <Box component="form" id={formId} onSubmit={handleSubmit(handleFormSubmit)}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
@@ -560,36 +440,31 @@ const RecurringAppointmentForm = ({
               control={control}
               rules={recurringAppointmentValidations.patientId}
               render={({ field }) => {
-                const selectedPatient = patients.find(
-                  (p) => (p._id || p.id) === field.value
-                );
+                const selectedPatient = patients.find((p) => (p._id || p.id) === field.value);
                 return (
                   <Autocomplete
                     disabled={isEditMode}
                     options={patients}
-                    loading={patientSearchLoading}
+                    loading={loadingPatients}
                     filterOptions={(x) => x}
                     getOptionLabel={(option) =>
-                      option
-                        ? `${option.firstName} ${option.lastName} (${option.patientCode})`
-                        : ''
+                      option ? `${option.firstName} ${option.lastName} (${option.patientCode})` : ''
                     }
                     value={selectedPatient || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
                     }}
                     onInputChange={(event, value, reason) => {
                       if (reason === 'input') {
-                        searchPatients(value);
+                        if (patientSearchTimerRef.current) clearTimeout(patientSearchTimerRef.current);
+                        patientSearchTimerRef.current = setTimeout(() => {
+                          onPatientSearch?.(value);
+                        }, 300);
                       } else if (reason === 'clear') {
-                        searchPatients('');
+                        onPatientSearch?.('');
                       }
                     }}
-                    onBlur={() => {
-                      searchPatients('');
-                    }}
+                    onBlur={() => onPatientSearch?.('')}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
                     }
@@ -604,7 +479,7 @@ const RecurringAppointmentForm = ({
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {patientSearchLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {loadingPatients ? <CircularProgress color="inherit" size={20} /> : null}
                               {params.InputProps.endAdornment}
                             </>
                           ),
@@ -616,49 +491,46 @@ const RecurringAppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="providerId"
               control={control}
               rules={recurringAppointmentValidations.providerId}
               render={({ field }) => {
-                const selectedProvider = providers.find(
-                  (p) => (p._id || p.id) === field.value
-                );
+                const selectedProvider = providers.find((p) => (p._id || p.id) === field.value);
                 return (
                   <Autocomplete
                     options={providers}
-                    loading={providerSearchLoading}
-                    filterOptions={(x) => x}
+                    loading={providersLoading}
                     getOptionLabel={(option) => {
                       if (!option) return '';
-                      const firstName = option.userId?.firstName || '';
-                      const lastName = option.userId?.lastName || '';
+                      const firstName = option.userId?.firstName || option.firstName || '';
+                      const lastName = option.userId?.lastName || option.lastName || '';
                       const code = option.providerCode || '';
                       const name = `${firstName} ${lastName}`.trim();
-                      return name
-                        ? `${name} (${code})`
-                        : code || 'Unknown Provider';
+                      return name ? `${name} (${code})` : code || 'Unknown Provider';
                     }}
                     value={selectedProvider || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
-                    }}
-                    onInputChange={(event, value, reason) => {
-                      if (reason === 'input') {
-                        searchProviders(value);
-                      } else if (reason === 'clear') {
-                        searchProviders('');
-                      }
-                    }}
-                    onBlur={() => {
-                      searchProviders('');
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
                     }}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
                     }
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const q = inputValue.toLowerCase();
+                      return options.filter((o) => {
+                        const firstName = o.userId?.firstName || o.firstName || '';
+                        const lastName = o.userId?.lastName || o.lastName || '';
+                        return (
+                          firstName.toLowerCase().includes(q) ||
+                          lastName.toLowerCase().includes(q) ||
+                          (o.providerCode || '').toLowerCase().includes(q)
+                        );
+                      });
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -670,7 +542,7 @@ const RecurringAppointmentForm = ({
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {providerSearchLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {providersLoading ? <CircularProgress color="inherit" size={20} /> : null}
                               {params.InputProps.endAdornment}
                             </>
                           ),
@@ -682,40 +554,31 @@ const RecurringAppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="appointmentTypeId"
               control={control}
               rules={recurringAppointmentValidations.appointmentTypeId}
               render={({ field }) => {
-                const selectedType = appointmentTypes.find(
-                  (t) => (t._id || t.id) === field.value
-                );
+                const selectedType = appointmentTypes.find((t) => (t._id || t.id) === field.value);
                 return (
                   <Autocomplete
                     options={appointmentTypes}
-                    loading={appointmentTypeSearchLoading}
-                    filterOptions={(x) => x}
+                    loading={appointmentTypesLoading}
                     getOptionLabel={(option) => (option ? option.name : '')}
                     value={selectedType || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
-                    }}
-                    onInputChange={(event, value, reason) => {
-                      if (reason === 'input') {
-                        searchAppointmentTypes(value);
-                      } else if (reason === 'clear') {
-                        searchAppointmentTypes('');
-                      }
-                    }}
-                    onBlur={() => {
-                      searchAppointmentTypes('');
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
                     }}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
                     }
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const q = inputValue.toLowerCase();
+                      return options.filter((o) => o.name?.toLowerCase().includes(q));
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -727,7 +590,7 @@ const RecurringAppointmentForm = ({
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {appointmentTypeSearchLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {appointmentTypesLoading ? <CircularProgress color="inherit" size={20} /> : null}
                               {params.InputProps.endAdornment}
                             </>
                           ),
@@ -739,6 +602,7 @@ const RecurringAppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth error={!!errors.frequency}>
               <InputLabel>Frequency *</InputLabel>
@@ -759,59 +623,42 @@ const RecurringAppointmentForm = ({
                   </Select>
                 )}
               />
-              {errors.frequency && (
-                <FormHelperText>{errors.frequency.message}</FormHelperText>
-              )}
+              {errors.frequency && <FormHelperText>{errors.frequency.message}</FormHelperText>}
             </FormControl>
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Frequency Value *"
               type="number"
-              {...register(
-                'frequencyValue',
-                recurringAppointmentValidations.frequencyValue
-              )}
+              {...register('frequencyValue', recurringAppointmentValidations.frequencyValue)}
               error={!!errors.frequencyValue}
               helperText={
                 errors.frequencyValue?.message ||
                 (() => {
                   const val = Number(frequencyValue) || 1;
-                  if (frequency === 'weekly') {
-                    return val === 1
-                      ? 'This appointment will occur every week.'
-                      : `This appointment will occur every ${val} weeks.`;
-                  } else if (frequency === 'monthly') {
-                    return val === 1
-                      ? 'This appointment will occur every month.'
-                      : `This appointment will occur every ${val} months.`;
-                  } else if (frequency === 'quarterly') {
-                    return val === 1
-                      ? 'This appointment will occur every quarter.'
-                      : `This appointment will occur every ${val} quarters.`;
-                  }
+                  if (frequency === 'weekly') return val === 1 ? 'Every week.' : `Every ${val} weeks.`;
+                  if (frequency === 'monthly') return val === 1 ? 'Every month.' : `Every ${val} months.`;
+                  if (frequency === 'quarterly') return val === 1 ? 'Every quarter.' : `Every ${val} quarters.`;
                   return 'How often (e.g., every 2 weeks)';
                 })()
               }
               inputProps={{ min: 1, max: 52 }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="startDate"
               control={control}
               rules={recurringAppointmentValidations.startDate}
               render={({ field }) => {
-                // Ensure value is always a dayjs object or null
                 let dateValue = null;
                 if (field.value) {
                   if (dayjs.isDayjs(field.value)) {
                     dateValue = field.value.isValid() ? field.value : null;
-                  } else if (
-                    typeof field.value === 'string' ||
-                    field.value instanceof Date
-                  ) {
+                  } else if (typeof field.value === 'string' || field.value instanceof Date) {
                     const parsed = dayjs(field.value);
                     dateValue = parsed.isValid() ? parsed : null;
                   }
@@ -834,30 +681,24 @@ const RecurringAppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="endDate"
               control={control}
               rules={recurringAppointmentValidations.endDate}
               render={({ field }) => {
-                // Ensure value is always a dayjs object or null
                 let dateValue = null;
                 if (field.value) {
                   if (dayjs.isDayjs(field.value)) {
                     dateValue = field.value.isValid() ? field.value : null;
-                  } else if (
-                    typeof field.value === 'string' ||
-                    field.value instanceof Date
-                  ) {
+                  } else if (typeof field.value === 'string' || field.value instanceof Date) {
                     const parsed = dayjs(field.value);
                     dateValue = parsed.isValid() ? parsed : null;
                   }
                 }
-                // Calculate minDate based on startDate
                 const minDate =
-                  startDate && dayjs.isDayjs(startDate) && startDate.isValid()
-                    ? startDate
-                    : dayjs();
+                  startDate && dayjs.isDayjs(startDate) && startDate.isValid() ? startDate : dayjs();
                 return (
                   <DatePicker
                     label="End Date"
@@ -876,24 +717,21 @@ const RecurringAppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="preferredTime"
               control={control}
               rules={recurringAppointmentValidations.preferredTime}
               render={({ field }) => {
-                // Ensure value is always a dayjs object or null
                 let timeValue = null;
                 if (field.value) {
                   if (dayjs.isDayjs(field.value)) {
                     timeValue = field.value.isValid() ? field.value : null;
                   } else if (typeof field.value === 'string') {
-                    // Parse time string (HH:mm format)
                     const [hours, minutes] = field.value.split(':');
                     if (hours && minutes) {
-                      const parsed = dayjs()
-                        .hour(parseInt(hours, 10))
-                        .minute(parseInt(minutes, 10));
+                      const parsed = dayjs().hour(parseInt(hours, 10)).minute(parseInt(minutes, 10));
                       timeValue = parsed.isValid() ? parsed : null;
                     }
                   }
@@ -917,6 +755,7 @@ const RecurringAppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth error={!!errors.preferredDayOfWeek}>
               <InputLabel>Preferred Day of Week</InputLabel>
@@ -931,9 +770,7 @@ const RecurringAppointmentForm = ({
                     onChange={(e) => field.onChange(e.target.value)}
                     label="Preferred Day of Week"
                   >
-                    <MenuItem value="">
-                      <em>--Any Day--</em>
-                    </MenuItem>
+                    <MenuItem value=""><em>--Any Day--</em></MenuItem>
                     <MenuItem value={0}>Sunday</MenuItem>
                     <MenuItem value={1}>Monday</MenuItem>
                     <MenuItem value={2}>Tuesday</MenuItem>
@@ -945,21 +782,17 @@ const RecurringAppointmentForm = ({
                 )}
               />
               {errors.preferredDayOfWeek && (
-                <FormHelperText>
-                  {errors.preferredDayOfWeek.message}
-                </FormHelperText>
+                <FormHelperText>{errors.preferredDayOfWeek.message}</FormHelperText>
               )}
             </FormControl>
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Total Appointments"
               type="number"
-              {...register(
-                'totalAppointments',
-                recurringAppointmentValidations.totalAppointments
-              )}
+              {...register('totalAppointments', recurringAppointmentValidations.totalAppointments)}
               error={!!errors.totalAppointments}
               helperText={
                 errors.totalAppointments?.message ||
@@ -968,6 +801,7 @@ const RecurringAppointmentForm = ({
               inputProps={{ min: 1, max: 100 }}
             />
           </Grid>
+
           <Grid size={{ xs: 12 }}>
             <FormControlLabel
               control={
@@ -979,15 +813,11 @@ const RecurringAppointmentForm = ({
               label="Active"
             />
           </Grid>
+
           {!hideButtons && (
             <Grid size={12}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button
-                  type="button"
-                  variant="outlined"
-                  onClick={handleBack}
-                  disabled={loading}
-                >
+                <Button type="button" variant="outlined" onClick={() => window.history.back()} disabled={loading}>
                   Cancel
                 </Button>
                 {!isEditMode && (
@@ -1004,20 +834,10 @@ const RecurringAppointmentForm = ({
                 <Button
                   type="submit"
                   variant="contained"
-                  startIcon={
-                    loading ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <SaveIcon />
-                    )
-                  }
+                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                   disabled={loading}
                 >
-                  {loading
-                    ? 'Saving...'
-                    : isEditMode
-                    ? 'Save Changes'
-                    : 'Create Recurring Appointment'}
+                  {loading ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Recurring Appointment'}
                 </Button>
               </Box>
             </Grid>
@@ -1026,12 +846,7 @@ const RecurringAppointmentForm = ({
       </Box>
 
       {/* Preview Dialog */}
-      <Dialog
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Preview Recurring Appointments</Typography>
           <IconButton onClick={() => setPreviewOpen(false)} size="small">
@@ -1041,36 +856,23 @@ const RecurringAppointmentForm = ({
         <DialogContent>
           {previewError && (
             <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1 }}>
-              <Typography variant="body2" color="error.contrastText">
-                {previewError}
-              </Typography>
+              <Typography variant="body2" color="error.contrastText">{previewError}</Typography>
             </Box>
           )}
           {previewData && (
             <Box>
               <Box sx={{ mb: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Chip
-                  label={`Total: ${previewData.totalCount} appointments`}
-                  color="primary"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`Available: ${previewData.availableCount}`}
-                  color="success"
-                  variant="outlined"
-                />
+                <Chip label={`Total: ${previewData.totalCount} appointments`} color="primary" variant="outlined" />
+                <Chip label={`Available: ${previewData.availableCount}`} color="success" variant="outlined" />
                 {previewData.conflictCount > 0 && (
-                  <Chip
-                    label={`Conflicts: ${previewData.conflictCount}`}
-                    color="error"
-                    variant="outlined"
-                  />
+                  <Chip label={`Conflicts: ${previewData.conflictCount}`} color="error" variant="outlined" />
                 )}
               </Box>
               {previewData.conflictCount > 0 && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
                   <Typography variant="body2">
-                    {previewData.conflictCount} appointment(s) have conflicts. <strong>You must resolve all conflicts before creating.</strong>
+                    {previewData.conflictCount} appointment(s) have conflicts.{' '}
+                    <strong>You must resolve all conflicts before creating.</strong>
                   </Typography>
                   <Typography variant="body2" component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
                     <li><strong>Skip</strong> - Don't create this appointment</li>
@@ -1099,14 +901,15 @@ const RecurringAppointmentForm = ({
                       const displayDate = override?.customDate ? dayjs(override.customDate) : dayjs(apt.date);
                       const displayStartTime = override?.customStartTime || apt.startTime;
                       const displayEndTime = override?.customEndTime || apt.endTime;
-                      
+
                       return (
                         <TableRow
                           key={apt.appointmentNumber}
                           sx={{
-                            backgroundColor: status === 'conflict' ? 'error.lighter' : 
-                                           status === 'skipped' ? 'action.disabledBackground' :
-                                           status === 'modified' ? 'info.lighter' : 'transparent',
+                            backgroundColor:
+                              status === 'conflict' ? 'error.lighter' :
+                              status === 'skipped' ? 'action.disabledBackground' :
+                              status === 'modified' ? 'info.lighter' : 'transparent',
                             opacity: status === 'skipped' ? 0.6 : 1,
                             textDecoration: status === 'skipped' ? 'line-through' : 'none',
                           }}
@@ -1114,28 +917,25 @@ const RecurringAppointmentForm = ({
                           <TableCell>{apt.appointmentNumber}</TableCell>
                           <TableCell>
                             {displayDate.format('MMM DD, YYYY')}
-                            {override?.customDate && <Typography variant="caption" color="info.main" display="block">(modified)</Typography>}
+                            {override?.customDate && (
+                              <Typography variant="caption" color="info.main" display="block">(modified)</Typography>
+                            )}
                           </TableCell>
+                          <TableCell>{displayDate.format('dddd')}</TableCell>
                           <TableCell>
-                            {displayDate.format('dddd')}
-                          </TableCell>
-                          <TableCell>
-                            {dayjs(`2000-01-01 ${displayStartTime}`).format('h:mm A')} - {dayjs(`2000-01-01 ${displayEndTime}`).format('h:mm A')}
-                            {(override?.customStartTime || override?.customEndTime) && <Typography variant="caption" color="info.main" display="block">(modified)</Typography>}
+                            {dayjs(`2000-01-01 ${displayStartTime}`).format('h:mm A')} -{' '}
+                            {dayjs(`2000-01-01 ${displayEndTime}`).format('h:mm A')}
+                            {(override?.customStartTime || override?.customEndTime) && (
+                              <Typography variant="caption" color="info.main" display="block">(modified)</Typography>
+                            )}
                           </TableCell>
                           <TableCell>{apt.durationMinutes} min</TableCell>
                           <TableCell>
-                            {status === 'waitlisted' ? (
-                              <Chip label="Waitlisted" color="secondary" size="small" />
-                            ) : status === 'skipped' ? (
-                              <Chip label="Skipped" color="default" size="small" />
-                            ) : status === 'modified' ? (
-                              <Chip label="Modified" color="info" size="small" />
-                            ) : status === 'conflict' ? (
-                              <Chip label="Conflict" color="error" size="small" title={apt.conflictReason} />
-                            ) : (
-                              <Chip label="Available" color="success" size="small" />
-                            )}
+                            {status === 'waitlisted' ? <Chip label="Waitlisted" color="secondary" size="small" /> :
+                             status === 'skipped' ? <Chip label="Skipped" color="default" size="small" /> :
+                             status === 'modified' ? <Chip label="Modified" color="info" size="small" /> :
+                             status === 'conflict' ? <Chip label="Conflict" color="error" size="small" title={apt.conflictReason} /> :
+                             <Chip label="Available" color="success" size="small" />}
                           </TableCell>
                           <TableCell>
                             {apt.hasConflict && status === 'conflict' && (
@@ -1146,10 +946,10 @@ const RecurringAppointmentForm = ({
                                 <Button size="small" variant="outlined" color="primary" onClick={() => handleEditConflict(apt)}>
                                   Edit
                                 </Button>
-                                <Button 
-                                  size="small" 
-                                  variant="outlined" 
-                                  color="secondary" 
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="secondary"
                                   onClick={() => handleAddToWaitlist(apt)}
                                   disabled={waitlistLoading[apt.appointmentNumber]}
                                   startIcon={waitlistLoading[apt.appointmentNumber] ? <CircularProgress size={14} /> : <WaitlistIcon />}
@@ -1178,13 +978,12 @@ const RecurringAppointmentForm = ({
                   </TableBody>
                 </Table>
               </TableContainer>
-              {previewData.previewAppointments.some(apt => apt.hasConflict && apt.conflictingAppointments) && (
+
+              {previewData.previewAppointments.some((apt) => apt.hasConflict && apt.conflictingAppointments) && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Conflict Details:
-                  </Typography>
+                  <Typography variant="subtitle2" gutterBottom>Conflict Details:</Typography>
                   {previewData.previewAppointments
-                    .filter(apt => apt.hasConflict && apt.conflictingAppointments)
+                    .filter((apt) => apt.hasConflict && apt.conflictingAppointments)
                     .map((apt) => (
                       <Box key={apt.appointmentNumber} sx={{ mb: 1 }}>
                         <Typography variant="body2" color="error">
@@ -1216,12 +1015,7 @@ const RecurringAppointmentForm = ({
       </Dialog>
 
       {/* Edit Conflict Dialog */}
-      <Dialog
-        open={!!editingConflict}
-        onClose={handleCancelConflictEdit}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={!!editingConflict} onClose={() => setEditingConflict(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Appointment Slot</DialogTitle>
         <DialogContent>
           {editingConflict && (
@@ -1232,21 +1026,21 @@ const RecurringAppointmentForm = ({
               <DatePicker
                 label="Date"
                 value={editingConflict.date}
-                onChange={(newValue) => setEditingConflict(prev => ({ ...prev, date: newValue }))}
+                onChange={(newValue) => setEditingConflict((prev) => ({ ...prev, date: newValue }))}
                 minDate={dayjs()}
                 slotProps={{ textField: { fullWidth: true } }}
               />
               <TimePicker
                 label="Start Time"
                 value={editingConflict.startTime}
-                onChange={(newValue) => setEditingConflict(prev => ({ ...prev, startTime: newValue }))}
+                onChange={(newValue) => setEditingConflict((prev) => ({ ...prev, startTime: newValue }))}
                 ampm={true}
                 slotProps={{ textField: { fullWidth: true } }}
               />
               <TimePicker
                 label="End Time"
                 value={editingConflict.endTime}
-                onChange={(newValue) => setEditingConflict(prev => ({ ...prev, endTime: newValue }))}
+                onChange={(newValue) => setEditingConflict((prev) => ({ ...prev, endTime: newValue }))}
                 ampm={true}
                 slotProps={{ textField: { fullWidth: true } }}
               />
@@ -1254,10 +1048,8 @@ const RecurringAppointmentForm = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancelConflictEdit}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveConflictEdit}>
-            Save Changes
-          </Button>
+          <Button onClick={() => setEditingConflict(null)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveConflictEdit}>Save Changes</Button>
         </DialogActions>
       </Dialog>
     </LocalizationProvider>

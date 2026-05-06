@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -11,6 +11,8 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentService } from '../../services/appointment.service';
+import { patientService } from '../../services/patient.service';
+import { languageService } from '../../services/language.service';
 import AppointmentForm from '../../components/appointments/AppointmentForm';
 
 const EditAppointmentPage = () => {
@@ -21,14 +23,15 @@ const EditAppointmentPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [appointment, setAppointment] = useState(null);
+  const [patients, setPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const [languages, setLanguages] = useState([]);
 
   const fetchAppointment = async () => {
     try {
       setLoading(true);
       setError('');
-      const appointmentData = await appointmentService.getAppointmentById(
-        appointmentId
-      );
+      const appointmentData = await appointmentService.getAppointmentById(appointmentId);
       setAppointment(appointmentData);
     } catch (err) {
       setError(
@@ -41,19 +44,32 @@ const EditAppointmentPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (appointmentId) {
-      fetchAppointment();
+  const searchPatients = useCallback(async (search = '') => {
+    try {
+      setLoadingPatients(true);
+      const result = await patientService.getAllPatients(1, 20, search, 'active');
+      setPatients(result.patients || []);
+    } catch {
+      setPatients([]);
+    } finally {
+      setLoadingPatients(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (appointmentId) fetchAppointment();
   }, [appointmentId]);
+
+  useEffect(() => {
+    searchPatients('');
+    languageService.getAllLanguages(true).then((result) => setLanguages(result || [])).catch(() => {});
+  }, [searchPatients]);
 
   const onSubmit = async (data) => {
     try {
       setSaving(true);
       setError('');
-
       await appointmentService.updateAppointment(appointmentId, data);
-
       showSnackbar('Appointment updated successfully', 'success');
       navigate('/appointments');
     } catch (err) {
@@ -70,12 +86,7 @@ const EditAppointmentPage = () => {
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
     );
@@ -97,14 +108,10 @@ const EditAppointmentPage = () => {
     );
   }
 
-  const handleBack = () => {
-    window.history.back();
-  };
-
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={handleBack}>
+        <IconButton onClick={() => window.history.back()}>
           <ArrowBackIcon />
         </IconButton>
         <Box sx={{ flexGrow: 1 }}>
@@ -129,6 +136,10 @@ const EditAppointmentPage = () => {
           initialData={appointment}
           loading={saving}
           isEditMode={true}
+          patients={patients}
+          loadingPatients={loadingPatients}
+          languages={languages}
+          onPatientSearch={searchPatients}
         />
       </Paper>
     </Box>

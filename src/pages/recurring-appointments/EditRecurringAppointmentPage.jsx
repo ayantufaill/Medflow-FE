@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -11,6 +11,7 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { recurringAppointmentService } from '../../services/recurring-appointment.service';
+import { patientService } from '../../services/patient.service';
 import RecurringAppointmentForm from '../../components/recurring-appointments/RecurringAppointmentForm';
 
 const EditRecurringAppointmentPage = () => {
@@ -21,43 +22,43 @@ const EditRecurringAppointmentPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [recurringAppointment, setRecurringAppointment] = useState(null);
+  const [patients, setPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
 
-  const fetchRecurringAppointment = async () => {
+  const searchPatients = useCallback(async (search = '') => {
     try {
-      setLoading(true);
-      setError('');
-      const appointmentData =
-        await recurringAppointmentService.getRecurringAppointmentById(
-          recurringAppointmentId
-        );
-      setRecurringAppointment(appointmentData);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to load recurring appointment data. Please try again.'
-      );
+      setLoadingPatients(true);
+      const result = await patientService.getAllPatients(1, 20, search, 'active');
+      setPatients(result.patients || []);
+    } catch {
+      setPatients([]);
     } finally {
-      setLoading(false);
+      setLoadingPatients(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (recurringAppointmentId) {
-      fetchRecurringAppointment();
+      recurringAppointmentService
+        .getRecurringAppointmentById(recurringAppointmentId)
+        .then((data) => setRecurringAppointment(data))
+        .catch((err) =>
+          setError(
+            err.response?.data?.error?.message ||
+              err.response?.data?.message ||
+              'Failed to load recurring appointment data. Please try again.'
+          )
+        )
+        .finally(() => setLoading(false));
     }
-  }, [recurringAppointmentId]);
+    searchPatients('');
+  }, [recurringAppointmentId, searchPatients]);
 
   const onSubmit = async (data) => {
     try {
       setSaving(true);
       setError('');
-
-      await recurringAppointmentService.updateRecurringAppointment(
-        recurringAppointmentId,
-        data
-      );
-
+      await recurringAppointmentService.updateRecurringAppointment(recurringAppointmentId, data);
       showSnackbar('Recurring appointment updated successfully', 'success');
       navigate('/recurring-appointments');
     } catch (err) {
@@ -74,41 +75,24 @@ const EditRecurringAppointmentPage = () => {
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
     );
   }
 
   if (error && !recurringAppointment) {
-    return (
-      <Box>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
+    return <Alert severity="error">{error}</Alert>;
   }
 
   if (!recurringAppointment) {
-    return (
-      <Box>
-        <Alert severity="error">Recurring appointment not found</Alert>
-      </Box>
-    );
+    return <Alert severity="error">Recurring appointment not found</Alert>;
   }
-
-  const handleBack = () => {
-    window.history.back();
-  };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={handleBack}>
+        <IconButton onClick={() => window.history.back()}>
           <ArrowBackIcon />
         </IconButton>
         <Box sx={{ flexGrow: 1 }}>
@@ -133,6 +117,9 @@ const EditRecurringAppointmentPage = () => {
           initialData={recurringAppointment}
           loading={saving}
           isEditMode={true}
+          patients={patients}
+          loadingPatients={loadingPatients}
+          onPatientSearch={searchPatients}
         />
       </Paper>
     </Box>

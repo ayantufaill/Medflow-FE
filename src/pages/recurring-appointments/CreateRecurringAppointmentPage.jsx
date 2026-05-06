@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -16,6 +16,7 @@ import {
 import { ArrowBack as ArrowBackIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { recurringAppointmentService } from '../../services/recurring-appointment.service';
+import { patientService } from '../../services/patient.service';
 import RecurringAppointmentForm from '../../components/recurring-appointments/RecurringAppointmentForm';
 
 const CreateRecurringAppointmentPage = () => {
@@ -23,10 +24,24 @@ const CreateRecurringAppointmentPage = () => {
   const { showSnackbar } = useSnackbar();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
 
-  const handleBack = () => {
-    window.history.back();
-  };
+  const searchPatients = useCallback(async (search = '') => {
+    try {
+      setLoadingPatients(true);
+      const result = await patientService.getAllPatients(1, 20, search, 'active');
+      setPatients(result.patients || []);
+    } catch {
+      setPatients([]);
+    } finally {
+      setLoadingPatients(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    searchPatients('');
+  }, [searchPatients]);
 
   const handleSubmit = async (data, useResolution = false) => {
     try {
@@ -39,17 +54,14 @@ const CreateRecurringAppointmentPage = () => {
       } else {
         result = await recurringAppointmentService.createRecurringAppointment(data);
       }
-      
-      // Check if appointments were generated
+
       const appointmentsCreated = result?.appointmentsCreated || result?.generatedInfo?.appointmentsCreated || 0;
       const skippedCount = result?.skippedCount || result?.generatedInfo?.skippedCount || 0;
-      
+
       let message = 'Recurring appointment created successfully';
       if (appointmentsCreated > 0) {
         message += `. ${appointmentsCreated} appointment(s) generated and added to calendar`;
-        if (skippedCount > 0) {
-          message += `, ${skippedCount} skipped`;
-        }
+        if (skippedCount > 0) message += `, ${skippedCount} skipped`;
       } else if (data.totalAppointments || data.endDate) {
         message += '. No appointments were generated (may need manual generation)';
       }
@@ -71,7 +83,7 @@ const CreateRecurringAppointmentPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={handleBack}>
+        <IconButton onClick={() => window.history.back()}>
           <ArrowBackIcon />
         </IconButton>
         <Box sx={{ flexGrow: 1 }}>
@@ -87,9 +99,7 @@ const CreateRecurringAppointmentPage = () => {
       <Dialog open={!!error} onClose={() => setError('')} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6" color="error">
-              Error
-            </Typography>
+            <Typography variant="h6" color="error">Error</Typography>
             <IconButton size="small" onClick={() => setError('')}>
               <CloseIcon />
             </IconButton>
@@ -112,12 +122,13 @@ const CreateRecurringAppointmentPage = () => {
           isEditMode={false}
           hideButtons={true}
           formId="create-recurring-appointment-form"
+          patients={patients}
+          loadingPatients={loadingPatients}
+          onPatientSearch={searchPatients}
         />
 
-        <Box
-          sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}
-        >
-          <Button variant="outlined" onClick={handleBack} disabled={saving}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+          <Button variant="outlined" onClick={() => window.history.back()} disabled={saving}>
             Cancel
           </Button>
           <Button
@@ -125,9 +136,7 @@ const CreateRecurringAppointmentPage = () => {
             type="submit"
             form="create-recurring-appointment-form"
             disabled={saving}
-            startIcon={
-              saving ? <CircularProgress size={20} color="inherit" /> : null
-            }
+            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : null}
           >
             {saving ? 'Creating...' : 'Create Recurring Appointment'}
           </Button>

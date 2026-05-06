@@ -48,7 +48,6 @@ import dayjs from 'dayjs';
 import { appointmentValidations } from '../../validations/appointmentValidations';
 import { patientService } from '../../services/patient.service';
 import { appointmentService } from '../../services/appointment.service';
-import { languageService } from '../../services/language.service';
 import { waitlistService } from '../../services/waitlist.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
@@ -60,96 +59,28 @@ const AppointmentForm = ({
   isEditMode = false,
   hideButtons = false,
   formId,
+  patients = [],
+  loadingPatients = false,
+  languages = [],
+  onPatientSearch,
 }) => {
   // ─── Redux cached dropdown data (fetched ONCE, shared across all forms) ───
   const {
     providers,
     rooms,
     appointmentTypes,
-    providersLoading,
-    roomsLoading,
-    appointmentTypesLoading,
-    loading: dropdownLoading,
   } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
 
-  const [patients, setPatients] = useState([]);
-  const [languages, setLanguages] = useState([]);
-  const [loadingLanguages, setLoadingLanguages] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [patientSearch, setPatientSearch] = useState('');
-  const [providerSearch, setProviderSearch] = useState('');
-  const [appointmentTypeSearch, setAppointmentTypeSearch] = useState('');
-  const [loadingPatients, setLoadingPatients] = useState(false);
-  const [loadingProviders, setLoadingProviders] = useState(false);
-  const [loadingAppointmentTypes, setLoadingAppointmentTypes] = useState(false);
   const patientSearchTimerRef = useRef(null);
-  const providerSearchTimerRef = useRef(null);
-  const appointmentTypeSearchTimerRef = useRef(null);
   const [addingToWaitlist, setAddingToWaitlist] = useState(false);
   const { showSnackbar } = useSnackbar();
-  
+
   // Insurance eligibility state
   const [insuranceEligibility, setInsuranceEligibility] = useState(null);
-
-  const searchPatients = useCallback(async (search = '') => {
-    try {
-      setLoadingPatients(true);
-      const result = await patientService.getAllPatients(1, 20, search, 'active');
-      setPatients(result.patients || []);
-    } catch (err) {
-      console.error('Error searching patients:', err);
-    } finally {
-      setLoadingPatients(false);
-    }
-  }, []);
-
-  // Providers & appointment types now come from Redux (cached)
-  // These search functions filter the cached data locally
-  const searchProviders = useCallback((search = '') => {
-    // Providers are already in Redux - local filter is enough
-    setLoadingProviders(false);
-  }, []);
-
-  const searchAppointmentTypes = useCallback((search = '') => {
-    // Appointment types are already in Redux - local filter is enough
-    setLoadingAppointmentTypes(false);
-  }, []);
-
-  useEffect(() => {
-    const fetchLocalData = async () => {
-      try {
-        setLoadingData(true);
-
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          console.error('No access token found. Please log in again.');
-          throw new Error('Authentication required. Please log in again.');
-        }
-
-        // Only fetch patients and languages — providers, rooms, appointmentTypes come from Redux
-        const [patientsResult, languagesResult] = await Promise.all([
-          patientService.getAllPatients(1, 100, '', 'active'),
-          languageService.getAllLanguages(true),
-        ]);
-        setPatients(patientsResult.patients || []);
-        setLanguages(languagesResult || []);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        if (err.response?.status === 401) {
-          console.error('Unauthorized. Token may be expired or invalid.');
-        }
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    fetchLocalData();
-  }, []);
 
   const [conflictError, setConflictError] = useState('');
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [showAvailableSlotsDialog, setShowAvailableSlotsDialog] = useState(false);
   const [conflictDate, setConflictDate] = useState(null);
   const [conflictProviderId, setConflictProviderId] = useState(null);
   const [conflictDuration, setConflictDuration] = useState(30);
@@ -226,7 +157,6 @@ const AppointmentForm = ({
         const startTimeStr = startTimeValue.format('HH:mm');
         const endTimeStr = endTimeValue.format('HH:mm');
 
-        // Parse time strings to minutes since midnight for comparison
         const parseTime = (timeStr) => {
           const [hours, minutes] = timeStr.split(':').map(Number);
           return hours * 60 + minutes;
@@ -235,45 +165,35 @@ const AppointmentForm = ({
         const startMinutes = parseTime(startTimeStr);
         const endMinutes = parseTime(endTimeStr);
 
-        // Calculate duration from times or use provided duration
         let calculatedDuration = endMinutes - startMinutes;
-        const appointmentDuration =
-          durationMinutesValue || calculatedDuration || 30;
+        const appointmentDuration = durationMinutesValue || calculatedDuration || 30;
 
-        // Validate end time is after start time
         if (calculatedDuration <= 0) {
           setConflictError('End time must be after start time.');
           return true;
         }
 
-        // First, check using available slots API (more efficient and considers working hours)
-        // Only use this if we have all required data
         if (dateStr && providerIdValue && appointmentDuration) {
           try {
-            const availableSlotsResult =
-              await appointmentService.getAvailableSlots(
-                providerIdValue,
-                dateStr,
-                appointmentDuration
-              );
+            const availableSlotsResult = await appointmentService.getAvailableSlots(
+              providerIdValue,
+              dateStr,
+              appointmentDuration
+            );
 
             const availableSlots = availableSlotsResult?.availableSlots || [];
 
             if (availableSlots.length === 0) {
-              setConflictError(
-                'No slots available for selected date and time.'
-              );
+              setConflictError('No slots available for selected date and time.');
               return true;
             }
 
-            // Check if the selected start time is in the available slots
             const isSlotAvailable = availableSlots.some((slot) => {
               const slotTime = parseTime(slot);
               return slotTime === startMinutes;
             });
 
             if (!isSlotAvailable) {
-              // Store available slots for display
               setAvailableSlots(availableSlots);
               setConflictDate(dateStr);
               setConflictProviderId(providerIdValue);
@@ -283,33 +203,20 @@ const AppointmentForm = ({
               );
               return true;
             }
-            
-            // Clear available slots if slot is available
+
             setAvailableSlots([]);
-          } catch (slotsError) {
-            console.warn(
-              'Available slots API failed, using manual conflict check:',
-              slotsError
-            );
+          } catch {
+            // fall through to manual conflict check
           }
         }
 
-        // Also do manual conflict check as a backup (more detailed and accurate)
         try {
           const result = await appointmentService.getAllAppointments(
-            1,
-            100,
-            providerIdValue,
-            '',
-            '',
-            dateStr,
-            dateStr,
-            ''
+            1, 100, providerIdValue, '', '', dateStr, dateStr, ''
           );
 
           const existingAppointments = result.appointments || [];
 
-          // Check for daily max appointments limit
           const selectedProvider = providers.find(
             (p) => (p._id || p.id) === providerIdValue
           );
@@ -319,12 +226,9 @@ const AppointmentForm = ({
                 apt.status !== 'cancelled' &&
                 apt.status !== 'no_show' &&
                 (!excludeAppointmentId ||
-                  (apt._id !== excludeAppointmentId &&
-                    apt.id !== excludeAppointmentId))
+                  (apt._id !== excludeAppointmentId && apt.id !== excludeAppointmentId))
             );
-            if (
-              activeAppointments.length >= selectedProvider.maxDailyAppointments
-            ) {
+            if (activeAppointments.length >= selectedProvider.maxDailyAppointments) {
               setConflictError(
                 `The provider has reached the maximum daily appointments limit (${selectedProvider.maxDailyAppointments}). Please select a different date or provider.`
               );
@@ -335,34 +239,24 @@ const AppointmentForm = ({
           const newStart = parseTime(startTimeStr);
           const newEnd = parseTime(endTimeStr);
 
-          // Check for conflicts (excluding cancelled and no_show appointments)
           const conflictingAppointments = existingAppointments.filter((apt) => {
             if (
               excludeAppointmentId &&
-              (apt._id === excludeAppointmentId ||
-                apt.id === excludeAppointmentId)
+              (apt._id === excludeAppointmentId || apt.id === excludeAppointmentId)
             ) {
               return false;
             }
-
-            if (apt.status === 'cancelled' || apt.status === 'no_show') {
-              return false;
-            }
+            if (apt.status === 'cancelled' || apt.status === 'no_show') return false;
 
             const aptStart = parseTime(apt.startTime);
             const aptEnd = parseTime(apt.endTime);
-
-            const hasOverlap = newEnd > aptStart && newStart < aptEnd;
-            return hasOverlap;
+            return newEnd > aptStart && newStart < aptEnd;
           });
 
           if (conflictingAppointments.length > 0) {
-            // Fetch available slots to show user
             try {
               const availableSlotsResult = await appointmentService.getAvailableSlots(
-                providerIdValue,
-                dateStr,
-                appointmentDuration
+                providerIdValue, dateStr, appointmentDuration
               );
               const slots = availableSlotsResult?.availableSlots || [];
               if (slots.length > 0) {
@@ -371,42 +265,40 @@ const AppointmentForm = ({
                 setConflictProviderId(providerIdValue);
                 setConflictDuration(appointmentDuration);
               }
-            } catch (err) {
-              console.warn('Could not fetch available slots:', err);
+            } catch {
+              // ignore
             }
-            
+
             const conflictDetails = conflictingAppointments
               .map((apt) => `${apt.startTime} - ${apt.endTime}`)
               .join(', ');
-            const conflictMsg = `This time slot conflicts with existing appointment(s) at ${conflictDetails}. Please choose a different time.`;
-            setConflictError(conflictMsg);
+            setConflictError(
+              `This time slot conflicts with existing appointment(s) at ${conflictDetails}. Please choose a different time.`
+            );
             return true;
           }
 
           setConflictError('');
           return false;
-        } catch (conflictError) {
-          console.error('Error checking appointment conflicts:', conflictError);
+        } catch {
           setConflictError('');
           return false;
         }
       } catch (error) {
-        console.error('Error checking appointment conflict:', error);
         const errorMessage =
           error.response?.data?.error?.message ||
           error.response?.data?.message ||
           'Unable to verify provider availability. Please try again.';
         setConflictError(errorMessage);
-        // Don't block submission if conflict check fails - let backend handle it
         return false;
       } finally {
         setCheckingConflict(false);
       }
     },
-    []
+    [providers]
   );
 
-  // Auto-calculate end time when start time or duration changes (only if end time is not manually set)
+  // Auto-calculate end time when start time or duration changes
   const [endTimeManuallySet, setEndTimeManuallySet] = useState(false);
   const [startTimeManuallySet, setStartTimeManuallySet] = useState(false);
   const [durationError, setDurationError] = useState('');
@@ -421,64 +313,30 @@ const AppointmentForm = ({
     const selectedType = appointmentTypes.find(
       (t) => (t._id || t.id) === appointmentTypeId
     );
-    if (
-      selectedType?.defaultDuration &&
-      !startTimeManuallySet &&
-      !endTimeManuallySet
-    ) {
+    if (selectedType?.defaultDuration && !startTimeManuallySet && !endTimeManuallySet) {
       const currentValues = watch();
       const currentDuration = currentValues.durationMinutes;
-      const hasDurationAlreadySet = currentDuration && currentDuration > 0;
-      if (!hasDurationAlreadySet && currentDuration !== selectedType.defaultDuration) {
-        reset({
-          ...currentValues,
-          durationMinutes: selectedType.defaultDuration,
-        });
+      if (!currentDuration || currentDuration === 0) {
+        reset({ ...currentValues, durationMinutes: selectedType.defaultDuration });
       }
     }
-  }, [
-    appointmentTypeId,
-    appointmentTypes,
-    reset,
-    watch,
-    startTimeManuallySet,
-    endTimeManuallySet,
-  ]);
+  }, [appointmentTypeId, appointmentTypes, reset, watch, startTimeManuallySet, endTimeManuallySet]);
 
   const calculateEndTimeFromStart = useCallback((start, duration) => {
-    if (
-      !start ||
-      !dayjs.isDayjs(start) ||
-      !start.isValid() ||
-      !duration ||
-      duration < 5
-    ) {
-      return null;
-    }
+    if (!start || !dayjs.isDayjs(start) || !start.isValid() || !duration || duration < 5) return null;
     return start.add(duration, 'minute');
   }, []);
 
   const calculateStartTimeFromEnd = useCallback((end, duration) => {
-    if (
-      !end ||
-      !dayjs.isDayjs(end) ||
-      !end.isValid() ||
-      !duration ||
-      duration < 5
-    ) {
-      return null;
-    }
+    if (!end || !dayjs.isDayjs(end) || !end.isValid() || !duration || duration < 5) return null;
     return end.subtract(duration, 'minute');
   }, []);
 
   const calculateDurationFromTimes = useCallback((start, end) => {
     if (
-      !start ||
-      !end ||
-      !dayjs.isDayjs(start) ||
-      !dayjs.isDayjs(end) ||
-      !start.isValid() ||
-      !end.isValid()
+      !start || !end ||
+      !dayjs.isDayjs(start) || !dayjs.isDayjs(end) ||
+      !start.isValid() || !end.isValid()
     ) {
       return null;
     }
@@ -490,289 +348,112 @@ const AppointmentForm = ({
 
   useEffect(() => {
     if (
-      startTime &&
-      dayjs.isDayjs(startTime) &&
-      startTime.isValid() &&
-      durationMinutes &&
-      durationMinutes >= 5 &&
-      !endTimeManuallySet
+      startTime && dayjs.isDayjs(startTime) && startTime.isValid() &&
+      durationMinutes && durationMinutes >= 5 && !endTimeManuallySet
     ) {
-      const calculatedEndTime = calculateEndTimeFromStart(
-        startTime,
-        durationMinutes
-      );
-      if (
-        calculatedEndTime &&
-        (!endTime || !dayjs.isDayjs(endTime) || !endTime.isValid())
-      ) {
-        reset({
-          ...watch(),
-          endTime: calculatedEndTime,
-        });
+      const calculatedEndTime = calculateEndTimeFromStart(startTime, durationMinutes);
+      if (calculatedEndTime && (!endTime || !dayjs.isDayjs(endTime) || !endTime.isValid())) {
+        reset({ ...watch(), endTime: calculatedEndTime });
       }
     }
-  }, [
-    startTime,
-    durationMinutes,
-    reset,
-    watch,
-    endTime,
-    endTimeManuallySet,
-    calculateEndTimeFromStart,
-  ]);
+  }, [startTime, durationMinutes, reset, watch, endTime, endTimeManuallySet, calculateEndTimeFromStart]);
 
   useEffect(() => {
     if (
-      endTime &&
-      dayjs.isDayjs(endTime) &&
-      endTime.isValid() &&
-      durationMinutes &&
-      durationMinutes >= 5 &&
-      !startTimeManuallySet &&
-      endTimeManuallySet &&
+      endTime && dayjs.isDayjs(endTime) && endTime.isValid() &&
+      durationMinutes && durationMinutes >= 5 &&
+      !startTimeManuallySet && endTimeManuallySet &&
       (!startTime || !dayjs.isDayjs(startTime) || !startTime.isValid())
     ) {
-      const calculatedStartTime = calculateStartTimeFromEnd(
-        endTime,
-        durationMinutes
-      );
+      const calculatedStartTime = calculateStartTimeFromEnd(endTime, durationMinutes);
       if (calculatedStartTime) {
-        reset({
-          ...watch(),
-          startTime: calculatedStartTime,
-        });
+        reset({ ...watch(), startTime: calculatedStartTime });
       }
     }
-  }, [
-    endTime,
-    durationMinutes,
-    reset,
-    watch,
-    startTime,
-    startTimeManuallySet,
-    endTimeManuallySet,
-    calculateStartTimeFromEnd,
-  ]);
+  }, [endTime, durationMinutes, reset, watch, startTime, startTimeManuallySet, endTimeManuallySet, calculateStartTimeFromEnd]);
 
-  // Watch for changes and check conflicts
+  // Debounced conflict check on time/provider/date change
   useEffect(() => {
     if (providerId && appointmentDate && startTime && endTime) {
       const timeoutId = setTimeout(() => {
-        const appointmentId = isEditMode
-          ? initialData?._id || initialData?.id || null
-          : null;
-        checkAppointmentConflict(
-          providerId,
-          appointmentDate,
-          startTime,
-          endTime,
-          appointmentId,
-          durationMinutes
-        );
-      }, 500); // Debounce for 500ms
-
+        const appointmentId = isEditMode ? initialData?._id || initialData?.id || null : null;
+        checkAppointmentConflict(providerId, appointmentDate, startTime, endTime, appointmentId, durationMinutes);
+      }, 500);
       return () => clearTimeout(timeoutId);
     } else {
       setConflictError('');
     }
-  }, [
-    providerId,
-    appointmentDate,
-    startTime,
-    endTime,
-    durationMinutes,
-    isEditMode,
-    initialData,
-    checkAppointmentConflict,
-  ]);
+  }, [providerId, appointmentDate, startTime, endTime, durationMinutes, isEditMode, initialData, checkAppointmentConflict]);
 
-  // Check insurance eligibility when patientId changes (from form watch or initial data)
-  // Always fetch fresh patient data to ensure insurance info is up-to-date
-  useEffect(() => {
-    const checkPatientInsurance = async () => {
-      const currentPatientId = watchedPatientId || initialData?.patientId?._id || initialData?.patientId;
-      
-      if (!currentPatientId) {
-        setInsuranceEligibility(null);
-        return;
-      }
+  // ─── Insurance eligibility ────────────────────────────────────────────────
 
-      // Fetch insurance data separately since getPatientById might not include it
-      // This ensures we have updated data even after user adds insurance and comes back
-      try {
-        console.log('Fetching insurance data for patient:', currentPatientId);
-        
-        // Fetch active insurances for the patient
-        const insurances = await patientService.getPatientInsurances(currentPatientId, true);
-        console.log('Insurances received:', insurances);
-        
-        // Find primary active insurance
-        const primaryInsurance = insurances?.find(
-          ins => ins.isActive === true && ins.insuranceType === 'primary'
-        );
-        
-        console.log('Primary insurance found:', primaryInsurance);
-        
-        if (primaryInsurance) {
-          // Get insurance company name
-          let insuranceName = 'Unknown';
-          if (primaryInsurance.insuranceCompanyId) {
-            if (typeof primaryInsurance.insuranceCompanyId === 'object') {
-              insuranceName = primaryInsurance.insuranceCompanyId.name || 'Unknown';
-            } else {
-              // If it's just an ID, we might need to fetch the company
-              // For now, use 'Unknown'
-              insuranceName = 'Unknown';
-            }
-          }
-          
-          setInsuranceEligibility({
-            status: primaryInsurance.verificationStatus || 'pending',
-            insuranceName: insuranceName,
-            copayAmount: primaryInsurance.copayAmount,
-          });
-        } else {
-          console.log('No primary active insurance found for patient');
-          console.log('All insurances:', insurances);
-          setInsuranceEligibility({ 
-            status: 'no_insurance', 
-            message: 'No active insurance found',
-            insuranceName: 'No Insurance'
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching patient insurance:', err);
-        console.error('Error details:', {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status,
+  const checkPatientInsurance = useCallback(async (patientId) => {
+    if (!patientId) {
+      setInsuranceEligibility(null);
+      return;
+    }
+    try {
+      const insurances = await patientService.getPatientInsurances(patientId, true);
+      const primaryInsurance = insurances?.find(
+        (ins) => ins.isActive === true && ins.insuranceType === 'primary'
+      );
+      if (primaryInsurance) {
+        const insuranceName =
+          typeof primaryInsurance.insuranceCompanyId === 'object'
+            ? primaryInsurance.insuranceCompanyId?.name || 'Unknown'
+            : 'Unknown';
+        setInsuranceEligibility({
+          status: primaryInsurance.verificationStatus || 'pending',
+          insuranceName,
+          copayAmount: primaryInsurance.copayAmount,
         });
-        
-        // On error, still try to check from patients array as fallback
-        const patient = patients.find(p => (p._id || p.id) === currentPatientId);
-        if (patient) {
-          const primaryInsurance = patient.primaryInsurance || 
-            patient.insurances?.find(ins => ins.isActive && ins.insuranceType === 'primary');
-          if (primaryInsurance) {
-            setInsuranceEligibility({
-              status: primaryInsurance.verificationStatus || 'pending',
-              insuranceName: primaryInsurance.insuranceCompanyId?.name || 'Unknown',
-              copayAmount: primaryInsurance.copayAmount,
-            });
-          } else {
-            setInsuranceEligibility({ 
-              status: 'no_insurance', 
-              message: 'No active insurance found',
-              insuranceName: 'No Insurance'
-            });
-          }
-        } else {
-          setInsuranceEligibility({ 
-            status: 'no_insurance', 
-            message: 'No active insurance found',
-            insuranceName: 'No Insurance'
-          });
-        }
+      } else {
+        setInsuranceEligibility({ status: 'no_insurance', insuranceName: 'No Insurance' });
       }
-    };
+    } catch {
+      setInsuranceEligibility({ status: 'no_insurance', insuranceName: 'No Insurance' });
+    }
+  }, []);
 
-    checkPatientInsurance();
-  }, [watchedPatientId, initialData?.patientId, patients]);
+  useEffect(() => {
+    const currentPatientId =
+      watchedPatientId || initialData?.patientId?._id || initialData?.patientId;
+    checkPatientInsurance(currentPatientId);
+  }, [watchedPatientId, initialData?.patientId, checkPatientInsurance]);
 
-  // Refresh insurance data when page becomes visible (user comes back from adding insurance)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && watchedPatientId) {
-        // Refresh insurance check when user comes back to the page
-        const checkPatientInsurance = async () => {
-          try {
-            console.log('Page visible, refreshing insurance data for:', watchedPatientId);
-            const insurances = await patientService.getPatientInsurances(watchedPatientId, true);
-            const primaryInsurance = insurances?.find(
-              ins => ins.isActive === true && ins.insuranceType === 'primary'
-            );
-            
-            if (primaryInsurance) {
-              let insuranceName = 'Unknown';
-              if (primaryInsurance.insuranceCompanyId) {
-                if (typeof primaryInsurance.insuranceCompanyId === 'object') {
-                  insuranceName = primaryInsurance.insuranceCompanyId.name || 'Unknown';
-                }
-              }
-              
-              setInsuranceEligibility({
-                status: primaryInsurance.verificationStatus || 'pending',
-                insuranceName: insuranceName,
-                copayAmount: primaryInsurance.copayAmount,
-              });
-            } else {
-              setInsuranceEligibility({ 
-                status: 'no_insurance', 
-                message: 'No active insurance found',
-                insuranceName: 'No Insurance'
-              });
-            }
-          } catch (err) {
-            console.error('Error refreshing insurance data:', err);
-          }
-        };
-        checkPatientInsurance();
+        checkPatientInsurance(watchedPatientId);
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [watchedPatientId]);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [watchedPatientId, checkPatientInsurance]);
+
+  // ─── initialData reset ───────────────────────────────────────────────────
 
   useEffect(() => {
     if (initialData) {
       const parseTime = (timeValue) => {
         if (!timeValue) return null;
-
-        // If it's already a dayjs object, return it
-        if (dayjs.isDayjs(timeValue)) {
-          return timeValue;
-        }
-
-        // If it's a Date object, convert to dayjs
-        if (timeValue instanceof Date) {
-          return dayjs(timeValue);
-        }
-
-        // If it's a string, parse it
+        if (dayjs.isDayjs(timeValue)) return timeValue;
+        if (timeValue instanceof Date) return dayjs(timeValue);
         if (typeof timeValue === 'string') {
-          // Check if it's in HH:mm format
           if (timeValue.includes(':')) {
             const [hours, minutes] = timeValue.split(':');
-            return dayjs()
-              .hour(parseInt(hours, 10))
-              .minute(parseInt(minutes, 10));
+            return dayjs().hour(parseInt(hours, 10)).minute(parseInt(minutes, 10));
           }
-          // Otherwise try to parse as ISO string or other format
           return dayjs(timeValue);
         }
-
-        // If it's a number (timestamp), convert it
-        if (typeof timeValue === 'number') {
-          return dayjs(timeValue);
-        }
-
-        // Fallback: try to parse with dayjs
         return dayjs(timeValue);
       };
 
       reset({
         patientId: initialData.patientId?._id || initialData.patientId || '',
         providerId: initialData.providerId?._id || initialData.providerId || '',
-        appointmentTypeId:
-          initialData.appointmentTypeId?._id ||
-          initialData.appointmentTypeId ||
-          '',
-        appointmentDate: initialData.appointmentDate
-          ? dayjs(initialData.appointmentDate)
-          : null,
+        appointmentTypeId: initialData.appointmentTypeId?._id || initialData.appointmentTypeId || '',
+        appointmentDate: initialData.appointmentDate ? dayjs(initialData.appointmentDate) : null,
         startTime: parseTime(initialData.startTime),
         endTime: parseTime(initialData.endTime),
         durationMinutes: initialData.durationMinutes || 30,
@@ -785,8 +466,7 @@ const AppointmentForm = ({
         copayCollected: initialData.copayCollected || '',
         reminderSent: initialData.reminderSent || false,
         customFields:
-          initialData.customFields &&
-          typeof initialData.customFields === 'object'
+          initialData.customFields && typeof initialData.customFields === 'object'
             ? initialData.customFields
             : {},
         status: initialData.status || 'scheduled',
@@ -794,13 +474,11 @@ const AppointmentForm = ({
     }
   }, [initialData, reset]);
 
-  const handleBack = () => {
-    window.history.back();
-  };
+  const handleBack = () => window.history.back();
 
   const handleAddToWaitlist = async () => {
     const formValues = watch();
-    
+
     if (!formValues.patientId || !formValues.providerId) {
       showSnackbar('Patient and Provider are required to add to waitlist', 'warning');
       return;
@@ -818,7 +496,9 @@ const AppointmentForm = ({
         patientId: formValues.patientId,
         providerId: formValues.providerId,
         appointmentTypeId: formValues.appointmentTypeId || undefined,
-        preferredDate: formValues.appointmentDate ? formValues.appointmentDate.format('YYYY-MM-DD') : undefined,
+        preferredDate: formValues.appointmentDate
+          ? formValues.appointmentDate.format('YYYY-MM-DD')
+          : undefined,
         preferredTimeStart: formatTime(formValues.startTime),
         preferredTimeEnd: formatTime(formValues.endTime),
         priority: 'normal',
@@ -828,7 +508,7 @@ const AppointmentForm = ({
 
       setConflictError('');
       showSnackbar('Appointment added to waitlist successfully', 'success');
-      
+
       reset({
         patientId: '',
         providerId: '',
@@ -850,9 +530,7 @@ const AppointmentForm = ({
       });
     } catch (err) {
       showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to add to waitlist',
+        err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add to waitlist',
         'error'
       );
     } finally {
@@ -863,66 +541,45 @@ const AppointmentForm = ({
   const MAX_CUSTOM_FIELDS = 10;
 
   const handleAddCustomField = () => {
-    if (Object.keys(customFieldsLocal).length >= MAX_CUSTOM_FIELDS) {
-      return;
-    }
+    if (Object.keys(customFieldsLocal).length >= MAX_CUSTOM_FIELDS) return;
     const newKey = `customField_${Object.keys(customFieldsLocal).length + 1}`;
     const newFields = { ...customFieldsLocal, [newKey]: '' };
     setCustomFieldsLocal(newFields);
-    reset({
-      ...watch(),
-      customFields: newFields,
-    });
+    reset({ ...watch(), customFields: newFields });
   };
 
   const handleRemoveCustomField = (key) => {
     const newFields = { ...customFieldsLocal };
     delete newFields[key];
     setCustomFieldsLocal(newFields);
-    reset({
-      ...watch(),
-      customFields: newFields,
-    });
+    reset({ ...watch(), customFields: newFields });
   };
 
   const handleCustomFieldKeyChange = (oldKey, newKey) => {
     if (!newKey || newKey === oldKey) return;
     const newFields = {};
     Object.entries(customFieldsLocal).forEach(([k, v]) => {
-      if (k === oldKey) {
-        newFields[newKey] = v;
-      } else {
-        newFields[k] = v;
-      }
+      newFields[k === oldKey ? newKey : k] = v;
     });
     setCustomFieldsLocal(newFields);
-    reset({
-      ...watch(),
-      customFields: newFields,
-    });
+    reset({ ...watch(), customFields: newFields });
   };
 
   const handleCustomFieldValueChange = (key, value) => {
     const newFields = { ...customFieldsLocal, [key]: value };
     setCustomFieldsLocal(newFields);
-    reset({
-      ...watch(),
-      customFields: newFields,
-    });
+    reset({ ...watch(), customFields: newFields });
   };
 
-  const sanitizeValue = (value) =>
-    typeof value === 'string' ? value.trim() : value;
+  const sanitizeValue = (value) => (typeof value === 'string' ? value.trim() : value);
 
   const handleFormSubmit = async (formData) => {
-    // Validate end time is after start time
     const formatTime = (timeValue) => {
       if (!timeValue) return '';
       if (typeof timeValue === 'string') return timeValue;
       return timeValue.format('HH:mm');
     };
 
-    // Validate appointment date is not in the past
     if (formData.appointmentDate && dayjs.isDayjs(formData.appointmentDate)) {
       const today = dayjs().startOf('day');
       if (formData.appointmentDate.isBefore(today)) {
@@ -930,9 +587,7 @@ const AppointmentForm = ({
           type: 'manual',
           message: 'Appointment date cannot be in the past',
         });
-        setConflictError(
-          'Appointment date cannot be in the past. Please select a future date.'
-        );
+        setConflictError('Appointment date cannot be in the past. Please select a future date.');
         return;
       }
     }
@@ -945,127 +600,71 @@ const AppointmentForm = ({
         const [hours, minutes] = timeStr.split(':').map(Number);
         return hours * 60 + minutes;
       };
-
       const startMinutes = parseTime(startTimeStr);
       const endMinutes = parseTime(endTimeStr);
       const duration = endMinutes - startMinutes;
 
       if (duration <= 0) {
-        setError('endTime', {
-          type: 'manual',
-          message: 'End time must be after start time',
-        });
-        setError('startTime', {
-          type: 'manual',
-          message: 'Start time must be before end time',
-        });
-        setConflictError(
-          'End time must be after start time. Please adjust the times.'
-        );
-        return; // Prevent form submission
+        setError('endTime', { type: 'manual', message: 'End time must be after start time' });
+        setError('startTime', { type: 'manual', message: 'Start time must be before end time' });
+        setConflictError('End time must be after start time. Please adjust the times.');
+        return;
       }
 
       if (duration < 5) {
-        setError('endTime', {
-          type: 'manual',
-          message: 'Appointment duration must be at least 5 minutes',
-        });
-        setConflictError(
-          'Appointment duration must be at least 5 minutes. Please adjust the times.'
-        );
-        return; // Prevent form submission
+        setError('endTime', { type: 'manual', message: 'Appointment duration must be at least 5 minutes' });
+        setConflictError('Appointment duration must be at least 5 minutes. Please adjust the times.');
+        return;
       }
     }
 
-    // Check for conflicts before submitting
     const appointmentDuration = formData.durationMinutes || 30;
 
     if (!isEditMode) {
       const hasConflict = await checkAppointmentConflict(
-        formData.providerId,
-        formData.appointmentDate,
-        formData.startTime,
-        formData.endTime,
-        null,
-        appointmentDuration
+        formData.providerId, formData.appointmentDate,
+        formData.startTime, formData.endTime, null, appointmentDuration
       );
-
       if (hasConflict) {
-        setError('startTime', {
-          type: 'manual',
-          message:
-            conflictError ||
-            'This time slot conflicts with an existing appointment or slot not exist',
-        });
-        setError('endTime', {
-          type: 'manual',
-          message:
-            conflictError ||
-            'This time slot conflicts with an existing appointment or slot not exist',
-        });
-        return; // Prevent form submission
+        setError('startTime', { type: 'manual', message: conflictError || 'This time slot conflicts with an existing appointment or slot not exist' });
+        setError('endTime', { type: 'manual', message: conflictError || 'This time slot conflicts with an existing appointment or slot not exist' });
+        return;
       }
     } else {
-      // For edit mode, exclude current appointment from conflict check
       const appointmentId = initialData?._id || initialData?.id;
       if (appointmentId) {
         const hasConflict = await checkAppointmentConflict(
-          formData.providerId,
-          formData.appointmentDate,
-          formData.startTime,
-          formData.endTime,
-          appointmentId,
-          appointmentDuration
+          formData.providerId, formData.appointmentDate,
+          formData.startTime, formData.endTime, appointmentId, appointmentDuration
         );
-
         if (hasConflict) {
-          setError('startTime', {
-            type: 'manual',
-            message:
-              conflictError ||
-              'This time slot conflicts with an existing appointment',
-          });
-          setError('endTime', {
-            type: 'manual',
-            message:
-              conflictError ||
-              'This time slot conflicts with an existing appointment',
-          });
-          return; // Prevent form submission
+          setError('startTime', { type: 'manual', message: conflictError || 'This time slot conflicts with an existing appointment' });
+          setError('endTime', { type: 'manual', message: conflictError || 'This time slot conflicts with an existing appointment' });
+          return;
         }
       }
     }
 
     const sanitizedData = {
       ...formData,
-      appointmentDate: formData.appointmentDate
-        ? formData.appointmentDate.format('YYYY-MM-DD')
-        : '',
+      appointmentDate: formData.appointmentDate ? formData.appointmentDate.format('YYYY-MM-DD') : '',
       startTime: formatTime(formData.startTime),
       endTime: formatTime(formData.endTime),
-      durationMinutes: formData.durationMinutes
-        ? Number(formData.durationMinutes)
-        : undefined,
+      durationMinutes: formData.durationMinutes ? Number(formData.durationMinutes) : undefined,
       chiefComplaint: sanitizeValue(formData.chiefComplaint) || undefined,
       notes: sanitizeValue(formData.notes) || undefined,
       roomId: sanitizeValue(formData.roomId) || undefined,
       interpreterLanguage: formData.requiresInterpreter
         ? sanitizeValue(formData.interpreterLanguage) || undefined
         : undefined,
-      copayCollected: formData.copayCollected
-        ? Number(formData.copayCollected)
-        : undefined,
+      copayCollected: formData.copayCollected ? Number(formData.copayCollected) : undefined,
       reminderSent: formData.reminderSent || false,
       status: formData.status || 'scheduled',
       customFields:
         formData.customFields && Object.keys(formData.customFields).length > 0
           ? Object.fromEntries(
               Object.entries(formData.customFields).filter(
-                ([key, value]) =>
-                  key &&
-                  value &&
-                  key.trim() !== '' &&
-                  value.toString().trim() !== ''
+                ([key, value]) => key && value && key.trim() !== '' && value.toString().trim() !== ''
               )
             )
           : undefined,
@@ -1074,45 +673,19 @@ const AppointmentForm = ({
     onSubmit(sanitizedData);
   };
 
-  if (loadingData) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box
-        component="form"
-        id={formId}
-        onSubmit={handleSubmit(handleFormSubmit)}
-      >
+      <Box component="form" id={formId} onSubmit={handleSubmit(handleFormSubmit)}>
         <Dialog
           open={!!conflictError}
-          onClose={() => {
-            setConflictError('');
-            setAvailableSlots([]);
-          }}
+          onClose={() => { setConflictError(''); setAvailableSlots([]); }}
           maxWidth="md"
           fullWidth
         >
           <DialogTitle>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Typography variant="h6" color="error">
-                Conflict Detected
-              </Typography>
-              <IconButton size="small" onClick={() => {
-                setConflictError('');
-                setAvailableSlots([]);
-              }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="h6" color="error">Conflict Detected</Typography>
+              <IconButton size="small" onClick={() => { setConflictError(''); setAvailableSlots([]); }}>
                 <CloseIcon />
               </IconButton>
             </Box>
@@ -1120,12 +693,11 @@ const AppointmentForm = ({
           <DialogContent>
             <Typography>{conflictError}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              {availableSlots.length > 0 
+              {availableSlots.length > 0
                 ? 'Please select an available time slot below or add this appointment to the waitlist.'
                 : 'You can either change the appointment time or add this appointment to the waitlist for later scheduling.'}
             </Typography>
-            
-            {/* Available Slots Display */}
+
             {availableSlots.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
@@ -1150,8 +722,7 @@ const AppointmentForm = ({
                       const ampm = hour >= 12 ? 'PM' : 'AM';
                       const displayHour = hour % 12 || 12;
                       const formattedTime = `${displayHour}:${minutes} ${ampm}`;
-                      
-                      // Calculate end time
+
                       const slotStart = dayjs(`${conflictDate} ${slot}`);
                       const slotEnd = slotStart.add(conflictDuration, 'minute');
                       const endTimeStr = slotEnd.format('HH:mm');
@@ -1160,42 +731,28 @@ const AppointmentForm = ({
                       const endAmpm = endHour >= 12 ? 'PM' : 'AM';
                       const endDisplayHour = endHour % 12 || 12;
                       const formattedEndTime = `${endDisplayHour}:${endMinutes} ${endAmpm}`;
-                      
+
                       return (
                         <Grid size={{ xs: 6, sm: 4, md: 3 }} key={index}>
                           <Button
                             variant="outlined"
                             fullWidth
                             onClick={() => {
-                              // Set the selected time
                               const selectedStart = dayjs(`${conflictDate} ${slot}`);
                               const selectedEnd = selectedStart.add(conflictDuration, 'minute');
-                              
-                              reset({
-                                ...watch(),
-                                startTime: selectedStart,
-                                endTime: selectedEnd,
-                              });
-                              
+                              reset({ ...watch(), startTime: selectedStart, endTime: selectedEnd });
                               setConflictError('');
                               setAvailableSlots([]);
                             }}
                             sx={{
                               py: 1.5,
                               borderColor: 'primary.main',
-                              '&:hover': {
-                                borderColor: 'primary.dark',
-                                bgcolor: 'primary.50',
-                              },
+                              '&:hover': { borderColor: 'primary.dark', bgcolor: 'primary.50' },
                             }}
                           >
                             <Box>
-                              <Typography variant="body2" fontWeight="medium">
-                                {formattedTime}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                - {formattedEndTime}
-                              </Typography>
+                              <Typography variant="body2" fontWeight="medium">{formattedTime}</Typography>
+                              <Typography variant="caption" color="text.secondary">- {formattedEndTime}</Typography>
                             </Box>
                           </Button>
                         </Grid>
@@ -1207,13 +764,7 @@ const AppointmentForm = ({
             )}
           </DialogContent>
           <DialogActions>
-            <Button
-              onClick={() => {
-                setConflictError('');
-                setAvailableSlots([]);
-              }}
-              variant="outlined"
-            >
+            <Button onClick={() => { setConflictError(''); setAvailableSlots([]); }} variant="outlined">
               Cancel
             </Button>
             <Button
@@ -1227,6 +778,7 @@ const AppointmentForm = ({
             </Button>
           </DialogActions>
         </Dialog>
+
         <Dialog
           open={checkingConflict && !conflictError}
           onClose={() => setCheckingConflict(false)}
@@ -1244,7 +796,6 @@ const AppointmentForm = ({
           </DialogContent>
         </Dialog>
 
-        {/* Enhanced Conflict Error Alert */}
         {conflictError && (
           <Grid size={12}>
             <Alert
@@ -1252,11 +803,7 @@ const AppointmentForm = ({
               icon={<ErrorIcon />}
               sx={{ mb: 2 }}
               action={
-                <IconButton
-                  size="small"
-                  onClick={() => setConflictError('')}
-                  color="inherit"
-                >
+                <IconButton size="small" onClick={() => setConflictError('')} color="inherit">
                   <CloseIcon fontSize="small" />
                 </IconButton>
               }
@@ -1264,9 +811,7 @@ const AppointmentForm = ({
               <Typography variant="body2" fontWeight="bold" gutterBottom>
                 Appointment Conflict Detected
               </Typography>
-              <Typography variant="body2">
-                {conflictError}
-              </Typography>
+              <Typography variant="body2">{conflictError}</Typography>
               <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
                 Please select a different time slot or provider to continue.
               </Typography>
@@ -1281,45 +826,31 @@ const AppointmentForm = ({
               control={control}
               rules={appointmentValidations.patientId}
               render={({ field }) => {
-                const selectedPatient = patients.find(
-                  (p) => (p._id || p.id) === field.value
-                );
+                const selectedPatient = patients.find((p) => (p._id || p.id) === field.value);
                 return (
                   <Autocomplete
                     disabled={isEditMode}
                     options={patients}
                     loading={loadingPatients}
                     getOptionLabel={(option) =>
-                      option
-                        ? `${option.firstName} ${option.lastName} (${option.patientCode})`
-                        : ''
+                      option ? `${option.firstName} ${option.lastName} (${option.patientCode})` : ''
                     }
                     value={selectedPatient || null}
                     onChange={(event, newValue) => {
-                      const patientId = newValue ? newValue._id || newValue.id : '';
-                      field.onChange(patientId);
-                      
-                      // Insurance eligibility will be checked by the useEffect that watches watchedPatientId
-                      // This ensures we always get fresh data from the API, even after user adds insurance
-                      if (!newValue) {
-                        setInsuranceEligibility(null);
-                      }
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
+                      if (!newValue) setInsuranceEligibility(null);
                     }}
                     onInputChange={(event, newInputValue, reason) => {
                       if (reason === 'input') {
-                        if (patientSearchTimerRef.current) {
-                          clearTimeout(patientSearchTimerRef.current);
-                        }
+                        if (patientSearchTimerRef.current) clearTimeout(patientSearchTimerRef.current);
                         patientSearchTimerRef.current = setTimeout(() => {
-                          searchPatients(newInputValue);
+                          onPatientSearch?.(newInputValue);
                         }, 300);
                       } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
-                        searchPatients('');
+                        onPatientSearch?.('');
                       }
                     }}
-                    onBlur={() => {
-                      searchPatients('');
-                    }}
+                    onBlur={() => onPatientSearch?.('')}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
                     }
@@ -1334,18 +865,14 @@ const AppointmentForm = ({
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {loadingPatients ? (
-                                <CircularProgress color="inherit" size={20} />
-                              ) : null}
+                              {loadingPatients ? <CircularProgress color="inherit" size={20} /> : null}
                               {params.InputProps.endAdornment}
                             </>
                           ),
                         }}
                       />
                     )}
-                    noOptionsText={
-                      loadingPatients ? 'Searching...' : 'No patients found'
-                    }
+                    noOptionsText={loadingPatients ? 'Searching...' : 'No patients found'}
                     filterOptions={(x) => x}
                   />
                 );
@@ -1369,8 +896,6 @@ const AppointmentForm = ({
                 icon={
                   insuranceEligibility.status === 'verified' ? (
                     <CheckCircleIcon />
-                  ) : insuranceEligibility.status === 'pending' ? (
-                    <ErrorIcon />
                   ) : insuranceEligibility.status === 'no_insurance' ? (
                     <InsuranceIcon />
                   ) : (
@@ -1379,7 +904,15 @@ const AppointmentForm = ({
                 }
                 sx={{ mb: 2 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: insuranceEligibility.copayAmount ? 1 : 0, flexWrap: 'wrap' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mb: insuranceEligibility.copayAmount ? 1 : 0,
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <Chip
                     label={
                       insuranceEligibility.status === 'verified'
@@ -1398,48 +931,34 @@ const AppointmentForm = ({
                         ? 'success'
                         : insuranceEligibility.status === 'pending'
                         ? 'warning'
-                        : insuranceEligibility.status === 'failed' || insuranceEligibility.status === 'inactive'
-                        ? 'error'
-                        : 'default'
+                        : insuranceEligibility.status === 'no_insurance'
+                        ? 'default'
+                        : 'error'
                     }
                   />
                   <Typography variant="body2" fontWeight="medium">
-                    Insurance Eligibility: {insuranceEligibility.insuranceName}
+                    {insuranceEligibility.insuranceName}
                   </Typography>
-                </Box>
-                {insuranceEligibility.copayAmount && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Expected Copay: <strong>${insuranceEligibility.copayAmount}</strong>
-                  </Typography>
-                )}
-                {insuranceEligibility.message && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                    {insuranceEligibility.message}
-                  </Typography>
-                )}
-                {insuranceEligibility.status === 'no_insurance' && watchedPatientId && (
-                  <Box sx={{ mt: 1.5 }}>
-                    <Button
-                      type="button"
+                  {insuranceEligibility.copayAmount != null && (
+                    <Chip
+                      icon={<MoneyIcon fontSize="small" />}
+                      label={`Copay: $${insuranceEligibility.copayAmount}`}
                       size="small"
                       variant="outlined"
-                      startIcon={<AddIcon />}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const patientId = watchedPatientId;
-                        if (patientId) {
-                          try {
-                            navigate(`/patients/${patientId}?tab=insurance`);
-                          } catch (error) {
-                            console.error('Navigation error:', error);
-                            window.location.href = `/patients/${patientId}?tab=insurance`;
-                          }
-                        }
-                      }}
-                    >
-                      Add Insurance
-                    </Button>
+                    />
+                  )}
+                </Box>
+                {insuranceEligibility.status === 'no_insurance' && (
+                  <Typography variant="caption" color="text.secondary">
+                    No active primary insurance found for this patient.
+                  </Typography>
+                )}
+                {insuranceEligibility.status === 'pending' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <InfoIcon fontSize="small" color="warning" />
+                    <Typography variant="caption">
+                      Insurance eligibility has not been verified yet.
+                    </Typography>
                   </Box>
                 )}
               </Alert>
@@ -1452,46 +971,16 @@ const AppointmentForm = ({
               control={control}
               rules={appointmentValidations.providerId}
               render={({ field }) => {
-                const selectedProvider = providers.find(
-                  (p) => (p._id || p.id) === field.value
-                );
+                const selectedProvider = providers.find((p) => (p._id || p.id) === field.value);
                 return (
                   <Autocomplete
                     options={providers}
-                    loading={loadingProviders}
-                    getOptionLabel={(option) => {
-                      if (!option) return '';
-                      const firstName = option.userId?.firstName || '';
-                      const lastName = option.userId?.lastName || '';
-                      const code = option.providerCode || '';
-                      const name = `${firstName} ${lastName}`.trim();
-                      return name
-                        ? `${name} (${code})`
-                        : code || 'Unknown Provider';
-                    }}
+                    getOptionLabel={(option) =>
+                      option ? `${option.firstName} ${option.lastName}` : ''
+                    }
                     value={selectedProvider || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
-                      setConflictError('');
-                      clearErrors('startTime');
-                      clearErrors('endTime');
-                    }}
-                    onInputChange={(event, newInputValue, reason) => {
-                      if (reason === 'input') {
-                        if (providerSearchTimerRef.current) {
-                          clearTimeout(providerSearchTimerRef.current);
-                        }
-                        providerSearchTimerRef.current = setTimeout(() => {
-                          searchProviders(newInputValue);
-                        }, 300);
-                      } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
-                        searchProviders('');
-                      }
-                    }}
-                    onBlur={() => {
-                      searchProviders('');
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
                     }}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
@@ -1502,91 +991,39 @@ const AppointmentForm = ({
                         label="Provider *"
                         error={!!errors.providerId}
                         helperText={errors.providerId?.message}
-                        placeholder="Search provider by name or code..."
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {loadingProviders ? (
-                                <CircularProgress color="inherit" size={20} />
-                              ) : null}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
+                        placeholder="Select a provider..."
                       />
                     )}
-                    noOptionsText={
-                      loadingProviders ? 'Searching...' : 'No providers found'
-                    }
-                    filterOptions={(x) => x}
+                    noOptionsText="No providers found"
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const searchLower = inputValue.toLowerCase();
+                      return options.filter(
+                        (option) =>
+                          option.firstName?.toLowerCase().includes(searchLower) ||
+                          option.lastName?.toLowerCase().includes(searchLower)
+                      );
+                    }}
                   />
                 );
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="appointmentTypeId"
               control={control}
+              rules={appointmentValidations.appointmentTypeId}
               render={({ field }) => {
-                const selectedType = appointmentTypes.find(
-                  (t) => (t._id || t.id) === field.value
-                );
+                const selectedType = appointmentTypes.find((t) => (t._id || t.id) === field.value);
                 return (
                   <Autocomplete
                     options={appointmentTypes}
-                    loading={loadingAppointmentTypes}
                     getOptionLabel={(option) => (option ? option.name : '')}
                     value={selectedType || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
-                      if (newValue?.defaultDuration) {
-                        const currentValues = watch();
-                        const currentStartTime = currentValues.startTime;
-                        const currentDuration = currentValues.durationMinutes;
-                        const hasDurationAlreadySet = currentDuration && currentDuration > 0;
-                        const hasValidStartTime =
-                          currentStartTime &&
-                          dayjs.isDayjs(currentStartTime) &&
-                          currentStartTime.isValid();
-
-                        if (!hasDurationAlreadySet) {
-                          const updates = {
-                            ...currentValues,
-                            durationMinutes: newValue.defaultDuration,
-                          };
-
-                          if (hasValidStartTime && !endTimeManuallySet) {
-                            updates.endTime = calculateEndTimeFromStart(
-                              currentStartTime,
-                              newValue.defaultDuration
-                            );
-                          }
-
-                          reset(updates);
-                        }
-                      }
-                    }}
-                    onInputChange={(event, newInputValue, reason) => {
-                      if (reason === 'input') {
-                        if (appointmentTypeSearchTimerRef.current) {
-                          clearTimeout(appointmentTypeSearchTimerRef.current);
-                        }
-                        appointmentTypeSearchTimerRef.current = setTimeout(
-                          () => {
-                            searchAppointmentTypes(newInputValue);
-                          },
-                          300
-                        );
-                      } else if (reason === 'clear' || (reason === 'reset' && !newInputValue)) {
-                        searchAppointmentTypes('');
-                      }
-                    }}
-                    onBlur={() => {
-                      searchAppointmentTypes('');
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
                     }}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
@@ -1597,31 +1034,23 @@ const AppointmentForm = ({
                         label="Appointment Type *"
                         error={!!errors.appointmentTypeId}
                         helperText={errors.appointmentTypeId?.message}
-                        placeholder="Search appointment type..."
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {loadingAppointmentTypes ? (
-                                <CircularProgress color="inherit" size={20} />
-                              ) : null}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
+                        placeholder="Select an appointment type..."
                       />
                     )}
-                    noOptionsText={
-                      loadingAppointmentTypes
-                        ? 'Searching...'
-                        : 'No appointment types found'
-                    }
-                    filterOptions={(x) => x}
+                    noOptionsText="No appointment types found"
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const searchLower = inputValue.toLowerCase();
+                      return options.filter((option) =>
+                        option.name?.toLowerCase().includes(searchLower)
+                      );
+                    }}
                   />
                 );
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="appointmentDate"
@@ -1631,53 +1060,19 @@ const AppointmentForm = ({
                 <DatePicker
                   {...field}
                   label="Appointment Date *"
-                  value={field.value}
-                  onChange={(newValue) => {
-                    if (
-                      newValue &&
-                      dayjs.isDayjs(newValue) &&
-                      newValue.isValid()
-                    ) {
-                      const today = dayjs().startOf('day');
-                      if (newValue.isBefore(today)) {
-                        setError('appointmentDate', {
-                          type: 'manual',
-                          message: 'Appointment date cannot be in the past',
-                        });
-                        return;
-                      }
-                    }
-                    field.onChange(newValue);
-                    clearErrors('appointmentDate');
-                    setConflictError('');
-                    clearErrors('startTime');
-                    clearErrors('endTime');
-                  }}
+                  minDate={dayjs()}
                   slotProps={{
                     textField: {
                       fullWidth: true,
                       error: !!errors.appointmentDate,
                       helperText: errors.appointmentDate?.message,
-                      onBlur: () => {
-                        const value = field.value;
-                        if (value && dayjs.isDayjs(value) && value.isValid()) {
-                          const today = dayjs().startOf('day');
-                          if (value.isBefore(today)) {
-                            setError('appointmentDate', {
-                              type: 'manual',
-                              message: 'Appointment date cannot be in the past',
-                            });
-                          }
-                        }
-                      },
                     },
                   }}
-                  minDate={dayjs()}
-                  disablePast
                 />
               )}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="startTime"
@@ -1693,11 +1088,7 @@ const AppointmentForm = ({
                     setStartTimeManuallySet(true);
                     setDurationError('');
 
-                    if (
-                      newValue &&
-                      dayjs.isDayjs(newValue) &&
-                      newValue.isValid()
-                    ) {
+                    if (newValue && dayjs.isDayjs(newValue) && newValue.isValid()) {
                       const currentEndTime = watch('endTime');
                       const currentDuration = watch('durationMinutes');
 
@@ -1707,28 +1098,14 @@ const AppointmentForm = ({
                         dayjs.isDayjs(currentEndTime) &&
                         currentEndTime.isValid()
                       ) {
-                        const calculatedDuration = calculateDurationFromTimes(
-                          newValue,
-                          currentEndTime
-                        );
+                        const calculatedDuration = calculateDurationFromTimes(newValue, currentEndTime);
                         if (calculatedDuration && calculatedDuration >= 5) {
-                          reset({
-                            ...watch(),
-                            startTime: newValue,
-                            durationMinutes: calculatedDuration,
-                          });
+                          reset({ ...watch(), startTime: newValue, durationMinutes: calculatedDuration });
                         }
                       } else if (currentDuration && currentDuration >= 5) {
-                        const calculatedEndTime = calculateEndTimeFromStart(
-                          newValue,
-                          currentDuration
-                        );
+                        const calculatedEndTime = calculateEndTimeFromStart(newValue, currentDuration);
                         if (calculatedEndTime) {
-                          reset({
-                            ...watch(),
-                            startTime: newValue,
-                            endTime: calculatedEndTime,
-                          });
+                          reset({ ...watch(), startTime: newValue, endTime: calculatedEndTime });
                         }
                       }
                     }
@@ -1740,25 +1117,8 @@ const AppointmentForm = ({
                   slotProps={{
                     textField: {
                       fullWidth: true,
-                      error: !!errors.startTime || !!conflictError,
-                      helperText:
-                        errors.startTime?.message ||
-                        (conflictError && checkingConflict
-                          ? 'Checking availability...'
-                          : conflictError
-                          ? 'Time slot has conflicts'
-                          : ''),
-                      InputProps: conflictError
-                        ? {
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Tooltip title="Time slot has conflicts">
-                                  <ErrorIcon color="error" fontSize="small" />
-                                </Tooltip>
-                              </InputAdornment>
-                            ),
-                          }
-                        : undefined,
+                      error: !!errors.startTime,
+                      helperText: errors.startTime?.message,
                     },
                   }}
                   disabled={checkingConflict}
@@ -1766,19 +1126,15 @@ const AppointmentForm = ({
               )}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="endTime"
               control={control}
               rules={appointmentValidations.endTime}
               render={({ field }) => {
-                // Calculate minimum end time (start time + 5 minutes)
                 let minTime = null;
-                if (
-                  startTime &&
-                  dayjs.isDayjs(startTime) &&
-                  startTime.isValid()
-                ) {
+                if (startTime && dayjs.isDayjs(startTime) && startTime.isValid()) {
                   minTime = startTime.add(5, 'minute');
                 }
 
@@ -1792,11 +1148,7 @@ const AppointmentForm = ({
                       setEndTimeManuallySet(true);
                       setDurationError('');
 
-                      if (
-                        newValue &&
-                        dayjs.isDayjs(newValue) &&
-                        newValue.isValid()
-                      ) {
+                      if (newValue && dayjs.isDayjs(newValue) && newValue.isValid()) {
                         const currentStartTime = watch('startTime');
                         const currentDuration = watch('durationMinutes');
 
@@ -1806,28 +1158,14 @@ const AppointmentForm = ({
                           dayjs.isDayjs(currentStartTime) &&
                           currentStartTime.isValid()
                         ) {
-                          const calculatedDuration = calculateDurationFromTimes(
-                            currentStartTime,
-                            newValue
-                          );
+                          const calculatedDuration = calculateDurationFromTimes(currentStartTime, newValue);
                           if (calculatedDuration && calculatedDuration >= 5) {
-                            reset({
-                              ...watch(),
-                              endTime: newValue,
-                              durationMinutes: calculatedDuration,
-                            });
+                            reset({ ...watch(), endTime: newValue, durationMinutes: calculatedDuration });
                           }
                         } else if (currentDuration && currentDuration >= 5) {
-                          const calculatedStartTime = calculateStartTimeFromEnd(
-                            newValue,
-                            currentDuration
-                          );
+                          const calculatedStartTime = calculateStartTimeFromEnd(newValue, currentDuration);
                           if (calculatedStartTime) {
-                            reset({
-                              ...watch(),
-                              endTime: newValue,
-                              startTime: calculatedStartTime,
-                            });
+                            reset({ ...watch(), endTime: newValue, startTime: calculatedStartTime });
                           }
                         }
                       }
@@ -1845,20 +1183,20 @@ const AppointmentForm = ({
                           errors.endTime?.message ||
                           (conflictError && checkingConflict
                             ? 'Checking availability...'
-                          : conflictError
-                          ? 'Time slot has conflicts'
+                            : conflictError
+                            ? 'Time slot has conflicts'
                             : ''),
-                      InputProps: conflictError
-                        ? {
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Tooltip title="Time slot has conflicts">
-                                  <ErrorIcon color="error" fontSize="small" />
-                                </Tooltip>
-                              </InputAdornment>
-                            ),
-                          }
-                        : undefined,
+                        InputProps: conflictError
+                          ? {
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <Tooltip title="Time slot has conflicts">
+                                    <ErrorIcon color="error" fontSize="small" />
+                                  </Tooltip>
+                                </InputAdornment>
+                              ),
+                            }
+                          : undefined,
                       },
                     }}
                     disabled={checkingConflict}
@@ -1867,6 +1205,7 @@ const AppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
@@ -1879,23 +1218,12 @@ const AppointmentForm = ({
                   const currentStartTime = watch('startTime');
                   const currentEndTime = watch('endTime');
                   const hasValidStartTime =
-                    currentStartTime &&
-                    dayjs.isDayjs(currentStartTime) &&
-                    currentStartTime.isValid();
+                    currentStartTime && dayjs.isDayjs(currentStartTime) && currentStartTime.isValid();
                   const hasValidEndTime =
-                    currentEndTime &&
-                    dayjs.isDayjs(currentEndTime) &&
-                    currentEndTime.isValid();
+                    currentEndTime && dayjs.isDayjs(currentEndTime) && currentEndTime.isValid();
 
-                  if (
-                    hasValidStartTime &&
-                    hasValidEndTime &&
-                    startTimeManuallySet &&
-                    endTimeManuallySet
-                  ) {
-                    setDurationError(
-                      'Please adjust the start-time and end-time'
-                    );
+                  if (hasValidStartTime && hasValidEndTime && startTimeManuallySet && endTimeManuallySet) {
+                    setDurationError('Please adjust the start-time and end-time');
                     return;
                   }
 
@@ -1903,28 +1231,14 @@ const AppointmentForm = ({
 
                   if (newDuration >= 5) {
                     if (hasValidStartTime && !endTimeManuallySet) {
-                      const calculatedEndTime = calculateEndTimeFromStart(
-                        currentStartTime,
-                        newDuration
-                      );
+                      const calculatedEndTime = calculateEndTimeFromStart(currentStartTime, newDuration);
                       if (calculatedEndTime) {
-                        reset({
-                          ...watch(),
-                          durationMinutes: newDuration,
-                          endTime: calculatedEndTime,
-                        });
+                        reset({ ...watch(), durationMinutes: newDuration, endTime: calculatedEndTime });
                       }
                     } else if (hasValidEndTime && !startTimeManuallySet) {
-                      const calculatedStartTime = calculateStartTimeFromEnd(
-                        currentEndTime,
-                        newDuration
-                      );
+                      const calculatedStartTime = calculateStartTimeFromEnd(currentEndTime, newDuration);
                       if (calculatedStartTime) {
-                        reset({
-                          ...watch(),
-                          durationMinutes: newDuration,
-                          startTime: calculatedStartTime,
-                        });
+                        reset({ ...watch(), durationMinutes: newDuration, startTime: calculatedStartTime });
                       }
                     }
                   }
@@ -1939,23 +1253,20 @@ const AppointmentForm = ({
               inputProps={{ min: 5 }}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="roomId"
               control={control}
               render={({ field }) => {
-                const selectedRoom = rooms.find(
-                  (r) => (r._id || r.id) === field.value
-                );
+                const selectedRoom = rooms.find((r) => (r._id || r.id) === field.value);
                 return (
                   <Autocomplete
                     options={rooms}
                     getOptionLabel={(option) => (option ? option.name : '')}
                     value={selectedRoom || null}
                     onChange={(event, newValue) => {
-                      field.onChange(
-                        newValue ? newValue._id || newValue.id : ''
-                      );
+                      field.onChange(newValue ? newValue._id || newValue.id : '');
                     }}
                     isOptionEqualToValue={(option, value) =>
                       (option._id || option.id) === (value._id || value.id)
@@ -1982,20 +1293,19 @@ const AppointmentForm = ({
               }}
             />
           </Grid>
+
           <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Chief Complaint"
               multiline
               rows={2}
-              {...register(
-                'chiefComplaint',
-                appointmentValidations.chiefComplaint
-              )}
+              {...register('chiefComplaint', appointmentValidations.chiefComplaint)}
               error={!!errors.chiefComplaint}
               helperText={errors.chiefComplaint?.message}
             />
           </Grid>
+
           <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
@@ -2007,6 +1317,7 @@ const AppointmentForm = ({
               helperText={errors.notes?.message}
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControlLabel
               control={
@@ -2018,6 +1329,7 @@ const AppointmentForm = ({
               label="Requires Interpreter"
             />
           </Grid>
+
           {requiresInterpreter && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
@@ -2033,20 +1345,13 @@ const AppointmentForm = ({
                 }}
                 render={({ field }) => (
                   <FormControl fullWidth error={!!errors.interpreterLanguage}>
-                    <InputLabel id="interpreter-language-label">
-                      Interpreter Language *
-                    </InputLabel>
-                    <Select
-                      {...field}
-                      labelId="interpreter-language-label"
-                      label="Interpreter Language *"
-                    >
-                      <MenuItem value="">
-                        <em>Select a language</em>
-                      </MenuItem>
+                    <InputLabel id="interpreter-language-label">Interpreter Language *</InputLabel>
+                    <Select {...field} labelId="interpreter-language-label" label="Interpreter Language *">
+                      <MenuItem value=""><em>Select a language</em></MenuItem>
                       {languages.map((lang) => (
                         <MenuItem key={lang._id || lang.code} value={lang.name}>
-                          {lang.name} {lang.nativeName && lang.nativeName !== lang.name ? `(${lang.nativeName})` : ''}
+                          {lang.name}
+                          {lang.nativeName && lang.nativeName !== lang.name ? ` (${lang.nativeName})` : ''}
                         </MenuItem>
                       ))}
                     </Select>
@@ -2058,6 +1363,7 @@ const AppointmentForm = ({
               />
             </Grid>
           )}
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControlLabel
               control={
@@ -2069,6 +1375,7 @@ const AppointmentForm = ({
               label="Insurance Verified"
             />
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
@@ -2077,16 +1384,10 @@ const AppointmentForm = ({
               {...register('copayCollected', {
                 ...appointmentValidations.copayCollected,
                 validate: (value) => {
-                  if (value === null || value === undefined || value === '') {
-                    return true;
-                  }
+                  if (value === null || value === undefined || value === '') return true;
                   const numValue = Number(value);
-                  if (isNaN(numValue) || numValue < 0) {
-                    return 'Copay collected must be 0 or greater';
-                  }
-                  if (numValue > 999999.99) {
-                    return 'Copay collected must be 999999.99 or less';
-                  }
+                  if (isNaN(numValue) || numValue < 0) return 'Copay collected must be 0 or greater';
+                  if (numValue > 999999.99) return 'Copay collected must be 999999.99 or less';
                   const decimalParts = String(value).split('.');
                   if (decimalParts.length > 1 && decimalParts[1].length > 2) {
                     return 'Copay collected cannot have more than 2 decimal places';
@@ -2107,23 +1408,16 @@ const AppointmentForm = ({
                 if (
                   decimalParts.length > 1 &&
                   decimalParts[1].length >= 2 &&
-                  ![
-                    'Backspace',
-                    'Delete',
-                    'ArrowLeft',
-                    'ArrowRight',
-                    'Tab',
-                  ].includes(key)
+                  !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(key)
                 ) {
                   const selectionStart = e.target.selectionStart;
                   const decimalIndex = value.indexOf('.');
-                  if (selectionStart > decimalIndex) {
-                    e.preventDefault();
-                  }
+                  if (selectionStart > decimalIndex) e.preventDefault();
                 }
               }}
             />
           </Grid>
+
           {isEditMode && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
@@ -2137,6 +1431,7 @@ const AppointmentForm = ({
               />
             </Grid>
           )}
+
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth error={!!errors.status}>
               <InputLabel>Status</InputLabel>
@@ -2160,21 +1455,13 @@ const AppointmentForm = ({
                   </Select>
                 )}
               />
-              {errors.status && (
-                <FormHelperText>{errors.status.message}</FormHelperText>
-              )}
+              {errors.status && <FormHelperText>{errors.status.message}</FormHelperText>}
             </FormControl>
           </Grid>
+
           <Grid size={{ xs: 12 }}>
             <Divider sx={{ my: 2 }} />
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 2,
-              }}
-            >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" component="h3">
                 Custom Fields ({Object.keys(customFieldsLocal).length}/{MAX_CUSTOM_FIELDS})
               </Typography>
@@ -2192,95 +1479,67 @@ const AppointmentForm = ({
             {Object.keys(customFieldsLocal).length === 0 ? (
               <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'grey.50' }}>
                 <Typography variant="body2" color="text.secondary">
-                  No custom fields added. Click "Add Field" to add custom
-                  fields.
+                  No custom fields added. Click "Add Field" to add custom fields.
                 </Typography>
               </Paper>
             ) : (
               <>
-                {Object.entries(customFieldsLocal).map(
-                  ([key, value], index) => (
-                    <Box key={`custom-field-${index}`} sx={{ width: '100%' }}>
-                      <Grid container spacing={2} sx={{ mb: 1 }}>
-                        <Grid size={{ xs: 12, sm: 5 }}>
-                          <TextField
-                            fullWidth
-                            label={`Field Name ${index + 1}`}
-                            defaultValue={key}
-                            onBlur={(e) => {
-                              const newKey = e.target.value.trim();
-                              if (newKey && newKey !== key) {
-                                handleCustomFieldKeyChange(key, newKey);
-                              }
-                            }}
-                            placeholder="e.g., Referral Source, Special Instructions"
-                          />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField
-                            fullWidth
-                            label={`Field Value ${index + 1}`}
-                            defaultValue={value || ''}
-                            onBlur={(e) =>
-                              handleCustomFieldValueChange(key, e.target.value)
-                            }
-                            placeholder="Enter the value"
-                          />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 1 }}>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              height: '100%',
-                              pt: { xs: 0, sm: 1 },
-                            }}
-                          >
-                            <IconButton
-                              color="error"
-                              onClick={() => handleRemoveCustomField(key)}
-                              title="Remove this field"
-                              size="small"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Box>
-                        </Grid>
+                {Object.entries(customFieldsLocal).map(([key, value], index) => (
+                  <Box key={`custom-field-${index}`} sx={{ width: '100%' }}>
+                    <Grid container spacing={2} sx={{ mb: 1 }}>
+                      <Grid size={{ xs: 12, sm: 5 }}>
+                        <TextField
+                          fullWidth
+                          label={`Field Name ${index + 1}`}
+                          defaultValue={key}
+                          onBlur={(e) => {
+                            const newKey = e.target.value.trim();
+                            if (newKey && newKey !== key) handleCustomFieldKeyChange(key, newKey);
+                          }}
+                          placeholder="e.g., Referral Source, Special Instructions"
+                        />
                       </Grid>
-                    </Box>
-                  )
-                )}
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <TextField
+                          fullWidth
+                          label={`Field Value ${index + 1}`}
+                          defaultValue={value || ''}
+                          onBlur={(e) => handleCustomFieldValueChange(key, e.target.value)}
+                          placeholder="Enter the value"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', pt: { xs: 0, sm: 1 } }}>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleRemoveCustomField(key)}
+                            title="Remove this field"
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ))}
               </>
             )}
           </Grid>
+
           {!hideButtons && (
             <Grid size={12}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button
-                  type="button"
-                  variant="outlined"
-                  onClick={handleBack}
-                  disabled={loading}
-                >
+                <Button type="button" variant="outlined" onClick={handleBack} disabled={loading}>
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   variant="contained"
-                  startIcon={
-                    loading ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <SaveIcon />
-                    )
-                  }
+                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                   disabled={loading}
                 >
-                  {loading
-                    ? 'Saving...'
-                    : isEditMode
-                    ? 'Save Changes'
-                    : 'Create Appointment'}
+                  {loading ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Appointment'}
                 </Button>
               </Box>
             </Grid>
