@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { fontSize } from "../../../constants/styles";

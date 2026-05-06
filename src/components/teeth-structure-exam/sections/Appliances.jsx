@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack } from "@mui/material";
 import { 
   MedicalServices, Healing, Psychology, SelfImprovement, Science, 

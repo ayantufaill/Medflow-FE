@@ -1,4 +1,3 @@
-import React from "react";
 import { Box } from "@mui/material";
 
 // --- Improved Tooth Icons based on the new screenshot ---

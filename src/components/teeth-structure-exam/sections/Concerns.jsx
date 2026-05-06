@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Typography, Stack, Checkbox } from "@mui/material";
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import { fontSize, fontWeight } from "../../../constants/styles";

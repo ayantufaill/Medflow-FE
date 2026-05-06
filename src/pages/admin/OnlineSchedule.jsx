@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Checkbox, FormControlLabel, TextField, Paper, Grid, Button,

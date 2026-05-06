@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Box, Typography, TextField, Checkbox, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from "@mui/material";

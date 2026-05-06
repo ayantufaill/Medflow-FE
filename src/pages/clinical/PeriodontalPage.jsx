@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DiagnosticNavbar from '../../components/clinical/DiagnosticNavbar';

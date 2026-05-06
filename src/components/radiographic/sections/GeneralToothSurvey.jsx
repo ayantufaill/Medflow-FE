@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import { fontSize, fontWeight } from "../../../constants/styles";

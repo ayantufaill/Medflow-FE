@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Typography, TextField, Checkbox, FormControlLabel, Grid } from "@mui/material";
 
 const PaymentPlan = ({ 

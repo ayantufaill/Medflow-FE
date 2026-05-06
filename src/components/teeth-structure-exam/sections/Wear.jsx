@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Typography, Stack, Divider, Button, Checkbox } from "@mui/material";
 import { fontSize, fontWeight } from "../../../constants/styles";
 

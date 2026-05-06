@@ -1,4 +1,3 @@
-import React from 'react';
 import { Menu, MenuItem, Typography } from '@mui/material';
 
 const PrintOptionsDropdown = ({ anchorEl, open, onClose, onSelect }) => {

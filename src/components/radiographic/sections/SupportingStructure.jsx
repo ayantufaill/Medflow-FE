@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider, Radio, RadioGroup } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';

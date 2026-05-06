@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Typography, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
 

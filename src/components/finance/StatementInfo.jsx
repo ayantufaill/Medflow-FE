@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Typography, Grid, InputBase } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
 

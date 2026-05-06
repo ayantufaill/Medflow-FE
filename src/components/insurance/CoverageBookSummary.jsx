@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, Box, Button, Checkbox, Select, MenuItem

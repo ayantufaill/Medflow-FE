@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Typography, Grid, Select, MenuItem, Checkbox, FormControlLabel } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
