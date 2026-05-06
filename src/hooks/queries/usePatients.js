@@ -25,10 +25,12 @@ export const usePatients = (options = {}) => {
   });
 };
 
-export const usePatient = (patientId) => {
+export const usePatient = (patientId, { includeSsn = false } = {}) => {
   return useQuery({
-    queryKey: patientKeys.detail(patientId),
-    queryFn: () => patientService.getPatientById(patientId),
+    queryKey: includeSsn
+      ? [...patientKeys.detail(patientId), 'with-ssn']
+      : patientKeys.detail(patientId),
+    queryFn: () => patientService.getPatientById(patientId, includeSsn),
     enabled: !!patientId,
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
