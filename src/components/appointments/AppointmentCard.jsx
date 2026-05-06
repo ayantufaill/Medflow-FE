@@ -592,7 +592,7 @@ const StatusTag = ({ label, bgColor, borderColor, textColor, fontSize, bold = fa
         py: 0.05,
         bgcolor: bgColor,
         borderRadius: "2px",
-        border: "1px solid borderColor",
+        border: `1px solid ${borderColor}`,
       }}
     >
       <Typography

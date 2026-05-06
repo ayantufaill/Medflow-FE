@@ -49,8 +49,7 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
     } catch (err) {
       console.error("Failed to fetch appointment history:", err);
     } finally {
-      setLoading(true); // Small delay feel or keep loading for 500ms
-      setTimeout(() => setLoading(false), 300);
+      setLoading(false);
     }
   }, [patient]);
 
@@ -228,7 +227,7 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
                         >
                           <TableCell padding="checkbox"><Checkbox size="small" /></TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{dayjs(appt.appointmentDate).format("MM/DD/YYYY")}</TableCell>
-                          <TableCell>{dayjs(appt.startTime || appt.appointmentDate).format("hh:mm A")}</TableCell>
+                          <TableCell>{appt.startTime ? dayjs(`2000-01-01 ${appt.startTime}`).format("hh:mm A") : dayjs(appt.appointmentDate).format("hh:mm A")}</TableCell>
                           <TableCell>{appt.appointmentType?.name || "Recare"}</TableCell>
                           <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {appt.procedures || appt.note || "---"}
