@@ -178,13 +178,15 @@ const SimpleStatement = ({ onClose }) => {
           showOutstanding={false}
         />
 
+        {/* Perforation Line Text */}
+        <Typography variant="caption" sx={{ display: 'block', mt: 2, mb: 1, color: '#777', fontSize: fontSize.xs, textAlign: 'center' }}>
+          Please detach and return this part of the statement with your payment to ensure proper processing
+        </Typography>
+        
         {/* Perforation Line */}
-        <Box sx={{ position: 'relative', my: 5, borderTop: '1px dashed #bbb', textAlign: 'center' }}>
-           <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: '#777', fontSize: fontSize.xs }}>
-            Please detach and return this part of the statement with your payment to ensure proper processing
-          </Typography>
+        <Box sx={{ position: 'relative', my: 2, borderTop: '1px dashed #bbb', textAlign: 'center' }}>
           <ContentCutIcon sx={{ position: 'absolute', left: 0, top: -12, color: '#bbb', fontSize: 20 }} />
-          <Typography variant="caption" sx={{ display: 'block', color: '#777', fontSize: fontSize.xs }}>
+          <Typography variant="caption" sx={{ display: 'block', color: '#777', fontSize: fontSize.xs, mt: 2 }}>
             Please keep this part of the statement for your records
           </Typography>
         </Box>
@@ -211,7 +213,6 @@ const SimpleStatement = ({ onClose }) => {
         />
 
 
-
         {/* Appointments & Notes */}
         <StatementFooter 
           appointments={appointments}
@@ -220,7 +221,14 @@ const SimpleStatement = ({ onClose }) => {
           onNotesChange={(e) => setNotes(e.target.value)}
           onSaveNotes={() => setShowNotesInput(false)}
           onEditNotes={() => setShowNotesInput(true)}
-          onCloseNotes={() => setShowNotesInput(false)}
+          onCloseNotes={() => {
+            if (showNotesInput && notes) {
+              setShowNotesInput(false);
+            } else {
+              setShowNotesInput(false);
+              setNotes('');
+            }
+          }}
         />
 
         {/* Action Buttons */}
@@ -245,7 +253,7 @@ const SimpleStatement = ({ onClose }) => {
             }}
             onClick={() => setShowNotesInput(true)}
           >
-            Add Notes
+            {notes ? 'Edit Notes' : 'Add Notes'}
           </Button>
           <Button 
             variant="outlined" 

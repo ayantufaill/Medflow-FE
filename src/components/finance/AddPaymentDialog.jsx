@@ -141,7 +141,7 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
             variant="standard"
             value={paymentType}
             onChange={handlePaymentTypeChange}
-            sx={{ fontSize: '0.875rem', width: 120 }}
+            sx={{ fontSize: '0.875rem', width: 170 }}
             MenuProps={{ disablePortal: true }}
             disabled={!isChecked}
           >

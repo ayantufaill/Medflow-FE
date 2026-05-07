@@ -13,6 +13,12 @@ import InsurancePaymentDialog from './InsurancePaymentDialog';
 import CashPlusMenu from './CashPlusMenu';
 import AddPaymentDialog from './AddPaymentDialog';
 import AccountNotesDialog from './AccountNotesDialog';
+import NewInvoiceDialog from './NewInvoiceDialog';
+import PatientPrintOptions from './PatientPrintOptions';
+import PrintReceiptDialog from './PrintReceiptDialog';
+import ItemizedReceiptPreview from './ItemizedReceiptPreview';
+import SimpleStatementDialog from './SimpleStatementDialog';
+import DetailedStatementDialog from './DetailedStatementDialog';
 
 // --- STYLED COMPONENTS ---
 
@@ -191,7 +197,14 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
   const [showInsurancePayment, setShowInsurancePayment] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showAccountNotes, setShowAccountNotes] = useState(false);
+  const [showNewInvoice, setShowNewInvoice] = useState(false);
   const [cashPlusAnchorEl, setCashPlusAnchorEl] = useState(null);
+  const [printAnchorEl, setPrintAnchorEl] = useState(null);
+  const [showPrintReceipt, setShowPrintReceipt] = useState(false);
+  const [showItemizedReceipt, setShowItemizedReceipt] = useState(false);
+  const [showSimpleStatement, setShowSimpleStatement] = useState(false);
+  const [showDetailedStatement, setShowDetailedStatement] = useState(false);
+  const [isFamilyReceipt, setIsFamilyReceipt] = useState(false);
   
   const handleShareSelect = (optionId) => {
     if (optionId === 'request-payment') {
@@ -238,14 +251,36 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
     setShowAccountNotes(true);
   };
 
+  const handlePrintClick = (event) => {
+    setPrintAnchorEl(event.currentTarget);
+  };
+
+  const handlePrintClose = () => {
+    setPrintAnchorEl(null);
+  };
+
+  const handlePrintSelect = (option) => {
+    console.log('Print option selected:', option);
+    if (option === 'patient payment receipt' || option === 'family patient receipt') {
+      setIsFamilyReceipt(option === 'family patient receipt');
+      setShowPrintReceipt(true);
+    } else if (option === 'Itemized receipt') {
+      setShowItemizedReceipt(true);
+    } else if (option === 'Simple Statement') {
+      setShowSimpleStatement(true);
+    } else if (option === 'Detailed Statement') {
+      setShowDetailedStatement(true);
+    }
+  };
+
   const pixelIcons = [
-    // { Icon: IconBill }, // Invoices icon disabled
+    { Icon: IconBill, onClick: () => setShowNewInvoice(true) },
     { Icon: IconUserWallet, onClick: handleUserWalletClick },
-    // { Icon: IconInsurance }, // Add Claim icon disabled
+    { Icon: IconInsurance },
     { Icon: IconInsuranceWallet, onClick: handleInsuranceWalletClick },
     { Icon: IconRefreshCoin, onClick: onRefreshCoinClick },
     { Icon: IconPiggyBank, onClick: onOpenDepositMenu },
-    // { Icon: IconPrinter }, // Print icon disabled
+    { Icon: IconPrinter, onClick: handlePrintClick },
     { Icon: IconCloudUpload, onShareSelect: handleShareSelect },
     { Icon: IconCashPlus, onClick: handleCashPlusClick },
     { Icon: IconCashMinus, onClick: onCashMinusClick },
@@ -285,11 +320,11 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
         <Box 
           sx={{ 
             position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)',
+            width: '500px',
+            height: 'fit-content',
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
@@ -301,7 +336,6 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
             sx={{ 
               maxWidth: '500px', 
               width: '90%',
-              bgcolor: '#fff',
               borderRadius: '8px',
               overflow: 'visible',
               boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
@@ -424,6 +458,192 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
           >
             <AccountNotesDialog 
               onClose={() => setShowAccountNotes(false)}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {/* New Invoice Dialog */}
+      {showNewInvoice && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowNewInvoice(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '1000px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <NewInvoiceDialog 
+              onClose={() => setShowNewInvoice(false)}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {/* Patient Print Options Dropdown */}
+      <PatientPrintOptions
+        anchorEl={printAnchorEl}
+        open={Boolean(printAnchorEl)}
+        onClose={handlePrintClose}
+        onSelect={handlePrintSelect}
+      />
+
+      {/* Print Receipt Dialog */}
+      {showPrintReceipt && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowPrintReceipt(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '500px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <PrintReceiptDialog 
+              onClose={() => setShowPrintReceipt(false)}
+              initialIncludeFamily={isFamilyReceipt}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {/* Itemized Receipt Preview Dialog */}
+      {showItemizedReceipt && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowItemizedReceipt(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '1100px', 
+              width: '95%',
+              bgcolor: '#fff',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ItemizedReceiptPreview 
+              onClose={() => setShowItemizedReceipt(false)}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {/* Simple Statement Dialog */}
+      {showSimpleStatement && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowSimpleStatement(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '1100px', 
+              width: '95%',
+              maxHeight: '95vh',
+              bgcolor: '#fff',
+              borderRadius: '4px',
+              overflow: 'auto',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SimpleStatementDialog 
+              onClose={() => setShowSimpleStatement(false)}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {/* Detailed Statement Dialog */}
+      {showDetailedStatement && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowDetailedStatement(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '1100px', 
+              width: '95%',
+              maxHeight: '95vh',
+              bgcolor: '#fff',
+              borderRadius: '4px',
+              overflow: 'auto',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DetailedStatementDialog 
+              onClose={() => setShowDetailedStatement(false)}
             />
           </Box>
         </Box>

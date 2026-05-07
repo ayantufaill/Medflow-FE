@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Box, Typography, Grid, Paper, IconButton, 
-  Button, Stack, Accordion, AccordionSummary, AccordionDetails, Chip, Divider
+  Button, Stack, Accordion, AccordionSummary, AccordionDetails, Chip, Divider,
+  Dialog, DialogContent
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -17,10 +18,15 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SecurityIcon from '@mui/icons-material/Security';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import ErrorBoundary from '../../components/shared/ErrorBoundary';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DentalTreatmentPlan from '../../components/clinical/DentalTreatmentPlan';
 import ProcedureRow from '../../components/clinical/ProcedureRow';
 import TreatmentPlanEndTable from '../../components/clinical/TreatmentPlanEndTable';
+import ReEstimateMenu from '../../components/clinical/ReEstimateMenu';
+import AdjustedFeeTreatmentPlan from '../../components/clinical/AdjustedFeeTreatmentPlan';
+import EditProcedureFees from '../../components/clinical/EditProcedureFees';
+import PredetermineProcedures from '../../components/clinical/PredetermineProcedures';
 import { fontSize, fontWeight } from "../../constants/styles";
 
 // --- Custom SVG Tooth Icons for Headers ---
@@ -235,101 +241,122 @@ const OrthoSectionHeader = ({ label, isExpanded = false }) => (
 );
 
 // --- Global Action Bar Component ---
-const GlobalActionBar = () => (
-  <Stack 
-    direction="row" 
-    alignItems="center" 
-    justifyContent="space-between" 
-    sx={{ p: 1, bgcolor: '#f8f9fc', borderBottom: '1px solid #e0e0e0' }}
-  >
-    {/* Left Button Group */}
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Button 
-        variant="contained" 
-        size="small" 
-        endIcon={<KeyboardArrowDownIcon />}
-        sx={{ bgcolor: '#a3b1d6', textTransform: 'none', borderRadius: 1 }}
-      >
-        Visit
-      </Button>
-      <Button 
-        variant="contained" 
-        size="small" 
-        endIcon={<KeyboardArrowDownIcon />}
-        sx={{ bgcolor: '#a3b1d6', textTransform: 'none', borderRadius: 1 }}
-      >
-        State
-      </Button>
-      <IconButton size="small" sx={{ bgcolor: '#f4c7c3', mx: 1 }}>
-        <DeleteIcon fontSize="small" sx={{ color: '#d93025' }} />
-      </IconButton>
-      <Button 
-        variant="contained" 
-        color="success" 
-        size="small" 
-        sx={{ borderRadius: 20, textTransform: 'none', px: 2, bgcolor: '#b7e1cd', color: '#137333' }}
-      >
-        Complete
-      </Button>
-      <Button 
-        variant="outlined" 
-        size="small" 
-        sx={{ borderRadius: 20, textTransform: 'none', px: 2, color: '#9e9e9e', borderColor: '#e0e0e0' }}
-      >
-        Refer To
-      </Button>
-    </Stack>
+const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredetermineClick }) => {
+  const [reEstimateAnchor, setReEstimateAnchor] = useState(null);
 
-    {/* Right Action Group */}
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Stack direction="row">
+  const handleReEstimateClick = (event) => {
+    setReEstimateAnchor(event.currentTarget);
+  };
+
+  const handleReEstimateClose = () => {
+    setReEstimateAnchor(null);
+  };
+
+  return (
+    <Stack 
+      direction="row" 
+      alignItems="center" 
+      justifyContent="space-between" 
+      sx={{ p: 1, bgcolor: '#f8f9fc', borderBottom: '1px solid #e0e0e0' }}
+    >
+      {/* Left Button Group */}
+      <Stack direction="row" spacing={1} alignItems="center">
         <Button 
           variant="contained" 
           size="small" 
-          sx={{ bgcolor: '#1a237e', textTransform: 'none', borderRight: '1px solid #3f51b5', borderRadius: '4px 0 0 4px' }}
+          endIcon={<KeyboardArrowDownIcon />}
+          sx={{ bgcolor: '#a3b1d6', textTransform: 'none', borderRadius: 1 }}
         >
-          Re-Estimate
+          Visit
         </Button>
         <Button 
           variant="contained" 
           size="small" 
-          sx={{ bgcolor: '#1a237e', minWidth: 30, borderRadius: '0 4px 4px 0' }}
+          endIcon={<KeyboardArrowDownIcon />}
+          sx={{ bgcolor: '#a3b1d6', textTransform: 'none', borderRadius: 1 }}
         >
-          <KeyboardArrowDownIcon fontSize="small" />
+          State
+        </Button>
+        <IconButton size="small" sx={{ bgcolor: '#f4c7c3', mx: 1 }}>
+          <DeleteIcon fontSize="small" sx={{ color: '#d93025' }} />
+        </IconButton>
+        <Button 
+          variant="contained" 
+          color="success" 
+          size="small" 
+          sx={{ borderRadius: 20, textTransform: 'none', px: 2, bgcolor: '#b7e1cd', color: '#137333' }}
+        >
+          Complete
+        </Button>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          sx={{ borderRadius: 20, textTransform: 'none', px: 2, color: '#9e9e9e', borderColor: '#e0e0e0' }}
+        >
+          Refer To
         </Button>
       </Stack>
-      
-      <Chip 
-        label="DBI" 
-        variant="outlined" 
-        size="small" 
-        sx={{ borderRadius: 1, height: 24, bgcolor: '#a3b1d6', border: 'none' }} 
-      />
-      
-      <IconButton size="small"><PrintIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
-      <IconButton size="small"><CreditCardIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
-      <IconButton size="small"><SettingsIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
-      <IconButton size="small"><SecurityIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
-      
-      <Button 
-        variant="outlined" 
-        size="small" 
-        sx={{ textTransform: 'none', color: '#1a237e', borderColor: '#1a237e' }}
-      >
-        View Used Fee Guide
-      </Button>
-      
-      <Button 
-        variant="contained" 
-        size="small" 
-        endIcon={<KeyboardArrowDownIcon />}
-        sx={{ bgcolor: '#1a237e', textTransform: 'none' }}
-      >
-        INS. COVERAGE
-      </Button>
+
+      {/* Right Action Group */}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row">
+          <Button 
+            variant="contained" 
+            size="small" 
+            sx={{ bgcolor: '#1a237e', textTransform: 'none', borderRight: '1px solid #3f51b5', borderRadius: '4px 0 0 4px' }}
+            onClick={handleReEstimateClick}
+          >
+            Re-Estimate
+          </Button>
+          <Button 
+            variant="contained" 
+            size="small" 
+            sx={{ bgcolor: '#1a237e', minWidth: 30, borderRadius: '0 4px 4px 0' }}
+            onClick={handleReEstimateClick}
+          >
+            <KeyboardArrowDownIcon fontSize="small" />
+          </Button>
+        </Stack>
+        
+        <ReEstimateMenu 
+          anchorEl={reEstimateAnchor}
+          open={Boolean(reEstimateAnchor)}
+          onClose={handleReEstimateClose}
+          onOptionClick={onReEstimateOptionClick}
+        />
+        
+        <Chip 
+          label="DBI" 
+          variant="outlined" 
+          size="small" 
+          sx={{ borderRadius: 1, height: 24, bgcolor: '#a3b1d6', border: 'none' }} 
+        />
+        
+        <IconButton size="small"><PrintIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
+        <IconButton size="small"><CreditCardIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
+        <IconButton size="small" onClick={onSettingsClick}><SettingsIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
+        <IconButton size="small" onClick={onPredetermineClick}><SecurityIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
+        
+        <Button 
+          variant="outlined" 
+          size="small" 
+          sx={{ textTransform: 'none', color: '#1a237e', borderColor: '#1a237e' }}
+        >
+          View Used Fee Guide
+        </Button>
+        
+        <Button 
+          variant="contained" 
+          size="small" 
+          endIcon={<KeyboardArrowDownIcon />}
+          sx={{ bgcolor: '#1a237e', textTransform: 'none' }}
+        >
+          INS. COVERAGE
+        </Button>
+      </Stack>
     </Stack>
-  </Stack>
-);
+  );
+};
 
 // --- Styled Components for Clinical Badges ---
 const ActionBadge = ({ label, color, textColor = "black" }) => (
@@ -342,32 +369,39 @@ const ActionBadge = ({ label, color, textColor = "black" }) => (
   </Box>
 );
 
-const SidebarSection = ({ title, children, expanded = false, icons = [] }) => (
-  <Accordion 
-    defaultExpanded={expanded} 
-    disableGutters 
-    elevation={0} 
-    sx={{ 
-      borderBottom: '1px solid #b4bedb',
-      '&:before': { display: 'none' } 
-    }}
-  >
-    <AccordionSummary 
-      expandIcon={<ExpandMoreIcon sx={{ fontSize: 18, color: '#333' }} />} 
-      sx={{ minHeight: 40, px: 1.5, '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
+const SidebarSection = ({ title, children, expanded: defaultExpanded = false, icons = [], titleSx = {} }) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  return (
+    <Accordion 
+      expanded={isExpanded} 
+      onChange={(e, expanded) => setIsExpanded(expanded)}
+      disableGutters 
+      elevation={0} 
+      sx={{ 
+        borderBottom: '1px solid #b4bedb',
+        '&:before': { display: 'none' } 
+      }}
     >
-      <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-        {title}
-      </Typography>
-      <Stack direction="row" spacing={0.5} sx={{ mr: 1 }}>
-        {icons}
-      </Stack>
-    </AccordionSummary>
-    <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-      {children}
-    </AccordionDetails>
-  </Accordion>
-);
+      <AccordionSummary 
+        expandIcon={<ExpandMoreIcon sx={{ fontSize: 18, color: '#333' }} />} 
+        sx={{ minHeight: 40, px: 1.5, '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
+      >
+        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#4a69bd', ...titleSx }}>
+          {title}
+        </Typography>
+        {isExpanded && (
+          <Stack direction="row" spacing={0.5} sx={{ mr: 1, alignItems: 'center' }}>
+            {icons}
+          </Stack>
+        )}
+      </AccordionSummary>
+      <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
+        {children}
+      </AccordionDetails>
+    </Accordion>
+  );
+};
 
 // --- Reusable Sidebar Item ---
 const SidebarItem = ({ label }) => (
@@ -402,7 +436,7 @@ const DiagnosticItem = ({ label }) => (
 
 // --- Central Chart Tooth Component ---
 const Tooth = ({ num, isActive = false }) => {
-  const [isHovered, setIsHovered] = React.useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   
   return (
     <Box 
@@ -443,6 +477,47 @@ const Tooth = ({ num, isActive = false }) => {
 };
 
 export default function TreatmentPlanPage() {
+  const [showAdjustedFeePlan, setShowAdjustedFeePlan] = useState(false);
+  const [showEditFeesModal, setShowEditFeesModal] = useState(false);
+  const [showPredetermineModal, setShowPredetermineModal] = useState(false);
+  const [paymentOptionType, setPaymentOptionType] = useState(null);
+  const [showGroupingSection, setShowGroupingSection] = useState(false);
+
+  const handleReEstimateOptionClick = (option) => {
+    if (option === 'Adjusted Fee Treatment Plan') {
+      setPaymentOptionType(null);
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    } else if (option === '15% Friends + Family') {
+      setPaymentOptionType('15_percent');
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    } else if (option === 'No Grouping') {
+      setPaymentOptionType('no_grouping');
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    } else if (option === 'Grouped By Tooth/Area') {
+      setPaymentOptionType('no_grouping');
+      setShowGroupingSection(true);
+      setShowAdjustedFeePlan(true);
+    } else if (option === 'Grouped By Code - Non-Contracted Ins') {
+      setPaymentOptionType('no_grouping');
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    } else if (option === 'Without Insurance Estimates - Itemized') {
+      setPaymentOptionType('no_grouping');
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    } else if (option === 'Grouped By Code - Contracted Ins') {
+      setPaymentOptionType('no_grouping');
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    } else if (option === 'With Insurance Estimates Itemized') {
+      setPaymentOptionType('no_grouping');
+      setShowGroupingSection(false);
+      setShowAdjustedFeePlan(true);
+    }
+  };
   const [visits, setVisits] = useState(() => [
     {
       id: 'v-1',
@@ -569,11 +644,44 @@ export default function TreatmentPlanPage() {
               <Box sx={{ width: '100%', bgcolor: "#fff", p: 0, height: 'calc(100vh - 250px)', overflowY: "auto", border: "1px solid #ccc" }}>
               
               {/* Top Filter Bar */}
-              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', p: 1.5, bgcolor: '#f5f7fa', borderBottom: '1px solid #e0e0e0' }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', p: 1.5, bgcolor: '#f5f7fa', borderBottom: '1px solid #e0e0e0' }}>
                 <Typography sx={{ fontSize: fontSize.xs, color: '#666', fontWeight: fontWeight.medium }}>Power Codes | Resolve</Typography>
                 <Box sx={{ flexGrow: 1 }} />
               </Stack>
-          
+
+              <SidebarSection 
+                title="No Charge" 
+                icons={[
+                  <Box key="1" sx={{ position: 'relative', width: 22, height: 22, borderRadius: '50%', border: '2px solid #f44336', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fff' }}>
+                    <Typography sx={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>$</Typography>
+                    <Box sx={{ position: 'absolute', width: '100%', height: '2px', bgcolor: '#f44336', transform: 'rotate(-45deg)' }} />
+                  </Box>,
+                  <Box key="2" sx={{ position: 'relative', width: 22, height: 22, borderRadius: '50%', border: '2px solid #ffb300', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fff' }}>
+                    <Typography sx={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>$</Typography>
+                    <Box sx={{ position: 'absolute', width: '100%', height: '2px', bgcolor: '#ffb300', transform: 'rotate(-45deg)' }} />
+                  </Box>,
+                  <Box key="3" sx={{ position: 'relative', width: 22, height: 22 }}>
+                    <Box component="img" src="/white_teeth.png" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <Box sx={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', border: '1px solid red', bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography sx={{ fontSize: '7px', fontWeight: 'bold' }}>$</Typography>
+                      <Box sx={{ position: 'absolute', width: '100%', height: '1px', bgcolor: 'red', transform: 'rotate(-45deg)' }} />
+                    </Box>
+                  </Box>,
+                  <Box key="4" sx={{ position: 'relative', px: 0.5, py: 0.2, bgcolor: '#ffcdd2', border: '1px solid #ef9a9a', borderRadius: '4px' }}>
+                    <Typography sx={{ fontSize: '10px', fontWeight: 'bold', color: '#000' }}>P-OP</Typography>
+                    <Box sx={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, borderRadius: '50%', border: '1px solid red', bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography sx={{ fontSize: '7px', fontWeight: 'bold' }}>$</Typography>
+                      <Box sx={{ position: 'absolute', width: '100%', height: '1px', bgcolor: 'red', transform: 'rotate(-45deg)' }} />
+                    </Box>
+                  </Box>,
+                  <BracesIcon key="5" />
+                ]}
+              >
+                <Typography sx={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+                  No charge items will appear here.
+                </Typography>
+              </SidebarSection>
+           
           {/* 1. Power Codes */}
           <SidebarSection title="Power Codes">
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
@@ -619,216 +727,155 @@ export default function TreatmentPlanPage() {
           </SidebarSection>
 
           {/* 3. Preventative */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Preventative
-              </Typography>
-              <Stack direction="row" spacing={0.5} sx={{ mr: 1 }}>
-                <Box sx={{ bgcolor: '#008080', color: 'white', px: 0.5, py: 0.2, fontSize: fontSize.xs, fontWeight: fontWeight.bold, borderRadius: '3px' }}>PRV</Box>
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarItem label="Prophy" />
-              <SidebarItem label="Fluoride" />
-              <SidebarItem label="Preventative services" />
-              <SidebarItem label="Space maintenance" />
-              <SidebarItem label="vaccine administration" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Preventative" 
+            expanded 
+            icons={[
+              <Box key="1" sx={{ bgcolor: '#008080', color: 'white', px: 0.5, py: 0.2, fontSize: fontSize.xs, fontWeight: fontWeight.bold, borderRadius: '3px' }}>PRV</Box>
+            ]}
+          >
+            <SidebarItem label="Prophy" />
+            <SidebarItem label="Fluoride" />
+            <SidebarItem label="Preventative services" />
+            <SidebarItem label="Space maintenance" />
+            <SidebarItem label="vaccine administration" />
+          </SidebarSection>
 
           {/* 4. Restorative */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Restorative
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarItem label="Direct" />
-              <SidebarItem label="Indirect Adhesive" />
-              <SidebarItem label="Indirect" />
-              <SidebarItem label="Indirect Cohesive" />
-              <SidebarItem label="Recement/Repair" />
-              <SidebarItem label="Pediatric" />
-              <SidebarItem label="Additional restorative" />
-              <SidebarItem label="BU/P&C" />
-              <SidebarItem label="Restorative" />
-              <SidebarItem label="Per arch" />
-              <SidebarItem label="Clip - stationary" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection title="Restorative" expanded>
+            <SidebarItem label="Direct" />
+            <SidebarItem label="Indirect Adhesive" />
+            <SidebarItem label="Indirect" />
+            <SidebarItem label="Indirect Cohesive" />
+            <SidebarItem label="Recement/Repair" />
+            <SidebarItem label="Pediatric" />
+            <SidebarItem label="Additional restorative" />
+            <SidebarItem label="BU/P&C" />
+            <SidebarItem label="Restorative" />
+            <SidebarItem label="Per arch" />
+            <SidebarItem label="Clip - stationary" />
+          </SidebarSection>
 
           {/* 5. Endodontics */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Endodontics
-              </Typography>
-              <Stack direction="row" spacing={0.5} sx={{ mr: 1 }}>
-                <EndoToothIcon filled />
-                <EndoToothIcon />
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarSubItem label="Pulp capping" />
-              <SidebarSubItem label="Pulpotomy" />
-              <SidebarSubItem label="Root Canal" />
-              <SidebarSubItem label="Apexification/recalcification" />
-              <SidebarSubItem label="Pulpal Regeneration" />
-              <SidebarSubItem label="Apicoectomy/Periradicular" />
-              <SidebarSubItem label="Additional endo" />
-              <SidebarSubItem label="Apicoectomy/Periradicular Services" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Endodontics" 
+            expanded 
+            icons={[
+              <EndoToothIcon key="1" filled />,
+              <EndoToothIcon key="2" />
+            ]}
+          >
+            <SidebarSubItem label="Pulp capping" />
+            <SidebarSubItem label="Pulpotomy" />
+            <SidebarSubItem label="Root Canal" />
+            <SidebarSubItem label="Apexification/recalcification" />
+            <SidebarSubItem label="Pulpal Regeneration" />
+            <SidebarSubItem label="Apicoectomy/Periradicular" />
+            <SidebarSubItem label="Additional endo" />
+            <SidebarSubItem label="Apicoectomy/Periradicular Services" />
+          </SidebarSection>
 
           {/* 6. Periodontics */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Periodontics
-              </Typography>
-              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mr: 1 }}>
-                <Box sx={{ bgcolor: '#f08080', color: 'white', px: 0.6, py: 0.2, fontSize: fontSize.xs, fontWeight: fontWeight.bold, borderRadius: '3px' }}>LBR</Box>
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarSubItem label="Crown Exposure" />
-              <SidebarSubItem label="Pocket Reduction" />
-              <SidebarSubItem label="Gingival Flap Procedure" />
-              <SidebarSubItem label="Periodontal Regeneration" />
-              <SidebarSubItem label="Membrane Placement" />
-              <SidebarSubItem label="Surgical" />
-              <SidebarSubItem label="Gingival Grafting" />
-              <SidebarSubItem label="Hygiene" />
-              <SidebarSubItem label="Adjunctive" />
-              <SidebarSubItem label="Additional perio" />
-              <SidebarSubItem label="Splinting" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Periodontics" 
+            expanded 
+            icons={[
+              <Box key="1" sx={{ bgcolor: '#f08080', color: 'white', px: 0.6, py: 0.2, fontSize: fontSize.xs, fontWeight: fontWeight.bold, borderRadius: '3px' }}>LBR</Box>
+            ]}
+          >
+            <SidebarSubItem label="Crown Exposure" />
+            <SidebarSubItem label="Pocket Reduction" />
+            <SidebarSubItem label="Gingival Flap Procedure" />
+            <SidebarSubItem label="Periodontal Regeneration" />
+            <SidebarSubItem label="Membrane Placement" />
+            <SidebarSubItem label="Surgical" />
+            <SidebarSubItem label="Gingival Grafting" />
+            <SidebarSubItem label="Hygiene" />
+            <SidebarSubItem label="Adjunctive" />
+            <SidebarSubItem label="Additional perio" />
+            <SidebarSubItem label="Splinting" />
+          </SidebarSection>
 
           {/* 7. Prosthodontics, Removable */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Prosthodontics, Removable
-              </Typography>
-              <Stack direction="row" spacing={1} sx={{ mr: 1 }}>
-                <DentureIcon color="#9c27b0" />
-                <DentureIcon color="#ef9a9a" />
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarSubItem label="Complete Denture" />
-              <SidebarSubItem label="RPD" />
-              <SidebarSubItem label="Denture adjustment" />
-              <SidebarSubItem label="Denture repair" />
-              <SidebarSubItem label="Denture rebase" />
-              <SidebarSubItem label="Denture reline" />
-              <SidebarSubItem label="Additional removable denture" />
-              <SidebarSubItem label="Precision Attachment" />
-              <SidebarSubItem label="CD" />
-              <SidebarSubItem label="Duplication of Complete Denture" />
-              <SidebarSubItem label="Maxillary Guidance Prosthesis" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Prosthodontics, Removable" 
+            expanded 
+            icons={[
+              <DentureIcon key="1" color="#9c27b0" />,
+              <DentureIcon key="2" color="#ef9a9a" />
+            ]}
+          >
+            <SidebarSubItem label="Complete Denture" />
+            <SidebarSubItem label="RPD" />
+            <SidebarSubItem label="Denture adjustment" />
+            <SidebarSubItem label="Denture repair" />
+            <SidebarSubItem label="Denture rebase" />
+            <SidebarSubItem label="Denture reline" />
+            <SidebarSubItem label="Additional removable denture" />
+            <SidebarSubItem label="Precision Attachment" />
+            <SidebarSubItem label="CD" />
+            <SidebarSubItem label="Duplication of Complete Denture" />
+            <SidebarSubItem label="Maxillary Guidance Prosthesis" />
+          </SidebarSection>
 
           {/* 8. Implant Services */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Implant Services
-              </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 1 }}>
-                <ImplantIcon />
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarSubItem label="Surgical Placement" />
-              <SidebarSubItem label="Re-entry/Uncovery" />
-              <SidebarSubItem label="Abutment" />
-              <SidebarSubItem label="Implant removable prosthetics" />
-              <SidebarSubItem label="Implant-Restorative" />
-              <SidebarSubItem label="Implant fixed prosthetics" />
-              <SidebarSubItem label="Implant maintenance" />
-              <SidebarSubItem label="Surgical services" />
-              <SidebarSubItem label="Peri-implantitis Treatment" />
-              <SidebarSubItem label="Bone Graft" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Implant Services" 
+            expanded 
+            icons={[<ImplantIcon key="1" />]}
+          >
+            <SidebarSubItem label="Surgical Placement" />
+            <SidebarSubItem label="Re-entry/Uncovery" />
+            <SidebarSubItem label="Abutment" />
+            <SidebarSubItem label="Implant removable prosthetics" />
+            <SidebarSubItem label="Implant-Restorative" />
+            <SidebarSubItem label="Implant fixed prosthetics" />
+            <SidebarSubItem label="Implant maintenance" />
+            <SidebarSubItem label="Surgical services" />
+            <SidebarSubItem label="Peri-implantitis Treatment" />
+            <SidebarSubItem label="Bone Graft" />
+          </SidebarSection>
 
           {/* 9. Prosthodontics, Fixed */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Prosthodontics, Fixed
-              </Typography>
-              <Stack direction="row" spacing={0.5} sx={{ mr: 1 }}>
-                <RestorationToothIcon fill="#fff" />
-                <RestorationToothIcon fill="#ffd700" />
-                <RestorationToothIcon fill="#eee" />
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarSubItem label="Fixed Bridge" />
-              <SidebarSubItem label="Inlay/Onlay FPD" />
-              <SidebarSubItem label="Additional FPD" />
-              <SidebarSubItem label="FPD repair" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Prosthodontics, Fixed" 
+            expanded 
+            icons={[
+              <RestorationToothIcon key="1" fill="#fff" />,
+              <RestorationToothIcon key="2" fill="#ffd700" />,
+              <RestorationToothIcon key="3" fill="#eee" />
+            ]}
+          >
+            <SidebarSubItem label="Fixed Bridge" />
+            <SidebarSubItem label="Inlay/Onlay FPD" />
+            <SidebarSubItem label="Additional FPD" />
+            <SidebarSubItem label="FPD repair" />
+          </SidebarSection>
 
           {/* 10. Oral Surgery */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
-            <AccordionSummary 
-              expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-              sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#4a69bd' }}>
-                Oral Surgery
-              </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 1 }}>
-                <ScalpelIcon />
-                <HemostatIcon />
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 1.5, pt: 0 }}>
-              <SidebarSubItem label="Extraction" />
-              <SidebarSubItem label="Other" />
-              <SidebarSubItem label="corticotomy" />
-              <SidebarSubItem label="Alveoloplasty" />
-              <SidebarSubItem label="Vestibuloplasty" />
-              <SidebarSubItem label="Excision of soft tissue lesion" />
-              <SidebarSubItem label="Bony tumor excision" />
-              <SidebarSubItem label="Excision of bone tissue" />
-              <SidebarSubItem label="Incision and drain" />
-              <SidebarSubItem label="TMJ surgeries" />
-              <SidebarSubItem label="Site Preparation" />
-              <SidebarSubItem label="Frenulectomy" />
-              <SidebarSubItem label="Marsupialization" />
-              <SidebarSubItem label="GTR" />
-            </AccordionDetails>
-          </Accordion>
+          <SidebarSection 
+            title="Oral Surgery" 
+            expanded 
+            icons={[
+              <ScalpelIcon key="1" />,
+              <HemostatIcon key="2" />
+            ]}
+          >
+            <SidebarSubItem label="Extraction" />
+            <SidebarSubItem label="Other" />
+            <SidebarSubItem label="corticotomy" />
+            <SidebarSubItem label="Alveoloplasty" />
+            <SidebarSubItem label="Vestibuloplasty" />
+            <SidebarSubItem label="Excision of soft tissue lesion" />
+            <SidebarSubItem label="Bony tumor excision" />
+            <SidebarSubItem label="Excision of bone tissue" />
+            <SidebarSubItem label="Incision and drain" />
+            <SidebarSubItem label="TMJ surgeries" />
+            <SidebarSubItem label="Site Preparation" />
+            <SidebarSubItem label="Frenulectomy" />
+            <SidebarSubItem label="Marsupialization" />
+            <SidebarSubItem label="GTR" />
+          </SidebarSection>
 
           {/* 11. Orthodontics */}
           <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
@@ -940,21 +987,23 @@ export default function TreatmentPlanPage() {
 
             {/* Tooth Chart Grid */}
             <Box sx={{ ml: 6, mt: 4 }}>
-              {/* Maxillary (Upper) */}
-              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 4 }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map(n => (
-                  <Tooth key={n} num={n} isActive={n === 3} />
-                ))}
-              </Stack>
+              <ErrorBoundary>
+                {/* Maxillary (Upper) */}
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 4 }}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map(n => (
+                    <Tooth key={n} num={n} isActive={n === 3} />
+                  ))}
+                </Stack>
 
-              <Divider sx={{ my: 4, borderStyle: 'dashed' }} />
+                <Divider sx={{ my: 4, borderStyle: 'dashed' }} />
 
-              {/* Mandibular (Lower) */}
-              <Stack direction="row" spacing={1} justifyContent="center">
-                {[32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17].map(n => (
-                  <Tooth key={n} num={n} />
-                ))}
-              </Stack>
+                {/* Mandibular (Lower) */}
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  {[32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17].map(n => (
+                    <Tooth key={n} num={n} />
+                  ))}
+                </Stack>
+              </ErrorBoundary>
 
               {/* Additional Footer Controls */}
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 6, ml: 2, color: '#6b7cb4' }}>
@@ -968,8 +1017,52 @@ export default function TreatmentPlanPage() {
         
         {/* Global Action Bar - Outside the columns, full width */}
         <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', pt: 2, px: 2 }}>
-          <GlobalActionBar />
+          <GlobalActionBar 
+            onReEstimateOptionClick={handleReEstimateOptionClick} 
+            onSettingsClick={() => setShowEditFeesModal(true)}
+            onPredetermineClick={() => setShowPredetermineModal(true)}
+          />
         </Box>
+
+        <Dialog 
+          open={showEditFeesModal} 
+          onClose={() => setShowEditFeesModal(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 0, p: 0, maxWidth: '1000px' } }}
+        >
+          <DialogContent sx={{ p: 0 }}>
+            <EditProcedureFees onClose={() => setShowEditFeesModal(false)} />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog 
+          open={showAdjustedFeePlan} 
+          onClose={() => setShowAdjustedFeePlan(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 0, p: 0, maxWidth: '900px' } }}
+        >
+          <DialogContent sx={{ p: 0 }}>
+            <AdjustedFeeTreatmentPlan 
+              onClose={() => setShowAdjustedFeePlan(false)} 
+              paymentOptionType={paymentOptionType}
+              showGroupingSection={showGroupingSection}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog 
+          open={showPredetermineModal} 
+          onClose={() => setShowPredetermineModal(false)}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 0, p: 0, maxWidth: '1200px' } }}
+        >
+          <DialogContent sx={{ p: 0 }}>
+            <PredetermineProcedures onClose={() => setShowPredetermineModal(false)} />
+          </DialogContent>
+        </Dialog>
 
         {/* Dental Treatment Plan - Outside the columns, full width */}
         <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>

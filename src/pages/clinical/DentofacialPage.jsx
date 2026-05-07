@@ -223,7 +223,7 @@ const DentofacialPage = () => {
   return (
     <Box>
       <ClinicalNavbar />
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 2 }}>
         <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
           Diagnostic Opinion
         </Typography>

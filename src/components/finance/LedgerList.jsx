@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent, DialogTitle, DialogActions, Button } from '@mui/material';
 import { 
   CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh, Reply, 
@@ -198,7 +199,7 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
 );
 
 const LedgerList = ({ expanded, items = [] }) => {
-  const [ledgerItems, setLedgerItems] = React.useState(
+  const [ledgerItems, setLedgerItems] = useState(
     items.length > 0 ? items : [
       { 
         id: '24532', date: '04/10/2026', method: 'Master Card', amount: ' $184.00', color: '#5c6bc0',
@@ -236,33 +237,33 @@ const LedgerList = ({ expanded, items = [] }) => {
       },
     ]
   );
-  const [expandedItems, setExpandedItems] = React.useState({});
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const [printAnchorEl, setPrintAnchorEl] = React.useState(null);
-  const [adjAnchorEl, setAdjAnchorEl] = React.useState(null);
-  const [showAdjustDialog, setShowAdjustDialog] = React.useState(false);
-  const [showDebitDialog, setShowDebitDialog] = React.useState(false);
-  const [showMembershipDialog, setShowMembershipDialog] = React.useState(false);
-  const [showWriteOffDialog, setShowWriteOffDialog] = React.useState(false);
-  const [showVoidDialog, setShowVoidDialog] = React.useState(false);
-  const [voidTarget, setVoidTarget] = React.useState(null);
-  const [voidedItems, setVoidedItems] = React.useState({});
-  const [showCourtesyCredit, setShowCourtesyCredit] = React.useState(false);
-  const [editTarget, setEditTarget] = React.useState(null);
-  const [adjustmentTypes, setAdjustmentTypes] = React.useState({});
-  const [refreshedItems, setRefreshedItems] = React.useState({});
-  const [showUndoDialog, setShowUndoDialog] = React.useState(false);
-  const [undoTarget, setUndoTarget] = React.useState(null);
-  const [showSimpleStatement, setShowSimpleStatement] = React.useState(false);
-  const [showDetailedStatement, setShowDetailedStatement] = React.useState(false);
-  const [showEditDeposit, setShowEditDeposit] = React.useState(false);
-  const [editDepositTarget, setEditDepositTarget] = React.useState(null);
-  const [showInvoiceModal, setShowInvoiceModal] = React.useState(false);
-  const [invoiceModalData, setInvoiceModalData] = React.useState(null);
+  const [expandedItems, setExpandedItems] = useState({});
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [printAnchorEl, setPrintAnchorEl] = useState(null);
+  const [adjAnchorEl, setAdjAnchorEl] = useState(null);
+  const [showAdjustDialog, setShowAdjustDialog] = useState(false);
+  const [showDebitDialog, setShowDebitDialog] = useState(false);
+  const [showMembershipDialog, setShowMembershipDialog] = useState(false);
+  const [showWriteOffDialog, setShowWriteOffDialog] = useState(false);
+  const [showVoidDialog, setShowVoidDialog] = useState(false);
+  const [voidTarget, setVoidTarget] = useState(null);
+  const [voidedItems, setVoidedItems] = useState({});
+  const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [adjustmentTypes, setAdjustmentTypes] = useState({});
+  const [refreshedItems, setRefreshedItems] = useState({});
+  const [showUndoDialog, setShowUndoDialog] = useState(false);
+  const [undoTarget, setUndoTarget] = useState(null);
+  const [showSimpleStatement, setShowSimpleStatement] = useState(false);
+  const [showDetailedStatement, setShowDetailedStatement] = useState(false);
+  const [showEditDeposit, setShowEditDeposit] = useState(false);
+  const [editDepositTarget, setEditDepositTarget] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceModalData, setInvoiceModalData] = useState(null);
 
 
   // Sync individual states with global expanded prop
-  React.useEffect(() => {
+  useEffect(() => {
     if (expanded !== undefined) {
       const allExpanded = {};
       ledgerItems.forEach((_, idx) => {

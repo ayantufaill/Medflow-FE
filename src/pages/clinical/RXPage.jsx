@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { 
   Box, Typography, Button, Tabs, Tab, Table, TableBody, 
   TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid,
+  Select, MenuItem, FormControl, InputLabel, Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
+import NewRX from '../../components/clinical/NewRX';
 
 const RXPage = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -68,14 +70,51 @@ const RXPage = () => {
               <Typography sx={{ fontWeight: 'bold', color: '#2e3b84', fontSize: '1rem' }}>
                 Prescription List
               </Typography>
-              <Button
-                variant="contained"
-                onClick={handleOpen}
-                startIcon={<AddIcon />}
-                sx={{ backgroundColor: '#2e3b84', borderRadius: '20px', textTransform: 'none', fontSize: '0.75rem' }}
-              >
-                Add
-              </Button>
+              <Stack direction="row" spacing={2} alignItems="center">
+                {tabValue === 1 && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      sx={{ 
+                        color: '#2e3b84', 
+                        borderColor: '#2e3b84', 
+                        borderRadius: '20px', 
+                        textTransform: 'none', 
+                        fontSize: '0.75rem',
+                        px: 3,
+                        '&:hover': { borderColor: '#1a2735', backgroundColor: 'rgba(46, 59, 132, 0.04)' }
+                      }}
+                    >
+                      Generate
+                    </Button>
+                    <Select
+                      size="small"
+                      variant="standard"
+                      displayEmpty
+                      value=""
+                      sx={{ 
+                        fontSize: '0.75rem', 
+                        minWidth: 120,
+                        color: '#666',
+                        '&:before': { borderBottom: '1px solid #ccc' },
+                        '&:after': { borderBottom: '2px solid #2e3b84' }
+                      }}
+                    >
+                      <MenuItem value="">Select Provider</MenuItem>
+                      <MenuItem value="dr-sabour">Dr. Sabour</MenuItem>
+                      <MenuItem value="dr-karl">Dr. Karl</MenuItem>
+                    </Select>
+                  </>
+                )}
+                <Button
+                  variant="contained"
+                  onClick={handleOpen}
+                  startIcon={<AddIcon />}
+                  sx={{ backgroundColor: '#2e3b84', borderRadius: '20px', textTransform: 'none', fontSize: '0.75rem', px: 3 }}
+                >
+                  Add
+                </Button>
+              </Stack>
             </Box>
 
             <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 0 }}>
@@ -135,27 +174,14 @@ const RXPage = () => {
       </Box>
 
       {/* Add Prescription Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle sx={{ fontWeight: 'bold', color: '#1a2735' }}>Add New Prescription</DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2} sx={{ pt: 1 }}>
-            <Grid item xs={4}><TextField label="Rx #" name="rxNum" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={8}><TextField label="Description" name="description" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Start Date" name="startDate" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Duration" name="duration" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Long Term" name="longTerm" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Refills" name="refills" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Dose" name="dose" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Provider" name="provider" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={12}><TextField label="Notes" name="notes" multiline rows={2} fullWidth size="small" onChange={handleChange} /></Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleClose} sx={{ color: '#666', textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={handleAdd} variant="contained" sx={{ backgroundColor: '#2e3b84', textTransform: 'none' }}>
-            Create Prescription
-          </Button>
-        </DialogActions>
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        fullWidth 
+        maxWidth="lg"
+        PaperProps={{ sx: { borderRadius: 0, p: 0 } }}
+      >
+        <NewRX onClose={handleClose} />
       </Dialog>
     </Box>
   );

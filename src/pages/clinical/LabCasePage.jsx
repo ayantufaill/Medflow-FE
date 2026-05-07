@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
+import LabOrder from '../../components/shared/LabOrder';
 
 const LabCasePage = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -58,9 +59,16 @@ const LabCasePage = () => {
     setStatusAnchorEl(null);
   };
 
-  const handleAddCase = () => {
+  const handleAddCase = (data) => {
     const newCase = {
-      ...formData,
+      lab: data.lab !== 'none' ? data.lab : 'New Lab', 
+      patient: 'Unknown', // LabOrder doesn't currently provide patient
+      createdDate: new Date().toISOString().split('T')[0],
+      dueDate: data.dueDate,
+      appointmentDate: '',
+      sharedOn: '',
+      status: 'Sent',
+      notes: data.instructions ? 'Instructions provided' : '',
       id: Date.now(),
       type: tabValue === 0 ? 'Active' : tabValue === 1 ? 'Completed' : 'Archived'
     };
@@ -194,28 +202,13 @@ const LabCasePage = () => {
         <MenuItem onClick={() => handleStatusFilterSelect('In Progress')}>In Progress</MenuItem>
       </Menu>
 
-      {/* Add Case Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle sx={{ fontWeight: 'bold' }}>New Lab Case</DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2} sx={{ pt: 1 }}>
-            {/* Row 1 */}
-            <Grid item xs={4}><TextField label="Lab Name" name="lab" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Patient Name" name="patient" fullWidth size="small" onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Created Date" name="createdDate" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} onChange={handleChange} /></Grid>
-            {/* Row 2 */}
-            <Grid item xs={4}><TextField label="Shared On" name="sharedOn" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Due Date" name="dueDate" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} onChange={handleChange} /></Grid>
-            <Grid item xs={4}><TextField label="Appointment" name="appointmentDate" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} onChange={handleChange} /></Grid>
-            {/* Row 3 */}
-            <Grid item xs={12}><TextField label="Notes" name="notes" multiline rows={1} fullWidth size="small" onChange={handleChange} /></Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={handleAddCase} variant="contained" sx={{ backgroundColor: '#003380', textTransform: 'none' }}>Create Case</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Add Case Dialog using LabOrder */}
+      <LabOrder 
+        open={open} 
+        onClose={handleClose} 
+        onSubmit={handleAddCase}
+        isLabCase={true} 
+      />
     </Box>
   );
 };
