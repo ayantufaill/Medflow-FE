@@ -21,6 +21,7 @@ import EditPatientFlagsDialog from '../../components/finance/EditPatientFlagsDia
 import DepositDialog from '../../components/finance/DepositDialog';
 import DepositOptionsMenu from '../../components/finance/DepositOptionsMenu';
 import CourtesyCreditComponent from '../../components/finance/CourtesyCreditComponent';
+import ErrorBoundary from '../../components/shared/ErrorBoundary';
 
 const FinancePage = () => {
   const [view, setView] = useState('invoices');
@@ -124,7 +125,9 @@ const FinancePage = () => {
       />
 
       {/* Dynamic Ledger Section */}
-      {view === 'family' ? <FamilyLedgerTable /> : view === 'individual' ? <IndividualLedgerTable /> : <LedgerList expanded={expanded} />}
+      <ErrorBoundary>
+        {view === 'family' ? <FamilyLedgerTable /> : view === 'individual' ? <IndividualLedgerTable /> : <LedgerList expanded={expanded} />}
+      </ErrorBoundary>
 
       {/* Account Adjustment Dialog */}
       {showAccountAdjustment && (

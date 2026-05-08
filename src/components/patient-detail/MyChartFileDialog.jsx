@@ -123,7 +123,7 @@ const MyChartFileDialog = ({ open, onClose, patient }) => {
       <DialogContent sx={{ p: 3, mt: 2 }}>
         <Grid container spacing={3}>
           {/* LEFT PANEL: MyChart Patient Profile */}
-          <Grid item xs={12} md={7}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <Box
               sx={{
                 border: "2px solid #b2dfdb",
@@ -221,7 +221,7 @@ const MyChartFileDialog = ({ open, onClose, patient }) => {
           </Grid>
 
           {/* RIGHT PANEL: Office Patient Profile */}
-          <Grid item xs={12} md={5}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <Box
               sx={{
                 border: "2px solid #c5cae9",

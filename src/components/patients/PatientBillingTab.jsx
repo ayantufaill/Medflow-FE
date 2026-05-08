@@ -132,7 +132,7 @@ const PatientBillingTab = ({ patient }) => {
         <Divider sx={{ mb: 2 }} />
 
         <Grid container spacing={3}>
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary">
                 Total Billed
@@ -142,7 +142,7 @@ const PatientBillingTab = ({ patient }) => {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.50', borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary">
                 Total Paid
@@ -152,7 +152,7 @@ const PatientBillingTab = ({ patient }) => {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Box sx={{ textAlign: 'center', p: 2, bgcolor: balance.outstanding > 0 ? 'error.50' : 'grey.50', borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary">
                 Outstanding Balance
@@ -166,7 +166,7 @@ const PatientBillingTab = ({ patient }) => {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={6} sm={3}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <Box sx={{ textAlign: 'center', p: 2, bgcolor: balance.accountCredit > 0 ? 'info.50' : 'grey.50', borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary">
                 Account Credit

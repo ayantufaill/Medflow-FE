@@ -1,3 +1,4 @@
+import React from 'react';
 import { Box, Typography, Button, Checkbox, FormControlLabel } from '@mui/material';
 
 const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {

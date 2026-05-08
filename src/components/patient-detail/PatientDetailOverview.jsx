@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, InputAdornment } from '@mui/material';
+import { Box, Paper, Typography, TextField, InputAdornment, Divider } from '@mui/material';
 import { KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material';
 import PatientDetailActions from './PatientDetailActions';
 import MyChartProfileModal from './MyChartProfileModal';
@@ -11,6 +11,7 @@ import FamilyMembersSection from './FamilyMembersSection';
 import FinancialResponsibilitySection from './FinancialResponsibilitySection';
 import HeadOfCommunicationSection from './HeadOfCommunicationSection';
 import EmergencyContactSection from './EmergencyContactSection';
+import PatientPreferencesGrid from './PatientPreferencesGrid';
 import { InlineFieldRow, standardFieldSx } from './InlineField';
 import { sectionTitleSx, labelSx } from '../../constants/styles';
 
@@ -244,22 +245,14 @@ export default function PatientDetailOverview({
             gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' },
             gap: 4,
             alignItems: 'start',
-            '& > *:nth-of-type(1)': {
-              pl: { xs: 2, sm: 2 },
-              pr: { xs: 2, sm: 2 },
-            },
-            '& > *:nth-of-type(2)': {
-              pl: { xs: 2, sm: 2 },
-              pr: { xs: 2, sm: 2 },
-            },
-            '& > *:nth-of-type(3)': {
+            '& > *:nth-of-type(1), & > *:nth-of-type(2), & > *:nth-of-type(3)': {
               pl: { xs: 2, sm: 2 },
               pr: { xs: 2, sm: 2 },
             },
           }}
         >
-          {/* Col 1: Patient details | Additional information */}
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Row 1 */}
+          <Box>
             <PatientDetailsSection 
               patient={patient} 
               patientNumber={patientNumber}
@@ -267,16 +260,14 @@ export default function PatientDetailOverview({
               onPatientDataChange={onPatientDataChange}
             />
           </Box>
-          {/* Col 2: Contact information | Spouse information */}
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box>
             <ContactInformationSection 
               patient={patient}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
           </Box>
-          {/* Col 3: Financial Responsibility | Head of communication | Emergency contact */}
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box>
             <FinancialResponsibilitySection 
               patient={patient}
               isEditMode={isEditMode}
@@ -290,18 +281,9 @@ export default function PatientDetailOverview({
               />
             </Box>
           </Box>
-        </Box>
-        
-        {/* Second row: Additional Information | Spouse Information | Emergency Contact - aligned equally */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' },
-            gap: 4,
-            mt: 0,
-          }}
-        >
-          <Box sx={{ pt: 3, borderTop: 1, borderColor: 'divider' }}>
+
+          {/* Row 2 - Aligned Vertically */}
+          <Box sx={{ mt: 1 }}>
             <AdditionalInformationSection 
               patient={patient} 
               showSpouse={false}
@@ -309,14 +291,14 @@ export default function PatientDetailOverview({
               onPatientDataChange={onPatientDataChange}
             />
           </Box>
-          <Box sx={{ pt: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ mt: 1 }}>
             <SpouseInformationSectionContent 
               patient={patient} 
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
           </Box>
-          <Box sx={{ pt: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ mt: 1 }}>
             <EmergencyContactSection 
               patient={patient}
               isEditMode={isEditMode}
@@ -324,6 +306,13 @@ export default function PatientDetailOverview({
             />
           </Box>
         </Box>
+        
+
+        <Divider sx={{ my: 4 }} />
+        <PatientPreferencesGrid 
+          patient={patient} 
+          isEditMode={isEditMode} 
+        />
       </Paper>
 
       {/* Family Members — full width row */}

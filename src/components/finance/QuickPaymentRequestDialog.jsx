@@ -22,14 +22,14 @@ const QuickPaymentRequestDialog = ({ onClose }) => {
   const isConfirmDisabled = !amount || parseFloat(amount) <= 0;
 
   return (
-    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px', maxWidth: 400, boxShadow: 1 }}>
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px', maxWidth: 500, boxShadow: 1 }}>
       {/* Title Label */}
       <Typography sx={{ color: textBlue, fontSize: '0.9rem', mb: 1.5 }}>
         Please enter the requested payment amount:
       </Typography>
 
       {/* Large Amount Input */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5, width: '100%' }}>
         <Typography sx={{ fontSize: '1.2rem', color: textBlue, mt: 0.5, mr: 1 }}>
           $
         </Typography>

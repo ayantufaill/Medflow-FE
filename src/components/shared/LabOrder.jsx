@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   Box, Typography, IconButton, TextField, Select, MenuItem,
-  Button, Divider, Checkbox, FormControlLabel, Paper, InputAdornment, Modal, ToggleButton, ToggleButtonGroup, ClickAwayListener, Popover
+  Button, Divider, Checkbox, FormControlLabel, Paper, InputAdornment, Modal, ToggleButton, ToggleButtonGroup, ClickAwayListener, Popover, Grid
 } from '@mui/material';
 import {
   Close, DeleteOutline, CalendarToday, Add, 
   CloudUploadOutlined, Undo, Redo, FormatBold, 
   FormatItalic, FormatListBulleted, FormatAlignLeft, 
   FormatAlignCenter, FormatAlignRight, SentimentSatisfiedAlt, LightbulbOutlined,
-  FormatColorText, FormatColorFill
+  FormatColorText, FormatColorFill, Mic, AccessTime
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import SignaturePad from './SignaturePad';
@@ -28,7 +28,7 @@ const modalStyle = {
   outline: 'none'
 };
 
-const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
+const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase = false }) => {
   // State management
   const [selectedLab, setSelectedLab] = useState('none');
   const [selectedTemplate, setSelectedTemplate] = useState('none');
@@ -133,8 +133,8 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
   // Rich text editor handlers
   const handleFormat = (format, value) => {
     if (editorRef.current) {
-      document.execCommand(format, false, value);
       editorRef.current.focus();
+      document.execCommand(format, false, value);
       // Manually update state after formatting
       setInstructions(editorRef.current.innerHTML);
     }
@@ -239,61 +239,116 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
         {/* 2. Form Content (Scrollable) */}
         <Box sx={{ p: 3, maxHeight: '85vh', overflowY: 'auto' }}>
           
-          {/* Active Procedure Row */}
-          <Box sx={{ display: 'flex', gap: 10, mb: 1 }}>
-            <Typography sx={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>Active Procedure</Typography>
-            <Typography sx={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>Procedure Cost</Typography>
-          </Box>
-          <Divider sx={{ mb: 1.5 }} />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 10, mb: 3 }}>
-            <Typography sx={{ fontSize: '14px', color: '#4a6da7', fontWeight: 500, width: 140 }}>Maintenance D4910</Typography>
-            <Box sx={{ border: '1px solid #cbd5e1', borderRadius: 1, px: 1, py: 0.5, fontSize: '14px', minWidth: 60 }}>$0.00</Box>
-            <IconButton 
-              size="small" 
-              sx={{ 
-                color: '#ff7675',
-                '&:hover': { 
-                  bgcolor: 'rgba(255, 118, 117, 0.08)',
-                  transform: 'scale(1.1)'
-                },
-                transition: 'all 0.2s ease-in-out'
-              }}
-              onClick={handleRemoveProcedure}
-            >
-              <DeleteOutline fontSize="small" />
-            </IconButton>
-          </Box>
+          {isLabCase ? (
+            <Grid container spacing={4} sx={{ mb: 2 }}>
+              <Grid item xs={6}>
+                <Typography sx={{ color: '#ef4444', fontSize: '13px', mb: 3 }}>
+                  At least one procedure is required to create or update the lab case.
+                </Typography>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 1 }}>Choose Lab <span style={{ color: 'red' }}>*</span></Typography>
+                  <Select 
+                    size="small" 
+                    fullWidth 
+                    value={selectedLab} 
+                    onChange={(e) => setSelectedLab(e.target.value)}
+                    sx={{ fontSize: '13px' }}
+                  >
+                    <MenuItem value="none">None</MenuItem>
+                    <MenuItem value="lab1">ABC Dental Lab</MenuItem>
+                    <MenuItem value="lab2">XYZ Dental Lab</MenuItem>
+                  </Select>
+                </Box>
 
-          {/* Lab & Template Selects */}
-          <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 0.5 }}>Choose Lab <span style={{ color: 'red' }}>*</span></Typography>
-            <Select 
-              size="small" 
-              fullWidth 
-              value={selectedLab} 
-              onChange={(e) => setSelectedLab(e.target.value)}
-              sx={{ maxWidth: 300, fontSize: '13px' }}
-            >
-              <MenuItem value="none">None</MenuItem>
-              <MenuItem value="lab1">ABC Dental Lab</MenuItem>
-              <MenuItem value="lab2">XYZ Dental Lab</MenuItem>
-            </Select>
-          </Box>
+                <Box sx={{ mb: 3 }}>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 1 }}>Choose Template</Typography>
+                  <Select 
+                    size="small" 
+                    fullWidth 
+                    value={selectedTemplate} 
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    sx={{ fontSize: '13px' }}
+                  >
+                    <MenuItem value="none">None</MenuItem>
+                    <MenuItem value="template1">Crown Template</MenuItem>
+                    <MenuItem value="template2">Bridge Template</MenuItem>
+                  </Select>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 1 }}>Select Treatment Plan</Typography>
+                  <Select 
+                    size="small" 
+                    fullWidth 
+                    value="none" 
+                    sx={{ fontSize: '13px' }}
+                  >
+                    <MenuItem value="none">None</MenuItem>
+                  </Select>
+                </Box>
+              </Grid>
+            </Grid>
+          ) : (
+            <>
+              {/* Active Procedure Row */}
+              <Box sx={{ display: 'flex', gap: 10, mb: 1 }}>
+                <Typography sx={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>Active Procedure</Typography>
+                <Typography sx={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>Procedure Cost</Typography>
+              </Box>
+              <Divider sx={{ mb: 1.5 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 10, mb: 3 }}>
+                <Typography sx={{ fontSize: '14px', color: '#4a6da7', fontWeight: 500, width: 140 }}>Maintenance D4910</Typography>
+                <Box sx={{ border: '1px solid #cbd5e1', borderRadius: 1, px: 1, py: 0.5, fontSize: '14px', minWidth: 60 }}>$0.00</Box>
+                <IconButton 
+                  size="small" 
+                  sx={{ 
+                    color: '#ff7675',
+                    '&:hover': { 
+                      bgcolor: 'rgba(255, 118, 117, 0.08)',
+                      transform: 'scale(1.1)'
+                    },
+                    transition: 'all 0.2s ease-in-out'
+                  }}
+                  onClick={handleRemoveProcedure}
+                >
+                  <DeleteOutline fontSize="small" />
+                </IconButton>
+              </Box>
 
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 0.5 }}>Choose Template</Typography>
-            <Select 
-              size="small" 
-              fullWidth 
-              value={selectedTemplate} 
-              onChange={(e) => setSelectedTemplate(e.target.value)}
-              sx={{ maxWidth: 300, fontSize: '13px' }}
-            >
-              <MenuItem value="none">None</MenuItem>
-              <MenuItem value="template1">Crown Template</MenuItem>
-              <MenuItem value="template2">Bridge Template</MenuItem>
-            </Select>
-          </Box>
+              {/* Lab & Template Selects */}
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 0.5 }}>Choose Lab <span style={{ color: 'red' }}>*</span></Typography>
+                <Select 
+                  size="small" 
+                  fullWidth 
+                  value={selectedLab} 
+                  onChange={(e) => setSelectedLab(e.target.value)}
+                  sx={{ maxWidth: 300, fontSize: '13px' }}
+                >
+                  <MenuItem value="none">None</MenuItem>
+                  <MenuItem value="lab1">ABC Dental Lab</MenuItem>
+                  <MenuItem value="lab2">XYZ Dental Lab</MenuItem>
+                </Select>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontSize: '13px', fontWeight: 700, mb: 0.5 }}>Choose Template</Typography>
+                <Select 
+                  size="small" 
+                  fullWidth 
+                  value={selectedTemplate} 
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  sx={{ maxWidth: 300, fontSize: '13px' }}
+                >
+                  <MenuItem value="none">None</MenuItem>
+                  <MenuItem value="template1">Crown Template</MenuItem>
+                  <MenuItem value="template2">Bridge Template</MenuItem>
+                </Select>
+              </Box>
+            </>
+          )}
 
           {/* 3. Functional Rich Text Editor */}
           <Box sx={{ border: '1px solid #4a6da7', borderRadius: 2, mb: 2, overflow: 'hidden' }}>
@@ -306,60 +361,51 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                 <Redo fontSize="inherit" />
               </IconButton>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-              <ToggleButton
-                size="small"
-                value="bold"
-                selected={bold}
-                onChange={() => {
-                  setBold(!bold);
-                  handleFormat('bold');
-                }}
-                sx={{ minWidth: 28, height: 28 }}
+              <IconButton 
+                size="small" 
+                onClick={() => { setBold(!bold); handleFormat('bold'); }}
+                sx={{ bgcolor: bold ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
               >
-                <FormatBold fontSize="inherit" />
-              </ToggleButton>
-              <ToggleButton
-                size="small"
-                value="italic"
-                selected={italic}
-                onChange={() => {
-                  setItalic(!italic);
-                  handleFormat('italic');
-                }}
-                sx={{ minWidth: 28, height: 28 }}
+                <FormatBold fontSize="inherit" color={bold ? 'primary' : 'inherit'} />
+              </IconButton>
+              <IconButton 
+                size="small" 
+                onClick={() => { setItalic(!italic); handleFormat('italic'); }}
+                sx={{ bgcolor: italic ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
               >
-                <FormatItalic fontSize="inherit" />
-              </ToggleButton>
+                <FormatItalic fontSize="inherit" color={italic ? 'primary' : 'inherit'} />
+              </IconButton>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-              <ToggleButton
-                size="small"
-                value="list"
-                selected={bulletList}
-                onChange={() => {
-                  setBulletList(!bulletList);
-                  handleFormat('insertUnorderedList');
-                }}
-                sx={{ minWidth: 28, height: 28 }}
+              <IconButton 
+                size="small" 
+                onClick={() => { setBulletList(!bulletList); handleFormat('insertUnorderedList'); }}
+                sx={{ bgcolor: bulletList ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
               >
-                <FormatListBulleted fontSize="inherit" />
-              </ToggleButton>
-              <ToggleButtonGroup
-                size="small"
-                value={alignment}
-                exclusive
-                onChange={handleAlignmentChange}
-                sx={{ '& .MuiToggleButton-root': { minWidth: 28, height: 28, px: 0.5 } }}
-              >
-                <ToggleButton value="left">
-                  <FormatAlignLeft fontSize="inherit" />
-                </ToggleButton>
-                <ToggleButton value="center">
-                  <FormatAlignCenter fontSize="inherit" />
-                </ToggleButton>
-                <ToggleButton value="right">
-                  <FormatAlignRight fontSize="inherit" />
-                </ToggleButton>
-              </ToggleButtonGroup>
+                <FormatListBulleted fontSize="inherit" color={bulletList ? 'primary' : 'inherit'} />
+              </IconButton>
+              <Stack direction="row" spacing={0.5}>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleAlignmentChange(null, 'left')}
+                  sx={{ bgcolor: alignment === 'left' ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
+                >
+                  <FormatAlignLeft fontSize="inherit" color={alignment === 'left' ? 'primary' : 'inherit'} />
+                </IconButton>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleAlignmentChange(null, 'center')}
+                  sx={{ bgcolor: alignment === 'center' ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
+                >
+                  <FormatAlignCenter fontSize="inherit" color={alignment === 'center' ? 'primary' : 'inherit'} />
+                </IconButton>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleAlignmentChange(null, 'right')}
+                  sx={{ bgcolor: alignment === 'right' ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
+                >
+                  <FormatAlignRight fontSize="inherit" color={alignment === 'right' ? 'primary' : 'inherit'} />
+                </IconButton>
+              </Stack>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
               
               {/* Paragraph Style */}
@@ -375,8 +421,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                 <MenuItem value="h2">Heading 2</MenuItem>
                 <MenuItem value="h3">Heading 3</MenuItem>
                 <MenuItem value="h4">Heading 4</MenuItem>
-                <MenuItem value="h5">Heading 5</MenuItem>
-                <MenuItem value="h6">Heading 6</MenuItem>
+                <MenuItem value="pre">Preformatted</MenuItem>
               </Select>
               
               {/* Font Size */}
@@ -388,7 +433,9 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                 variant="outlined"
               >
                 <MenuItem value="1">8pt</MenuItem>
+                <MenuItem value="1.5">9pt</MenuItem>
                 <MenuItem value="2">10pt</MenuItem>
+                <MenuItem value="2.5">11pt</MenuItem>
                 <MenuItem value="3">12pt</MenuItem>
                 <MenuItem value="4">14pt</MenuItem>
                 <MenuItem value="5">18pt</MenuItem>
@@ -421,12 +468,14 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                   sx={{ 
                     minWidth: 28, 
                     height: 28,
-                    color: textColor,
                     '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                   }}
                   title="Text Color"
                 >
-                  <FormatColorText fontSize="inherit" />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <FormatColorText fontSize="inherit" sx={{ color: textColor }} />
+                    <Box sx={{ width: '80%', height: '2px', bgcolor: textColor, mt: -0.5 }} />
+                  </Box>
                 </IconButton>
                 <Popover
                   open={Boolean(textColorAnchor)}
@@ -446,6 +495,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                     {standardColors.map((color) => (
                       <Box
                         key={color}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleTextColorChange(color)}
                         sx={{
                           width: 20,
@@ -493,6 +543,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
                     {standardColors.map((color) => (
                       <Box
                         key={color}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleHighlightColorChange(color)}
                         sx={{
                           width: 20,
@@ -521,6 +572,8 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '' }) => {
               >
                 <LightbulbOutlined fontSize="inherit" />
               </IconButton>
+              <IconButton size="small" title="Voice to text"><Mic fontSize="inherit" /></IconButton>
+              <IconButton size="small" title="Insert timestamp"><AccessTime fontSize="inherit" /></IconButton>
             </Box>
             
             {/* Editable Content Area */}
