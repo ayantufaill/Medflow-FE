@@ -33,6 +33,10 @@ const adminOnly = (children) => (
 const adminRoutes = [
   <Route key="/admin" path="/admin" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/user-management" path="/admin/user-management" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/user-management/providers" path="/admin/user-management/providers" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/user-management/roles" path="/admin/user-management/roles" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/user-management/time-clock" path="/admin/user-management/time-clock" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/user-management/task-management" path="/admin/user-management/task-management" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/practice-setup" path="/admin/practice-setup" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management" path="/admin/clinical-management" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management" path="/admin/finance-management" element={adminOnly(<AdminPage />)} />,

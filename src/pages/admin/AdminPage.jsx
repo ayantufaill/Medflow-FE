@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Box, Tabs, Tab, useTheme, Button, Typography } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
+import ProvidersListPage from '../providers/ProvidersListPage';
 import PracticeInfoListPage from '../practice-info/PracticeInfoListPage';
 import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompaniesListPage';
 import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListPage';
@@ -11,6 +12,14 @@ import PaymentTerminals from './PaymentTerminals';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
+
+const USER_MANAGEMENT_SUB_TABS = [
+  { label: 'Users', path: '/admin/user-management' },
+  { label: 'Providers', path: '/admin/user-management/providers' },
+  { label: 'Roles', path: '/admin/user-management/roles' },
+  { label: 'Time Clock', path: '/admin/user-management/time-clock' },
+  { label: 'Task Management', path: '/admin/user-management/task-management' },
+];
 
 const TABS = [
   { label: 'User Management', path: '/admin/user-management' },
@@ -57,9 +66,8 @@ const AdminPage = () => {
 
   const activeTab = TABS.findIndex((tab) => location.pathname.startsWith(tab.path));
 
-  // Check if the current path is a top-level administrative tab
-  const isTopLevelPage = TABS.some((tab) => tab.path === location.pathname);
-  // If it's not a top-level page and not the base /admin, it's a sub-page
+  const isUserManagementSubTab = USER_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+  const isTopLevelPage = TABS.some((tab) => tab.path === location.pathname) || isUserManagementSubTab;
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   if (location.pathname === '/admin') {
@@ -113,7 +121,7 @@ const AdminPage = () => {
           </Box>
 
           {/* Sub-nav — visible on hover */}
-          {hoveredTab !== null && (hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
+          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
             <Box
               sx={{
                 borderBottom: 1,
@@ -128,34 +136,41 @@ const AdminPage = () => {
                 '&::-webkit-scrollbar': { display: 'none' },
               }}
             >
-              {(hoveredTab === 1
-                ? PRACTICE_SETUP_SUB_TABS
-                : hoveredTab === 2
-                  ? CLINICAL_MANAGEMENT_SUB_TABS
-                  : FINANCIAL_MANAGEMENT_SUB_TABS
-              ).map((sub) => (
-                <Typography
-                  key={sub.label}
-                  component={Link}
-                  to={sub.path}
-                  sx={{
-                    px: 2,
-                    py: 1.5,
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    color: 'text.secondary',
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap',
-                    borderBottom: '2px solid transparent',
-                    '&:hover': {
-                      color: theme.palette.primary.main,
-                      borderBottomColor: theme.palette.primary.main,
-                    },
-                  }}
-                >
-                  {sub.label}
-                </Typography>
-              ))}
+              {(hoveredTab === 0
+                ? USER_MANAGEMENT_SUB_TABS
+                : hoveredTab === 1
+                  ? PRACTICE_SETUP_SUB_TABS
+                  : hoveredTab === 2
+                    ? CLINICAL_MANAGEMENT_SUB_TABS
+                    : FINANCIAL_MANAGEMENT_SUB_TABS
+              ).map((sub) => {
+                const isActive = location.pathname === sub.path;
+                return (
+                  <Typography
+                    key={sub.label}
+                    component={Link}
+                    to={sub.path}
+                    sx={{
+                      px: 2,
+                      py: 1.5,
+                      fontSize: '0.8rem',
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive ? theme.palette.primary.main : 'text.secondary',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                      borderBottom: isActive
+                        ? `2px solid ${theme.palette.primary.main}`
+                        : '2px solid transparent',
+                      '&:hover': {
+                        color: theme.palette.primary.main,
+                        borderBottomColor: theme.palette.primary.main,
+                      },
+                    }}
+                  >
+                    {sub.label}
+                  </Typography>
+                );
+              })}
             </Box>
           )}
         </Box>
@@ -163,7 +178,22 @@ const AdminPage = () => {
 
       {/* Page content */}
       <Box sx={{ mt: isSubPage ? 0 : 3 }}>
-        {activeTab === 0 && <UserManagementView />}
+        {activeTab === 0 && (
+          location.pathname === '/admin/user-management/providers' ? (
+            <ProvidersListPage />
+          ) : location.pathname === '/admin/user-management/roles' ||
+            location.pathname === '/admin/user-management/time-clock' ||
+            location.pathname === '/admin/user-management/task-management' ? (
+            <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {USER_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label}
+              </Typography>
+              <Typography color="text.secondary">Content for this section is coming soon.</Typography>
+            </Box>
+          ) : (
+            <UserManagementView />
+          )
+        )}
         {activeTab === 1 && (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
