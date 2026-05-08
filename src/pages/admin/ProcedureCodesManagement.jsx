@@ -684,6 +684,7 @@ const ProcedureCodesManagement = () => {
   const [expandedSubItems, setExpandedSubItems] = useState([]);
   const [expandedCodesCategories, setExpandedCodesCategories] = useState([]);
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [editingPath, setEditingPath] = useState(null);
 
   const handleOpenSyncDialog = (e) => {
     e?.stopPropagation();
@@ -788,8 +789,8 @@ const ProcedureCodesManagement = () => {
     setCategories(newCategories);
   };
 
-  const renderNestedDetails = (catIdx, itemIdx, procedures) => (
-    <Box sx={{ mt: 1, mb: 2, border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+  const renderNestedDetails = (catIdx, itemIdx, procedures, isLocked) => (
+    <Box sx={{ mt: 1, mb: 2, border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden', opacity: isLocked ? 0.85 : 1 }}>
       <Box sx={{ display: 'flex', backgroundColor: '#f8f9fa', borderBottom: '1px solid #e0e0e0', py: 0.8, px: 2 }}>
         <Typography sx={{ width: '8%', fontSize: '0.75rem', fontWeight: 'bold', color: '#333' }}>Order</Typography>
         <Typography sx={{ width: '15%', fontSize: '0.75rem', fontWeight: 'bold', color: '#333' }}>Code</Typography>
@@ -806,22 +807,25 @@ const ProcedureCodesManagement = () => {
             <TextField 
               size="small" 
               value={proc.code} 
+              disabled={isLocked}
               onChange={(e) => handleUpdateProcedureField(catIdx, itemIdx, pIdx, 'code', e.target.value)}
-              sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.75rem' } }}
+              sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.75rem', backgroundColor: isLocked ? '#fcfcfc' : '#fff' } }}
             />
           </Box>
           <Box sx={{ width: '15%', pr: 1 }}>
             <TextField 
               size="small" 
               value={proc.subCode} 
+              disabled={isLocked}
               onChange={(e) => handleUpdateProcedureField(catIdx, itemIdx, pIdx, 'subCode', e.target.value)}
-              sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.75rem' } }}
+              sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.75rem', backgroundColor: isLocked ? '#fcfcfc' : '#fff' } }}
             />
           </Box>
           <Box sx={{ width: '25%', display: 'flex', justifyContent: 'center' }}>
             <Checkbox 
               size="small" 
               checked={proc.billed} 
+              disabled={isLocked}
               onChange={(e) => handleUpdateProcedureField(catIdx, itemIdx, pIdx, 'billed', e.target.checked)}
               sx={{ p: 0 }} 
             />
@@ -830,8 +834,9 @@ const ProcedureCodesManagement = () => {
             <Select 
               size="small" 
               value={proc.phase} 
+              disabled={isLocked}
               onChange={(e) => handleUpdateProcedureField(catIdx, itemIdx, pIdx, 'phase', e.target.value)}
-              sx={{ height: 28, fontSize: '0.75rem', width: '100%' }} 
+              sx={{ height: 28, fontSize: '0.75rem', width: '100%', backgroundColor: isLocked ? '#fcfcfc' : '#fff' }} 
               displayEmpty
             >
               <MenuItem value=""><em>None</em></MenuItem>
@@ -843,8 +848,9 @@ const ProcedureCodesManagement = () => {
             <Select 
               size="small" 
               value={proc.visit} 
+              disabled={isLocked}
               onChange={(e) => handleUpdateProcedureField(catIdx, itemIdx, pIdx, 'visit', e.target.value)}
-              sx={{ height: 28, fontSize: '0.75rem', width: '100%' }} 
+              sx={{ height: 28, fontSize: '0.75rem', width: '100%', backgroundColor: isLocked ? '#fcfcfc' : '#fff' }} 
               displayEmpty
             >
               <MenuItem value=""><em>None</em></MenuItem>
@@ -855,20 +861,24 @@ const ProcedureCodesManagement = () => {
             </Select>
           </Box>
           <Box sx={{ width: '7%', display: 'flex', justifyContent: 'center' }}>
-            <DeleteIcon 
-              onClick={() => handleDeleteProcedure(catIdx, itemIdx, pIdx)}
-              sx={{ color: '#d32f2f', fontSize: '1rem', cursor: 'pointer' }} 
-            />
+            {!isLocked && (
+              <DeleteIcon 
+                onClick={() => handleDeleteProcedure(catIdx, itemIdx, pIdx)}
+                sx={{ color: '#d32f2f', fontSize: '1rem', cursor: 'pointer' }} 
+              />
+            )}
           </Box>
         </Box>
       ))}
       <Box sx={{ p: 1.5, borderTop: '1px solid #e0e0e0' }}>
-         <Typography 
-           onClick={() => handleAddProcedure(catIdx, itemIdx)}
-           sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}
-         >
-           + Add Procedure
-         </Typography>
+         {!isLocked && (
+           <Typography 
+             onClick={() => handleAddProcedure(catIdx, itemIdx)}
+             sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}
+           >
+             + Add Procedure
+           </Typography>
+         )}
       </Box>
     </Box>
   );
@@ -886,37 +896,61 @@ const ProcedureCodesManagement = () => {
           <Box sx={{ minWidth: 32, display: 'flex', justifyContent: 'center' }}>
             <ProcedureIcon type={item.icon} />
           </Box>
-          <TextField
-            size="small"
-            value={item.name}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => handleUpdateItemName(catIdx, itemIdx, e.target.value)}
-            variant="standard"
-            sx={{ 
-              ml: 1, 
-              '& .MuiInputBase-input': { 
+          {editingPath === `${catIdx}-${itemIdx}` ? (
+            <TextField
+              size="small"
+              value={item.name}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => handleUpdateItemName(catIdx, itemIdx, e.target.value)}
+              variant="standard"
+              sx={{ 
+                ml: 1, 
+                '& .MuiInputBase-input': { 
+                  color: '#1a3a6b', 
+                  fontSize: '0.8rem', 
+                  fontWeight: 500,
+                  py: 0,
+                },
+                '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #ccc' }
+              }}
+            />
+          ) : (
+            <Typography 
+              sx={{ 
+                ml: 1, 
                 color: '#1a3a6b', 
                 fontSize: '0.8rem', 
                 fontWeight: 500,
-                py: 0
-              },
-              '& .MuiInput-underline:before': { borderBottom: 'none' },
-              '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #ccc' }
-            }}
-          />
+                cursor: 'pointer' 
+              }}
+            >
+              {item.name}
+            </Typography>
+          )}
           <FormControlLabel
             onClick={(e) => e.stopPropagation()}
-            control={<Checkbox size="small" sx={{ p: 0.5 }} />}
+            control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
             label={<Typography sx={{ fontSize: '0.75rem' }}>Show in Schedule</Typography>}
-            sx={{ ml: 2 }}
+            sx={{ ml: 2, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
           />
           <FormControlLabel
             onClick={(e) => e.stopPropagation()}
-            control={<Checkbox size="small" sx={{ p: 0.5 }} />}
+            control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
             label={<Typography sx={{ fontSize: '0.75rem' }}>Hide Power Code</Typography>}
-            sx={{ ml: 1 }}
+            sx={{ ml: 1, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
           />
-          <EditIcon onClick={(e) => e.stopPropagation()} sx={{ color: '#4a90e2', fontSize: '1rem', ml: 1, cursor: 'pointer' }} />
+          {editingPath === `${catIdx}-${itemIdx}` ? (
+            <CheckIcon 
+              onClick={(e) => { e.stopPropagation(); setEditingPath(null); }} 
+              sx={{ color: '#48bb78', fontSize: '1.2rem', ml: 1, cursor: 'pointer' }} 
+            />
+          ) : (
+            <EditIcon 
+              onClick={(e) => { e.stopPropagation(); setEditingPath(`${catIdx}-${itemIdx}`); }} 
+              sx={{ color: '#4a90e2', fontSize: '1rem', ml: 1, cursor: 'pointer' }} 
+            />
+          )}
           <DeleteIcon 
             onClick={(e) => { e.stopPropagation(); handleDeletePowerCode(catIdx, itemIdx); }} 
             sx={{ color: '#d32f2f', fontSize: '1rem', ml: 1, cursor: 'pointer' }} 
@@ -939,7 +973,7 @@ const ProcedureCodesManagement = () => {
       </Box>
       {expandedSubItems.includes(item.name) && item.procedures && (
         <Box sx={{ pl: 5, pr: 2 }}>
-          {renderNestedDetails(catIdx, itemIdx, item.procedures)}
+          {renderNestedDetails(catIdx, itemIdx, item.procedures, editingPath !== `${catIdx}-${itemIdx}`)}
         </Box>
       )}
     </Box>

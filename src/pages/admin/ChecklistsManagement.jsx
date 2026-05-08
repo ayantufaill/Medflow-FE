@@ -463,6 +463,11 @@ const ChecklistsManagement = () => {
           iconId: 'tooth-prep',
           items: []
         });
+      } else if (type === 'category') {
+        if (!updatedChecklists[value]) {
+          updatedChecklists[value] = [];
+          setExpandedCategories(prev => [...prev, value]);
+        }
       }
 
       setChecklists(updatedChecklists);
@@ -763,17 +768,39 @@ const ChecklistsManagement = () => {
           <SyncIcon sx={{ fontSize: '1.1rem' }} />
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Sync</Typography>
         </Box>
-        <Typography 
-          sx={{ 
-            color: '#1a3a6b', 
-            fontSize: '0.85rem', 
-            fontWeight: 500, 
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' }
-          }}
-        >
-          + Add Checklist Category
-        </Typography>
+        {activeInput?.type === 'category' ? (
+          <Box sx={{ mb: 1, width: 250 }}>
+            <input
+              autoFocus
+              placeholder="Enter category name and press Enter"
+              value={activeInput.value}
+              onChange={(e) => setActiveInput({ ...activeInput, value: e.target.value })}
+              onKeyDown={handleInputSubmit}
+              onBlur={() => setActiveInput(null)}
+              style={{
+                width: '100%',
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                border: '1px solid #1a3a6b',
+                borderRadius: '4px',
+                outline: 'none'
+              }}
+            />
+          </Box>
+        ) : (
+          <Typography 
+            onClick={() => setActiveInput({ type: 'category', value: '' })}
+            sx={{ 
+              color: '#1a3a6b', 
+              fontSize: '0.85rem', 
+              fontWeight: 500, 
+              cursor: 'pointer',
+              '&:hover': { textDecoration: 'underline' }
+            }}
+          >
+            + Add Checklist Category
+          </Typography>
+        )}
       </Box>
 
       {/* Categories List */}
