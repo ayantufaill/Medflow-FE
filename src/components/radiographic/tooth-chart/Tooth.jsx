@@ -1,3 +1,4 @@
+import React from "react";
 import { Box, Typography } from "@mui/material";
 import { fontSize, fontWeight } from "../../../constants/styles";
 

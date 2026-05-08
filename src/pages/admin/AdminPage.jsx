@@ -7,6 +7,10 @@ import PracticeInfoListPage from '../practice-info/PracticeInfoListPage';
 import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompaniesListPage';
 import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListPage';
 import ServicesListPage from '../services/ServicesListPage';
+import PaymentTerminals from './PaymentTerminals';
+import ProductsManagement from './ProductsManagement';
+import ProcedureCodesManagement from './ProcedureCodesManagement';
+import ChecklistsManagement from './ChecklistsManagement';
 
 const TABS = [
   { label: 'User Management', path: '/admin/user-management' },
@@ -33,13 +37,29 @@ const FINANCIAL_MANAGEMENT_SUB_TABS = [
   { label: 'Payment Terminals', path: '/admin/payment-terminals' },
 ];
 
+const CLINICAL_MANAGEMENT_SUB_TABS = [
+  { label: 'Products', path: '/admin/clinical-management/products' },
+  { label: 'Procedure Codes', path: '/admin/clinical-management/procedure-codes' },
+  { label: 'Checklists', path: '/admin/clinical-management/checklists' },
+  { label: 'Prescription Templates', path: '/admin/clinical-management/prescription-templates' },
+  { label: 'System Settings', path: '/admin/clinical-management/system-settings' },
+  { label: 'Recare Configuration', path: '/admin/clinical-management/recare-configuration' },
+  { label: 'Informed Consent', path: '/admin/clinical-management/informed-consent' },
+  { label: 'Pre & Post-Ops', path: '/admin/clinical-management/pre-post-ops' },
+];
+
 const AdminPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showSubNav, setShowSubNav] = useState(false);
+  const [hoveredTab, setHoveredTab] = useState(null);
 
-  const activeTab = TABS.findIndex((tab) => tab.path === location.pathname);
+  const activeTab = TABS.findIndex((tab) => location.pathname.startsWith(tab.path));
+
+  // Check if the current path is a top-level administrative tab
+  const isTopLevelPage = TABS.some((tab) => tab.path === location.pathname);
+  // If it's not a top-level page and not the base /admin, it's a sub-page
+  const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   if (location.pathname === '/admin') {
     return <Navigate to="/admin/user-management" replace />;
@@ -47,13 +67,14 @@ const AdminPage = () => {
 
   return (
     <Box>
-      {/* Main tab bar + sub-nav wrapper — hover on this whole area keeps sub-nav visible */}
-      <Box
-        onMouseLeave={() => setShowSubNav(false)}
-        sx={{ mx: -3, backgroundColor: theme.palette.background.paper }}
-      >
+      {/* Main tab bar + sub-nav wrapper — Hidden on sub-management pages */}
+      {!isSubPage && (
+        <Box
+          onMouseLeave={() => setHoveredTab(null)}
+          sx={{ mx: -3, backgroundColor: theme.palette.background.paper }}
+        >
         {/* Main tabs */}
-        <Box sx={{ borderBottom: showSubNav ? 0 : 1, borderColor: 'divider', px: 3 }}>
+        <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 3 }}>
           <Tabs
             value={activeTab === -1 ? false : activeTab}
             onChange={() => {}}
@@ -84,14 +105,14 @@ const AdminPage = () => {
                 component={Link}
                 to={tab.path}
                 disableRipple
-                onMouseEnter={() => setShowSubNav(index === 1)}
+                onMouseEnter={() => setHoveredTab(index)}
               />
             ))}
           </Tabs>
         </Box>
 
-        {/* Practice Setup sub-nav — visible on hover */}
-        {showSubNav && (
+        {/* Sub-nav — visible on hover */}
+        {hoveredTab !== null && (hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
           <Box
             sx={{
               borderBottom: 1,
@@ -101,9 +122,17 @@ const AdminPage = () => {
               backgroundColor: '#f0f4fa',
               display: 'flex',
               gap: 0,
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
             }}
           >
-            {PRACTICE_SETUP_SUB_TABS.map((sub) => (
+            {(hoveredTab === 1
+              ? PRACTICE_SETUP_SUB_TABS
+              : hoveredTab === 2
+              ? CLINICAL_MANAGEMENT_SUB_TABS
+              : FINANCIAL_MANAGEMENT_SUB_TABS
+            ).map((sub) => (
               <Typography
                 key={sub.label}
                 component={Link}
@@ -129,9 +158,10 @@ const AdminPage = () => {
           </Box>
         )}
       </Box>
+    )}
 
       {/* Page content */}
-      <Box sx={{ mt: 3 }}>
+      <Box sx={{ mt: isSubPage ? 0 : 3 }}>
         {activeTab === 0 && <UserManagementView />}
         {activeTab === 1 && (
           <Box>
@@ -150,10 +180,42 @@ const AdminPage = () => {
         )}
         {activeTab === 2 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <AppointmentTypesListPage />
+            {location.pathname === '/admin/clinical-management' ? (
+              <AppointmentTypesListPage />
+            ) : location.pathname === '/admin/clinical-management/products' ? (
+              <ProductsManagement />
+            ) : location.pathname === '/admin/clinical-management/procedure-codes' ? (
+              <ProcedureCodesManagement />
+            ) : location.pathname === '/admin/clinical-management/checklists' ? (
+              <ChecklistsManagement />
+            ) : (
+              <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
+                <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                  {CLINICAL_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label ||
+                    'Clinical Management'}
+                </Typography>
+                <Typography color="text.secondary">Content for this section is coming soon.</Typography>
+              </Box>
+            )}
           </Box>
         )}
-        {activeTab === 3 && <ServicesListPage />}
+        {activeTab === 3 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {location.pathname === '/admin/finance-management' ? (
+              <ServicesListPage />
+            ) : location.pathname === '/admin/payment-terminals' ? (
+              <PaymentTerminals />
+            ) : (
+              <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
+                <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                  {FINANCIAL_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label ||
+                    'Finance Management'}
+                </Typography>
+                <Typography color="text.secondary">Content for this section is coming soon.</Typography>
+              </Box>
+            )}
+          </Box>
+        )}
         {activeTab === 4 && <InsuranceCompaniesListPage />}
       </Box>
     </Box>
