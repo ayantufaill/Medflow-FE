@@ -1,3 +1,4 @@
+import React from 'react';
 import { Box, Typography, Button, MenuItem, Select, FormControl } from '@mui/material';
 
 const EditDeposit = ({ depositData, onSave, onCancel }) => {

@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -13,12 +14,12 @@ import {
 } from '@mui/material';
 
 const AccountAdjustmentDialog = ({ onClose }) => {
-  const [adjustmentType, setAdjustmentType] = React.useState('Un-Collected');
-  const [rateType, setRateType] = React.useState('Flat rate');
-  const [outstandingType, setOutstandingType] = React.useState('total');
-  const [specificAmount, setSpecificAmount] = React.useState('$ 0');
-  const [includeCourtesy, setIncludeCourtesy] = React.useState(false);
-  const [description, setDescription] = React.useState('');
+  const [adjustmentType, setAdjustmentType] = useState('Un-Collected');
+  const [rateType, setRateType] = useState('Flat rate');
+  const [outstandingType, setOutstandingType] = useState('total');
+  const [specificAmount, setSpecificAmount] = useState('$ 0');
+  const [includeCourtesy, setIncludeCourtesy] = useState(false);
+  const [description, setDescription] = useState('');
   
   const totalOutstanding = 400.00;
   const patientOutstanding = 400.00;

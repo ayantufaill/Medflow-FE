@@ -58,9 +58,8 @@ const FinanceActions = ({ view, expanded, onExpandToggle, onFilterChange }) => {
           { label: 'INS. COVERAGE', variant: 'contained', hasIcon: true, action: handleInsuranceCoverageClick },
           { label: 'Tx', variant: 'outlined', minWidth: '30px', action: () => navigate('/clinical/treatment-plan'), tooltip: 'Treatment Plan' },
         ].filter(btn => !(btn.hideInLedgerViews && (view === 'family' || view === 'individual'))).map((btn) => (
-          <Tooltip title={btn.tooltip || ''} arrow>
+          <Tooltip key={btn.label} title={btn.tooltip || ''} arrow>
           <Button 
-            key={btn.label}
             variant={btn.variant} 
             size="small" 
             onClick={btn.action}

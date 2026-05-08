@@ -27,43 +27,55 @@ const StatementFooter = ({ appointments, notes, showNotesInput, onNotesChange, o
       </Grid>
 
       {/* Notes Section */}
-      {showNotesInput && (
+      {(showNotesInput || notes) && (
         <Box sx={{ mt: 3, border: '1px solid #e0e0e0' }}>
-          <Box sx={{ bgcolor: rowLightBlue, p: 1, display: 'flex', justifyContent: 'space-between' }}>
+          <Box sx={{ bgcolor: rowLightBlue, p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.sm, color: textDarkBlue }}>Statement Notes:</Typography>
             <Typography 
-              sx={{ fontWeight: fontWeight.bold, cursor: 'pointer', color: textDarkBlue }}
+              sx={{ fontWeight: fontWeight.bold, cursor: 'pointer', color: textDarkBlue, px: 1 }}
               onClick={onCloseNotes}
             >
               x
             </Typography>
           </Box>
-          <Box sx={{ p: 2, pb: 8, position: 'relative', minHeight: 120 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Write your notes here..."
-              value={notes}
-              onChange={onNotesChange}
-              sx={{
-                '& .MuiInputBase-root': {
-                  fontSize: fontSize.sm
-                }
-              }}
-            />
-            <Button 
-              variant="contained" 
-              sx={{ 
-                position: 'absolute', 
-                bottom: 10, 
-                right: 10, 
-                bgcolor: textDarkBlue 
-              }}
-              onClick={onSaveNotes}
-            >
-              Save
-            </Button>
+          <Box sx={{ p: 2, position: 'relative', minHeight: showNotesInput ? 120 : 'auto' }}>
+            {showNotesInput ? (
+              <>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  placeholder="Write your notes here..."
+                  value={notes}
+                  onChange={onNotesChange}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontSize: fontSize.sm
+                    }
+                  }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                  <Button 
+                    variant="contained" 
+                    sx={{ 
+                      bgcolor: textDarkBlue,
+                      textTransform: 'none',
+                      fontSize: fontSize.sm
+                    }}
+                    onClick={onSaveNotes}
+                  >
+                    Save
+                  </Button>
+                </Box>
+              </>
+            ) : (
+              <Typography 
+                sx={{ fontSize: fontSize.sm, whiteSpace: 'pre-wrap', cursor: 'pointer' }}
+                onClick={onEditNotes}
+              >
+                {notes}
+              </Typography>
+            )}
           </Box>
         </Box>
       )}

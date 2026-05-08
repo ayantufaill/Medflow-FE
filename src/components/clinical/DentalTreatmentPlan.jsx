@@ -14,6 +14,7 @@ import {
   DialogActions,
   TextField
 } from '@mui/material';
+import RecareSettingsDialog from './RecareSettingsDialog';
 import {
   KeyboardArrowDown as ExpandIcon,
   History as HistoryIcon,
@@ -38,6 +39,7 @@ const DentalTreatmentPlan = () => {
     office2026: true,
     tdsMembership: true
   });
+  const [recareSettingsOpen, setRecareSettingsOpen] = useState(false);
 
   // Financial data state
   const [treatmentTotals, setTreatmentTotals] = useState({
@@ -105,8 +107,7 @@ const DentalTreatmentPlan = () => {
   };
 
   const handleSettings = () => {
-    console.log('Opening settings');
-    // Open settings dialog/modal
+    setRecareSettingsOpen(true);
   };
 
   const handleSendToPatient = () => {
@@ -368,8 +369,12 @@ const DentalTreatmentPlan = () => {
           onClick={handlePrint}
         />
       </Box>
+      <RecareSettingsDialog 
+        open={recareSettingsOpen} 
+        onClose={() => setRecareSettingsOpen(false)} 
+      />
     </Box>
   );
-};
+}
 
 export default DentalTreatmentPlan;

@@ -6,37 +6,14 @@ import {
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import AddIcon from '@mui/icons-material/Add';
 
+import CreateNewReferral from '../../components/clinical/CreateNewReferral';
+
 const ReferralPage = () => {
   const [referrals, setReferrals] = useState([]);
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    specialist: '',
-    specialty: '',
-    reason: ''
-  });
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
-    setFormData({ specialist: '', specialty: '', reason: '' });
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleAddReferral = () => {
-    if (!formData.specialist) return;
-    
-    const newReferral = {
-      id: referrals.length + 1,
-      ...formData,
-      date: new Date().toLocaleDateString(),
-    };
-    
-    setReferrals([...referrals, newReferral]);
-    handleClose();
-  };
+  const handleClose = () => setOpen(false);
 
   return (
     <Box>
@@ -103,54 +80,14 @@ const ReferralPage = () => {
       </Box>
 
       {/* Add Referral Form Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 'bold', color: '#1a2735' }}>Create New Referral</DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Specialist Name"
-              name="specialist"
-              fullWidth
-              size="small"
-              value={formData.specialist}
-              onChange={handleChange}
-            />
-            <TextField
-              select
-              label="Specialty"
-              name="specialty"
-              fullWidth
-              size="small"
-              value={formData.specialty}
-              onChange={handleChange}
-            >
-              <MenuItem value="Oral Surgeon">Oral Surgeon</MenuItem>
-              <MenuItem value="Endodontist">Endodontist</MenuItem>
-              <MenuItem value="Periodontist">Periodontist</MenuItem>
-              <MenuItem value="Orthodontist">Orthodontist</MenuItem>
-            </TextField>
-            <TextField
-              label="Reason for Referral"
-              name="reason"
-              multiline
-              rows={3}
-              fullWidth
-              size="small"
-              value={formData.reason}
-              onChange={handleChange}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleClose} sx={{ color: '#666', textTransform: 'none' }}>Cancel</Button>
-          <Button 
-            onClick={handleAddReferral} 
-            variant="contained" 
-            sx={{ backgroundColor: '#2e3b84', textTransform: 'none', '&:hover': { backgroundColor: '#1e2a63' } }}
-          >
-            Create Referral
-          </Button>
-        </DialogActions>
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        fullWidth 
+        maxWidth="lg"
+        PaperProps={{ sx: { borderRadius: 2, height: '90vh' } }}
+      >
+        <CreateNewReferral onClose={handleClose} />
       </Dialog>
     </Box>
   );

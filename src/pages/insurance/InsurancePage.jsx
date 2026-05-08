@@ -4,7 +4,7 @@ import {
   Box, Typography, Button, Tabs, Tab, Table, TableBody, 
   TableCell, TableContainer, TableHead, TableRow, Paper,
   Menu, MenuItem, Chip, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, TextField, Alert, Collapse, Grid
+  DialogContent, DialogActions, TextField, Alert, Collapse, Grid, Stack
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import EditIcon from '@mui/icons-material/Edit';
@@ -25,6 +25,7 @@ const InsurancePage = () => {
 
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showOldDesign, setShowOldDesign] = useState(false);
   
   // Dialog states
   const [addCoverageDialogOpen, setAddCoverageDialogOpen] = useState(false);
@@ -123,8 +124,7 @@ const InsurancePage = () => {
   };
 
   const handleViewOldDesign = () => {
-    showSnackbar('Redirecting to old design...', 'info');
-    // In real app: navigate('/insurance/legacy')
+    setShowOldDesign(true);
   };
 
   const handleViewCoverage = (row) => {
@@ -191,6 +191,15 @@ const InsurancePage = () => {
   };
 
   const currentTabData = getTabData();
+
+  if (showOldDesign) {
+    return (
+      <OldDesignView 
+        onSwitch={() => setShowOldDesign(false)} 
+        onAddCoverage={() => handleAddCoverage('Insurance Coverage')}
+      />
+    );
+  }
 
   return (
     <Box sx={{ p: 2, bgcolor: 'white', minHeight: '100vh' }}>
@@ -623,6 +632,80 @@ const InsurancePage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+    </Box>
+  );
+};
+
+const OldDesignView = ({ onSwitch, onAddCoverage }) => {
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: '80vh',
+      position: 'relative',
+      bgcolor: '#fff'
+    }}>
+      <Typography sx={{ color: '#ff8a80', fontSize: '0.85rem', mb: 4, fontWeight: 500 }}>
+        Patient has no active coverage
+      </Typography>
+
+      <Stack direction="row" spacing={1.5} alignItems="center">
+        <Typography sx={{ color: '#7788bb', fontWeight: 'bold', fontSize: '0.85rem' }}>
+          ADD PATIENT INSURANCE
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={onAddCoverage}
+          startIcon={<Box component="span" sx={{ fontSize: '1.2rem', mr: 0.5 }}>✱</Box>}
+          sx={{
+            bgcolor: '#6677aa',
+            color: '#fff',
+            textTransform: 'uppercase',
+            fontWeight: 'bold',
+            fontSize: '0.8rem',
+            px: 2.5,
+            py: 0.7,
+            boxShadow: 'none',
+            borderRadius: '4px',
+            '&:hover': { bgcolor: '#556699', boxShadow: 'none' }
+          }}
+        >
+          New Coverage
+        </Button>
+      </Stack>
+
+      <Box sx={{ 
+        position: 'absolute', 
+        bottom: 40, 
+        left: 20, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1 
+      }}>
+        <Typography sx={{ color: '#ef5350', fontSize: '0.8rem', fontStyle: 'italic' }}>
+          A new insurance design has been released.
+        </Typography>
+        <Button
+          size="small"
+          variant="contained"
+          onClick={onSwitch}
+          sx={{
+            bgcolor: '#6677aa',
+            color: '#fff',
+            textTransform: 'none',
+            fontSize: '0.75rem',
+            px: 2,
+            py: 0.5,
+            boxShadow: 'none',
+            borderRadius: '4px',
+            '&:hover': { bgcolor: '#556699' }
+          }}
+        >
+          View New Design
+        </Button>
+      </Box>
     </Box>
   );
 };
