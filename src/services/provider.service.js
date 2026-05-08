@@ -19,13 +19,15 @@ export const providerService = {
     limit = 10,
     search = '',
     isActive = null,
-    specialty = ''
+    specialty = '',
+    providerCategory = ''
   ) {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
     if (search) params.append('search', search);
     if (specialty) params.append('specialty', specialty);
+    if (providerCategory) params.append('providerCategory', providerCategory);
     if (isActive !== null && isActive !== undefined) {
       params.append('isActive', isActive ? 'true' : 'false');
     }
