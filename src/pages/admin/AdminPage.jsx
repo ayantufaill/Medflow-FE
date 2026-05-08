@@ -44,6 +44,7 @@ const CLINICAL_MANAGEMENT_SUB_TABS = [
   { label: 'Prescription Templates', path: '/admin/clinical-management/prescription-templates' },
   { label: 'System Settings', path: '/admin/clinical-management/system-settings' },
   { label: 'Recare Configuration', path: '/admin/clinical-management/recare-configuration' },
+  { label: 'TreatmentPlan Presentation', path: '/admin/clinical-management/TreatmentPlan-Presentation' },
   { label: 'Informed Consent', path: '/admin/clinical-management/informed-consent' },
   { label: 'Pre & Post-Ops', path: '/admin/clinical-management/pre-post-ops' },
 ];
@@ -73,92 +74,92 @@ const AdminPage = () => {
           onMouseLeave={() => setHoveredTab(null)}
           sx={{ mx: -3, backgroundColor: theme.palette.background.paper }}
         >
-        {/* Main tabs */}
-        <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 3 }}>
-          <Tabs
-            value={activeTab === -1 ? false : activeTab}
-            onChange={() => {}}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              '& .MuiTab-root': {
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                minWidth: 140,
-                color: 'text.secondary',
-                borderBottom: '3px solid transparent',
-                '&.Mui-selected': {
-                  color: theme.palette.primary.main,
-                },
-              },
-              '& .MuiTabs-indicator': {
-                height: 3,
-                backgroundColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            {TABS.map((tab, index) => (
-              <Tab
-                key={tab.label}
-                label={tab.label}
-                component={Link}
-                to={tab.path}
-                disableRipple
-                onMouseEnter={() => setHoveredTab(index)}
-              />
-            ))}
-          </Tabs>
-        </Box>
-
-        {/* Sub-nav — visible on hover */}
-        {hoveredTab !== null && (hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
-          <Box
-            sx={{
-              borderBottom: 1,
-              borderColor: 'divider',
-              borderTop: 1,
-              px: 3,
-              backgroundColor: '#f0f4fa',
-              display: 'flex',
-              gap: 0,
-              overflowX: 'auto',
-              scrollbarWidth: 'none',
-              '&::-webkit-scrollbar': { display: 'none' },
-            }}
-          >
-            {(hoveredTab === 1
-              ? PRACTICE_SETUP_SUB_TABS
-              : hoveredTab === 2
-              ? CLINICAL_MANAGEMENT_SUB_TABS
-              : FINANCIAL_MANAGEMENT_SUB_TABS
-            ).map((sub) => (
-              <Typography
-                key={sub.label}
-                component={Link}
-                to={sub.path}
-                sx={{
-                  px: 2,
-                  py: 1.5,
-                  fontSize: '0.8rem',
-                  fontWeight: 500,
+          {/* Main tabs */}
+          <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 3 }}>
+            <Tabs
+              value={activeTab === -1 ? false : activeTab}
+              onChange={() => { }}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  minWidth: 140,
                   color: 'text.secondary',
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  borderBottom: '2px solid transparent',
-                  '&:hover': {
+                  borderBottom: '3px solid transparent',
+                  '&.Mui-selected': {
                     color: theme.palette.primary.main,
-                    borderBottomColor: theme.palette.primary.main,
                   },
-                }}
-              >
-                {sub.label}
-              </Typography>
-            ))}
+                },
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  backgroundColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              {TABS.map((tab, index) => (
+                <Tab
+                  key={tab.label}
+                  label={tab.label}
+                  component={Link}
+                  to={tab.path}
+                  disableRipple
+                  onMouseEnter={() => setHoveredTab(index)}
+                />
+              ))}
+            </Tabs>
           </Box>
-        )}
-      </Box>
-    )}
+
+          {/* Sub-nav — visible on hover */}
+          {hoveredTab !== null && (hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
+            <Box
+              sx={{
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderTop: 1,
+                px: 3,
+                backgroundColor: '#f0f4fa',
+                display: 'flex',
+                gap: 0,
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
+              }}
+            >
+              {(hoveredTab === 1
+                ? PRACTICE_SETUP_SUB_TABS
+                : hoveredTab === 2
+                  ? CLINICAL_MANAGEMENT_SUB_TABS
+                  : FINANCIAL_MANAGEMENT_SUB_TABS
+              ).map((sub) => (
+                <Typography
+                  key={sub.label}
+                  component={Link}
+                  to={sub.path}
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    color: 'text.secondary',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    borderBottom: '2px solid transparent',
+                    '&:hover': {
+                      color: theme.palette.primary.main,
+                      borderBottomColor: theme.palette.primary.main,
+                    },
+                  }}
+                >
+                  {sub.label}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </Box>
+      )}
 
       {/* Page content */}
       <Box sx={{ mt: isSubPage ? 0 : 3 }}>

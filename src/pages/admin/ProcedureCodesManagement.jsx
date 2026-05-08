@@ -12,6 +12,10 @@ import {
   Divider,
   MenuItem,
   Select,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -679,6 +683,16 @@ const ProcedureCodesManagement = () => {
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [expandedSubItems, setExpandedSubItems] = useState([]);
   const [expandedCodesCategories, setExpandedCodesCategories] = useState([]);
+  const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
+
+  const handleOpenSyncDialog = (e) => {
+    e?.stopPropagation();
+    setSyncDialogOpen(true);
+  };
+
+  const handleCloseSyncDialog = () => {
+    setSyncDialogOpen(false);
+  };
 
   // Dynamic State for Categories and Items
   const [categories, setCategories] = useState([
@@ -909,6 +923,7 @@ const ProcedureCodesManagement = () => {
           />
         </Box>
         <Box
+          onClick={handleOpenSyncDialog}
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -978,6 +993,7 @@ const ProcedureCodesManagement = () => {
           <Tab label="Eligibility Used ADA Codes" />
         </Tabs>
         <Box
+          onClick={handleOpenSyncDialog}
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -1212,6 +1228,88 @@ const ProcedureCodesManagement = () => {
           </Box>
         </Box>
       )}
+
+      {/* Sync Dialog */}
+      <Dialog
+        open={isSyncDialogOpen}
+        onClose={handleCloseSyncDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 1, overflow: 'hidden' }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: '#0c345d',
+            color: '#fff',
+            fontSize: '1rem',
+            fontWeight: 500,
+            py: 2,
+            px: 3,
+            lineHeight: 1.3,
+          }}
+        >
+          Select the offices you would like to sync with the source office
+        </DialogTitle>
+        <DialogContent sx={{ mt: 3, px: 3 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
+              Source Office:
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              value="thedentalstudio"
+              disabled
+              sx={{
+                '& .MuiInputBase-input': { backgroundColor: '#f0f0f0', fontSize: '0.85rem' },
+                '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+              }}
+            />
+          </Box>
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
+              Target Offices
+            </Typography>
+            {/* Placeholder for Target Offices list - matching Products/Checklists page */}
+            <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1, backgroundColor: '#fafafa', textAlign: 'center' }}>
+              <Typography variant="caption" color="textSecondary">
+                Select target offices from the list below...
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleCloseSyncDialog}
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#e0e0e0',
+              color: '#333',
+              fontSize: '0.85rem',
+              px: 3,
+              '&:hover': { backgroundColor: '#d0d0d0' }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCloseSyncDialog}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#6b8fb9',
+              color: '#fff',
+              fontSize: '0.85rem',
+              px: 4,
+              '&:hover': { backgroundColor: '#5a7ca8' }
+            }}
+          >
+            Sync
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
