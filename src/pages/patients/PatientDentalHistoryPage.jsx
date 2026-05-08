@@ -9,7 +9,16 @@ import {
   Tabs,
   Tab,
   Alert,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  Divider,
+  IconButton,
+  Stack,
 } from "@mui/material";
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CircleIcon from '@mui/icons-material/Circle';
 import {
   Print as PrintIcon,
   CheckCircle as CheckCircleIcon,
@@ -80,6 +89,120 @@ const groupDentalHistoryRows = (rows = []) => {
     grouped.get(key).push(item);
   });
   return Array.from(grouped.entries());
+};
+
+const PersonalHistoryForm = () => {
+  // Styles for the header risk indicators
+  const riskLevels = [
+    { label: 'Low', color: '#4caf50' },
+    { label: 'Moderate', color: '#ffeb3b' },
+    { label: 'High', color: '#f44336' },
+  ];
+
+  const QuestionRow = ({ number, question, children }) => (
+    <Box sx={{ py: 2 }}>
+      <Stack direction="row" spacing={2} alignItems="flex-start">
+        <Typography variant="body2" sx={{ fontWeight: 600, color: '#424242', minWidth: '25px' }}>
+          {number}.
+        </Typography>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#424242', mb: 1 }}>
+            {question}
+          </Typography>
+          {children}
+        </Box>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <IconButton size="small">
+            <InfoOutlinedIcon fontSize="small" sx={{ color: '#999' }} />
+          </IconButton>
+          <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic' }}>
+            not answered
+          </Typography>
+        </Stack>
+      </Stack>
+      <Divider sx={{ mt: 2 }} />
+    </Box>
+  );
+
+  return (
+    <Box sx={{ width: '100%', p: 3, bgcolor: '#fff' }}>
+      {/* Header Section */}
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#616161', textTransform: 'uppercase' }}>
+          PERSONAL HISTORY
+        </Typography>
+        {riskLevels.map((risk) => (
+          <Stack key={risk.label} direction="row" alignItems="center" spacing={0.5}>
+            <CircleIcon sx={{ color: risk.color, fontSize: 14 }} variant="outline" />
+            <Typography variant="caption" sx={{ color: '#666' }}>{risk.label}</Typography>
+          </Stack>
+        ))}
+      </Stack>
+      <Divider sx={{ mb: 2, height: 2, bgcolor: '#1976d2' }} />
+
+      {/* Question 1 */}
+      <QuestionRow number={1} question="Are you fearful of dental treatment?">
+        <Typography variant="body2" sx={{ color: '#666' }}>
+          on a scale of 1 (least) to 10 (most):
+        </Typography>
+        {/* You could add a Slider or RadioGroup here */}
+      </QuestionRow>
+
+      {/* Question 2 */}
+      <QuestionRow number={2} question="Have you had an unfavorable dental experience?" />
+
+      {/* Question 3 */}
+      <QuestionRow number={3} question="Have you ever had complications from past dental treatment?" />
+
+      {/* Question 4 */}
+      <QuestionRow number={4} question="Have you ever had trouble getting numb or had any reactions to local anesthetic?" />
+
+      {/* Question 5 */}
+      <QuestionRow 
+        number={5} 
+        question="Did you ever have braces, orthodontic treatment or had your bite adjusted, and at what age?"
+      >
+        <RadioGroup sx={{ mt: 1 }}>
+          <FormControlLabel 
+            value="before16" 
+            control={<Radio size="small" />} 
+            label="Before 16 years old" 
+            slotProps={{ typography: { variant: 'body2', sx: { color: '#666' } } }}
+          />
+          <FormControlLabel 
+            value="after16" 
+            control={<Radio size="small" />} 
+            label="After 16 years old" 
+            slotProps={{ typography: { variant: 'body2', sx: { color: '#666' } } }}
+          />
+          <FormControlLabel 
+            value="both" 
+            control={<Radio size="small" />} 
+            label="Both" 
+            slotProps={{ typography: { variant: 'body2', sx: { color: '#666' } } }}
+          />
+        </RadioGroup>
+      </QuestionRow>
+
+      {/* Question 6 */}
+      <QuestionRow 
+        number={6} 
+        question="Have you had any teeth removed, missing teeth that never developed, or lost teeth due to injury or facial trauma?"
+      >
+        <Stack spacing={0.5} sx={{ mt: 1, pl: 1 }}>
+          {[
+            'Gum (periodontal) disease', 'Teeth that never developed', 'Wisdom teeth',
+            'Crowding or Lack Of Space', 'Dental caries - non-restorative', 'Infection', 'Fracture or crack'
+          ].map((text) => (
+            <Typography key={text} variant="body2" sx={{ color: '#666', fontSize: '0.85rem' }}>{text}</Typography>
+          ))}
+          <Typography variant="body2" sx={{ color: 'green', fontWeight: 'bold', cursor: 'pointer', mt: 1, fontSize: '0.85rem' }}>
+            Edit
+          </Typography>
+        </Stack>
+      </QuestionRow>
+    </Box>
+  );
 };
 
 const PatientDentalHistoryPage = () => {
@@ -435,12 +558,7 @@ const PatientDentalHistoryPage = () => {
           )}
 
           {tabValue === 1 && (
-            <DentalHistoryFullView
-              groupedHistory={dentalGroups}
-              gumAndBoneGrouped={gumAndBoneGroups}
-              biteAndJawJointGrouped={biteAndJawJointGroups}
-              onUpdateItem={handleUpdateItem}
-            />
+            <PersonalHistoryForm />
           )}
 
           <Box sx={{ mt: 2 }}>

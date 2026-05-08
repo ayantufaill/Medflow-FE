@@ -2,6 +2,7 @@ import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import InsurancePage from '../pages/insurance/InsurancePage';
+import AddCoveragePage from '../pages/patients/AddCoveragePage';
 import FinancePage from '../pages/finance/FinancePage';
 import ServicesListPage from '../pages/services/ServicesListPage';
 import CreateServicePage from '../pages/services/CreateServicePage';
@@ -57,6 +58,7 @@ const adminBillingFrontDesk = (children) => (
 
 const billingRoutes = [
   <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />)} />,
+  <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />)} />,
   <Route key="/finance" path="/finance" element={adminBillingReception(<FinancePage />)} />,
 
   <Route key="/services" path="/services" element={adminBilling(<ServicesListPage />)} />,

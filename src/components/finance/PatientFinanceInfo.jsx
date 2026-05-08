@@ -19,6 +19,7 @@ import PrintReceiptDialog from './PrintReceiptDialog';
 import ItemizedReceiptPreview from './ItemizedReceiptPreview';
 import SimpleStatementDialog from './SimpleStatementDialog';
 import DetailedStatementDialog from './DetailedStatementDialog';
+import LateFeeDialog from './LateFeeDialog';
 
 // --- STYLED COMPONENTS ---
 
@@ -204,6 +205,8 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
   const [showItemizedReceipt, setShowItemizedReceipt] = useState(false);
   const [showSimpleStatement, setShowSimpleStatement] = useState(false);
   const [showDetailedStatement, setShowDetailedStatement] = useState(false);
+  const [showLateFee, setShowLateFee] = useState(false);
+  const [selectedAdjustment, setSelectedAdjustment] = useState(null);
   const [isFamilyReceipt, setIsFamilyReceipt] = useState(false);
   
   const handleShareSelect = (optionId) => {
@@ -244,7 +247,21 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
 
   const handleCashPlusSelect = (item) => {
     console.log('Cash Plus option selected:', item);
-    // Add logic for handling the selected option here
+    if (item.id === 'broken-appt' || item.id === 'late-cancellation') {
+      const event = new CustomEvent('add-ledger-item', {
+        detail: {
+          title: item.label,
+          amount: '$100.00',
+          ptBal: '$100.00',
+          invBal: '$100.00',
+          useCheckmark: false
+        }
+      });
+      window.dispatchEvent(event);
+    } else {
+      setSelectedAdjustment(item);
+      setShowLateFee(true);
+    }
   };
 
   const handleAddAccountNoteClick = () => {
@@ -427,6 +444,48 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
         onClose={handleCashPlusClose}
         onSelect={handleCashPlusSelect}
       />
+
+      {/* Late Fee Dialog */}
+      {showLateFee && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowLateFee(false)}
+        >
+          <Box onClick={(e) => e.stopPropagation()}>
+            <LateFeeDialog 
+              onClose={() => setShowLateFee(false)} 
+              adjustmentType={selectedAdjustment?.label}
+              onAddFee={(selected, flatRate) => {
+                console.log('Adding fee for:', selected, 'Rate:', flatRate);
+                setShowLateFee(false);
+                const isLatePayment = selectedAdjustment?.id?.startsWith('late-payment');
+                // Dispatch event to add the fee to ledger
+                const event = new CustomEvent('add-ledger-item', {
+                  detail: {
+                    title: selectedAdjustment?.label || 'Adjustment Fee',
+                    amount: flatRate ? `$${flatRate}` : '$100.00',
+                    ptBal: flatRate ? `$${flatRate}` : '$100.00',
+                    invBal: flatRate ? `$${flatRate}` : '$100.00',
+                    useCheckmark: isLatePayment
+                  }
+                });
+                window.dispatchEvent(event);
+              }}
+            />
+          </Box>
+        </Box>
+      )}
 
       {/* Account Notes Dialog */}
       {showAccountNotes && (

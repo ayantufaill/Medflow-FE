@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent, DialogTitle, DialogActions, Button } from '@mui/material';
+import { Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent, DialogTitle, DialogActions, Button, Menu, MenuItem } from '@mui/material';
 import { 
   CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh, Reply, 
   CheckCircle, Refresh, Tune
@@ -18,6 +18,8 @@ import SimpleStatement from './SimpleStatement';
 import DetailedStatement from './DetailedStatement';
 import EditDeposit from './EditDeposit';
 import InvoiceModal from './InvoiceModal';
+import TransferCreditConfirmationDialog from './TransferCreditConfirmationDialog';
+import EditInvoiceDetailsDialog from './EditInvoiceDetailsDialog';
 
 // --- COMPONENT HELPERS ---
  
@@ -124,14 +126,33 @@ const PixelAutoFix = () => (
   </PixelIconWrapper>
 );
 
-const SummaryLabel = ({ label, value }) => (
+const SummaryLabel = ({ label, value, isRed }) => (
   <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 0.5 }}>
     <Typography variant="caption" sx={{ color: '#777', fontSize: '10px', whiteSpace: 'nowrap' }}>{label}:</Typography>
-    <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#444', fontSize: '10px' }}>{value}</Typography>
+    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isRed ? '#d32f2f' : '#444', fontSize: '10px' }}>{value}</Typography>
   </Box>
 );
 
-const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExtendedTools, onVoidClick, voidData, onEditClick, editData, adjustmentType, onRefreshClick, refreshData }) => (
+const LedgerSubRow = ({ 
+  id, 
+  date, 
+  title, 
+  amount, 
+  initials, 
+  isAdjustment, 
+  showExtendedTools, 
+  onVoidClick, 
+  voidData, 
+  onEditClick, 
+  editData, 
+  adjustmentType, 
+  onRefreshClick, 
+  refreshData,
+  onMagicStickClick,
+  onSettingsClick,
+  onAdjustmentSelect,
+  onPrintClick 
+}) => (
   <Box sx={{ 
     display: 'flex', 
     alignItems: 'center', 
@@ -173,10 +194,26 @@ const LedgerSubRow = ({ id, date, title, amount, initials, isAdjustment, showExt
     <Stack direction="row" spacing={1} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
       {showExtendedTools ? (
         <>
-           {/* <Settings sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
-           <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} />
-           <AutoFixHigh sx={{ fontSize: 18, color: '#444', cursor: 'pointer' }} />
-           <Tune sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} /> */}
+           <Settings 
+             sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
+             onClick={() => onSettingsClick && onSettingsClick({ id, date, title, amount })}
+           />
+           <Print 
+             sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
+             onClick={(e) => onPrintClick && onPrintClick(e)}
+           />
+           <AutoFixHigh 
+             sx={{ fontSize: 18, color: '#444', cursor: 'pointer' }} 
+             onClick={(e) => onMagicStickClick && onMagicStickClick(e)}
+           />
+           <Tune 
+             sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} 
+             onClick={(e) => onAdjustmentSelect && onAdjustmentSelect(e)}
+           />
+           <NotInterested 
+             sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} 
+             onClick={() => onVoidClick && onVoidClick(voidData)}
+           />
         </>
       ) : (
         <>
@@ -258,8 +295,61 @@ const LedgerList = ({ expanded, items = [] }) => {
   const [showDetailedStatement, setShowDetailedStatement] = useState(false);
   const [showEditDeposit, setShowEditDeposit] = useState(false);
   const [editDepositTarget, setEditDepositTarget] = useState(null);
+  const [showTransferConfirmation, setShowTransferConfirmation] = useState(false);
+  const [showEditInvoice, setShowEditInvoice] = useState(false);
+  const [editInvoiceTarget, setEditInvoiceTarget] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceModalData, setInvoiceModalData] = useState(null);
+  const [magicStickAnchorEl, setMagicStickAnchorEl] = useState(null);
+
+  const handleMagicStickClick = (event) => {
+    setMagicStickAnchorEl(event.currentTarget);
+  };
+
+  const handleMagicStickClose = () => {
+    setMagicStickAnchorEl(null);
+  };
+
+  useEffect(() => {
+    const handleAddLedgerItem = (event) => {
+      const { title, amount, ptBal, invBal, useCheckmark } = event.detail;
+      const today = new Date().toLocaleDateString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: 'numeric' 
+      });
+      
+      const newItem = {
+        id: Math.floor(Math.random() * 90000 + 10000).toString(),
+        date: today,
+        method: 'Adjustment',
+        amount: amount,
+        color: '#5c6bc0',
+        isAdjustment: true,
+        useCheckmark: useCheckmark,
+        initials: 'MAG',
+        success: true,
+        summary: { 
+          insWo: '$0.00', 
+          ptBal: ptBal, 
+          insBal: '$0.00', 
+          invBal: invBal 
+        },
+        details: [
+          { 
+            id: Math.floor(Math.random() * 90000 + 10000).toString(), 
+            title: title, 
+            amount: amount 
+          }
+        ]
+      };
+      
+      setLedgerItems(prev => [newItem, ...prev]);
+    };
+
+    window.addEventListener('add-ledger-item', handleAddLedgerItem);
+    return () => window.removeEventListener('add-ledger-item', handleAddLedgerItem);
+  }, []);
 
 
   // Sync individual states with global expanded prop
@@ -469,25 +559,23 @@ const LedgerList = ({ expanded, items = [] }) => {
           >
             <Stack direction="row" spacing={2} alignItems="center" sx={{ flexGrow: 1 }}>
               {isExpanded ? (
-                isRefreshed ? (
-                  <Box sx={{ 
-                    width: 20, 
-                    height: 20, 
-                    borderRadius: '50%', 
-                    bgcolor: '#d32f2f',
-                    mr: 2.5 
-                  }} />
-                ) : (
-                  <CheckCircle sx={{ color: '#4caf50', fontSize: 20, width: 40 }} />
-                )
+                (() => {
+                  if (isRefreshed) return (
+                    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f44336', mr: 2.5, ml: 0.5 }} />
+                  );
+                  if (item.isAdjustment && !item.useCheckmark) return (
+                    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f44336', mr: 2.5, ml: 0.5 }} />
+                  );
+                  return <CheckCircle sx={{ color: '#4caf50', fontSize: 20, width: 40 }} />;
+                })()
               ) : (
                 <Checkbox size="small" sx={{ p: 0, width: 40 }} />
               )}
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
                 {isExpanded ? (
-                  <Typography variant="caption" sx={{ color: item.color, fontWeight: 500, fontSize: '11px' }}>
-                    Invoice #{item.id} ({item.date}): [ Patient Deposit ]{item.amount}
+                  <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', fontSize: '11px', textTransform: item.isAdjustment ? 'uppercase' : 'none' }}>
+                    {item.isAdjustment ? 'INVOICE' : 'Invoice'} #{item.id} ({item.date}): {item.isAdjustment ? '' : '[ Patient Deposit ]'}{item.amount}
                   </Typography>
                 ) : (
                   <>
@@ -499,7 +587,7 @@ const LedgerList = ({ expanded, items = [] }) => {
                       {item.amount}
                     </Typography>
 
-                    {item.success && !item.details?.some(d => d.title.includes('(uncollected)')) && (
+                    {item.success && !item.isAdjustment && !item.details?.some(d => d.title.includes('(uncollected)')) && (
                       <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
                         SuccessfulTransaction
                       </Typography>
@@ -517,10 +605,10 @@ const LedgerList = ({ expanded, items = [] }) => {
 
             {!isExpanded && (
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
-                {/* {!item.success && (
+                {!item.success && (
                   <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />
                 )}
-                <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} /> */}
+                <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
                 <Edit 
                   sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} 
                   onClick={(e) => {
@@ -548,9 +636,9 @@ const LedgerList = ({ expanded, items = [] }) => {
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center', mb: 0.5 }}>
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
                     <SummaryLabel label="Ins WO" value={item.summary?.insWo || '$0.00'} />
-                    <SummaryLabel label="Pt Balance" value={item.summary?.ptBal || '$0.00'} />
+                    <SummaryLabel label="Pt Balance" value={item.summary?.ptBal || '$0.00'} isRed={item.isAdjustment && item.summary?.ptBal !== '$0.00'} />
                     <SummaryLabel label="Ins Balance" value={item.summary?.insBal || '$0.00'} />
-                    <SummaryLabel label="Invoice Balance" value={item.summary?.invBal || '$0.00'} />
+                    <SummaryLabel label="Invoice Balance" value={item.summary?.invBal || '$0.00'} isRed={item.isAdjustment && item.summary?.invBal !== '$0.00'} />
                   </Box>
                   <Typography variant="caption" sx={{ color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
                     {item.initials}
@@ -568,7 +656,7 @@ const LedgerList = ({ expanded, items = [] }) => {
                       sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
                       onClick={handlePrintClick}
                     />
-                    {/* <IconCashMinus size={18} /> */}
+                    <IconCashMinus size={18} />
                   </Stack>
                 </Box>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center' }}>
@@ -625,6 +713,20 @@ const LedgerList = ({ expanded, items = [] }) => {
                     idx: idx,
                     id: detail.id,
                     invoiceId: item.id
+                  }}
+                  isAdjustment={item.isAdjustment}
+                  onMagicStickClick={handleMagicStickClick}
+                  onSettingsClick={(data) => {
+                    setEditInvoiceTarget(data);
+                    setShowEditInvoice(true);
+                  }}
+                  onAdjustmentSelect={(e) => {
+                    setAdjAnchorEl(e.currentTarget);
+                    setAdjItem(item);
+                  }}
+                  onPrintClick={(e) => {
+                    setPrintAnchorEl(e.currentTarget);
+                    setPrintItem(item);
                   }}
                 />
                 );
@@ -871,6 +973,67 @@ const LedgerList = ({ expanded, items = [] }) => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Magic Stick (AutoFix) Menu */}
+      <Menu
+        anchorEl={magicStickAnchorEl}
+        open={Boolean(magicStickAnchorEl)}
+        onClose={handleMagicStickClose}
+        PaperProps={{
+          sx: {
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            border: '1px solid #eef2ff',
+            '& .MuiMenuItem-root': {
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#444',
+              py: 1
+            }
+          }
+        }}
+      >
+        <MenuItem onClick={() => {
+          handleMagicStickClose();
+          setShowTransferConfirmation(true);
+        }}>
+          Transfer Outstanding To Patient
+        </MenuItem>
+      </Menu>
+
+      <TransferCreditConfirmationDialog
+        open={showTransferConfirmation}
+        onClose={() => setShowTransferConfirmation(false)}
+        onConfirm={() => {
+          console.log('Transfer confirmed');
+          setShowTransferConfirmation(false);
+        }}
+      />
+
+      {/* Edit Invoice Details Dialog */}
+      {showEditInvoice && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowEditInvoice(false)}
+        >
+          <Box onClick={(e) => e.stopPropagation()}>
+            <EditInvoiceDetailsDialog 
+              onClose={() => setShowEditInvoice(false)} 
+              invoiceId={editInvoiceTarget?.id}
+            />
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };

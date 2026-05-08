@@ -9,6 +9,7 @@ import PatientDetailPage from '../pages/patients/PatientDetailPage';
 import RedirectToPatientDetails from '../pages/patients/RedirectToPatientDetails';
 import ImportPatientsPage from '../pages/patients/ImportPatientsPage';
 import ViewPatientInsurancePage from '../pages/patients/ViewPatientInsurancePage';
+import InsurancePage from '../pages/insurance/InsurancePage';
 import AddCoveragePage from '../pages/patients/AddCoveragePage';
 import MembershipPlanPage from '../pages/patients/MemberPage';
 import ViewPatientAllergyPage from '../pages/patients/ViewPatientAllergyPage';
@@ -44,6 +45,7 @@ const patientRoutes = [
   <Route key="/patients/:patientId/view" path="/patients/:patientId/view" element={adminReception(<ViewPatientPage />)} />,
   <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={adminReception(<MembershipPlanPage />)} />,
   <Route key="/patients/:patientId/insurance/new" path="/patients/:patientId/insurance/new" element={adminReception(<AddCoveragePage />)} />,
+  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={adminReception(<InsurancePage />)} />,
   <Route key="/patients/:patientId/insurance/:insuranceId" path="/patients/:patientId/insurance/:insuranceId" element={adminReception(<ViewPatientInsurancePage />)} />,
   <Route key="/patients/:patientId/signed-documents" path="/patients/:patientId/signed-documents" element={adminReception(<PatientSignedDocumentsPage />)} />,
   <Route

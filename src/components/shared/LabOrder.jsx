@@ -8,7 +8,7 @@ import {
   CloudUploadOutlined, Undo, Redo, FormatBold, 
   FormatItalic, FormatListBulleted, FormatAlignLeft, 
   FormatAlignCenter, FormatAlignRight, SentimentSatisfiedAlt, LightbulbOutlined,
-  FormatColorText, FormatColorFill
+  FormatColorText, FormatColorFill, Mic, AccessTime
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import SignaturePad from './SignaturePad';
@@ -133,8 +133,8 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
   // Rich text editor handlers
   const handleFormat = (format, value) => {
     if (editorRef.current) {
-      document.execCommand(format, false, value);
       editorRef.current.focus();
+      document.execCommand(format, false, value);
       // Manually update state after formatting
       setInstructions(editorRef.current.innerHTML);
     }
@@ -361,60 +361,51 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                 <Redo fontSize="inherit" />
               </IconButton>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-              <ToggleButton
-                size="small"
-                value="bold"
-                selected={bold}
-                onChange={() => {
-                  setBold(!bold);
-                  handleFormat('bold');
-                }}
-                sx={{ minWidth: 28, height: 28 }}
+              <IconButton 
+                size="small" 
+                onClick={() => { setBold(!bold); handleFormat('bold'); }}
+                sx={{ bgcolor: bold ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
               >
-                <FormatBold fontSize="inherit" />
-              </ToggleButton>
-              <ToggleButton
-                size="small"
-                value="italic"
-                selected={italic}
-                onChange={() => {
-                  setItalic(!italic);
-                  handleFormat('italic');
-                }}
-                sx={{ minWidth: 28, height: 28 }}
+                <FormatBold fontSize="inherit" color={bold ? 'primary' : 'inherit'} />
+              </IconButton>
+              <IconButton 
+                size="small" 
+                onClick={() => { setItalic(!italic); handleFormat('italic'); }}
+                sx={{ bgcolor: italic ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
               >
-                <FormatItalic fontSize="inherit" />
-              </ToggleButton>
+                <FormatItalic fontSize="inherit" color={italic ? 'primary' : 'inherit'} />
+              </IconButton>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-              <ToggleButton
-                size="small"
-                value="list"
-                selected={bulletList}
-                onChange={() => {
-                  setBulletList(!bulletList);
-                  handleFormat('insertUnorderedList');
-                }}
-                sx={{ minWidth: 28, height: 28 }}
+              <IconButton 
+                size="small" 
+                onClick={() => { setBulletList(!bulletList); handleFormat('insertUnorderedList'); }}
+                sx={{ bgcolor: bulletList ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
               >
-                <FormatListBulleted fontSize="inherit" />
-              </ToggleButton>
-              <ToggleButtonGroup
-                size="small"
-                value={alignment}
-                exclusive
-                onChange={handleAlignmentChange}
-                sx={{ '& .MuiToggleButton-root': { minWidth: 28, height: 28, px: 0.5 } }}
-              >
-                <ToggleButton value="left">
-                  <FormatAlignLeft fontSize="inherit" />
-                </ToggleButton>
-                <ToggleButton value="center">
-                  <FormatAlignCenter fontSize="inherit" />
-                </ToggleButton>
-                <ToggleButton value="right">
-                  <FormatAlignRight fontSize="inherit" />
-                </ToggleButton>
-              </ToggleButtonGroup>
+                <FormatListBulleted fontSize="inherit" color={bulletList ? 'primary' : 'inherit'} />
+              </IconButton>
+              <Stack direction="row" spacing={0.5}>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleAlignmentChange(null, 'left')}
+                  sx={{ bgcolor: alignment === 'left' ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
+                >
+                  <FormatAlignLeft fontSize="inherit" color={alignment === 'left' ? 'primary' : 'inherit'} />
+                </IconButton>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleAlignmentChange(null, 'center')}
+                  sx={{ bgcolor: alignment === 'center' ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
+                >
+                  <FormatAlignCenter fontSize="inherit" color={alignment === 'center' ? 'primary' : 'inherit'} />
+                </IconButton>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleAlignmentChange(null, 'right')}
+                  sx={{ bgcolor: alignment === 'right' ? '#e0e0e0' : 'transparent', borderRadius: 1, minWidth: 28, height: 28 }}
+                >
+                  <FormatAlignRight fontSize="inherit" color={alignment === 'right' ? 'primary' : 'inherit'} />
+                </IconButton>
+              </Stack>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
               
               {/* Paragraph Style */}
@@ -430,8 +421,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                 <MenuItem value="h2">Heading 2</MenuItem>
                 <MenuItem value="h3">Heading 3</MenuItem>
                 <MenuItem value="h4">Heading 4</MenuItem>
-                <MenuItem value="h5">Heading 5</MenuItem>
-                <MenuItem value="h6">Heading 6</MenuItem>
+                <MenuItem value="pre">Preformatted</MenuItem>
               </Select>
               
               {/* Font Size */}
@@ -478,12 +468,14 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                   sx={{ 
                     minWidth: 28, 
                     height: 28,
-                    color: textColor,
                     '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                   }}
                   title="Text Color"
                 >
-                  <FormatColorText fontSize="inherit" />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <FormatColorText fontSize="inherit" sx={{ color: textColor }} />
+                    <Box sx={{ width: '80%', height: '2px', bgcolor: textColor, mt: -0.5 }} />
+                  </Box>
                 </IconButton>
                 <Popover
                   open={Boolean(textColorAnchor)}
@@ -503,6 +495,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                     {standardColors.map((color) => (
                       <Box
                         key={color}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleTextColorChange(color)}
                         sx={{
                           width: 20,
@@ -550,6 +543,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                     {standardColors.map((color) => (
                       <Box
                         key={color}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleHighlightColorChange(color)}
                         sx={{
                           width: 20,
@@ -578,6 +572,8 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
               >
                 <LightbulbOutlined fontSize="inherit" />
               </IconButton>
+              <IconButton size="small" title="Voice to text"><Mic fontSize="inherit" /></IconButton>
+              <IconButton size="small" title="Insert timestamp"><AccessTime fontSize="inherit" /></IconButton>
             </Box>
             
             {/* Editable Content Area */}

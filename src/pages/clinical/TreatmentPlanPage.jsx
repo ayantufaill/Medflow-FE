@@ -27,6 +27,8 @@ import ReEstimateMenu from '../../components/clinical/ReEstimateMenu';
 import AdjustedFeeTreatmentPlan from '../../components/clinical/AdjustedFeeTreatmentPlan';
 import EditProcedureFees from '../../components/clinical/EditProcedureFees';
 import PredetermineProcedures from '../../components/clinical/PredetermineProcedures';
+import UsedFeeGuidesDialog from '../../components/clinical/UsedFeeGuidesDialog';
+import ReEstimateCompletedProceduresDialog from '../../components/clinical/ReEstimateCompletedProceduresDialog';
 import { fontSize, fontWeight } from "../../constants/styles";
 
 // --- Custom SVG Tooth Icons for Headers ---
@@ -241,7 +243,7 @@ const OrthoSectionHeader = ({ label, isExpanded = false }) => (
 );
 
 // --- Global Action Bar Component ---
-const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredetermineClick }) => {
+const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredetermineClick, onViewFeeGuideClick }) => {
   const [reEstimateAnchor, setReEstimateAnchor] = useState(null);
 
   const handleReEstimateClick = (event) => {
@@ -341,6 +343,7 @@ const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredeterm
           variant="outlined" 
           size="small" 
           sx={{ textTransform: 'none', color: '#1a237e', borderColor: '#1a237e' }}
+          onClick={onViewFeeGuideClick}
         >
           View Used Fee Guide
         </Button>
@@ -480,6 +483,8 @@ export default function TreatmentPlanPage() {
   const [showAdjustedFeePlan, setShowAdjustedFeePlan] = useState(false);
   const [showEditFeesModal, setShowEditFeesModal] = useState(false);
   const [showPredetermineModal, setShowPredetermineModal] = useState(false);
+  const [showUsedFeeGuideModal, setShowUsedFeeGuideModal] = useState(false);
+  const [showReEstimateDialog, setShowReEstimateDialog] = useState(false);
   const [paymentOptionType, setPaymentOptionType] = useState(null);
   const [showGroupingSection, setShowGroupingSection] = useState(false);
 
@@ -1021,6 +1026,7 @@ export default function TreatmentPlanPage() {
             onReEstimateOptionClick={handleReEstimateOptionClick} 
             onSettingsClick={() => setShowEditFeesModal(true)}
             onPredetermineClick={() => setShowPredetermineModal(true)}
+            onViewFeeGuideClick={() => setShowUsedFeeGuideModal(true)}
           />
         </Box>
 
@@ -1063,6 +1069,16 @@ export default function TreatmentPlanPage() {
             <PredetermineProcedures onClose={() => setShowPredetermineModal(false)} />
           </DialogContent>
         </Dialog>
+
+        <UsedFeeGuidesDialog
+          open={showUsedFeeGuideModal}
+          onClose={() => setShowUsedFeeGuideModal(false)}
+        />
+
+        <ReEstimateCompletedProceduresDialog
+          open={showReEstimateDialog}
+          onClose={() => setShowReEstimateDialog(false)}
+        />
 
         {/* Dental Treatment Plan - Outside the columns, full width */}
         <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>
@@ -1142,7 +1158,7 @@ export default function TreatmentPlanPage() {
           <TreatmentPlanEndTable
             completedRows={[]}
             outOfOfficeRows={[]}
-            onReEstimateCompleted={() => {}}
+            onReEstimateCompleted={() => setShowReEstimateDialog(true)}
           />
         </Box>
         </Box>
