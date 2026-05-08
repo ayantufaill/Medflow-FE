@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useDebounce } from 'use-debounce';
-import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
@@ -15,33 +14,27 @@ import {
   TablePagination,
   TextField,
   IconButton,
-  Chip,
   Button,
   Alert,
   CircularProgress,
   InputAdornment,
   Tooltip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
   FormControl,
-  InputLabel,
   Select,
+  MenuItem,
+  Tabs,
+  Tab,
+  FormControlLabel,
+  Checkbox,
+  Collapse,
   Grid,
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Search as SearchIcon,
   Add as AddIcon,
-  Refresh as RefreshIcon,
-  MoreVert as MoreVertIcon,
-  Visibility as VisibilityIcon,
-  Clear,
-  FilterAltOff,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { providerService } from '../../services/provider.service';
@@ -51,231 +44,783 @@ import {
   selectProviderPagination,
   selectProviderListLoading,
   selectProviderListError,
-  invalidateProviders,
-  removeProviderFromList,
   updateProviderInList,
 } from '../../store/slices/providerSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import EditProviderDialog from '../../components/providers/EditProviderDialog';
+import AddProviderDialog from '../../components/providers/AddProviderDialog';
+
+// ─── Tab config ──────────────────────────────────────────────────────────────
+
+const SUB_TABS = [
+  {
+    label: 'Active Providers',
+    heading: 'In Office Providers:',
+    buttonLabel: 'Add Provider',
+    addPath: '/providers/new',
+    useRedux: true,
+    apiParams: { isActive: true },
+    columns: ['provider', 'specialty', 'providerType', 'email', 'mobile', 'taxNumber', 'licenseNumber'],
+  },
+  {
+    label: 'Referral Providers',
+    heading: 'Referral Providers:',
+    buttonLabel: 'Add Referral Provider',
+    addPath: '/providers/new',
+    useRedux: false,
+    apiParams: { providerCategory: 'referral' },
+    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
+  },
+  {
+    label: 'Care Team Providers',
+    heading: 'Care Team Providers:',
+    buttonLabel: 'Add Care Team Provider',
+    addPath: '/providers/new',
+    useRedux: false,
+    apiParams: { providerCategory: 'care_team' },
+    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone'],
+  },
+  {
+    label: 'Labs',
+    heading: 'Labs:',
+    buttonLabel: 'Add Lab Provider',
+    addPath: '/providers/new',
+    useRedux: false,
+    apiParams: { providerCategory: 'lab' },
+    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
+    columnOverrides: { provider: 'Lab' },
+    searchPlaceholder: 'Search by lab name',
+  },
+  {
+    label: 'Inactive Providers',
+    heading: 'Inactive Providers:',
+    buttonLabel: 'Add Provider',
+    addPath: '/providers/new',
+    useRedux: true,
+    apiParams: { isActive: false },
+    columns: ['provider', 'specialty', 'providerType', 'email', 'mobile', 'taxNumber', 'licenseNumber'],
+    inactive: true,
+  },
+];
+
+const COLUMN_HEADERS = {
+  provider: 'Provider',
+  specialty: 'Specialty',
+  providerType: 'Provider Type',
+  email: 'Email',
+  mobile: 'Mobile Phone Number',
+  officePhone: 'Office Phone Number',
+  taxNumber: 'Federal Tax Number',
+  licenseNumber: 'License Number',
+  verified: 'Verified',
+};
+
+const SPECIALTIES = [
+  'General Dentist',
+  'Dental Hygienist',
+  'Orthodontist',
+  'Periodontist',
+  'Endodontist',
+  'Oral Surgeon',
+  'Prosthodontist',
+  'Pedodontist',
+  'Primary Care Doctor',
+  'Radiology',
+  'Other',
+];
+
+// ─── Verified badge ───────────────────────────────────────────────────────────
+
+const getVerifiedInfo = (provider) => {
+  const status = provider.verificationStatus || provider.verified || null;
+  const verifiedDate = provider.verifiedAt || provider.verificationDate || null;
+  const sentDate = provider.verificationSentAt || provider.sentAt || null;
+
+  if (status === 'verified' || (status === true && verifiedDate)) {
+    const d = verifiedDate ? new Date(verifiedDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
+    return { label: `Verified${d ? ` ${d}` : ''}`, color: '#e8f5e9', textColor: '#2e7d32' };
+  }
+  if (status === 'sent' || sentDate) {
+    const d = sentDate ? new Date(sentDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
+    return { label: `Sent On${d ? ` ${d}` : ''}`, color: '#fff8e1', textColor: '#f57c00' };
+  }
+  return null;
+};
+
+const VerifiedBadge = ({ provider }) => {
+  const info = getVerifiedInfo(provider);
+  if (!info) return (
+    <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, backgroundColor: '#f5f5f5', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+      Not Sent - N/A
+    </Box>
+  );
+  return (
+    <Box
+      sx={{
+        display: 'inline-block',
+        px: 1,
+        py: 0.25,
+        borderRadius: 1,
+        backgroundColor: info.color,
+        color: info.textColor,
+        fontSize: '0.75rem',
+        fontWeight: 500,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {info.label}
+    </Box>
+  );
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const formatSpecialty = (value) => {
+  if (!value) return '-';
+  if (Array.isArray(value)) {
+    const cleaned = value.map((v) => (typeof v === 'string' ? v.trim() : '')).filter(Boolean);
+    return cleaned.length ? cleaned.join(', ') : '-';
+  }
+  return typeof value === 'string' ? value.trim() || '-' : '-';
+};
+
+const getProviderName = (provider) => {
+  const first = provider.userId?.firstName || provider.firstName || '';
+  const last = provider.userId?.lastName || provider.lastName || '';
+  return [first, last].filter(Boolean).join(' ') || '-';
+};
+
+const getCellValue = (provider, col) => {
+  switch (col) {
+    case 'provider': return getProviderName(provider);
+    case 'specialty': return formatSpecialty(provider.specialty);
+    case 'providerType': return provider.providerType || provider.title || '-';
+    case 'email': return provider.userId?.email || provider.email || '-';
+    case 'mobile': return provider.phone || provider.userId?.phone || provider.mobilePhone || '-';
+    case 'officePhone': return provider.officePhone || provider.workPhone || '-';
+    case 'taxNumber': return provider.federalTaxId || provider.taxId || provider.federalTaxNumber || '-';
+    case 'licenseNumber': return provider.licenseNumber || '-';
+    default: return '-';
+  }
+};
+
+// ─── Expanded row panel ───────────────────────────────────────────────────────
+
+const DetailField = ({ label, value }) => (
+  <Box>
+    <Typography component="span" variant="body2" fontWeight={700}>{label}: </Typography>
+    <Typography component="span" variant="body2">{value || ''}</Typography>
+  </Box>
+);
+
+const ExpandedDetails = ({ provider, onDeactivate, onActivate, actionLoading }) => {
+  const addr = provider.address || {};
+  const userId = provider.userId || {};
+
+  const fields = [
+    [
+      { label: 'Title', value: provider.title },
+      { label: 'Middle Name', value: userId.middleName || provider.middleName },
+      { label: 'Home Phone Number', value: provider.homePhone || userId.homePhone },
+    ],
+    [
+      { label: 'Suffix Title', value: provider.suffixTitle || provider.suffix },
+      { label: 'Preferred Name', value: provider.preferredName || userId.preferredName },
+      { label: 'Color', value: null, color: provider.color },
+    ],
+    [
+      { label: 'Organization Name', value: provider.organizationName },
+      { label: 'NPI', value: provider.npiNumber },
+      { label: 'Description', value: provider.description },
+    ],
+    [
+      { label: 'Signature on File', value: provider.signatureOnFile ? 'Yes' : provider.signatureOnFile === false ? 'No' : '' },
+      { label: 'Additional Provider ID', value: provider.additionalProviderId },
+    ],
+    [
+      { label: 'Country', value: addr.country || provider.country },
+      { label: 'Additional Address', value: addr.additionalAddress || addr.address2 },
+      { label: 'State', value: addr.state || provider.state },
+    ],
+    [
+      { label: 'Street Address', value: addr.street || addr.address1 || provider.streetAddress },
+      { label: 'City', value: addr.city || provider.city },
+      { label: 'Zip Code', value: addr.zipCode || addr.zip || provider.zipCode },
+    ],
+  ];
+
+  return (
+    <Box sx={{ p: 2.5, backgroundColor: '#eef2f8', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <Grid container spacing={1}>
+        {fields.map((col, ci) => (
+          <Grid key={ci} size={2}>
+            {col.map((f) =>
+              f.color !== undefined ? (
+                <Box key={f.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="body2" fontWeight={700}>{f.label}: </Typography>
+                  {f.color ? (
+                    <Box sx={{ width: 16, height: 16, borderRadius: '2px', backgroundColor: f.color, border: '1px solid rgba(0,0,0,0.15)' }} />
+                  ) : null}
+                </Box>
+              ) : (
+                <DetailField key={f.label} label={f.label} value={f.value} />
+              )
+            )}
+          </Grid>
+        ))}
+      </Grid>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+        {provider.isActive ? (
+          <Button
+            variant="contained"
+            size="small"
+            onClick={onDeactivate}
+            disabled={actionLoading}
+            sx={{ backgroundColor: '#e53935', '&:hover': { backgroundColor: '#c62828' } }}
+          >
+            Deactivate
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            size="small"
+            onClick={onActivate}
+            disabled={actionLoading}
+            color="success"
+          >
+            Activate
+          </Button>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+// ─── Inactive providers multi-section view ────────────────────────────────────
+
+const INACTIVE_SECTIONS = [
+  {
+    key: 'inOffice',
+    heading: 'In Office Providers:',
+    apiParams: { isActive: false },
+    columns: ['provider', 'specialty', 'providerType', 'email', 'mobile', 'taxNumber', 'licenseNumber'],
+  },
+  {
+    key: 'referral',
+    heading: 'Referral Providers:',
+    apiParams: { isActive: false, providerCategory: 'referral' },
+    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
+  },
+  {
+    key: 'careTeam',
+    heading: 'Care Team Providers:',
+    apiParams: { isActive: false, providerCategory: 'care_team' },
+    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone'],
+  },
+  {
+    key: 'lab',
+    heading: 'LabCase Providers:',
+    apiParams: { isActive: false, providerCategory: 'lab' },
+    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
+  },
+];
+
+const InactiveSectionTable = ({ section, onEdit, onActivate, actionLoading }) => {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    providerService
+      .getAllProviders(1, 50, '', section.apiParams.isActive, '', section.apiParams.providerCategory || '')
+      .then((result) => { if (!cancelled) { setRows(result.providers || []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <Box sx={{ mb: 4 }}>
+      <Typography
+        variant="subtitle1"
+        fontWeight={700}
+        sx={{ mb: 1.5, color: '#1a6b9e', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+      >
+        {section.heading}
+      </Typography>
+      <Paper variant="outlined">
+        {loading ? (
+          <Box display="flex" justifyContent="center" p={3}><CircularProgress size={24} /></Box>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ '& .MuiTableCell-head': { fontWeight: 700, backgroundColor: '#f8fafc', fontSize: '0.8rem' } }}>
+                  {section.columns.map((col) => (
+                    <TableCell key={col}>{COLUMN_HEADERS[col]}</TableCell>
+                  ))}
+                  <TableCell />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={section.columns.length + 1} sx={{ py: 2, color: 'text.secondary', fontSize: '0.82rem' }} />
+                  </TableRow>
+                ) : (
+                  rows.map((provider) => {
+                    const id = provider._id || provider.id;
+                    return (
+                      <TableRow key={id} hover sx={{ '& .MuiTableCell-root': { fontSize: '0.82rem', py: 1.2 } }}>
+                        {section.columns.map((col) => (
+                          <TableCell key={col}>
+                            {col === 'provider' ? (
+                              <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                                {getCellValue(provider, col)}
+                              </Typography>
+                            ) : col === 'verified' ? (
+                              <VerifiedBadge provider={provider} />
+                            ) : (
+                              getCellValue(provider, col)
+                            )}
+                          </TableCell>
+                        ))}
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                            <Tooltip title="Activate">
+                              <span>
+                                <IconButton size="small" disabled={actionLoading}
+                                  onClick={() => onActivate(provider)}
+                                  sx={{ color: 'text.disabled' }}>
+                                  <CheckCircleOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Edit">
+                              <IconButton size="small" onClick={() => onEdit(provider)} sx={{ color: 'text.secondary' }}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+    </Box>
+  );
+};
+
+const InactiveProvidersView = ({ onEdit, onActivate, actionLoading }) => (
+  <Box>
+    {INACTIVE_SECTIONS.map((section) => (
+      <InactiveSectionTable
+        key={section.key}
+        section={section}
+        onEdit={onEdit}
+        onActivate={onActivate}
+        actionLoading={actionLoading}
+      />
+    ))}
+  </Box>
+);
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const ProvidersListPage = () => {
-  const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const dispatch = useDispatch();
 
-  // ─── Redux State ─────────────────────────────────────────
-  const providers = useSelector(selectProviderList);
-  const pagination = useSelector(selectProviderPagination);
-  const loading = useSelector(selectProviderListLoading);
+  // Redux state (used for Active + Inactive tabs)
+  const reduxProviders = useSelector(selectProviderList);
+  const reduxPagination = useSelector(selectProviderPagination);
+  const reduxLoading = useSelector(selectProviderListLoading);
   const reduxError = useSelector(selectProviderListError);
 
-  // ─── Local UI State ──────────────────────────────────────
+  // Local state (used for Referral / CareTeam / Labs tabs)
+  const [localProviders, setLocalProviders] = useState([]);
+  const [localTotal, setLocalTotal] = useState(0);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  const [activeSubTab, setActiveSubTab] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [specialtyFilter, setSpecialtyFilter] = useState('');
+  const [dragEnabled, setDragEnabled] = useState(false);
   const [error, setError] = useState('');
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, providerId: null, providerName: '' });
-  const [actionMenu, setActionMenu] = useState({ anchorEl: null, providerId: null, providerName: '', isActive: null });
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [addDialog, setAddDialog] = useState({ open: false });
+  const [editDialog, setEditDialog] = useState({ open: false, providerId: null, providerName: '' });
+  const [deactivateDialog, setDeactivateDialog] = useState({ open: false, providerId: null, providerName: '' });
+  const [actionLoading, setActionLoading] = useState(false);
   const [debouncedSearch] = useDebounce(search, 500);
-  const totalProviders = pagination?.total || 0;
-  const hasActiveFilters = search || statusFilter;
 
-  const formatSpecialty = (value) => {
-    if (!value) return '-';
-    if (Array.isArray(value)) {
-      const cleaned = value.map((v) => (typeof v === 'string' ? v.trim() : '')).filter((v) => v.length > 0);
-      return cleaned.length ? cleaned.join(', ') : '-';
-    }
-    if (typeof value === 'string') return value.trim() || '-';
-    return '-';
-  };
+  const tabConfig = SUB_TABS[activeSubTab];
+  const useRedux = tabConfig.useRedux;
 
-  // ─── Single fetch via Redux (fires once per param change) ───
+  const providers = useRedux ? reduxProviders : localProviders;
+  const totalProviders = useRedux ? (reduxPagination?.total || 0) : localTotal;
+  const loading = useRedux ? reduxLoading : localLoading;
+
+  // ─── Fetch (Redux tabs) ───────────────────────────────────────
   useEffect(() => {
-    let isActive = null;
-    if (statusFilter === 'active') isActive = true;
-    else if (statusFilter === 'inactive') isActive = false;
-
+    if (!useRedux) return;
     dispatch(fetchProviders({
       page: page + 1,
       limit: rowsPerPage,
       search: debouncedSearch.trim(),
-      isActive,
+      specialty: specialtyFilter,
+      ...tabConfig.apiParams,
     }));
-  }, [dispatch, page, rowsPerPage, debouncedSearch, statusFilter]);
+  }, [dispatch, page, rowsPerPage, debouncedSearch, specialtyFilter, activeSubTab, useRedux]);
 
   useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
 
-  const handleResetFilters = () => { setSearch(''); setStatusFilter(''); setPage(0); };
-  const handleChangePage = (event, newPage) => { setPage(newPage); };
-  const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
-
-  const handleDeleteClick = (providerId, providerName) => {
-    setDeleteDialog({ open: true, providerId, providerName });
-  };
-
-  const handleDeleteConfirm = async () => {
+  // ─── Fetch (local tabs) ───────────────────────────────────────
+  const fetchLocal = useCallback(async () => {
+    setLocalLoading(true);
+    setLocalError('');
     try {
-      setDeleteLoading(true);
-      await providerService.deleteProvider(deleteDialog.providerId);
-      showSnackbar('Provider deleted successfully', 'success');
-      dispatch(removeProviderFromList(deleteDialog.providerId));
-      setDeleteDialog({ open: false, providerId: null, providerName: '' });
+      const result = await providerService.getAllProviders(
+        page + 1,
+        rowsPerPage,
+        debouncedSearch.trim(),
+        null,
+        specialtyFilter,
+        tabConfig.apiParams.providerCategory || ''
+      );
+      setLocalProviders(result.providers || []);
+      setLocalTotal(result.pagination?.total || 0);
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to delete provider.';
-      setError(msg);
-      showSnackbar(msg, 'error');
+      const msg = err.response?.data?.error?.message || 'Failed to load providers';
+      setLocalError(msg);
+      setLocalProviders([]);
     } finally {
-      setDeleteLoading(false);
+      setLocalLoading(false);
+    }
+  }, [page, rowsPerPage, debouncedSearch, specialtyFilter, activeSubTab]);
+
+  useEffect(() => {
+    if (useRedux) return;
+    fetchLocal();
+  }, [fetchLocal, useRedux]);
+
+  // ─── Handlers ────────────────────────────────────────────────
+  const handleSubTabChange = (_, newValue) => {
+    setActiveSubTab(newValue);
+    setPage(0);
+    setSearch('');
+    setSpecialtyFilter('');
+    setLocalProviders([]);
+    setLocalError('');
+    setExpandedRowId(null);
+  };
+
+  const handleToggleActive = async (provider) => {
+    const id = provider._id || provider.id;
+    const name = getProviderName(provider);
+    if (provider.isActive) {
+      setDeactivateDialog({ open: true, providerId: id, providerName: name });
+    } else {
+      try {
+        setActionLoading(true);
+        await providerService.activateProvider(id);
+        showSnackbar(`Provider "${name}" activated`, 'success');
+        if (useRedux) dispatch(updateProviderInList({ _id: id, isActive: true }));
+        else fetchLocal();
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to activate provider', 'error');
+      } finally {
+        setActionLoading(false);
+      }
     }
   };
 
-  const handleDeleteCancel = () => { setDeleteDialog({ open: false, providerId: null, providerName: '' }); };
-  const handleActionMenuOpen = (event, providerId, providerName, isActive) => { setActionMenu({ anchorEl: event.currentTarget, providerId, providerName, isActive }); };
-  const handleActionMenuClose = () => { setActionMenu((prev) => ({ ...prev, anchorEl: null })); };
-  const handleViewDetails = (providerId) => { handleActionMenuClose(); navigate(`/providers/${providerId}`); };
-  const handleEdit = (providerId) => { handleActionMenuClose(); navigate(`/providers/${providerId}/edit`); };
-  const handleDelete = (providerId, providerName) => { handleActionMenuClose(); handleDeleteClick(providerId, providerName); };
-
-  const handleActivate = async (providerId, providerName) => {
-    handleActionMenuClose();
+  const handleDeactivateConfirm = async () => {
     try {
-      await providerService.activateProvider(providerId);
-      showSnackbar(`Provider "${providerName}" activated successfully`, 'success');
-      dispatch(updateProviderInList({ _id: providerId, isActive: true }));
+      setActionLoading(true);
+      await providerService.deactivateProvider(deactivateDialog.providerId);
+      showSnackbar(`Provider "${deactivateDialog.providerName}" deactivated`, 'success');
+      if (useRedux) dispatch(updateProviderInList({ _id: deactivateDialog.providerId, isActive: false }));
+      else fetchLocal();
+      setDeactivateDialog({ open: false, providerId: null, providerName: '' });
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to activate provider.';
-      setError(msg);
-      showSnackbar(msg, 'error');
+      showSnackbar(err.response?.data?.error?.message || 'Failed to deactivate provider', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleDeactivate = async (providerId, providerName) => {
-    handleActionMenuClose();
-    try {
-      await providerService.deactivateProvider(providerId);
-      showSnackbar(`Provider "${providerName}" deactivated successfully`, 'success');
-      dispatch(updateProviderInList({ _id: providerId, isActive: false }));
-    } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to deactivate provider.';
-      setError(msg);
-      showSnackbar(msg, 'error');
-    }
-  };
-
-  const handleRefresh = () => {
-    dispatch(invalidateProviders());
-    // The useEffect will re-fire because invalidateProviders changes lastFetched
-    // Force re-dispatch by toggling a trivial state or re-dispatching directly
-    let isActive = null;
-    if (statusFilter === 'active') isActive = true;
-    else if (statusFilter === 'inactive') isActive = false;
-    dispatch(fetchProviders({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), isActive }));
-  };
-
+  // ─── Render ───────────────────────────────────────────────────
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Typography variant="h4" fontWeight="bold">Providers</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/providers/new')}>Add Provider</Button>
+      {(error || localError) && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => { setError(''); setLocalError(''); }}>
+          {error || localError}
+        </Alert>
+      )}
+
+      {/* Sub-tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs
+          value={activeSubTab}
+          onChange={handleSubTabChange}
+          sx={{ '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, fontSize: '0.875rem' } }}
+        >
+          {SUB_TABS.map((tab) => (
+            <Tab
+              key={tab.label}
+              label={tab.label}
+              disableRipple
+              sx={tab.inactive ? { color: 'error.main', '&.Mui-selected': { color: 'error.main' } } : {}}
+            />
+          ))}
+        </Tabs>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {tabConfig.inactive ? (
+        <InactiveProvidersView
+          actionLoading={actionLoading}
+          onActivate={(provider) => handleToggleActive(provider)}
+          onEdit={(provider) => setEditDialog({ open: true, providerId: provider._id || provider.id, providerName: getProviderName(provider) })}
+        />
+      ) : (
+        <>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            {tabConfig.heading}
+          </Typography>
 
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <Grid container spacing={2} sx={{ mb: 3, alignItems: 'center' }}>
-          <Grid size={7}>
+          {/* Controls row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
             <TextField
-              fullWidth placeholder="Search by name, title, NPI, specialty..." value={search}
-              onChange={(e) => setSearch(e.target.value)} size="small"
+              size="small"
+              placeholder={tabConfig.searchPlaceholder || 'Search by provider name'}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              sx={{ width: 260 }}
               InputProps={{
-                startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
-                endAdornment: search.length > 0 && <IconButton size="small" onClick={() => setSearch('')}><Clear /></IconButton>,
+                startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
               }}
             />
-          </Grid>
-          <Grid size={3}>
-            <FormControl fullWidth size="small">
-              <InputLabel id="status-filter-label">Filter by Status</InputLabel>
-              <Select labelId="status-filter-label" value={statusFilter} label="Filter by Status" onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
-                <MenuItem value=""><em>All Status</em></MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <Select
+                displayEmpty
+                value={specialtyFilter}
+                onChange={(e) => { setSpecialtyFilter(e.target.value); setPage(0); }}
+                renderValue={(v) => v || 'Filter by Specialty'}
+              >
+                <MenuItem value=""><em>All Specialties</em></MenuItem>
+                {SPECIALTIES.map((s) => (
+                  <MenuItem key={s} value={s}>{s}</MenuItem>
+                ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid size={2}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
-              <Tooltip title="Clear Filters"><span><IconButton onClick={handleResetFilters} disabled={loading || !hasActiveFilters} color="primary"><FilterAltOff /></IconButton></span></Tooltip>
-              <Tooltip title="Refresh"><span><IconButton onClick={handleRefresh} disabled={loading} color="primary"><RefreshIcon /></IconButton></span></Tooltip>
-            </Box>
-          </Grid>
-        </Grid>
 
-        {loading ? (
-          <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
-        ) : (
-          <>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Provider</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell>NPI Number</TableCell>
-                    <TableCell>Specialty</TableCell>
-                    <TableCell>Title</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {providers.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} align="center" sx={{ py: 4 }}><Typography color="text.secondary">No providers found</Typography></TableCell></TableRow>
-                  ) : (
-                    providers.map((provider) => (
-                      <TableRow key={provider._id || provider.id} hover>
-                        <TableCell><Typography variant="body2">{provider.userId?.firstName} {provider.userId?.lastName}</Typography></TableCell>
-                        <TableCell>{provider.providerCode || '-'}</TableCell>
-                        <TableCell>{provider.npiNumber || '-'}</TableCell>
-                        <TableCell>{formatSpecialty(provider.specialty)}</TableCell>
-                        <TableCell>{provider.title || '-'}</TableCell>
-                        <TableCell><Chip label={provider.isActive ? 'Active' : 'Inactive'} color={provider.isActive ? 'success' : 'default'} size="small" /></TableCell>
-                        <TableCell align="right">
-                          <IconButton size="small" onClick={(e) => handleActionMenuOpen(e, provider._id || provider.id, `${provider.userId?.firstName} ${provider.userId?.lastName}`, provider.isActive)}>
-                            <MoreVertIcon />
-                          </IconButton>
-                        </TableCell>
+            <Box sx={{ flex: 1 }} />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={dragEnabled}
+                  onChange={(e) => setDragEnabled(e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                  Drag and drop table<br />rows to reorder
+                </Typography>
+              }
+              sx={{ mr: 1 }}
+            />
+
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setAddDialog({ open: true, title: tabConfig.buttonLabel, providerCategory: tabConfig.apiParams.providerCategory || null })}
+              sx={{ backgroundColor: '#1a3a6b', whiteSpace: 'nowrap' }}
+            >
+              {tabConfig.buttonLabel}
+            </Button>
+
+            <Button
+              variant="outlined"
+              onClick={() => { if (useRedux) { setSearch(''); setSpecialtyFilter(''); } else fetchLocal(); }}
+              sx={{ whiteSpace: 'nowrap', color: 'text.secondary', borderColor: 'divider' }}
+            >
+              Reset Providers Order
+            </Button>
+          </Box>
+
+          {/* Table */}
+          <Paper variant="outlined">
+            {loading ? (
+              <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
+            ) : (
+              <>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ '& .MuiTableCell-head': { fontWeight: 700, backgroundColor: '#f8fafc', fontSize: '0.8rem' } }}>
+                        {dragEnabled && <TableCell sx={{ width: 40 }} />}
+                        {tabConfig.columns.map((col) => (
+                          <TableCell key={col}>
+                            {(tabConfig.columnOverrides?.[col]) || COLUMN_HEADERS[col]}
+                          </TableCell>
+                        ))}
+                        <TableCell align="center">Actions</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination component="div" count={totalProviders} page={page} onPageChange={handleChangePage} rowsPerPage={rowsPerPage} onRowsPerPageChange={handleChangeRowsPerPage} rowsPerPageOptions={[5, 10, 25, 50]} />
-          </>
-        )}
-      </Paper>
+                    </TableHead>
+                    <TableBody>
+                      {providers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={tabConfig.columns.length + (dragEnabled ? 2 : 1)} align="center" sx={{ py: 4 }}>
+                            <Typography color="text.secondary">No providers found</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        providers.map((provider) => {
+                          const id = provider._id || provider.id;
+                          const isExpanded = expandedRowId === id;
+                          const totalCols = tabConfig.columns.length + (dragEnabled ? 2 : 1);
+                          return (
+                            <>
+                              <TableRow
+                                key={id}
+                                hover
+                                onClick={() => setExpandedRowId(isExpanded ? null : id)}
+                                sx={{
+                                  cursor: 'pointer',
+                                  '& .MuiTableCell-root': { fontSize: '0.82rem', py: 1.2 },
+                                  ...(isExpanded && { backgroundColor: '#f0f4fa' }),
+                                }}
+                              >
+                                {dragEnabled && (
+                                  <TableCell sx={{ cursor: 'grab', color: 'text.disabled' }} onClick={(e) => e.stopPropagation()}>
+                                    <DragIndicatorIcon fontSize="small" />
+                                  </TableCell>
+                                )}
+                                {tabConfig.columns.map((col) => (
+                                  <TableCell key={col}>
+                                    {col === 'provider' ? (
+                                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                                        {getCellValue(provider, col)}
+                                      </Typography>
+                                    ) : col === 'verified' ? (
+                                      <VerifiedBadge provider={provider} />
+                                    ) : (
+                                      getCellValue(provider, col)
+                                    )}
+                                  </TableCell>
+                                ))}
+                                <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                    <Tooltip title={provider.isActive ? 'Deactivate' : 'Activate'}>
+                                      <span>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleToggleActive(provider)}
+                                          disabled={actionLoading}
+                                          sx={{ color: provider.isActive ? 'primary.main' : 'text.disabled' }}
+                                        >
+                                          <CheckCircleOutlineIcon fontSize="small" />
+                                        </IconButton>
+                                      </span>
+                                    </Tooltip>
+                                    <Tooltip title="Edit">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => setEditDialog({ open: true, providerId: id, providerName: getProviderName(provider) })}
+                                        sx={{ color: 'text.secondary' }}
+                                      >
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
 
-      <Menu anchorEl={actionMenu.anchorEl} open={Boolean(actionMenu.anchorEl)} onClose={handleActionMenuClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
-        <MenuItem onClick={() => handleViewDetails(actionMenu.providerId)}><ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon><ListItemText>View Details</ListItemText></MenuItem>
-        <MenuItem onClick={() => handleEdit(actionMenu.providerId)}><ListItemIcon><EditIcon fontSize="small" /></ListItemIcon><ListItemText>Edit</ListItemText></MenuItem>
-        {actionMenu.isActive ? (
-          <MenuItem onClick={() => handleDeactivate(actionMenu.providerId, actionMenu.providerName)} sx={{ color: 'warning.main' }}>
-            <ListItemIcon><CancelIcon fontSize="small" color="warning" /></ListItemIcon><ListItemText>Deactivate</ListItemText>
-          </MenuItem>
-        ) : (
-          <MenuItem onClick={() => handleActivate(actionMenu.providerId, actionMenu.providerName)} sx={{ color: 'success.main' }}>
-            <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon><ListItemText>Activate</ListItemText>
-          </MenuItem>
-        )}
-        <MenuItem onClick={() => handleDelete(actionMenu.providerId, actionMenu.providerName)} sx={{ color: 'error.main' }}>
-          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon><ListItemText>Delete</ListItemText>
-        </MenuItem>
-      </Menu>
+                              {/* Expanded details panel */}
+                              <TableRow key={`${id}-expanded`}>
+                                <TableCell colSpan={totalCols} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
+                                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                    <ExpandedDetails
+                                      provider={provider}
+                                      actionLoading={actionLoading}
+                                      onDeactivate={() => setDeactivateDialog({ open: true, providerId: id, providerName: getProviderName(provider) })}
+                                      onActivate={() => handleToggleActive(provider)}
+                                    />
+                                  </Collapse>
+                                </TableCell>
+                              </TableRow>
+                            </>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <TablePagination
+                  component="div"
+                  count={totalProviders}
+                  page={page}
+                  onPageChange={(_, p) => setPage(p)}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                />
+              </>
+            )}
+          </Paper>
+        </>
+      )}
 
-      <ConfirmationDialog open={deleteDialog.open} onClose={handleDeleteCancel} onConfirm={handleDeleteConfirm} title="Delete Provider Permanently" message={`Are you sure you want to permanently delete provider "${deleteDialog.providerName}"?`} confirmText="Delete" cancelText="Cancel" confirmColor="error" loading={deleteLoading} />
+      <AddProviderDialog
+        open={addDialog.open}
+        title={addDialog.title}
+        providerCategory={addDialog.providerCategory}
+        onClose={() => setAddDialog({ open: false })}
+        onSaved={() => {
+          setAddDialog({ open: false });
+          if (useRedux) {
+            dispatch(fetchProviders({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), specialty: specialtyFilter, ...tabConfig.apiParams }));
+          } else {
+            fetchLocal();
+          }
+        }}
+      />
+
+      <ConfirmationDialog
+        open={deactivateDialog.open}
+        onClose={() => setDeactivateDialog({ open: false, providerId: null, providerName: '' })}
+        onConfirm={handleDeactivateConfirm}
+        title="Deactivate Provider"
+        message={`Deactivate "${deactivateDialog.providerName}"? They will be marked inactive.`}
+        confirmText="Deactivate"
+        cancelText="Cancel"
+        confirmColor="warning"
+        loading={actionLoading}
+      />
+
+      <EditProviderDialog
+        open={editDialog.open}
+        providerId={editDialog.providerId}
+        providerName={editDialog.providerName}
+        onClose={() => setEditDialog({ open: false, providerId: null, providerName: '' })}
+        onSaved={() => {
+          setExpandedRowId(null);
+          if (!useRedux) fetchLocal();
+        }}
+      />
     </Box>
   );
 };
