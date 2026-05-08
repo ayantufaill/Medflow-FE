@@ -136,7 +136,7 @@ const Radiographic = () => {
           </Box>
 
           {/* Right Column - Tooth Chart */}
-          <Grid item xs={8.5} sx={{ position: 'relative', bgcolor: '#fff', ml: 2 }}>
+          <Grid size={8.5} sx={{ position: 'relative', bgcolor: '#fff', ml: 2 }}>
             
             {/* Surface Selection Sidebar */}
             <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>

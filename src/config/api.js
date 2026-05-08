@@ -165,8 +165,9 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const { authService } = await import('../services/auth.service');
-        const data = await authService.refreshToken(refreshToken);
+        // Call the refresh token endpoint directly to avoid circular dependency with authService
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken });
+        const data = response.data.data;
         const { tokens } = data;
 
         if (tokens?.accessToken) {

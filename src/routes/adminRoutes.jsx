@@ -14,6 +14,15 @@ import DocumentCategorySetup from '../pages/admin/DocumentCategorySetup';
 import ScheduleConfiguration from '../pages/admin/ScheduleConfiguration';
 import PracticeSettings from '../pages/admin/PracticeSettings';
 import PracticeInformation from '../pages/admin/PracticeInformation';
+import ProductsManagement from '../pages/admin/ProductsManagement';
+import PrescriptionTemplates from '../pages/admin/PrescriptionTemplates';
+import ProcedureCodesManagement from '../pages/admin/ProcedureCodesManagement';
+import ChecklistsManagement from '../pages/admin/ChecklistsManagement';
+import ClinicalSystemSettings from '../pages/admin/ClinicalSystemSettings';
+import RecareConfiguration from '../pages/admin/RecareConfiguration';
+import TreatmentPlanPresentation from '../pages/admin/TreatmentPlanPresentation';
+import InformedConsent from '../pages/admin/InformedConsent';
+import PrePostOps from '../pages/admin/PrePostOps';
 
 const adminOnly = (children) => (
   <ProtectedRoute requiredRoles={['Admin']}>
@@ -40,6 +49,16 @@ const adminRoutes = [
   <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(<PracticeInformation />)} />,
   <Route key="/admin/practice-setup/office-timings" path="/admin/practice-setup/office-timings" element={adminOnly(<OfficeTimings />)} />,
   <Route key="/admin/practice-setup/online-schedule" path="/admin/practice-setup/online-schedule" element={adminOnly(<OnlineSchedule />)} />,
+  <Route key="/admin/payment-terminals" path="/admin/payment-terminals" element={adminOnly(<PaymentTerminals />)} />,
+  <Route key="/admin/clinical-management/products" path="/admin/clinical-management/products" element={adminOnly(<ProductsManagement />)} />,
+  <Route key="/admin/clinical-management/procedure-codes" path="/admin/clinical-management/procedure-codes" element={adminOnly(<ProcedureCodesManagement />)} />,
+  <Route key="/admin/clinical-management/checklists" path="/admin/clinical-management/checklists" element={adminOnly(<ChecklistsManagement />)} />,
+  <Route key="/admin/clinical-management/prescription-templates" path="/admin/clinical-management/prescription-templates" element={adminOnly(<PrescriptionTemplates />)} />,
+  <Route key="/admin/clinical-management/system-settings" path="/admin/clinical-management/system-settings" element={adminOnly(<ClinicalSystemSettings />)} />,
+  <Route key="/admin/clinical-management/recare-configuration" path="/admin/clinical-management/recare-configuration" element={adminOnly(<RecareConfiguration />)} />,
+  <Route key="/admin/clinical-management/TreatmentPlan-Presentation" path="/admin/clinical-management/TreatmentPlan-Presentation" element={adminOnly(<TreatmentPlanPresentation />)} />,
+  <Route key="/admin/clinical-management/informed-consent" path="/admin/clinical-management/informed-consent" element={adminOnly(<InformedConsent />)} />,
+  <Route key="/admin/clinical-management/pre-post-ops" path="/admin/clinical-management/pre-post-ops" element={adminOnly(<PrePostOps />)} />,
 ];
 
 export default adminRoutes;
