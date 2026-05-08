@@ -33,8 +33,20 @@ const US_STATES = [
 ];
 
 const SPECIALTIES = [
-  'General Dentist','Dental Hygienist','Orthodontist','Periodontist','Endodontist',
-  'Oral Surgeon','Prosthodontist','Pedodontist','Primary Care Doctor','Radiology','Other',
+  'Dental Assistant',
+  'Practice Billing Entity',
+  'Dental Hygienist',
+  'Dental Laboratory Technician',
+  'General Dentist',
+  'Denturist',
+  'Endodontist',
+  'Myofunctional Therapist',
+  'Orthodontist',
+  'Pathology, Oral & Maxillofacial',
+  'Pedodontist',
+  'Periodontist',
+  'Prosthodontist',
+  'Surgery, Oral & Maxillofacial',
 ];
 
 const COLOR_SWATCHES = [
