@@ -17,6 +17,7 @@ import InsurancePlans from './InsurancePlans';
 import MembershipPlans from './MembershipPlans';
 import MatchConvertedCarriers from './MatchConvertedCarriers';
 import MatchVyneCarriers from './MatchVyneCarriers';
+import PatientCommunicationSettings from './PatientCommunicationSettings';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -29,6 +30,7 @@ const USER_MANAGEMENT_SUB_TABS = [
 const TABS = [
   { label: 'User Management', path: '/admin/user-management' },
   { label: 'Practice Setup', path: '/admin/practice-setup' },
+  { label: 'Patient Communication', path: '/admin/patient-communication' },
   { label: 'Clinical Management', path: '/admin/clinical-management' },
   { label: 'Finance Management', path: '/admin/finance-management' },
   { label: 'Insurance Management', path: '/admin/insurance-management' },
@@ -45,6 +47,15 @@ const PRACTICE_SETUP_SUB_TABS = [
   { label: 'Schedule Configuration', path: '/admin/practice-setup/schedule-configuration' },
   { label: 'Settings', path: '/admin/practice-setup/practice-settings' },
   { label: 'Information', path: '/admin/practice-setup/practice-information' },
+];
+
+const PATIENT_COMMUNICATION_SUB_TABS = [
+  { label: 'Communication Settings', path: '/admin/patient-communication/settings' },
+  { label: 'Templates (Emails/Texts/Letters)', path: '/admin/patient-communication/templates' },
+  { label: 'Email Campaign', path: '/admin/patient-communication/email-campaign' },
+  { label: 'Questionnaires', path: '/admin/patient-communication/questionnaires' },
+  { label: 'Schedule Gap Fills', path: '/admin/patient-communication/gap-fills' },
+  { label: 'Review Settings', path: '/admin/patient-communication/review-settings' },
 ];
 
 const FINANCIAL_MANAGEMENT_SUB_TABS = [
@@ -80,11 +91,25 @@ const AdminPage = () => {
   const activeTab = TABS.findIndex((tab) => location.pathname.startsWith(tab.path));
 
   const isUserManagementSubTab = USER_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
-  const isTopLevelPage = TABS.some((tab) => tab.path === location.pathname) || isUserManagementSubTab;
+  const isPracticeSetupSubTab = PRACTICE_SETUP_SUB_TABS.some((t) => t.path === location.pathname);
+  const isPatientCommunicationSubTab = PATIENT_COMMUNICATION_SUB_TABS.some((t) => t.path === location.pathname);
+  const isClinicalManagementSubTab = CLINICAL_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+  const isFinancialManagementSubTab = FINANCIAL_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+  const isInsuranceManagementSubTab = INSURANCE_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+
+  const isTopLevelPage =
+    TABS.some((tab) => tab.path === location.pathname) ||
+    isUserManagementSubTab ||
+    isPatientCommunicationSubTab;
+
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   if (location.pathname === '/admin') {
     return <Navigate to="/admin/user-management" replace />;
+  }
+
+  if (location.pathname === '/admin/patient-communication') {
+    return <Navigate to="/admin/patient-communication/settings" replace />;
   }
 
   return (
@@ -134,7 +159,7 @@ const AdminPage = () => {
           </Box>
 
           {/* Sub-nav — visible on hover */}
-          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3 || hoveredTab === 4) && (
+          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3 || hoveredTab === 4 || hoveredTab === 5) && (
             <Box
               sx={{
                 borderBottom: 1,
@@ -154,10 +179,12 @@ const AdminPage = () => {
                 : hoveredTab === 1
                   ? PRACTICE_SETUP_SUB_TABS
                   : hoveredTab === 2
-                    ? CLINICAL_MANAGEMENT_SUB_TABS
+                    ? PATIENT_COMMUNICATION_SUB_TABS
                     : hoveredTab === 3
-                      ? FINANCIAL_MANAGEMENT_SUB_TABS
-                      : INSURANCE_MANAGEMENT_SUB_TABS
+                      ? CLINICAL_MANAGEMENT_SUB_TABS
+                      : hoveredTab === 4
+                        ? FINANCIAL_MANAGEMENT_SUB_TABS
+                        : INSURANCE_MANAGEMENT_SUB_TABS
               ).map((sub) => {
                 const isActive = location.pathname === sub.path;
                 return (
@@ -225,6 +252,20 @@ const AdminPage = () => {
           </Box>
         )}
         {activeTab === 2 && (
+          location.pathname === '/admin/patient-communication/settings' ? (
+            <PatientCommunicationSettings />
+          ) : (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
+                Patient Communication - {PATIENT_COMMUNICATION_SUB_TABS.find(t => t.path === location.pathname)?.label || 'Module'}
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', mt: 2 }}>
+                This module is under development.
+              </Typography>
+            </Box>
+          )
+        )}
+        {activeTab === 3 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {location.pathname === '/admin/clinical-management' ? (
               <AppointmentTypesListPage />
@@ -245,7 +286,7 @@ const AdminPage = () => {
             )}
           </Box>
         )}
-        {activeTab === 3 && (
+        {activeTab === 4 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {location.pathname === '/admin/finance-management' ? (
               <ServicesListPage />
@@ -262,7 +303,7 @@ const AdminPage = () => {
             )}
           </Box>
         )}
-        {activeTab === 4 && (
+        {activeTab === 5 && (
           location.pathname === '/admin/insurance-management/carriers' ? (
             <InsuranceCarriers />
           ) : location.pathname === '/admin/insurance-management/plans' ? (
