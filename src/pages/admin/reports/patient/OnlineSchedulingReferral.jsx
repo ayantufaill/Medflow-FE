@@ -1,0 +1,104 @@
+import React from 'react';
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from '@mui/material';
+
+const INITIAL_DATA = [
+  {
+    referral: 'Google Search',
+    utmSource: 'google',
+    utmMedium: 'organic',
+    utmCampaign: 'seo_2024',
+    clicks: 145,
+  },
+  {
+    referral: 'Facebook Ad',
+    utmSource: 'facebook',
+    utmMedium: 'cpc',
+    utmCampaign: 'summer_promo',
+    clicks: 89,
+  },
+  {
+    referral: 'Newsletter',
+    utmSource: 'email',
+    utmMedium: 'newsletter',
+    utmCampaign: 'monthly_update',
+    clicks: 56,
+  },
+];
+
+const OnlineSchedulingReferral = () => {
+  return (
+    <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          color: '#337ab7', 
+          fontWeight: 500, 
+          mb: 2, 
+          textDecoration: 'underline',
+          cursor: 'pointer'
+        }}
+      >
+        Online Scheduling Referral:
+      </Typography>
+
+      <TableContainer component={Paper} elevation={0} sx={{ borderBottom: '1px solid #ddd', borderRadius: 0 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              {[
+                'Referral', 
+                'UTM Source', 
+                'UTM Medium', 
+                'UTM Campaign', 
+                'Number of Clicks'
+              ].map((header) => (
+                <TableCell 
+                  key={header} 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '0.75rem', 
+                    py: 1,
+                    px: 1,
+                    borderBottom: '1px solid #ddd',
+                    backgroundColor: '#fff'
+                  }}
+                >
+                  {header}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {INITIAL_DATA.map((row, index) => (
+              <TableRow 
+                key={index} 
+                sx={{ 
+                  backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc',
+                  '& td': { borderBottom: '1px solid #eee' }
+                }}
+              >
+                <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.referral}</TableCell>
+                <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.utmSource}</TableCell>
+                <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.utmMedium}</TableCell>
+                <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.utmCampaign}</TableCell>
+                <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.clicks}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+};
+
+export default OnlineSchedulingReferral;

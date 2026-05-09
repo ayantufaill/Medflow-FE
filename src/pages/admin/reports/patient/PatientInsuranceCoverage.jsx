@@ -125,17 +125,35 @@ const PatientInsuranceCoverage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [data, setData] = useState(INITIAL_DATA);
   const [grouping, setGrouping] = useState('no');
+  const [assignmentFilter, setAssignmentFilter] = useState('no');
 
   const handleApplyFilters = () => {
-    const filtered = INITIAL_DATA.filter((item) => {
+    let filtered = INITIAL_DATA.filter((item) => {
       const searchLower = searchQuery.toLowerCase();
-      return (
+      const matchesSearch = (
         item.patient.toLowerCase().includes(searchLower) ||
         item.planName.toLowerCase().includes(searchLower) ||
         item.payer.toLowerCase().includes(searchLower) ||
         item.number.includes(searchLower)
       );
+
+      const matchesAssignment = 
+        assignmentFilter === 'no' || 
+        (assignmentFilter === 'assignment' && item.assignmentStatus === 'Assignment') ||
+        (assignmentFilter === 'non-assignment' && item.assignmentStatus !== 'Assignment');
+
+      return matchesSearch && matchesAssignment;
     });
+
+    // Handle Grouping (as sorting)
+    if (grouping === 'payer') {
+      filtered = [...filtered].sort((a, b) => a.payer.localeCompare(b.payer));
+    } else if (grouping === 'plan') {
+      filtered = [...filtered].sort((a, b) => a.planName.localeCompare(b.planName));
+    } else if (grouping === 'fee') {
+      filtered = [...filtered].sort((a, b) => (a.feeSchedule || '').localeCompare(b.feeSchedule || ''));
+    }
+
     setData(filtered);
   };
 
@@ -262,7 +280,11 @@ const PatientInsuranceCoverage = () => {
         {/* Filter by Assignment */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by Assignment:</Typography>
-          <RadioGroup row defaultValue="no">
+          <RadioGroup 
+            row 
+            value={assignmentFilter}
+            onChange={(e) => setAssignmentFilter(e.target.value)}
+          >
             <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No filter</Typography>} />
             <FormControlLabel value="assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Assignment</Typography>} />
             <FormControlLabel value="non-assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Non-Assignment</Typography>} />
