@@ -20,7 +20,6 @@ import NotificationsReport from './reports/patient/NotificationsReport';
 import ProceduresReport from './reports/patient/ProceduresReport';
 import PatientTrackersReport from './reports/patient/PatientTrackersReport';
 import ReferralByPatientReport from './reports/patient/ReferralByPatientReport';
-import { TABS, PATIENT_REPORT_SUB_TABS } from './ReportsConfig';
 import RecareReport from './reports/clinical/RecareReport';
 import UnsignedProgressNotesReport from './reports/clinical/UnsignedProgressNotesReport';
 import RxReport from './reports/clinical/RxReport';
