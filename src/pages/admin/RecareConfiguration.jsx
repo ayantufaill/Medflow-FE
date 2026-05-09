@@ -66,7 +66,8 @@ const RecareConfiguration = () => {
           onClick={() => navigate('/admin/clinical-management')}
           sx={{
             color: '#1a3a6b',
-            fontSize: '0.85rem',
+            fontSize: '0.9rem',
+            fontWeight: 700,
             cursor: 'pointer',
             '&:hover': { textDecoration: 'underline' },
           }}

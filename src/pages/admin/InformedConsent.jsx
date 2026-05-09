@@ -146,7 +146,16 @@ const InformedConsent = () => {
     <Box sx={{ p: 0 }}>
       {/* Breadcrumb Navigation */}
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography onClick={() => navigate('/admin/clinical-management')} sx={{ color: '#1a3a6b', fontSize: '0.85rem', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+        <Typography 
+          onClick={() => navigate('/admin/clinical-management')} 
+          sx={{ 
+            color: '#1a3a6b', 
+            fontSize: '0.9rem', 
+            fontWeight: 700, 
+            cursor: 'pointer', 
+            '&:hover': { textDecoration: 'underline' } 
+          }}
+        >
           Clinical Management
         </Typography>
         <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
