@@ -12,6 +12,11 @@ import PaymentTerminals from './PaymentTerminals';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
+import InsuranceCarriers from './InsuranceCarriers';
+import InsurancePlans from './InsurancePlans';
+import MembershipPlans from './MembershipPlans';
+import MatchConvertedCarriers from './MatchConvertedCarriers';
+import MatchVyneCarriers from './MatchVyneCarriers';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -56,6 +61,14 @@ const CLINICAL_MANAGEMENT_SUB_TABS = [
   { label: 'TreatmentPlan Presentation', path: '/admin/clinical-management/TreatmentPlan-Presentation' },
   { label: 'Informed Consent', path: '/admin/clinical-management/informed-consent' },
   { label: 'Pre & Post-Ops', path: '/admin/clinical-management/pre-post-ops' },
+];
+
+const INSURANCE_MANAGEMENT_SUB_TABS = [
+  { label: 'Insurance Carriers', path: '/admin/insurance-management/carriers' },
+  { label: 'Insurance Plans', path: '/admin/insurance-management/plans' },
+  { label: 'Membership Plans', path: '/admin/insurance-management/membership-plans' },
+  { label: 'Match Converted Carriers', path: '/admin/insurance-management/match-converted-carriers' },
+  { label: 'Match Vyne Carriers', path: '/admin/insurance-management/match-vyne-carriers' },
 ];
 
 const AdminPage = () => {
@@ -121,7 +134,7 @@ const AdminPage = () => {
           </Box>
 
           {/* Sub-nav — visible on hover */}
-          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
+          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3 || hoveredTab === 4) && (
             <Box
               sx={{
                 borderBottom: 1,
@@ -142,7 +155,9 @@ const AdminPage = () => {
                   ? PRACTICE_SETUP_SUB_TABS
                   : hoveredTab === 2
                     ? CLINICAL_MANAGEMENT_SUB_TABS
-                    : FINANCIAL_MANAGEMENT_SUB_TABS
+                    : hoveredTab === 3
+                      ? FINANCIAL_MANAGEMENT_SUB_TABS
+                      : INSURANCE_MANAGEMENT_SUB_TABS
               ).map((sub) => {
                 const isActive = location.pathname === sub.path;
                 return (
@@ -247,7 +262,21 @@ const AdminPage = () => {
             )}
           </Box>
         )}
-        {activeTab === 4 && <InsuranceCompaniesListPage />}
+        {activeTab === 4 && (
+          location.pathname === '/admin/insurance-management/carriers' ? (
+            <InsuranceCarriers />
+          ) : location.pathname === '/admin/insurance-management/plans' ? (
+            <InsurancePlans />
+          ) : location.pathname === '/admin/insurance-management/membership-plans' ? (
+            <MembershipPlans />
+          ) : location.pathname === '/admin/insurance-management/match-converted-carriers' ? (
+            <MatchConvertedCarriers />
+          ) : location.pathname === '/admin/insurance-management/match-vyne-carriers' ? (
+            <MatchVyneCarriers />
+          ) : (
+            <InsuranceCompaniesListPage />
+          )
+        )}
       </Box>
     </Box>
   );
