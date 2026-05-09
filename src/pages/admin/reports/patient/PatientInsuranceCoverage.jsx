@@ -18,6 +18,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const INITIAL_DATA = [
   {
@@ -202,9 +203,9 @@ const PatientInsuranceCoverage = () => {
     window.print();
   };
 
-  const handleCreateTemplate = () => {
-    alert('Create Template feature is coming soon!');
-  };
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+  const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
   return (
     <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
@@ -415,6 +416,12 @@ const PatientInsuranceCoverage = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

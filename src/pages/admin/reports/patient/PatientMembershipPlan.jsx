@@ -21,6 +21,7 @@ import {
   FormControl,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const INITIAL_DATA = [
   {
@@ -86,6 +87,10 @@ const PatientMembershipPlan = () => {
   const [data, setData] = useState(INITIAL_DATA);
   const [grouping, setGrouping] = useState('no');
   const [renewalMonth, setRenewalMonth] = useState('');
+
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+  const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
   const handleApplyFilters = () => {
     let filtered = INITIAL_DATA.filter((item) => {
@@ -196,10 +201,10 @@ const PatientMembershipPlan = () => {
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1.5 }}>
-        <Button variant="contained" size="small" onClick={handleApplyFilters} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem' }}>Apply Filters</Button>
-        <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem' }}>Create Template</Button>
-        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" onClick={() => window.print()} sx={{ textTransform: 'none', backgroundColor: '#da4453', fontSize: '0.75rem' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleApplyFilters} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Apply Filters</Button>
+        <Button variant="contained" size="small" onClick={handleCreateTemplate} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Create Template</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Export as CSV</Button>
+        <Button variant="contained" size="small" onClick={() => window.print()} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Print</Button>
       </Box>
 
       <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
@@ -231,6 +236,12 @@ const PatientMembershipPlan = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

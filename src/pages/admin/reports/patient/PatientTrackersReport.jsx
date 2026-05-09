@@ -19,6 +19,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   { 
@@ -40,6 +41,13 @@ const PatientTrackersReport = () => {
   const [endDate, setEndDate] = useState(dayjs('2027-01-01'));
   const [createdBy, setCreatedBy] = useState('all');
   const [status, setStatus] = useState('all');
+
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleCreateTemplate = () => setTemplateDialogOpen(true);
+  const handleSaveTemplate = (name) => {
+    console.log('Saving template:', name);
+    alert(`Template "${name}" saved successfully!`);
+  };
 
   const handlePrint = () => window.print();
   const handleExport = () => alert('Exporting report as CSV...');
@@ -123,7 +131,14 @@ const PatientTrackersReport = () => {
 
             <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
               <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Apply</Button>
-              <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Create Template</Button>
+              <Button 
+                variant="contained" 
+                size="small" 
+                onClick={handleCreateTemplate}
+                sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+              >
+                Create Template
+              </Button>
             </Box>
           </Box>
         </Box>
@@ -164,6 +179,12 @@ const PatientTrackersReport = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <CreateTemplateDialog 
+          open={templateDialogOpen} 
+          onClose={() => setTemplateDialogOpen(false)} 
+          onSave={handleSaveTemplate} 
+        />
       </Box>
     </LocalizationProvider>
   );

@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 dayjs.extend(customParseFormat);
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   {
@@ -140,9 +141,9 @@ const CancelledAppointmentsReport = () => {
     window.print();
   };
 
-  const handleCreateTemplate = () => {
-    alert('Create Template feature is coming soon!');
-  };
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+  const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -218,7 +219,7 @@ const CancelledAppointmentsReport = () => {
               variant="contained" 
               size="small" 
               onClick={handleApply}
-              sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}
+              sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
             >
               Apply
             </Button>
@@ -226,7 +227,7 @@ const CancelledAppointmentsReport = () => {
               variant="contained" 
               size="small" 
               onClick={handleCreateTemplate}
-              sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}
+              sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
             >
               Create Template
             </Button>
@@ -241,7 +242,7 @@ const CancelledAppointmentsReport = () => {
             variant="contained" 
             size="small" 
             onClick={handleExportCSV}
-            sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}
+            sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
           >
             Export as CSV
           </Button>
@@ -249,7 +250,7 @@ const CancelledAppointmentsReport = () => {
             variant="contained" 
             size="small" 
             onClick={handlePrint}
-            sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}
+            sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
           >
             Print
           </Button>
@@ -312,6 +313,12 @@ const CancelledAppointmentsReport = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <CreateTemplateDialog 
+          open={templateDialogOpen} 
+          onClose={() => setTemplateDialogOpen(false)} 
+          onSave={handleSaveTemplate} 
+        />
       </Box>
     </LocalizationProvider>
   );

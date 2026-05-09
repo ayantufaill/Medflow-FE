@@ -19,6 +19,7 @@ import ReviewReport from './reports/patient/ReviewReport';
 import NotificationsReport from './reports/patient/NotificationsReport';
 import ProceduresReport from './reports/patient/ProceduresReport';
 import PatientTrackersReport from './reports/patient/PatientTrackersReport';
+import ReferralByPatientReport from './reports/patient/ReferralByPatientReport';
 import { TABS, PATIENT_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
 import ClinicalReportsSubNav from '../../components/admin/reports/ClinicalReportsSubNav';
@@ -119,6 +120,8 @@ const ReportsDashboard = () => {
           <ProceduresReport />
         ) : location.pathname === '/admin/reports/patient/trackers' ? (
           <PatientTrackersReport />
+        ) : location.pathname === '/admin/reports/patient/referral-by-patient' ? (
+          <ReferralByPatientReport />
         ) : (
           <Box sx={{ textAlign: 'center', p: 3, backgroundColor: '#f9fafb', borderRadius: 2 }}>
             <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>

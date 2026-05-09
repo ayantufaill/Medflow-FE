@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,7 +9,9 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Button,
 } from '@mui/material';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const INITIAL_DATA = [
   {
@@ -36,6 +38,9 @@ const INITIAL_DATA = [
 ];
 
 const OnlineSchedulingReferral = () => {
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+
   return (
     <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
       <Typography 
@@ -50,6 +55,11 @@ const OnlineSchedulingReferral = () => {
       >
         Online Scheduling Referral:
       </Typography>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1.5 }}>
+        <Button variant="contained" size="small" onClick={() => setTemplateDialogOpen(true)} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Create Template</Button>
+        <Button variant="contained" size="small" onClick={() => window.print()} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Print</Button>
+      </Box>
 
       <TableContainer component={Paper} elevation={0} sx={{ borderBottom: '1px solid #ddd', borderRadius: 0 }}>
         <Table size="small">
@@ -97,6 +107,12 @@ const OnlineSchedulingReferral = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

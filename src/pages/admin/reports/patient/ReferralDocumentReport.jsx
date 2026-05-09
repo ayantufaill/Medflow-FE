@@ -15,6 +15,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import dayjs from 'dayjs';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   { patient: 'Bonnie Fuller', provider: 'Dr. Smith', created: '05/07/2026', due: '', shared: '05/07/2026', status: 'Sent Out' },
@@ -28,6 +29,8 @@ const DUMMY_DATA = [
 const ReferralDocumentReport = () => {
   const [status, setStatus] = useState('none');
   const [provider, setProvider] = useState('all');
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   return (
     <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
@@ -71,13 +74,23 @@ const ReferralDocumentReport = () => {
           </Select>
         </Box>
 
-        <Button 
-          variant="contained" 
-          size="small" 
-          sx={{ ml: 'auto', textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}
-        >
-          Apply Filters
-        </Button>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+          <Button 
+            variant="contained" 
+            size="small" 
+            onClick={() => setTemplateDialogOpen(true)}
+            sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+          >
+            Create Template
+          </Button>
+          <Button 
+            variant="contained" 
+            size="small" 
+            sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+          >
+            Apply Filters
+          </Button>
+        </Box>
       </Box>
 
       <Divider sx={{ mb: 2, opacity: 0.3 }} />
@@ -87,14 +100,16 @@ const ReferralDocumentReport = () => {
         <Button 
           variant="contained" 
           size="small" 
-          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}
+          onClick={() => alert('Exporting CSV...')}
+          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
         >
           Export as CSV
         </Button>
         <Button 
           variant="contained" 
           size="small" 
-          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}
+          onClick={() => window.print()}
+          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
         >
           Print
         </Button>
@@ -124,6 +139,12 @@ const ReferralDocumentReport = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

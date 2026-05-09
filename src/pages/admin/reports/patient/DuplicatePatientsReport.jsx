@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   Paper,
 } from '@mui/material';
 import dayjs from 'dayjs';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   { id: '1049', firstName: 'Sarah', lastName: 'Miller', dob: 'Feb 03, 1983', status: 'Inactive', subscriber: 'False' },
@@ -25,6 +26,9 @@ const DUMMY_DATA = [
 ];
 
 const DuplicatePatientsReport = () => {
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+
   const handlePrint = () => window.print();
   
   const handleExportCSV = () => {
@@ -56,8 +60,16 @@ const DuplicatePatientsReport = () => {
         <Button 
           variant="contained" 
           size="small" 
+          onClick={() => setTemplateDialogOpen(true)}
+          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+        >
+          Create Template
+        </Button>
+        <Button 
+          variant="contained" 
+          size="small" 
           onClick={handleExportCSV}
-          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}
+          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
         >
           Export as CSV
         </Button>
@@ -65,7 +77,7 @@ const DuplicatePatientsReport = () => {
           variant="contained" 
           size="small" 
           onClick={handlePrint}
-          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}
+          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
         >
           Print
         </Button>
@@ -95,6 +107,12 @@ const DuplicatePatientsReport = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

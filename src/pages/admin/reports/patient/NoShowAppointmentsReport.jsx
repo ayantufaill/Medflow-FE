@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 dayjs.extend(customParseFormat);
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   {
@@ -64,6 +65,10 @@ const NoShowAppointmentsReport = () => {
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
   const [data, setData] = useState(DUMMY_DATA);
+
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+  const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
   const handleApply = () => {
     if (!startDate || !endDate) return;
@@ -157,10 +162,10 @@ const NoShowAppointmentsReport = () => {
           </Box>
 
           <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-            <Button variant="contained" size="small" onClick={handleApply} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}>
+            <Button variant="contained" size="small" onClick={handleApply} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>
               Apply
             </Button>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}>
+            <Button variant="contained" size="small" onClick={handleCreateTemplate} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>
               Create Template
             </Button>
           </Box>
@@ -170,10 +175,10 @@ const NoShowAppointmentsReport = () => {
 
         {/* Action Buttons */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-          <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}>
+          <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>
             Export as CSV
           </Button>
-          <Button variant="contained" size="small" onClick={handlePrint} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}>
+          <Button variant="contained" size="small" onClick={handlePrint} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>
             Print
           </Button>
         </Box>
@@ -206,6 +211,12 @@ const NoShowAppointmentsReport = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <CreateTemplateDialog 
+          open={templateDialogOpen} 
+          onClose={() => setTemplateDialogOpen(false)} 
+          onSave={handleSaveTemplate} 
+        />
       </Box>
     </LocalizationProvider>
   );

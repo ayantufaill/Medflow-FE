@@ -23,6 +23,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   {
@@ -73,6 +74,9 @@ const AppointmentsReport = () => {
   const [provider, setProvider] = useState('all');
   const [status, setStatus] = useState('all');
   const [locationType, setLocationType] = useState('office');
+
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -236,10 +240,17 @@ const AppointmentsReport = () => {
             </Select>
 
             <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-              <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}>Apply</Button>
-              <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}>Create Template</Button>
-              <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#ff5252', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}>Print</Button>
-              <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}>Export CSV</Button>
+              <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Apply</Button>
+              <Button 
+                variant="contained" 
+                size="small" 
+                onClick={() => setTemplateDialogOpen(true)}
+                sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+              >
+                Create Template
+              </Button>
+              <Button variant="contained" size="small" onClick={() => window.print()} sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Print</Button>
+              <Button variant="contained" size="small" onClick={() => alert('Exporting CSV...')} sx={{ textTransform: 'none', backgroundColor: '#4a89dc', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}>Export CSV</Button>
             </Box>
           </Box>
         </Box>
@@ -275,6 +286,12 @@ const AppointmentsReport = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <CreateTemplateDialog 
+          open={templateDialogOpen} 
+          onClose={() => setTemplateDialogOpen(false)} 
+          onSave={handleSaveTemplate} 
+        />
       </Box>
     </LocalizationProvider>
   );

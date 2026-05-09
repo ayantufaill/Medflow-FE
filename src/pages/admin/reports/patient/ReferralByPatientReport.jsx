@@ -22,21 +22,20 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
-  { patient: 'Bonnie Fuller', date: '05/07/2026', code: 'D1110', description: 'Prophylaxis - Adult', fee: '$120.00', editedFee: '$100.00', discount: '$20.00', provider: 'Dr. Smith' },
-  { patient: 'Sarah Miller', date: '05/04/2026', code: 'D0120', description: 'Periodic Oral Eval', fee: '$65.00', editedFee: '$50.00', discount: '$15.00', provider: 'Dr. Johnson' },
+  { patient: 'Alice Smith', referralSource: 'Insurance', referDate: '05/01/2026', notes: 'Referred from Cigna portal' },
+  { patient: 'Bob Johnson', referralSource: 'Dr. Mike Lee', referDate: '04/28/2026', notes: 'Oral surgeon referral' },
 ];
 
-const PatientDiscountEditedFeeReport = () => {
+const ReferralByPatientReport = () => {
   const [currentDate, setCurrentDate] = useState(dayjs('2026-05-08'));
   const [dateRange, setDateRange] = useState('daily');
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const handlePrevDate = () => setCurrentDate(prev => prev.subtract(1, 'day'));
   const handleNextDate = () => setCurrentDate(prev => prev.add(1, 'day'));
 
   const handlePrint = () => window.print();
   const handleExport = () => alert('Exporting report as CSV...');
-
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   return (
@@ -45,7 +44,7 @@ const PatientDiscountEditedFeeReport = () => {
         variant="body2" 
         sx={{ color: '#337ab7', fontWeight: 500, mb: 2, textDecoration: 'underline', cursor: 'pointer' }}
       >
-        Patient By Discount Or Edited Fee:
+        Referral By Patient:
       </Typography>
 
       {/* Filter Section */}
@@ -61,7 +60,6 @@ const PatientDiscountEditedFeeReport = () => {
           >
             <MenuItem value="daily">Daily</MenuItem>
             <MenuItem value="weekly">Weekly</MenuItem>
-            <MenuItem value="monthly">Monthly</MenuItem>
           </Select>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
             <ChevronLeft 
@@ -93,13 +91,6 @@ const PatientDiscountEditedFeeReport = () => {
         >
           Create Template
         </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          sx={{ ml: 1, textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Apply Filters
-        </Button>
       </Box>
 
       <Divider sx={{ mb: 2, opacity: 0.3 }} />
@@ -124,16 +115,12 @@ const PatientDiscountEditedFeeReport = () => {
         </Button>
       </Box>
 
-      <Typography variant="caption" sx={{ display: 'block', mb: 2, color: '#999', fontStyle: 'italic', fontSize: '0.65rem' }}>
-        Please note that Adjustment dates do not exist before 01/24/2023, so any data before that will not be displayed.
-      </Typography>
-
       {/* Table Section */}
       <TableContainer component={Paper} elevation={0}>
         <Table size="small">
           <TableHead>
             <TableRow>
-              {['Patient', 'Date', 'Code', 'Description', 'Original Fee', 'Edited Fee', 'Discount', 'Provider'].map((h) => (
+              {['Patient', 'Referral Source', 'Referral Date', 'Notes'].map((h) => (
                 <TableCell key={h} sx={{ fontWeight: 600, fontSize: '0.72rem', borderBottom: '1px solid #ddd' }}>{h}</TableCell>
               ))}
             </TableRow>
@@ -142,13 +129,9 @@ const PatientDiscountEditedFeeReport = () => {
             {DUMMY_DATA.map((row, i) => (
               <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
                 <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.date}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.code}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.description}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.fee}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.editedFee}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', color: '#d9534f' }}>{row.discount}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.provider}</TableCell>
+                <TableCell sx={{ fontSize: '0.7rem' }}>{row.referralSource}</TableCell>
+                <TableCell sx={{ fontSize: '0.7rem' }}>{row.referDate}</TableCell>
+                <TableCell sx={{ fontSize: '0.7rem' }}>{row.notes}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -164,4 +147,4 @@ const PatientDiscountEditedFeeReport = () => {
   );
 };
 
-export default PatientDiscountEditedFeeReport;
+export default ReferralByPatientReport;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   Paper,
 } from '@mui/material';
 import dayjs from 'dayjs';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   { firstName: 'Sarah', lastName: 'Miller', email: 'sarah.m@gmail.com', phone: '+1 234 567 8901', text: 'Yes', emailPerm: 'Yes', review: 'Yes' },
@@ -23,6 +24,9 @@ const DUMMY_DATA = [
 ];
 
 const PatientContactPreferencesReport = () => {
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+
   const handlePrint = () => window.print();
   
   const handleExportCSV = () => {
@@ -54,8 +58,16 @@ const PatientContactPreferencesReport = () => {
         <Button 
           variant="contained" 
           size="small" 
+          onClick={() => setTemplateDialogOpen(true)}
+          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+        >
+          Create Template
+        </Button>
+        <Button 
+          variant="contained" 
+          size="small" 
           onClick={handleExportCSV}
-          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', boxShadow: 'none' }}
+          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
         >
           Export as CSV
         </Button>
@@ -63,7 +75,7 @@ const PatientContactPreferencesReport = () => {
           variant="contained" 
           size="small" 
           onClick={handlePrint}
-          sx={{ textTransform: 'none', backgroundColor: '#ff5252', color: '#fff', fontSize: '0.75rem', boxShadow: 'none' }}
+          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
         >
           Print
         </Button>
@@ -94,6 +106,12 @@ const PatientContactPreferencesReport = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

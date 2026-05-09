@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const ReviewReport = () => {
   const [currentDate, setCurrentDate] = useState(dayjs('2026-05-08'));
@@ -23,6 +24,9 @@ const ReviewReport = () => {
 
   const handlePrint = () => window.print();
   const handleExport = () => alert('Exporting report as CSV...');
+
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   return (
     <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
@@ -88,7 +92,15 @@ const ReviewReport = () => {
           <Button 
             variant="contained" 
             size="small" 
-            sx={{ ml: 'auto', textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+            onClick={() => setTemplateDialogOpen(true)}
+            sx={{ ml: 'auto', textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
+          >
+            Create Template
+          </Button>
+          <Button 
+            variant="contained" 
+            size="small" 
+            sx={{ ml: 1, textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
           >
             Apply Filters
           </Button>
@@ -132,6 +144,12 @@ const ReviewReport = () => {
           No Data Found
         </Typography>
       </Box>
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };

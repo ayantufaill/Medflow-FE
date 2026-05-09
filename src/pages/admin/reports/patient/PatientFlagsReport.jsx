@@ -15,6 +15,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Edit as EditIcon, Print as PrintIcon, FileDownload as DownloadIcon } from '@mui/icons-material';
+import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 
 const DUMMY_DATA = [
   {
@@ -70,9 +71,9 @@ const PatientFlagsReport = () => {
     window.print();
   };
 
-  const handleCreateTemplate = () => {
-    alert('Create Template feature is coming soon!');
-  };
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+  const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
   return (
     <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
@@ -131,7 +132,7 @@ const PatientFlagsReport = () => {
               variant="contained" 
               size="small" 
               onClick={handleApplyFilters}
-              sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem' }}
+              sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
             >
               Apply Filters
             </Button>
@@ -139,7 +140,7 @@ const PatientFlagsReport = () => {
               variant="contained" 
               size="small" 
               onClick={handleCreateTemplate}
-              sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem' }}
+              sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
             >
               Create Template
             </Button>
@@ -163,7 +164,7 @@ const PatientFlagsReport = () => {
             size="small" 
             onClick={handleExportCSV}
             startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
-            sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem' }}
+            sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
           >
             Export as CSV
           </Button>
@@ -172,7 +173,7 @@ const PatientFlagsReport = () => {
             size="small" 
             onClick={handlePrint}
             startIcon={<PrintIcon sx={{ fontSize: 16 }} />}
-            sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem' }}
+            sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
           >
             Print
           </Button>
@@ -211,6 +212,12 @@ const PatientFlagsReport = () => {
           </Table>
         </TableContainer>
       )}
+
+      <CreateTemplateDialog 
+        open={templateDialogOpen} 
+        onClose={() => setTemplateDialogOpen(false)} 
+        onSave={handleSaveTemplate} 
+      />
     </Box>
   );
 };
