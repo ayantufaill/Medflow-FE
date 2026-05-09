@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Box, Tabs, Tab, useTheme, Typography } from '@mui/material';
 import PatientInsuranceCoverage from './reports/patient/PatientInsuranceCoverage';
-import { TABS, PATIENT_REPORT_SUB_TABS } from './ReportsConfig';
+import RecareReport from './reports/clinical/RecareReport';
+import UnsignedProgressNotesReport from './reports/clinical/UnsignedProgressNotesReport';
+import RxReport from './reports/clinical/RxReport';
+import LoginReport from './reports/others/LoginReport';
+import AuditReport from './reports/others/AuditReport';
+import SavedReports from './reports/saving/SavedReports';
+import { TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
 import ClinicalReportsSubNav from '../../components/admin/reports/ClinicalReportsSubNav';
 import OthersReportsSubNav from '../../components/admin/reports/OthersReportsSubNav';
@@ -19,6 +25,20 @@ const ReportsDashboard = () => {
   if (location.pathname === '/admin/reports') {
     return <Navigate to="/admin/reports/financial" replace />;
   }
+
+  const getCurrentPageLabel = () => {
+    const allSubTabs = [
+      ...PATIENT_REPORT_SUB_TABS,
+      ...CLINICAL_REPORT_SUB_TABS,
+      ...OTHERS_REPORT_SUB_TABS,
+      ...SAVING_REPORT_SUB_TABS
+    ];
+    const subTab = allSubTabs.find(sub => sub.path === location.pathname);
+    if (subTab) return subTab.label;
+    
+    const mainTab = TABS[activeTab === -1 ? 0 : activeTab];
+    return mainTab ? mainTab.label : '';
+  };
 
   return (
     <Box onMouseLeave={() => setHoveredTab(null)}>
@@ -65,14 +85,25 @@ const ReportsDashboard = () => {
       {hoveredTab === 4 && <SavingReportsSubNav />}
 
       {/* Page content */}
-      <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2 }}>
+      <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2, overflow: 'hidden' }}>
         {location.pathname === '/admin/reports/patient/insurance-coverage' ? (
           <PatientInsuranceCoverage />
+        ) : location.pathname === '/admin/reports/clinical/recare' ? (
+          <RecareReport />
+        ) : location.pathname === '/admin/reports/clinical/unsigned-progress-notes' ? (
+          <UnsignedProgressNotesReport />
+        ) : location.pathname === '/admin/reports/clinical/rx' ? (
+          <RxReport />
+        ) : location.pathname === '/admin/reports/others/login' ? (
+          <LoginReport />
+        ) : location.pathname === '/admin/reports/others/audit' ? (
+          <AuditReport />
+        ) : location.pathname === '/admin/reports/saving' ? (
+          <SavedReports />
         ) : (
           <Box sx={{ textAlign: 'center', p: 3, backgroundColor: '#f9fafb', borderRadius: 2 }}>
             <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-              {PATIENT_REPORT_SUB_TABS.find(sub => sub.path === location.pathname)?.label || 
-               TABS[activeTab === -1 ? 0 : activeTab]?.label}
+              {getCurrentPageLabel()}
             </Typography>
             <Typography color="text.secondary">Content for this report is coming soon.</Typography>
           </Box>

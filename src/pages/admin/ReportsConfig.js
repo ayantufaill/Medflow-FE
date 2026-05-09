@@ -28,7 +28,14 @@ export const PATIENT_REPORT_SUB_TABS = [
   { label: 'Patient Trackers', path: '/admin/reports/patient/trackers' },
 ];
 
-export const CLINICAL_REPORT_SUB_TABS = [];
+export const CLINICAL_REPORT_SUB_TABS = [
+  { label: 'Recare Report', path: '/admin/reports/clinical/recare' },
+  { label: 'Unsigned Progress Notes Report', path: '/admin/reports/clinical/unsigned-progress-notes' },
+  { label: 'RX Report', path: '/admin/reports/clinical/rx' },
+];
 export const FINANCIAL_REPORT_SUB_TABS = [];
-export const OTHERS_REPORT_SUB_TABS = [];
+export const OTHERS_REPORT_SUB_TABS = [
+  { label: 'Login Report', path: '/admin/reports/others/login' },
+  { label: 'Audit Report', path: '/admin/reports/others/audit' },
+];
 export const SAVING_REPORT_SUB_TABS = [];
