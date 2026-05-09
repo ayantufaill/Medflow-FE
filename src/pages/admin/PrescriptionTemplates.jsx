@@ -332,18 +332,18 @@ const PrescriptionTemplates = () => {
           </TableHead>
           <TableBody>
             {prescriptions.map((row, index) => (
-              <TableRow 
-                key={index} 
-                sx={{ 
+              <TableRow
+                key={index}
+                sx={{
                   '&:hover': { backgroundColor: '#f8f9fa' },
                   '& td': { py: 1, borderBottom: '1px solid #f0f0f0' }
                 }}
               >
                 <TableCell sx={{ fontSize: '0.75rem', color: '#333' }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.name} 
+                    <TextField
+                      size="small"
+                      value={editDraft.name}
                       onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
                       sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                     />
@@ -351,9 +351,9 @@ const PrescriptionTemplates = () => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#666' }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.description} 
+                    <TextField
+                      size="small"
+                      value={editDraft.description}
                       onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
                       sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                     />
@@ -361,9 +361,9 @@ const PrescriptionTemplates = () => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.medication} 
+                    <TextField
+                      size="small"
+                      value={editDraft.medication}
                       onChange={(e) => setEditDraft({ ...editDraft, medication: e.target.value })}
                       sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                     />
@@ -371,9 +371,9 @@ const PrescriptionTemplates = () => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#666' }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.dose} 
+                    <TextField
+                      size="small"
+                      value={editDraft.dose}
                       onChange={(e) => setEditDraft({ ...editDraft, dose: e.target.value })}
                       sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                     />
@@ -381,9 +381,9 @@ const PrescriptionTemplates = () => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#666' }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.duration} 
+                    <TextField
+                      size="small"
+                      value={editDraft.duration}
                       onChange={(e) => setEditDraft({ ...editDraft, duration: e.target.value })}
                       sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                     />
@@ -391,9 +391,9 @@ const PrescriptionTemplates = () => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#666' }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.longTerm} 
+                    <TextField
+                      size="small"
+                      value={editDraft.longTerm}
                       onChange={(e) => setEditDraft({ ...editDraft, longTerm: e.target.value })}
                       sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                     />
@@ -401,9 +401,9 @@ const PrescriptionTemplates = () => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
                   {editingIndex === index ? (
-                    <TextField 
-                      size="small" 
-                      value={editDraft.refills} 
+                    <TextField
+                      size="small"
+                      value={editDraft.refills}
                       onChange={(e) => setEditDraft({ ...editDraft, refills: e.target.value })}
                       sx={{ width: 40, '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, textAlign: 'center' } }}
                     />
@@ -430,11 +430,11 @@ const PrescriptionTemplates = () => {
                         <IconButton size="small" sx={{ p: 0.2, color: '#e57373' }} onClick={() => handleDelete(index)}>
                           <DeleteIcon sx={{ fontSize: '0.9rem' }} />
                         </IconButton>
-                        <Typography 
+                        <Typography
                           onClick={handleOpenSyncDialog}
-                          sx={{ 
-                            fontSize: '0.7rem', 
-                            color: '#1a3a6b', 
+                          sx={{
+                            fontSize: '0.7rem',
+                            color: '#1a3a6b',
                             cursor: 'pointer',
                             '&:hover': { textDecoration: 'underline' }
                           }}
@@ -560,7 +560,7 @@ const PrescriptionTemplates = () => {
       >
         <DialogTitle
           sx={{
-            backgroundColor: '#6b8fb9',
+            backgroundColor: '#335377ff',
             color: '#fff',
             fontSize: '1rem',
             fontWeight: 500,
@@ -575,8 +575,8 @@ const PrescriptionTemplates = () => {
           <Grid container spacing={2}>
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Template Name</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.name}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, name: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -584,8 +584,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Template Description</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.description}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, description: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -594,8 +594,8 @@ const PrescriptionTemplates = () => {
 
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Drug*</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.medication}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, medication: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -603,8 +603,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Dose</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.dose}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, dose: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -613,8 +613,8 @@ const PrescriptionTemplates = () => {
 
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Route</Typography>
-              <Select 
-                fullWidth size="small" 
+              <Select
+                fullWidth size="small"
                 value={newTemplateDraft.route}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, route: e.target.value })}
                 sx={{ fontSize: '0.85rem' }}
@@ -625,8 +625,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Forms</Typography>
-              <Select 
-                fullWidth size="small" 
+              <Select
+                fullWidth size="small"
                 value={newTemplateDraft.forms}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, forms: e.target.value })}
                 sx={{ fontSize: '0.85rem' }}
@@ -639,8 +639,8 @@ const PrescriptionTemplates = () => {
 
             <Grid size={3}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Frequency</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.frequency}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, frequency: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -648,8 +648,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={1}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Duration</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.duration}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, duration: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -657,8 +657,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={2}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Duration Unit</Typography>
-              <Select 
-                fullWidth size="small" 
+              <Select
+                fullWidth size="small"
                 value={newTemplateDraft.durationUnit}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, durationUnit: e.target.value })}
                 sx={{ fontSize: '0.85rem' }}
@@ -670,8 +670,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={3}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Quantity*</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.quantity}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, quantity: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -679,8 +679,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={3}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Spelled out quantity</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.spelledOutQuantity}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, spelledOutQuantity: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
@@ -689,27 +689,27 @@ const PrescriptionTemplates = () => {
 
             <Grid size={4}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Refills*</Typography>
-              <TextField 
-                fullWidth size="small" 
+              <TextField
+                fullWidth size="small"
                 value={newTemplateDraft.refills}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, refills: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>
             <Grid size={4} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <FormControlLabel 
-                control={<Checkbox size="small" checked={newTemplateDraft.maySubstitute} onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, maySubstitute: e.target.checked })} />} 
-                label={<Typography sx={{ fontSize: '0.75rem' }}>May substitute generic</Typography>} 
+              <FormControlLabel
+                control={<Checkbox size="small" checked={newTemplateDraft.maySubstitute} onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, maySubstitute: e.target.checked })} />}
+                label={<Typography sx={{ fontSize: '0.75rem' }}>May substitute generic</Typography>}
               />
-              <FormControlLabel 
-                control={<Checkbox size="small" checked={newTemplateDraft.isLongTerm} onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, isLongTerm: e.target.checked })} />} 
-                label={<Typography sx={{ fontSize: '0.75rem' }}>Long Term</Typography>} 
+              <FormControlLabel
+                control={<Checkbox size="small" checked={newTemplateDraft.isLongTerm} onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, isLongTerm: e.target.checked })} />}
+                label={<Typography sx={{ fontSize: '0.75rem' }}>Long Term</Typography>}
               />
             </Grid>
             <Grid size={4}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Provider*</Typography>
-              <Select 
-                fullWidth size="small" 
+              <Select
+                fullWidth size="small"
                 value={newTemplateDraft.provider}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, provider: e.target.value })}
                 sx={{ fontSize: '0.85rem' }}
@@ -721,8 +721,8 @@ const PrescriptionTemplates = () => {
 
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Patient Instructions</Typography>
-              <TextField 
-                fullWidth multiline rows={3} 
+              <TextField
+                fullWidth multiline rows={3}
                 value={newTemplateDraft.patientInstructions}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, patientInstructions: e.target.value })}
                 sx={{ '& .MuiInputBase-root': { fontSize: '0.85rem' } }}
@@ -730,8 +730,8 @@ const PrescriptionTemplates = () => {
             </Grid>
             <Grid size={6}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 0.5, color: '#333' }}>Rx Instructions</Typography>
-              <TextField 
-                fullWidth multiline rows={3} 
+              <TextField
+                fullWidth multiline rows={3}
                 value={newTemplateDraft.rxInstructions}
                 onChange={(e) => setNewTemplateDraft({ ...newTemplateDraft, rxInstructions: e.target.value })}
                 sx={{ '& .MuiInputBase-root': { fontSize: '0.85rem' } }}

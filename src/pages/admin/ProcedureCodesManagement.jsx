@@ -886,75 +886,94 @@ const ProcedureCodesManagement = () => {
   const renderSubItem = (catIdx, itemIdx, item) => (
     <Box sx={{ display: 'flex', flexDirection: 'column', pl: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', py: 0.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer' }} onClick={() => toggleSubItem(item.name)}>
-          {expandedSubItems.includes(item.name) ? (
-            <KeyboardArrowUpIcon sx={{ color: '#666', fontSize: '1rem' }} />
-          ) : (
-            <KeyboardArrowDownIcon sx={{ color: '#666', fontSize: '1rem' }} />
-          )}
-          <Typography sx={{ fontSize: '0.8rem', color: '#666', minWidth: 16 }}>{item.id}-</Typography>
-          <Box sx={{ minWidth: 32, display: 'flex', justifyContent: 'center' }}>
-            <ProcedureIcon type={item.icon} />
-          </Box>
-          {editingPath === `${catIdx}-${itemIdx}` ? (
-            <TextField
-              size="small"
-              value={item.name}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => handleUpdateItemName(catIdx, itemIdx, e.target.value)}
-              variant="standard"
-              sx={{ 
-                ml: 1, 
-                '& .MuiInputBase-input': { 
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+          <Box 
+            onClick={() => toggleSubItem(item.name)}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 350, cursor: 'pointer' }}
+          >
+            {expandedSubItems.includes(item.name) ? (
+              <KeyboardArrowUpIcon sx={{ color: '#666', fontSize: '1rem' }} />
+            ) : (
+              <KeyboardArrowDownIcon sx={{ color: '#666', fontSize: '1rem' }} />
+            )}
+            <Typography sx={{ fontSize: '0.8rem', color: '#666', minWidth: 16 }}>{item.id}-</Typography>
+            <Box sx={{ minWidth: 32, display: 'flex', justifyContent: 'center' }}>
+              <ProcedureIcon type={item.icon} />
+            </Box>
+            {editingPath === `${catIdx}-${itemIdx}` ? (
+              <TextField
+                size="small"
+                value={item.name}
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => handleUpdateItemName(catIdx, itemIdx, e.target.value)}
+                variant="standard"
+                sx={{ 
+                  ml: 1, 
+                  width: '80%',
+                  '& .MuiInputBase-input': { 
+                    color: '#1a3a6b', 
+                    fontSize: '0.8rem', 
+                    fontWeight: 500,
+                    py: 0,
+                  },
+                  '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #ccc' }
+                }}
+              />
+            ) : (
+              <Typography 
+                sx={{ 
+                  ml: 1, 
                   color: '#1a3a6b', 
                   fontSize: '0.8rem', 
                   fontWeight: 500,
-                  py: 0,
-                },
-                '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #ccc' }
-              }}
+                }}
+              >
+                {item.name}
+              </Typography>
+            )}
+          </Box>
+
+          <Box sx={{ width: 160 }}>
+            <FormControlLabel
+              onClick={(e) => e.stopPropagation()}
+              control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
+              label={<Typography sx={{ fontSize: '0.75rem' }}>Show in Schedule</Typography>}
+              sx={{ ml: 2, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
             />
-          ) : (
-            <Typography 
+          </Box>
+
+          <Box sx={{ width: 160 }}>
+            <FormControlLabel
+              onClick={(e) => e.stopPropagation()}
+              control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
+              label={<Typography sx={{ fontSize: '0.75rem' }}>Hide Power Code</Typography>}
+              sx={{ ml: 1, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
+            />
+          </Box>
+
+          <Box sx={{ width: 80, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+            {editingPath === `${catIdx}-${itemIdx}` ? (
+              <CheckIcon 
+                onClick={(e) => { e.stopPropagation(); setEditingPath(null); }} 
+                sx={{ color: '#48bb78', fontSize: '1.2rem', cursor: 'pointer' }} 
+              />
+            ) : (
+              <EditIcon 
+                onClick={(e) => { e.stopPropagation(); setEditingPath(`${catIdx}-${itemIdx}`); }} 
+                sx={{ color: '#4a90e2', fontSize: '1rem', cursor: 'pointer' }} 
+              />
+            )}
+            <DeleteIcon 
+              onClick={(e) => { e.stopPropagation(); handleDeletePowerCode(catIdx, itemIdx); }} 
               sx={{ 
-                ml: 1, 
-                color: '#1a3a6b', 
-                fontSize: '0.8rem', 
-                fontWeight: 500,
-                cursor: 'pointer' 
-              }}
-            >
-              {item.name}
-            </Typography>
-          )}
-          <FormControlLabel
-            onClick={(e) => e.stopPropagation()}
-            control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
-            label={<Typography sx={{ fontSize: '0.75rem' }}>Show in Schedule</Typography>}
-            sx={{ ml: 2, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
-          />
-          <FormControlLabel
-            onClick={(e) => e.stopPropagation()}
-            control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
-            label={<Typography sx={{ fontSize: '0.75rem' }}>Hide Power Code</Typography>}
-            sx={{ ml: 1, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
-          />
-          {editingPath === `${catIdx}-${itemIdx}` ? (
-            <CheckIcon 
-              onClick={(e) => { e.stopPropagation(); setEditingPath(null); }} 
-              sx={{ color: '#48bb78', fontSize: '1.2rem', ml: 1, cursor: 'pointer' }} 
+                color: '#d32f2f', 
+                fontSize: '1rem', 
+                cursor: 'pointer',
+                display: editingPath === `${catIdx}-${itemIdx}` ? 'block' : 'none'
+              }} 
             />
-          ) : (
-            <EditIcon 
-              onClick={(e) => { e.stopPropagation(); setEditingPath(`${catIdx}-${itemIdx}`); }} 
-              sx={{ color: '#4a90e2', fontSize: '1rem', ml: 1, cursor: 'pointer' }} 
-            />
-          )}
-          <DeleteIcon 
-            onClick={(e) => { e.stopPropagation(); handleDeletePowerCode(catIdx, itemIdx); }} 
-            sx={{ color: '#d32f2f', fontSize: '1rem', ml: 1, cursor: 'pointer' }} 
-          />
+          </Box>
         </Box>
         <Box
           onClick={handleOpenSyncDialog}
