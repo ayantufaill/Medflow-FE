@@ -18,6 +18,7 @@ import MembershipPlans from './MembershipPlans';
 import MatchConvertedCarriers from './MatchConvertedCarriers';
 import MatchVyneCarriers from './MatchVyneCarriers';
 import PatientCommunicationSettings from './PatientCommunicationSettings';
+import PatientCommunicationTemplates from './PatientCommunicationTemplates';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -254,6 +255,8 @@ const AdminPage = () => {
         {activeTab === 2 && (
           location.pathname === '/admin/patient-communication/settings' ? (
             <PatientCommunicationSettings />
+          ) : location.pathname === '/admin/patient-communication/templates' ? (
+            <PatientCommunicationTemplates />
           ) : (
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
