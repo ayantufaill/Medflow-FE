@@ -12,6 +12,17 @@ import PaymentTerminals from './PaymentTerminals';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
+import InsuranceCarriers from './InsuranceCarriers';
+import InsurancePlans from './InsurancePlans';
+import MembershipPlans from './MembershipPlans';
+import MatchConvertedCarriers from './MatchConvertedCarriers';
+import MatchVyneCarriers from './MatchVyneCarriers';
+import PatientCommunicationSettings from './PatientCommunicationSettings';
+import PatientCommunicationTemplates from './PatientCommunicationTemplates';
+import EmailCampaigns from './EmailCampaigns';
+import Questionnaires from './Questionnaires';
+import ScheduleGapFills from './ScheduleGapFills';
+import ReviewSettings from './ReviewSettings';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -24,6 +35,7 @@ const USER_MANAGEMENT_SUB_TABS = [
 const TABS = [
   { label: 'User Management', path: '/admin/user-management' },
   { label: 'Practice Setup', path: '/admin/practice-setup' },
+  { label: 'Patient Communication', path: '/admin/patient-communication' },
   { label: 'Clinical Management', path: '/admin/clinical-management' },
   { label: 'Finance Management', path: '/admin/finance-management' },
   { label: 'Insurance Management', path: '/admin/insurance-management' },
@@ -42,6 +54,15 @@ const PRACTICE_SETUP_SUB_TABS = [
   { label: 'Information', path: '/admin/practice-setup/practice-information' },
 ];
 
+const PATIENT_COMMUNICATION_SUB_TABS = [
+  { label: 'Communication Settings', path: '/admin/patient-communication/settings' },
+  { label: 'Templates (Emails/Texts/Letters)', path: '/admin/patient-communication/templates' },
+  { label: 'Email Campaign', path: '/admin/patient-communication/email-campaign' },
+  { label: 'Questionnaires', path: '/admin/patient-communication/questionnaires' },
+  { label: 'Schedule Gap Fills', path: '/admin/patient-communication/gap-fills' },
+  { label: 'Review Settings', path: '/admin/patient-communication/review-settings' },
+];
+
 const FINANCIAL_MANAGEMENT_SUB_TABS = [
   { label: 'Payment Terminals', path: '/admin/payment-terminals' },
 ];
@@ -58,6 +79,14 @@ const CLINICAL_MANAGEMENT_SUB_TABS = [
   { label: 'Pre & Post-Ops', path: '/admin/clinical-management/pre-post-ops' },
 ];
 
+const INSURANCE_MANAGEMENT_SUB_TABS = [
+  { label: 'Insurance Carriers', path: '/admin/insurance-management/carriers' },
+  { label: 'Insurance Plans', path: '/admin/insurance-management/plans' },
+  { label: 'Membership Plans', path: '/admin/insurance-management/membership-plans' },
+  { label: 'Match Converted Carriers', path: '/admin/insurance-management/match-converted-carriers' },
+  { label: 'Match Vyne Carriers', path: '/admin/insurance-management/match-vyne-carriers' },
+];
+
 const AdminPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -67,11 +96,24 @@ const AdminPage = () => {
   const activeTab = TABS.findIndex((tab) => location.pathname.startsWith(tab.path));
 
   const isUserManagementSubTab = USER_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
-  const isTopLevelPage = TABS.some((tab) => tab.path === location.pathname) || isUserManagementSubTab;
+  const isPracticeSetupSubTab = PRACTICE_SETUP_SUB_TABS.some((t) => t.path === location.pathname);
+  const isPatientCommunicationSubTab = PATIENT_COMMUNICATION_SUB_TABS.some((t) => t.path === location.pathname);
+  const isClinicalManagementSubTab = CLINICAL_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+  const isFinancialManagementSubTab = FINANCIAL_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+  const isInsuranceManagementSubTab = INSURANCE_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
+
+  const isTopLevelPage =
+    TABS.some((tab) => tab.path === location.pathname) ||
+    isUserManagementSubTab;
+
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   if (location.pathname === '/admin') {
     return <Navigate to="/admin/user-management" replace />;
+  }
+
+  if (location.pathname === '/admin/patient-communication') {
+    return <Navigate to="/admin/patient-communication/settings" replace />;
   }
 
   return (
@@ -121,7 +163,7 @@ const AdminPage = () => {
           </Box>
 
           {/* Sub-nav — visible on hover */}
-          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3) && (
+          {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3 || hoveredTab === 4 || hoveredTab === 5) && (
             <Box
               sx={{
                 borderBottom: 1,
@@ -141,8 +183,12 @@ const AdminPage = () => {
                 : hoveredTab === 1
                   ? PRACTICE_SETUP_SUB_TABS
                   : hoveredTab === 2
-                    ? CLINICAL_MANAGEMENT_SUB_TABS
-                    : FINANCIAL_MANAGEMENT_SUB_TABS
+                    ? PATIENT_COMMUNICATION_SUB_TABS
+                    : hoveredTab === 3
+                      ? CLINICAL_MANAGEMENT_SUB_TABS
+                      : hoveredTab === 4
+                        ? FINANCIAL_MANAGEMENT_SUB_TABS
+                        : INSURANCE_MANAGEMENT_SUB_TABS
               ).map((sub) => {
                 const isActive = location.pathname === sub.path;
                 return (
@@ -210,6 +256,30 @@ const AdminPage = () => {
           </Box>
         )}
         {activeTab === 2 && (
+          location.pathname === '/admin/patient-communication/settings' ? (
+            <PatientCommunicationSettings />
+          ) : location.pathname === '/admin/patient-communication/templates' ? (
+            <PatientCommunicationTemplates />
+          ) : location.pathname === '/admin/patient-communication/email-campaign' ? (
+            <EmailCampaigns />
+          ) : location.pathname === '/admin/patient-communication/questionnaires' ? (
+            <Questionnaires />
+          ) : location.pathname === '/admin/patient-communication/gap-fills' ? (
+            <ScheduleGapFills />
+          ) : location.pathname === '/admin/patient-communication/review-settings' ? (
+            <ReviewSettings />
+          ) : (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
+                Patient Communication - {PATIENT_COMMUNICATION_SUB_TABS.find(t => t.path === location.pathname)?.label || 'Module'}
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', mt: 2 }}>
+                This module is under development.
+              </Typography>
+            </Box>
+          )
+        )}
+        {activeTab === 3 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {location.pathname === '/admin/clinical-management' ? (
               <AppointmentTypesListPage />
@@ -230,7 +300,7 @@ const AdminPage = () => {
             )}
           </Box>
         )}
-        {activeTab === 3 && (
+        {activeTab === 4 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {location.pathname === '/admin/finance-management' ? (
               <ServicesListPage />
@@ -247,7 +317,21 @@ const AdminPage = () => {
             )}
           </Box>
         )}
-        {activeTab === 4 && <InsuranceCompaniesListPage />}
+        {activeTab === 5 && (
+          location.pathname === '/admin/insurance-management/carriers' ? (
+            <InsuranceCarriers />
+          ) : location.pathname === '/admin/insurance-management/plans' ? (
+            <InsurancePlans />
+          ) : location.pathname === '/admin/insurance-management/membership-plans' ? (
+            <MembershipPlans />
+          ) : location.pathname === '/admin/insurance-management/match-converted-carriers' ? (
+            <MatchConvertedCarriers />
+          ) : location.pathname === '/admin/insurance-management/match-vyne-carriers' ? (
+            <MatchVyneCarriers />
+          ) : (
+            <InsuranceCompaniesListPage />
+          )
+        )}
       </Box>
     </Box>
   );
