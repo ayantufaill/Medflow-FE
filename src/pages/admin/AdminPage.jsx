@@ -18,6 +18,7 @@ import MembershipPlans from './MembershipPlans';
 import MatchConvertedCarriers from './MatchConvertedCarriers';
 import MatchVyneCarriers from './MatchVyneCarriers';
 import PatientCommunicationSettings from './PatientCommunicationSettings';
+import PatientCommunicationTemplates from './PatientCommunicationTemplates';
 import EmailCampaigns from './EmailCampaigns';
 import Questionnaires from './Questionnaires';
 import ScheduleGapFills from './ScheduleGapFills';
@@ -257,6 +258,8 @@ const AdminPage = () => {
         {activeTab === 2 && (
           location.pathname === '/admin/patient-communication/settings' ? (
             <PatientCommunicationSettings />
+          ) : location.pathname === '/admin/patient-communication/templates' ? (
+            <PatientCommunicationTemplates />
           ) : location.pathname === '/admin/patient-communication/email-campaign' ? (
             <EmailCampaigns />
           ) : location.pathname === '/admin/patient-communication/questionnaires' ? (

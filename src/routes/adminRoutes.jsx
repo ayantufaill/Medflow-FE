@@ -23,6 +23,7 @@ import RecareConfiguration from '../pages/admin/RecareConfiguration';
 import TreatmentPlanPresentation from '../pages/admin/TreatmentPlanPresentation';
 import InformedConsent from '../pages/admin/InformedConsent';
 import PrePostOps from '../pages/admin/PrePostOps';
+import ReportsDashboard from '../pages/admin/ReportsDashboard';
 
 const adminOnly = (children) => (
   <ProtectedRoute requiredRoles={['Admin']}>
@@ -76,6 +77,7 @@ const adminRoutes = [
   <Route key="/admin/clinical-management/TreatmentPlan-Presentation" path="/admin/clinical-management/TreatmentPlan-Presentation" element={adminOnly(<TreatmentPlanPresentation />)} />,
   <Route key="/admin/clinical-management/informed-consent" path="/admin/clinical-management/informed-consent" element={adminOnly(<InformedConsent />)} />,
   <Route key="/admin/clinical-management/pre-post-ops" path="/admin/clinical-management/pre-post-ops" element={adminOnly(<PrePostOps />)} />,
+  <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />)} />,
 ];
 
 export default adminRoutes;

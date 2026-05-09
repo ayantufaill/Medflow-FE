@@ -43,6 +43,7 @@ import {
   Forum,
   Settings,
   AttachMoney,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -51,6 +52,7 @@ const DRAWER_WIDTH_EXPANDED = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
 
 const menuItems = [
+  { text: 'Admin Dashboard', icon: <AdminPanelSettings />, path: '/admin/reports', requiredRoles: ['Admin'] },
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
   // { text: 'Patients', icon: <People />, path: '/patients' },
@@ -375,7 +377,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
               <WithTooltip key={item.text} title={item.text}>
                 <ListItem disablePadding>
                   <ListItemButton
-                    onClick={() => handleNavigation(item.path)}
+                    onClick={() => item.path && handleNavigation(item.path)}
                     selected={isActive}
                     sx={{
                       // Center icons when collapsed, left-align when expanded
