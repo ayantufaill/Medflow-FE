@@ -19,6 +19,10 @@ import MatchConvertedCarriers from './MatchConvertedCarriers';
 import MatchVyneCarriers from './MatchVyneCarriers';
 import PatientCommunicationSettings from './PatientCommunicationSettings';
 import PatientCommunicationTemplates from './PatientCommunicationTemplates';
+import EmailCampaigns from './EmailCampaigns';
+import Questionnaires from './Questionnaires';
+import ScheduleGapFills from './ScheduleGapFills';
+import ReviewSettings from './ReviewSettings';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -100,8 +104,7 @@ const AdminPage = () => {
 
   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
-    isUserManagementSubTab ||
-    isPatientCommunicationSubTab;
+    isUserManagementSubTab;
 
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
@@ -257,6 +260,14 @@ const AdminPage = () => {
             <PatientCommunicationSettings />
           ) : location.pathname === '/admin/patient-communication/templates' ? (
             <PatientCommunicationTemplates />
+          ) : location.pathname === '/admin/patient-communication/email-campaign' ? (
+            <EmailCampaigns />
+          ) : location.pathname === '/admin/patient-communication/questionnaires' ? (
+            <Questionnaires />
+          ) : location.pathname === '/admin/patient-communication/gap-fills' ? (
+            <ScheduleGapFills />
+          ) : location.pathname === '/admin/patient-communication/review-settings' ? (
+            <ReviewSettings />
           ) : (
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
