@@ -98,4 +98,9 @@ export const insurancePlanService = {
     const response = await apiClient.get('/coverage-templates');
     return response.data.data;
   },
+
+  async createInsurancePlan(payload) {
+    const response = await apiClient.post('/insurance-plans', payload);
+    return response.data.data.plan;
+  },
 };
