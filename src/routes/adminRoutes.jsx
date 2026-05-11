@@ -42,6 +42,15 @@ const adminRoutes = [
   <Route key="/admin/practice-setup" path="/admin/practice-setup" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management" path="/admin/clinical-management" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management" path="/admin/finance-management" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/adjustment-types" path="/admin/finance-management/adjustment-types" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/fee-guide" path="/admin/finance-management/fee-guide" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/fee-guide/:id" path="/admin/finance-management/fee-guide/:id" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/billing-configuration" path="/admin/finance-management/billing-configuration" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/payment-types" path="/admin/finance-management/payment-types" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/dashboard-goals" path="/admin/finance-management/dashboard-goals" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/payment-presentation" path="/admin/finance-management/payment-presentation" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/coverage-book-shortcut" path="/admin/finance-management/coverage-book-shortcut" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/ar-automation" path="/admin/finance-management/ar-automation" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management" path="/admin/insurance-management" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication" path="/admin/patient-communication" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/settings" path="/admin/patient-communication/settings" element={adminOnly(<AdminPage />)} />,
@@ -68,7 +77,7 @@ const adminRoutes = [
   <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(<PracticeInformation />)} />,
   <Route key="/admin/practice-setup/office-timings" path="/admin/practice-setup/office-timings" element={adminOnly(<OfficeTimings />)} />,
   <Route key="/admin/practice-setup/online-schedule" path="/admin/practice-setup/online-schedule" element={adminOnly(<OnlineSchedule />)} />,
-  <Route key="/admin/payment-terminals" path="/admin/payment-terminals" element={adminOnly(<PaymentTerminals />)} />,
+
   <Route key="/admin/clinical-management/products" path="/admin/clinical-management/products" element={adminOnly(<ProductsManagement />)} />,
   <Route key="/admin/clinical-management/procedure-codes" path="/admin/clinical-management/procedure-codes" element={adminOnly(<ProcedureCodesManagement />)} />,
   <Route key="/admin/clinical-management/checklists" path="/admin/clinical-management/checklists" element={adminOnly(<ChecklistsManagement />)} />,
@@ -80,6 +89,7 @@ const adminRoutes = [
   <Route key="/admin/clinical-management/pre-post-ops" path="/admin/clinical-management/pre-post-ops" element={adminOnly(<PrePostOps />)} />,
   <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />)} />,
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
+  <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];
 
 export default adminRoutes;

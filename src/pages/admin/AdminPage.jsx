@@ -23,6 +23,10 @@ import EmailCampaigns from './EmailCampaigns';
 import Questionnaires from './Questionnaires';
 import ScheduleGapFills from './ScheduleGapFills';
 import ReviewSettings from './ReviewSettings';
+import AdjustmentTypes from './AdjustmentTypes';
+import FeeGuides from './FeeGuides';
+import FeeGuideDetail from './FeeGuideDetail';
+import BillingConfiguration from './BillingConfiguration';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -64,7 +68,14 @@ const PATIENT_COMMUNICATION_SUB_TABS = [
 ];
 
 const FINANCIAL_MANAGEMENT_SUB_TABS = [
-  { label: 'Payment Terminals', path: '/admin/payment-terminals' },
+  { label: 'Adjustment Types', path: '/admin/finance-management/adjustment-types' },
+  { label: 'Fee Guide', path: '/admin/finance-management/fee-guide' },
+  { label: 'Billing Configuration', path: '/admin/finance-management/billing-configuration' },
+  { label: 'Payment Types', path: '/admin/finance-management/payment-types' },
+  { label: 'Dashboard Goals', path: '/admin/finance-management/dashboard-goals' },
+  { label: 'Payment Presentation', path: '/admin/finance-management/payment-presentation' },
+  { label: 'Coverage Book Shortcut', path: '/admin/finance-management/coverage-book-shortcut' },
+  { label: 'AR Automation', path: '/admin/finance-management/ar-automation' },
 ];
 
 const CLINICAL_MANAGEMENT_SUB_TABS = [
@@ -304,8 +315,14 @@ const AdminPage = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {location.pathname === '/admin/finance-management' ? (
               <ServicesListPage />
-            ) : location.pathname === '/admin/payment-terminals' ? (
-              <PaymentTerminals />
+            ) : location.pathname === '/admin/finance-management/adjustment-types' ? (
+              <AdjustmentTypes />
+            ) : location.pathname.includes('/admin/finance-management/fee-guide/') ? (
+              <FeeGuideDetail />
+            ) : location.pathname === '/admin/finance-management/fee-guide' ? (
+              <FeeGuides />
+            ) : location.pathname === '/admin/finance-management/billing-configuration' ? (
+              <BillingConfiguration />
             ) : (
               <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
                 <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
