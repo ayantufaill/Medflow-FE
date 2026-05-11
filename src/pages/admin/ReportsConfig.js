@@ -33,7 +33,32 @@ export const CLINICAL_REPORT_SUB_TABS = [
   { label: 'Unsigned Progress Notes Report', path: '/admin/reports/clinical/unsigned-progress-notes' },
   { label: 'RX Report', path: '/admin/reports/clinical/rx' },
 ];
-export const FINANCIAL_REPORT_SUB_TABS = [];
+export const FINANCIAL_REPORT_SUB_TABS = [
+  { label: 'Aging Report', path: '/admin/reports/financial/aging' },
+  { label: 'Patient Aging Report', path: '/admin/reports/financial/patient-aging' },
+  { label: 'Deposit Slips', path: '/admin/reports/financial/deposit-slips' },
+  { label: 'Production Report', path: '/admin/reports/financial/production' },
+  { label: 'Production & Collection', path: '/admin/reports/financial/production-collection' },
+  { label: 'Production & Collection Summary', path: '/admin/reports/financial/production-collection-summary' },
+  { label: 'Provider Collection Per Payment Type', path: '/admin/reports/financial/provider-collection-payment-type' },
+  { label: 'Production Per Code', path: '/admin/reports/financial/production-per-code' },
+  { label: 'Collection Per Code Per Carrier', path: '/admin/reports/financial/collection-code-carrier' },
+  { label: 'Adjustment Report', path: '/admin/reports/financial/adjustment' },
+  { label: 'Courtesy Credit Report', path: '/admin/reports/financial/courtesy-credit' },
+  { label: 'Courtesy Credit Modifications Report', path: '/admin/reports/financial/courtesy-credit-modifications' },
+  { label: 'Credit Accounts Report', path: '/admin/reports/financial/credit-accounts' },
+  { label: 'Modifications Report', path: '/admin/reports/financial/modifications' },
+  { label: 'Deposit Summary', path: '/admin/reports/financial/deposit-summary' },
+  { label: 'Collection Per Carrier', path: '/admin/reports/financial/collection-carrier' },
+  { label: 'Total Collection By Individuals', path: '/admin/reports/financial/total-collection-individuals' },
+  { label: 'Total Collection By Family', path: '/admin/reports/financial/total-collection-family' },
+  { label: 'Payment Plans', path: '/admin/reports/financial/payment-plans' },
+  { label: 'Payment Lines', path: '/admin/reports/financial/payment-lines' },
+  { label: 'Payment Request Report', path: '/admin/reports/financial/payment-request' },
+  { label: 'OpenEdge Transactions', path: '/admin/reports/financial/openedge-transactions' },
+  { label: 'Procedures By Insurance', path: '/admin/reports/financial/procedures-insurance' },
+  { label: 'Family Migrated Balances', path: '/admin/reports/financial/family-migrated-balances' },
+];
 export const OTHERS_REPORT_SUB_TABS = [
   { label: 'Login Report', path: '/admin/reports/others/login' },
   { label: 'Audit Report', path: '/admin/reports/others/audit' },
