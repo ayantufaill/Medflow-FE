@@ -27,6 +27,8 @@ import AdjustmentTypes from './AdjustmentTypes';
 import FeeGuides from './FeeGuides';
 import FeeGuideDetail from './FeeGuideDetail';
 import BillingConfiguration from './BillingConfiguration';
+import PaymentTypes from './PaymentTypes';
+import ARAutomation from './ARAutomation';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -323,6 +325,10 @@ const AdminPage = () => {
               <FeeGuides />
             ) : location.pathname === '/admin/finance-management/billing-configuration' ? (
               <BillingConfiguration />
+            ) : location.pathname === '/admin/finance-management/payment-types' ? (
+              <PaymentTypes />
+            ) : location.pathname === '/admin/finance-management/ar-automation' ? (
+              <ARAutomation />
             ) : (
               <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
                 <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
