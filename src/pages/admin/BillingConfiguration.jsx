@@ -17,6 +17,7 @@ import {
   Radio as MuiRadio
 } from '@mui/material';
 import { Link } from 'react-router-dom';
+import PreviewStatementDialog from '../../components/admin/PreviewStatementDialog';
 import {
   InfoOutlined as InfoIcon
 } from '@mui/icons-material';
@@ -68,6 +69,8 @@ const BillingConfiguration = () => {
     honorWriteOff: true,
   });
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     setFormData(prev => ({
@@ -111,7 +114,11 @@ const BillingConfiguration = () => {
               <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main', textDecoration: 'underline' }}>
                 General Settings
               </Typography>
-              <MuiLink href="#" sx={{ fontSize: '0.8125rem', textDecoration: 'none', color: 'primary.main' }}>
+              <MuiLink 
+                component="button"
+                onClick={() => setPreviewOpen(true)}
+                sx={{ fontSize: '0.8125rem', textDecoration: 'none', color: 'primary.main', border: 'none', background: 'none', cursor: 'pointer' }}
+              >
                 Preview statement
               </MuiLink>
             </Box>
@@ -519,6 +526,12 @@ const BillingConfiguration = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Dialogs */}
+      <PreviewStatementDialog 
+        open={previewOpen} 
+        onClose={() => setPreviewOpen(false)} 
+      />
     </Box>
   );
 };
