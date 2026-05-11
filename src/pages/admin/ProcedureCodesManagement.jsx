@@ -861,24 +861,20 @@ const ProcedureCodesManagement = () => {
             </Select>
           </Box>
           <Box sx={{ width: '7%', display: 'flex', justifyContent: 'center' }}>
-            {!isLocked && (
-              <DeleteIcon 
-                onClick={() => handleDeleteProcedure(catIdx, itemIdx, pIdx)}
-                sx={{ color: '#d32f2f', fontSize: '1rem', cursor: 'pointer' }} 
-              />
-            )}
+            <DeleteIcon 
+              onClick={() => handleDeleteProcedure(catIdx, itemIdx, pIdx)}
+              sx={{ color: '#d32f2f', fontSize: '1rem', cursor: 'pointer' }} 
+            />
           </Box>
         </Box>
       ))}
       <Box sx={{ p: 1.5, borderTop: '1px solid #e0e0e0' }}>
-         {!isLocked && (
-           <Typography 
-             onClick={() => handleAddProcedure(catIdx, itemIdx)}
-             sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}
-           >
-             + Add Procedure
-           </Typography>
-         )}
+        <Typography 
+          onClick={() => handleAddProcedure(catIdx, itemIdx)}
+          sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}
+        >
+          + Add Procedure
+        </Typography>
       </Box>
     </Box>
   );
@@ -970,7 +966,6 @@ const ProcedureCodesManagement = () => {
                 color: '#d32f2f', 
                 fontSize: '1rem', 
                 cursor: 'pointer',
-                display: editingPath === `${catIdx}-${itemIdx}` ? 'block' : 'none'
               }} 
             />
           </Box>
