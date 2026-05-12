@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -28,6 +29,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
 } from '@mui/icons-material';
+import { feeService } from '../../services/fee.service';
 
 const CODES_CATEGORIES = [
   'Diagnostic',
@@ -685,6 +687,43 @@ const ProcedureCodesManagement = () => {
   const [expandedCodesCategories, setExpandedCodesCategories] = useState([]);
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
   const [editingPath, setEditingPath] = useState(null);
+  const [procedureCodes, setProcedureCodes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [totalCodes, setTotalCodes] = useState(0);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (activeTab === 1) {
+      fetchProcedureCodes();
+    }
+  }, [activeTab, searchQuery, page]);
+
+  const fetchProcedureCodes = async (category = null) => {
+    try {
+      setLoading(true);
+      const result = await feeService.getProcedureCodes({
+        search: searchQuery,
+        category: category,
+        page,
+        limit: 50
+      });
+      setProcedureCodes(result.data);
+      setTotalCodes(result.total);
+    } catch (error) {
+      console.error('Failed to fetch procedure codes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleCodesCategory = (catName) => {
+    if (expandedCodesCategories.includes(catName)) {
+      setExpandedCodesCategories(expandedCodesCategories.filter(c => c !== catName));
+    } else {
+      setExpandedCodesCategories([...expandedCodesCategories, catName]);
+      fetchProcedureCodes(catName);
+    }
+  };
 
   const handleOpenSyncDialog = (e) => {
     e?.stopPropagation();
@@ -1149,7 +1188,10 @@ const ProcedureCodesManagement = () => {
               placeholder="Enter code or procedure"
               size="small"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (e.target.value) fetchProcedureCodes();
+              }}
               sx={{
                 width: 300,
                 '& .MuiInputBase-input': { fontSize: '0.85rem', py: 0.7 },
@@ -1158,83 +1200,69 @@ const ProcedureCodesManagement = () => {
             />
           </Box>
 
-          {/* Categories List */}
+          {/* Categories or Search Results */}
           <Box sx={{ pl: 1 }}>
-            {INITIAL_CODES_TAB.map((category, idx) => (
-              <Box key={idx}>
-                {/* Header Row */}
-                <Box 
-                  onClick={() => {
-                    if (expandedCodesCategories.includes(category.name)) {
-                      setExpandedCodesCategories(expandedCodesCategories.filter(c => c !== category.name));
-                    } else {
-                      setExpandedCodesCategories([...expandedCodesCategories, category.name]);
-                    }
-                  }}
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    py: 1, 
-                    cursor: 'pointer',
-                    backgroundColor: expandedCodesCategories.includes(category.name) ? '#f5f7f9' : 'transparent',
-                    borderBottom: '1px solid #f0f0f0',
-                    px: 1,
-                    mx: -1
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                    {expandedCodesCategories.includes(category.name) ? (
-                      <Box sx={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Box sx={{ width: 10, height: 2, backgroundColor: '#666' }} />
-                      </Box>
-                    ) : (
-                      <AddIcon sx={{ color: '#666', fontSize: '1.1rem' }} />
-                    )}
-                    <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-                      {category.name}
-                    </Typography>
-                  </Box>
-                  <Typography
-                    sx={{
-                      color: '#4a90e2',
-                      fontSize: '0.8rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      '&:hover': { textDecoration: 'underline' }
-                    }}
-                  >
-                    + Add Custom Code
-                  </Typography>
-                </Box>
-
-                {/* Sub-items List */}
-                {expandedCodesCategories.includes(category.name) && category.subItems.length > 0 && (
-                  <Box sx={{ pl: 3 }}>
-                    {category.subItems.map((sub, subIdx) => (
-                      <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                          <AddIcon sx={{ color: '#666', fontSize: '1.1rem', cursor: 'pointer' }} />
-                          <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-                            {sub}
-                          </Typography>
-                        </Box>
-                        <Typography
-                          sx={{
-                            color: '#4a90e2',
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            '&:hover': { textDecoration: 'underline' }
-                          }}
-                        >
-                          + Add Custom Code
+            {searchQuery ? (
+               <Box>
+                 {loading ? (
+                   <CircularProgress size={24} />
+                 ) : procedureCodes.map((sub, subIdx) => (
+                    <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                        <AddIcon sx={{ color: '#666', fontSize: '1.1rem' }} />
+                        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
+                          {sub.ProcCode} - {sub.Descript}
                         </Typography>
                       </Box>
-                    ))}
+                    </Box>
+                 ))}
+               </Box>
+            ) : (
+              INITIAL_CODES_TAB.map((category, idx) => (
+                <Box key={idx}>
+                  <Box 
+                    onClick={() => handleToggleCodesCategory(category.name)}
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      py: 1, 
+                      cursor: 'pointer',
+                      backgroundColor: expandedCodesCategories.includes(category.name) ? '#f5f7f9' : 'transparent',
+                      borderBottom: '1px solid #f0f0f0',
+                      px: 1,
+                      mx: -1
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                      {expandedCodesCategories.includes(category.name) ? (
+                        <Box sx={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Box sx={{ width: 10, height: 2, backgroundColor: '#666' }} />
+                        </Box>
+                      ) : (
+                        <AddIcon sx={{ color: '#666', fontSize: '1.1rem' }} />
+                      )}
+                      <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
+                        {category.name}
+                      </Typography>
+                    </Box>
                   </Box>
-                )}
-              </Box>
-            ))}
+
+                  {expandedCodesCategories.includes(category.name) && (
+                    <Box sx={{ pl: 3 }}>
+                      {loading ? (
+                        <CircularProgress size={20} sx={{ m: 2 }} />
+                      ) : procedureCodes.map((sub, subIdx) => (
+                        <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
+                          <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
+                            {sub.ProcCode} - {sub.Descript}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              ))
+            )}
           </Box>
 
           {/* Footer Add */}

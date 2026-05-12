@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -21,11 +21,14 @@ import {
   TableHead,
   TableRow,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import { reportingService } from '../../services/reporting.service';
+import { audienceService } from '../../services/audience.service';
 
 const COLUMNS = [
   'ID', 'Middle Name', 'dob', 'email', 'householdHeadUUID', 'isHeadOfHousehold', 'newPatientDate', 'sex', 
@@ -50,37 +53,42 @@ const AdvancedReporting = () => {
   const [selectedColumns, setSelectedColumns] = useState(['Last Name', 'First Name', 'nextTreatmentAppt', 'nextRecareAppt', 'IsSubscriber(NonPatient)', 'Inactive', 'lastAppt']);
   const [showResults, setShowResults] = useState(false);
 
-  const [reports, setReports] = useState({
-    Patient: [
-      'Screening for inactive patients',
-      'Total # of patients',
-      'Credit accounts report',
-      'PPO percentage',
-      'Accounts Receivable by patient',
-      'x',
-    ],
-    Procedures: [
-      'Whitening pt\'s',
-      'Patients with no appointment',
-      'DNOA collection',
-    ],
-  });
+  const [reports, setReports] = useState({ Patient: [], Procedures: [] });
+  const [audiences, setAudiences] = useState({ Patient: [], Procedures: [] });
+  const [loading, setLoading] = useState(false);
+  const [resultsData, setResultsData] = useState([]);
+  const [totalResults, setTotalResults] = useState(0);
 
-  const [audiences, setAudiences] = useState({
-    Patient: [
-      'Email Campaign #1',
-      'Spark Day',
-      'Family',
-      'Use it Lose it.',
-      'Deactivation list 12/2023',
-      'Active patient 09/24',
-      'Newsletter active patients 4/22',
-      'Valentines 2025',
-      'TDS Membership 2025 update',
-      'test',
-    ],
-    Procedures: [],
-  });
+  useEffect(() => {
+    fetchSavedItems();
+  }, []);
+
+  const fetchSavedItems = async () => {
+    try {
+      setLoading(true);
+      const [savedReports, savedAudiences] = await Promise.all([
+        reportingService.getSavedReports(),
+        audienceService.getAllAudiences()
+      ]);
+
+      const groupedReports = { Patient: [], Procedures: [] };
+      savedReports.forEach(r => {
+        if (groupedReports[r.kind]) groupedReports[r.kind].push(r);
+      });
+
+      const groupedAudiences = { Patient: [], Procedures: [] };
+      savedAudiences.forEach(a => {
+        if (groupedAudiences[a.kind]) groupedAudiences[a.kind].push(a);
+      });
+
+      setReports(groupedReports);
+      setAudiences(groupedAudiences);
+    } catch (error) {
+      console.error('Failed to fetch saved items:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -93,14 +101,44 @@ const AdvancedReporting = () => {
     setShowResults(false);
   };
 
-  const handleDeleteItem = (e, category, index) => {
+  const handleDeleteItem = async (e, category, id) => {
     e.stopPropagation();
-    const data = tabValue === 0 ? { ...reports } : { ...audiences };
-    const updatedCategory = [...data[category]];
-    updatedCategory.splice(index, 1);
-    const updatedData = { ...data, [category]: updatedCategory };
-    if (tabValue === 0) setReports(updatedData);
-    else setAudiences(updatedData);
+    try {
+      if (tabValue === 0) {
+        await reportingService.deleteReport(id);
+      } else {
+        await audienceService.deleteAudience(id);
+      }
+      fetchSavedItems();
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+    }
+  };
+
+  const handleRunReport = async () => {
+    try {
+      setLoading(true);
+      // For now using selected columns and a basic filter
+      const filters = [
+        { field: 'Inactive', operator: 'equals', value: 0 }
+      ];
+      
+      const result = await reportingService.runReport({
+        kind: selectedItem?.kind || 'Patient',
+        filters,
+        columns: selectedColumns,
+        page: 1,
+        limit: 50
+      });
+
+      setResultsData(result.data);
+      setTotalResults(result.total);
+      setShowResults(true);
+    } catch (error) {
+      console.error('Failed to run report:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleColumn = (col) => {
@@ -212,10 +250,11 @@ const AdvancedReporting = () => {
         {/* Actions */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
           <Button
-            onClick={() => setShowResults(true)}
+            onClick={handleRunReport}
+            disabled={loading}
             sx={{ backgroundColor: '#a6a6a6', color: '#fff', textTransform: 'none', px: 3, fontSize: '0.85rem', '&:hover': { backgroundColor: '#8c8c8c' } }}
           >
-            Run Report
+            {loading ? <CircularProgress size={20} color="inherit" /> : 'Run Report'}
           </Button>
           <Button
             sx={{ backgroundColor: '#5eb36d', color: '#fff', textTransform: 'none', px: 3, fontSize: '0.85rem', '&:hover': { backgroundColor: '#4e9b5a' } }}
@@ -225,7 +264,7 @@ const AdvancedReporting = () => {
         </Box>
 
         <Typography sx={{ fontSize: '0.75rem', color: '#dcb265', mb: 2 }}>
-          Filtered Items: {showResults ? '1260' : '0'}
+          Filtered Items: {totalResults}
         </Typography>
 
         {/* Results Table */}
@@ -240,14 +279,13 @@ const AdvancedReporting = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {[1, 2, 3, 4, 5].map(i => (
+                {resultsData.map((row, i) => (
                   <TableRow key={i}>
-                    <TableCell sx={{ fontSize: '0.8rem', py: 1.5 }}>Patient {i}</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem' }}>Name {i}</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem' }}>Not Completed</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem' }}>Diagnostic Imaging</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem' }}>D0274</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem' }}>Bitewing Four Xrays</TableCell>
+                    {selectedColumns.slice(0, 6).map(col => (
+                      <TableCell key={col} sx={{ fontSize: '0.8rem', py: 1.5 }}>
+                        {row[col] !== undefined ? String(row[col]) : '-'}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>
@@ -337,11 +375,11 @@ const AdvancedReporting = () => {
                   }}
                 >
                   <Typography sx={{ fontSize: '0.85rem', color: '#333' }}>
-                    {item}
+                    {item.name}
                   </Typography>
                   <IconButton
                     size="small"
-                    onClick={(e) => handleDeleteItem(e, category, index)}
+                    onClick={(e) => handleDeleteItem(e, category, item._id)}
                     sx={{ color: '#ffb3b3', '&:hover': { color: '#ff4d4f' } }}
                   >
                     <DeleteIcon sx={{ fontSize: '1.1rem' }} />
@@ -390,15 +428,29 @@ const AdvancedReporting = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'center', gap: 1 }}>
           <Button
-            onClick={() => {
-              const data = tabValue === 0 ? reports : audiences;
-              const category = reportKind === 'Patient' ? 'Patient' : 'Procedures';
-              const updatedData = { ...data, [category]: [...data[category], reportName] };
-              if (tabValue === 0) setReports(updatedData);
-              else setAudiences(updatedData);
-              setOpenModal(false);
-              setReportName('');
-              setReportKind('Kind');
+            onClick={async () => {
+              try {
+                if (tabValue === 0) {
+                  await reportingService.saveReport({ 
+                    name: reportName, 
+                    kind: reportKind, 
+                    filters: [], 
+                    columns: selectedColumns 
+                  });
+                } else {
+                  await audienceService.saveAudience({ 
+                    name: reportName, 
+                    kind: reportKind, 
+                    filters: [] 
+                  });
+                }
+                setOpenModal(false);
+                setReportName('');
+                setReportKind('Kind');
+                fetchSavedItems();
+              } catch (error) {
+                console.error('Failed to save item:', error);
+              }
             }}
             sx={{ backgroundColor: '#dcb265', color: '#fff', textTransform: 'none', px: 3, fontSize: '0.85rem', '&:hover': { backgroundColor: '#c99f54' } }}
           >
