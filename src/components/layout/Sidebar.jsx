@@ -14,6 +14,9 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
+  Menu,
+  MenuItem,
+  Popover,
 } from '@mui/material';
 import {
   Dashboard,
@@ -52,7 +55,6 @@ const DRAWER_WIDTH_EXPANDED = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
 
 const menuItems = [
-  { text: 'Admin Dashboard', icon: <AdminPanelSettings />, path: '/admin/reports', requiredRoles: ['Admin'] },
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
   // { text: 'Patients', icon: <People />, path: '/patients' },
@@ -153,7 +155,6 @@ const menuItems = [
   { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
   { text: 'Finance', icon: <AttachMoney />, path: '/finance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
   { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
-  { text: 'Advanced Reporting', icon: <Assessment />, path: '/admin/advanced-reporting', requiredRoles: ['Admin', 'Doctor'] },
  // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
   /*{
     text: 'Practice Info',
@@ -199,6 +200,20 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { logout, user } = useAuth();
+  const [settingsAnchor, setSettingsAnchor] = useState(null);
+
+  const handleSettingsOpen = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setSettingsAnchor({
+      getBoundingClientRect: () => rect,
+      nodeType: 1,
+    });
+    navigate('/admin/user-management');
+  };
+
+  const handleSettingsClose = () => {
+    setSettingsAnchor(null);
+  };
 
   // Helper function to check if user has required roles
   const hasRequiredRole = (requiredRoles) => {
@@ -470,7 +485,8 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
           <WithTooltip title="Settings">
             <ListItem disablePadding>
               <ListItemButton
-                onClick={() => handleNavigation('/admin/user-management')}
+                id="settings-button"
+                onClick={handleSettingsOpen}
                 sx={{
                   mx: 1,
                   mb: 0.5,
@@ -577,6 +593,65 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
         {/* Pass isCollapsed so content adapts to show icons-only or full layout */}
         <DrawerContent isCollapsed={!open} />
       </Drawer>
+
+      <Popover
+        anchorEl={settingsAnchor}
+        open={Boolean(settingsAnchor)}
+        onClose={handleSettingsClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        disableScrollLock
+        PaperProps={{
+          sx: {
+            bgcolor: '#e8f0fe',
+            minWidth: 200,
+            borderRadius: '8px',
+            boxShadow: '0px 4px 12px rgba(0,0,0,0.1)',
+            ml: 1,
+          },
+        }}
+      >
+        <Box sx={{ py: 1 }}>
+          {[
+            'Claim Management',
+            'Batch Actions',
+            'Reports',
+            'Advanced Reporting',
+            'Dashboard',
+            'KPI Dashboard',
+            'Automations',
+            'Admin',
+          ].map((item) => (
+            <MenuItem
+              key={item}
+              onClick={() => {
+                if (item === 'Advanced Reporting') navigate('/admin/advanced-reporting');
+                if (item === 'Admin') navigate('/admin/reports');
+                if (item === 'Dashboard') navigate('/admin/reports');
+                handleSettingsClose();
+              }}
+              sx={{
+                color: '#1a3a6b',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                py: 1.2,
+                px: 2,
+                '&:hover': {
+                  bgcolor: 'rgba(26, 58, 107, 0.08)',
+                },
+              }}
+            >
+              {item}
+            </MenuItem>
+          ))}
+        </Box>
+      </Popover>
     </Box>
   );
 };

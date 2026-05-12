@@ -22,13 +22,15 @@ const FamilyMigratedBalances = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, px: 2 }}
+            size="small"
+            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto' }}
           >
             Export as CSV
           </Button>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#d32f2f', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, px: 2, '&:hover': { backgroundColor: '#b71c1c' } }}
+            size="small"
+            sx={{ backgroundColor: '#d32f2f', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#b71c1c' } }}
           >
             Print
           </Button>

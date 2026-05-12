@@ -176,9 +176,9 @@ const PaymentPlans = () => {
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem' }}>Apply Filters</Button>
-        <Button variant="contained" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem' }}>Create Template</Button>
-        <Button variant="contained" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem' }}>Print</Button>
+        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
+        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
+        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Table */}

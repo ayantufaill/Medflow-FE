@@ -54,13 +54,15 @@ const ProceduresInsurance = () => {
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, opacity: 0.7 }}
+            size="small"
+            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', opacity: 0.7 }}
           >
             Apply Filters
           </Button>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600 }}
+            size="small"
+            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto' }}
           >
             Create Template
           </Button>
@@ -71,7 +73,8 @@ const ProceduresInsurance = () => {
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600 }}
+            size="small"
+            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto' }}
           >
             Print
           </Button>

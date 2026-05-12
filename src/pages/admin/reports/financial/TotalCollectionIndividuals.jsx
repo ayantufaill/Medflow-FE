@@ -68,13 +68,15 @@ const TotalCollectionIndividuals = () => {
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, '&:hover': { backgroundColor: '#4a74a8' } }}
+            size="small"
+            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
           >
             Apply Filters
           </Button>
           <Button
             variant="contained"
-            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, '&:hover': { backgroundColor: '#c99f54' } }}
+            size="small"
+            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
           >
             Create Template
           </Button>
@@ -85,13 +87,15 @@ const TotalCollectionIndividuals = () => {
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
         <Button
           variant="contained"
-          sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, '&:hover': { backgroundColor: '#4a74a8' } }}
+          size="small"
+          sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
         >
           Export as CSV
         </Button>
         <Button
           variant="contained"
-          sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, '&:hover': { backgroundColor: '#c99f54' } }}
+          size="small"
+          sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
         >
           Print
         </Button>

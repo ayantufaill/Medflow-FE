@@ -65,11 +65,15 @@ const CreditAccountsReport = () => {
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
+            size="small"
             sx={{
               backgroundColor: '#5c85bb',
               textTransform: 'none',
-              fontSize: '0.8rem',
+              fontSize: '0.72rem',
               fontWeight: 600,
+              py: 0.3,
+              px: 1.5,
+              minWidth: 'auto',
               '&:hover': { backgroundColor: '#4a74a8' }
             }}
           >
@@ -77,11 +81,15 @@ const CreditAccountsReport = () => {
           </Button>
           <Button
             variant="contained"
+            size="small"
             sx={{
               backgroundColor: '#dcb265',
               textTransform: 'none',
-              fontSize: '0.8rem',
+              fontSize: '0.72rem',
               fontWeight: 600,
+              py: 0.3,
+              px: 1.5,
+              minWidth: 'auto',
               '&:hover': { backgroundColor: '#c99f54' }
             }}
           >
@@ -94,11 +102,15 @@ const CreditAccountsReport = () => {
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
         <Button
           variant="contained"
+          size="small"
           sx={{
             backgroundColor: '#5c85bb',
             textTransform: 'none',
-            fontSize: '0.8rem',
+            fontSize: '0.72rem',
             fontWeight: 600,
+            py: 0.3,
+            px: 1.5,
+            minWidth: 'auto',
             '&:hover': { backgroundColor: '#4a74a8' }
           }}
         >
@@ -106,12 +118,16 @@ const CreditAccountsReport = () => {
         </Button>
         <Button
           variant="contained"
+          size="small"
           startIcon={<span>🖨️</span>}
           sx={{
             backgroundColor: '#dcb265',
             textTransform: 'none',
-            fontSize: '0.8rem',
+            fontSize: '0.72rem',
             fontWeight: 600,
+            py: 0.3,
+            px: 1.5,
+            minWidth: 'auto',
             '&:hover': { backgroundColor: '#c99f54' }
           }}
         >

@@ -51,6 +51,11 @@ const DepositSummary = () => {
             Create new deposit summary:
           </Typography>
 
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+          </Box>
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '0.85rem' }}>Transactions Date Range:</Typography>
@@ -65,9 +70,9 @@ const DepositSummary = () => {
                 <MenuItem value="Weekly">Weekly</MenuItem>
               </Select>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b' }}>← May 08, 2026 →</Typography>
-              <Typography sx={{ fontSize: '0.85rem' }}>Date: 05/08/2026</Typography>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+              <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
+              <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
             </Box>
           </Box>
 
@@ -89,32 +94,12 @@ const DepositSummary = () => {
             <CheckboxGroup title="Include Deposits" items={PAYMENT_TYPES.slice(0, 5)} />
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, mt: 4, justifyContent: 'flex-end', borderTop: '1px solid #e0e0e0', pt: 2 }}>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: '#5c85bb',
-                textTransform: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { backgroundColor: '#4a74a8' }
-              }}
-            >
-              Create Deposit
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
+              Preview Deposit
             </Button>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: '#dcb265',
-                textTransform: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { backgroundColor: '#c99f54' }
-              }}
-            >
-              Create Template
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
+              Print Slip
             </Button>
           </Box>
         </Grid>
