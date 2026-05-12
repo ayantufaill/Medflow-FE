@@ -39,6 +39,12 @@ const ProgressNotesPage = () => {
   const [textColorAnchor, setTextColorAnchor] = useState(null);
   const [formatState, setFormatState] = useState({ bold: false, italic: false, align: 'left' });
   const editorRef = React.useRef(null);
+  const [completedProcedures, setCompletedProcedures] = useState([
+    { id: 1, code: 'D0120', procedure: 'Periodic Oral Evaluation', tooth: '', type: 'Diagnostic', selected: false },
+    { id: 2, code: 'D1110', procedure: 'Prophylaxis - Adult', tooth: '', type: 'Preventative', selected: false },
+    { id: 3, code: 'D0274', procedure: 'Bitewings - Four Radiographic Images', tooth: '', type: 'Diagnostic', selected: false },
+    { id: 4, code: 'D1206', procedure: 'Topical Application of Fluoride Varnish', tooth: '', type: 'Preventative', selected: false },
+  ]);
 
   const standardColors = [
     '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
@@ -312,7 +318,6 @@ const ProgressNotesPage = () => {
                         <IconButton size="small" onClick={() => handleToggleRow(note.id)}>
                           {note.isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
                         </IconButton>
-                        {note.isExpanded && <EventNoteIcon sx={{ fontSize: '1.1rem', mr: 1, color: '#666' }} />}
                         <Typography sx={{ fontSize: '0.8rem' }}>{note.date}</Typography>
                       </Box>
                     </TableCell>
@@ -908,13 +913,84 @@ const ProgressNotesPage = () => {
         <DialogActions><Button onClick={handleAddNote} variant="contained" sx={{ bgcolor: '#2e3b84' }}>Save</Button></DialogActions>
       </Dialog>
 
-      <Dialog open={openProcDialog} onClose={() => setOpenProcDialog(false)}>
-        <DialogTitle>Add Completed Procedure</DialogTitle>
-        <DialogContent>
-          <TextField fullWidth placeholder="e.g. D0120 - Periodic Evaluation" value={newProc} onChange={(e) => setNewProc(e.target.value)} sx={{ mt: 1 }} />
+      <Dialog open={openProcDialog} onClose={() => setOpenProcDialog(false)} maxWidth="md" fullWidth>
+        <Box sx={{ bgcolor: '#5b84c1', p: 1.5, textAlign: 'center' }}>
+          <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '1.1rem' }}>
+            Display Completed Procedures
+          </Typography>
+        </Box>
+        <DialogContent sx={{ p: 2 }}>
+          <TableContainer component={Box} sx={{ borderBottom: '1px solid #eee', mb: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <input type="checkbox" onChange={(e) => {
+                        setCompletedProcedures(completedProcedures.map(p => ({ ...p, selected: e.target.checked })));
+                      }} />
+                      <Typography sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>All</Typography>
+                    </Stack>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Code ⇅</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Procedure</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Tooth# ⇅</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>ProcedureType</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {completedProcedures.map((proc) => (
+                  <TableRow key={proc.id}>
+                    <TableCell padding="checkbox">
+                      <input type="checkbox" checked={proc.selected} onChange={() => {
+                        setCompletedProcedures(completedProcedures.map(p => p.id === proc.id ? { ...p, selected: !p.selected } : p));
+                      }} />
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem' }}>{proc.code}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem' }}>{proc.procedure}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem' }}>{proc.tooth}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem' }}>{proc.type}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          <Button 
+            variant="contained" size="small"
+            sx={{ 
+              bgcolor: '#5b84c1', textTransform: 'none', px: 2, 
+              '&:hover': { bgcolor: '#4a6fa5' }, boxShadow: 'none'
+            }}
+          >
+            Add More
+          </Button>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleAddProcedure} variant="contained" sx={{ bgcolor: '#2e3b84' }}>Add</Button>
+        <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button 
+            onClick={() => {
+              const selected = completedProcedures.filter(p => p.selected).map(p => `${p.code} - ${p.procedure}`);
+              setNotes(notes.map(n => n.id === activeNoteId ? { ...n, procedures: [...n.procedures, ...selected] } : n));
+              setOpenProcDialog(false);
+            }} 
+            variant="contained"
+            sx={{ 
+              bgcolor: '#ccae81', textTransform: 'none', px: 4, fontWeight: 600,
+              '&:hover': { bgcolor: '#b79a6d' }, boxShadow: 'none'
+            }}
+          >
+            Save
+          </Button>
+          <Button 
+            onClick={() => setOpenProcDialog(false)} 
+            variant="contained"
+            sx={{ 
+              bgcolor: '#a0a0a0', textTransform: 'none', px: 4, fontWeight: 600,
+              '&:hover': { bgcolor: '#8e8e8e' }, boxShadow: 'none'
+            }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

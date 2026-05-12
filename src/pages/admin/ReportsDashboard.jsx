@@ -26,11 +26,36 @@ import RxReport from './reports/clinical/RxReport';
 import LoginReport from './reports/others/LoginReport';
 import AuditReport from './reports/others/AuditReport';
 import SavedReports from './reports/saving/SavedReports';
-import { TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
+import AgingReport from './reports/financial/AgingReport';
+import PatientAgingReport from './reports/financial/PatientAgingReport';
+import DepositSlips from './reports/financial/DepositSlips';
+import ProductionReport from './reports/financial/ProductionReport';
+import ProductionCollection from './reports/financial/ProductionCollection';
+import ProductionCollectionSummary from './reports/financial/ProductionCollectionSummary';
+import ProviderCollectionPaymentType from './reports/financial/ProviderCollectionPaymentType';
+import ProductionPerCode from './reports/financial/ProductionPerCode';
+import CollectionCodeCarrier from './reports/financial/CollectionCodeCarrier';
+import AdjustmentReport from './reports/financial/AdjustmentReport';
+import CourtesyCreditReport from './reports/financial/CourtesyCreditReport';
+import CourtesyCreditModifications from './reports/financial/CourtesyCreditModifications';
+import CreditAccountsReport from './reports/financial/CreditAccountsReport';
+import ModificationsReport from './reports/financial/ModificationsReport';
+import DepositSummary from './reports/financial/DepositSummary';
+import CollectionCarrier from './reports/financial/CollectionCarrier';
+import TotalCollectionIndividuals from './reports/financial/TotalCollectionIndividuals';
+import TotalCollectionFamily from './reports/financial/TotalCollectionFamily';
+import PaymentPlans from './reports/financial/PaymentPlans';
+import PaymentLines from './reports/financial/PaymentLines';
+import PaymentRequest from './reports/financial/PaymentRequest';
+import OpenEdgeTransactions from './reports/financial/OpenEdgeTransactions';
+import ProceduresInsurance from './reports/financial/ProceduresInsurance';
+import FamilyMigratedBalances from './reports/financial/FamilyMigratedBalances';
+import { TABS, FINANCIAL_REPORT_SUB_TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
 import ClinicalReportsSubNav from '../../components/admin/reports/ClinicalReportsSubNav';
 import OthersReportsSubNav from '../../components/admin/reports/OthersReportsSubNav';
 import SavingReportsSubNav from '../../components/admin/reports/SavingReportsSubNav';
+import FinancialReportsSubNav from '../../components/admin/reports/FinancialReportsSubNav';
 
 const ReportsDashboard = () => {
   const theme = useTheme();
@@ -46,6 +71,7 @@ const ReportsDashboard = () => {
 
   const getCurrentPageLabel = () => {
     const allSubTabs = [
+      ...FINANCIAL_REPORT_SUB_TABS,
       ...PATIENT_REPORT_SUB_TABS,
       ...CLINICAL_REPORT_SUB_TABS,
       ...OTHERS_REPORT_SUB_TABS,
@@ -97,6 +123,7 @@ const ReportsDashboard = () => {
       </Box>
 
       {/* Sub-nav — visible on hover */}
+      {hoveredTab === 0 && <FinancialReportsSubNav />}
       {hoveredTab === 1 && <ClinicalReportsSubNav />}
       {hoveredTab === 2 && <PatientReportsSubNav />}
       {hoveredTab === 3 && <OthersReportsSubNav />}
@@ -152,6 +179,54 @@ const ReportsDashboard = () => {
           <LoginReport />
         ) : location.pathname === '/admin/reports/others/audit' ? (
           <AuditReport />
+                ) : location.pathname === '/admin/reports/financial/aging' ? (
+          <AgingReport />
+        ) : location.pathname === '/admin/reports/financial/patient-aging' ? (
+          <PatientAgingReport />
+        ) : location.pathname === '/admin/reports/financial/deposit-slips' ? (
+          <DepositSlips />
+        ) : location.pathname === '/admin/reports/financial/production' ? (
+          <ProductionReport />
+        ) : location.pathname === '/admin/reports/financial/production-collection' ? (
+          <ProductionCollection />
+        ) : location.pathname === '/admin/reports/financial/production-collection-summary' ? (
+          <ProductionCollectionSummary />
+        ) : location.pathname === '/admin/reports/financial/provider-collection-payment-type' ? (
+          <ProviderCollectionPaymentType />
+        ) : location.pathname === '/admin/reports/financial/production-per-code' ? (
+          <ProductionPerCode />
+        ) : location.pathname === '/admin/reports/financial/collection-code-carrier' ? (
+          <CollectionCodeCarrier />
+        ) : location.pathname === '/admin/reports/financial/adjustment' ? (
+          <AdjustmentReport />
+        ) : location.pathname === '/admin/reports/financial/courtesy-credit' ? (
+          <CourtesyCreditReport />
+        ) : location.pathname === '/admin/reports/financial/courtesy-credit-modifications' ? (
+          <CourtesyCreditModifications />
+        ) : location.pathname === '/admin/reports/financial/credit-accounts' ? (
+          <CreditAccountsReport />
+        ) : location.pathname === '/admin/reports/financial/modifications' ? (
+          <ModificationsReport />
+        ) : location.pathname === '/admin/reports/financial/deposit-summary' ? (
+          <DepositSummary />
+        ) : location.pathname === '/admin/reports/financial/collection-carrier' ? (
+          <CollectionCarrier />
+        ) : location.pathname === '/admin/reports/financial/total-collection-individuals' ? (
+          <TotalCollectionIndividuals />
+        ) : location.pathname === '/admin/reports/financial/total-collection-family' ? (
+          <TotalCollectionFamily />
+        ) : location.pathname === '/admin/reports/financial/payment-plans' ? (
+          <PaymentPlans />
+        ) : location.pathname === '/admin/reports/financial/payment-lines' ? (
+          <PaymentLines />
+        ) : location.pathname === '/admin/reports/financial/payment-request' ? (
+          <PaymentRequest />
+        ) : location.pathname === '/admin/reports/financial/openedge-transactions' ? (
+          <OpenEdgeTransactions />
+        ) : location.pathname === '/admin/reports/financial/procedures-insurance' ? (
+          <ProceduresInsurance />
+        ) : location.pathname === '/admin/reports/financial/family-migrated-balances' ? (
+          <FamilyMigratedBalances />
         ) : location.pathname === '/admin/reports/saving' ? (
           <SavedReports />
         ) : (
