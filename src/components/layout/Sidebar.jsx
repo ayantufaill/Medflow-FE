@@ -71,7 +71,7 @@ const menuItems = [
     path: '/rooms',
     requiredRoles: ['Admin'],
   },*/
- // { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
+  // { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
   {
     text: 'Patients',
     icon: <People />,
@@ -138,12 +138,12 @@ const menuItems = [
     path: '/invoices',
     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
   },*/
- /* {
-    text: 'Payments',
-    icon: <Payment />,
-    path: '/payments',
-    requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-  },*/
+  /* {
+     text: 'Payments',
+     icon: <Payment />,
+     path: '/payments',
+     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
+   },*/
   /*{
     text: 'Estimates',
     icon: <RequestQuote />,
@@ -155,7 +155,7 @@ const menuItems = [
   { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
   { text: 'Finance', icon: <AttachMoney />, path: '/finance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
   { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
- // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
+  // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
   /*{
     text: 'Practice Info',
     icon: <Business />,
@@ -208,7 +208,6 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
       getBoundingClientRect: () => rect,
       nodeType: 1,
     });
-    navigate('/admin/user-management');
   };
 
   const handleSettingsClose = () => {
@@ -613,7 +612,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             minWidth: 200,
             borderRadius: '8px',
             boxShadow: '0px 4px 12px rgba(0,0,0,0.1)',
-            ml: 1,
+            ml: -1,
           },
         }}
       >
@@ -632,7 +631,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
               key={item}
               onClick={() => {
                 if (item === 'Advanced Reporting') navigate('/admin/advanced-reporting');
-                if (item === 'Admin') navigate('/admin/reports');
+                if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Dashboard') navigate('/admin/reports');
                 handleSettingsClose();
               }}
