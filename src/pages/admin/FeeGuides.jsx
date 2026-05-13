@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -34,6 +34,7 @@ import EmptyFeeGuideDialog from '../../components/admin/feeguides/EmptyFeeGuideD
 import ReestimateDialog from '../../components/admin/feeguides/ReestimateDialog';
 import EditFeeGuideDialog from '../../components/admin/feeguides/EditFeeGuideDialog';
 import AuditHistoryDialog from '../../components/admin/feeguides/AuditHistoryDialog';
+import { feeService } from '../../services/fee.service';
 
 const FeeGuides = () => {
   const navigate = useNavigate();
@@ -48,17 +49,31 @@ const FeeGuides = () => {
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [selectedFeeGuide, setSelectedFeeGuide] = useState('');
 
-  const feeGuidesData = [
-    { id: 1, name: 'Careington PPO Platinum (directly in network)', default: 'No', defaultProvider: '', plans: 354 },
-    { id: 2, name: 'Full arch $0 fee guide', default: 'No', defaultProvider: '', plans: 0 },
-    { id: 3, name: 'Office Fees 2021', default: 'No', defaultProvider: '', plans: 0 },
-    { id: 4, name: 'Office Fees 2022', default: 'No', defaultProvider: '', plans: 0 },
-    { id: 5, name: 'Office Fees 2023/2024', default: 'No', defaultProvider: '', plans: 13 },
-    { id: 6, name: 'Office Fees 2025', default: 'No', defaultProvider: '', plans: 3 },
-    { id: 7, name: 'Office Fees 2026', default: 'Yes', defaultProvider: '', plans: 8 },
-    { id: 8, name: 'TDS Membership 2023', default: 'No', defaultProvider: '', plans: 14 },
-    { id: 9, name: 'TDS Membership 2025', default: 'No', defaultProvider: '', plans: 11 },
-  ];
+  const [feeGuidesData, setFeeGuidesData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchFeeGuides();
+  }, []);
+
+  const fetchFeeGuides = async () => {
+    try {
+      setLoading(true);
+      const data = await feeService.getFeeSchedules();
+      const mappedData = data.map(fs => ({
+        id: fs.FeeSchedNum.toString(),
+        name: fs.Description,
+        default: fs.FeeSchedType === 0 ? 'Yes' : 'No', // Simplified logic
+        defaultProvider: '',
+        plans: 0 // Mocked for now
+      }));
+      setFeeGuidesData(mappedData);
+    } catch (error) {
+      console.error('Failed to fetch fee guides:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenPlans = (name) => {
     setSelectedFeeGuide(name.toUpperCase());
