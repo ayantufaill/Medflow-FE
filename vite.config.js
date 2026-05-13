@@ -7,6 +7,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // usePolling is required when source files are bind-mounted inside Docker
+    // because inotify events don't cross the container boundary on Linux.
+    // Set DOCKER=1 in docker-compose to enable; has no effect on native dev.
+    watch: process.env.DOCKER ? { usePolling: true, interval: 1000 } : undefined,
   },
   build: {
     chunkSizeWarningLimit: 1000,
