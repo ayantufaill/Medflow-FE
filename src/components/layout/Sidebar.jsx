@@ -630,9 +630,17 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             <MenuItem
               key={item}
               onClick={() => {
+                console.log("Settings Menu Item Clicked:", item);
+                if (item === 'Claim Management') navigate('/claims');
+                if (item === 'Batch Actions') navigate('/batch-actions');
                 if (item === 'Advanced Reporting') navigate('/admin/advanced-reporting');
                 if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Dashboard') navigate('/admin/reports');
+                if (item === 'Reports') navigate('/admin/reports/financial');
+                if (item === 'KPI Dashboard') {
+                  console.log("Navigating to KPI Dashboard route: /admin/reports/kpi");
+                  navigate('/admin/reports/kpi');
+                }
                 handleSettingsClose();
               }}
               sx={{

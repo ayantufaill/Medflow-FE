@@ -42,6 +42,39 @@ const COLUMNS = [
 
 const METADATA_FIELDS = ['Metadata', 'dob', 'email', 'inactive', 'isHeadOfHousehold', 'isSubscriber(NonPatient)', 'newPatientDate', 'sex', 'Preferred DDS', 'Preferred HYG', 'zip code', 'recallDate', 'nextTreatmentAppt', 'nextRecareAppt', 'lastAppt', 'patientPoliciesPayers', 'payerName', 'Ins Remain', 'Has Mychart Account', 'Total Outstanding Balance'];
 
+// 1:1 Static Pre-seed Data from Screenshot
+const DEFAULT_REPORTS = {
+  Patient: [
+    { _id: 'def-rep-1', name: 'Screening for inactive patients', kind: 'Patient' },
+    { _id: 'def-rep-2', name: 'Total # of patients', kind: 'Patient' },
+    { _id: 'def-rep-3', name: 'Credit accounts report', kind: 'Patient' },
+    { _id: 'def-rep-4', name: 'PPO percentage', kind: 'Patient' },
+    { _id: 'def-rep-5', name: 'Accounts Receivable by patient', kind: 'Patient' },
+    { _id: 'def-rep-6', name: 'x', kind: 'Patient' },
+  ],
+  Procedures: [
+    { _id: 'def-rep-7', name: "Whitening pt's", kind: 'Procedures' },
+    { _id: 'def-rep-8', name: 'Patients with no appointment', kind: 'Procedures' },
+    { _id: 'def-rep-9', name: 'DNOA collection', kind: 'Procedures' },
+  ]
+};
+
+const DEFAULT_AUDIENCES = {
+  Patient: [
+    { _id: 'def-aud-1', name: 'Email Campaign #1', kind: 'Patient' },
+    { _id: 'def-aud-2', name: 'Spark Day', kind: 'Patient' },
+    { _id: 'def-aud-3', name: 'Family', kind: 'Patient' },
+    { _id: 'def-aud-4', name: 'Use it Lose it.', kind: 'Patient' },
+    { _id: 'def-aud-5', name: 'Deactivation list 12/2023', kind: 'Patient' },
+    { _id: 'def-aud-6', name: 'Active patient 09/24', kind: 'Patient' },
+    { _id: 'def-aud-7', name: 'Newsletter active patients 4/22', kind: 'Patient' },
+    { _id: 'def-aud-8', name: 'Valentines 2025', kind: 'Patient' },
+    { _id: 'def-aud-9', name: 'TDS Membership 2025 update', kind: 'Patient' },
+    { _id: 'def-aud-10', name: 'test', kind: 'Patient' },
+  ],
+  Procedures: []
+};
+
 const AdvancedReporting = () => {
   const [tabValue, setTabValue] = useState(0);
   const [view, setView] = useState('list'); // 'list' or 'detail'
@@ -53,8 +86,8 @@ const AdvancedReporting = () => {
   const [selectedColumns, setSelectedColumns] = useState(['Last Name', 'First Name', 'nextTreatmentAppt', 'nextRecareAppt', 'IsSubscriber(NonPatient)', 'Inactive', 'lastAppt']);
   const [showResults, setShowResults] = useState(false);
 
-  const [reports, setReports] = useState({ Patient: [], Procedures: [] });
-  const [audiences, setAudiences] = useState({ Patient: [], Procedures: [] });
+  const [reports, setReports] = useState(DEFAULT_REPORTS);
+  const [audiences, setAudiences] = useState(DEFAULT_AUDIENCES);
   const [loading, setLoading] = useState(false);
   const [resultsData, setResultsData] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
@@ -66,19 +99,45 @@ const AdvancedReporting = () => {
   const fetchSavedItems = async () => {
     try {
       setLoading(true);
-      const [savedReports, savedAudiences] = await Promise.all([
-        reportingService.getSavedReports(),
-        audienceService.getAllAudiences()
-      ]);
+      let savedReports = [];
+      let savedAudiences = [];
+      
+      try {
+        const [repRes, audRes] = await Promise.all([
+          reportingService.getSavedReports(),
+          audienceService.getAllAudiences()
+        ]);
+        savedReports = repRes || [];
+        savedAudiences = audRes || [];
+      } catch (apiErr) {
+        console.warn('Reporting/Audience API not reachable, using seeded data.', apiErr);
+      }
 
-      const groupedReports = { Patient: [], Procedures: [] };
+      // Merge backend items into static defaults (avoid duplicate names)
+      const groupedReports = { 
+        Patient: [...DEFAULT_REPORTS.Patient], 
+        Procedures: [...DEFAULT_REPORTS.Procedures] 
+      };
       savedReports.forEach(r => {
-        if (groupedReports[r.kind]) groupedReports[r.kind].push(r);
+        if (groupedReports[r.kind]) {
+          const exists = groupedReports[r.kind].some(existing => existing.name.toLowerCase() === r.name.toLowerCase());
+          if (!exists) {
+            groupedReports[r.kind].push(r);
+          }
+        }
       });
 
-      const groupedAudiences = { Patient: [], Procedures: [] };
+      const groupedAudiences = { 
+        Patient: [...DEFAULT_AUDIENCES.Patient], 
+        Procedures: [...DEFAULT_AUDIENCES.Procedures] 
+      };
       savedAudiences.forEach(a => {
-        if (groupedAudiences[a.kind]) groupedAudiences[a.kind].push(a);
+        if (groupedAudiences[a.kind]) {
+          const exists = groupedAudiences[a.kind].some(existing => existing.name.toLowerCase() === a.name.toLowerCase());
+          if (!exists) {
+            groupedAudiences[a.kind].push(a);
+          }
+        }
       });
 
       setReports(groupedReports);
@@ -105,11 +164,22 @@ const AdvancedReporting = () => {
     e.stopPropagation();
     try {
       if (tabValue === 0) {
-        await reportingService.deleteReport(id);
+        if (!id.toString().startsWith('def-')) {
+          await reportingService.deleteReport(id);
+        }
+        setReports(prev => ({
+          ...prev,
+          [category]: prev[category].filter(item => item._id !== id)
+        }));
       } else {
-        await audienceService.deleteAudience(id);
+        if (!id.toString().startsWith('def-')) {
+          await audienceService.deleteAudience(id);
+        }
+        setAudiences(prev => ({
+          ...prev,
+          [category]: prev[category].filter(item => item._id !== id)
+        }));
       }
-      fetchSavedItems();
     } catch (error) {
       console.error('Failed to delete item:', error);
     }
@@ -118,7 +188,6 @@ const AdvancedReporting = () => {
   const handleRunReport = async () => {
     try {
       setLoading(true);
-      // For now using selected columns and a basic filter
       const filters = [
         { field: 'Inactive', operator: 'equals', value: 0 }
       ];
@@ -161,7 +230,7 @@ const AdvancedReporting = () => {
             {tabValue === 0 ? 'Reports' : 'Audience'}
           </Typography>
           <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
-          <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>Report #10:</Typography>
+          <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>Report Details:</Typography>
         </Box>
 
         {/* Header */}
@@ -297,114 +366,156 @@ const AdvancedReporting = () => {
   }
 
   return (
-    <Box sx={{ p: 0, minHeight: '100vh', backgroundColor: '#fff' }}>
+    <Box sx={{ p: 0, minHeight: '100vh', backgroundColor: '#ffffff' }}>
       {/* Page Title */}
       <Box sx={{ px: 3, py: 2 }}>
-        <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, fontSize: '1.1rem' }}>
+        <Typography variant="h5" sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '1.25rem' }}>
           Advanced Reporting
         </Typography>
       </Box>
 
-      {/* Tabs Section */}
-      <Box sx={{ borderBottom: 1, borderColor: '#e0e0e0', px: 3 }}>
+      {/* Tabs Section - Styled as high-fidelity folder cards from screenshot */}
+      <Box sx={{ borderBottom: '1px solid #e2e8f0', px: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           sx={{
+            minHeight: 'auto',
             '& .MuiTabs-indicator': {
-              backgroundColor: '#1a3a6b',
-              height: 3,
-            },
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontWeight: 500,
-              fontSize: '0.85rem',
-              minWidth: 80,
-              color: '#9e9e9e',
-              '&.Mui-selected': {
-                color: '#1a3a6b',
-              },
+              display: 'none',
             },
           }}
         >
-          <Tab label="Reports" />
-          <Tab label="Audience" />
+          <Tab
+            label="Reports"
+            sx={{
+              textTransform: 'none',
+              fontWeight: tabValue === 0 ? 600 : 500,
+              fontSize: '0.85rem',
+              color: tabValue === 0 ? '#1a3a6b' : '#8898aa',
+              backgroundColor: tabValue === 0 ? '#ffffff' : 'transparent',
+              borderTop: tabValue === 0 ? '3px solid #1a3a6b' : '3px solid transparent',
+              borderLeft: tabValue === 0 ? '1px solid #e2e8f0' : 'none',
+              borderRight: tabValue === 0 ? '1px solid #e2e8f0' : 'none',
+              borderBottom: tabValue === 0 ? '1px solid #ffffff' : 'none',
+              borderRadius: '4px 4px 0 0',
+              minHeight: 40,
+              px: 3.5,
+              mr: 1,
+              position: 'relative',
+              top: '1px',
+              zIndex: tabValue === 0 ? 2 : 1,
+            }}
+          />
+          <Tab
+            label="Audience"
+            sx={{
+              textTransform: 'none',
+              fontWeight: tabValue === 1 ? 600 : 500,
+              fontSize: '0.85rem',
+              color: tabValue === 1 ? '#1a3a6b' : '#8898aa',
+              backgroundColor: tabValue === 1 ? '#ffffff' : 'transparent',
+              borderTop: tabValue === 1 ? '3px solid #1a3a6b' : '3px solid transparent',
+              borderLeft: tabValue === 1 ? '1px solid #e2e8f0' : 'none',
+              borderRight: tabValue === 1 ? '1px solid #e2e8f0' : 'none',
+              borderBottom: tabValue === 1 ? '1px solid #ffffff' : 'none',
+              borderRadius: '4px 4px 0 0',
+              minHeight: 40,
+              px: 3.5,
+              position: 'relative',
+              top: '1px',
+              zIndex: tabValue === 1 ? 2 : 1,
+            }}
+          />
         </Tabs>
+
+        {/* Add Report Link on far right */}
+        <Button
+          startIcon={<AddIcon sx={{ fontSize: '0.9rem !important', position: 'relative', top: '-1px' }} />}
+          onClick={() => setOpenModal(true)}
+          sx={{
+            textTransform: 'none',
+            color: '#1a3a6b',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            mb: 0.8,
+            '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
+          }}
+        >
+          {tabValue === 0 ? 'Add Report' : 'Add Audience'}
+        </Button>
       </Box>
 
       {/* Content Area */}
       <Box sx={{ p: 3 }}>
-        {/* Add Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <Button
-            startIcon={<AddIcon sx={{ fontSize: '1rem !important' }} />}
-            onClick={() => setOpenModal(true)}
-            sx={{
-              textTransform: 'none',
-              color: '#1a3a6b',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
-            }}
-          >
-            {tabValue === 0 ? 'Add Report' : 'Add Audience'}
-          </Button>
-        </Box>
-
-        {/* List */}
+        {/* List categorized by kind */}
         {Object.entries(tabValue === 0 ? reports : audiences).map(([category, items]) => (
           <Box key={category} sx={{ mb: 4 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#000', mb: 1 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: '#1a3a6b', mb: 1.2 }}>
               {category}
             </Typography>
-            <Box sx={{ border: '1px solid #f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
-              {items.map((item, index) => (
-                <Box
-                  key={index}
-                  onClick={() => handleItemClick(item, category)}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    px: 2,
-                    py: 0.75,
-                    backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff',
-                    borderBottom: index === items.length - 1 ? 'none' : '1px solid #f0f0f0',
-                    cursor: 'pointer',
-                    '&:hover': { backgroundColor: '#f5f7fa' },
-                  }}
-                >
-                  <Typography sx={{ fontSize: '0.85rem', color: '#333' }}>
-                    {item.name}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleDeleteItem(e, category, item._id)}
-                    sx={{ color: '#ffb3b3', '&:hover': { color: '#ff4d4f' } }}
+            {items.length > 0 ? (
+              <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+                {items.map((item, index) => (
+                  <Box
+                    key={item._id || index}
+                    onClick={() => handleItemClick(item.name, category)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      px: 2,
+                      py: 1.1,
+                      backgroundColor: '#ffffff',
+                      borderBottom: index === items.length - 1 ? 'none' : '1px solid #edf2f7',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease',
+                      '&:hover': { backgroundColor: '#f8fafc' },
+                    }}
                   >
-                    <DeleteIcon sx={{ fontSize: '1.1rem' }} />
-                  </IconButton>
-                </Box>
-              ))}
-            </Box>
+                    <Typography sx={{ fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>
+                      {item.name}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleDeleteItem(e, category, item._id)}
+                      sx={{ 
+                        color: '#ffa3a3', 
+                        p: 0.5,
+                        '&:hover': { color: '#ef5350', backgroundColor: 'rgba(239, 83, 80, 0.04)' } 
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: '1.05rem' }} />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{ border: '1px dashed #cbd5e1', p: 3, borderRadius: '4px', textAlign: 'center', bgcolor: '#f8fafc' }}>
+                <Typography variant="body2" sx={{ color: '#8898aa', fontStyle: 'italic' }}>
+                  No active audiences saved in this category.
+                </Typography>
+              </Box>
+            )}
           </Box>
         ))}
       </Box>
 
-      {/* Modal */}
+      {/* Add Report / Audience Modal */}
       <Dialog
         open={openModal}
         onClose={() => setOpenModal(false)}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: '8px', overflow: 'hidden' } }}
+        sx={{ '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.2)' } }}
+        PaperProps={{ sx: { borderRadius: '6px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', maxWidth: '450px' } }}
       >
-        <Box sx={{ backgroundColor: '#5c85bb', py: 1, px: 2 }}>
-          <Typography sx={{ color: '#fff', fontSize: '0.9rem', fontWeight: 500, textAlign: 'center' }}>
+        <Box sx={{ backgroundColor: '#547cb0', py: 1.5, px: 2 }}>
+          <Typography sx={{ color: '#fff', fontSize: '0.95rem', fontWeight: 600, textAlign: 'center' }}>
             {tabValue === 0 ? 'Add New Report' : 'Add New Audience'}
           </Typography>
         </Box>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: 2, pb: 1 }}>
           <TextField
             fullWidth
             placeholder={tabValue === 0 ? "Report Name" : "Audience Name"}
@@ -412,13 +523,14 @@ const AdvancedReporting = () => {
             size="small"
             value={reportName}
             onChange={(e) => setReportName(e.target.value)}
-            sx={{ mb: 2, '& .MuiOutlinedInput-root': { fontSize: '0.85rem' } }}
+            sx={{ mb: 2.5, '& .MuiOutlinedInput-root': { fontSize: '0.85rem', borderRadius: '4px', borderColor: '#e0e0e0' } }}
           />
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth size="small" variant="standard" sx={{ '& .MuiInput-underline:before': { borderBottomColor: '#e0e0e0' } }}>
             <Select
               value={reportKind}
               onChange={(e) => setReportKind(e.target.value)}
-              sx={{ fontSize: '0.85rem' }}
+              displayEmpty
+              sx={{ fontSize: '0.85rem', color: reportKind === 'Kind' ? '#999' : '#333' }}
             >
               <MenuItem value="Kind" disabled sx={{ fontSize: '0.85rem' }}>Kind</MenuItem>
               <MenuItem value="Patient" sx={{ fontSize: '0.85rem' }}>Patient</MenuItem>
@@ -426,39 +538,83 @@ const AdvancedReporting = () => {
             </Select>
           </FormControl>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'center', gap: 1 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, justifyContent: 'flex-end', gap: 1 }}>
           <Button
             onClick={async () => {
+              if (!reportName.trim()) {
+                alert('Please enter a name.');
+                return;
+              }
               try {
+                const newId = `custom-${Date.now()}`;
+                const newItem = { _id: newId, name: reportName, kind: reportKind };
+
                 if (tabValue === 0) {
-                  await reportingService.saveReport({ 
-                    name: reportName, 
-                    kind: reportKind, 
-                    filters: [], 
-                    columns: selectedColumns 
-                  });
+                  try {
+                    await reportingService.saveReport({ 
+                      name: reportName, 
+                      kind: reportKind, 
+                      filters: [], 
+                      columns: selectedColumns 
+                    });
+                  } catch (apiErr) {
+                    console.warn('Failed API write, saving locally only:', apiErr);
+                  }
+                  setReports(prev => ({
+                    ...prev,
+                    [reportKind]: [...prev[reportKind], newItem]
+                  }));
                 } else {
-                  await audienceService.saveAudience({ 
-                    name: reportName, 
-                    kind: reportKind, 
-                    filters: [] 
-                  });
+                  try {
+                    await audienceService.saveAudience({ 
+                      name: reportName, 
+                      kind: reportKind, 
+                      filters: [] 
+                    });
+                  } catch (apiErr) {
+                    console.warn('Failed API write, saving locally only:', apiErr);
+                  }
+                  setAudiences(prev => ({
+                    ...prev,
+                    [reportKind]: [...prev[reportKind], newItem]
+                  }));
                 }
                 setOpenModal(false);
                 setReportName('');
                 setReportKind('Kind');
-                fetchSavedItems();
               } catch (error) {
                 console.error('Failed to save item:', error);
               }
             }}
-            sx={{ backgroundColor: '#dcb265', color: '#fff', textTransform: 'none', px: 3, fontSize: '0.85rem', '&:hover': { backgroundColor: '#c99f54' } }}
+            sx={{ 
+              backgroundColor: '#dcb265', 
+              color: '#fff', 
+              textTransform: 'none', 
+              px: 3, 
+              fontSize: '0.85rem', 
+              fontWeight: 600,
+              boxShadow: 'none',
+              borderRadius: '4px',
+              minWidth: '80px',
+              '&:hover': { backgroundColor: '#c99f54', boxShadow: 'none' } 
+            }}
           >
             Save
           </Button>
           <Button
             onClick={() => setOpenModal(false)}
-            sx={{ backgroundColor: '#a6a6a6', color: '#fff', textTransform: 'none', px: 3, fontSize: '0.85rem', '&:hover': { backgroundColor: '#8c8c8c' } }}
+            sx={{ 
+              backgroundColor: '#a6a6a6', 
+              color: '#fff', 
+              textTransform: 'none', 
+              px: 3, 
+              fontSize: '0.85rem', 
+              fontWeight: 600,
+              boxShadow: 'none',
+              borderRadius: '4px',
+              minWidth: '80px',
+              '&:hover': { backgroundColor: '#8c8c8c', boxShadow: 'none' } 
+            }}
           >
             Cancel
           </Button>

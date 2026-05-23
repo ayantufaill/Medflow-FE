@@ -20,6 +20,7 @@ import CreateEstimatePage from '../pages/estimates/CreateEstimatePage';
 import EditEstimatePage from '../pages/estimates/EditEstimatePage';
 import ViewEstimatePage from '../pages/estimates/ViewEstimatePage';
 import ClaimsListPage from '../pages/claims/ClaimsListPage';
+import BatchActionsPage from '../pages/claims/BatchActionsPage';
 import ViewClaimPage from '../pages/claims/ViewClaimPage';
 import DeniedClaimsPage from '../pages/claims/DeniedClaimsPage';
 import ResubmitClaimPage from '../pages/claims/ResubmitClaimPage';
@@ -81,6 +82,7 @@ const billingRoutes = [
   <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingDoctor(<ViewEstimatePage />)} />,
 
   <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />)} />,
+  <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />)} />,
   <Route key="/claims/denied" path="/claims/denied" element={adminBilling(<DeniedClaimsPage />)} />,
   <Route key="/claims/secondary" path="/claims/secondary" element={adminBilling(<SecondaryClaimsPage />)} />,
   <Route key="/claims/:claimId" path="/claims/:claimId" element={adminBilling(<ViewClaimPage />)} />,
