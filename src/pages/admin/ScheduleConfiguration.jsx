@@ -296,7 +296,7 @@ const ScheduleConfiguration = () => {
       <Paper sx={{ p: 3, mt: 4 }}>
         <Typography variant="h6" gutterBottom>Appointment Checklists</Typography>
         <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <Typography variant="subtitle1" gutterBottom>Pre-appointment Checklist</Typography>
             {["Import History", "Import Record", "Appt Reminder", "Verify Insurance Eligibility", "Share Consent Forms"].map((item) => (
               <Box key={item} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee' }}>
@@ -307,9 +307,20 @@ const ScheduleConfiguration = () => {
             <Button sx={{ mt: 2 }}>+ Add</Button>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <Typography variant="subtitle1" gutterBottom>Check-in Checklist</Typography>
             {["Review Records", "Review & sign Visit Plan", "Sign Consent Forms", "Verify Premed Taken"].map((item) => (
+              <Box key={item} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee' }}>
+                <Typography>{item}</Typography>
+                <IconButton color="error" size="small"><DeleteIcon /></IconButton>
+              </Box>
+            ))}
+            <Button sx={{ mt: 2 }}>+ Add</Button>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Typography variant="subtitle1" gutterBottom>Check-out Checklist</Typography>
+            {["Complete & Bill Procedures", "Purchase Products", "Share Clinical Reports", "Prescription", "Schedule Next Appt", "Send Lab Case"].map((item) => (
               <Box key={item} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee' }}>
                 <Typography>{item}</Typography>
                 <IconButton color="error" size="small"><DeleteIcon /></IconButton>

@@ -9,6 +9,8 @@ import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompanie
 import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListPage';
 import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
+import InstallationGuide from './InstallationGuide';
+import MoveData from './MoveData';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
@@ -43,7 +45,7 @@ const USER_MANAGEMENT_SUB_TABS = [
 
 const TABS = [
   { label: 'User Management', path: '/admin/user-management' },
-  { label: 'Practice Setup', path: '/admin/practice-setup' },
+  { label: 'Practice Setup', path: '/admin/practice-setup', clickPath: '/admin/practice-setup/onboarding' },
   { label: 'Patient Communication', path: '/admin/patient-communication' },
   { label: 'Clinical Management', path: '/admin/clinical-management' },
   { label: 'Finance Management', path: '/admin/finance-management' },
@@ -61,6 +63,8 @@ const PRACTICE_SETUP_SUB_TABS = [
   { label: 'Schedule Configuration', path: '/admin/practice-setup/schedule-configuration' },
   { label: 'Settings', path: '/admin/practice-setup/practice-settings' },
   { label: 'Information', path: '/admin/practice-setup/practice-information' },
+  { label: 'Installation Guide', path: '/admin/practice-setup/installation-guide' },
+  { label: 'Move Data', path: '/admin/practice-setup/move-data' },
 ];
 
 const PATIENT_COMMUNICATION_SUB_TABS = [
@@ -77,6 +81,7 @@ const FINANCIAL_MANAGEMENT_SUB_TABS = [
   { label: 'Fee Guide', path: '/admin/finance-management/fee-guide' },
   { label: 'Billing Configuration', path: '/admin/finance-management/billing-configuration' },
   { label: 'Payment Types', path: '/admin/finance-management/payment-types' },
+  { label: 'Payment Terminal', path: '/admin/finance-management/payment-terminal' },
   { label: 'Dashboard Goals', path: '/admin/finance-management/dashboard-goals' },
   { label: 'Payment Presentation', path: '/admin/finance-management/payment-presentation' },
   { label: 'Coverage Book Shortcut', path: '/admin/finance-management/coverage-book-shortcut' },
@@ -120,12 +125,17 @@ const AdminPage = () => {
 
   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
-    isUserManagementSubTab;
+    isUserManagementSubTab ||
+    location.pathname === '/admin/practice-setup/installation-guide';
 
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   if (location.pathname === '/admin') {
     return <Navigate to="/admin/user-management" replace />;
+  }
+
+  if (location.pathname === '/admin/practice-setup') {
+    return <Navigate to="/admin/practice-setup/onboarding" replace />;
   }
 
   if (location.pathname === '/admin/patient-communication') {
@@ -170,7 +180,7 @@ const AdminPage = () => {
                   key={tab.label}
                   label={tab.label}
                   component={Link}
-                  to={tab.path}
+                  to={tab.clickPath || tab.path}
                   disableRipple
                   onMouseEnter={() => setHoveredTab(index)}
                 />
@@ -257,19 +267,25 @@ const AdminPage = () => {
           )
         )}
         {activeTab === 1 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/admin/practice-setup/onboarding')}
-                sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
-              >
-                Onboard New Practice
-              </Button>
+          location.pathname === '/admin/practice-setup/installation-guide' ? (
+            <InstallationGuide />
+          ) : location.pathname === '/admin/practice-setup/move-data' ? (
+            <MoveData />
+          ) : (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => navigate('/admin/practice-setup/onboarding')}
+                  sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
+                >
+                  Onboard New Practice
+                </Button>
+              </Box>
+              <PracticeInfoListPage />
             </Box>
-            <PracticeInfoListPage />
-          </Box>
+          )
         )}
         {activeTab === 2 && (
           location.pathname === '/admin/patient-communication/settings' ? (
@@ -330,6 +346,8 @@ const AdminPage = () => {
               <BillingConfiguration />
             ) : location.pathname === '/admin/finance-management/payment-types' ? (
               <PaymentTypes />
+            ) : location.pathname === '/admin/finance-management/payment-terminal' ? (
+              <PaymentTerminals />
             ) : location.pathname === '/admin/finance-management/dashboard-goals' ? (
               <DashboardGoals />
             ) : location.pathname === '/admin/finance-management/payment-presentation' ? (
