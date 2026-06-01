@@ -48,6 +48,119 @@ const TreatmentPlanPresentation = () => {
   // Form states (simplified for demonstration)
   const [headerChecks, setHeaderChecks] = useState({ logo: true, phone: true });
   
+  // Payment Options States
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [addedPaymentTypes, setAddedPaymentTypes] = useState([
+    {
+      id: '1',
+      typeName: 'Payment Type 1',
+      kind: 'Payment Plan',
+      title: '',
+      body: '',
+      variables: [
+        { name: 'Duration (months)', placeholder: 'Duration (months)', value: '' },
+        { name: 'Management Fee (%)', placeholder: 'Management Fee', value: '' },
+        { name: 'Down Payment (% of total)', placeholder: 'Down Payment (%', value: '' },
+        { name: 'Down Payment', value: 'Auto calculated', isAuto: true },
+        { name: 'Monthly Payment', value: 'Auto calculated', isAuto: true }
+      ]
+    }
+  ]);
+
+  const handleAddPaymentOption = (type) => {
+    const nextIndex = addedPaymentTypes.length + 1;
+    const hasVariables = (type === 'Payment Plan' || type === 'Financing');
+    
+    const newType = {
+      id: Date.now().toString(),
+      typeName: `Payment Type ${nextIndex}`,
+      kind: type,
+      title: '',
+      body: '',
+      variables: hasVariables ? [
+        { name: 'Duration (months)', placeholder: 'Duration (months)', value: '' },
+        { name: 'Management Fee (%)', placeholder: 'Management Fee', value: '' },
+        { name: 'Down Payment (% of total)', placeholder: 'Down Payment (%', value: '' },
+        { name: 'Down Payment', value: 'Auto calculated', isAuto: true },
+        { name: 'Monthly Payment', value: 'Auto calculated', isAuto: true }
+      ] : []
+    };
+    
+    setAddedPaymentTypes([...addedPaymentTypes, newType]);
+    setDropdownOpen(false);
+  };
+
+  const handleTitleChange = (optionId, value) => {
+    setAddedPaymentTypes(addedPaymentTypes.map(opt => 
+      opt.id === optionId ? { ...opt, title: value } : opt
+    ));
+  };
+
+  const handleBodyChange = (optionId, value) => {
+    setAddedPaymentTypes(addedPaymentTypes.map(opt => 
+      opt.id === optionId ? { ...opt, body: value } : opt
+    ));
+  };
+
+  const handleVariableValueChange = (optionId, varName, value) => {
+    setAddedPaymentTypes(addedPaymentTypes.map(opt => {
+      if (opt.id === optionId) {
+        const updatedVars = opt.variables.map(v => 
+          v.name === varName ? { ...v, value: value } : v
+        );
+        return { ...opt, variables: updatedVars };
+      }
+      return opt;
+    }));
+  };
+
+  const handleInsertVariable = (optionId, variableName) => {
+    const textarea = document.getElementById(`body-textarea-${optionId}`);
+    if (!textarea) return;
+
+    const startPos = textarea.selectionStart;
+    const endPos = textarea.selectionEnd;
+    const textVal = textarea.value;
+    const variableText = `{${variableName}}`;
+    
+    const newBody = textVal.substring(0, startPos) + variableText + textVal.substring(endPos, textVal.length);
+    
+    setAddedPaymentTypes(addedPaymentTypes.map(opt => 
+      opt.id === optionId ? { ...opt, body: newBody } : opt
+    ));
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = startPos + variableText.length;
+    }, 0);
+  };
+
+  // Acknowledgment Paragraphs state
+  const [acknowledgments, setAcknowledgments] = useState([
+    "This treatment plan and alternatives have been described to me. I fully understand the risks, benefits, and alternatives of the recommended treatment. My questions have been answered.",
+    "I understand that as the treatment progresses, modifications may be necessary and these may affect the fee. Should this occur, I further understand that the modification of treatment and the change in fee will be discussed with me at the earliest possible time.",
+    "I understand that I am responsible to pay up front for all my treatment. The treatment will be submitted to my dental insurance company on my behalf, but our office will not accept assignment payments from my dental insurance company on my behalf.",
+    "This estimate is valid for 90 days from the date of this letter.",
+    "If treatment commences, but the entire treatment plan is not completed, I acknowledge that the expected outcome for whatever procedures are completed may be compromised."
+  ]);
+
+  // Click outside listener for dropdown
+  React.useEffect(() => {
+    const handleOutsideClick = () => {
+      setDropdownOpen(false);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  const handleAddParagraph = () => {
+    setAcknowledgments([...acknowledgments, "New acknowledgment paragraph text here."]);
+  };
+
+  const handleDeleteParagraph = (indexToDelete) => {
+    setAcknowledgments(acknowledgments.filter((_, idx) => idx !== indexToDelete));
+  };
+  
   const handleOpenSyncDialog = () => setSyncDialogOpen(true);
   const handleCloseSyncDialog = () => setSyncDialogOpen(false);
 
@@ -246,8 +359,237 @@ const TreatmentPlanPresentation = () => {
               <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
                 <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Payment Options</Typography>
               </Grid>
-              <Grid size={10.5} sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>+ add new payment option</Typography>
+              <Grid size={10.5} sx={{ p: 2 }}>
+                {/* Dynamic Stack of Payment Options */}
+                {addedPaymentTypes.map((option, idx) => (
+                  <Box key={option.id} sx={{ mb: 3.5 }}>
+                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#4a5568', mb: 1 }}>
+                      {option.typeName}
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start' }}>
+                      {/* Left: Variables Table */}
+                      <Box sx={{ width: '40%', border: '1px solid #cbd5e0', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#fff' }}>
+                        <Box sx={{ display: 'flex', backgroundColor: '#0c345d', color: '#fff', p: '6px 12px' }}>
+                          <Typography sx={{ fontSize: '11px', fontWeight: 700, flex: 1.2 }}>Variables</Typography>
+                          <Typography sx={{ fontSize: '11px', fontWeight: 700, flex: 1 }}>Default Values</Typography>
+                        </Box>
+                        
+                        {option.variables.map((variable) => (
+                          <Box 
+                            key={variable.name} 
+                            sx={{ 
+                              display: 'flex', 
+                              borderBottom: '1px solid #e2e8f0', 
+                              '&:last-child': { borderBottom: 'none' }, 
+                              alignItems: 'center', 
+                              p: '6px 12px' 
+                            }}
+                          >
+                            <Typography 
+                              onClick={() => handleInsertVariable(option.id, variable.name)}
+                              sx={{ 
+                                fontSize: '11px', 
+                                color: '#1a3a6b', 
+                                fontWeight: 500, 
+                                flex: 1.2, 
+                                cursor: 'pointer', 
+                                '&:hover': { textDecoration: 'underline', color: '#4a90e2' } 
+                              }}
+                            >
+                              {variable.name}
+                            </Typography>
+                            
+                            {variable.isAuto ? (
+                              <Typography sx={{ fontSize: '11px', color: '#a0aec0', fontStyle: 'italic', flex: 1 }}>
+                                Auto calculated
+                              </Typography>
+                            ) : (
+                              <TextField
+                                size="small"
+                                placeholder={variable.placeholder}
+                                value={variable.value}
+                                onChange={(e) => handleVariableValueChange(option.id, variable.name, e.target.value)}
+                                sx={{ 
+                                  flex: 1,
+                                  '& .MuiInputBase-input': { 
+                                    fontSize: '11px', 
+                                    py: 0.4, 
+                                    px: 1,
+                                    color: '#4a5568',
+                                    backgroundColor: '#fff'
+                                  },
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#cbd5e0'
+                                  }
+                                }}
+                              />
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+
+                      {/* Right: Title & Body Textarea */}
+                      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#4a5568', width: '35px' }}>
+                            Title:
+                          </Typography>
+                          <TextField 
+                            size="small" 
+                            fullWidth 
+                            value={option.title} 
+                            onChange={(e) => handleTitleChange(option.id, e.target.value)}
+                            sx={{ '& .MuiInputBase-input': { fontSize: '11px', py: 0.5 } }} 
+                          />
+                        </Box>
+                        
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={4}
+                          value={option.body}
+                          id={`body-textarea-${option.id}`}
+                          onChange={(e) => handleBodyChange(option.id, e.target.value)}
+                          sx={{ 
+                            '& .MuiInputBase-root': { backgroundColor: '#fff' },
+                            '& .MuiInputBase-input': { fontSize: '11px', lineHeight: 1.5, color: '#333' } 
+                          }}
+                        />
+                        
+                        <Typography sx={{ fontSize: '10px', color: '#718096', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          ℹ️ To add a variable into your body, simply put your text cursor where you would like to add it, then click on the variable
+                        </Typography>
+                      </Box>
+
+                      {/* Far Right: Delete Trash Icon */}
+                      <Box sx={{ pt: 0.5 }}>
+                        <IconButton 
+                          size="small"
+                          onClick={() => setAddedPaymentTypes(addedPaymentTypes.filter(opt => opt.id !== option.id))}
+                          sx={{ color: '#f56565', '&:hover': { color: '#e53e3e', backgroundColor: '#fff5f5' } }}
+                        >
+                          <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                    
+                    {idx < addedPaymentTypes.length - 1 && <Divider sx={{ mt: 3.5, mb: 3.5 }} />}
+                  </Box>
+                ))}
+
+                {/* Add new payment option button */}
+                <Box sx={{ position: 'relative', display: 'inline-block', mt: addedPaymentTypes.length > 0 ? 1 : 0 }}>
+                  <Typography 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDropdownOpen(!dropdownOpen);
+                    }}
+                    sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    + add new payment option
+                  </Typography>
+
+                  {dropdownOpen && (
+                    <Box 
+                      sx={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        zIndex: 1000,
+                        mt: 0.5,
+                        minWidth: 180,
+                        backgroundColor: '#edf2f7',
+                        border: '1px solid #718096',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                        borderRadius: '2px',
+                        overflow: 'hidden',
+                        fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+                      }}
+                    >
+                      {/* Please choose payment kind */}
+                      <Box 
+                        sx={{ 
+                          p: '6px 12px', 
+                          backgroundColor: '#e2e8f0', 
+                          borderBottom: '1px solid #cbd5e0',
+                          cursor: 'default'
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '11px', fontWeight: 500, color: '#718096' }}>
+                          Please choose payment kind
+                        </Typography>
+                      </Box>
+
+                      {/* Pay In Advance */}
+                      <Box 
+                        onClick={() => handleAddPaymentOption('Pay In Advance')}
+                        sx={{ 
+                          p: '6px 12px', 
+                          backgroundColor: '#edf2f7', 
+                          color: '#1a3a6b',
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#e2e8f0' }
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
+                          Pay In Advance
+                        </Typography>
+                      </Box>
+
+                      {/* Pay As You Go */}
+                      <Box 
+                        onClick={() => handleAddPaymentOption('Pay As You Go')}
+                        sx={{ 
+                          p: '6px 12px', 
+                          backgroundColor: '#edf2f7', 
+                          color: '#1a3a6b',
+                          cursor: 'pointer',
+                          borderTop: '1px solid #cbd5e0',
+                          '&:hover': { backgroundColor: '#e2e8f0' }
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
+                          Pay As You Go
+                        </Typography>
+                      </Box>
+
+                      {/* Payment Plan */}
+                      <Box 
+                        onClick={() => handleAddPaymentOption('Payment Plan')}
+                        sx={{ 
+                          p: '6px 12px', 
+                          backgroundColor: '#1a3a6b', 
+                          color: '#fff',
+                          cursor: 'pointer',
+                          borderTop: '1px solid #cbd5e0',
+                          '&:hover': { backgroundColor: '#142a52' }
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
+                          Payment Plan
+                        </Typography>
+                      </Box>
+
+                      {/* Financing */}
+                      <Box 
+                        onClick={() => handleAddPaymentOption('Financing')}
+                        sx={{ 
+                          p: '6px 12px', 
+                          backgroundColor: '#edf2f7', 
+                          color: '#1a3a6b',
+                          cursor: 'pointer',
+                          borderTop: '1px solid #cbd5e0',
+                          '&:hover': { backgroundColor: '#e2e8f0' }
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
+                          Financing
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
               </Grid>
             </Grid>
           </Paper>
@@ -259,30 +601,39 @@ const TreatmentPlanPresentation = () => {
                 <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Acknowledgment</Typography>
               </Grid>
               <Grid size={10.5} sx={{ p: 2 }}>
-                {[
-                  "This treatment plan and alternatives have been described to me. I fully understand the risks, benefits, and alternatives of the recommended treatment. My questions have been answered.",
-                  "I understand that as the treatment progresses, modifications may be necessary and these may affect the fee. Should this occur, I further understand that the modification of treatment and the change in fee will be discussed with me at the earliest possible time.",
-                  "I understand that I am responsible to pay up front for all my treatment. The treatment will be submitted to my dental insurance company on my behalf, but our office will not accept assignment payments from my dental insurance company on my behalf.",
-                  "This estimate is valid for 90 days from the date of this letter.",
-                  "If treatment commences, but the entire treatment plan is not completed, I acknowledge that the expected outcome for whatever procedures are completed may be compromised."
-                ].map((text, idx) => (
+                {acknowledgments.map((text, idx) => (
                   <Box key={idx} sx={{ mb: 2.5 }}>
                     <TextField
                       fullWidth
                       multiline
                       rows={3}
-                      defaultValue={text}
+                      value={text}
+                      onChange={(e) => {
+                        const updated = [...acknowledgments];
+                        updated[idx] = e.target.value;
+                        setAcknowledgments(updated);
+                      }}
                       sx={{ 
                         '& .MuiInputBase-root': { backgroundColor: '#fff' },
                         '& .MuiInputBase-input': { fontSize: '0.8rem', lineHeight: 1.5, color: '#333' } 
                       }}
                     />
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-                      <IconButton size="small"><DeleteIcon sx={{ fontSize: '1rem', color: '#f8d7da' }} /></IconButton>
+                      <IconButton 
+                        size="small"
+                        onClick={() => handleDeleteParagraph(idx)}
+                      >
+                        <DeleteIcon sx={{ fontSize: '1rem', color: '#f8d7da', '&:hover': { color: '#e53e3e' } }} />
+                      </IconButton>
                     </Box>
                   </Box>
                 ))}
-                <Typography sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', mt: 1, '&:hover': { textDecoration: 'underline' } }}>+ add new paragraph</Typography>
+                <Typography 
+                  onClick={handleAddParagraph}
+                  sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', mt: 1, '&:hover': { textDecoration: 'underline' } }}
+                >
+                  + add new paragraph
+                </Typography>
               </Grid>
             </Grid>
           </Paper>
