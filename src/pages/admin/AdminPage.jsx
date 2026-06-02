@@ -53,6 +53,7 @@ const TABS = [
 ];
 
 const PRACTICE_SETUP_SUB_TABS = [
+  { label: 'Setup Wizard', path: '/admin/practice-setup/onboarding' },
   { label: 'Kiosk Account View', path: '/admin/practice-setup/kiosk-accounts' },
   { label: 'MyChart Configuration', path: '/admin/practice-setup/my-chart-configuration' },
   { label: 'Office Timings', path: '/admin/practice-setup/office-timings' },

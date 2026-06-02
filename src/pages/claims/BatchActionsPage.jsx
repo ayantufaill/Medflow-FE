@@ -243,8 +243,8 @@ const INITIAL_BATCH_CLAIMS_LIST = [
     carrier: 'Membership Payer',
     planName: 'Bright Beginning (Bright Beginning)',
     procedures: [
-      { code: 'D0140', description: 'limited ex', provider: 'Christian Sabour', fee: 85.00 },
-      { code: 'D0220', description: 'PA1', provider: 'Christian Sabour', fee: 35.00 }
+      { dos: '02/12/2026', tooth: '14', surface: 'O', ptBalance: '$22.50', insBalance: '$62.50', code: 'D0140', description: 'limited ex', provider: 'Christian Sabour', fee: 85.00 },
+      { dos: '02/12/2026', tooth: '14', surface: 'B', ptBalance: '$15.00', insBalance: '$20.00', code: 'D0220', description: 'PA1', provider: 'Christian Sabour', fee: 35.00 }
     ]
   },
   {
@@ -255,9 +255,9 @@ const INITIAL_BATCH_CLAIMS_LIST = [
     carrier: 'Membership Payer',
     planName: 'Clean + Confident - Existing Patient (Clean + Confident - Existing Patient)',
     procedures: [
-      { code: 'D0120', description: 'periodic ex', provider: 'Christian Sabour', fee: 55.00 },
-      { code: 'D1110', description: 'hygiene', provider: 'Christian Sabour', fee: 95.00 },
-      { code: 'D1206', description: 'fl', provider: 'Christian Sabour', fee: 30.00 }
+      { dos: '02/12/2026', tooth: '3', surface: 'M', ptBalance: '$18.00', insBalance: '$37.00', code: 'D0120', description: 'periodic ex', provider: 'Christian Sabour', fee: 55.00 },
+      { dos: '02/12/2026', tooth: '3', surface: 'O', ptBalance: '$30.00', insBalance: '$65.00', code: 'D1110', description: 'hygiene', provider: 'Christian Sabour', fee: 95.00 },
+      { dos: '02/12/2026', tooth: 'A', surface: 'V', ptBalance: '$8.00', insBalance: '$12.00', code: 'D1206', description: 'fl', provider: 'Christian Sabour', fee: 30.00 }
     ]
   }
 ];
@@ -440,6 +440,14 @@ export default function BatchActionsPage() {
     setSelectedClaims({});
   };
 
+  const handleRefreshBatchPayments = () => {
+    setBatchPayments(INITIAL_BATCH_PAYMENTS);
+    setSearchQuery('');
+    setFilterCarrier('All');
+    setFilterDate('All');
+    setShowFilterDrawer(false);
+  };
+
   // Handle EOB File Upload Simulation
   const handleEobUpload = () => {
     setUploadingEob(true);
@@ -525,7 +533,7 @@ export default function BatchActionsPage() {
             mb: 2.5,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <Button
               variant="contained"
               startIcon={<AddIcon sx={{ fontSize: 16 }} />}
@@ -544,6 +552,25 @@ export default function BatchActionsPage() {
               }}
             >
               Add New Payment
+            </Button>
+
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+              onClick={handleRefreshBatchPayments}
+              sx={{
+                textTransform: 'none',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: '#1a3a6b',
+                borderColor: '#e2e8f0',
+                backgroundColor: '#f7fafc',
+                py: 0.7,
+                px: 2,
+                '&:hover': { borderColor: '#cbd5e1', backgroundColor: '#edf2f7' },
+              }}
+            >
+              Refresh
             </Button>
           </Box>
 
@@ -1407,7 +1434,7 @@ export default function BatchActionsPage() {
                               '&:hover': { background: 'none', textDecoration: 'underline' }
                             }}
                           >
-                            Show
+                            {isExpanded ? 'Hide' : 'Show'}
                           </Button>
                         </TableCell>
 
@@ -1449,22 +1476,24 @@ export default function BatchActionsPage() {
                               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1a3a6b', fontSize: '0.8rem' }}>
                                 Claim Treatment Details:
                               </Typography>
-                              <Table size="small" sx={{ maxWidth: '600px' }}>
+                              <Table size="small" sx={{ maxWidth: '700px' }}>
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>ADA Code</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Description</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Provider</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Fee</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>DOS</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Tooth#</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Surface</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Pt. Balance</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Ins. Balance</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
                                   {claim.procedures.map((proc, idx) => (
                                     <TableRow key={idx}>
-                                      <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{proc.code}</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.description}</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.provider}</TableCell>
-                                      <TableCell align="right" sx={{ fontSize: '0.75rem', fontWeight: 600 }}>${proc.fee.toFixed(2)}</TableCell>
+                                      <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{proc.dos || '—'}</TableCell>
+                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.tooth || '—'}</TableCell>
+                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.surface || '—'}</TableCell>
+                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.ptBalance || '—'}</TableCell>
+                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.insBalance || '—'}</TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>

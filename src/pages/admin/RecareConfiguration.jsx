@@ -37,6 +37,7 @@ const RECARE_PROCEDURES = [
   { name: 'Fluoride', intervals: '3,4,6,9,12', unit: 'Months', trigger: false },
   { name: 'Pano/Fmx', intervals: '12,24,36,48,60', unit: 'Months', trigger: false },
   { name: 'Scaling', intervals: '1,3,4,6,9,12', unit: 'Months', trigger: true },
+  { name: 'Maintenance', intervals: '3,4,6,9,12', unit: 'Months', trigger: false },
   { name: 'PA', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },
   { name: 'additional1 TDS Membership', intervals: '12', unit: 'Months', trigger: false },
   { name: 'additional2', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },

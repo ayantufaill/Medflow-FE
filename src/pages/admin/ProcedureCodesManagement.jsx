@@ -18,6 +18,7 @@ import {
   DialogActions,
   CircularProgress,
   Grid,
+  InputAdornment,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -754,7 +755,7 @@ const ProcedureCodesManagement = () => {
   const [localCustomCodes, setLocalCustomCodes] = useState([]);
   const [isAddCustomCodeOpen, setAddCustomCodeOpen] = useState(false);
   const [customCodeForm, setCustomCodeForm] = useState({
-    code: 'C',
+    code: '',
     category: '',
     procedureType: '',
     procedure: '',
@@ -765,7 +766,7 @@ const ProcedureCodesManagement = () => {
 
   const handleOpenAddCustomCode = (categoryName = '') => {
     setCustomCodeForm({
-      code: 'C',
+      code: '',
       category: categoryName || '',
       procedureType: '',
       procedure: '',
@@ -782,8 +783,9 @@ const ProcedureCodesManagement = () => {
 
   const handleSaveCustomCode = (e) => {
     e.preventDefault();
+    const finalCode = customCodeForm.code.startsWith('C') ? customCodeForm.code : `C${customCodeForm.code}`;
     const newCode = {
-      ProcCode: customCodeForm.code,
+      ProcCode: finalCode,
       Descript: customCodeForm.description || customCodeForm.codeName,
       Category: customCodeForm.category,
     };
@@ -1683,14 +1685,19 @@ const ProcedureCodesManagement = () => {
                 <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
                   Code *
                 </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  required
-                  value={customCodeForm.code}
-                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, code: e.target.value }))}
-                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#475569' }}>
+                    C
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    required
+                    value={customCodeForm.code}
+                    onChange={(e) => setCustomCodeForm(prev => ({ ...prev, code: e.target.value }))}
+                    sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                  />
+                </Box>
               </Grid>
               <Grid item xs={6}>
                 <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
