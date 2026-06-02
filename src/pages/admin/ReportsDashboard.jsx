@@ -50,6 +50,8 @@ import PaymentRequest from './reports/financial/PaymentRequest';
 import OpenEdgeTransactions from './reports/financial/OpenEdgeTransactions';
 import ProceduresInsurance from './reports/financial/ProceduresInsurance';
 import FamilyMigratedBalances from './reports/financial/FamilyMigratedBalances';
+import DashboardTab from './reports/DashboardTab';
+import KpiDashboard from './reports/KpiDashboard';
 import { TABS, FINANCIAL_REPORT_SUB_TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
 import ClinicalReportsSubNav from '../../components/admin/reports/ClinicalReportsSubNav';
@@ -60,14 +62,12 @@ import FinancialReportsSubNav from '../../components/admin/reports/FinancialRepo
 const ReportsDashboard = () => {
   const theme = useTheme();
   const location = useLocation();
+  console.log("ReportsDashboard mounted/rendered. Pathname:", location.pathname);
   const [hoveredTab, setHoveredTab] = useState(null);
 
   const activeTab = TABS.findIndex((tab) => location.pathname.startsWith(tab.path));
 
-  // If we're at /admin/reports, redirect to the first tab
-  if (location.pathname === '/admin/reports') {
-    return <Navigate to="/admin/reports/financial" replace />;
-  }
+  // No redirect for /admin/reports, it is the root reports dashboard
 
   const getCurrentPageLabel = () => {
     const allSubTabs = [
@@ -85,10 +85,10 @@ const ReportsDashboard = () => {
   };
 
   return (
-    <Box onMouseLeave={() => setHoveredTab(null)}>
+    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ width: '100%' }}>
       <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', mb: hoveredTab !== null ? 0 : 3 }}>
         <Tabs
-          value={activeTab === -1 ? 0 : activeTab}
+          value={activeTab === -1 ? false : activeTab}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
@@ -130,8 +130,12 @@ const ReportsDashboard = () => {
       {hoveredTab === 4 && <SavingReportsSubNav />}
 
       {/* Page content */}
-      <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2, overflow: 'hidden' }}>
-        {location.pathname === '/admin/reports/patient/insurance-coverage' ? (
+      <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+        {(location.pathname === '/admin/reports' || location.pathname === '/admin/reports/dashboard') ? (
+          <DashboardTab />
+        ) : location.pathname.toLowerCase().includes('/kpi') ? (
+          <KpiDashboard />
+        ) : location.pathname === '/admin/reports/patient/insurance-coverage' ? (
           <PatientInsuranceCoverage />
         ) : location.pathname === '/admin/reports/patient/membership-plan' ? (
           <PatientMembershipPlan />
