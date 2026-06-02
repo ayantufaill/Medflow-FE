@@ -47,6 +47,7 @@ const adminRoutes = [
   <Route key="/admin/finance-management/fee-guide/:id" path="/admin/finance-management/fee-guide/:id" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/billing-configuration" path="/admin/finance-management/billing-configuration" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/payment-types" path="/admin/finance-management/payment-types" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/payment-terminal" path="/admin/finance-management/payment-terminal" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/dashboard-goals" path="/admin/finance-management/dashboard-goals" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/payment-presentation" path="/admin/finance-management/payment-presentation" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/coverage-book-shortcut" path="/admin/finance-management/coverage-book-shortcut" element={adminOnly(<AdminPage />)} />,
@@ -77,6 +78,7 @@ const adminRoutes = [
   <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(<PracticeInformation />)} />,
   <Route key="/admin/practice-setup/office-timings" path="/admin/practice-setup/office-timings" element={adminOnly(<OfficeTimings />)} />,
   <Route key="/admin/practice-setup/online-schedule" path="/admin/practice-setup/online-schedule" element={adminOnly(<OnlineSchedule />)} />,
+  <Route key="/admin/practice-setup/installation-guide" path="/admin/practice-setup/installation-guide" element={adminOnly(<AdminPage />)} />,
 
   <Route key="/admin/clinical-management/products" path="/admin/clinical-management/products" element={adminOnly(<ProductsManagement />)} />,
   <Route key="/admin/clinical-management/procedure-codes" path="/admin/clinical-management/procedure-codes" element={adminOnly(<ProcedureCodesManagement />)} />,

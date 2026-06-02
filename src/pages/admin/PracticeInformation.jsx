@@ -178,6 +178,8 @@ const PracticeInformation = () => {
     twoFactorNonAuth: false,
     openEdgeToken: '',
     openEdgeMyChartToken: '',
+    googleMeasurementId: '',
+    smilePayMerchantId: '',
     surchargeFee: '',
     usingOryxImaging: false,
     xrayBridges: [],
@@ -222,6 +224,8 @@ const PracticeInformation = () => {
             city:          data.address?.city        || '',
             state:         data.address?.state       || '',
             zipCode:       data.address?.postalCode  || '',
+            googleMeasurementId: data.googleMeasurementId || '',
+            smilePayMerchantId: data.smilePayMerchantId || '',
           }));
           if (data.logoPath) setLogoPreview(data.logoPath);
         }
@@ -269,6 +273,8 @@ const PracticeInformation = () => {
           state: form.state,
           postalCode: form.zipCode,
         },
+        googleMeasurementId: form.googleMeasurementId,
+        smilePayMerchantId: form.smilePayMerchantId,
         ...(form.logoFile ? { logo: form.logoFile } : {}),
       };
       if (practiceId) {
@@ -412,6 +418,12 @@ const PracticeInformation = () => {
           </FieldRow>
           <FieldRow label="Open Edge MyChart Token:">
             <TextField variant="standard" fullWidth value={form.openEdgeMyChartToken} onChange={set('openEdgeMyChartToken')} inputProps={{ style: stdSx }} />
+          </FieldRow>
+          <FieldRow label="Google Measurement ID:">
+            <TextField variant="standard" fullWidth value={form.googleMeasurementId} onChange={set('googleMeasurementId')} inputProps={{ style: stdSx }} />
+          </FieldRow>
+          <FieldRow label="SmilePay Merchant ID:">
+            <TextField variant="standard" fullWidth value={form.smilePayMerchantId} onChange={set('smilePayMerchantId')} inputProps={{ style: stdSx }} />
           </FieldRow>
 
           {/* Surcharge fee */}

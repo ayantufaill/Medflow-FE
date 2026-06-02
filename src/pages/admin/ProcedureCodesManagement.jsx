@@ -17,6 +17,8 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  Grid,
+  InputAdornment,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -28,6 +30,7 @@ import {
   Delete as DeleteIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
+  DescriptionOutlined as DescriptionIcon,
 } from '@mui/icons-material';
 import { feeService } from '../../services/fee.service';
 
@@ -44,6 +47,34 @@ const CODES_CATEGORIES = [
   'Orthodontics',
   'Adjunctive General Services',
 ];
+
+const MOCK_SUBTYPE_CODES = {
+  'Oral evaluation': [
+    { ProcCode: 'D0120', Descript: 'periodic oral evaluation - established patient', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D0140', Descript: 'limited oral evaluation - problem focused', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D0145', Descript: 'oral evaluation for a patient under three years of age and counseling with primary caregiver', site: 'None', dbi: false, provider: 'Default' },
+    { ProcCode: 'D0150', Descript: 'comprehensive oral evaluation - new or established patient', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D0160', Descript: 'detailed and extensive oral evaluation - problem focused, by report', site: 'None', dbi: false, provider: 'Default' },
+    { ProcCode: 'D0170', Descript: 're-evaluation - limited, problem focused (established patient; not post-operative visit)', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D0171', Descript: 're-evaluation - post-operative office visit', site: 'None', dbi: false, provider: 'Default' },
+    { ProcCode: 'D0180', Descript: 'Comprehensive Periodontal Evaluation - New or Established Patient', site: 'None', dbi: false, provider: 'Default' },
+    { ProcCode: 'D0190', Descript: 'screening of a patient', site: 'None', dbi: false, provider: 'Default' },
+    { ProcCode: 'D0191', Descript: 'assessment of a patient', site: 'None', dbi: false, provider: 'Default' },
+  ],
+  'Diagnostic Imaging': [
+    { ProcCode: 'D0330', Descript: 'panoramic radiographic image', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D0210', Descript: 'intraoral - complete series of radiographic images', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D0220', Descript: 'intraoral - periapical first radiographic image', site: 'None', dbi: false, provider: 'Default' },
+  ],
+  'Fluoride': [
+    { ProcCode: 'D1206', Descript: 'topical application of fluoride varnish', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D1208', Descript: 'topical application of fluoride - excluding varnish', site: 'None', dbi: false, provider: 'Default' },
+  ],
+  'Prophy': [
+    { ProcCode: 'D1110', Descript: 'prophylaxis - adult', site: 'None', dbi: false, provider: 'Dentist' },
+    { ProcCode: 'D1120', Descript: 'prophylaxis - child', site: 'None', dbi: false, provider: 'Default' },
+  ],
+};
 
 const INITIAL_CODES_TAB = [
   { 
@@ -685,12 +716,82 @@ const ProcedureCodesManagement = () => {
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [expandedSubItems, setExpandedSubItems] = useState([]);
   const [expandedCodesCategories, setExpandedCodesCategories] = useState([]);
+  const [expandedSubTypes, setExpandedSubTypes] = useState([]);
+
+  const handleToggleSubType = (subTypeName) => {
+    if (expandedSubTypes.includes(subTypeName)) {
+      setExpandedSubTypes(expandedSubTypes.filter(s => s !== subTypeName));
+    } else {
+      setExpandedSubTypes([...expandedSubTypes, subTypeName]);
+    }
+  };
+
+  const getProcedureCodesForSubType = (subTypeName) => {
+    // Return specific mocks if available
+    if (MOCK_SUBTYPE_CODES[subTypeName]) {
+      return MOCK_SUBTYPE_CODES[subTypeName];
+    }
+    
+    // Check if we have local custom codes added to this category/subtype
+    const custom = localCustomCodes.filter(c => c.Category.toLowerCase() === subTypeName.toLowerCase());
+    if (custom.length > 0) {
+      return custom;
+    }
+
+    // Otherwise generate realistic generic codes
+    const baseCodeNum = 1000 + Math.abs(subTypeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 8000;
+    return [
+      { ProcCode: `D${baseCodeNum}`, Descript: `${subTypeName} standard procedure code`, site: 'None', dbi: false, provider: 'Default' },
+      { ProcCode: `D${baseCodeNum + 1}`, Descript: `${subTypeName} additional level procedure`, site: 'None', dbi: false, provider: 'Dentist' },
+    ];
+  };
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
   const [editingPath, setEditingPath] = useState(null);
   const [procedureCodes, setProcedureCodes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalCodes, setTotalCodes] = useState(0);
   const [page, setPage] = useState(1);
+
+  const [localCustomCodes, setLocalCustomCodes] = useState([]);
+  const [isAddCustomCodeOpen, setAddCustomCodeOpen] = useState(false);
+  const [customCodeForm, setCustomCodeForm] = useState({
+    code: '',
+    category: '',
+    procedureType: '',
+    procedure: '',
+    codeName: '',
+    site: 'None',
+    description: '',
+  });
+
+  const handleOpenAddCustomCode = (categoryName = '') => {
+    setCustomCodeForm({
+      code: '',
+      category: categoryName || '',
+      procedureType: '',
+      procedure: '',
+      codeName: '',
+      site: 'None',
+      description: '',
+    });
+    setAddCustomCodeOpen(true);
+  };
+
+  const handleCloseAddCustomCode = () => {
+    setAddCustomCodeOpen(false);
+  };
+
+  const handleSaveCustomCode = (e) => {
+    e.preventDefault();
+    const finalCode = customCodeForm.code.startsWith('C') ? customCodeForm.code : `C${customCodeForm.code}`;
+    const newCode = {
+      ProcCode: finalCode,
+      Descript: customCodeForm.description || customCodeForm.codeName,
+      Category: customCodeForm.category,
+    };
+    setLocalCustomCodes((prev) => [newCode, ...prev]);
+    setAddCustomCodeOpen(false);
+  };
 
   useEffect(() => {
     if (activeTab === 1) {
@@ -1206,80 +1307,246 @@ const ProcedureCodesManagement = () => {
                <Box>
                  {loading ? (
                    <CircularProgress size={24} />
-                 ) : procedureCodes.map((sub, subIdx) => (
-                    <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                        <AddIcon sx={{ color: '#666', fontSize: '1.1rem' }} />
-                        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
-                          {sub.ProcCode} - {sub.Descript}
-                        </Typography>
-                      </Box>
-                    </Box>
-                 ))}
-               </Box>
-            ) : (
-              INITIAL_CODES_TAB.map((category, idx) => (
-                <Box key={idx}>
-                  <Box 
-                    onClick={() => handleToggleCodesCategory(category.name)}
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      py: 1, 
-                      cursor: 'pointer',
-                      backgroundColor: expandedCodesCategories.includes(category.name) ? '#f5f7f9' : 'transparent',
-                      borderBottom: '1px solid #f0f0f0',
-                      px: 1,
-                      mx: -1
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                      {expandedCodesCategories.includes(category.name) ? (
-                        <Box sx={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Box sx={{ width: 10, height: 2, backgroundColor: '#666' }} />
-                        </Box>
-                      ) : (
-                        <AddIcon sx={{ color: '#666', fontSize: '1.1rem' }} />
-                      )}
-                      <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-                        {category.name}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {expandedCodesCategories.includes(category.name) && (
-                    <Box sx={{ pl: 3 }}>
-                      {loading ? (
-                        <CircularProgress size={20} sx={{ m: 2 }} />
-                      ) : procedureCodes.map((sub, subIdx) => (
-                        <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
-                          <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
-                            {sub.ProcCode} - {sub.Descript}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
+                 ) : [
+                    ...localCustomCodes.filter(c => 
+                      c.ProcCode.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      c.Descript.toLowerCase().includes(searchQuery.toLowerCase())
+                    ),
+                    ...procedureCodes
+                  ].map((sub, subIdx) => (
+                     <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
+                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                         <Typography sx={{ color: '#666', fontSize: '1.1rem', mr: 0.5 }}>+</Typography>
+                         <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
+                           {sub.ProcCode} - {sub.Descript}
+                         </Typography>
+                       </Box>
+                     </Box>
+                  ))}
                 </Box>
-              ))
-            )}
-          </Box>
+             ) : (
+               INITIAL_CODES_TAB.map((category, idx) => (
+                 <Box key={idx}>
+                   <Box 
+                     onClick={() => handleToggleCodesCategory(category.name)}
+                     sx={{ 
+                       display: 'flex', 
+                       alignItems: 'center', 
+                       py: 0.8, 
+                       cursor: 'pointer',
+                       backgroundColor: expandedCodesCategories.includes(category.name) ? '#f5f7f9' : 'transparent',
+                       borderBottom: '1px solid #f0f0f0',
+                       px: 1,
+                       mx: -1
+                     }}
+                   >
+                     <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                       <Typography sx={{ color: '#666', fontSize: '1.05rem', fontWeight: 'bold', width: 20, mr: 0.5 }}>
+                         {expandedCodesCategories.includes(category.name) ? '−' : '+'}
+                       </Typography>
+                       <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500, mr: 2 }}>
+                         {category.name}
+                       </Typography>
+                       <Typography
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           handleOpenAddCustomCode(category.name);
+                         }}
+                         sx={{
+                           color: '#4a90e2',
+                           fontSize: '0.8rem',
+                           fontWeight: 500,
+                           cursor: 'pointer',
+                           '&:hover': { textDecoration: 'underline' }
+                         }}
+                       >
+                         + Add Custom Code
+                       </Typography>
+                     </Box>
+                   </Box>
 
-          {/* Footer Add */}
-          <Box sx={{ mt: 2, pl: 1 }}>
-            <Typography
-              sx={{
-                color: '#4a90e2',
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                '&:hover': { textDecoration: 'underline' }
-              }}
-            >
-              + Add Custom Code
-            </Typography>
-          </Box>
-        </Box>
+                    {expandedCodesCategories.includes(category.name) && (
+                      <Box sx={{ pl: 3 }}>
+                        {category.subItems && category.subItems.length > 0 ? (
+                          category.subItems.map((subItem, subIdx) => {
+                            const isSubTypeExpanded = expandedSubTypes.includes(subItem);
+                            return (
+                              <Box key={subIdx} sx={{ mb: 0.5 }}>
+                                {/* SubType Header Row */}
+                                <Box
+                                  onClick={() => handleToggleSubType(subItem)}
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    py: 0.6,
+                                    cursor: 'pointer',
+                                    '&:hover': { backgroundColor: '#f8fafc' },
+                                    borderBottom: '1px solid #f1f5f9'
+                                  }}
+                                >
+                                  <Typography sx={{ color: '#666', fontSize: '0.95rem', fontWeight: 'bold', width: 20, mr: 0.5, pl: 0.5 }}>
+                                    {isSubTypeExpanded ? '−' : '+'}
+                                  </Typography>
+                                  <Typography sx={{ color: '#1a3a6b', fontSize: '0.8rem', fontWeight: 600, mr: 2 }}>
+                                    {subItem}
+                                  </Typography>
+                                  <Typography
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenAddCustomCode(subItem);
+                                    }}
+                                    sx={{
+                                      color: '#4a90e2',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 500,
+                                      cursor: 'pointer',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                  >
+                                    + Add Custom Code
+                                  </Typography>
+                                </Box>
+
+                                {/* SubType Expanded Procedure Codes */}
+                                {isSubTypeExpanded && (
+                                  <Box sx={{ pl: 3, borderLeft: '1px dashed #cbd5e1', ml: 1.5 }}>
+                                    {getProcedureCodesForSubType(subItem).map((procItem, procIdx) => (
+                                      <Box
+                                        key={procIdx}
+                                        sx={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          py: 1,
+                                          borderBottom: '1px solid #f1f5f9',
+                                          gap: 2
+                                        }}
+                                      >
+                                        {/* Icon */}
+                                        <DescriptionIcon sx={{ color: '#94a3b8', fontSize: '1.1rem' }} />
+
+                                        {/* Code Box */}
+                                        <Box
+                                          sx={{
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            px: 1.2,
+                                            py: 0.3,
+                                            backgroundColor: '#f8fafc',
+                                            minWidth: 65,
+                                            textAlign: 'center'
+                                          }}
+                                        >
+                                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>
+                                            {procItem.ProcCode}
+                                          </Typography>
+                                        </Box>
+
+                                        {/* Description */}
+                                        <Typography sx={{ fontSize: '0.75rem', color: '#334155', flex: 1 }}>
+                                          {procItem.Descript}
+                                        </Typography>
+
+                                        {/* Add Custom Site Link */}
+                                        <Typography
+                                          sx={{
+                                            color: '#3b82f6',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 500,
+                                            cursor: 'pointer',
+                                            minWidth: 100,
+                                            '&:hover': { textDecoration: 'underline' }
+                                          }}
+                                        >
+                                          + Add Custom Site
+                                        </Typography>
+
+                                        {/* Checkbox DBI */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 60 }}>
+                                          <Checkbox size="small" sx={{ p: 0.5 }} checked={procItem.dbi || false} />
+                                          <Typography sx={{ fontSize: '0.75rem', color: '#475569', ml: 0.5 }}>DBI</Typography>
+                                        </Box>
+
+                                        {/* Stacking Office Code / Office Desc links */}
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 130 }}>
+                                          <Typography
+                                            sx={{
+                                              color: '#3b82f6',
+                                              fontSize: '0.75rem',
+                                              fontWeight: 500,
+                                              cursor: 'pointer',
+                                              lineHeight: 1.2,
+                                              '&:hover': { textDecoration: 'underline' }
+                                            }}
+                                          >
+                                            + Add Office Code
+                                          </Typography>
+                                          <Typography
+                                            sx={{
+                                              color: '#3b82f6',
+                                              fontSize: '0.75rem',
+                                              fontWeight: 500,
+                                              cursor: 'pointer',
+                                              lineHeight: 1.2,
+                                              mt: 0.3,
+                                              '&:hover': { textDecoration: 'underline' }
+                                            }}
+                                          >
+                                            + Add Office Desc.
+                                          </Typography>
+                                        </Box>
+
+                                        {/* Provider Dropdown */}
+                                        <Select
+                                          size="small"
+                                          value={procItem.provider || 'Default'}
+                                          sx={{ height: 26, fontSize: '0.75rem', minWidth: 90, backgroundColor: '#fff' }}
+                                        >
+                                          <MenuItem value="Default">Default</MenuItem>
+                                          <MenuItem value="Dentist">Dentist</MenuItem>
+                                          <MenuItem value="Hygienist">Hygienist</MenuItem>
+                                        </Select>
+                                      </Box>
+                                    ))}
+                                  </Box>
+                                )}
+                              </Box>
+                            );
+                          })
+                        ) : (
+                          [
+                            ...localCustomCodes.filter(c => c.Category.toLowerCase() === category.name.toLowerCase()),
+                            ...procedureCodes
+                          ].map((sub, subIdx) => (
+                            <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
+                              <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
+                                {sub.ProcCode} - {sub.Descript}
+                              </Typography>
+                            </Box>
+                          ))
+                        )}
+                      </Box>
+                    )}
+                 </Box>
+               ))
+             )}
+           </Box>
+
+           {/* Footer Add */}
+           <Box sx={{ mt: 2, pl: 1 }}>
+             <Typography
+               onClick={() => handleOpenAddCustomCode('')}
+               sx={{
+                 color: '#4a90e2',
+                 fontSize: '0.8rem',
+                 fontWeight: 500,
+                 cursor: 'pointer',
+                 '&:hover': { textDecoration: 'underline' }
+               }}
+             >
+               + Add Custom Code
+             </Typography>
+           </Box>
+         </Box>
       )}
 
       {/* Tab Content: Eligibility Used ADA Codes */}
@@ -1386,6 +1653,179 @@ const ProcedureCodesManagement = () => {
             Sync
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Add Custom Code Dialog */}
+      <Dialog
+        open={isAddCustomCodeOpen}
+        onClose={handleCloseAddCustomCode}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '4px', overflow: 'hidden' }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: '#4b71a1',
+            color: '#fff',
+            fontSize: '1.05rem',
+            fontWeight: 600,
+            py: 1.5,
+            px: 3,
+            textAlign: 'center',
+          }}
+        >
+          Add Custom Code
+        </DialogTitle>
+        <form onSubmit={handleSaveCustomCode}>
+          <DialogContent sx={{ py: 3, px: 3 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Code *
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#475569' }}>
+                    C
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    required
+                    value={customCodeForm.code}
+                    onChange={(e) => setCustomCodeForm(prev => ({ ...prev, code: e.target.value }))}
+                    sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Category *
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  required
+                  value={customCodeForm.category}
+                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, category: e.target.value }))}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Procedure Type *
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  required
+                  value={customCodeForm.procedureType}
+                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, procedureType: e.target.value }))}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Procedure *
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  required
+                  value={customCodeForm.procedure}
+                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, procedure: e.target.value }))}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Code Name:
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={customCodeForm.codeName}
+                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, codeName: e.target.value }))}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Site
+                </Typography>
+                <Select
+                  fullWidth
+                  size="small"
+                  value={customCodeForm.site}
+                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, site: e.target.value }))}
+                  sx={{ height: 38, fontSize: '0.85rem' }}
+                >
+                  <MenuItem value="None">None</MenuItem>
+                  <MenuItem value="Upper Right">Upper Right</MenuItem>
+                  <MenuItem value="Upper Left">Upper Left</MenuItem>
+                  <MenuItem value="Lower Right">Lower Right</MenuItem>
+                  <MenuItem value="Lower Left">Lower Left</MenuItem>
+                  <MenuItem value="Upper Arch">Upper Arch</MenuItem>
+                  <MenuItem value="Lower Arch">Lower Arch</MenuItem>
+                </Select>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                  Description *
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  size="small"
+                  required
+                  value={customCodeForm.description}
+                  onChange={(e) => setCustomCodeForm(prev => ({ ...prev, description: e.target.value }))}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'center', gap: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                backgroundColor: '#c5a059',
+                color: '#fff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                px: 3,
+                py: 0.75,
+                borderRadius: '4px',
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#b08c48', boxShadow: 'none' }
+              }}
+            >
+              Save
+            </Button>
+            <Button
+              onClick={handleCloseAddCustomCode}
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                backgroundColor: '#a0aec0',
+                color: '#fff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                px: 3,
+                py: 0.75,
+                borderRadius: '4px',
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#8a9ab0', boxShadow: 'none' }
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </Box>
   );

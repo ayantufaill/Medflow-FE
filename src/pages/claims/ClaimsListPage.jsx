@@ -17,6 +17,7 @@ import {
   FormControl,
   Select,
   MenuItem,
+  Menu,
   Grid,
   Tooltip,
   Dialog,
@@ -44,6 +45,7 @@ import {
   PictureAsPdf as PdfIcon,
   FilterList as FilterIcon,
   Search as SearchIcon,
+  ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 
 // Claim type options
@@ -318,7 +320,7 @@ const INITIAL_CLAIMS = [
     status: 'eobUploaded',
     clearingHouseMessage: '',
     notes: 'EOB received digitally, manual review pending.',
-    description: 'F/U 06/15/2026"Banding date:1...',
+    description: 'F/U 06/15/2026*Banding date:1... (KS6 bur); dentin sealed with RelyX (light cured) Temporaries fabricated using Clinicians Choice matrix + Kettenbach Visalys Temps seated, adjusted, polished; occlusion checked Cemented with TempBond Clear; excess removed; contacts flossed and verified Shade: A3 (Vita) Final material: Lithium disilicate (Emax) Lab: Reliable Dental Lab POIG given Dr. LP',
     procedures: [
       { code: 'D8080', name: 'Comprehensive Orthodontic Treatment - Adolescent', fee: 3200.00 },
     ],
@@ -1157,6 +1159,44 @@ const ClaimsListPage = () => {
     setSelectedClaims(newSelected);
   };
 
+  // Select All Dropdown Menu State
+  const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
+  const isSelectAllMenuOpen = Boolean(selectAllAnchorEl);
+
+  const handleSelectAllMenuOpen = (event) => {
+    setSelectAllAnchorEl(event.currentTarget);
+  };
+
+  const handleSelectAllMenuClose = () => {
+    setSelectAllAnchorEl(null);
+  };
+
+  // Helper to select specific subsets of claims
+  const handleSelectSubset = (type) => {
+    const newSelected = {};
+    if (type === 'all') {
+      filteredClaims.forEach((c) => {
+        newSelected[c.id] = true;
+      });
+    } else if (type === 'ready') {
+      filteredClaims.forEach((c) => {
+        if (c.status === 'readyForSubmission') {
+          newSelected[c.id] = true;
+        }
+      });
+    } else if (type === 'errored') {
+      filteredClaims.forEach((c) => {
+        if (c.status === 'validationError' || c.status === 'error' || c.status === 'rejected') {
+          newSelected[c.id] = true;
+        }
+      });
+    } else if (type === 'none') {
+      // empty selection
+    }
+    setSelectedClaims(newSelected);
+    handleSelectAllMenuClose();
+  };
+
   // Check if any claim is selected
   const hasSelection = useMemo(() => {
     return Object.values(selectedClaims).some((val) => val === true);
@@ -1422,10 +1462,10 @@ const ClaimsListPage = () => {
   // Export CSV Action
   const handleExportCSV = () => {
     const headers = 'Patient Name,Claim #,Claim Type,Sent on,Printed on,Carrier,Status,ERA Status,Clearing House Status Message,Description\n';
-    const rows = filteredClaims.map((c) => 
+    const rows = filteredClaims.map((c) =>
       `"${c.patientName}","${c.claimNumber}","${c.claimType}","${c.sentDate || ''}","${c.printedDate || ''}","${c.carrier}","${c.status}","${c.eraStatus || ''}","${c.clearingHouseMessage || ''}","${c.description}"`
     ).join('\n');
-    
+
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1529,47 +1569,42 @@ const ClaimsListPage = () => {
 
       {/* Conditional Filtering Panel */}
       {activeTab === 6 ? (
-        // DENTICAL REPORTS Search Header Panel
         <Paper sx={{ p: 2.5, mb: 3, backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: 'none', border: '1px solid #e0e6ed' }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={8} md={6}>
-              <Box>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
-                  Search by report content:
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Enter Patient Name/Clearing House Claim Number/DCN, etc..."
-                  value={searchReportContent}
-                  onChange={(e) => setSearchReportContent(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff',
-                      fontSize: '0.85rem',
-                    },
-                  }}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={4} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
-              <Button
-                onClick={handleRefresh}
-                startIcon={<RefreshIcon sx={{ fontSize: '0.9rem' }} />}
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 3, flexWrap: 'wrap' }}>
+            <Box sx={{ flex: 1, minWidth: '350px', maxWidth: '650px' }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
+                Search by report content:                      
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search by Patient Name, Clearinghouse Claim #, or DCN..."
+                value={searchReportContent}
+                onChange={(e) => setSearchReportContent(e.target.value)}
                 sx={{
-                  textTransform: 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#1a3a6b',
-                  padding: 0,
-                  minWidth: 'auto',
-                  '&:hover': { background: 'none', textDecoration: 'underline' },
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#ffffff',
+                    fontSize: '0.85rem',
+                  },
                 }}
-              >
-                Refresh
-              </Button>
-            </Grid>
-          </Grid>
+              />
+            </Box>
+            <Button
+              onClick={handleRefresh}
+              startIcon={<RefreshIcon sx={{ fontSize: '0.9rem' }} />}
+              sx={{
+                textTransform: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#1a3a6b',
+                padding: '4px 8px',
+                mb: 0.5,
+                '&:hover': { background: 'none', textDecoration: 'underline' },
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
         </Paper>
       ) : activeTab === 7 ? (
         // ERA REPORTS Header Panel (1:1 with Screenshot)
@@ -1878,12 +1913,12 @@ const ClaimsListPage = () => {
             <Grid item xs={12} sm={6}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
-                  {activeTab === 5 ? 'Search by claim number or sent date:' : 'Search by claim number, sent or printed on date:'}
+                  {activeTab === 5 ? 'Search by claim number or sent date:' : 'Search by claim number or sent date:'}
                 </Typography>
                 <TextField
                   fullWidth
                   size="small"
-                  placeholder={activeTab === 5 ? 'Search by claim # or sent date' : 'Search by claim #, sent or printed on date'}
+                  placeholder={activeTab === 5 ? 'Search by claim # or sent date' : 'Search by claim # or sent date'}
                   value={searchClaimOrDate}
                   onChange={(e) => setSearchClaimOrDate(e.target.value)}
                   sx={{
@@ -2259,156 +2294,156 @@ const ClaimsListPage = () => {
                       px: 2.5,
                       '&:hover': { backgroundColor: '#d1b089' },
                       '&.Mui-disabled': { backgroundColor: 'rgba(229, 197, 158, 0.4)', color: 'rgba(61, 48, 33, 0.4)' },
-                  }}
-                >
-                  Void & Recreate Claims
-                </Button>
-              </>
-            ) : activeTab === 4 ? (
-              // OUTSTANDING CLAIMS Actions
-              <>
-                <Button
-                  variant="contained"
-                  disabled={!hasSelection}
-                  onClick={handleVoidAndRecreate}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#e5c59e',
-                    color: '#3d3021',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#d1b089' },
-                    '&.Mui-disabled': { backgroundColor: 'rgba(229, 197, 158, 0.4)', color: 'rgba(61, 48, 33, 0.4)' },
-                  }}
-                >
-                  Void & Recreate Claims
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handlePrintPage}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#1a3a6b',
-                    color: '#ffffff',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#132c54' },
-                  }}
-                >
-                  Print Page
-                </Button>
-                <Button
-                  variant="contained"
-                  disabled={!hasSelection}
-                  onClick={handlePrintClaims}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#7d9cc4',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#6281a8' },
-                    '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
-                  }}
-                >
-                  Print Claims
-                </Button>
-              </>
-            ) : (
-              // PREDETERMINATION Actions
-              <>
-                <Button
-                  variant="contained"
-                  disabled={!hasSelection}
-                  onClick={handleConvertType}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#7d9cc4',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#6281a8' },
-                    '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
-                  }}
-                >
-                  Convert Type
-                </Button>
-                <Button
-                  variant="contained"
-                  disabled={!hasSelection}
-                  onClick={handleChangeStatus}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#7d9cc4',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#6281a8' },
-                    '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
-                  }}
-                >
-                  Change Status
-                </Button>
-                <Button
-                  variant="contained"
-                  disabled={!hasSelection}
-                  onClick={handleSendPredeterminations}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#e5c59e',
-                    color: '#3d3021',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#d1b089' },
-                    '&.Mui-disabled': { backgroundColor: 'rgba(229, 197, 158, 0.4)', color: 'rgba(61, 48, 33, 0.4)' },
-                  }}
-                >
-                  Send Predeterminations
-                </Button>
-                <Button
-                  variant="contained"
-                  disabled={!hasSelection}
-                  onClick={handlePrintPredeterminations}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    backgroundColor: '#7d9cc4',
-                    boxShadow: 'none',
-                    borderRadius: '4px',
-                    px: 2.5,
-                    '&:hover': { backgroundColor: '#6281a8' },
-                    '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
-                  }}
-                >
-                  Print Predeterminations
-                </Button>
-              </>
-            )}
+                    }}
+                  >
+                    Void & Recreate Claims
+                  </Button>
+                </>
+              ) : activeTab === 4 ? (
+                // OUTSTANDING CLAIMS Actions
+                <>
+                  <Button
+                    variant="contained"
+                    disabled={!hasSelection}
+                    onClick={handleVoidAndRecreate}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#e5c59e',
+                      color: '#3d3021',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#d1b089' },
+                      '&.Mui-disabled': { backgroundColor: 'rgba(229, 197, 158, 0.4)', color: 'rgba(61, 48, 33, 0.4)' },
+                    }}
+                  >
+                    Void & Recreate Claims
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handlePrintPage}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#1a3a6b',
+                      color: '#ffffff',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#132c54' },
+                    }}
+                  >
+                    Print Page
+                  </Button>
+                  <Button
+                    variant="contained"
+                    disabled={!hasSelection}
+                    onClick={handlePrintClaims}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#7d9cc4',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#6281a8' },
+                      '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
+                    }}
+                  >
+                    Print Claims
+                  </Button>
+                </>
+              ) : (
+                // PREDETERMINATION Actions
+                <>
+                  <Button
+                    variant="contained"
+                    disabled={!hasSelection}
+                    onClick={handleConvertType}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#7d9cc4',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#6281a8' },
+                      '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
+                    }}
+                  >
+                    Convert Type
+                  </Button>
+                  <Button
+                    variant="contained"
+                    disabled={!hasSelection}
+                    onClick={handleChangeStatus}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#7d9cc4',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#6281a8' },
+                      '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
+                    }}
+                  >
+                    Change Status
+                  </Button>
+                  <Button
+                    variant="contained"
+                    disabled={!hasSelection}
+                    onClick={handleSendPredeterminations}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#e5c59e',
+                      color: '#3d3021',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#d1b089' },
+                      '&.Mui-disabled': { backgroundColor: 'rgba(229, 197, 158, 0.4)', color: 'rgba(61, 48, 33, 0.4)' },
+                    }}
+                  >
+                    Send Predeterminations
+                  </Button>
+                  <Button
+                    variant="contained"
+                    disabled={!hasSelection}
+                    onClick={handlePrintPredeterminations}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      backgroundColor: '#7d9cc4',
+                      boxShadow: 'none',
+                      borderRadius: '4px',
+                      px: 2.5,
+                      '&:hover': { backgroundColor: '#6281a8' },
+                      '&.Mui-disabled': { backgroundColor: 'rgba(125, 156, 196, 0.4)', color: '#ffffff' },
+                    }}
+                  >
+                    Print Predeterminations
+                  </Button>
+                </>
+              )}
+            </Box>
           </Box>
         </Box>
-      </Box>
       )}
 
       {/* Main Content Area */}
       {activeTab === 6 ? (
         // DENTICAL REPORTS Table Layout
-        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'hidden' }}>
+        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
           <Table>
             <TableHead sx={{ backgroundColor: '#fafbfe' }}>
               <TableRow>
@@ -2496,7 +2531,7 @@ const ClaimsListPage = () => {
         </TableContainer>
       ) : activeTab === 7 ? (
         // ERA REPORTS Table Layout (1:1 with Screenshot)
-        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'hidden' }}>
+        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
           <Table>
             <TableHead sx={{ backgroundColor: '#fafbfe' }}>
               <TableRow>
@@ -2627,72 +2662,109 @@ const ClaimsListPage = () => {
       ) : (
         // STANDARD CLAIMS Data Table
         <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'hidden' }}>
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
+          <Table size="small">
+            <TableHead sx={{ backgroundColor: '#fafbfe', '& .MuiTableCell-root': { py: 0.8, px: 0.5, fontSize: '0.73rem', lineHeight: 1.2 } }}>
               <TableRow>
-                <TableCell sx={{ width: '40px', py: 1.5 }}>
-                  <Checkbox
-                    size="small"
-                    checked={filteredClaims.length > 0 && filteredClaims.every((c) => selectedClaims[c.id])}
-                    onChange={handleSelectAll}
-                    sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#1a3a6b' } }}
-                  />
+                <TableCell sx={{ width: '40px', py: 0.8, px: 0.5, textAlign: 'center', verticalAlign: 'top' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.2 }}>
+                    <Checkbox
+                      size="small"
+                      checked={filteredClaims.length > 0 && filteredClaims.every((c) => selectedClaims[c.id])}
+                      indeterminate={
+                        filteredClaims.some((c) => selectedClaims[c.id]) &&
+                        !filteredClaims.every((c) => selectedClaims[c.id])
+                      }
+                      onChange={handleSelectAll}
+                      sx={{ p: 0, color: '#cbd5e1', '&.Mui-checked': { color: '#1a3a6b' } }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={handleSelectAllMenuOpen}
+                      sx={{ p: 0.2, color: '#4a5568', mt: 0.2 }}
+                    >
+                      <ArrowDropDownIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                  <Menu
+                    anchorEl={selectAllAnchorEl}
+                    open={isSelectAllMenuOpen}
+                    onClose={handleSelectAllMenuClose}
+                    sx={{
+                      '& .MuiPaper-root': {
+                        boxShadow: '0px 2px 8px rgba(0,0,0,0.15)',
+                        border: '1px solid #e2e8f0',
+                      }
+                    }}
+                  >
+                    <MenuItem onClick={() => handleSelectSubset('all')} sx={{ fontSize: '0.8rem', py: 0.8, px: 2 }}>
+                      Select All
+                    </MenuItem>
+                    <MenuItem onClick={() => handleSelectSubset('ready')} sx={{ fontSize: '0.8rem', py: 0.8, px: 2 }}>
+                      Select All Ready
+                    </MenuItem>
+                    <MenuItem onClick={() => handleSelectSubset('errored')} sx={{ fontSize: '0.8rem', py: 0.8, px: 2 }}>
+                      Select All with Alerts/Errors
+                    </MenuItem>
+                    <MenuItem onClick={() => handleSelectSubset('none')} sx={{ fontSize: '0.8rem', py: 0.8, px: 2 }}>
+                      Clear Selection
+                    </MenuItem>
+                  </Menu>
                 </TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Patient Name</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Patient Name</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                   {activeTab === 4 ? 'Claim # (created date)' : 'Claim #'}
                 </TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Claim Type</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Claim Type</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                   {activeTab === 0 ? 'Created Date' : 'Sent on'}
                 </TableCell>
                 {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     Printed on
                   </TableCell>
                 )}
                 {activeTab === 4 && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     Subscriber
                   </TableCell>
                 )}
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Carrier</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Carrier</TableCell>
                 {activeTab === 4 && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     Plan Name (#)
                   </TableCell>
                 )}
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Procedures</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Procedures</TableCell>
                 {activeTab === 5 && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Treating Provider</TableCell>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Treating Provider</TableCell>
                 )}
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Status</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Status</TableCell>
                 {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     ERA Status
                   </TableCell>
                 )}
                 {(activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4 || activeTab === 5) && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     Clearing House Status Message
                   </TableCell>
                 )}
                 {activeTab === 4 && (
-                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     Submitted Value
                   </TableCell>
                 )}
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Notes</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Description</TableCell>
-                <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Actions</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Notes</TableCell>
+                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Description</TableCell>
+                <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody sx={{ '& .MuiTableCell-root': { py: 0.5, px: 0.4, fontSize: '0.73rem', lineHeight: 1.2 } }}>
               {filteredClaims.length === 0 ? (
                 <TableRow>
-                  <TableCell 
-                    colSpan={activeTab === 4 ? 17 : activeTab === 5 ? 13 : activeTab === 2 || activeTab === 3 ? 14 : activeTab === 1 ? 12 : 11} 
-                    align="center" 
+                  <TableCell
+                    colSpan={activeTab === 4 ? 17 : activeTab === 5 ? 13 : activeTab === 2 || activeTab === 3 ? 14 : activeTab === 1 ? 12 : 11}
+                    align="center"
                     sx={{ py: 6 }}
                   >
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -2748,61 +2820,74 @@ const ClaimsListPage = () => {
                         }}
                       >
                         {/* Checkbox column */}
-                        <TableCell sx={{ py: 1 }}>
-                          <Checkbox
-                            size="small"
-                            checked={isSelected}
-                            onChange={() => handleSelectClaim(claim.id)}
-                            sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#1a3a6b' } }}
-                          />
+                        <TableCell sx={{ py: 1, verticalAlign: 'top', textAlign: 'center' }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.2 }}>
+                            <Checkbox
+                              size="small"
+                              checked={isSelected}
+                              onChange={() => handleSelectClaim(claim.id)}
+                              sx={{ p: 0, color: '#cbd5e1', '&.Mui-checked': { color: '#1a3a6b' } }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() => toggleProcedures(claim.id)}
+                              sx={{ p: 0.2, color: '#4a5568', mt: 0.2 }}
+                            >
+                              {isExpanded ? (
+                                <ArrowDropDownIcon sx={{ fontSize: 16, transform: 'rotate(180deg)' }} />
+                              ) : (
+                                <ArrowDropDownIcon sx={{ fontSize: 16 }} />
+                              )}
+                            </IconButton>
+                          </Box>
                         </TableCell>
 
                         {/* Patient Name (+ Code & DOB) */}
-                        <TableCell sx={{ py: 1 }}>
-                          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: isError && activeTab === 0 ? '#d93838' : '#2d3748' }}>
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 600, color: isError && activeTab === 0 ? '#d93838' : '#2d3748', fontSize: '0.74rem' }}>
                             {claim.patientName}
                           </Typography>
-                          <Typography sx={{ fontSize: '0.78rem', color: '#718096', fontWeight: 400 }}>
+                          <Typography sx={{ color: '#718096', fontWeight: 400, fontSize: '0.68rem' }}>
                             {claim.patientCode}
                           </Typography>
                           {(activeTab === 4 || activeTab === 5) && claim.patientDob && (
-                            <Typography sx={{ fontSize: '0.75rem', color: '#718096', mt: 0.2 }}>
+                            <Typography sx={{ color: '#718096', mt: 0.2, fontSize: '0.68rem' }}>
                               {claim.patientDob}
                             </Typography>
                           )}
                         </TableCell>
 
                         {/* Claim # (+ Created Date) */}
-                        <TableCell sx={{ py: 1 }}>
-                          <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: isError && activeTab === 0 ? '#d93838' : '#4a5568' }}>
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 600, color: isError && activeTab === 0 ? '#d93838' : '#4a5568', fontSize: '0.72rem' }}>
                             {claim.claimNumber}
                           </Typography>
                           {activeTab === 4 && claim.createdDate && (
-                            <Typography sx={{ fontSize: '0.75rem', color: '#718096', fontStyle: 'normal' }}>
+                            <Typography sx={{ color: '#718096', fontStyle: 'normal', fontSize: '0.68rem' }}>
                               ({claim.createdDate})
                             </Typography>
                           )}
                         </TableCell>
 
                         {/* Claim Type */}
-                        <TableCell sx={{ py: 1 }}>
-                          <Typography sx={{ fontSize: '0.8rem', color: isError && activeTab === 0 ? '#d93838' : '#718096', display: 'flex', flexDirection: 'column' }}>
+                        <TableCell>
+                          <Typography sx={{ color: isError && activeTab === 0 ? '#d93838' : '#718096', display: 'flex', flexDirection: 'column', fontSize: '0.7rem' }}>
                             <span style={{ fontWeight: 600 }}>{claim.claimType.split(' ')[0]}</span>
                             <span>{claim.claimType.split(' ').slice(1).join(' ')}</span>
                           </Typography>
                         </TableCell>
 
                         {/* Created Date / Sent Date */}
-                        <TableCell sx={{ py: 1 }}>
-                          <Typography sx={{ fontSize: '0.8rem', color: isError && activeTab === 0 ? '#d93838' : '#4a5568' }}>
+                        <TableCell>
+                          <Typography sx={{ color: isError && activeTab === 0 ? '#d93838' : '#4a5568' }}>
                             {activeTab === 0 ? claim.createdDate : claim.sentDate}
                           </Typography>
                         </TableCell>
 
                         {/* Printed on Date */}
                         {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-                          <TableCell sx={{ py: 1 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                          <TableCell>
+                            <Typography sx={{ color: '#4a5568' }}>
                               {claim.printedDate || '—'}
                             </Typography>
                           </TableCell>
@@ -2810,99 +2895,99 @@ const ClaimsListPage = () => {
 
                         {/* Subscriber */}
                         {activeTab === 4 && (
-                          <TableCell sx={{ py: 1 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 500 }}>
+                          <TableCell>
+                            <Typography sx={{ color: '#4a5568', fontWeight: 500 }}>
                               {claim.subscriber || '—'}
                             </Typography>
                           </TableCell>
                         )}
 
                         {/* Carrier */}
-                        <TableCell sx={{ py: 1 }}>
-                          <Typography sx={{ fontSize: '0.8rem', color: isError && activeTab === 0 ? '#d93838' : '#4a5568', fontWeight: 500 }}>
+                        <TableCell>
+                          <Typography sx={{ color: isError && activeTab === 0 ? '#d93838' : '#4a5568', fontWeight: 500, fontSize: '0.72rem' }}>
                             {claim.carrier}
                           </Typography>
                         </TableCell>
 
                         {/* Plan Name (#) */}
                         {activeTab === 4 && (
-                          <TableCell sx={{ py: 1 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontStyle: 'normal' }}>
+                          <TableCell>
+                            <Typography sx={{ color: '#4a5568', fontStyle: 'normal', fontSize: '0.7rem' }}>
                               {claim.planName || '—'}
                             </Typography>
                           </TableCell>
                         )}
 
                         {/* Procedures */}
-                        <TableCell sx={{ py: 1 }}>
+                        <TableCell>
                           <Button
                             size="small"
                             onClick={() => toggleProcedures(claim.id)}
                             sx={{
                               textTransform: 'none',
-                              fontSize: '0.78rem',
+                              fontSize: '0.7rem',
                               fontWeight: 600,
                               color: '#1a3a6b',
-                              padding: '2px 8px',
+                              padding: '1px 6px',
                               minWidth: 'auto',
                               '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.08)' },
                             }}
                           >
-                            {isExpanded ? 'Hide' : '✓ Show'}
+                            {isExpanded ? 'Hide' : 'v Show'}
                           </Button>
                         </TableCell>
 
                         {/* Treating Provider */}
                         {activeTab === 5 && (
-                          <TableCell sx={{ py: 1 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 500 }}>
+                          <TableCell>
+                            <Typography sx={{ color: '#4a5568', fontWeight: 500 }}>
                               {claim.treatingProvider || '—'}
                             </Typography>
                           </TableCell>
                         )}
 
                         {/* Status Dropdown */}
-                        <TableCell sx={{ py: 1 }}>
+                        <TableCell>
                           {activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4 || activeTab === 5 ? (
                             // Interactive Dropdown
-                            <FormControl size="small" variant="standard" sx={{ m: 0, minWidth: 100 }}>
+                            <FormControl size="small" variant="standard" sx={{ m: 0, minWidth: 75 }}>
                               <Select
                                 value={claim.status}
                                 onChange={(e) => handleRowStatusChange(claim.id, e.target.value)}
                                 disableUnderline
                                 sx={{
-                                  fontSize: '0.8rem',
+                                  fontSize: '0.72rem',
                                   fontWeight: 500,
                                   color: claim.status === 'error' || claim.status === 'rejected' ? '#d93838' : '#2d3748',
                                   '& .MuiSelect-select': { py: 0.5, pr: 2 },
                                 }}
                               >
-                                <MenuItem value="readyForSubmission" sx={{ fontSize: '0.8rem' }}>readyForSubmission</MenuItem>
-                                <MenuItem value="inProcess" sx={{ fontSize: '0.8rem' }}>inProcess</MenuItem>
-                                <MenuItem value="accepted" sx={{ fontSize: '0.8rem' }}>accepted</MenuItem>
-                                <MenuItem value="acceptedPaid" sx={{ fontSize: '0.8rem' }}>acceptedPaid</MenuItem>
-                                <MenuItem value="error" sx={{ fontSize: '0.8rem', color: '#d93838' }}>error</MenuItem>
-                                <MenuItem value="rejected" sx={{ fontSize: '0.8rem', color: '#d93838' }}>rejected</MenuItem>
-                                <MenuItem value="eobUploaded" sx={{ fontSize: '0.8rem' }}>eobUploaded</MenuItem>
-                                <MenuItem value="manualClaim" sx={{ fontSize: '0.8rem' }}>manualClaim</MenuItem>
-                                <MenuItem value="acceptedForProcessing" sx={{ fontSize: '0.8rem' }}>acceptedForProcessing</MenuItem>
+                                <MenuItem value="readyForSubmission" sx={{ fontSize: '0.7rem' }}>readyForSubmission</MenuItem>
+                                <MenuItem value="inProcess" sx={{ fontSize: '0.7rem' }}>inProcess</MenuItem>
+                                <MenuItem value="accepted" sx={{ fontSize: '0.7rem' }}>accepted</MenuItem>
+                                <MenuItem value="acceptedPaid" sx={{ fontSize: '0.7rem' }}>acceptedPaid</MenuItem>
+                                <MenuItem value="error" sx={{ fontSize: '0.7rem', color: '#d93838' }}>error</MenuItem>
+                                <MenuItem value="rejected" sx={{ fontSize: '0.7rem', color: '#d93838' }}>rejected</MenuItem>
+                                <MenuItem value="eobUploaded" sx={{ fontSize: '0.7rem' }}>eobUploaded</MenuItem>
+                                <MenuItem value="manualClaim" sx={{ fontSize: '0.7rem' }}>manualClaim</MenuItem>
+                                <MenuItem value="acceptedForProcessing" sx={{ fontSize: '0.7rem' }}>acceptedForProcessing</MenuItem>
                               </Select>
                             </FormControl>
                           ) : (
                             // Standard Status in UNSENT tab
                             isError ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#d93838' }}>
+                                <Typography sx={{ fontWeight: 600, color: '#d93838', fontSize: '0.72rem' }}>
                                   validationError
                                 </Typography>
                                 <Tooltip title="Click to Revalidate / Resolve errors">
                                   <IconButton size="small" onClick={() => handleRevalidate(claim.id)} sx={{ p: 0.2, color: '#1a3a6b' }}>
-                                    <SyncIcon sx={{ fontSize: 14 }} />
+                                    <SyncIcon sx={{ fontSize: 12 }} />
                                   </IconButton>
                                 </Tooltip>
                               </Box>
                             ) : (
-                              <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, color: '#2d3748' }}>
+                              <Typography sx={{ fontWeight: 500, color: '#2d3748', fontSize: '0.72rem' }}>
                                 {claim.status}
                               </Typography>
                             )
@@ -2911,8 +2996,8 @@ const ClaimsListPage = () => {
 
                         {/* ERA Status */}
                         {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-                          <TableCell sx={{ py: 1 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: claim.eraStatus ? '#d93838' : '#718096', fontWeight: 600 }}>
+                          <TableCell>
+                            <Typography sx={{ color: claim.eraStatus ? '#d93838' : '#718096', fontWeight: 600, fontSize: '0.72rem' }}>
                               {claim.eraStatus || '—'}
                             </Typography>
                           </TableCell>
@@ -2920,14 +3005,13 @@ const ClaimsListPage = () => {
 
                         {/* Clearing House Status Message */}
                         {(activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4 || activeTab === 5) && (
-                          <TableCell sx={{ py: 1, maxWidth: '280px' }}>
+                          <TableCell sx={{ maxWidth: '120px', verticalAlign: 'top' }}>
                             <Typography
-                              noWrap={!expandAllMessages}
+                              noWrap={!isExpanded && !expandAllMessages}
                               sx={{
-                                fontSize: '0.78rem',
                                 color: '#2d3748',
                                 fontWeight: 500,
-                                whiteSpace: expandAllMessages ? 'normal' : 'nowrap',
+                                whiteSpace: (isExpanded || expandAllMessages) ? 'normal' : 'nowrap',
                                 wordBreak: 'break-word',
                               }}
                             >
@@ -2938,49 +3022,102 @@ const ClaimsListPage = () => {
 
                         {/* Submitted Value */}
                         {activeTab === 4 && (
-                          <TableCell sx={{ py: 1 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 700 }}>
+                          <TableCell sx={{ verticalAlign: 'top' }}>
+                            <Typography sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                               ${(claim.submittedValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </Typography>
                           </TableCell>
                         )}
 
                         {/* Notes icon */}
-                        <TableCell sx={{ py: 1 }}>
+                        <TableCell sx={{ verticalAlign: 'top' }}>
                           <IconButton
                             size="small"
                             onClick={(e) => handleNoteOpen(e, claim.notes)}
-                            sx={{ color: '#a0aec0', '&:hover': { color: '#1a3a6b' } }}
+                            sx={{ color: '#a0aec0', '&:hover': { color: '#1a3a6b' }, p: 0.2 }}
                           >
-                            <DescriptionIcon sx={{ fontSize: 16 }} />
+                            <DescriptionIcon sx={{ fontSize: 14 }} />
                           </IconButton>
                         </TableCell>
 
                         {/* Description */}
-                        <TableCell sx={{ py: 1, maxWidth: '240px' }}>
-                          <Tooltip title={claim.description || ''} arrow disableInteractive>
-                            <Typography
-                              noWrap
-                              sx={{
-                                fontSize: '0.78rem',
-                                color: '#4a5568',
-                                fontStyle: 'italic',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {claim.description || '—'}
-                            </Typography>
-                          </Tooltip>
+                        <TableCell sx={{ maxWidth: isExpanded ? '400px' : '110px', verticalAlign: 'top' }}>
+                          {isExpanded ? (
+                            (() => {
+                              let shortDesc = claim.description || '';
+                              let longDesc = '';
+                              if (claim.description.includes(' CC ')) {
+                                const idx = claim.description.indexOf(' CC ');
+                                shortDesc = claim.description.substring(0, idx);
+                                longDesc = claim.description.substring(idx + 1);
+                              } else if (claim.description.includes(' (KS6 ')) {
+                                const idx = claim.description.indexOf(' (KS6 ');
+                                shortDesc = claim.description.substring(0, idx);
+                                longDesc = claim.description.substring(idx + 1);
+                              }
+                              
+                              return (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'stretch' }}>
+                                  <Typography
+                                    sx={{
+                                      color: '#4a5568',
+                                      fontStyle: 'italic',
+                                      fontSize: '0.72rem',
+                                    }}
+                                  >
+                                    {shortDesc}
+                                  </Typography>
+                                  {longDesc && (
+                                    <Typography
+                                      sx={{
+                                        color: '#2d3748',
+                                        whiteSpace: 'normal',
+                                        wordBreak: 'break-word',
+                                        lineHeight: 1.3,
+                                        backgroundColor: '#f8fafc',
+                                        p: 1,
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '4px',
+                                        fontSize: '0.72rem',
+                                      }}
+                                    >
+                                      {longDesc}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              );
+                            })()
+                          ) : (
+                            <Tooltip title={claim.description || ''} arrow disableInteractive>
+                              <Typography
+                                noWrap
+                                sx={{
+                                  color: '#4a5568',
+                                  fontStyle: 'italic',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {(() => {
+                                  if (claim.description.includes(' CC ')) {
+                                    return claim.description.split(' CC ')[0];
+                                  } else if (claim.description.includes(' (KS6 ')) {
+                                    return claim.description.split(' (KS6 ')[0];
+                                  }
+                                  return claim.description || '—';
+                                })()}
+                              </Typography>
+                            </Tooltip>
+                          )}
                         </TableCell>
 
                         {/* Actions */}
-                        <TableCell align="right" sx={{ py: 1 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.2 }}>
                             {activeTab === 5 ? (
                               <>
                                 <Tooltip title="Edit Predetermination">
-                                  <IconButton size="small" onClick={() => handleOpenEdit(claim)} sx={{ color: '#7d9cc4' }}>
-                                    <EditIcon sx={{ fontSize: 16 }} />
+                                  <IconButton size="small" onClick={() => handleOpenEdit(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                    <EditIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Manage Attachments">
@@ -2990,21 +3127,22 @@ const ClaimsListPage = () => {
                                     sx={{
                                       color: attachIconColor,
                                       transition: 'color 0.2s',
+                                      p: 0.2,
                                     }}
                                   >
-                                    <AttachFileIcon sx={{ fontSize: 16 }} />
+                                    <AttachFileIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
                                 {claim.showEye ? (
                                   <Tooltip title="Preview ADA Form">
-                                    <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4' }}>
-                                      <VisibilityIcon sx={{ fontSize: 16 }} />
+                                    <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                      <VisibilityIcon sx={{ fontSize: 14 }} />
                                     </IconButton>
                                   </Tooltip>
                                 ) : (
                                   <Tooltip title="Delete Predetermination">
-                                    <IconButton size="small" onClick={() => handleDeletePredetermination(claim.id)} sx={{ color: '#e53e3e' }}>
-                                      <DeleteIcon sx={{ fontSize: 16 }} />
+                                    <IconButton size="small" onClick={() => handleDeletePredetermination(claim.id)} sx={{ color: '#e53e3e', p: 0.2 }}>
+                                      <DeleteIcon sx={{ fontSize: 14 }} />
                                     </IconButton>
                                   </Tooltip>
                                 )}
@@ -3012,8 +3150,8 @@ const ClaimsListPage = () => {
                             ) : (
                               <>
                                 <Tooltip title="Edit Claim">
-                                  <IconButton size="small" onClick={() => handleOpenEdit(claim)} sx={{ color: '#7d9cc4' }}>
-                                    <EditIcon sx={{ fontSize: 16 }} />
+                                  <IconButton size="small" onClick={() => handleOpenEdit(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                    <EditIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Manage Attachments">
@@ -3023,14 +3161,15 @@ const ClaimsListPage = () => {
                                     sx={{
                                       color: claim.redAttachment ? '#d93838' : '#7d9cc4',
                                       transition: 'color 0.2s',
+                                      p: 0.2,
                                     }}
                                   >
-                                    <AttachFileIcon sx={{ fontSize: 16 }} />
+                                    <AttachFileIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Preview Claim Form">
-                                  <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4' }}>
-                                    <VisibilityIcon sx={{ fontSize: 16 }} />
+                                  <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                    <VisibilityIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
                               </>
@@ -3041,8 +3180,8 @@ const ClaimsListPage = () => {
 
                       {/* Expandable Procedure list detail */}
                       <TableRow>
-                        <TableCell 
-                          colSpan={activeTab === 4 ? 17 : activeTab === 5 ? 13 : activeTab === 2 || activeTab === 3 ? 14 : activeTab === 1 ? 12 : 11} 
+                        <TableCell
+                          colSpan={activeTab === 4 ? 17 : activeTab === 5 ? 13 : activeTab === 2 || activeTab === 3 ? 14 : activeTab === 1 ? 12 : 11}
                           sx={{ p: 0, border: 'none' }}
                         >
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -3321,7 +3460,7 @@ const ClaimsListPage = () => {
               <Typography sx={{ fontSize: '0.85rem', color: '#333', mb: 2 }}>
                 Claim {attachingClaim.claimNumber}
               </Typography>
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4 }}>
                 <Typography sx={{ fontSize: '0.85rem', color: '#444' }}>
                   Payor Reference Number:
@@ -3357,27 +3496,27 @@ const ClaimsListPage = () => {
                 </Box>
                 {/* Upload from PC */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
                   <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Upload from PC</Typography>
                 </Box>
                 {/* Perio Chart */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8 2 6 5 6 9v3c0 2-2 4-2 6 0 1 1 2 2 2h2c1-2 2-3 4-3s3 1 4 3h2c1 0 2-1 2-2 0-2-2-4-2-6V9c0-4-2-7-6-7z"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8 2 6 5 6 9v3c0 2-2 4-2 6 0 1 1 2 2 2h2c1-2 2-3 4-3s3 1 4 3h2c1 0 2-1 2-2 0-2-2-4-2-6V9c0-4-2-7-6-7z" /></svg>
                   <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Perio Chart</Typography>
                 </Box>
                 {/* Medical History */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><path d="M12 8v8M8 12h8"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" /><path d="M12 8v8M8 12h8" /></svg>
                   <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Medical History</Typography>
                 </Box>
                 {/* Dental History */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                   <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Dental History</Typography>
                 </Box>
                 {/* Progress Notes */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                   <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Progress Notes</Typography>
                 </Box>
                 {/* Upload EOBs */}
