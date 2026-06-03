@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -9,12 +9,18 @@ import {
   Button
 } from '@mui/material';
 
-const DepositDialog = ({ onClose, onSave, depositType = 'patient-deposit' }) => {
-  const [fromPatient, setFromPatient] = useState('test test');
+const DepositDialog = ({ patient, onClose, onSave, depositType = 'patient-deposit' }) => {
+  const [fromPatient, setFromPatient] = useState(patient ? `${patient.firstName} ${patient.lastName}` : 'test test');
   const [paymentMethod, setPaymentMethod] = useState('Do not use');
   const [toAccount, setToAccount] = useState('');
   const [policy, setPolicy] = useState('');
   const [depositAmount, setDepositAmount] = useState('0.00');
+
+  useEffect(() => {
+    if (patient) {
+      setFromPatient(`${patient.firstName} ${patient.lastName}`);
+    }
+  }, [patient]);
   
   const blueHeader = '#5c7cb6';
   const blueText = '#3a5a8c';
@@ -89,7 +95,7 @@ const DepositDialog = ({ onClose, onSave, depositType = 'patient-deposit' }) => 
               }
             }}
           >
-            <MenuItem value="test test">test test</MenuItem>
+            <MenuItem value={fromPatient}>{fromPatient}</MenuItem>
           </Select>
 
           <Typography sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>with</Typography>

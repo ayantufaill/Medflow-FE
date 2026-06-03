@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -22,8 +22,12 @@ import DepositDialog from '../../components/finance/DepositDialog';
 import DepositOptionsMenu from '../../components/finance/DepositOptionsMenu';
 import CourtesyCreditComponent from '../../components/finance/CourtesyCreditComponent';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
+import { usePatient } from '../../hooks/redux/usePatient';
+import apiClient from '../../config/api';
+import { patientService } from '../../services/patient.service';
 
 const FinancePage = () => {
+  const { currentPatient, selectedPatientId, fetchById, setPatient } = usePatient();
   const [view, setView] = useState('invoices');
   const [expanded, setExpanded] = useState(false);
   const [showPaymentPlan, setShowPaymentPlan] = useState(false);
@@ -39,6 +43,40 @@ const FinancePage = () => {
     hideBillingTransfers: false
   });
 
+  useEffect(() => {
+    const loadPatientDetails = async () => {
+      // If we already have currentPatient, no need to fetch
+      if (currentPatient && (currentPatient._id || currentPatient.id)) {
+        return;
+      }
+      
+      // If we have selectedPatientId, fetch that patient
+      if (selectedPatientId) {
+        try {
+          await fetchById(selectedPatientId);
+        } catch (error) {
+          console.error('Error fetching selected patient details:', error);
+        }
+        return;
+      }
+      
+      // Fallback: If no patient is selected, fetch the first active patient in the system
+      try {
+        const result = await patientService.getAllPatients(1, 1, '', 'active');
+        const firstPatient = result?.patients?.[0];
+        if (firstPatient && (firstPatient._id || firstPatient.id)) {
+          const patientId = firstPatient._id || firstPatient.id;
+          const fullPatient = await patientService.getPatientById(patientId);
+          setPatient(fullPatient);
+        }
+      } catch (error) {
+        console.error('Error fetching fallback patient details:', error);
+      }
+    };
+
+    loadPatientDetails();
+  }, [currentPatient, selectedPatientId, fetchById, setPatient]);
+
   const handleViewChange = (event) => {
     setView(event.target.value);
   };
@@ -49,22 +87,142 @@ const FinancePage = () => {
     // Add logic to filter ledger data based on these filters
   };
 
-  const handleDepositSave = (depositData) => {
+  const handleDepositSave = async (depositData) => {
     console.log('Deposit saved:', depositData);
-    // Add API call or state update logic here
+    try {
+      const patientId = currentPatient?._id || currentPatient?.id;
+      if (!patientId) {
+        console.warn('No active patient selected to add deposit.');
+        return;
+      }
+
+      // Map human-readable paymentMethod to backend-supported values
+      // Backend expects: ['cash', 'check', 'card', 'ach', 'insurance']
+      let mappedMethod = 'cash';
+      const methodLower = depositData.paymentMethod?.toLowerCase() || '';
+      if (methodLower.includes('check')) mappedMethod = 'check';
+      else if (methodLower.includes('card') || methodLower.includes('visa') || methodLower.includes('master')) mappedMethod = 'card';
+      else if (methodLower.includes('eft') || methodLower.includes('ach')) mappedMethod = 'ach';
+      else if (methodLower.includes('insurance')) mappedMethod = 'insurance';
+
+      // Map depositType: 'patient-deposit' -> 'patient', 'insurance-deposit' -> 'insurance'
+      const mappedType = depositData.depositType === 'insurance-deposit' ? 'insurance' : 'patient';
+
+      await apiClient.post('/deposits', {
+        patientId: patientId.toString(),
+        amount: parseFloat(depositData.depositAmount) || 0,
+        paymentMethod: mappedMethod,
+        depositType: mappedType,
+        date: new Date().toISOString(),
+        notes: `Prepayment Deposit - Method: ${depositData.paymentMethod}. Account: ${depositData.toAccount || 'None'}. Policy: ${depositData.policy || 'None'}`
+      });
+
+      // Dispatch refresh event to update the ledger UI
+      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+    } catch (err) {
+      console.error('Error saving deposit in database:', err);
+    }
     setShowDeposit(false);
   };
 
-  const handleCourtesyCreditSave = (creditData) => {
+  const handleCourtesyCreditSave = async (creditData) => {
     console.log('Courtesy credit saved:', creditData);
-    // Add API call or state update logic here
+    try {
+      const patientId = currentPatient?._id || currentPatient?.id;
+      if (!patientId) {
+        console.warn('No active patient selected to add courtesy credit.');
+        return;
+      }
+      
+      // Post adjustment to backend (negative amount for credit subtraction)
+      const amountVal = -Math.abs(creditData.creditAmount);
+      await apiClient.post('/adjustments', {
+        patientId: patientId.toString(),
+        amount: amountVal,
+        date: new Date(),
+        notes: `Courtesy Credit - Type: ${creditData.adjustmentType}`
+      });
+
+      // Dispatch refresh event to update the ledger UI
+      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+    } catch (err) {
+      console.error('Error saving courtesy credit in database:', err);
+    }
     setShowCourtesyCredit(false);
   };
 
-  const handleEditFlagsSave = (flagsData) => {
+  const handleAccountAdjustmentSave = async (adjustmentData) => {
+    console.log('Account adjustment saved:', adjustmentData);
+    try {
+      const patientId = currentPatient?._id || currentPatient?.id;
+      if (!patientId) {
+        console.warn('No active patient selected to add account adjustment.');
+        return;
+      }
+      
+      // Post adjustment to backend (negative amount for balance deduction/cash minus)
+      const amountVal = -Math.abs(adjustmentData.amount);
+      await apiClient.post('/adjustments', {
+        patientId: patientId.toString(),
+        amount: amountVal,
+        date: new Date(),
+        notes: `Account Adjustment - Type: ${adjustmentData.adjustmentType}${adjustmentData.description ? `. Description: ${adjustmentData.description}` : ''}`
+      });
+
+      // Dispatch refresh event to update the ledger UI
+      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+    } catch (err) {
+      console.error('Error saving account adjustment in database:', err);
+    }
+    setShowAccountAdjustment(false);
+  };
+
+  const handleEditFlagsSave = async (flagsData) => {
     console.log('Patient flags saved:', flagsData);
-    // Add API call or state update logic here
+    const activeFlags = Object.keys(flagsData).filter(key => flagsData[key]);
+    try {
+      if (currentPatient && (currentPatient._id || currentPatient.id)) {
+        const patientId = currentPatient._id || currentPatient.id;
+        const updatedPatient = await patientService.updatePatientWorkspace(patientId, {
+          patientFlags: activeFlags
+        });
+        setPatient(updatedPatient);
+        console.log('Patient flags updated successfully:', updatedPatient.patientFlags);
+      } else {
+        console.warn('No active patient selected to update flags.');
+      }
+    } catch (error) {
+      console.error('Error updating patient flags:', error);
+    }
     setShowEditFlags(false);
+  };
+
+  const handleCreatePaymentPlan = async (planData) => {
+    console.log('Creating payment plan:', planData);
+    try {
+      const patientId = currentPatient?._id || currentPatient?.id;
+      if (!patientId) {
+        console.warn('No active patient to create payment plan for.');
+        return;
+      }
+      
+      await apiClient.post('/payment-plans', {
+        patientId: patientId.toString(),
+        totalAmount: planData.totalAmount,
+        downPayment: planData.downPayment,
+        monthlyPayment: planData.monthlyPayment,
+        numberOfPayments: planData.numberOfPayments,
+        apr: 0,
+        startDate: planData.startDate || new Date().toISOString(),
+        notes: planData.notes
+      });
+      
+      // Dispatch refresh event to update the ledger UI
+      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+    } catch (err) {
+      console.error('Error creating payment plan in backend:', err);
+    }
+    setShowPaymentPlan(false);
   };
 
   const handleDepositOptionSelect = (optionId) => {
@@ -79,7 +237,11 @@ const FinancePage = () => {
   };
 
   if (showPaymentPlan) {
-    return <NewPaymentPlan onBack={() => setShowPaymentPlan(false)} />;
+    return <NewPaymentPlan 
+      patient={currentPatient} 
+      onBack={() => setShowPaymentPlan(false)} 
+      onCreatePlan={handleCreatePaymentPlan}
+    />;
   }
 
   return (
@@ -107,6 +269,8 @@ const FinancePage = () => {
       <Box sx={{ display: 'flex', width: '100%', mt: 2, alignItems: 'center' }}>
         <PatientFinanceInfo 
           view={view} 
+          flags={currentPatient?.patientFlags || []}
+          patient={currentPatient}
           onCalendarClick={() => setShowPaymentPlan(true)} 
           onCashMinusClick={() => setShowAccountAdjustment(true)}
           onRefreshCoinClick={() => setShowCourtesyRefund(true)}
@@ -126,7 +290,7 @@ const FinancePage = () => {
 
       {/* Dynamic Ledger Section */}
       <ErrorBoundary>
-        {view === 'family' ? <FamilyLedgerTable /> : view === 'individual' ? <IndividualLedgerTable /> : <LedgerList expanded={expanded} />}
+        {view === 'family' ? <FamilyLedgerTable patient={currentPatient} /> : view === 'individual' ? <IndividualLedgerTable patient={currentPatient} /> : <LedgerList patient={currentPatient} expanded={expanded} />}
       </ErrorBoundary>
 
       {/* Account Adjustment Dialog */}
@@ -157,7 +321,11 @@ const FinancePage = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <AccountAdjustmentDialog onClose={() => setShowAccountAdjustment(false)} />
+            <AccountAdjustmentDialog 
+              patient={currentPatient}
+              onClose={() => setShowAccountAdjustment(false)} 
+              onSave={handleAccountAdjustmentSave}
+            />
           </Box>
         </Box>
       )}
@@ -190,7 +358,10 @@ const FinancePage = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <CourtesyRefundDialog onClose={() => setShowCourtesyRefund(false)} />
+            <CourtesyRefundDialog 
+              patient={currentPatient}
+              onClose={() => setShowCourtesyRefund(false)} 
+            />
           </Box>
         </Box>
       )}
@@ -226,6 +397,7 @@ const FinancePage = () => {
             <EditPatientFlagsDialog 
               onClose={() => setShowEditFlags(false)}
               onSave={handleEditFlagsSave}
+              initialFlags={currentPatient?.patientFlags || []}
             />
           </Box>
         </Box>
@@ -260,6 +432,7 @@ const FinancePage = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <DepositDialog 
+              patient={currentPatient}
               onClose={() => setShowDeposit(false)} 
               onSave={handleDepositSave}
               depositType={depositType}

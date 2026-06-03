@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -16,15 +16,40 @@ import {
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import WarningIcon from '@mui/icons-material/Warning';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { claimService } from '../../services/claim.service';
+import { paymentService } from '../../services/payment.service';
 
-const InsurancePaymentDialog = ({ onClose, onSave }) => {
+const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
-  const [paymentMethod, setPaymentMethod] = useState('Master Card');
+  const [paymentMethod, setPaymentMethod] = useState('insurance');
   const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [showSimpleBillingAlert, setShowSimpleBillingAlert] = useState(false);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [selectedPaymentOption, setSelectedPaymentOption] = useState('swipe');
   const [rememberCard, setRememberCard] = useState(false);
+  const [claims, setClaims] = useState([]);
+  const [loadingClaims, setLoadingClaims] = useState(true);
+
+  useEffect(() => {
+    const fetchClaims = async () => {
+      const patientId = patient?._id || patient?.id;
+      if (!patientId) return;
+      try {
+        setLoadingClaims(true);
+        const data = await claimService.getAllClaims({ patientId, limit: 1000 });
+        const claimsList = data.claims || [];
+        setClaims(claimsList);
+        if (claimsList.length > 0) {
+          setSelectedClaim(claimsList[0].id);
+        }
+      } catch (err) {
+        console.error('Error fetching claims:', err);
+      } finally {
+        setLoadingClaims(false);
+      }
+    };
+    fetchClaims();
+  }, [patient]);
   
   const headerBackground = '#7788bb';
   const greenHeader = '#8fb884';
@@ -57,17 +82,42 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
     setShowPaymentOptions(true);
   };
 
-  const handleProceedPayment = () => {
-    const paymentData = {
-      selectedClaim,
-      paymentMethod,
-      paymentAmount: parseFloat(paymentAmount) || 0,
-      checkboxOptions: checkboxOptions.map(opt => opt.label),
-      date: '04/15/2026'
-    };
+  const handleProceedPayment = async () => {
+    const patientId = patient?._id || patient?.id;
+    const selectedClaimObj = claims.find(c => c.id === selectedClaim);
     
-    if (onSave) {
-      onSave(paymentData);
+    if (!patientId || !selectedClaimObj) {
+      console.error('Missing patient ID or claim object');
+      return;
+    }
+
+    try {
+      const paymentData = {
+        patientId: patientId.toString(),
+        invoiceId: selectedClaimObj.invoiceId?.toString() || selectedClaimObj.invoice?.id?.toString() || selectedClaimObj.invoice?._id?.toString(),
+        amount: parseFloat(paymentAmount) || 0,
+        paymentMethod: paymentMethod,
+        paymentSource: 'insurance_company',
+        paymentDate: new Date().toISOString(),
+        insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
+        notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.map(opt => opt.label).join(', ')}`
+      };
+
+      // Call API to create payment
+      await paymentService.createPayment(paymentData);
+
+      // Update claim paidAmount and status to paid
+      await claimService.updateClaim(selectedClaimObj.id, {
+        status: 'paid',
+        paidAmount: parseFloat(paymentAmount) || 0,
+        paidDate: new Date().toISOString()
+      });
+
+      if (onSave) {
+        onSave(paymentData);
+      }
+    } catch (err) {
+      console.error('Error applying insurance payment:', err);
     }
     
     setShowPaymentOptions(false);
@@ -89,7 +139,9 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 2, mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CalendarMonthIcon sx={{ fontSize: '1.2rem', color: '#888' }} />
-            <Typography sx={{ color: '#7788bb', fontSize: '0.9rem', fontWeight: 500 }}>04/15/2026</Typography>
+            <Typography sx={{ color: '#7788bb', fontSize: '0.9rem', fontWeight: 500 }}>
+              {new Date().toLocaleDateString()}
+            </Typography>
           </Box>
 
           <Typography sx={{ color: '#2c3e50', fontSize: '0.9rem' }}>
@@ -103,7 +155,15 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
             sx={{ fontSize: '0.85rem', minWidth: 120 }}
             MenuProps={{ disablePortal: true }}
           >
-            <MenuItem value="select a claim">select a claim</MenuItem>
+            {claims.length === 0 ? (
+              <MenuItem value="select a claim">select a claim</MenuItem>
+            ) : (
+              claims.map((claim) => (
+                <MenuItem key={claim.id} value={claim.id}>
+                  Claim #{claim.id} ({claim.status})
+                </MenuItem>
+              ))
+            )}
           </Select>
 
           <Typography sx={{ fontSize: '0.85rem' }}>with</Typography>
@@ -115,9 +175,10 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
             sx={{ fontSize: '0.85rem', minWidth: 120 }}
             MenuProps={{ disablePortal: true }}
           >
-            <MenuItem value="Master Card">Master Card</MenuItem>
-            <MenuItem value="Visa">Visa</MenuItem>
-            <MenuItem value="Cash">Cash</MenuItem>
+            <MenuItem value="insurance">Insurance</MenuItem>
+            <MenuItem value="check">Check</MenuItem>
+            <MenuItem value="card">Credit Card</MenuItem>
+            <MenuItem value="cash">Cash</MenuItem>
           </Select>
 
           {/* Checkbox Group */}
@@ -184,21 +245,23 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
         </Box>
 
         {/* Warning Section */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 2, 
-          py: 1.5, 
-          px: 2, 
-          borderTop: '1px solid #8fb884', 
-          borderBottom: '1px solid #8fb884',
-          mb: 2 
-        }}>
-          <WarningIcon sx={{ color: '#d35400', fontSize: '1.5rem' }} />
-          <Typography sx={{ color: '#c0392b', fontSize: '0.85rem', fontWeight: 400 }}>
-            There are no claims on the patient's account. Please create one before applying insurance payment.
-          </Typography>
-        </Box>
+        {!loadingClaims && claims.length === 0 && (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 2, 
+            py: 1.5, 
+            px: 2, 
+            borderTop: '1px solid #8fb884', 
+            borderBottom: '1px solid #8fb884',
+            mb: 2 
+          }}>
+            <WarningIcon sx={{ color: '#d35400', fontSize: '1.5rem' }} />
+            <Typography sx={{ color: '#c0392b', fontSize: '0.85rem', fontWeight: 400 }}>
+              There are no claims on the patient's account. Please create one before applying insurance payment.
+            </Typography>
+          </Box>
+        )}
 
         {/* Footer Section */}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
@@ -224,6 +287,7 @@ const InsurancePaymentDialog = ({ onClose, onSave }) => {
               <Button 
                 variant="contained" 
                 onClick={handleApplyAndPay}
+                disabled={claims.length === 0 || parseFloat(paymentAmount) <= 0}
                 sx={{ bgcolor: greenButton, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
               >
                 Apply and Pay

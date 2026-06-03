@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,8 +12,9 @@ import {
   Button, 
   TextField
 } from '@mui/material';
+import { invoiceService } from '../../services/invoice.service';
 
-const AccountAdjustmentDialog = ({ onClose }) => {
+const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
   const [adjustmentType, setAdjustmentType] = useState('Un-Collected');
   const [rateType, setRateType] = useState('Flat rate');
   const [outstandingType, setOutstandingType] = useState('total');
@@ -21,9 +22,27 @@ const AccountAdjustmentDialog = ({ onClose }) => {
   const [includeCourtesy, setIncludeCourtesy] = useState(false);
   const [description, setDescription] = useState('');
   
-  const totalOutstanding = 400.00;
-  const patientOutstanding = 400.00;
+  const [totalOutstanding, setTotalOutstanding] = useState(0);
+  const [patientOutstanding, setPatientOutstanding] = useState(0);
   const courtesyCredit = 0.00;
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      const patientId = patient?.id || patient?._id;
+      if (!patientId) return;
+      try {
+        const balanceData = await invoiceService.getPatientBalance(patientId);
+        if (balanceData) {
+          const bal = balanceData.balance || 0;
+          setTotalOutstanding(bal);
+          setPatientOutstanding(bal);
+        }
+      } catch (err) {
+        console.error('Error fetching patient balance:', err);
+      }
+    };
+    fetchBalance();
+  }, [patient]);
   
   const blueHeader = '#7788bb';
   const labelBlue = '#5c6bc0';
@@ -229,6 +248,16 @@ const AccountAdjustmentDialog = ({ onClose }) => {
             
             <Button 
               variant="contained" 
+              onClick={() => {
+                const value = parseFloat(calculateAdjustmentValue()) || 0;
+                if (onSave) {
+                  onSave({
+                    adjustmentType,
+                    amount: value,
+                    description
+                  });
+                }
+              }}
               sx={{ bgcolor: goldButton, '&:hover': { bgcolor: '#b3a247' }, textTransform: 'none', px: 3 }}
             >
               Apply
