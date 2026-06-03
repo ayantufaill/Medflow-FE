@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -10,9 +10,9 @@ import {
   TextField
 } from '@mui/material';
 
-const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
+const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [amount, setAmount] = useState('0');
-  const [selectedPatient, setSelectedPatient] = useState('test test');
+  const [selectedPatient, setSelectedPatient] = useState(patient ? `${patient.firstName} ${patient.lastName}` : 'test test');
   const [paymentMethod, setPaymentMethod] = useState('Master Card');
   const [generateStatement, setGenerateStatement] = useState(false);
   const [description, setDescription] = useState('');
@@ -20,6 +20,12 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
   const [paymentType, setPaymentType] = useState('patient amount');
   const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [overpayment, setOverpayment] = useState('0.00');
+
+  useEffect(() => {
+    if (patient) {
+      setSelectedPatient(`${patient.firstName} ${patient.lastName}`);
+    }
+  }, [patient]);
   
   const headerBackground = '#7788bb';
   const greenHeader = '#8eb378';
@@ -100,7 +106,7 @@ const AddPaymentDialog = ({ onClose, onPaymentApply }) => {
             sx={{ fontSize: '0.875rem', minWidth: 100 }}
             MenuProps={{ disablePortal: true }}
           >
-            <MenuItem value="test test">test test</MenuItem>
+            <MenuItem value={selectedPatient}>{selectedPatient}</MenuItem>
           </Select>
           <Typography sx={{ fontSize: '0.875rem' }}>
             with

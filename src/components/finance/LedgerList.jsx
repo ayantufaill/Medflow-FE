@@ -20,6 +20,9 @@ import EditDeposit from './EditDeposit';
 import InvoiceModal from './InvoiceModal';
 import TransferCreditConfirmationDialog from './TransferCreditConfirmationDialog';
 import EditInvoiceDetailsDialog from './EditInvoiceDetailsDialog';
+import { invoiceService } from '../../services/invoice.service';
+import apiClient from '../../config/api';
+import dayjs from 'dayjs';
 
 // --- COMPONENT HELPERS ---
  
@@ -181,7 +184,7 @@ const LedgerSubRow = ({
         </Box>
       ) : (
         <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
-          Invoice #{id || '24636'} ({date}): [ {title} ]{amount}
+          {isAdjustment ? 'Adjustment' : 'Invoice'} #{id || '24636'} ({date}): [ {title} ]
         </Typography>
       )}
     </Typography>
@@ -235,47 +238,102 @@ const LedgerSubRow = ({
   </Box>
 );
 
-const LedgerList = ({ expanded, items = [] }) => {
+const LedgerList = ({ patient, expanded, items = [] }) => {
   const [ledgerItems, setLedgerItems] = useState(
-    items.length > 0 ? items : [
-      { 
-        id: '24532', date: '04/10/2026', method: 'Master Card', amount: ' $184.00', color: '#5c6bc0',
-        initials: 'MAG', success: false,
-        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-        details: [
-          { id: '14040', title: 'Periodic Oral Eval (uncollected)', amount: '$50.00' },
-          { id: '24636', title: 'Broken appt', amount: '$134.00' }
-        ]
-      },
-      { 
-        id: '24531', date: '04/10/2026', method: 'Sunbit', amount: '$92.00', color: '#5c6bc0',
-        initials: 'MAG', success: true,
-        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-        details: [
-          { id: '24637', title: 'Amalgam - 1 Surface', amount: '$92.00' }
-        ]
-      },
-      { 
-        id: '24530', date: '04/10/2026', method: 'Sunbit', amount: '$292.00', color: '#5c6bc0', initials: 'MAG',
-        success: true,
-        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-        details: [{ id: '24638', title: 'Composite - 2 Surfaces', amount: '$292.00' }]
-      },
-      { 
-        id: '23003', date: '01/27/2026', method: 'Master Card', amount: '- $1.00', color: '#90a4ae', initials: 'MAG',
-        success: false,
-        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-        details: [{ id: '24639', title: 'Account Adjustment', amount: '- $1.00' }]
-      },
-      { 
-        id: '8494', date: '09/20/2023', method: 'American Express', amount: '$1.00', color: '#5c6bc0', success: true, initials: 'MAG',
-        summary: { insWo: '$0.00', ptBal: '$0.00', insBal: '$0.00', invBal: '$0.00' },
-        details: [{ id: '24640', title: 'Test Transaction', amount: '$1.00' }]
-      },
-    ]
+    items.length > 0 ? items : []
   );
+
+  const patientId = patient?._id || patient?.id;
+
+  const fetchPatientData = async () => {
+    if (!patientId) return;
+    try {
+      // Fetch invoices and adjustments in parallel
+      const [invoicesResult, adjustmentsResult] = await Promise.all([
+        invoiceService.getAllInvoices({ patientId, limit: 1000 }),
+        apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`)
+      ]);
+
+      const invoices = invoicesResult.invoices || [];
+      const adjustments = adjustmentsResult.data?.data?.adjustments || [];
+      
+      const mappedInvoices = invoices.map(invoice => ({
+        id: invoice._id || invoice.id,
+        invoiceNumber: invoice.invoiceNumber || invoice._id || invoice.id,
+        date: invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MM/DD/YYYY') : 'N/A',
+        rawDate: invoice.invoiceDate || '',
+        method: 'Invoice',
+        amount: `$${Number(invoice.totalAmount || 0).toFixed(2)}`,
+        color: '#5c6bc0',
+        isAdjustment: false,
+        initials: 'STAFF',
+        success: invoice.status !== 'voided',
+        summary: {
+          insWo: '$0.00',
+          ptBal: `$${Number(invoice.patientPortion || 0).toFixed(2)}`,
+          insBal: `$${Number(invoice.insurancePortion || 0).toFixed(2)}`,
+          invBal: `$${Number(invoice.balanceDue || 0).toFixed(2)}`,
+          appliedWo: '$0.00',
+          ptPaid: `$${Number(invoice.paidAmount || 0).toFixed(2)}`,
+          insPaid: '$0.00',
+        },
+        details: []
+      }));
+
+      const mappedAdjustments = adjustments.map(adj => {
+        const amt = Number(adj.amount || 0);
+        return {
+          id: adj._id || adj.id,
+          invoiceNumber: `Adj #${adj._id || adj.id}`,
+          date: adj.date ? dayjs(adj.date).format('MM/DD/YYYY') : 'N/A',
+          rawDate: adj.date || '',
+          method: 'Adjustment',
+          amount: `$${Math.abs(amt).toFixed(2)}`,
+          color: '#7e57c2',
+          isAdjustment: true,
+          useCheckmark: false,
+          initials: 'STAFF',
+          success: true,
+          summary: {
+            insWo: '$0.00',
+            ptBal: `$${amt.toFixed(2)}`,
+            insBal: '$0.00',
+            invBal: `$${amt.toFixed(2)}`,
+            appliedWo: '$0.00',
+            ptPaid: '$0.00',
+            insPaid: '$0.00',
+          },
+          details: [
+            {
+              id: adj._id || adj.id,
+              title: adj.notes || 'Patient Account Adjustment',
+              amount: `$${amt.toFixed(2)}`,
+            }
+          ]
+        };
+      });
+
+      const combined = [...mappedInvoices, ...mappedAdjustments];
+      combined.sort((a, b) => {
+        const dateA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
+        const dateB = b.rawDate ? new Date(b.rawDate).getTime() : 0;
+        return dateB - dateA; // Sort descending (newest first)
+      });
+      
+      setLedgerItems(combined);
+    } catch (err) {
+      console.error('Error fetching dynamic ledger list:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatientData();
+  }, [patientId]);
   const [expandedItems, setExpandedItems] = useState({});
   const [anchorEl, setAnchorEl] = useState(null);
+  const [calendarTarget, setCalendarTarget] = useState(null);
+  const [adjItem, setAdjItem] = useState(null);
+  const [printItem, setPrintItem] = useState(null);
   const [printAnchorEl, setPrintAnchorEl] = useState(null);
   const [adjAnchorEl, setAdjAnchorEl] = useState(null);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
@@ -312,44 +370,12 @@ const LedgerList = ({ expanded, items = [] }) => {
 
   useEffect(() => {
     const handleAddLedgerItem = (event) => {
-      const { title, amount, ptBal, invBal, useCheckmark } = event.detail;
-      const today = new Date().toLocaleDateString('en-US', { 
-        month: '2-digit', 
-        day: '2-digit', 
-        year: 'numeric' 
-      });
-      
-      const newItem = {
-        id: Math.floor(Math.random() * 90000 + 10000).toString(),
-        date: today,
-        method: 'Adjustment',
-        amount: amount,
-        color: '#5c6bc0',
-        isAdjustment: true,
-        useCheckmark: useCheckmark,
-        initials: 'MAG',
-        success: true,
-        summary: { 
-          insWo: '$0.00', 
-          ptBal: ptBal, 
-          insBal: '$0.00', 
-          invBal: invBal 
-        },
-        details: [
-          { 
-            id: Math.floor(Math.random() * 90000 + 10000).toString(), 
-            title: title, 
-            amount: amount 
-          }
-        ]
-      };
-      
-      setLedgerItems(prev => [newItem, ...prev]);
+      fetchPatientData();
     };
 
     window.addEventListener('add-ledger-item', handleAddLedgerItem);
     return () => window.removeEventListener('add-ledger-item', handleAddLedgerItem);
-  }, []);
+  }, [patientId]);
 
 
   // Sync individual states with global expanded prop
@@ -363,7 +389,7 @@ const LedgerList = ({ expanded, items = [] }) => {
     }
   }, [expanded]);
 
-  const handleItemClick = (idx, event) => {
+  const handleItemClick = async (idx, event) => {
     console.log('Click on invoice:', idx);
     setExpandedItems(prev => {
       const newState = {
@@ -373,10 +399,35 @@ const LedgerList = ({ expanded, items = [] }) => {
       console.log('New expanded state:', newState);
       return newState;
     });
+
+    const targetItem = ledgerItems[idx];
+    if (targetItem && targetItem.method === 'Invoice' && (!targetItem.details || targetItem.details.length === 0)) {
+      try {
+        const invoiceId = targetItem.id;
+        const fullInvoice = await invoiceService.getInvoiceById(invoiceId);
+        
+        const detailsMapped = fullInvoice.lineItems?.map(line => ({
+          id: line._id || line.id,
+          title: line.description || 'Procedure',
+          amount: `$${Number(line.total || line.totalPrice || 0).toFixed(2)}`
+        })) || [];
+        
+        setLedgerItems(prevItems => 
+          prevItems.map((item, i) => 
+            i === idx 
+              ? { ...item, details: detailsMapped }
+              : item
+          )
+        );
+      } catch (err) {
+        console.error('Error loading dynamic invoice details:', err);
+      }
+    }
   };
   
-  const handleCalendarClick = (event) => {
+  const handleCalendarClick = (item, event) => {
     setAnchorEl(event.currentTarget);
+    setCalendarTarget(item);
   };
 
   const handlePrintClick = (event) => {
@@ -419,9 +470,27 @@ const LedgerList = ({ expanded, items = [] }) => {
     }
   };
 
-  const handleBackdateDone = (date) => {
+  const handleBackdateDone = async (date) => {
     console.log('Backdated to:', date);
-    // Add logic here to update the transaction date if needed
+    if (calendarTarget && date) {
+      try {
+        if (calendarTarget.isAdjustment) {
+          // Adjustments: Update Date via PATCH /api/adjustments/:id
+          await apiClient.patch(`/adjustments/${calendarTarget.id}`, {
+            date: new Date(date)
+          });
+        } else {
+          // Invoices: Update Due Date via PATCH /api/invoices/:id
+          await invoiceService.updateInvoice(calendarTarget.id, {
+            dueDate: new Date(date)
+          });
+        }
+        fetchPatientData();
+      } catch (err) {
+        console.error('Error backdating transaction:', err);
+      }
+    }
+    setCalendarTarget(null);
   };
 
   const handleVoidClick = (item) => {
@@ -429,15 +498,24 @@ const LedgerList = ({ expanded, items = [] }) => {
     setShowVoidDialog(true);
   };
 
-  const handleVoidConfirm = () => {
+  const handleVoidConfirm = async () => {
     if (voidTarget) {
-      // Mark the item as voided using invoice ID and detail ID
-      const voidKey = `${voidTarget.invoiceId}-${voidTarget.id}`;
-      setVoidedItems(prev => ({
-        ...prev,
-        [voidKey]: true
-      }));
-      console.log('Voiding adjustment:', voidTarget);
+      try {
+        const isParentAdjustment = voidTarget.isAdjustment;
+
+        if (isParentAdjustment) {
+          // Parent is a database adjustment: delete it completely
+          await apiClient.delete(`/adjustments/${voidTarget.invoiceId}`);
+        } else {
+          // Parent is an invoice: delete the corresponding procedure line item
+          await invoiceService.deleteInvoiceItem(voidTarget.invoiceId, voidTarget.id);
+        }
+
+        // Instantly reload ledger items from database
+        fetchPatientData();
+      } catch (err) {
+        console.error('Error deleting/voiding transaction:', err);
+      }
     }
     setShowVoidDialog(false);
     setVoidTarget(null);
@@ -453,14 +531,38 @@ const LedgerList = ({ expanded, items = [] }) => {
     setShowCourtesyCredit(true);
   };
 
-  const handleCourtesyCreditSave = (data) => {
+  const handleCourtesyCreditSave = async (data) => {
     console.log('Saving courtesy credit:', data);
-    // Save the adjustment type
-    const key = `${data.invoiceId}-${data.id}`;
-    setAdjustmentTypes(prev => ({
-      ...prev,
-      [key]: data.adjustmentType
-    }));
+    try {
+      // Formulate courtesy credit as a database adjustment deduction (negative amount)
+      const amountVal = -Math.abs(data.creditAmount);
+      const notesText = `${data.adjustmentType} applied to Procedure #${data.id}`;
+      
+      // Persist the adjustment in the database
+      await apiClient.post('/adjustments', {
+        patientId: patientId,
+        amount: amountVal,
+        date: new Date(),
+        notes: notesText
+      });
+
+      // Update local visual adjustment types state
+      const key = `${data.invoiceId}-${data.id}`;
+      setAdjustmentTypes(prev => ({
+        ...prev,
+        [key]: data.adjustmentType
+      }));
+
+      // Trigger backend invoice recalculation if the procedure is associated with an invoice
+      if (data.invoiceId) {
+        await apiClient.post(`/invoices/${data.invoiceId}/recalculate`);
+      }
+
+      // Re-fetch all dynamic data to update totals in real-time
+      fetchPatientData();
+    } catch (err) {
+      console.error('Error applying courtesy credit adjustment:', err);
+    }
     setShowCourtesyCredit(false);
     setEditTarget(null);
   };
@@ -475,13 +577,33 @@ const LedgerList = ({ expanded, items = [] }) => {
     setShowUndoDialog(true);
   };
 
-  const handleUndoConfirm = () => {
+  const handleUndoConfirm = async () => {
     if (undoTarget) {
-      const key = `${undoTarget.invoiceId}-${undoTarget.id}`;
-      setRefreshedItems(prev => ({
-        ...prev,
-        [key]: true
-      }));
+      try {
+        // Query database adjustments to locate the courtesy credit applied to this procedure log
+        const response = await apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`);
+        const adjustments = response.data?.data?.adjustments || [];
+        
+        // Find the adjustment that references this procedure ID in its notes description
+        const targetAdjustment = adjustments.find(adj => 
+          adj.notes && adj.notes.includes(`Procedure #${undoTarget.id}`)
+        );
+
+        if (targetAdjustment) {
+          // Permanently delete/reverse the adjustment
+          await apiClient.delete(`/adjustments/${targetAdjustment._id || targetAdjustment.id}`);
+        }
+
+        // Re-calculate the invoice totals
+        if (undoTarget.invoiceId) {
+          await apiClient.post(`/invoices/${undoTarget.invoiceId}/recalculate`);
+        }
+
+        // Re-fetch patient data to update the UI
+        fetchPatientData();
+      } catch (err) {
+        console.error('Error undoing courtesy credit:', err);
+      }
     }
     setShowUndoDialog(false);
     setUndoTarget(null);
@@ -574,13 +696,13 @@ const LedgerList = ({ expanded, items = [] }) => {
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
                 {isExpanded ? (
-                  <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', fontSize: '11px', textTransform: item.isAdjustment ? 'uppercase' : 'none' }}>
-                    {item.isAdjustment ? 'INVOICE' : 'Invoice'} #{item.id} ({item.date}): {item.isAdjustment ? '' : '[ Patient Deposit ]'}{item.amount}
+                  <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', fontSize: '11px', textTransform: 'none' }}>
+                    {item.method === 'Invoice' ? 'Invoice' : 'Adjustment'} #{item.invoiceNumber || item.id} ({item.date}): {item.method === 'Invoice' ? '[ Patient Deposit ]' : ''}{item.amount}
                   </Typography>
                 ) : (
                   <>
                     <Typography variant="caption" sx={{ color: item.color, fontWeight: 500, fontSize: '11px' }}>
-                      Patient Deposit#{item.id} ({item.date} <CalendarMonth sx={{ fontSize: 13, verticalAlign: 'middle', mb: 0.5 }} />) with {item.method}
+                      {item.method === 'Invoice' ? `Invoice #${item.invoiceNumber || item.id}` : item.method === 'Adjustment' ? `Adjustment #${item.invoiceNumber || item.id}` : `Patient Deposit#${item.id}`} ({item.date} <CalendarMonth sx={{ fontSize: 13, verticalAlign: 'middle', mb: 0.5 }} />) with {item.method}
                     </Typography>
 
                     <Typography variant="caption" sx={{ fontWeight: 'bold', color: item.color, fontSize: '11px' }}>
@@ -646,7 +768,7 @@ const LedgerList = ({ expanded, items = [] }) => {
                   <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="flex-end">
                     <CalendarMonth 
                       sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
-                      onClick={handleCalendarClick}
+                      onClick={(e) => handleCalendarClick(item, e)}
                     />
                     <Tune 
                       sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} 
@@ -700,19 +822,22 @@ const LedgerList = ({ expanded, items = [] }) => {
                     title: detail.title,
                     amount: detail.amount,
                     date: item.date,
-                    invoiceId: item.id
+                    invoiceId: item.id,
+                    isAdjustment: item.isAdjustment
                   }}
                   editData={{
                     id: detail.id,
                     title: detail.title,
                     amount: detail.amount,
                     date: item.date,
-                    invoiceId: item.id
+                    invoiceId: item.id,
+                    isAdjustment: item.isAdjustment
                   }}
                   refreshData={{
                     idx: idx,
                     id: detail.id,
-                    invoiceId: item.id
+                    invoiceId: item.id,
+                    isAdjustment: item.isAdjustment
                   }}
                   isAdjustment={item.isAdjustment}
                   onMagicStickClick={handleMagicStickClick}

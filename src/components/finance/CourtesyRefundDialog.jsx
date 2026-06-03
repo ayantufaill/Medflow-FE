@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -9,12 +9,18 @@ import {
   Button
 } from '@mui/material';
 
-const CourtesyRefundDialog = ({ onClose }) => {
-  const [fromPatient, setFromPatient] = useState('test test');
+const CourtesyRefundDialog = ({ patient, onClose }) => {
+  const [fromPatient, setFromPatient] = useState(patient ? `${patient.firstName} ${patient.lastName}` : 'test test');
   const [paymentMethod, setPaymentMethod] = useState('Do not use');
   const [toAccount, setToAccount] = useState('');
   const [accountCredit, setAccountCredit] = useState(false);
   const [refundAmount, setRefundAmount] = useState(0);
+
+  useEffect(() => {
+    if (patient) {
+      setFromPatient(`${patient.firstName} ${patient.lastName}`);
+    }
+  }, [patient]);
   
   const blueHeader = '#7788bb';
   const blueText = '#5c6bc0';
@@ -60,7 +66,7 @@ const CourtesyRefundDialog = ({ onClose }) => {
             sx={{ fontSize: '0.85rem', minWidth: 80, height: 24 }}
             MenuProps={{ disablePortal: true }}
           >
-            <MenuItem value="test test">test test</MenuItem>
+            <MenuItem value={fromPatient}>{fromPatient}</MenuItem>
           </Select>
 
           <Typography sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>with</Typography>

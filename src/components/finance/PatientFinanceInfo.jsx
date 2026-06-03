@@ -20,6 +20,7 @@ import ItemizedReceiptPreview from './ItemizedReceiptPreview';
 import SimpleStatementDialog from './SimpleStatementDialog';
 import DetailedStatementDialog from './DetailedStatementDialog';
 import LateFeeDialog from './LateFeeDialog';
+import apiClient from '../../config/api';
 
 // --- STYLED COMPONENTS ---
 
@@ -193,7 +194,21 @@ const IconCalendar = () => (
   </Tooltip>
 );
 
-const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefreshCoinClick, onAddFlagsClick, onOpenDepositMenu }) => {
+const flagColorMap = {
+  'alert': '#7dab9f',
+  'old patient': '#5e5ba8',
+  'family & friends': '#bc6c73',
+  'late payment': '#d9975b',
+  'needs special care': '#88b7d6',
+  'TDS Member': '#a6f272',
+  'Botox/Filler': '#eef681',
+  'Bioclear Patient': '#cf5dbd',
+  'Ortho Patient': '#4d39c0',
+  'Balance Owed': '#d3562f',
+  'appointment_reminder': '#94bc74'
+};
+
+const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick, onCashMinusClick, onRefreshCoinClick, onAddFlagsClick, onOpenDepositMenu }) => {
   const [showQuickPayment, setShowQuickPayment] = useState(false);
   const [showInsurancePayment, setShowInsurancePayment] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -233,7 +248,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
 
   const handleInsurancePaymentSave = (paymentData) => {
     console.log('Insurance payment saved:', paymentData);
-    // Add API call or state update logic here
+    window.dispatchEvent(new CustomEvent('add-ledger-item'));
     setShowInsurancePayment(false);
   };
 
@@ -245,15 +260,39 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
     setCashPlusAnchorEl(null);
   };
 
-  const handleCashPlusSelect = (item) => {
+  const createAdjustmentInDb = async (amountVal, notesText) => {
+    const patientId = patient?._id || patient?.id;
+    if (!patientId) return null;
+    
+    try {
+      const response = await apiClient.post('/adjustments', {
+        patientId: parseInt(patientId) || patientId,
+        amount: parseFloat(amountVal),
+        date: new Date().toISOString(),
+        notes: notesText
+      });
+      return response.data?.data?.adjustment;
+    } catch (err) {
+      console.error('Error creating backend adjustment:', err);
+      return null;
+    }
+  };
+
+  const handleCashPlusSelect = async (item) => {
     console.log('Cash Plus option selected:', item);
     if (item.id === 'broken-appt' || item.id === 'late-cancellation') {
+      const amountVal = 100.00;
+      const notesText = item.label || 'Adjustment Fee';
+      
+      const adjustment = await createAdjustmentInDb(amountVal, notesText);
+      const displayedId = adjustment?._id || adjustment?.id || Math.floor(Math.random() * 90000 + 10000).toString();
+
       const event = new CustomEvent('add-ledger-item', {
         detail: {
-          title: item.label,
-          amount: '$100.00',
-          ptBal: '$100.00',
-          invBal: '$100.00',
+          title: `${notesText} (Adj #${displayedId})`,
+          amount: `$${amountVal.toFixed(2)}`,
+          ptBal: `$${amountVal.toFixed(2)}`,
+          invBal: `$${amountVal.toFixed(2)}`,
           useCheckmark: false
         }
       });
@@ -307,12 +346,37 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
   return (
     <Box sx={{ width: '38%', flexShrink: 0, pr: 2 }}>
       <Box sx={{ borderTop: '4px solid #7986cb', width: 'fit-content', minWidth: '80px', textAlign: 'center', p: 1, border: '1px solid #ddd', borderTopWidth: '4px' }}>
-        <Typography variant="caption" sx={{ color: '#5c6bc0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>test test</Typography>
+        <Typography variant="caption" sx={{ color: '#5c6bc0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+          {patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : 'No Patient Loaded'}
+        </Typography>
       </Box>
       
-      <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2 }}>
-        <Typography variant="caption" sx={{ color: '#5c6bc0', cursor: 'pointer' }}>Billing flags: </Typography>
-        <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }} onClick={onAddFlagsClick}>+add flags</Typography>
+      <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+        <Typography variant="caption" sx={{ color: '#5c6bc0' }}>Billing flags: </Typography>
+        {Array.isArray(flags) && flags.length > 0 ? (
+          flags.map((flag) => {
+            const color = flagColorMap[flag] || '#bdbdbd';
+            return (
+              <Tooltip key={flag} title={flag === 'appointment_reminder' ? 'Send reminder earlier' : flag} placement="top">
+                <Box
+                  onClick={onAddFlagsClick}
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    bgcolor: color,
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                    display: 'inline-block',
+                    '&:hover': { opacity: 0.8 }
+                  }}
+                />
+              </Tooltip>
+            );
+          })
+        ) : (
+          <Typography variant="caption" sx={{ color: '#999', fontStyle: 'italic' }}>None</Typography>
+        )}
+        <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer', ml: 1 }} onClick={onAddFlagsClick}>+add flags</Typography>
         <Typography variant="caption" sx={{ color: '#1976d2', cursor: 'pointer' }} onClick={handleAddAccountNoteClick}>+add account note</Typography>
       </Stack>
 
@@ -395,6 +459,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
             onClick={(e) => e.stopPropagation()}
           >
             <InsurancePaymentDialog 
+              patient={patient}
               onClose={() => setShowInsurancePayment(false)}
               onSave={handleInsurancePaymentSave}
             />
@@ -431,6 +496,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
             onClick={(e) => e.stopPropagation()}
           >
             <AddPaymentDialog 
+              patient={patient}
               onClose={() => setShowAddPayment(false)}
               onPaymentApply={handlePaymentApply}
             />
@@ -466,17 +532,24 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
             <LateFeeDialog 
               onClose={() => setShowLateFee(false)} 
               adjustmentType={selectedAdjustment?.label}
-              onAddFee={(selected, flatRate) => {
+              onAddFee={async (selected, flatRate) => {
                 console.log('Adding fee for:', selected, 'Rate:', flatRate);
                 setShowLateFee(false);
                 const isLatePayment = selectedAdjustment?.id?.startsWith('late-payment');
+                
+                const amountVal = flatRate ? parseFloat(flatRate) : 100.00;
+                const notesText = selectedAdjustment?.label || 'Adjustment Fee';
+                
+                const adjustment = await createAdjustmentInDb(amountVal, notesText);
+                const displayedId = adjustment?._id || adjustment?.id || Math.floor(Math.random() * 90000 + 10000).toString();
+
                 // Dispatch event to add the fee to ledger
                 const event = new CustomEvent('add-ledger-item', {
                   detail: {
-                    title: selectedAdjustment?.label || 'Adjustment Fee',
-                    amount: flatRate ? `$${flatRate}` : '$100.00',
-                    ptBal: flatRate ? `$${flatRate}` : '$100.00',
-                    invBal: flatRate ? `$${flatRate}` : '$100.00',
+                    title: `${notesText} (Adj #${displayedId})`,
+                    amount: `$${amountVal.toFixed(2)}`,
+                    ptBal: `$${amountVal.toFixed(2)}`,
+                    invBal: `$${amountVal.toFixed(2)}`,
                     useCheckmark: isLatePayment
                   }
                 });
@@ -551,6 +624,7 @@ const PatientFinanceInfo = ({ view, onCalendarClick, onCashMinusClick, onRefresh
             onClick={(e) => e.stopPropagation()}
           >
             <NewInvoiceDialog 
+              patient={patient}
               onClose={() => setShowNewInvoice(false)}
             />
           </Box>

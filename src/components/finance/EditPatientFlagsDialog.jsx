@@ -7,8 +7,16 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 
-const EditPatientFlagsDialog = ({ onClose, onSave }) => {
-  const [flags, setFlags] = useState({});
+const EditPatientFlagsDialog = ({ onClose, onSave, initialFlags = [] }) => {
+  const [flags, setFlags] = useState(() => {
+    const initialMap = {};
+    if (Array.isArray(initialFlags)) {
+      initialFlags.forEach(flag => {
+        initialMap[flag] = true;
+      });
+    }
+    return initialMap;
+  });
   
   const modalHeader = '#7b8ab8';
   const labelGrey = '#333';
@@ -50,7 +58,7 @@ const EditPatientFlagsDialog = ({ onClose, onSave }) => {
       {/* Header */}
       <Box sx={{ bgcolor: modalHeader, py: 1.5, textAlign: 'center' }}>
         <Typography sx={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
-          Edit Patient Flags
+          Add Patient Flags
         </Typography>
       </Box>
 
