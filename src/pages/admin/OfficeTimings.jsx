@@ -94,16 +94,31 @@ const OfficeTimings = () => {
   };
 
   const handleSave = async () => {
-    if (!practiceInfoId) {
-      showSnackbar('Practice Info not found', 'error');
-      return;
-    }
     try {
-      await practiceInfoService.updateOfficeTimings(practiceInfoId, timings);
+      let id = practiceInfoId;
+      if (!id) {
+        // Auto-create a default practice info so the user is unblocked
+        const newPractice = await practiceInfoService.createPracticeInfo({
+          practiceName: 'Default Practice',
+          phone: '555-000-0000',
+          email: 'info@defaultpractice.com',
+          address: {
+            line1: '123 Default St',
+            city: 'Metropolis',
+            state: 'NY',
+            postalCode: '10001',
+            country: 'United States'
+          }
+        });
+        id = newPractice._id || newPractice.id;
+        setPracticeInfoId(id);
+      }
+      await practiceInfoService.updateOfficeTimings(id, timings);
       showSnackbar('Office timings saved successfully', 'success');
     } catch (error) {
       console.error(error);
-      showSnackbar('Failed to save office timings', 'error');
+      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save office timings';
+      showSnackbar(errMsg, 'error');
     }
   };
 
