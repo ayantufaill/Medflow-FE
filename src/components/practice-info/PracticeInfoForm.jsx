@@ -755,8 +755,8 @@ const PracticeInfoForm = ({
                 {loading
                   ? 'Saving...'
                   : isEditMode
-                  ? 'Save Changes'
-                  : 'Create Practice Info'}
+                    ? 'Save Changes'
+                    : 'Create Practice Info'}
               </Button>
             </Box>
           </Grid>

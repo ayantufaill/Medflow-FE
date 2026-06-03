@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { practiceInfoService } from '../../services/practice-info.service';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -15,10 +17,12 @@ import {
   MenuItem,
   Select,
   FormControl,
+  Button
 } from '@mui/material';
 import {
   Search as SearchIcon,
   InfoOutlined as InfoOutlinedIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 
 // ─── Section anchor IDs ────────────────────────────────────────────────────────
@@ -42,6 +46,8 @@ const SECTIONS = [
   { id: 'treatment-printout-form',   label: 'Treatment Printout Form' },
 ];
 
+const SettingsContext = createContext(null);
+
 // ─── Reusable atoms ────────────────────────────────────────────────────────────
 
 const SectionHeader = ({ id, label }) => (
@@ -59,14 +65,15 @@ const InfoIcon = () => (
 
 /** Checkbox row — blue text when checked */
 const SettingCheckbox = ({ label, defaultChecked = false, info = false }) => {
-  const [checked, setChecked] = useState(defaultChecked);
+  const ctx = useContext(SettingsContext);
+  const checked = ctx?.settings[label] !== undefined ? ctx.settings[label] : defaultChecked;
   return (
     <FormControlLabel
       control={
         <Checkbox
           size="small"
           checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
+          onChange={(e) => ctx?.handleChange(label, e.target.checked)}
           sx={{ py: 0.5 }}
         />
       }
@@ -89,17 +96,19 @@ const SettingCheckbox = ({ label, defaultChecked = false, info = false }) => {
 
 /** Toggle row with inline number input */
 const SettingToggle = ({ label, defaultValue, defaultOn = true }) => {
-  const [on, setOn]   = useState(defaultOn);
-  const [val, setVal] = useState(defaultValue);
+  const ctx = useContext(SettingsContext);
+  const on = ctx?.settings[`${label}_on`] !== undefined ? ctx.settings[`${label}_on`] : defaultOn;
+  const val = ctx?.settings[`${label}_val`] !== undefined ? ctx.settings[`${label}_val`] : defaultValue;
+  
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.5 }}>
-      <Switch size="small" checked={on} onChange={(e) => setOn(e.target.checked)} color="success" />
+      <Switch size="small" checked={on} onChange={(e) => ctx?.handleChange(`${label}_on`, e.target.checked)} color="success" />
       <Typography variant="body2" sx={{ flex: 1 }}>{label}</Typography>
       {defaultValue !== undefined && (
         <TextField
           variant="standard"
           value={val}
-          onChange={(e) => setVal(e.target.value)}
+          onChange={(e) => ctx?.handleChange(`${label}_val`, e.target.value)}
           inputProps={{ style: { width: 28, textAlign: 'center', fontSize: '0.85rem' } }}
           sx={{ width: 36 }}
         />
@@ -110,14 +119,15 @@ const SettingToggle = ({ label, defaultValue, defaultOn = true }) => {
 
 /** Inline label + number field row (blue label) */
 const SettingInlineNumber = ({ label, defaultValue, info = false }) => {
-  const [val, setVal] = useState(defaultValue);
+  const ctx = useContext(SettingsContext);
+  const val = ctx?.settings[label] !== undefined ? ctx.settings[label] : defaultValue;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
       <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>{label}</Typography>
       <TextField
         variant="standard"
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onChange={(e) => ctx?.handleChange(label, e.target.value)}
         inputProps={{ style: { width: 36, textAlign: 'center', fontSize: '0.85rem' } }}
         sx={{ width: 44 }}
       />
@@ -128,12 +138,13 @@ const SettingInlineNumber = ({ label, defaultValue, info = false }) => {
 
 /** Inline label + select dropdown */
 const SettingInlineSelect = ({ label, options, defaultValue, info = false }) => {
-  const [val, setVal] = useState(defaultValue);
+  const ctx = useContext(SettingsContext);
+  const val = ctx?.settings[label] !== undefined ? ctx.settings[label] : defaultValue;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, my: 0.75 }}>
       <Typography variant="body2" color="primary.main">{label}</Typography>
       <FormControl variant="standard" sx={{ minWidth: 200 }}>
-        <Select value={val} onChange={(e) => setVal(e.target.value)} sx={{ fontSize: '0.85rem' }}>
+        <Select value={val} onChange={(e) => ctx?.handleChange(label, e.target.value)} sx={{ fontSize: '0.85rem' }}>
           {options.map((o) => (
             <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.85rem' }}>{o.label}</MenuItem>
           ))}
@@ -148,8 +159,54 @@ const SettingInlineSelect = ({ label, options, defaultValue, info = false }) => 
 
 const PracticeSettings = () => {
   const [search, setSearch]         = useState('');
-  const [airwayExam, setAirwayExam] = useState('fairest');
+  const [airwayExam, setAirwayExam] = useState('fairest'); // Will keep local for simplicity as it's custom below
   const contentRef                  = useRef(null);
+  const { showSnackbar } = useSnackbar();
+  
+  const [practiceInfoId, setPracticeInfoId] = useState(null);
+  const [settings, setSettings] = useState({});
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
+        if (practiceInfo) {
+          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
+          if (practiceInfo.practiceSettings) {
+            setSettings(practiceInfo.practiceSettings);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch practice info:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleChange = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
+
+  const handleSave = async () => {
+    try {
+      let id = practiceInfoId;
+      if (!id) {
+        const newPractice = await practiceInfoService.createPracticeInfo({
+          practiceName: 'Default Practice',
+          phone: '555-000-0000',
+          email: 'info@defaultpractice.com',
+          address: { line1: '123 St', city: 'Metropolis', state: 'NY', postalCode: '10001', country: 'US' }
+        });
+        id = newPractice._id || newPractice.id;
+        setPracticeInfoId(id);
+      }
+      
+      await practiceInfoService.updatePracticeSettings(id, settings);
+      showSnackbar('Practice Settings saved successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save settings';
+      showSnackbar(errMsg, 'error');
+    }
+  };
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -157,12 +214,13 @@ const PracticeSettings = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', gap: 3, position: 'relative' }}>
-      {/* ── Main content ── */}
-      <Box ref={contentRef} sx={{ flex: 1, minWidth: 0 }}>
+    <SettingsContext.Provider value={{ settings, handleChange }}>
+      <Box sx={{ display: 'flex', gap: 3, position: 'relative' }}>
+        {/* ── Main content ── */}
+        <Box ref={contentRef} sx={{ flex: 1, minWidth: 0 }}>
 
-        {/* Breadcrumb + Search */}
-        <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Breadcrumb + Search */}
+          <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Typography
               variant="caption"
@@ -175,21 +233,32 @@ const PracticeSettings = () => {
             <Typography variant="caption" color="text.secondary">{'>'}</Typography>
             <Typography variant="caption" color="text.secondary">Practice Settings</Typography>
           </Box>
-          <TextField
-            size="small"
-            placeholder="Search Settings"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ width: 220 }}
-          />
-        </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Search Settings"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ width: 220 }}
+              />
+              <Button 
+                variant="contained" 
+                color="success" 
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
+              >
+                Save
+              </Button>
+            </Box>
+          </Box>
 
         {/* ── AI ── */}
         <Box sx={{ mb: 4 }}>
@@ -396,7 +465,11 @@ const PracticeSettings = () => {
                 The Production &amp; Collection report will be generated at the selected business day of the month
               </Typography>
               <FormControl variant="standard" sx={{ minWidth: 60 }}>
-                <Select defaultValue="5" sx={{ fontSize: '0.85rem' }}>
+                <Select 
+                  value={settings['Production & Collection Report Day'] || "5"}
+                  onChange={(e) => handleChange('Production & Collection Report Day', e.target.value)}
+                  sx={{ fontSize: '0.85rem' }}
+                >
                   {[1,2,3,4,5,6,7,8,9,10].map((n) => (
                     <MenuItem key={n} value={String(n)} sx={{ fontSize: '0.85rem' }}>{n}</MenuItem>
                   ))}
@@ -426,7 +499,8 @@ const PracticeSettings = () => {
               </Typography>
               <TextField
                 variant="standard"
-                defaultValue="10"
+                value={settings['Default Font Size for Text Editors'] || "10"}
+                onChange={(e) => handleChange('Default Font Size for Text Editors', e.target.value)}
                 inputProps={{ style: { width: 36, textAlign: 'center', fontSize: '0.85rem' } }}
                 sx={{ width: 44 }}
               />
@@ -439,7 +513,11 @@ const PracticeSettings = () => {
                 Default Font Family for Text Editors
               </Typography>
               <FormControl variant="standard" sx={{ minWidth: 200 }}>
-                <Select defaultValue="lato" sx={{ fontSize: '0.85rem' }}>
+                <Select 
+                  value={settings['Default Font Family for Text Editors'] || "lato"}
+                  onChange={(e) => handleChange('Default Font Family for Text Editors', e.target.value)}
+                  sx={{ fontSize: '0.85rem' }}
+                >
                   <MenuItem value="lato" sx={{ fontSize: '0.85rem' }}>Lato</MenuItem>
                   <MenuItem value="arial" sx={{ fontSize: '0.85rem' }}>Arial</MenuItem>
                   <MenuItem value="times" sx={{ fontSize: '0.85rem' }}>Times New Roman</MenuItem>
@@ -459,7 +537,8 @@ const PracticeSettings = () => {
               <Box
                 component="input"
                 type="color"
-                defaultValue="#000000"
+                value={settings['Default Font Color for Text Editors'] || "#000000"}
+                onChange={(e) => handleChange('Default Font Color for Text Editors', e.target.value)}
                 sx={{
                   width: 28,
                   height: 28,
@@ -482,7 +561,11 @@ const PracticeSettings = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
               <Typography variant="body2" color="primary.main">Select Pay Period Options</Typography>
               <FormControl variant="standard" sx={{ minWidth: 200 }}>
-                <Select defaultValue="not-set" sx={{ fontSize: '0.85rem' }}>
+                <Select 
+                  value={settings['Select Pay Period Options'] || "not-set"}
+                  onChange={(e) => handleChange('Select Pay Period Options', e.target.value)}
+                  sx={{ fontSize: '0.85rem' }}
+                >
                   <MenuItem value="not-set" sx={{ fontSize: '0.85rem' }}>Not Set</MenuItem>
                   <MenuItem value="weekly" sx={{ fontSize: '0.85rem' }}>Weekly</MenuItem>
                   <MenuItem value="bi-weekly" sx={{ fontSize: '0.85rem' }}>Bi-Weekly</MenuItem>
@@ -496,14 +579,16 @@ const PracticeSettings = () => {
               </Typography>
               <TextField
                 variant="standard"
-                defaultValue="21"
+                value={settings['Automatically clock out hour'] || "21"}
+                onChange={(e) => handleChange('Automatically clock out hour', e.target.value)}
                 inputProps={{ style: { width: 28, textAlign: 'center', fontSize: '0.85rem' } }}
                 sx={{ width: 36 }}
               />
               <Typography variant="body2" color="text.secondary">:</Typography>
               <TextField
                 variant="standard"
-                defaultValue="00"
+                value={settings['Automatically clock out minute'] || "00"}
+                onChange={(e) => handleChange('Automatically clock out minute', e.target.value)}
                 inputProps={{ style: { width: 28, textAlign: 'center', fontSize: '0.85rem' } }}
                 sx={{ width: 36 }}
               />
@@ -566,7 +651,8 @@ const PracticeSettings = () => {
           </Tooltip>
         ))}
       </Box>
-    </Box>
+      </Box>
+    </SettingsContext.Provider>
   );
 };
 

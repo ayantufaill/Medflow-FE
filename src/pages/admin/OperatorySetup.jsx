@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { roomService } from '../../services/room.service';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Button,
@@ -22,14 +25,38 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 
 const OperatorySetup = () => {
-  // Mock data matching the screenshot
-  const operatories = [
-    { name: 'Operatory 1', status: 'Active', order: 1 },
-    { name: 'Operatory 2', status: 'Active', order: 2 },
-    { name: 'Operatory 3', status: 'Active', order: 3 },
-    { name: 'Operatory 4', status: 'Active', order: 4 },
-    { name: 'Consult', status: 'Active', order: 5 },
-  ];
+  const [operatories, setOperatories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const { showSnackbar } = useSnackbar();
+
+  useEffect(() => {
+    const fetchOperatories = async () => {
+      try {
+        setLoading(true);
+        const res = await roomService.getAllRooms(1, 100);
+        setOperatories(res.rooms || []);
+      } catch (error) {
+        console.error('Failed to fetch operatories:', error);
+        showSnackbar('Failed to load operatories', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOperatories();
+  }, [showSnackbar]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this operatory?')) return;
+    try {
+      await roomService.deleteRoom(id);
+      setOperatories(prev => prev.filter(op => op._id !== id && op.roomNumber !== id));
+      showSnackbar('Operatory deleted successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to delete operatory', 'error');
+    }
+  };
 
   const primaryNavy = '#002855'; // Matching the dark navy in your image
 
@@ -95,14 +122,14 @@ const OperatorySetup = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {operatories.map((op) => (
-                <TableRow key={op.name} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ py: 1.5 }}>{op.name}</TableCell>
-                  <TableCell>{op.status}</TableCell>
-                  <TableCell>{op.order}</TableCell>
-                  <TableCell></TableCell>
+              {operatories.map((op, i) => (
+                <TableRow key={op._id || i} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                  <TableCell sx={{ py: 1.5 }}>{op.name || op.roomNumber}</TableCell>
+                  <TableCell>{op.status || 'Active'}</TableCell>
+                  <TableCell>{op.order || i + 1}</TableCell>
+                  <TableCell>{op.note || ''}</TableCell>
                   <TableCell align="right">
-                    <IconButton size="small">
+                    <IconButton size="small" onClick={() => handleDelete(op._id || op.roomNumber)}>
                       <DeleteOutlineIcon fontSize="small" sx={{ color: '#bdbdbd' }} />
                     </IconButton>
                   </TableCell>
