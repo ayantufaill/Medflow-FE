@@ -191,4 +191,225 @@ export const claimService = {
     const response = await apiClient.delete(`/claims/${claimId}/documents/${documentId}`);
     return response.data.data;
   },
+
+  /**
+   * Get claims statistics and counts for tabs
+   * @returns {Promise<Object>} Tab summary counts
+   */
+  async getTabSummary() {
+    const response = await apiClient.get('/claims/tab-summary');
+    return response.data.data;
+  },
+
+  /**
+   * Get outstanding claims (aging report)
+   * @param {Object} options - Filter and pagination options
+   * @returns {Promise<Object>} Outstanding claims data
+   */
+  async getOutstandingClaims(options = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      dateRange = 'none',
+      groupBy = 'none',
+      search = '',
+    } = options;
+
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (dateRange && dateRange !== 'none') params.append('dateRange', dateRange);
+    if (groupBy && groupBy !== 'none') params.append('groupBy', groupBy);
+    if (search) params.append('search', search);
+
+    const response = await apiClient.get(`/claims/outstanding?${params.toString()}`);
+    return response.data.data;
+  },
+
+  /**
+   * Get outstanding claims list specifically formatted for payment check allocation dropdowns
+   * @param {string} search - Search query
+   * @returns {Promise<Object>} Outstanding claims for allocation
+   */
+  async getOutstandingClaimsForAllocation(search = '') {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    const response = await apiClient.get(`/claims/outstanding-for-allocation?${params.toString()}`);
+    return response.data.data;
+  },
+
+  /**
+   * Get predetermination claims (PreAuth)
+   * @param {Object} options - Filter and pagination options
+   * @returns {Promise<Object>} Predetermination claims data
+   */
+  async getPredeterminations(options = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      patientId = '',
+      search = '',
+    } = options;
+
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (patientId) params.append('patientId', patientId);
+    if (search) params.append('search', search);
+
+    const response = await apiClient.get(`/claims/predeterminations`);
+    return response.data.data;
+  },
+
+  /**
+   * Get Dentical remittance and eligibility reports
+   * @returns {Promise<Array>} Dentical reports
+   */
+  async getDenticalReports() {
+    const response = await apiClient.get('/claims/dentical-reports');
+    return response.data.data;
+  },
+
+  /**
+   * Get ERA reports
+   * @param {Object} options - Pagination and filter options
+   * @returns {Promise<Object>} ERA reports list
+   */
+  async getEraReports(options = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      eraTab = 'active',
+      search = '',
+    } = options;
+
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (eraTab) params.append('eraTab', eraTab);
+    if (search) params.append('search', search);
+
+    const response = await apiClient.get(`/claims/era-reports?${params.toString()}`);
+    return response.data.data;
+  },
+
+  /**
+   * Get procedures pending claim creation grouped by patient
+   * @returns {Promise<Array>} Pending procedures
+   */
+  async getPendingProcedures() {
+    const response = await apiClient.get('/claims/pending-procedures');
+    return response.data.data;
+  },
+
+  /**
+   * Submit multiple claims in a batch
+   * @param {Array<string>} claimIds - Array of claim IDs to submit
+   * @param {string} submissionType - 'electronic' or 'paper'
+   * @returns {Promise<Object>} Batch submission results
+   */
+  async batchSubmitClaims(claimIds, submissionType = 'electronic') {
+    const response = await apiClient.post('/claims/batch-submit', {
+      claimIds,
+      submissionType,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Record a batch payment check or EFT from insurance carrier
+   * @param {Object} paymentData - Payment and allocations details
+   * @returns {Promise<Object>} Recorded payment details
+   */
+  async recordBatchPayment(paymentData) {
+    const response = await apiClient.post('/claims/batch-payment', paymentData);
+    return response.data.data;
+  },
+
+  /**
+   * Get batch payments recorded
+   * @param {Object} options - Pagination and search filters
+   * @returns {Promise<Object>} Batch payments list
+   */
+  async getBatchPayments(options = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+    } = options;
+
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (search) params.append('search', search);
+
+    const response = await apiClient.get(`/claims/batch-payments?${params.toString()}`);
+    return response.data.data;
+  },
+
+  /**
+   * Upload EOB document for a batch payment
+   * @param {string} paymentId - Payment ID
+   * @param {FormData} formData - Document file form data
+   * @returns {Promise<Object>} EOB upload response
+   */
+  async uploadEOB(paymentId, formData) {
+    const response = await apiClient.post(`/claims/batch-payment/${paymentId}/eob`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Generate batch statements/invoices for patients
+   * @param {Array<string>} patientIds - Array of patient IDs
+   * @param {string} deliveryPreference - Delivery method
+   * @returns {Promise<Object>} Batch statements generation result
+   */
+  async generateBatchInvoices(patientIds, deliveryPreference) {
+    const response = await apiClient.post('/claims/batch-invoices', {
+      patientIds,
+      deliveryPreference,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Revert multiple completed procedures back to treatment-planned status
+   * @param {Array<string>} procedureIds - Procedure IDs
+   * @returns {Promise<Object>} Uncompleted procedures results
+   */
+  async uncompleteProcedures(procedureIds) {
+    const response = await apiClient.post('/claims/procedures/uncomplete', {
+      procedureIds,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Get clearinghouse transmission status for a claim
+   * @param {string} claimId - Claim ID
+   * @returns {Promise<Object>} Clearinghouse details
+   */
+  async getClearinghouseStatus(claimId) {
+    const response = await apiClient.get(`/claims/${claimId}/clearinghouse`);
+    return response.data.data;
+  },
+
+  /**
+   * Quick status update for a claim with a tracking note
+   * @param {string} claimId - Claim ID
+   * @param {string} status - New claim status
+   * @param {string} note - Status note
+   * @returns {Promise<Object>} Updated claim
+   */
+  async quickStatusUpdate(claimId, status, note) {
+    const response = await apiClient.post(`/claims/${claimId}/quick-status`, {
+      status,
+      note,
+    });
+    return response.data.data.claim;
+  },
 };
