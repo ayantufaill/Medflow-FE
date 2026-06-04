@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -43,7 +43,37 @@ const MOCK_CARRIERS = [
 
 const CollectionCarrier = () => {
   const [networkFilter, setNetworkFilter] = useState('None');
-  const [payerFilter, setPayerFilter] = useState('Payer');
+  const [payerType, setPayerType] = useState('Payer');
+  const [searchText, setSearchText] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const filteredCarriers = useMemo(() => {
+    let filtered = MOCK_CARRIERS;
+    if (searchText) {
+      filtered = filtered.filter(c => c.name.toLowerCase().includes(searchText.toLowerCase()));
+    }
+    return filtered;
+  }, [searchText]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Carrier,Total Collection,Patient Name,Patient Collection,Patient Production,Patient Write-off\n";
+    MOCK_CARRIERS.forEach(carrier => {
+      csvContent += `"${carrier.name}","${carrier.collection}","","","",""\n`;
+      carrier.patients.forEach(p => {
+        csvContent += `"${carrier.name}","","${p.name}","${p.collection}","${p.production}","${p.writeoff}"\n`;
+      });
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "collection_carrier.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <Box sx={{ p: 0 }}>
@@ -55,12 +85,12 @@ const CollectionCarrier = () => {
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem' }}>Date Range:</Typography>
-            <Select value="Daily" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-              <MenuItem value="Daily">Daily</MenuItem>
-            </Select>
-            <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', ml: 1 }}>← May 08, 2026 →</Typography>
-            <Typography sx={{ fontSize: '0.85rem' }}>Date: 05/08/2026</Typography>
+            <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
           </Box>
         </Box>
 
@@ -83,16 +113,11 @@ const CollectionCarrier = () => {
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)}>
+            <RadioGroup row value={payerType} onChange={(e) => setPayerType(e.target.value)}>
               <FormControlLabel value="Payer" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Filter by Payer:</Typography>} />
-            </RadioGroup>
-            <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }} />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)}>
               <FormControlLabel value="Plan" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Filter by Plan:</Typography>} />
             </RadioGroup>
-            <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }} />
+            <TextField size="small" variant="outlined" placeholder="Enter Name" value={searchText} onChange={(e) => setSearchText(e.target.value)} sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }} />
           </Box>
 
           <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
@@ -103,12 +128,12 @@ const CollectionCarrier = () => {
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Carrier Sections */}
-      {MOCK_CARRIERS.map((carrier, idx) => (
+      {filteredCarriers.map((carrier, idx) => (
         <Box key={idx} sx={{ mb: 5 }}>
           <Typography sx={{ color: '#0052cc', fontWeight: 600, fontSize: '0.85rem', mb: 0.5 }}>{carrier.name}</Typography>
           <Box sx={{ mb: 1 }}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -29,6 +29,41 @@ const MOCK_TRANSACTIONS = [
 ];
 
 const OpenEdgeTransactions = () => {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('Select Status');
+
+  const filteredTransactions = useMemo(() => {
+    let filtered = MOCK_TRANSACTIONS;
+    if (selectedStatus !== 'Select Status') {
+      filtered = filtered.filter(row => row.status === selectedStatus);
+    }
+    if (startDate || endDate) {
+      const sDate = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const eDate = endDate ? new Date(endDate) : new Date('2100-01-01');
+      filtered = filtered.filter(row => {
+        const itemDate = new Date(row.created);
+        return itemDate >= sDate && itemDate <= eDate;
+      });
+    }
+    return filtered;
+  }, [selectedStatus, startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Patient ID,Created On,Transaction Type,Transaction Number,Status\n";
+    MOCK_TRANSACTIONS.forEach(row => {
+      csvContent += `"${row.id}","${row.created}","${row.type}","${row.number}","${row.status}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "openedge_transactions.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   return (
     <Box sx={{ p: 0 }}>
       <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
@@ -38,28 +73,22 @@ const OpenEdgeTransactions = () => {
       {/* Filters Section */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Created On Date Filter:</Typography>
-          <Select value="Range" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <TextField size="small" variant="standard" defaultValue="05/08/2025" sx={{ width: 100, '& input': { fontSize: '0.85rem' } }} />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <TextField size="small" variant="standard" defaultValue="05/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem' } }} />
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Filter by Status:</Typography>
-          <Select value="Select Status" size="small" sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff' }}>
+          <Select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} size="small" sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff' }}>
             <MenuItem value="Select Status">Select Status</MenuItem>
+            <MenuItem value="Credit Card Declined">Credit Card Declined</MenuItem>
+            <MenuItem value="Timed Out">Timed Out</MenuItem>
+            <MenuItem value="Pending">Pending</MenuItem>
           </Select>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#1a3a6b', color: '#1a3a6b' }}>Credit Card Declined</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#1a3a6b', color: '#1a3a6b' }}>Timed Out</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#1a3a6b', color: '#1a3a6b' }}>Pending</Button>
         </Box>
       </Box>
 
@@ -69,8 +98,8 @@ const OpenEdgeTransactions = () => {
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Table Section */}
@@ -86,7 +115,7 @@ const OpenEdgeTransactions = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {MOCK_TRANSACTIONS.map((row, index) => (
+            {filteredTransactions.map((row, index) => (
               <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
                 <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.id}</TableCell>
                 <TableCell sx={{ fontSize: '0.75rem' }}>{row.created}</TableCell>

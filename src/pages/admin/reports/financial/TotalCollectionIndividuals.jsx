@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  TextField,
 } from '@mui/material';
 
 const MOCK_INDIVIDUALS = [
@@ -25,8 +26,39 @@ const MOCK_INDIVIDUALS = [
 ];
 
 const TotalCollectionIndividuals = () => {
-  const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortBy, setSortBy] = useState('Default');
+
+  const filteredIndividuals = useMemo(() => {
+    let filtered = MOCK_INDIVIDUALS;
+    // Apply sorting logic if needed
+    if (sortBy === 'Amount') {
+      // Dummy sort by removing $ and commas, parsing float
+      filtered = [...filtered].sort((a, b) => {
+        const valA = parseFloat(a.totalCollection.replace(/[^0-9.-]+/g,""));
+        const valB = parseFloat(b.totalCollection.replace(/[^0-9.-]+/g,""));
+        return valB - valA;
+      });
+    }
+    return filtered;
+  }, [sortBy, startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,ID,Patient,Patient Collection,Insurance Collection,Total Collection\n";
+    MOCK_INDIVIDUALS.forEach(row => {
+      csvContent += `"${row.id}","${row.name}","${row.patientCollection}","${row.insuranceCollection}","${row.totalCollection}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "total_collection_individuals.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <Box sx={{ p: 0 }}>
@@ -34,52 +66,48 @@ const TotalCollectionIndividuals = () => {
         Total Collection By Individuals Report:
       </Typography>
 
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Date Range:</Typography>
-          <Select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            size="small"
-            variant="standard"
-            sx={{ fontSize: '0.85rem', minWidth: 100 }}
-          >
-            <MenuItem value="Daily">Daily</MenuItem>
-            <MenuItem value="Weekly">Weekly</MenuItem>
-          </Select>
-          <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', ml: 1 }}>← May 08, 2026 →</Typography>
-          <Typography sx={{ fontSize: '0.85rem' }}>Date: 05/08/2026</Typography>
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
+          </Box>
         </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem' }}>Sort Report By</Typography>
+            <Select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              size="small"
+              sx={{ fontSize: '0.85rem', minWidth: 100, height: 32, backgroundColor: '#5c85bb', color: '#fff', '& .MuiSvgIcon-root': { color: '#fff' } }}
+            >
+              <MenuItem value="Default">Default</MenuItem>
+              <MenuItem value="Amount">Amount</MenuItem>
+            </Select>
+          </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Sort Report By</Typography>
-          <Select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            size="small"
-            sx={{ fontSize: '0.85rem', minWidth: 100, height: 32, backgroundColor: '#5c85bb', color: '#fff', '& .MuiSvgIcon-root': { color: '#fff' } }}
-          >
-            <MenuItem value="Default">Default</MenuItem>
-            <MenuItem value="Amount">Amount</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
-          >
-            Apply Filters
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
-          >
-            Create Template
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
+            >
+              Apply Filters
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
+            >
+              Create Template
+            </Button>
+          </Box>
         </Box>
       </Box>
 
@@ -88,6 +116,7 @@ const TotalCollectionIndividuals = () => {
         <Button
           variant="contained"
           size="small"
+          onClick={handleExportCSV}
           sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
         >
           Export as CSV
@@ -95,6 +124,7 @@ const TotalCollectionIndividuals = () => {
         <Button
           variant="contained"
           size="small"
+          onClick={handlePrint}
           sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
         >
           Print
@@ -114,7 +144,7 @@ const TotalCollectionIndividuals = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {MOCK_INDIVIDUALS.map((row, index) => (
+            {filteredIndividuals.map((row, index) => (
               <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
                 <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.id}</TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.name}</TableCell>

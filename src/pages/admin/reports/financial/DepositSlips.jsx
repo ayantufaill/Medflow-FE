@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,7 +16,9 @@ import {
   TableRow,
   Paper,
   Divider,
+  CircularProgress,
 } from '@mui/material';
+import { reportingService } from '../../../../services/reporting.service';
 
 const DepositSlips = () => {
   const paymentTypes = [
@@ -24,6 +26,52 @@ const DepositSlips = () => {
     'Master Card', 'Visa Card', 'ACH Payment', 'American Express', 
     'Discover', 'Card on File', 'Online Card', 'Sunbit', 'Cherry', 'HFD', 'VCC'
   ];
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [dateMode, setDateMode] = useState('daily');
+  const [showPreviousSlips, setShowPreviousSlips] = useState(true);
+
+  useEffect(() => {
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    if (dateMode === 'daily') {
+      // Just today
+    } else if (dateMode === 'weekly') {
+      // Start of week (Sunday) to End of week (Saturday)
+      start.setDate(today.getDate() - today.getDay());
+      end.setDate(start.getDate() + 6);
+    } else if (dateMode === 'monthly') {
+      // First to last day of month
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    }
+
+    if (dateMode !== 'range') {
+      setStartDate(start.toISOString().split('T')[0]);
+      setEndDate(end.toISOString().split('T')[0]);
+    }
+  }, [dateMode]);
+
+  const fetchDepositSlips = async () => {
+    setLoading(true);
+    try {
+      const data = await reportingService.getFinancialReport('deposit-slips', { startDate, endDate });
+      setReportData(data || []);
+    } catch (error) {
+      console.error('Failed to fetch deposit slips', error);
+      setReportData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepositSlips();
+  }, []); // Only run once on mount
 
   const renderCheckboxList = (title, items) => (
     <Box sx={{ mb: 2 }}>
@@ -55,7 +103,7 @@ const DepositSlips = () => {
         <Grid item xs={12} md={6} sx={{ borderRight: '1px solid #e0e0e0', pr: 4 }}>
           <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Create new deposit slip:</Typography>
           
-          <RadioGroup row defaultValue="daily" sx={{ mb: 2 }}>
+          <RadioGroup row value={dateMode} onChange={(e) => setDateMode(e.target.value)} sx={{ mb: 2 }}>
             <FormControlLabel value="daily" control={<Radio size="small" />} label={<Typography variant="caption">Daily</Typography>} />
             <FormControlLabel value="range" control={<Radio size="small" />} label={<Typography variant="caption">Range</Typography>} />
             <FormControlLabel value="weekly" control={<Radio size="small" />} label={<Typography variant="caption">Weekly</Typography>} />
@@ -63,8 +111,20 @@ const DepositSlips = () => {
           </RadioGroup>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Typography variant="caption">Transactions done from: 05/08/2026</Typography>
-            <Typography variant="caption">to: 05/08/2026</Typography>
+            <Typography variant="caption">Transactions done from: </Typography>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => { setStartDate(e.target.value); setDateMode('range'); }} 
+              style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} 
+            />
+            <Typography variant="caption">to: </Typography>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => { setEndDate(e.target.value); setDateMode('range'); }} 
+              style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} 
+            />
             <FormControlLabel
               control={<Checkbox size="small" />}
               label={<Typography variant="caption">Group by provider</Typography>}
@@ -109,7 +169,7 @@ const DepositSlips = () => {
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-            <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Create Deposit</Button>
+            <Button variant="contained" onClick={fetchDepositSlips} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Create Deposit</Button>
             <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
           </Box>
         </Grid>
@@ -117,10 +177,52 @@ const DepositSlips = () => {
         {/* Right Section - Preview */}
         <Grid item xs={12} md={6}>
           <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Deposit slip:</Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>No slip created.</Typography>
-          <Typography variant="caption" color="text.secondary">
-            Create a deposit slip by editing the left side options and clicking 'create'.
-          </Typography>
+          
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress size={30} />
+            </Box>
+          ) : reportData === null ? (
+            <>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>No slip created.</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Create a deposit slip by editing the left side options and clicking 'create'.
+              </Typography>
+            </>
+          ) : reportData.length === 0 ? (
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>No deposits found for this date range.</Typography>
+          ) : (
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', maxHeight: 600 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>ID</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Date</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Amount</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Bank</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {reportData.map((row, idx) => (
+                    <TableRow key={idx} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.depositId}</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.date}</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1, fontWeight: 600 }}>${(row.amount || 0).toFixed(2)}</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.bank}</TableCell>
+                      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: row.status === 'Cleared' ? 'success.main' : 'text.primary' }}>{row.status}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow sx={{ borderTop: '2px solid #e0e0e0' }}>
+                    <TableCell colSpan={2} sx={{ fontSize: '0.75rem', py: 1, fontWeight: 700, textAlign: 'right' }}>Total Deposit:</TableCell>
+                    <TableCell colSpan={3} sx={{ fontSize: '0.85rem', py: 1, fontWeight: 700, color: 'primary.main' }}>
+                      ${reportData.reduce((acc, curr) => acc + (curr.amount || 0), 0).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </Grid>
       </Grid>
 
@@ -128,39 +230,46 @@ const DepositSlips = () => {
 
       {/* Bottom Section - Previous Slips */}
       <Box>
-        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main', display: 'flex', alignItems: 'center' }}>
-          <Box component="span" sx={{ mr: 1 }}>⌄</Box> Previous Deposit Slips:
+        <Typography 
+          variant="body2" 
+          onClick={() => setShowPreviousSlips(!showPreviousSlips)}
+          sx={{ mb: 2, fontWeight: 600, color: 'primary.main', display: 'flex', alignItems: 'center', cursor: 'pointer', width: 'fit-content' }}
+        >
+          <Box component="span" sx={{ mr: 1 }}>{showPreviousSlips ? '⌄' : '›'}</Box> Previous Deposit Slips:
         </Typography>
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Date of Slip</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Total Amount</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Note</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[
-                { date: '02/01/2022', amount: '29,243.17', note: '' },
-                { date: '03/06/2022', amount: '11,009.60', note: '' },
-                { date: '03/07/2022', amount: '16,890.95', note: '' },
-                { date: '03/07/2022', amount: '18,130.95', note: '' },
-                { date: '03/31/2022', amount: '29,700.28', note: '' },
-                { date: '09/30/2022', amount: '34,352.70', note: '' },
-                { date: '12/26/2022', amount: '334,467.81', note: 'Full year deposit slip 2022.' },
-                { date: '08/02/2023', amount: '6,212.20', note: '' },
-                { date: '08/02/2023', amount: '8,522.40', note: '' },
-              ].map((row, idx) => (
-                <TableRow key={idx} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
-                  <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.date}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>${row.amount}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.note}</TableCell>
+        
+        {showPreviousSlips && (
+          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                  <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Date of Slip</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Total Amount</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Note</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {[
+                  { date: '02/01/2022', amount: '29,243.17', note: '' },
+                  { date: '03/06/2022', amount: '11,009.60', note: '' },
+                  { date: '03/07/2022', amount: '16,890.95', note: '' },
+                  { date: '03/07/2022', amount: '18,130.95', note: '' },
+                  { date: '03/31/2022', amount: '29,700.28', note: '' },
+                  { date: '09/30/2022', amount: '34,352.70', note: '' },
+                  { date: '12/26/2022', amount: '334,467.81', note: 'Full year deposit slip 2022.' },
+                  { date: '08/02/2023', amount: '6,212.20', note: '' },
+                  { date: '08/02/2023', amount: '8,522.40', note: '' },
+                ].map((row, idx) => (
+                  <TableRow key={idx} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.date}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>${row.amount}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.note}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Box>
     </Box>
   );

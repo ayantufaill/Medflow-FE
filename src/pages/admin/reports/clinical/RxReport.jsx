@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -21,6 +21,10 @@ import {
 import { FileDownload, Print, ChevronLeft, ChevronRight } from '@mui/icons-material';
 
 const RxReport = () => {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [providerFilter, setProviderFilter] = useState('All');
+
   const rows = [
     { 
       id: 77, 
@@ -37,6 +41,38 @@ const RxReport = () => {
     }
   ];
 
+  const filteredRows = useMemo(() => {
+    let result = rows;
+    if (providerFilter !== 'All') {
+      result = result.filter(r => r.provider === providerFilter);
+    }
+    if (startDate || endDate) {
+      const s = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const e = endDate ? new Date(endDate) : new Date('2100-01-01');
+      result = result.filter(r => {
+        const d = new Date(r.startDate);
+        return d >= s && d <= e;
+      });
+    }
+    return result;
+  }, [providerFilter, startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Rx #,Provider,Patient,Start Date,Dose,Refills,Duration,Long Term,Prints,Notes,Drug Name\n";
+    filteredRows.forEach(row => {
+      csvContent += `"${row.id}","${row.provider}","${row.patient}","${row.startDate}","${row.dose}","${row.refills}","${row.duration}","${row.longTerm}","${row.prints}","${row.notes}","${row.drugName}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "rx_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Box sx={{ p: 1 }}>
       <Typography variant="body2" color="primary" sx={{ textDecoration: 'underline', mb: 2, cursor: 'pointer', display: 'inline-block' }}>
@@ -46,30 +82,25 @@ const RxReport = () => {
       {/* Filters Section */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Date Range:</Typography>
-          <Select defaultValue="Daily" size="small" variant="standard" sx={{ minWidth: 100, fontSize: '0.85rem' }}>
-            <MenuItem value="Daily">Daily</MenuItem>
-          </Select>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Start Date:</Typography>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.85rem', padding: '4px', border: '1px solid #ccc' }} />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton size="small"><ChevronLeft fontSize="small" /></IconButton>
-          <Typography variant="body2" color="primary">May 07, 2026</Typography>
-          <Typography variant="body2" sx={{ mx: 1 }}>➔</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Date:</Typography>
-          <Typography variant="body2" color="primary">05/07/2026</Typography>
-          <IconButton size="small"><ChevronRight fontSize="small" /></IconButton>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>End Date:</Typography>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.85rem', padding: '4px', border: '1px solid #ccc' }} />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Provider:</Typography>
-          <Select defaultValue="All" size="small" variant="standard" sx={{ minWidth: 120, fontSize: '0.85rem' }}>
+          <Select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} size="small" variant="standard" sx={{ minWidth: 120, fontSize: '0.85rem' }}>
             <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Dr. Smith">Dr. Smith</MenuItem>
           </Select>
         </Box>
 
-        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button variant="contained" size="small" sx={{ backgroundColor: '#8db3d9', textTransform: 'none', px: 3 }}>Apply</Button>
+        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Button variant="text" size="small" onClick={() => { setStartDate(''); setEndDate(''); setProviderFilter('All'); }} sx={{ textTransform: 'none', color: 'error.main' }}>Clear filters</Button>
         </Box>
       </Box>
 
@@ -77,8 +108,8 @@ const RxReport = () => {
 
       {/* Export Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
-        <Button variant="contained" size="small" startIcon={<FileDownload />} sx={{ backgroundColor: '#4a90e2', textTransform: 'none' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" startIcon={<Print />} sx={{ backgroundColor: '#d1a066', textTransform: 'none' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownload />} sx={{ backgroundColor: '#4a90e2', textTransform: 'none' }}>Export as CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} startIcon={<Print />} sx={{ backgroundColor: '#d1a066', textTransform: 'none' }}>Print</Button>
       </Box>
 
       {/* RX Table */}
@@ -100,7 +131,7 @@ const RxReport = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
+            {filteredRows.map((row) => (
               <TableRow key={row.id}>
                 <TableCell sx={{ fontSize: '0.75rem' }}>{row.id}</TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b' }}>{row.provider}</TableCell>

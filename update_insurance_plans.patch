@@ -1,0 +1,159 @@
+--- src/pages/admin/InsurancePlans.jsx
++++ src/pages/admin/InsurancePlans.jsx
+@@ -36,8 +36,8 @@
+   Restore as RestoreIcon,
+ } from '@mui/icons-material';
+ import { useDebounce } from 'use-debounce';
+-import { insurancePlanService } from '../../services/insurance.service';
++import { insurancePlanService, insuranceCompanyService } from '../../services/insurance.service';
+ import { useSnackbar } from '../../contexts/SnackbarContext';
+ import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+ import AuditInsurancePlanHistory from '../../components/insurance/AuditInsurancePlanHistory';
+ import PlanFeeGuideDialog from '../../components/insurance/PlanFeeGuideDialog';
+@@ -84,14 +84,16 @@
+ const InsurancePlans = () => {
+   const navigate = useNavigate();
+   const { showSnackbar } = useSnackbar();
+-  const [plans, setPlans] = useState(INITIAL_PLANS);
++  const [plans, setPlans] = useState([]);
++  const [companies, setCompanies] = useState([]);
+   const [loading, setLoading] = useState(false);
+   const [searchCarrier, setSearchCarrier] = useState('');
+   const [searchGeneral, setSearchGeneral] = useState('');
+   const [debouncedSearchCarrier] = useDebounce(searchCarrier, 500);
+   const [debouncedSearchGeneral] = useDebounce(searchGeneral, 500);
+   
+   const [viewMode, setViewMode] = useState('list'); // 'list' or 'add'
+   const [isAuditDialogOpen, setIsAuditDialogOpen] = useState(false);
+@@ -108,8 +110,9 @@
+   const [newPlan, setNewPlan] = useState({
+     groupNumber: '',
+     groupName: '',
+     employer: '',
+     templateName: '',
+-    payerName: '',
++    companyId: '',
+     payerId: '',
+     phone: '',
+     notes: '',
+@@ -134,9 +137,21 @@
+     }
+   }, [debouncedSearchGeneral]);
+ 
++  const fetchCompanies = useCallback(async () => {
++    try {
++      const result = await insuranceCompanyService.getAllInsuranceCompanies(1, 100);
++      if (result && result.companies) {
++        setCompanies(result.companies);
++      }
++    } catch (err) {
++      console.error('Failed to fetch companies:', err);
++    }
++  }, []);
++
+   useEffect(() => {
+-    // fetchPlans();
++    fetchPlans();
++    fetchCompanies();
+   }, [fetchPlans]);
+ 
+   const handleDeleteClick = (id, name) => {
+@@ -155,44 +170,39 @@
+   const handleSavePlan = async () => {
+     try {
+-      if (!newPlan.groupName || !newPlan.groupNumber) {
+-        showSnackbar('Group Name and Group # are required', 'error');
++      if (!newPlan.groupName || !newPlan.groupNumber || !newPlan.companyId) {
++        showSnackbar('Group Name, Group #, and Payer Name are required', 'error');
+         return;
+       }
+       
+-      const createdPlan = {
+-        ...newPlan,
+-        id: Date.now().toString(),
+-        groupNumber: newPlan.groupNumber,
+-        groupName: newPlan.groupName,
+-        employer: newPlan.employer,
+-        templateName: newPlan.templateName || 'Standard',
+-        phone: newPlan.phone,
+-        carrier: newPlan.payerName || 'Manual Entry',
+-        electronicId: newPlan.payerId || 'N/A',
+-        feeGuide: 'none',
+-        subscribers: 0
+-      };
+-
+-      // Optimistic update
+-      setPlans(prev => [createdPlan, ...prev]);
+-      
+-      try {
+-        await insurancePlanService.createInsurancePlan({
+-          groupNumber: newPlan.groupNumber,
+-          groupName: newPlan.groupName,
+-          employer: newPlan.employer,
+-          phone: newPlan.phone,
+-          payerName: newPlan.payerName,
+-          payerId: newPlan.payerId,
+-          notes: newPlan.notes
+-        });
+-      } catch (apiErr) {
+-        console.error('API failed to create plan, keeping optimistic update');
+-      }
+-
++      const payload = {
++        name: newPlan.groupName,
++        companyId: parseInt(newPlan.companyId),
++        groupNumber: newPlan.groupNumber,
++        coverageDetails: {
++          employer: newPlan.employer,
++          phone: newPlan.phone,
++          notes: newPlan.notes,
++          templateName: newPlan.templateName,
++        }
++      };
++
++      const createdPlanData = await insurancePlanService.createInsurancePlan(payload);
++      
++      const newDisplayPlan = {
++        id: createdPlanData.id,
++        groupNumber: createdPlanData.groupNumber,
++        groupName: createdPlanData.name,
++        employer: createdPlanData.coverageDetails?.employer || '',
++        templateName: createdPlanData.coverageDetails?.templateName || 'Standard',
++        phone: createdPlanData.coverageDetails?.phone || '',
++        carrier: companies.find(c => c.id === parseInt(newPlan.companyId))?.name || 'Manual Entry',
++        electronicId: newPlan.payerId || 'N/A',
++        feeGuide: 'none',
++        subscribers: 0
++      };
++      
++      setPlans(prev => [newDisplayPlan, ...prev]);
+       showSnackbar('Insurance plan added successfully', 'success');
+       setViewMode('list');
+       setNewPlan({
+-        groupNumber: '', groupName: '', employer: '', templateName: '', payerName: '', payerId: '', phone: '',
++        groupNumber: '', groupName: '', employer: '', templateName: '', companyId: '', payerId: '', phone: '',
+         notes: '', isHealthPlan: false, isCopayPlan: false, assignment: 'Assignment',
+         individualMax: '0.00', individualMaxUnlimited: true, familyMax: '0.00', familyMaxUnlimited: true,
+@@ -219,10 +229,14 @@
+           <Grid item xs={4}>
+             <Box sx={{ mb: 2 }}>
+               <Typography variant="caption" fontWeight={600}>Payer Name*:</Typography>
+-              <TextField 
+-                fullWidth size="small" 
+-                value={newPlan.payerName}
+-                onChange={(e) => setNewPlan({...newPlan, payerName: e.target.value})}
+-                sx={{ '& .MuiOutlinedInput-root': { height: 35 } }}
+-              />
++              <FormControl fullWidth size="small">
++                <Select
++                  value={newPlan.companyId}
++                  onChange={(e) => setNewPlan({...newPlan, companyId: e.target.value})}
++                  sx={{ height: 35 }}
++                >
++                  {companies.map(c => (
++                    <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
++                  ))}
++                </Select>
++              </FormControl>
+               <FormControlLabel
+                 control={<Checkbox size="small" />}

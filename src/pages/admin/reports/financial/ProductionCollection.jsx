@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -24,6 +24,8 @@ import {
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
+import { CircularProgress } from '@mui/material';
+import { reportingService } from '../../../../services/reporting.service';
 
 const ProductionCollection = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -32,54 +34,102 @@ const ProductionCollection = () => {
     setTabValue(newValue);
   };
 
-  const dummyData = [
-    {
-      date: '05/08/26',
-      flags: true,
-      patient: 'Patient A',
-      dob: '05/22/1986',
-      code: 'D0274',
-      procedure: 'BW4',
-      render: 'SAB',
-      bill: 'SAB',
-      charge: 0,
-      adj: 0,
-      estWriteOff: 0,
-      insPayment: 35.00,
-      ptPayment: 0,
-      actualWriteOff: 0,
-      collAdj: 0,
-      ptRefund: 0,
-      insRefund: 0,
-      payFromCredit: 0,
-      refundToCredit: 0,
-      credit: 0,
-      overpayment: 0
-    },
-    {
-      date: '05/08/26',
-      flags: true,
-      patient: 'Patient B',
-      dob: '05/22/1986',
-      code: 'D0120',
-      procedure: 'periodic ex',
-      render: 'SAB',
-      bill: 'SAB',
-      charge: 0,
-      adj: 0,
-      estWriteOff: 0,
-      insPayment: 31.00,
-      ptPayment: 0,
-      actualWriteOff: 0,
-      collAdj: 0,
-      ptRefund: 0,
-      insRefund: 0,
-      payFromCredit: 0,
-      refundToCredit: 0,
-      credit: 0,
-      overpayment: 0
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dateMode, setDateMode] = useState('daily');
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const [providerFilter, setProviderFilter] = useState('all');
+  const [grouping, setGrouping] = useState('no-grouping');
+  const [codeFilterMode, setCodeFilterMode] = useState('filter');
+  const [codeInput, setCodeInput] = useState('');
+  const [showFlags, setShowFlags] = useState(true);
+  const [ptsFlagFilter, setPtsFlagFilter] = useState('pts');
+  const [sortReportBy, setSortReportBy] = useState('default');
+
+  useEffect(() => {
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    if (dateMode === 'daily') {
+      // Just today
+    } else if (dateMode === 'weekly') {
+      start.setDate(today.getDate() - today.getDay());
+      end.setDate(start.getDate() + 6);
+    } else if (dateMode === 'monthly') {
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     }
-  ];
+
+    if (dateMode !== 'range') {
+      setStartDate(start.toISOString().split('T')[0]);
+      setEndDate(end.toISOString().split('T')[0]);
+    }
+  }, [dateMode]);
+
+  useEffect(() => {
+    fetchProductionCollection();
+  }, []);
+
+  const fetchProductionCollection = async () => {
+    setLoading(true);
+    try {
+      const data = await reportingService.getFinancialReport('production-collection', { startDate, endDate });
+      setReportData(data || []);
+    } catch (error) {
+      console.error('Failed to fetch', error);
+      setReportData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredData = React.useMemo(() => {
+    let data = [...reportData];
+    
+    if (providerFilter !== 'all') {
+      data = data.filter(r => r.provider === providerFilter);
+    }
+    
+    if (codeInput.trim()) {
+      const codes = codeInput.split(',').map(c => c.trim().toLowerCase());
+      if (codeFilterMode === 'filter') {
+        data = data.filter(r => codes.includes((r.code || 'PAYMENT').toLowerCase()));
+      } else {
+        data = data.filter(r => !codes.includes((r.code || 'PAYMENT').toLowerCase()));
+      }
+    }
+    
+    if (grouping === 'group-provider') {
+      data.sort((a, b) => (a.provider || '').localeCompare(b.provider || ''));
+    }
+    
+    return data;
+  }, [reportData, providerFilter, grouping, codeFilterMode, codeInput]);
+
+  const uniqueProviders = Array.from(new Set(reportData.map(r => r.provider).filter(Boolean)));
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Date,Patient,DOB,Code,Procedure,Provider,Procedure Charge,Insurance Payment,Patient Payment\n";
+    filteredData.forEach(row => {
+      const line = `"${row.date}","${row.patient || 'Unknown'}","${row.dob || ''}","${row.code || 'PAYMENT'}","${row.procedure || row.paymentMethod || 'Payment'}","${row.provider || 'SAB'}","${(row.charge || row.production || 0).toFixed(2)}","${(row.insPayment || 0).toFixed(2)}","${(row.ptPayment || row.collection || 0).toFixed(2)}"`;
+      csvContent += line + "\n";
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "production_collection_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <Box sx={{ p: 0 }}>
@@ -99,22 +149,41 @@ const ProductionCollection = () => {
         <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
           <Grid item>
             <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
-            <Select size="small" defaultValue="daily" sx={{ minWidth: 100, fontSize: '0.75rem' }}>
+            <Select size="small" value={dateMode} onChange={(e) => setDateMode(e.target.value)} sx={{ minWidth: 100, fontSize: '0.75rem' }}>
               <MenuItem value="daily">Daily</MenuItem>
+              <MenuItem value="weekly">Weekly</MenuItem>
+              <MenuItem value="monthly">Monthly</MenuItem>
+              <MenuItem value="range">Range</MenuItem>
             </Select>
           </Grid>
-          <Grid item>
-            <Typography variant="caption" color="primary">⬅ May 08, 2026 ⮕ Date: 05/08/2026</Typography>
+          <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>From:</Typography>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => { setStartDate(e.target.value); setDateMode('range'); }} 
+              style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} 
+            />
+            <Typography variant="caption" sx={{ fontWeight: 600, ml: 1 }}>To:</Typography>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => { setEndDate(e.target.value); setDateMode('range'); }} 
+              style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} 
+            />
           </Grid>
         </Grid>
 
         <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
           <Grid item>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Provider:</Typography>
-            <Button variant="outlined" size="small" sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0 }}>Select Provider ⌄</Button>
+            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Filter Report by:</Typography>
+            <Select size="small" value={providerFilter} onChange={e => setProviderFilter(e.target.value)} sx={{ minWidth: 140, fontSize: '0.75rem' }}>
+              <MenuItem value="all">Provider: All</MenuItem>
+              {uniqueProviders.map(p => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+            </Select>
           </Grid>
           <Grid item>
-            <RadioGroup row defaultValue="no-grouping">
+            <RadioGroup row value={grouping} onChange={e => setGrouping(e.target.value)}>
               <FormControlLabel value="no-grouping" control={<Radio size="small" />} label={<Typography variant="caption">No Grouping</Typography>} />
               <FormControlLabel value="group-provider" control={<Radio size="small" />} label={<Typography variant="caption">Group By Provider</Typography>} />
             </RadioGroup>
@@ -123,7 +192,7 @@ const ProductionCollection = () => {
 
         <Grid container spacing={4} sx={{ mb: 1 }}>
           <Grid item>
-            <RadioGroup row defaultValue="filter">
+            <RadioGroup row value={codeFilterMode} onChange={e => setCodeFilterMode(e.target.value)}>
               <FormControlLabel value="filter" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ borderBottom: '1px solid' }}>Filter Codes</Typography>} />
               <FormControlLabel value="exclude" control={<Radio size="small" />} label={<Typography variant="caption">Enter Codes to Exclude</Typography>} />
             </RadioGroup>
@@ -131,6 +200,8 @@ const ProductionCollection = () => {
               <TextField 
                 size="small" 
                 placeholder="Enter code or procedure" 
+                value={codeInput}
+                onChange={e => setCodeInput(e.target.value)}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }} 
               />
             </Box>
@@ -140,7 +211,7 @@ const ProductionCollection = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
           <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Display Only Records with Collection</Typography>} />
           <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Exclude Products</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" defaultChecked />} label={<Typography variant="caption">Show Flags in Report</Typography>} />
+          <FormControlLabel control={<Checkbox size="small" checked={showFlags} onChange={e => setShowFlags(e.target.checked)} />} label={<Typography variant="caption">Show Flags in Report</Typography>} />
           <FormControlLabel control={<Checkbox size="small" defaultChecked />} label={<Typography variant="caption">Show Date of Birth</Typography>} />
           <FormControlLabel control={<Checkbox size="small" defaultChecked />} label={<Typography variant="caption">Show Provider</Typography>} />
           <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Filter by DOS</Typography>} />
@@ -148,18 +219,18 @@ const ProductionCollection = () => {
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Select size="small" defaultValue="pts" sx={{ minWidth: 200, fontSize: '0.75rem' }}>
+            <Select size="small" value={ptsFlagFilter} onChange={e => setPtsFlagFilter(e.target.value)} sx={{ minWidth: 200, fontSize: '0.75rem' }}>
               <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
             </Select>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-              <Select size="small" defaultValue="default" sx={{ minWidth: 100, fontSize: '0.75rem' }}>
+              <Select size="small" value={sortReportBy} onChange={e => setSortReportBy(e.target.value)} sx={{ minWidth: 100, fontSize: '0.75rem' }}>
                 <MenuItem value="default">Default</MenuItem>
               </Select>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
+            <Button variant="contained" size="small" onClick={fetchProductionCollection} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
             <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
           </Box>
         </Box>
@@ -169,8 +240,8 @@ const ProductionCollection = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
         <MuiLink sx={{ fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>Office (no provider section)</MuiLink>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-          <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
+          <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
+          <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
         </Box>
       </Box>
 
@@ -209,33 +280,47 @@ const ProductionCollection = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {dummyData.map((row, idx) => (
-              <TableRow key={idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5, whiteSpace: 'nowrap' } }}>
-                <TableCell>{row.date}</TableCell>
-                <TableCell>
-                   <Box sx={{ width: 12, height: 12, bgcolor: '#f5a623', borderRadius: '2px' }} />
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={21} align="center" sx={{ py: 5 }}>
+                  <CircularProgress size={30} />
                 </TableCell>
-                <TableCell color="primary" sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient}</TableCell>
-                <TableCell>{row.dob}</TableCell>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.procedure}</TableCell>
-                <TableCell align="center" sx={{ borderLeft: '1px solid #f0f0f0' }}>{row.render}</TableCell>
-                <TableCell align="center">{row.bill}</TableCell>
-                <TableCell align="right" sx={{ borderLeft: '1px solid #f0f0f0' }}>${row.charge.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.adj.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.estWriteOff.toFixed(2)}</TableCell>
-                <TableCell align="right" sx={{ borderLeft: '1px solid #f0f0f0' }}>${row.insPayment.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.ptPayment.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.actualWriteOff.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.collAdj.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.ptRefund.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.insRefund.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.payFromCredit.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.refundToCredit.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.credit.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.overpayment.toFixed(2)}</TableCell>
               </TableRow>
-            ))}
+            ) : filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={21} align="center" sx={{ py: 3, fontStyle: 'italic', color: 'text.secondary' }}>
+                  No production or collection data found for this period
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredData.map((row, idx) => (
+                <TableRow key={idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5, whiteSpace: 'nowrap' } }}>
+                  <TableCell>{row.date}</TableCell>
+                  <TableCell>
+                     {showFlags && <Box sx={{ width: 12, height: 12, bgcolor: '#f5a623', borderRadius: '2px' }} />}
+                  </TableCell>
+                  <TableCell color="primary" sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Unknown'}</TableCell>
+                  <TableCell>{row.dob || ''}</TableCell>
+                  <TableCell>{row.code || 'PAYMENT'}</TableCell>
+                  <TableCell>{row.procedure || row.paymentMethod || 'Payment'}</TableCell>
+                  <TableCell align="center" sx={{ borderLeft: '1px solid #f0f0f0' }}>{row.render || 'SAB'}</TableCell>
+                  <TableCell align="center">{row.bill || 'SAB'}</TableCell>
+                  <TableCell align="right" sx={{ borderLeft: '1px solid #f0f0f0' }}>${(row.charge || row.production || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.adj || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.estWriteOff || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right" sx={{ borderLeft: '1px solid #f0f0f0' }}>${(row.insPayment || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.ptPayment || row.collection || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.actualWriteOff || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.collAdj || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.ptRefund || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.insRefund || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.payFromCredit || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.refundToCredit || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.credit || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.overpayment || 0).toFixed(2)}</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>

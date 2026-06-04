@@ -38,5 +38,29 @@ export const reportingService = {
   async runReport(options) {
     const response = await apiClient.post('/reports/run', options);
     return response.data.data;
+  },
+
+  /**
+   * Get pre-built financial reports
+   * @param {string} reportName 
+   * @param {Object} params - { date, range }
+   */
+  async getFinancialReport(reportName, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const url = `/reports/financial/${reportName}${query ? `?${query}` : ''}`;
+    const response = await apiClient.get(url);
+    return response.data.data;
+  },
+
+  /**
+   * Get pre-built other reports (login, audit)
+   * @param {string} reportName 
+   * @param {Object} params - { date, range }
+   */
+  async getOtherReport(reportName, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const url = `/reports/others/${reportName}${query ? `?${query}` : ''}`;
+    const response = await apiClient.get(url);
+    return response.data.data;
   }
 };

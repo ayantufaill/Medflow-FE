@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -27,6 +27,11 @@ import { KeyboardArrowDown, KeyboardArrowUp, FileDownload, Print } from '@mui/ic
 const UnsignedProgressNotesReport = () => {
   const [expandedRow, setExpandedRow] = useState(null);
   const [signedExpandedRow, setSignedExpandedRow] = useState(null);
+
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [kindFilter, setKindFilter] = useState('All');
+  const [providerFilter, setProviderFilter] = useState('All');
 
   const rows = [
     { id: 1, patient: 'Francis Fuller', date: '05/07/2026', kind: 'Exam', provider: 'Dr. Smith', note: 'CC: "I have a broken tooth #31". Patient had veneers done March of 2026 in Smile Texas in Houston with Dr. Mackenzie McAfee-Dooley, #\'s 4-13 and 20-29. Patient had his jaw broken in 2017 and now has a chain on right side mandible. He started to notice pain about 2-3 months ago on tooth #31. Last dental cleaning was a year ago, is now looking for a general dentist in DFW as he has recently moved to the area from Houston.' },
@@ -88,6 +93,55 @@ Thank you. YF`
     setSignedExpandedRow(signedExpandedRow === id ? null : id);
   };
 
+  const filteredRows = useMemo(() => {
+    let result = rows;
+    if (kindFilter !== 'All') result = result.filter(r => r.kind === kindFilter);
+    if (providerFilter !== 'All') result = result.filter(r => r.provider === providerFilter);
+    if (startDate || endDate) {
+      const s = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const e = endDate ? new Date(endDate) : new Date('2100-01-01');
+      result = result.filter(r => {
+        const d = new Date(r.date);
+        return d >= s && d <= e;
+      });
+    }
+    return result;
+  }, [kindFilter, providerFilter, startDate, endDate]);
+
+  const filteredSignedRows = useMemo(() => {
+    let result = signedRows;
+    if (kindFilter !== 'All') result = result.filter(r => r.kind === kindFilter);
+    if (providerFilter !== 'All') result = result.filter(r => r.provider === providerFilter);
+    if (startDate || endDate) {
+      const s = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const e = endDate ? new Date(endDate) : new Date('2100-01-01');
+      result = result.filter(r => {
+        const d = new Date(r.date);
+        return d >= s && d <= e;
+      });
+    }
+    return result;
+  }, [kindFilter, providerFilter, startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Patient,Created Date,Kind,Provider,Status\n";
+    filteredRows.forEach(row => {
+      csvContent += `"${row.patient}","${row.date}","${row.kind}","${row.provider}","Unsigned"\n`;
+    });
+    filteredSignedRows.forEach(row => {
+      csvContent += `"${row.patient}","${row.date}","${row.kind}","${row.provider}","Signed"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "progress_notes_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Box sx={{ p: 1 }}>
       <Typography variant="body2" color="primary" sx={{ textDecoration: 'underline', mb: 2, cursor: 'pointer', display: 'inline-block' }}>
@@ -95,31 +149,34 @@ Thank you. YF`
       </Typography>
 
       {/* Filters Section */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-        <TextField 
-          label="Start Date" 
-          defaultValue="04/08/2026" 
-          size="small" 
-          variant="standard"
-          sx={{ width: 150 }}
-        />
-        <TextField 
-          label="End Date" 
-          defaultValue="05/08/2026" 
-          size="small" 
-          variant="standard"
-          sx={{ width: 150 }}
-        />
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.85rem', padding: '4px', border: '1px solid #ccc' }} />
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.85rem', padding: '4px', border: '1px solid #ccc' }} />
+        </Box>
         <FormControl variant="standard" size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Kind</InputLabel>
-          <Select defaultValue="All" label="Kind">
+          <Select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} label="Kind">
             <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Exam">Exam</MenuItem>
+            <MenuItem value="Recare">Recare</MenuItem>
+            <MenuItem value="Conversation">Conversation</MenuItem>
+            <MenuItem value="Treatment">Treatment</MenuItem>
+            <MenuItem value="General">General</MenuItem>
           </Select>
         </FormControl>
         <FormControl variant="standard" size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Provider</InputLabel>
-          <Select defaultValue="All" label="Provider">
+          <Select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} label="Provider">
             <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Dr. Smith">Dr. Smith</MenuItem>
+            <MenuItem value="Dr. Wilson">Dr. Wilson</MenuItem>
+            <MenuItem value="Hygienist A">Hygienist A</MenuItem>
+            <MenuItem value="Hygienist B">Hygienist B</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -151,8 +208,8 @@ Thank you. YF`
 
       {/* Export Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
-        <Button variant="contained" size="small" startIcon={<FileDownload />} sx={{ backgroundColor: '#4a90e2', textTransform: 'none' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" startIcon={<Print />} sx={{ backgroundColor: '#d1a066', textTransform: 'none' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownload />} sx={{ backgroundColor: '#4a90e2', textTransform: 'none' }}>Export as CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} startIcon={<Print />} sx={{ backgroundColor: '#d1a066', textTransform: 'none' }}>Print</Button>
       </Box>
 
       {/* Missing Notes Section */}
@@ -182,7 +239,7 @@ Thank you. YF`
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row) => (
+              {filteredRows.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow 
                     onClick={() => handleRowClick(row.id)}
@@ -249,7 +306,7 @@ Thank you. YF`
               </TableRow>
             </TableHead>
             <TableBody>
-              {signedRows.map((row) => (
+              {filteredSignedRows.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow 
                     onClick={() => handleSignedRowClick(row.id)}

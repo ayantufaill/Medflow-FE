@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  TextField,
 } from '@mui/material';
 
 const MOCK_FAMILIES = [
@@ -48,8 +49,37 @@ const MOCK_FAMILIES = [
 ];
 
 const TotalCollectionFamily = () => {
-  const [dateRange, setDateRange] = useState('Daily');
+  const [searchText, setSearchText] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortBy, setSortBy] = useState('Default');
+
+  const filteredFamilies = useMemo(() => {
+    let filtered = MOCK_FAMILIES;
+    if (searchText) {
+      filtered = filtered.filter(f => f.name.toLowerCase().includes(searchText.toLowerCase()) || f.id.toLowerCase().includes(searchText.toLowerCase()));
+    }
+    return filtered;
+  }, [searchText]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,ID,Patient,Patient Collection,Insurance Collection,Total Collection\n";
+    MOCK_FAMILIES.forEach(family => {
+      csvContent += `"${family.id}","${family.name}","${family.patientCollection}","${family.insuranceCollection}","${family.totalCollection}"\n`;
+      family.members.forEach(member => {
+        csvContent += `"${member.id}","${member.name}","${member.patientCollection}","${member.insuranceCollection}","${member.totalCollection}"\n`;
+      });
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "total_collection_family.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <Box sx={{ p: 0 }}>
@@ -57,24 +87,17 @@ const TotalCollectionFamily = () => {
         Total Collection By Family Report:
       </Typography>
 
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Data Range:</Typography>
-          <Select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            size="small"
-            variant="standard"
-            sx={{ fontSize: '0.85rem', minWidth: 100 }}
-          >
-            <MenuItem value="Daily">Daily</MenuItem>
-            <MenuItem value="Weekly">Weekly</MenuItem>
-          </Select>
-          <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', ml: 1 }}>← May 08, 2026 →</Typography>
-          <Typography sx={{ fontSize: '0.85rem' }}>Date: 05/08/2026</Typography>
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
+          </Box>
         </Box>
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Sort Report By</Typography>
           <Select
@@ -87,32 +110,17 @@ const TotalCollectionFamily = () => {
             <MenuItem value="Amount">Amount</MenuItem>
           </Select>
         </Box>
-
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, '&:hover': { backgroundColor: '#4a74a8' } }}
-          >
-            Apply Filters
-          </Button>
-          <Button
-            variant="contained"
-            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600, '&:hover': { backgroundColor: '#c99f54' } }}
-          >
-            Create Template
-          </Button>
-        </Box>
       </Box>
 
       {/* Action Buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Families List */}
-      {MOCK_FAMILIES.map((family, fIdx) => (
-        <Box key={fIdx} sx={{ mb: 6 }}>
+      {filteredFamilies.map((family, idx) => (
+        <Box key={idx} sx={{ mb: 6 }}>
           <Box sx={{ mb: 1 }}>
             <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 600 }}>
               Total Patient Collection: <Typography component="span" sx={{ fontWeight: 400, color: '#000', ml: 1 }}>{family.patientCollection}</Typography>

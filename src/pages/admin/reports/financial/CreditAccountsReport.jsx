@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -15,20 +15,69 @@ import {
   TableRow,
   Paper,
   FormControl,
+  CircularProgress,
 } from '@mui/material';
-
-const MOCK_DATA = [
-  { name: 'Patient One', dob: 'May/17/1963', email: 'patient1@example.com', phone: '+1 (555) 000-1234', amount: '$350.00', credit: '$350.00', insCredit: '$0.00' },
-  { name: 'Patient Two', dob: 'Jul/19/1941', email: 'patient2@example.com', phone: '+1 (555) 000-5678', amount: '$29.90', credit: '$29.90', insCredit: '$0.00' },
-  { name: 'Patient Three', dob: 'Dec/06/1966', email: 'patient3@example.com', phone: '+1 (555) 000-9012', amount: '$44.00', credit: '$44.00', insCredit: '$0.00' },
-  { name: 'Patient Four', dob: 'Jul/17/1984', email: 'patient4@example.com', phone: '+1 (555) 000-3456', amount: '$395.20', credit: '$395.20', insCredit: '$0.00' },
-  { name: 'Patient Five', dob: 'Dec/13/1964', email: 'patient5@example.com', phone: '+1 (555) 000-7890', amount: '$1,275.00', credit: '$1,275.00', insCredit: '$0.00' },
-];
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import PrintIcon from '@mui/icons-material/Print';
+import { reportingService } from '../../../../services/reporting.service';
 
 const CreditAccountsReport = () => {
   const [filter, setFilter] = useState('All patients');
   const [includeInactive, setIncludeInactive] = useState(false);
   const [groupByCredit, setGroupByCredit] = useState(false);
+  
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCreditAccounts();
+  }, []);
+
+  const fetchCreditAccounts = async () => {
+    setLoading(true);
+    try {
+      const data = await reportingService.getFinancialReport('credit-accounts');
+      setReportData(data || []);
+    } catch (error) {
+      console.error('Failed to fetch', error);
+      setReportData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredData = useMemo(() => {
+    let data = [...reportData];
+    
+    // Inactive filter is visually hooked, but assuming all returned data is active unless specified
+    // Outstanding filter logic (just an example based on balance)
+    if (filter === 'Outstanding only') {
+      data = data.filter(r => r.balTotal < 0); // Assuming negative means credit outstanding
+    }
+    
+    if (groupByCredit) {
+      data.sort((a, b) => (a.balTotal || 0) - (b.balTotal || 0));
+    }
+    
+    return data;
+  }, [reportData, filter, includeInactive, groupByCredit]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Patient Name,Amount\n";
+    filteredData.forEach(row => {
+      const name = `${row.FName || ''} ${row.LName || ''}`.trim();
+      csvContent += `"${name}","${row.balTotal || 0}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "credit_accounts_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <Box sx={{ p: 0 }}>
@@ -66,6 +115,7 @@ const CreditAccountsReport = () => {
           <Button
             variant="contained"
             size="small"
+            onClick={fetchCreditAccounts}
             sx={{
               backgroundColor: '#5c85bb',
               textTransform: 'none',
@@ -103,6 +153,8 @@ const CreditAccountsReport = () => {
         <Button
           variant="contained"
           size="small"
+          onClick={handleExportCSV}
+          startIcon={<FileDownloadIcon />}
           sx={{
             backgroundColor: '#5c85bb',
             textTransform: 'none',
@@ -119,7 +171,8 @@ const CreditAccountsReport = () => {
         <Button
           variant="contained"
           size="small"
-          startIcon={<span>🖨️</span>}
+          onClick={handlePrint}
+          startIcon={<PrintIcon />}
           sx={{
             backgroundColor: '#dcb265',
             textTransform: 'none',
@@ -150,17 +203,35 @@ const CreditAccountsReport = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {MOCK_DATA.map((row, index) => (
-              <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.name}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.dob}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.email}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.phone}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.amount}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.credit}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.insCredit}</TableCell>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                  <CircularProgress size={30} />
+                </TableCell>
               </TableRow>
-            ))}
+            ) : filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 3, fontStyle: 'italic', color: 'text.secondary' }}>
+                  No credit accounts found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredData.map((row, index) => {
+                const name = `${row.FName || ''} ${row.LName || ''}`.trim();
+                const bal = row.balTotal ? `$${Math.abs(row.balTotal).toFixed(2)}` : '$0.00';
+                return (
+                  <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{name}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>-</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>-</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>-</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{bal}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{bal}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>$0.00</TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </TableContainer>

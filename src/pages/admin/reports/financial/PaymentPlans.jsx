@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -127,6 +127,41 @@ const Row = ({ row }) => {
 
 const PaymentPlans = () => {
   const [filterType, setFilterType] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('Select Status');
+
+  const filteredPlans = useMemo(() => {
+    let filtered = MOCK_PAYMENT_PLANS;
+    if (selectedStatus !== 'Select Status') {
+      filtered = filtered.filter(p => p.status === selectedStatus);
+    }
+    if (startDate || endDate) {
+      const sDate = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const eDate = endDate ? new Date(endDate) : new Date('2100-01-01');
+      filtered = filtered.filter(p => {
+        const itemDate = new Date(p.createdOn);
+        return itemDate >= sDate && itemDate <= eDate;
+      });
+    }
+    return filtered;
+  }, [selectedStatus, startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Patient,Created On,Payment Amount,Total Payments,Remaining Payments,Remaining Balance,Next Payment Due,Missed Payments,Last Billed On,Last Payment Due,Type,Status\n";
+    MOCK_PAYMENT_PLANS.forEach(row => {
+      csvContent += `"${row.patient}","${row.createdOn}","${row.amount}","${row.totalPayments}","${row.remainingPayments}","${row.remainingBalance}","${row.nextDue}","${row.missed}","${row.lastBilled}","${row.lastPayment}","${row.type}","${row.status}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "payment_plans.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <Box sx={{ p: 0 }}>
@@ -137,28 +172,29 @@ const PaymentPlans = () => {
       {/* Filters */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Created On Date Filter:</Typography>
-          <Select value="Range" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2025</Typography>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2026</Typography>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Filter by Status:</Typography>
-          <Select value="Select Status" size="small" sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff' }}>
-            <MenuItem value="Select Status">Select Status</MenuItem>
-          </Select>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28 }}>Failed</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28 }}>Pending</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28 }}>Scheduled</Button>
-        </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <Typography sx={{ fontSize: '0.85rem' }}>Filter by Status:</Typography>
+        <Select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          size="small"
+          sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff', '& .MuiSvgIcon-root': { color: '#fff' } }}
+        >
+          <MenuItem value="Select Status">Select Status</MenuItem>
+          <MenuItem value="Active">Active</MenuItem>
+          <MenuItem value="Failed">Failed</MenuItem>
+          <MenuItem value="Completed">Completed</MenuItem>
+          <MenuItem value="Scheduled">Scheduled</MenuItem>
+        </Select>
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -178,7 +214,8 @@ const PaymentPlans = () => {
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
         <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
         <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Table */}
@@ -201,7 +238,7 @@ const PaymentPlans = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {MOCK_PAYMENT_PLANS.map((row, index) => <Row key={index} row={row} />)}
+            {filteredPlans.map((row, index) => <Row key={index} row={row} />)}
           </TableBody>
         </Table>
       </TableContainer>

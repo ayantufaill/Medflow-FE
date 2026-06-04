@@ -36,7 +36,7 @@ import {
   Restore as RestoreIcon,
 } from '@mui/icons-material';
 import { useDebounce } from 'use-debounce';
-import { insurancePlanService } from '../../services/insurance.service';
+import { insurancePlanService, insuranceCompanyService } from '../../services/insurance.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import AuditInsurancePlanHistory from '../../components/insurance/AuditInsurancePlanHistory';
@@ -84,7 +84,8 @@ const INITIAL_PLANS = [
 const InsurancePlans = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [plans, setPlans] = useState(INITIAL_PLANS);
+  const [plans, setPlans] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchCarrier, setSearchCarrier] = useState('');
   const [searchGeneral, setSearchGeneral] = useState('');
@@ -108,7 +109,7 @@ const InsurancePlans = () => {
     groupName: '',
     employer: '',
     templateName: '',
-    payerName: '',
+    companyId: '',
     payerId: '',
     phone: '',
     notes: '',
@@ -126,7 +127,19 @@ const InsurancePlans = () => {
       setLoading(true);
       const result = await insurancePlanService.getInsurancePlans(1, 100, debouncedSearchGeneral);
       if (result && result.plans) {
-        setPlans(result.plans);
+        const mappedPlans = result.plans.map(p => ({
+          id: p._id,
+          groupNumber: p.groupNumber,
+          groupName: p.name,
+          employer: p.notes, // Notes field mapped to employer conceptually? Or leave empty if notes is just notes
+          templateName: p.planType || 'Standard',
+          phone: '-', // Backend doesn't store plan phone natively
+          carrier: p.insuranceCompany?.name || 'Manual Entry',
+          electronicId: p.insuranceCompany?.payerId || 'N/A',
+          feeGuide: p.feeSched || 'none',
+          subscribers: 0
+        }));
+        setPlans(mappedPlans);
       }
     } catch (err) {
       console.error('Failed to fetch plans:', err);
@@ -135,9 +148,21 @@ const InsurancePlans = () => {
     }
   }, [debouncedSearchGeneral]);
 
+  const fetchCompanies = useCallback(async () => {
+    try {
+      const result = await insuranceCompanyService.getAllInsuranceCompanies(1, 100);
+      if (result && result.companies) {
+        setCompanies(result.companies);
+      }
+    } catch (err) {
+      console.error('Failed to fetch companies:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    // fetchPlans();
-  }, [fetchPlans]);
+    fetchPlans();
+    fetchCompanies();
+  }, [fetchPlans, fetchCompanies]);
 
   const handleDeleteClick = (id, name) => {
     setDeleteDialog({ open: true, planId: id, groupName: name });
@@ -155,46 +180,39 @@ const InsurancePlans = () => {
 
   const handleSavePlan = async () => {
     try {
-      if (!newPlan.groupName || !newPlan.groupNumber) {
-        showSnackbar('Group Name and Group # are required', 'error');
+      if (!newPlan.groupName || !newPlan.groupNumber || !newPlan.companyId) {
+        showSnackbar('Group Name, Group #, and Payer Name are required', 'error');
         return;
       }
-      
-      const createdPlan = {
-        ...newPlan,
-        id: Date.now().toString(),
+
+      const payload = {
+        name: newPlan.groupName,
+        insuranceCompanyId: newPlan.companyId,
         groupNumber: newPlan.groupNumber,
-        groupName: newPlan.groupName,
-        employer: newPlan.employer,
-        templateName: newPlan.templateName || 'Standard',
-        phone: newPlan.phone,
-        carrier: newPlan.payerName || 'Manual Entry',
-        electronicId: newPlan.payerId || 'N/A',
-        feeGuide: 'none',
-        subscribers: 0
+        notes: newPlan.employer ? `Employer: ${newPlan.employer}\nPhone: ${newPlan.phone}\n${newPlan.notes}` : newPlan.notes,
+        planType: newPlan.templateName,
       };
 
-      // Optimistic update
-      setPlans(prev => [createdPlan, ...prev]);
+      const createdPlanData = await insurancePlanService.createInsurancePlan(payload);
       
-      try {
-        await insurancePlanService.createInsurancePlan({
-          groupNumber: newPlan.groupNumber,
-          groupName: newPlan.groupName,
-          employer: newPlan.employer,
-          phone: newPlan.phone,
-          payerName: newPlan.payerName,
-          payerId: newPlan.payerId,
-          notes: newPlan.notes
-        });
-      } catch (apiErr) {
-        console.error('API failed to create plan, keeping optimistic update');
-      }
-
+      const newDisplayPlan = {
+        id: createdPlanData._id,
+        groupNumber: createdPlanData.groupNumber,
+        groupName: createdPlanData.name,
+        employer: newPlan.employer,
+        templateName: createdPlanData.planType || 'Standard',
+        phone: newPlan.phone,
+        carrier: companies.find(c => c._id === newPlan.companyId)?.name || 'Manual Entry',
+        electronicId: newPlan.payerId || 'N/A',
+        feeGuide: createdPlanData.feeSched || 'none',
+        subscribers: 0
+      };
+      
+      setPlans(prev => [newDisplayPlan, ...prev]);
       showSnackbar('Insurance plan added successfully', 'success');
       setViewMode('list');
       setNewPlan({
-        groupNumber: '', groupName: '', employer: '', templateName: '', payerName: '', payerId: '', phone: '',
+        groupNumber: '', groupName: '', employer: '', templateName: '', companyId: '', payerId: '', phone: '',
         notes: '', isHealthPlan: false, isCopayPlan: false, assignment: 'Assignment',
         individualMax: '0.00', individualMaxUnlimited: true, familyMax: '0.00', familyMaxUnlimited: true,
       });
@@ -219,12 +237,17 @@ const InsurancePlans = () => {
           <Grid item xs={4}>
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" fontWeight={600}>Payer Name*:</Typography>
-              <TextField 
-                fullWidth size="small" 
-                value={newPlan.payerName}
-                onChange={(e) => setNewPlan({...newPlan, payerName: e.target.value})}
-                sx={{ '& .MuiOutlinedInput-root': { height: 35 } }}
-              />
+              <FormControl fullWidth size="small">
+                <Select
+                  value={newPlan.companyId}
+                  onChange={(e) => setNewPlan({...newPlan, companyId: e.target.value})}
+                  sx={{ height: 35 }}
+                >
+                  {companies.map(c => (
+                    <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <FormControlLabel
                 control={<Checkbox size="small" />}
                 label={<Typography sx={{ fontSize: '0.75rem' }}>Exclude System Carriers</Typography>}

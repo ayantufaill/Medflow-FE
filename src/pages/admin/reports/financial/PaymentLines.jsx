@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -27,8 +27,41 @@ const MOCK_PAYMENT_LINES = [
 ];
 
 const PaymentLines = () => {
-  const [dueDateFilter, setDueDateFilter] = useState('Range');
-  const [selectedStatus, setSelectedStatus] = useState('Scheduled');
+  const [selectedStatus, setSelectedStatus] = useState('Select Status');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredLines = useMemo(() => {
+    let filtered = MOCK_PAYMENT_LINES;
+    if (selectedStatus !== 'Select Status') {
+      filtered = filtered.filter(row => row.status === selectedStatus);
+    }
+    if (startDate || endDate) {
+      const sDate = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const eDate = endDate ? new Date(endDate) : new Date('2100-01-01');
+      filtered = filtered.filter(row => {
+        const itemDate = new Date(row.dueDate);
+        return itemDate >= sDate && itemDate <= eDate;
+      });
+    }
+    return filtered;
+  }, [selectedStatus, startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Patient ID,Patient,Amount,Down Payment,Due Date,Charged On,Failed On,Failed Attempts,Status,Error Message\n";
+    MOCK_PAYMENT_LINES.forEach(row => {
+      csvContent += `"${row.id}","${row.patient}","${row.amount}","${row.downPayment}","${row.dueDate}","${row.chargedOn}","${row.failedOn}","${row.failedAttempts}","${row.status}","${row.error}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "payment_lines.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const StatusChip = ({ label }) => (
     <Box
@@ -59,38 +92,27 @@ const PaymentLines = () => {
       {/* Filters Section */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Due Date Filter:</Typography>
-          <Select
-            value={dueDateFilter}
-            onChange={(e) => setDueDateFilter(e.target.value)}
-            size="small"
-            variant="standard"
-            sx={{ fontSize: '0.85rem', minWidth: 100 }}
-          >
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <TextField size="small" variant="standard" defaultValue="04/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem' } }} />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <TextField size="small" variant="standard" defaultValue="06/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem' } }} />
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Filter by Status:</Typography>
           <Select
-            value="Select Status"
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
             size="small"
             sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff', '& .MuiSvgIcon-root': { color: '#fff' } }}
           >
             <MenuItem value="Select Status">Select Status</MenuItem>
+            <MenuItem value="Failed">Failed</MenuItem>
+            <MenuItem value="Pending">Pending</MenuItem>
+            <MenuItem value="Scheduled">Scheduled</MenuItem>
           </Select>
-          <StatusChip label="Failed" />
-          <StatusChip label="Pending" />
-          <StatusChip label="Scheduled" />
         </Box>
       </Box>
 
@@ -104,8 +126,8 @@ const PaymentLines = () => {
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
         <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
         <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Table Section */}
@@ -126,7 +148,7 @@ const PaymentLines = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {MOCK_PAYMENT_LINES.map((row, index) => (
+            {filteredLines.map((row, index) => (
               <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
                 <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.id}</TableCell>
                 <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.patient}</TableCell>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -15,10 +15,12 @@ import {
   TableRow,
   Paper,
   Grid,
+  CircularProgress,
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import { reportingService } from '../../../../services/reporting.service';
 
 const PatientAgingReport = () => {
   const agingBuckets = [
@@ -31,44 +33,140 @@ const PatientAgingReport = () => {
     '> 180 day',
   ];
 
-  const dummyData = [
-    {
-      flags: [],
-      name: 'John Doe',
-      buckets: {
-        '0 - 30 days': { pt: 1904.33, ins: 0 },
-        '31 - 60 days': { pt: 0, ins: 0 },
-        '61 - 90 days': { pt: 0, ins: 0 },
-        '91 - 120 days': { pt: 0, ins: 0 },
-        '121 - 150 days': { pt: 0, ins: 0 },
-        '151 - 180 days': { pt: 0, ins: 0 },
-        '> 180 day': { pt: 0, ins: 0 },
-      },
-      total: 1904.33,
-      totalOwings: 3904.33,
-      paymentPlan: 0,
-      credit: 0,
-      lastBilled: '',
-    },
-    {
-      flags: [],
-      name: 'Jane Smith',
-      buckets: {
-        '0 - 30 days': { pt: 1724.00, ins: 0 },
-        '31 - 60 days': { pt: 0, ins: 0 },
-        '61 - 90 days': { pt: 0, ins: 0 },
-        '91 - 120 days': { pt: 0, ins: 0 },
-        '121 - 150 days': { pt: 0, ins: 0 },
-        '151 - 180 days': { pt: 0, ins: 0 },
-        '> 180 day': { pt: 0, ins: 0 },
-      },
-      total: 1724.00,
-      totalOwings: 3724.00,
-      paymentPlan: 0,
-      credit: 0,
-      lastBilled: '',
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [balanceFilter, setBalanceFilter] = useState('Any Balance');
+  const [owingFilter, setOwingFilter] = useState('Any Type of Owing');
+  const [providerFilter, setProviderFilter] = useState('All Providers');
+  const [filteredData, setFilteredData] = useState([]);
+  const [hideNames, setHideNames] = useState(false);
+  const [selectedRows, setSelectedRows] = useState([]);
+
+  useEffect(() => {
+    fetchPatientAgingReport();
+  }, []);
+
+  const fetchPatientAgingReport = async (selectedDate = null) => {
+    setLoading(true);
+    try {
+      const params = selectedDate ? { date: selectedDate } : {};
+      const data = await reportingService.getFinancialReport('patient-aging', params);
+      setReportData(data || []);
+      setFilteredData(data || []);
+    } catch (error) {
+      console.error('Failed to fetch patient aging report', error);
+      setReportData([]);
+      setFilteredData([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const applyFilters = () => {
+    let filtered = [...reportData];
+    
+    if (balanceFilter !== 'Any Balance') {
+      if (balanceFilter === '> $0') filtered = filtered.filter(row => row.total > 0);
+      else if (balanceFilter === '< $0 (Credit)') filtered = filtered.filter(row => row.total < 0);
+    }
+    
+    setFilteredData(filtered);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Patient Name," + agingBuckets.join(",") + ",Total,Payment Plan Owing,Credit,Last Billed On\n";
+    
+    const dataToExport = selectedRows.length > 0 ? filteredData.filter((_, idx) => selectedRows.includes(idx)) : filteredData;
+
+    dataToExport.forEach(row => {
+      const name = `"${hideNames ? 'HIDDEN' : row.name}"`;
+      const buckets = agingBuckets.map(b => row.buckets && row.buckets[b] ? `"${row.buckets[b].pt + row.buckets[b].ins}"` : '"0"').join(",");
+      const total = `"${row.total || 0}"`;
+      const plan = `"${row.paymentPlan || 0}"`;
+      const credit = `"${row.credit || 0}"`;
+      const billed = `"${row.lastBilled || ''}"`;
+      
+      csvContent += `${name},${buckets},${total},${plan},${credit},${billed}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "patient_aging_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedRows(filteredData.map((_, idx) => idx));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
+  const handleSelectRow = (idx) => {
+    if (selectedRows.includes(idx)) {
+      setSelectedRows(selectedRows.filter(i => i !== idx));
+    } else {
+      setSelectedRows([...selectedRows, idx]);
+    }
+  };
+
+  const calculateTotals = () => {
+    const totals = { 
+      outstanding: { buckets: {}, total: 0 },
+      patient: { buckets: {}, total: 0 },
+      insurance: { buckets: {}, total: 0 },
+      credit: 0
+    };
+    
+    agingBuckets.forEach(b => {
+      totals.outstanding.buckets[b] = 0;
+      totals.patient.buckets[b] = 0;
+      totals.insurance.buckets[b] = 0;
+    });
+
+    filteredData.forEach(row => {
+      agingBuckets.forEach(b => {
+        if (row.buckets && row.buckets[b]) {
+          const pt = row.buckets[b].pt || 0;
+          const ins = row.buckets[b].ins || 0;
+          totals.patient.buckets[b] += pt;
+          totals.insurance.buckets[b] += ins;
+          totals.outstanding.buckets[b] += pt + ins;
+        }
+      });
+      totals.credit += (row.credit || 0);
+    });
+    
+    totals.patient.total = agingBuckets.reduce((acc, b) => acc + totals.patient.buckets[b], 0);
+    totals.insurance.total = agingBuckets.reduce((acc, b) => acc + totals.insurance.buckets[b], 0);
+    totals.outstanding.total = totals.patient.total + totals.insurance.total;
+
+    return totals;
+  };
+
+  const totals = calculateTotals();
+
+  const renderFilterSelect = (label, options, value, onChange) => (
+    <Select
+      size="small"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      sx={{ minWidth: 120, fontSize: '0.75rem', backgroundColor: '#fff' }}
+    >
+      <MenuItem value={label}>{label}</MenuItem>
+      {options.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+    </Select>
+  );
 
   return (
     <Box sx={{ p: 0 }}>
@@ -79,17 +177,16 @@ const PatientAgingReport = () => {
       {/* Filter Section */}
       <Box sx={{ backgroundColor: '#f8f9fa', p: 2, borderRadius: 1, mb: 3 }}>
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item>
-            <Select size="small" defaultValue="any" sx={{ minWidth: 120, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-              <MenuItem value="any">Any AR Range</MenuItem>
-            </Select>
-          </Grid>
+          <Grid item>{renderFilterSelect('Any Balance', ['> $0', '< $0 (Credit)'], balanceFilter, setBalanceFilter)}</Grid>
+          <Grid item>{renderFilterSelect('Any Type of Owing', ['Patient Owings', 'Insurance Owings'], owingFilter, setOwingFilter)}</Grid>
+          <Grid item>{renderFilterSelect('Any Billing Date', [], 'Any Billing Date', () => {})}</Grid>
+          <Grid item>{renderFilterSelect('With OR Without Open Claims', [], 'With OR Without Open Claims', () => {})}</Grid>
+          <Grid item>{renderFilterSelect('Active Patients Only', [], 'Active Patients Only', () => {})}</Grid>
+          <Grid item>{renderFilterSelect('All Providers', ['Dr. Sabour', 'Sabour Ortho'], providerFilter, setProviderFilter)}</Grid>
+          <Grid item>{renderFilterSelect('Any AR Range', [], 'Any AR Range', () => {})}</Grid>
         </Grid>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Select size="small" defaultValue="pts" sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-            <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
-          </Select>
           <FormControlLabel 
             control={<Checkbox size="small" defaultChecked />} 
             label={<Typography variant="caption">Show Flags in Report</Typography>} 
@@ -119,7 +216,7 @@ const PatientAgingReport = () => {
             </Select>
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
+          <Button variant="contained" size="small" onClick={applyFilters} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
           <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
         </Box>
       </Box>
@@ -132,11 +229,11 @@ const PatientAgingReport = () => {
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <FormControlLabel 
-            control={<Checkbox size="small" />} 
+            control={<Checkbox size="small" checked={hideNames} onChange={(e) => setHideNames(e.target.checked)} />} 
             label={<Typography variant="caption">Hide Patient Names</Typography>} 
           />
-          <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-          <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
+          <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
+          <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
         </Box>
       </Box>
 
@@ -145,7 +242,14 @@ const PatientAgingReport = () => {
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1 } }}>
-              <TableCell padding="checkbox"><Checkbox size="small" /></TableCell>
+              <TableCell padding="checkbox">
+                <Checkbox 
+                  size="small" 
+                  checked={filteredData.length > 0 && selectedRows.length === filteredData.length}
+                  indeterminate={selectedRows.length > 0 && selectedRows.length < filteredData.length}
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
               <TableCell>Flags</TableCell>
               <TableCell>Patient Name</TableCell>
               {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
@@ -158,40 +262,58 @@ const PatientAgingReport = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {dummyData.map((row, idx) => (
-              <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5, verticalAlign: 'top' } }}>
-                <TableCell padding="checkbox"><Checkbox size="small" /></TableCell>
-                <TableCell></TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
-                    </Box>
-                    <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
-                  </Box>
-                </TableCell>
-                {agingBuckets.map(bucket => (
-                  <TableCell key={bucket} align="right">
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block' }}>Pt. ${row.buckets[bucket].pt.toFixed(2)}</Typography>
-                    </Box>
-                  </TableCell>
-                ))}
-                <TableCell align="right">
-                  <Typography variant="caption" sx={{ display: 'block' }}>${row.total.toFixed(2)}</Typography>
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>${row.totalOwings.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.paymentPlan.toFixed(2)}</TableCell>
-                <TableCell align="right">${row.credit.toFixed(2)}</TableCell>
-                <TableCell>{row.lastBilled}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main', cursor: 'pointer' }}>
-                    <NoteAddIcon sx={{ fontSize: 14, mr: 0.5 }} />
-                    <Typography variant="caption">add account note</Typography>
-                  </Box>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={11} align="center" sx={{ py: 5 }}>
+                  <CircularProgress size={30} />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={11} align="center" sx={{ py: 3, fontStyle: 'italic', color: 'text.secondary' }}>
+                  No data matches current filters
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredData.map((row, idx) => (
+                <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5, verticalAlign: 'top' } }}>
+                  <TableCell padding="checkbox">
+                    <Checkbox 
+                      size="small" 
+                      checked={selectedRows.includes(idx)}
+                      onChange={() => handleSelectRow(idx)}
+                    />
+                  </TableCell>
+                  <TableCell></TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
+                      </Box>
+                      <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{hideNames ? 'HIDDEN' : row.name}</Typography>
+                    </Box>
+                  </TableCell>
+                  {agingBuckets.map(bucket => (
+                    <TableCell key={bucket} align="right">
+                      <Typography variant="caption" sx={{ display: 'block' }}>Pt. ${(row.buckets && row.buckets[bucket] ? row.buckets[bucket].pt : 0).toFixed(2)}</Typography>
+                    </TableCell>
+                  ))}
+                  <TableCell align="right">
+                    <Typography variant="caption" sx={{ display: 'block' }}>${(row.total || 0).toFixed(2)}</Typography>
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>${(row.totalOwings || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.paymentPlan || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">${(row.credit || 0).toFixed(2)}</TableCell>
+                  <TableCell>{row.lastBilled || ''}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main', cursor: 'pointer' }}>
+                      <NoteAddIcon sx={{ fontSize: 14, mr: 0.5 }} />
+                      <Typography variant="caption">add account note</Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -201,16 +323,16 @@ const PatientAgingReport = () => {
         <Table size="small">
           <TableBody>
             {[
-              { label: 'Total Outstanding Balances', values: ['28,802.75', '10,452.94', '2,808.96', '764.50', '903.50', '7,677.87', '6,146.28'], total: '57,556.80' },
-              { label: 'Total Patients Balances', values: ['7,452.05', '1,074.18', '935.56', '764.50', '83.00', '2,482.12', '3,951.58'], total: '16,742.99' },
-              { label: 'Total Insurance Balances', values: ['21,350.70', '9,378.76', '1,873.40', '0.00', '820.50', '5,195.75', '2,194.70'], total: '40,813.81' }
+              { label: 'Total Outstanding Balances', data: totals.outstanding },
+              { label: 'Total Patients Balances', data: totals.patient },
+              { label: 'Total Insurance Balances', data: totals.insurance }
             ].map((row, idx) => (
               <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
                 <TableCell sx={{ width: '25%', fontWeight: 600 }}>{row.label}</TableCell>
-                {row.values.map((val, i) => (
-                  <TableCell key={i} align="right" sx={{ width: '8%', fontWeight: 600 }}>${val}</TableCell>
+                {agingBuckets.map((bucket, i) => (
+                  <TableCell key={i} align="right" sx={{ width: '8%', fontWeight: 600 }}>${row.data.buckets[bucket].toFixed(2)}</TableCell>
                 ))}
-                <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>${row.total}</TableCell>
+                <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>${row.data.total.toFixed(2)}</TableCell>
                 <TableCell sx={{ width: '15%' }}></TableCell>
               </TableRow>
             ))}
@@ -218,7 +340,7 @@ const PatientAgingReport = () => {
               <TableCell sx={{ fontWeight: 600 }}>Total Account Credit</TableCell>
               {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
               <TableCell></TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600 }}>$10,546.81</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>${totals.credit.toFixed(2)}</TableCell>
             </TableRow>
             <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
               <TableCell sx={{ fontWeight: 600 }}>
@@ -227,7 +349,7 @@ const PatientAgingReport = () => {
               </TableCell>
               {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
               <TableCell></TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>$47,009.99</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>${(totals.outstanding.total - totals.credit).toFixed(2)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>

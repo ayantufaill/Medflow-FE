@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -23,6 +23,37 @@ const MOCK_REQUESTS = [
 ];
 
 const PaymentRequest = () => {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredRequests = useMemo(() => {
+    let filtered = MOCK_REQUESTS;
+    if (startDate || endDate) {
+      const sDate = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const eDate = endDate ? new Date(endDate) : new Date('2100-01-01');
+      filtered = filtered.filter(row => {
+        const itemDate = new Date(row.created);
+        return itemDate >= sDate && itemDate <= eDate;
+      });
+    }
+    return filtered;
+  }, [startDate, endDate]);
+
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Patient,Created On,Amount Requested,Amount Paid,Date Paid,Status\n";
+    MOCK_REQUESTS.forEach(row => {
+      csvContent += `"${row.patient}","${row.created}","${row.requested}","${row.paid}","${row.date}","${row.status}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "payment_requests.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   return (
     <Box sx={{ p: 0 }}>
       <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
@@ -30,29 +61,20 @@ const PaymentRequest = () => {
       </Typography>
 
       {/* Filters */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Created On Date Filter:</Typography>
-          <Select value="Range" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2025</Typography>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2026</Typography>
-        </Box>
-        <Box sx={{ ml: 'auto' }}>
-          <Button variant="contained" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem' }}>Apply Filters</Button>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px', border: '1px solid #ccc' }} />
         </Box>
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+        <Button variant="contained" size="small" onClick={handleExportCSV} sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
+        <Button variant="contained" size="small" onClick={handlePrint} sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
       </Box>
 
       {/* Table */}
@@ -69,7 +91,7 @@ const PaymentRequest = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {MOCK_REQUESTS.map((row, index) => (
+            {filteredRequests.map((row, index) => (
               <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
                 <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.patient}</TableCell>
                 <TableCell sx={{ fontSize: '0.75rem' }}>{row.created}</TableCell>
