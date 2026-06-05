@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authService } from '../../services/auth.service';
+import { API_BASE_URL } from '../../config/api';
 
 /**
  * Decode JWT token to get expiration time
@@ -98,16 +99,31 @@ export const verifyEmailAndRegister = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
-  async (_, { rejectWithValue }) => {
-    try {
-      await authService.logout();
-      return true;
-    } catch (error) {
-      // Even if API fails, we want to clear local state
-      return rejectWithValue(error.message);
-    } finally {
-      authService.removeTokens(); // Assuming removeTokens clears localStorage
+  async (_, { dispatch }) => {
+    // 1. Grab tokens before they are deleted
+    const accessToken = localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    // 2. Dispatch clearAuth instantly to purge Redux state and force immediate redirect
+    dispatch(authSlice.actions.clearAuth());
+    
+    // 3. Send the logout request to backend in the background using raw fetch
+    // This bypasses the apiClient interceptor which would fail since tokens are being deleted
+    if (refreshToken && accessToken) {
+      fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ refreshToken })
+      }).catch(console.error);
     }
+    
+    // 4. Clean up any remaining tokens (though ProtectedRoute also does this)
+    authService.removeTokens();
+    
+    return true;
   }
 );
 
@@ -190,11 +206,13 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.loading = false;
     });
     builder.addCase(logoutUser.rejected, (state) => {
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.loading = false;
     });
   },
 });

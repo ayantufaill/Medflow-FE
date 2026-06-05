@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import patientReducer from './slices/patientSlice';
 import appointmentReducer from './slices/appointmentSlice';
 import providerReducer from './slices/providerSlice';
@@ -8,19 +8,34 @@ import billingReducer from './slices/billingSlice';
 import clinicalReducer from './slices/clinicalSlice';
 import uiReducer from './slices/uiSlice';
 import authReducer from './slices/authSlice';
+import insuranceReducer from './slices/insuranceSlice';
+import documentReducer from './slices/documentSlice';
+
+const appReducer = combineReducers({
+  patient: patientReducer,
+  appointment: appointmentReducer,
+  provider: providerReducer,
+  room: roomReducer,
+  appointmentType: appointmentTypeReducer,
+  billing: billingReducer,
+  clinical: clinicalReducer,
+  ui: uiReducer,
+  auth: authReducer,
+  insurance: insuranceReducer,
+  document: documentReducer,
+});
+
+const rootReducer = (state, action) => {
+  if (action.type === 'auth/logoutUser/fulfilled' || action.type === 'auth/clearAuth') {
+    // Reset the entire Redux state to undefined. This forces all reducers 
+    // to return their initialState, effectively purging all cached PHI from memory.
+    state = undefined;
+  }
+  return appReducer(state, action);
+};
 
 export const store = configureStore({
-  reducer: {
-    patient: patientReducer,
-    appointment: appointmentReducer,
-    provider: providerReducer,
-    room: roomReducer,
-    appointmentType: appointmentTypeReducer,
-    billing: billingReducer,
-    clinical: clinicalReducer,
-    ui: uiReducer,
-    auth: authReducer,
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

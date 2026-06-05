@@ -63,6 +63,17 @@ export const fetchAllProvidersForDropdown = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch providers');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { provider } = getState();
+      // Block redundant requests if a request is already in progress
+      // This solves the React 18 StrictMode double-mount race condition
+      if (provider.dropdownLoading) {
+        return false;
+      }
+      return true;
+    }
   }
 );
 

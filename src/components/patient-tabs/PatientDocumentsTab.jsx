@@ -26,8 +26,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { documentService } from '../../services/document.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { usePatientDocuments } from '../../hooks/redux/usePatientDocuments';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 
 const DOCUMENT_TYPE_LABELS = {
@@ -64,30 +64,25 @@ const formatFileSize = (bytes) => {
 const PatientDocumentsTab = ({ patientId }) => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
-  const [documents, setDocuments] = useState([]);
-  const [error, setError] = useState('');
+  const {
+    documents,
+    loading: reduxLoading,
+    error,
+    fetch: fetchDocuments,
+    remove: removeDocument
+  } = usePatientDocuments(patientId);
+
   const [deleteDialog, setDeleteDialog] = useState({ open: false, document: null });
   const [deleting, setDeleting] = useState(false);
 
-  const fetchDocuments = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const result = await documentService.getDocumentsByPatient(patientId, 1, 50);
-      setDocuments(result.documents || []);
-    } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to load documents');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // loading starts as false in Redux, so we check if documents is actually present
+  const isActuallyLoading = reduxLoading || (!documents.length && !error && deleteDialog.document === null);
 
   useEffect(() => {
     if (patientId) {
       fetchDocuments();
     }
-  }, [patientId]);
+  }, [patientId, fetchDocuments]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -115,13 +110,12 @@ const PatientDocumentsTab = ({ patientId }) => {
     if (!deleteDialog.document) return;
     try {
       setDeleting(true);
-      await documentService.deleteDocument(deleteDialog.document._id);
+      await removeDocument(deleteDialog.document._id).unwrap();
       showSnackbar('Document deleted successfully', 'success');
       setDeleteDialog({ open: false, document: null });
-      fetchDocuments();
     } catch (err) {
       showSnackbar(
-        err.response?.data?.error?.message || 'Failed to delete document',
+        err?.message || typeof err === 'string' ? err : 'Failed to delete document',
         'error'
       );
     } finally {
@@ -129,7 +123,9 @@ const PatientDocumentsTab = ({ patientId }) => {
     }
   };
 
-  if (loading) {
+  // If it's loading AND we have zero documents, show the loader.
+  // Otherwise show the list, and any new loading will just happen in background.
+  if (reduxLoading && documents.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
         <CircularProgress />

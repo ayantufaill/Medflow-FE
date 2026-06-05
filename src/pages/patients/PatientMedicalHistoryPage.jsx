@@ -25,8 +25,8 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { patientService } from "../../services/patient.service";
-import { documentService } from "../../services/document.service";
+import { useMedicalHistory } from "../../hooks/redux/useMedicalHistory";
+import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
 import MedicationListCard from "../../components/patients/MedicationListCard";
@@ -117,15 +117,13 @@ const PatientMedicalHistoryPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const { medicalHistory, loading, error, fetch, update, uploadDocument } = useMedicalHistory();
+  const { currentPatient: patient, fetchById } = usePatient();
 
-  const [patient, setPatient] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [historyTab, setHistoryTab] = useState(0); // 0 = Summary, 1 = Full Medical History
   const [medications, setMedications] = useState([]);
   const [supplements, setSupplements] = useState([]);
   const [visitDates, setVisitDates] = useState([]);
-  const [medicalHistory, setMedicalHistory] = useState(null);
   const [signature, setSignature] = useState(null);
   const [isStartingNewHistory, setIsStartingNewHistory] = useState(false);
 
@@ -158,76 +156,38 @@ const PatientMedicalHistoryPage = () => {
   };
 
   useEffect(() => {
-    let cancelled = false;
+    if (!patientId) return;
+    
+    // Fetch both patient info and medical history concurrently
+    fetchById(patientId);
+    
+    // The Redux fetch will return a promise we can unwrap to populate local editing state
+    fetch(patientId).unwrap()
+      .then((data) => {
+        setMedications(Array.isArray(data?.medications) ? data.medications : []);
+        setSupplements(Array.isArray(data?.supplements) ? data.supplements : []);
+        setSignature(data?.review?.signatureDataUrl || null);
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data =
-          await patientService.getStructuredMedicalHistory(patientId);
-        if (!cancelled) {
-          setPatient(data?.patient || null);
-          setMedicalHistory(data || null);
-          setMedications(
-            Array.isArray(data?.medications) ? data.medications : [],
-          );
-          setSupplements(
-            Array.isArray(data?.supplements) ? data.supplements : [],
-          );
-          setSignature(data?.review?.signatureDataUrl || null);
-
-          // Debug: Log the raw visitDates from backend
-          console.log('Raw visitDates from backend:', data?.visitDates);
-
-          const labels = Array.isArray(data?.visitDates)
-            ? data.visitDates
-              .map((item, index) => {
-                // Handle both string dates and objects with date/label properties
-                const dateStr = typeof item === 'string' ? item : item?.date;
-                const existingLabel = typeof item === 'object' ? item?.label : null;
-
-                // If there's already a formatted label, use it
-                if (existingLabel) {
-                  return existingLabel;
-                }
-
-                // Log for debugging
-                if (!dateStr || dateStr === "" || dateStr === null) {
-                  console.warn(`Visit date at index ${index} is empty or null:`, item);
-                  return null;
-                }
-
-                const formatted = formatVisitDate(dateStr);
-                if (!formatted) {
-                  console.warn(`Failed to format visit date at index ${index}:`, item);
-                }
-                // Only include valid formatted dates
-                return formatted || null;
-              })
-              .filter(Boolean)
-            : [];
-          setVisitDates(labels);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to load medical history",
-          );
-          showSnackbar("Failed to load medical history", "error");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    fetchData();
-    return () => {
-      cancelled = true;
-    };
-  }, [patientId, showSnackbar]);
+        // Process visit dates locally
+        const labels = Array.isArray(data?.visitDates)
+          ? data.visitDates
+            .map((item, index) => {
+              const dateStr = typeof item === 'string' ? item : item?.date;
+              const existingLabel = typeof item === 'object' ? item?.label : null;
+              if (existingLabel) return existingLabel;
+              if (!dateStr || dateStr === "" || dateStr === null) return null;
+              const formatted = formatVisitDate(dateStr);
+              return formatted || null;
+            })
+            .filter(Boolean)
+          : [];
+        setVisitDates(labels);
+      })
+      .catch((err) => {
+        if (err?.name === 'ConditionError') return;
+        showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to load medical history", "error");
+      });
+  }, [patientId, fetchById, fetch, showSnackbar]);
 
   const patientName = (() => {
     if (patient?.firstName || patient?.lastName) {
@@ -236,80 +196,66 @@ const PatientMedicalHistoryPage = () => {
     return "Ayan Tufail";
   })();
 
-  const generalInfo = medicalHistory?.generalInfo || {};
+  const [localGeneralInfo, setLocalGeneralInfo] = useState(null);
+  const [localSections, setLocalSections] = useState(null);
+  const [localPremed, setLocalPremed] = useState(null);
 
-  // Medical history questions come from the canonical `sections` array
-  // provided by /patients/:id/medical-history.
-  const rawSections = Array.isArray(medicalHistory?.sections)
-    ? medicalHistory.sections
-    : [];
+  // Initialize local editing state when medical history loads
+  useEffect(() => {
+    if (medicalHistory) {
+      setLocalGeneralInfo(medicalHistory.generalInfo || {});
+      setLocalSections(medicalHistory.sections || []);
+      setLocalPremed(medicalHistory.premed || {});
+    }
+  }, [medicalHistory]);
 
-  // Normalize additionalInfo for UI: backend stores it as an array, but
-  // the UI edits a single multiline string.
+  const generalInfo = localGeneralInfo || {};
+  const rawSections = Array.isArray(localSections) ? localSections : [];
+
   const summarySections = rawSections.map((section) => ({
     ...section,
     additionalInfo: Array.isArray(section.additionalInfo)
       ? section.additionalInfo.join("\n\n")
       : section.additionalInfo || "",
   }));
+
+  const handleSummarySectionChange = (sectionId, field, value) => {
+    setLocalSections((prev) => {
+      const currentSections = Array.isArray(prev) ? prev : [];
+      return currentSections.map((section) =>
+        section.id === sectionId ? { ...section, [field]: value } : section,
+      );
+    });
+  };
+
+  const handleGeneralInfoChange = (field, value) => {
+    setLocalGeneralInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handlePremedChange = (requiresPremed) => {
+    setLocalPremed((prev) => ({
+      ...prev,
+      requiresPremed,
+    }));
+  };
+
   const risk = medicalHistory?.risk || {};
   const reviewedWithPatient = Boolean(
     medicalHistory?.review?.reviewedWithPatient,
   );
 
-  const isEmptyState = !loading && !medicalHistory?.sections?.length && !isStartingNewHistory;
+  // loading starts as false in Redux, so we check if medicalHistory is actually present
+  const isActuallyLoading = loading || (!medicalHistory && !error);
+  const isEmptyState = !isActuallyLoading && (!medicalHistory?.sections || medicalHistory.sections.length === 0) && !isStartingNewHistory;
 
   const dobText = patient?.dateOfBirth
     ? `DOB: ${formatDate(patient.dateOfBirth)}`
     : "DOB: Mar 4, 2026";
 
   const [uploading, setUploading] = useState(false);
-
-  const updateMedicalHistoryState = (updater) => {
-    setMedicalHistory((prev) =>
-      typeof updater === "function" ? updater(prev) : updater,
-    );
-  };
-
-  const handleSummarySectionChange = (sectionId, field, value) => {
-    updateMedicalHistoryState((prev) => {
-      const currentSections = Array.isArray(prev?.sections)
-        ? prev.sections
-        : [];
-      const updatedSections = currentSections.map((section) =>
-        section.id === sectionId ? { ...section, [field]: value } : section,
-      );
-
-      return {
-        ...prev,
-        summary: {
-          ...(prev?.summary || {}),
-          sections: updatedSections,
-        },
-        sections: updatedSections,
-      };
-    });
-  };
-
-  const handleGeneralInfoChange = (field, value) => {
-    updateMedicalHistoryState((prev) => ({
-      ...prev,
-      generalInfo: {
-        ...(prev?.generalInfo || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const handlePremedChange = (requiresPremed) => {
-    updateMedicalHistoryState((prev) => ({
-      ...prev,
-      premed: {
-        ...(prev?.premed || {}),
-        requiresPremed,
-      },
-    }));
-  };
 
   const saveMedicalHistory = async (reviewedWithPatient = false) => {
     if (!patientId || !medicalHistory) return;
@@ -327,18 +273,16 @@ const PatientMedicalHistoryPage = () => {
           signatureDataUrl: signature || baseReview.signatureDataUrl || null,
         };
 
-      const sectionsForSave = Array.isArray(medicalHistory.sections)
-        ? medicalHistory.sections
+      const sectionsForSave = Array.isArray(localSections)
+        ? localSections
         : summarySections;
 
-      const data = await patientService.updateStructuredMedicalHistory(
+      const data = await update(
         patientId,
         {
-          generalInfo: medicalHistory.generalInfo,
-          premed: medicalHistory.premed,
+          generalInfo: localGeneralInfo || {},
+          premed: localPremed || {},
           risk: medicalHistory.risk,
-          // Backend expects additionalInfo to be an array; UI edits a single
-          // multiline string, so convert it before sending.
           sections: sectionsForSave.map((section) => ({
             ...section,
             additionalInfo: Array.isArray(section.additionalInfo)
@@ -350,10 +294,9 @@ const PatientMedicalHistoryPage = () => {
           medications,
           supplements,
           review,
-        },
-      );
+        }
+      ).unwrap();
 
-      setMedicalHistory(data || null);
       setMedications(Array.isArray(data?.medications) ? data.medications : []);
       setSupplements(Array.isArray(data?.supplements) ? data.supplements : []);
       setSignature(data?.review?.signatureDataUrl || signature || null);
@@ -364,12 +307,7 @@ const PatientMedicalHistoryPage = () => {
         "success",
       );
     } catch (err) {
-      showSnackbar(
-        err?.response?.data?.error?.message ||
-        err?.response?.data?.message ||
-        "Failed to update medical history",
-        "error",
-      );
+      showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to update medical history", "error");
     }
   };
 
@@ -392,19 +330,14 @@ const PatientMedicalHistoryPage = () => {
             "documentName",
             files[i].name || `Medical history document ${i + 1}`,
           );
-          await documentService.uploadDocument(formData);
+          await uploadDocument(formData).unwrap();
         }
         showSnackbar(
           `Uploaded ${files.length} document(s). View them under SIGNED DOCS tab.`,
           "success",
         );
       } catch (err) {
-        showSnackbar(
-          err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          "Failed to upload document",
-          "error",
-        );
+        showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to upload document", "error");
       } finally {
         setUploading(false);
       }
@@ -562,7 +495,11 @@ const PatientMedicalHistoryPage = () => {
         </Button>
       </Box>
 
-      {isEmptyState ? (
+      {isActuallyLoading && !patient ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4, flex: 1 }}>
+          <CircularProgress />
+        </Box>
+      ) : isEmptyState ? (
         <Box 
           sx={{ 
             display: 'flex', 
@@ -602,7 +539,7 @@ const PatientMedicalHistoryPage = () => {
           <MedicalGeneralInfoCard
             generalInfo={generalInfo}
             onChangeField={handleGeneralInfoChange}
-            premedRequires={Boolean(medicalHistory?.premed?.requiresPremed)}
+            premedRequires={Boolean(localPremed?.requiresPremed)}
             onPremedChange={handlePremedChange}
           />
 
