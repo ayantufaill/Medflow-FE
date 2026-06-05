@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import React from 'react';
+import { claimService } from '../../services/claim.service';
 import {
   Box,
   Typography,
@@ -28,6 +29,7 @@ import {
   Popover,
   Collapse,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -73,18 +75,18 @@ const CARRIERS = [
   { value: 'geha', label: 'GEHA Connection' },
 ];
 
-// Claim Status Options
+// Claim Status Options (aligned with backend ClaimStatus values)
 const CLAIM_STATUSES = [
   { value: 'all', label: 'All' },
-  { value: 'readyForSubmission', label: 'readyForSubmission' },
-  { value: 'inProcess', label: 'inProcess' },
-  { value: 'accepted', label: 'accepted' },
-  { value: 'acceptedPaid', label: 'acceptedPaid' },
-  { value: 'error', label: 'error' },
-  { value: 'rejected', label: 'rejected' },
-  { value: 'eobUploaded', label: 'eobUploaded' },
-  { value: 'manualClaim', label: 'manualClaim' },
-  { value: 'acceptedForProcessing', label: 'acceptedForProcessing' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'partial', label: 'Partial' },
+  { value: 'denied', label: 'Denied' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 // Group Date By Range Options (Specific to Outstanding Claims)
@@ -1073,8 +1075,84 @@ const ClaimsListPage = () => {
   const [expandAllMessages, setExpandAllMessages] = useState(false);
 
   // Claims Data State
-  const [claims, setClaims] = useState(INITIAL_CLAIMS);
+  const [claims, setClaims] = useState([]);
+  const [denticalReports, setDenticalReports] = useState([]);
+  const [eraReports, setEraReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedClaims, setSelectedClaims] = useState({});
+
+  // Fetch data from backend based on the active tab and filters
+  useEffect(() => {
+    let active = true;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        if (activeTab === 6) {
+          // Dentical Reports
+          const data = await claimService.getDenticalReports();
+          if (active) {
+            setDenticalReports(data || []);
+          }
+        } else if (activeTab === 7) {
+          // ERA Reports
+          const data = await claimService.getEraReports({
+            eraTab: activeEraTab,
+            search: searchEraContent,
+            limit: 100
+          });
+          if (active) {
+            setEraReports(data.reports || []);
+          }
+        } else {
+          // Helper: map API claim to display-ready shape
+          const mapClaimFields = (c, tab) => ({
+            ...c,
+            tab,
+            patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
+            patientCode: c.patient ? `(${c.patient.patientCode})` : '',
+            patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
+            carrier: c.insuranceCompany?.name || 'No Carrier',
+            claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary',
+            claimNumber: c.claimNumber || c.claimCode || `#${c.id}`,
+            createdDate: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+            sentDate: c.submittedDate ? new Date(c.submittedDate).toLocaleDateString() : (c.submissionDate ? new Date(c.submissionDate).toLocaleDateString() : ''),
+            printedDate: '',
+            procedures: c.procedures || [],
+            clearingHouseMessage: c.denialReason || '',
+            eraStatus: '',
+            description: c.notes || '',
+          });
+
+          // Claims (tab specific)
+          let fetchedClaims = [];
+          if (activeTab >= 0 && activeTab <= 3) {
+            // Fetch all claims for tabs 0-3; filter by status client-side
+            const data = await claimService.getAllClaims({ page: 1, limit: 500 });
+            fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'claims'));
+          } else if (activeTab === 4) {
+            const data = await claimService.getOutstandingClaims({ limit: 100, dateRange: groupDateRange, groupBy: groupByOption });
+            fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'outstanding'));
+          } else if (activeTab === 5) {
+            const data = await claimService.getPredeterminations({ limit: 100 });
+            fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'predetermination'));
+          }
+          if (active) {
+            setClaims(fetchedClaims);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching claims data:', error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => {
+      active = false;
+    };
+  }, [activeTab, activeEraTab, searchEraContent, groupDateRange, groupByOption, refreshTrigger]);
 
   // Expandable Procedures State
   const [expandedProcedures, setExpandedProcedures] = useState({});
@@ -1095,7 +1173,7 @@ const ClaimsListPage = () => {
 
   // Statistics & Alerts
   const validationErrorCount = useMemo(() => {
-    return claims.filter((c) => c.tab === 'unsent' && c.status === 'validationError').length;
+    return claims.filter((c) => c.status === 'denied' || c.status === 'rejected').length;
   }, [claims]);
 
   // Handle Note Popover Open
@@ -1114,21 +1192,39 @@ const ClaimsListPage = () => {
   };
 
   // Revalidate/Retry validation error claims
-  const handleRevalidate = (claimId) => {
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === claimId ? { ...c, status: 'readyForSubmission', notes: 'Revalidated: Ready' } : c
-      )
-    );
+  const handleRevalidate = async (claimId) => {
+    try {
+      setLoading(true);
+      const validation = await claimService.validateClaim(claimId);
+      if (validation.isValid) {
+        await claimService.quickStatusUpdate(claimId, 'readyForSubmission', 'Revalidated: Ready');
+        alert('Claim is valid! Status updated to Ready for Submission.');
+      } else {
+        const errorMsgs = validation.errors.map(e => e.message).join('\n');
+        await claimService.quickStatusUpdate(claimId, 'validationError', `Validation failed: ${errorMsgs}`);
+        alert('Validation failed:\n' + errorMsgs);
+      }
+      setRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Error validating claim: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle row-based status change directly from dropdown
-  const handleRowStatusChange = (claimId, newStatus) => {
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === claimId ? { ...c, status: newStatus } : c
-      )
-    );
+  const handleRowStatusChange = async (claimId, newStatus) => {
+    try {
+      setLoading(true);
+      await claimService.quickStatusUpdate(claimId, newStatus, `Status updated to ${newStatus}`);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Error updating status: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle Procedure Row Toggle
@@ -1221,16 +1317,12 @@ const ClaimsListPage = () => {
     setShowHidden(false);
     setSelectedClaims({});
     setExpandAllMessages(false);
-    setClaims(INITIAL_CLAIMS);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   // Load More Claims Action for Rejected
   const handleLoadMoreClaims = () => {
-    setClaims((prev) => {
-      const alreadyExist = prev.some((c) => c.tab === 'rejected');
-      if (alreadyExist) return prev;
-      return [...prev, ...REJECTED_MOCK_DATA];
-    });
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   // Load More ERA Reports
@@ -1239,25 +1331,38 @@ const ClaimsListPage = () => {
   };
 
   // Delete/Void Predetermination claim
-  const handleDeletePredetermination = (claimId) => {
+  const handleDeletePredetermination = async (claimId) => {
     if (window.confirm('Are you sure you want to delete this predetermination?')) {
-      setClaims((prev) => prev.filter((c) => c.id !== claimId));
-      setSelectedClaims((prev) => ({ ...prev, [claimId]: false }));
+      try {
+        setLoading(true);
+        await claimService.updateClaim(claimId, { status: 'cancelled' });
+        setSelectedClaims((prev) => ({ ...prev, [claimId]: false }));
+        setRefreshTrigger((prev) => prev + 1);
+      } catch (err) {
+        console.error(err);
+        alert('Error cancelling predetermination: ' + (err.message || err));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   // Filter & Sort Claims based on Active Tab, Filter inputs and Sort choice
   const filteredClaims = useMemo(() => {
     let result = claims.filter((claim) => {
-      // 1. Tab filtration mapping
+      // 1. Tab filtration mapping (status-based for tabs 0-3)
       if (activeTab === 0) {
-        if (claim.tab !== 'unsent') return false;
+        // Unsent: draft claims
+        if (!['draft'].includes(claim.status)) return false;
       } else if (activeTab === 1) {
-        if (claim.tab !== 'errored') return false;
+        // Errored: rejected or denied claims
+        if (!['rejected', 'denied'].includes(claim.status)) return false;
       } else if (activeTab === 2) {
-        if (claim.tab !== 'rejected') return false;
+        // Rejected only
+        if (claim.status !== 'rejected') return false;
       } else if (activeTab === 3) {
-        if (claim.tab !== 'history') return false;
+        // History: everything that has been processed (not draft)
+        if (claim.status === 'draft') return false;
       } else if (activeTab === 4) {
         if (claim.tab !== 'outstanding') return false;
       } else if (activeTab === 5) {
@@ -1358,17 +1463,18 @@ const ClaimsListPage = () => {
 
   // Dentical Reports Filter logic based on Search Input
   const filteredDenticalReports = useMemo(() => {
-    if (!searchReportContent.trim()) return DENTICAL_REPORTS_MOCK;
-    return DENTICAL_REPORTS_MOCK.filter((r) =>
+    if (!searchReportContent.trim()) return denticalReports;
+    return denticalReports.filter((r) =>
       r.fileName.toLowerCase().includes(searchReportContent.toLowerCase()) ||
       r.reportDate.includes(searchReportContent) ||
       r.dateCreated.includes(searchReportContent)
     );
-  }, [searchReportContent]);
+  }, [denticalReports, searchReportContent]);
 
   // ERA Reports Filter & Slice logic based on search ERA input and Active ERA sub-tab
   const filteredEraReports = useMemo(() => {
-    let result = INITIAL_ERA_REPORTS.filter((r) => r.eraTab === activeEraTab);
+    // Backend already filters by eraTab, so no need to filter again here
+    let result = [...eraReports];
 
     if (searchEraContent.trim()) {
       const s = searchEraContent.toLowerCase();
@@ -1382,7 +1488,7 @@ const ClaimsListPage = () => {
     }
 
     return result.slice(0, visibleEraCount);
-  }, [activeEraTab, searchEraContent, visibleEraCount]);
+  }, [eraReports, activeEraTab, searchEraContent, visibleEraCount]);
 
   // Action for Unsent/Predetermination: Convert type
   const handleConvertType = () => {
@@ -1396,7 +1502,7 @@ const ClaimsListPage = () => {
   };
 
   // Action for Unsent: Send Claims
-  const handleSendClaims = () => {
+  const handleSendClaims = async () => {
     const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
     const errorsSelected = claims.some((c) => selectedIds.includes(c.id) && c.status === 'validationError');
 
@@ -1405,29 +1511,35 @@ const ClaimsListPage = () => {
       return;
     }
 
-    setClaims((prev) =>
-      prev.map((c) =>
-        selectedIds.includes(c.id)
-          ? { ...c, tab: 'outstanding', sentDate: '05/23/2026', status: 'inProcess', description: 'Outstanding submission pending response' }
-          : c
-      )
-    );
-    setSelectedClaims({});
-    alert(`Successfully sent ${selectedIds.length} claim(s)! They are now in the OUTSTANDING CLAIMS tab.`);
+    try {
+      setLoading(true);
+      await claimService.batchSubmitClaims(selectedIds, 'electronic');
+      setSelectedClaims({});
+      setRefreshTrigger((prev) => prev + 1);
+      alert(`Successfully sent ${selectedIds.length} claim(s)! They are now in the OUTSTANDING CLAIMS tab.`);
+    } catch (err) {
+      console.error(err);
+      alert('Error sending claims: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Action for Predetermination: Send Predeterminations
-  const handleSendPredeterminations = () => {
+  const handleSendPredeterminations = async () => {
     const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
-    setClaims((prev) =>
-      prev.map((c) =>
-        selectedIds.includes(c.id)
-          ? { ...c, status: 'inProcess', sentDate: '05/23/2026', clearingHouseMessage: 'Status Response (A0): The predetermination has been received.' }
-          : c
-      )
-    );
-    setSelectedClaims({});
-    alert(`Successfully sent ${selectedIds.length} predetermination(s) to clearinghouse!`);
+    try {
+      setLoading(true);
+      await claimService.batchSubmitClaims(selectedIds, 'electronic');
+      setSelectedClaims({});
+      setRefreshTrigger((prev) => prev + 1);
+      alert(`Successfully sent ${selectedIds.length} predetermination(s) to clearinghouse!`);
+    } catch (err) {
+      console.error(err);
+      alert('Error sending predeterminations: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Action for Predetermination: Print Predeterminations
@@ -1441,17 +1553,24 @@ const ClaimsListPage = () => {
   };
 
   // Action for Errored / Rejected / History: Void & Recreate Claims
-  const handleVoidAndRecreate = () => {
+  const handleVoidAndRecreate = async () => {
     const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
-    setClaims((prev) =>
-      prev.map((c) =>
-        selectedIds.includes(c.id)
-          ? { ...c, tab: 'unsent', status: 'readyForSubmission', clearingHouseMessage: '', description: 'Voided and recreated draft' }
-          : c
-      )
-    );
-    setSelectedClaims({});
-    alert(`Voided and Recreated ${selectedIds.length} claim(s). They are now in the UNSENT CLAIMS tab.`);
+    try {
+      setLoading(true);
+      await Promise.all(
+        selectedIds.map((id) =>
+          claimService.quickStatusUpdate(id, 'draft', 'Voided and recreated draft')
+        )
+      );
+      setSelectedClaims({});
+      setRefreshTrigger((prev) => prev + 1);
+      alert(`Voided and Recreated ${selectedIds.length} claim(s). They are now in the UNSENT CLAIMS tab.`);
+    } catch (err) {
+      console.error(err);
+      alert('Error voiding and recreating claims: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Print Page Action
@@ -1481,10 +1600,25 @@ const ClaimsListPage = () => {
     setOpenEditDialog(true);
   };
 
-  const handleSaveEdit = () => {
-    setClaims((prev) => prev.map((c) => (c.id === editingClaim.id ? editingClaim : c)));
-    setOpenEditDialog(false);
-    setEditingClaim(null);
+  const handleSaveEdit = async () => {
+    try {
+      setLoading(true);
+      await claimService.updateClaim(editingClaim.id, {
+        status: editingClaim.status,
+        notes: editingClaim.notes || editingClaim.description || '',
+        policyNumber: editingClaim.policyNumber,
+        claimAmount: editingClaim.claimAmount || editingClaim.submittedValue,
+        submittedAmount: editingClaim.submittedAmount || editingClaim.submittedValue,
+      });
+      setOpenEditDialog(false);
+      setEditingClaim(null);
+      setRefreshTrigger((prev) => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Error saving claim: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Attachment dialog actions
@@ -2441,7 +2575,12 @@ const ClaimsListPage = () => {
       )}
 
       {/* Main Content Area */}
-      {activeTab === 6 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 12, flexDirection: 'column', gap: 2 }}>
+          <CircularProgress size={40} sx={{ color: '#1a3a6b' }} />
+          <Typography sx={{ color: '#4a5568', fontSize: '0.9rem', fontWeight: 500 }}>Loading data...</Typography>
+        </Box>
+      ) : activeTab === 6 ? (
         // DENTICAL REPORTS Table Layout
         <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
           <Table>
@@ -2797,7 +2936,7 @@ const ClaimsListPage = () => {
                 filteredClaims.map((claim) => {
                   const isSelected = !!selectedClaims[claim.id];
                   const isExpanded = !!expandedProcedures[claim.id];
-                  const isError = claim.status === 'validationError' || claim.status === 'error' || claim.status === 'rejected';
+                  const isError = claim.status === 'denied' || claim.status === 'rejected';
 
                   // Determine attachment color badge background/icon styling
                   let attachIconColor = '#7d9cc4';
@@ -2958,19 +3097,19 @@ const ClaimsListPage = () => {
                                 sx={{
                                   fontSize: '0.72rem',
                                   fontWeight: 500,
-                                  color: claim.status === 'error' || claim.status === 'rejected' ? '#d93838' : '#2d3748',
+                                  color: claim.status === 'denied' || claim.status === 'rejected' ? '#d93838' : '#2d3748',
                                   '& .MuiSelect-select': { py: 0.5, pr: 2 },
                                 }}
                               >
-                                <MenuItem value="readyForSubmission" sx={{ fontSize: '0.7rem' }}>readyForSubmission</MenuItem>
-                                <MenuItem value="inProcess" sx={{ fontSize: '0.7rem' }}>inProcess</MenuItem>
-                                <MenuItem value="accepted" sx={{ fontSize: '0.7rem' }}>accepted</MenuItem>
-                                <MenuItem value="acceptedPaid" sx={{ fontSize: '0.7rem' }}>acceptedPaid</MenuItem>
-                                <MenuItem value="error" sx={{ fontSize: '0.7rem', color: '#d93838' }}>error</MenuItem>
-                                <MenuItem value="rejected" sx={{ fontSize: '0.7rem', color: '#d93838' }}>rejected</MenuItem>
-                                <MenuItem value="eobUploaded" sx={{ fontSize: '0.7rem' }}>eobUploaded</MenuItem>
-                                <MenuItem value="manualClaim" sx={{ fontSize: '0.7rem' }}>manualClaim</MenuItem>
-                                <MenuItem value="acceptedForProcessing" sx={{ fontSize: '0.7rem' }}>acceptedForProcessing</MenuItem>
+                                <MenuItem value="draft" sx={{ fontSize: '0.7rem' }}>Draft</MenuItem>
+                                <MenuItem value="submitted" sx={{ fontSize: '0.7rem' }}>Submitted</MenuItem>
+                                <MenuItem value="pending" sx={{ fontSize: '0.7rem' }}>Pending</MenuItem>
+                                <MenuItem value="accepted" sx={{ fontSize: '0.7rem' }}>Accepted</MenuItem>
+                                <MenuItem value="paid" sx={{ fontSize: '0.7rem' }}>Paid</MenuItem>
+                                <MenuItem value="partial" sx={{ fontSize: '0.7rem' }}>Partial</MenuItem>
+                                <MenuItem value="denied" sx={{ fontSize: '0.7rem', color: '#d93838' }}>Denied</MenuItem>
+                                <MenuItem value="rejected" sx={{ fontSize: '0.7rem', color: '#d93838' }}>Rejected</MenuItem>
+                                <MenuItem value="cancelled" sx={{ fontSize: '0.7rem' }}>Cancelled</MenuItem>
                               </Select>
                             </FormControl>
                           ) : (
@@ -2978,7 +3117,7 @@ const ClaimsListPage = () => {
                             isError ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <Typography sx={{ fontWeight: 600, color: '#d93838', fontSize: '0.72rem' }}>
-                                  validationError
+                                  {claim.status}
                                 </Typography>
                                 <Tooltip title="Click to Revalidate / Resolve errors">
                                   <IconButton size="small" onClick={() => handleRevalidate(claim.id)} sx={{ p: 0.2, color: '#1a3a6b' }}>

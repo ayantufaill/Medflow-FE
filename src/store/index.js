@@ -7,6 +7,7 @@ import appointmentTypeReducer from './slices/appointmentTypeSlice';
 import billingReducer from './slices/billingSlice';
 import clinicalReducer from './slices/clinicalSlice';
 import uiReducer from './slices/uiSlice';
+import authReducer from './slices/authSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     billing: billingReducer,
     clinical: clinicalReducer,
     ui: uiReducer,
+    auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

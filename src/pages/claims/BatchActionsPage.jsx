@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import React from 'react';
+import { claimService } from '../../services/claim.service';
 import {
   Box,
   Typography,
@@ -272,6 +273,7 @@ const OUTSTANDING_CLAIMS_FOR_ALLOCATION = [
 ];
 
 export default function BatchActionsPage() {
+  const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('INSURANCE BATCH PAYMENT');
 
   // Search & Basic Filter States
@@ -282,32 +284,28 @@ export default function BatchActionsPage() {
   const [sortReportBy, setSortReportBy] = useState('Date of Service');
 
   // Tab 1 States
-  const [batchPayments, setBatchPayments] = useState(INITIAL_BATCH_PAYMENTS);
+  const [batchPayments, setBatchPayments] = useState([]);
   const [selectedBatchPayment, setSelectedBatchPayment] = useState(null);
   const [openDetailsModal, setOpenDetailsModal] = useState(false);
   const [openEOBModal, setOpenEOBModal] = useState(false);
   const [openAddPaymentModal, setOpenAddPaymentModal] = useState(false);
   const [newPaymentRef, setNewPaymentRef] = useState('');
   const [newPaymentCarrier, setNewPaymentCarrier] = useState('CIGNA');
-  const [newPaymentDate, setNewPaymentDate] = useState('05/23/2026');
+  const [newPaymentDate, setNewPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [checkAmount, setCheckAmount] = useState('');
-  const [allocations, setAllocations] = useState(
-    OUTSTANDING_CLAIMS_FOR_ALLOCATION.map(claim => ({
-      ...claim,
-      allocatedPaid: 0,
-      allocatedWriteOff: 0,
-      checked: false,
-    }))
-  );
+  const [allocations, setAllocations] = useState([]);
+  const [allocationsSearchQuery, setAllocationsSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState('Carrier');
+  const [activeModalStep, setActiveModalStep] = useState(0);
 
   // Tab 2 States (Batch Invoices)
-  const [invoicePatients, setInvoicePatients] = useState(INITIAL_BATCH_INVOICES_PATIENTS);
+  const [invoicePatients, setInvoicePatients] = useState([]);
   const [selectedPatients, setSelectedPatients] = useState({});
   const [openAddInvoiceModal, setOpenAddInvoiceModal] = useState(false);
   const [newInvoiceDelivery, setNewInvoiceDelivery] = useState('Email & SMS');
 
   // Tab 3 States (Batch Claims - 1:1 with Screenshot)
-  const [claimsList, setClaimsList] = useState(INITIAL_BATCH_CLAIMS_LIST);
+  const [claimsList, setClaimsList] = useState([]);
   const [selectedClaims, setSelectedClaims] = useState({});
   const [excludeClosedInvoices, setExcludeClosedInvoices] = useState(true);
   const [filterClaimType, setFilterClaimType] = useState('All');
@@ -315,10 +313,115 @@ export default function BatchActionsPage() {
   const [expandedProcedures, setExpandedProcedures] = useState({}); // claimId: true/false
   const [claimsSearchQuery, setClaimsSearchQuery] = useState('');
 
-  // Simulated upload state
+  // Loading and Uploading states
+  const [loading, setLoading] = useState(false);
   const [uploadingEob, setUploadingEob] = useState(false);
 
-  // Dynamic Filtering for Batch Payments
+  // Data Fetching Handlers
+  const loadBatchPayments = async () => {
+    setLoading(true);
+    try {
+      const data = await claimService.getBatchPayments({ search: searchQuery });
+      setBatchPayments(data.payments || []);
+    } catch (error) {
+      console.error('Failed to load batch payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPendingProcedures = async () => {
+    try {
+      const data = await claimService.getPendingProcedures();
+      setInvoicePatients(data.patients || []);
+    } catch (error) {
+      console.error('Failed to load pending procedures:', error);
+    }
+  };
+
+  const loadPendingClaims = async () => {
+    try {
+      const data = await claimService.getAllClaims({
+        status: 'draft',
+        search: claimsSearchQuery
+      });
+      const formatted = (data.claims || []).map(c => {
+        const patientName = c.patient ? `${c.patient.firstName || ''} ${c.patient.lastName || ''}`.trim() : (c.subscriber || 'Unknown');
+        const invoiceDate = c.invoice?.createdAt ? new Date(c.invoice.createdAt).toLocaleDateString() : '—';
+        const invoiceNumber = c.invoice?.invoiceNumber || c.invoiceId || '—';
+        const proceduresMapped = (c.procedures || []).map(p => ({
+          dos: p.dos ? new Date(p.dos).toLocaleDateString() : new Date(c.createdAt).toLocaleDateString(),
+          tooth: p.tooth || '—',
+          surface: p.surface || '—',
+          ptBalance: p.ptBalance || `$${(p.fee * 0.2).toFixed(2)}`,
+          insBalance: p.insBalance || `$${(p.fee * 0.8).toFixed(2)}`,
+          code: p.code || '—',
+          description: p.description || '—',
+          provider: p.provider || '—',
+          fee: p.fee || 0
+        }));
+
+        return {
+          id: c.id,
+          patient: patientName,
+          invoiceNumber: `#${invoiceNumber} (${invoiceDate})`,
+          claimType: c.insuranceType || 'Manual & Electronic',
+          carrier: c.insuranceCompany?.name || 'Membership Payer',
+          planName: c.planName || 'Standard Plan',
+          procedures: proceduresMapped
+        };
+      });
+      setClaimsList(formatted);
+    } catch (error) {
+      console.error('Failed to load pending claims:', error);
+    }
+  };
+
+  const loadAllocations = async (search = '') => {
+    try {
+      const data = await claimService.getOutstandingClaimsForAllocation(search);
+      const formatted = (data.claims || []).map(c => ({
+        claimId: c.id,
+        claimNumber: c.claimNumber || `#${c.id}`,
+        patient: c.subscriber || 'Unknown Patient',
+        patientId: c.patient?.id || '—',
+        carrier: c.planName || 'Unknown Carrier',
+        submitted: c.submittedAmount || 0,
+        openAmount: (c.claimAmount || 0) - (c.paidAmount || 0),
+        allocatedPaid: 0,
+        allocatedWriteOff: 0,
+        checked: false
+      }));
+      setAllocations(formatted);
+    } catch (error) {
+      console.error('Failed to load allocations:', error);
+    }
+  };
+
+  // Run on mount
+  useEffect(() => {
+    loadBatchPayments();
+    loadPendingProcedures();
+    loadPendingClaims();
+    loadAllocations();
+  }, []);
+
+  // Reload payments when main search query changes
+  useEffect(() => {
+    loadBatchPayments();
+  }, [searchQuery]);
+
+  // Reload claims when claims search query changes
+  useEffect(() => {
+    loadPendingClaims();
+  }, [claimsSearchQuery]);
+
+  // Reload allocations when allocations search query changes
+  useEffect(() => {
+    loadAllocations(allocationsSearchQuery);
+  }, [allocationsSearchQuery]);
+
+  // Dynamic Filtering for Batch Payments (local fallback filtering)
   const filteredBatchPayments = useMemo(() => {
     return batchPayments.filter((payment) => {
       const matchesSearch =
@@ -357,7 +460,7 @@ export default function BatchActionsPage() {
   }, [claimsList, claimsSearchQuery, filterClaimType, filterClaimsCarrier]);
 
   // Handlers for Allocations / Payment Creation
-  const handleSaveBatchPayment = () => {
+  const handleSaveBatchPayment = async () => {
     if (!newPaymentRef.trim()) {
       alert('Please enter a payment reference number.');
       return;
@@ -369,56 +472,52 @@ export default function BatchActionsPage() {
       return;
     }
 
-    const claimsListMock = selectedClaims.map(c => ({
-      claimNumber: c.claimNumber,
-      patient: c.patient,
-      patientId: c.patientId,
-      submitted: c.submitted,
-      paid: Number(c.allocatedPaid) || 0,
-      writeOff: Number(c.allocatedWriteOff) || 0,
-      status: 'Paid',
-    }));
-
-    const totalAllocatedPaid = claimsListMock.reduce((sum, item) => sum + item.paid, 0);
-
-    const newPayment = {
-      id: `bp-${Date.now()}`,
+    const payload = {
       paymentRef: newPaymentRef,
-      date: newPaymentDate,
-      status: 'COMPLETED',
-      carrier: newPaymentCarrier,
-      patientsText: claimsListMock.length === 1 ? claimsListMock[0].patient : `${claimsListMock.length} Patients`,
-      totalPayments: totalAllocatedPaid,
-      claims: claimsListMock,
-      eobs: [],
+      carrierId: '1', // default fallback carrier ID
+      paymentDate: newPaymentDate,
+      checkAmount: parseFloat(checkAmount) || 0,
+      allocations: selectedClaims.map(c => ({
+        claimId: c.claimId,
+        paidAmount: parseFloat(c.allocatedPaid) || 0,
+        writeOff: parseFloat(c.allocatedWriteOff) || 0,
+        // Extra fields preserved in Note JSON for Details UI:
+        claimNumber: c.claimNumber,
+        patient: c.patient,
+        patientId: c.patientId,
+        submitted: c.submitted,
+        paid: parseFloat(c.allocatedPaid) || 0,
+        status: 'Paid'
+      }))
     };
 
-    setBatchPayments([newPayment, ...batchPayments]);
-    setOpenAddPaymentModal(false);
-
-    setNewPaymentRef('');
-    setCheckAmount('');
-    setAllocations(
-      OUTSTANDING_CLAIMS_FOR_ALLOCATION.map(claim => ({
-        ...claim,
-        allocatedPaid: 0,
-        allocatedWriteOff: 0,
-        checked: false,
-      }))
-    );
+    try {
+      await claimService.recordBatchPayment(payload);
+      alert('Batch payment recorded successfully!');
+      setOpenAddPaymentModal(false);
+      loadBatchPayments();
+      // Reset forms
+      setNewPaymentRef('');
+      setCheckAmount('');
+      setActiveModalStep(0);
+      loadAllocations();
+    } catch (error) {
+      alert(`Failed to save batch payment: ${error.message}`);
+    }
   };
 
   // Handlers for Batch Invoices
-  const handleSaveBatchInvoice = () => {
+  const handleSaveBatchInvoice = async () => {
     const selectedIds = Object.keys(selectedPatients).filter(id => selectedPatients[id]);
-    const selectedList = invoicePatients.filter(p => selectedIds.includes(p.id));
-    const totalAmt = selectedList.reduce((sum, p) => sum + p.procedures.reduce((s, proc) => s + proc.fee, 0), 0);
-
-    alert(`Successfully generated batch statements for ${selectedList.length} patients!\nTotal Batch Amount: $${totalAmt.toFixed(2)}\nDelivery Preference: ${newInvoiceDelivery}`);
-    
-    setInvoicePatients(prev => prev.filter(p => !selectedIds.includes(p.id)));
-    setSelectedPatients({});
-    setOpenAddInvoiceModal(false);
+    try {
+      await claimService.generateBatchInvoices(selectedIds, newInvoiceDelivery);
+      alert(`Successfully generated batch statements for ${selectedIds.length} patients!`);
+      setSelectedPatients({});
+      setOpenAddInvoiceModal(false);
+      loadPendingProcedures();
+    } catch (error) {
+      alert(`Failed to generate batch invoices: ${error.message}`);
+    }
   };
 
   // Toggle procedures collapse inside claims list
@@ -430,45 +529,69 @@ export default function BatchActionsPage() {
   };
 
   // Handle EDI submission of selected claims
-  const handlePackAndSubmitClaims = () => {
+  const handlePackAndSubmitClaims = async () => {
     const selectedIds = Object.keys(selectedClaims).filter(id => selectedClaims[id]);
-    const count = selectedIds.length;
-    alert(`Generating EDI 837 transaction package for ${count} claims...\nTransmitting securely to Clearinghouse Gateway.`);
-    
-    // Remove the submitted claims from active pending list
-    setClaimsList(prev => prev.filter(c => !selectedIds.includes(c.id)));
-    setSelectedClaims({});
+    try {
+      const result = await claimService.batchSubmitClaims(selectedIds, 'electronic');
+      alert(`EDI batch transmission successful!\nSubmitted: ${result.submitted}\nFailed: ${result.failed}`);
+      setSelectedClaims({});
+      loadPendingClaims();
+    } catch (error) {
+      alert(`Failed to submit batch claims: ${error.message}`);
+    }
   };
 
   const handleRefreshBatchPayments = () => {
-    setBatchPayments(INITIAL_BATCH_PAYMENTS);
+    loadBatchPayments();
+    loadPendingProcedures();
+    loadPendingClaims();
     setSearchQuery('');
     setFilterCarrier('All');
     setFilterDate('All');
     setShowFilterDrawer(false);
   };
 
-  // Handle EOB File Upload Simulation
-  const handleEobUpload = () => {
+  // Handle EOB File Upload
+  const handleEobUpload = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('description', `EOB for Batch ${selectedBatchPayment.paymentRef}`);
+
     setUploadingEob(true);
-    setTimeout(() => {
+    try {
+      await claimService.uploadEOB(selectedBatchPayment.id, formData);
+      alert('EOB uploaded successfully!');
+      setOpenEOBModal(false);
+      loadBatchPayments();
+    } catch (error) {
+      alert(`EOB upload failed: ${error.message}`);
+    } finally {
       setUploadingEob(false);
-      const updated = batchPayments.map(p => {
-        if (p.id === selectedBatchPayment.id) {
-          const newEob = {
-            id: `eob-${Date.now()}`,
-            filename: `EOB_${p.carrier.replace(/\s+/g, '')}_Manual_${Math.floor(Math.random() * 1000)}.pdf`,
-            uploadDate: '05/23/2026',
-            size: '142 KB'
-          };
-          const newEobsList = [...(p.eobs || []), newEob];
-          setSelectedBatchPayment(prev => ({ ...prev, eobs: newEobsList }));
-          return { ...p, eobs: newEobsList };
-        }
-        return p;
-      });
-      setBatchPayments(updated);
-    }, 1500);
+    }
+  };
+
+  const handleUncompleteProcedures = async () => {
+    const selectedIds = Object.keys(selectedPatients).filter(id => selectedPatients[id]);
+    try {
+      const selectedList = invoicePatients.filter(p => selectedIds.includes(p.id));
+      const procIds = selectedList.flatMap(p => p.procedures.map(proc => proc.id || ''));
+      const validProcIds = procIds.filter(Boolean);
+
+      if (validProcIds.length === 0) {
+        alert('No valid procedures found for the selected patient(s) to revert.');
+        return;
+      }
+
+      await claimService.uncompleteProcedures(validProcIds);
+      alert(`Successfully reverted ${validProcIds.length} procedures back to treatment planned status.`);
+      setSelectedPatients({});
+      loadPendingProcedures();
+    } catch (error) {
+      alert(`Failed to revert procedures: ${error.message}`);
+    }
   };
 
   return (
@@ -658,7 +781,7 @@ export default function BatchActionsPage() {
             <Button
               variant="contained"
               disabled={!hasSelectedPatients}
-              onClick={() => alert(`Reverting ${Object.keys(selectedPatients).filter(id => selectedPatients[id]).length} patient procedures back to in-progress status.`)}
+              onClick={handleUncompleteProcedures}
               sx={{
                 textTransform: 'none',
                 fontSize: '0.82rem',
@@ -1693,11 +1816,18 @@ export default function BatchActionsPage() {
             <Typography variant="caption" sx={{ color: '#718096', display: 'block', mb: 2 }}>
               Supported format: PDF up to 10MB
             </Typography>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".pdf"
+              onChange={handleEobUpload}
+            />
             <Button
               variant="contained"
               startIcon={<UploadIcon sx={{ fontSize: 16 }} />}
               disabled={uploadingEob}
-              onClick={handleEobUpload}
+              onClick={() => fileInputRef.current?.click()}
               sx={{ bgcolor: '#1a3a6b', '&:hover': { bgcolor: '#11274c' }, textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
             >
               {uploadingEob ? 'Uploading EOB...' : 'Choose File & Upload'}
@@ -1711,17 +1841,50 @@ export default function BatchActionsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* 3. ADD NEW BATCH PAYMENT MODAL */}
-      <Dialog open={openAddPaymentModal} onClose={() => setOpenAddPaymentModal(false)} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: '6px', height: '600px' } }}>
+      <Dialog open={openAddPaymentModal} onClose={() => { setOpenAddPaymentModal(false); setActiveModalStep(0); }} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: '6px', height: '600px' } }}>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e0e6ed', p: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a3a6b', fontSize: '1.1rem' }}>
-            Insurance New Payment
+            Insurance New Payment - Step {activeModalStep + 1} of 3
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Button variant="contained" sx={{ bgcolor: '#7994c6', textTransform: 'none', fontWeight: 600, borderRadius: '4px', '&:hover': { bgcolor: '#627cb3' }, boxShadow: 'none' }}>
-              Next: Payment Allocation
-            </Button>
-            <IconButton onClick={() => setOpenAddPaymentModal(false)} size="small" sx={{ color: '#1a3a6b' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            {activeModalStep > 0 && (
+              <Button
+                variant="outlined"
+                onClick={() => setActiveModalStep(prev => prev - 1)}
+                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '4px', borderColor: '#cbd5e1', color: '#475569' }}
+              >
+                Back
+              </Button>
+            )}
+            {activeModalStep === 0 && (
+              <Button
+                variant="contained"
+                disabled={allocations.filter(a => a.checked).length === 0}
+                onClick={() => setActiveModalStep(1)}
+                sx={{ bgcolor: '#1a3a6b', textTransform: 'none', fontWeight: 600, borderRadius: '4px', '&:hover': { bgcolor: '#11274c' }, boxShadow: 'none' }}
+              >
+                Next: Payment Allocation
+              </Button>
+            )}
+            {activeModalStep === 1 && (
+              <Button
+                variant="contained"
+                onClick={() => setActiveModalStep(2)}
+                sx={{ bgcolor: '#1a3a6b', textTransform: 'none', fontWeight: 600, borderRadius: '4px', '&:hover': { bgcolor: '#11274c' }, boxShadow: 'none' }}
+              >
+                Next: Payment Method
+              </Button>
+            )}
+            {activeModalStep === 2 && (
+              <Button
+                variant="contained"
+                onClick={handleSaveBatchPayment}
+                sx={{ bgcolor: '#10b981', textTransform: 'none', fontWeight: 600, borderRadius: '4px', '&:hover': { bgcolor: '#059669' }, boxShadow: 'none' }}
+              >
+                Record Batch Payment
+              </Button>
+            )}
+            <IconButton onClick={() => { setOpenAddPaymentModal(false); setActiveModalStep(0); }} size="small" sx={{ color: '#1a3a6b' }}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
@@ -1731,93 +1894,303 @@ export default function BatchActionsPage() {
           <Box sx={{ width: '220px', borderRight: '1px solid #e0e6ed', bgcolor: '#f4f6f8', pt: 4, px: 2, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {/* Step 1 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative' }}>
-              <Box sx={{ zIndex: 1, width: 20, height: 20, borderRadius: '50%', bgcolor: '#1a3a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', ml: 1 }}>
-                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'white' }} />
+              <Box sx={{ zIndex: 1, width: 20, height: 20, borderRadius: '50%', bgcolor: activeModalStep >= 0 ? '#1a3a6b' : '#f4f6f8', border: activeModalStep >= 0 ? 'none' : '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', ml: 1 }}>
+                {activeModalStep > 0 ? (
+                  <Typography sx={{ color: 'white', fontSize: '0.7rem', fontWeight: 700 }}>✓</Typography>
+                ) : (
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'white' }} />
+                )}
               </Box>
-              <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', color: '#1a3a6b' }}>Claims Selection</Typography>
-              <Box sx={{ position: 'absolute', left: 18, top: 25, bottom: -35, width: '2px', bgcolor: '#e0e6ed' }} />
+              <Typography sx={{ fontWeight: activeModalStep === 0 ? 700 : 500, fontSize: '0.8rem', color: activeModalStep === 0 ? '#1a3a6b' : '#718096' }}>Claims Selection</Typography>
+              <Box sx={{ position: 'absolute', left: 18, top: 25, bottom: -35, width: '2px', bgcolor: activeModalStep > 0 ? '#1a3a6b' : '#e0e6ed' }} />
             </Box>
             {/* Step 2 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative' }}>
-              <Box sx={{ zIndex: 1, width: 20, height: 20, borderRadius: '50%', bgcolor: '#f4f6f8', border: '2px solid #cbd5e1', ml: 1 }} />
-              <Typography sx={{ fontWeight: 500, fontSize: '0.8rem', color: '#718096' }}>Payment Allocation</Typography>
-              <Box sx={{ position: 'absolute', left: 18, top: 25, bottom: -35, width: '2px', bgcolor: '#e0e6ed' }} />
+              <Box sx={{ zIndex: 1, width: 20, height: 20, borderRadius: '50%', bgcolor: activeModalStep >= 1 ? '#1a3a6b' : '#f4f6f8', border: activeModalStep >= 1 ? 'none' : '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', ml: 1 }}>
+                {activeModalStep > 1 ? (
+                  <Typography sx={{ color: 'white', fontSize: '0.7rem', fontWeight: 700 }}>✓</Typography>
+                ) : activeModalStep === 1 ? (
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'white' }} />
+                ) : null}
+              </Box>
+              <Typography sx={{ fontWeight: activeModalStep === 1 ? 700 : 500, fontSize: '0.8rem', color: activeModalStep === 1 ? '#1a3a6b' : '#718096' }}>Payment Allocation</Typography>
+              <Box sx={{ position: 'absolute', left: 18, top: 25, bottom: -35, width: '2px', bgcolor: activeModalStep > 1 ? '#1a3a6b' : '#e0e6ed' }} />
             </Box>
             {/* Step 3 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative' }}>
-              <Box sx={{ zIndex: 1, width: 20, height: 20, borderRadius: '50%', bgcolor: '#f4f6f8', border: '2px solid #cbd5e1', ml: 1 }} />
-              <Typography sx={{ fontWeight: 500, fontSize: '0.8rem', color: '#718096' }}>Payment Method</Typography>
+              <Box sx={{ zIndex: 1, width: 20, height: 20, borderRadius: '50%', bgcolor: activeModalStep === 2 ? '#1a3a6b' : '#f4f6f8', border: activeModalStep === 2 ? 'none' : '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', ml: 1 }}>
+                {activeModalStep === 2 && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'white' }} />}
+              </Box>
+              <Typography sx={{ fontWeight: activeModalStep === 2 ? 700 : 500, fontSize: '0.8rem', color: activeModalStep === 2 ? '#1a3a6b' : '#718096' }}>Payment Method</Typography>
             </Box>
           </Box>
 
           {/* Main Content Area */}
-          <Box sx={{ flex: 1, p: 3, display: 'flex', gap: 3 }}>
-            {/* Left Column: Search and Claims */}
-            <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Search Box */}
-              <Paper sx={{ p: 2, borderRadius: '6px', border: '1px solid #e0e6ed', boxShadow: 'none' }}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#4a5568', mb: 1 }}>Search By:</Typography>
-                <Box sx={{ display: 'flex', gap: 2, mb: 1.5, ml: 0 }}>
-                  <FormControlLabel
-                    value="Carrier"
-                    control={<Radio size="small" checked sx={{ p: 0.5, color: '#1a3a6b', '&.Mui-checked': { color: '#1a3a6b' } }} />}
-                    label={<Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b' }}>Carrier</Typography>}
-                    sx={{ m: 0 }}
-                  />
-                  <FormControlLabel
-                    value="Patient"
-                    control={<Radio size="small" checked={false} sx={{ p: 0.5, color: '#cbd5e1' }} />}
-                    label={<Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>Patient</Typography>}
-                    sx={{ m: 0 }}
-                  />
+          <Box sx={{ flex: 1, p: 3, display: 'flex', gap: 3, overflowY: 'auto' }}>
+            {activeModalStep === 0 && (
+              <>
+                {/* Left Column: Search and Claims */}
+                <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Search Box */}
+                  <Paper sx={{ p: 2, borderRadius: '6px', border: '1px solid #e0e6ed', boxShadow: 'none' }}>
+                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#4a5568', mb: 1 }}>Search By:</Typography>
+                    <Box sx={{ display: 'flex', gap: 2, mb: 1.5, ml: 0 }}>
+                      <FormControlLabel
+                        value="Carrier"
+                        control={<Radio size="small" checked={searchType === 'Carrier'} onChange={() => setSearchType('Carrier')} sx={{ p: 0.5, color: '#1a3a6b', '&.Mui-checked': { color: '#1a3a6b' } }} />}
+                        label={<Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b' }}>Carrier</Typography>}
+                        sx={{ m: 0 }}
+                      />
+                      <FormControlLabel
+                        value="Patient"
+                        control={<Radio size="small" checked={searchType === 'Patient'} onChange={() => setSearchType('Patient')} sx={{ p: 0.5, color: '#1a3a6b', '&.Mui-checked': { color: '#1a3a6b' } }} />}
+                        label={<Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b' }}>Patient</Typography>}
+                        sx={{ m: 0 }}
+                      />
+                    </Box>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={allocationsSearchQuery}
+                      onChange={(e) => setAllocationsSearchQuery(e.target.value)}
+                      placeholder={searchType === 'Carrier' ? "Search for Carrier" : "Search for Patient"}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#7994c6', fontSize: 18 }} /></InputAdornment>
+                      }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '4px' } }}
+                    />
+                  </Paper>
+
+                  {/* Claims Box */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a5568', ml: 0.5, textTransform: 'uppercase' }}>Outstanding Claims</Typography>
+                    {allocations.length === 0 ? (
+                      <Paper sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, borderRadius: '6px', border: '1px solid #e0e6ed', boxShadow: 'none', bgcolor: '#f8fafc', minHeight: '150px' }}>
+                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a3a6b', mb: 0.5 }}>No Claims Found</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#718096' }}>There are no outstanding claims matching your filter.</Typography>
+                      </Paper>
+                    ) : (
+                      <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', maxHeight: '300px', overflowY: 'auto' }}>
+                        <Table size="small" stickyHeader>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell padding="checkbox" sx={{ bgcolor: '#fafbfe' }}></TableCell>
+                              <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, py: 1, bgcolor: '#fafbfe' }}>CLAIM #</TableCell>
+                              <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, py: 1, bgcolor: '#fafbfe' }}>PATIENT</TableCell>
+                              <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, py: 1, bgcolor: '#fafbfe' }}>CARRIER</TableCell>
+                              <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700, py: 1, bgcolor: '#fafbfe' }}>OPEN BAL</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {allocations.map((claim, idx) => (
+                              <TableRow key={claim.claimId} hover>
+                                <TableCell padding="checkbox">
+                                  <Checkbox
+                                    size="small"
+                                    checked={claim.checked}
+                                    onChange={() => {
+                                      setAllocations(prev => prev.map((c, i) => i === idx ? { ...c, checked: !c.checked } : c));
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: '#334155' }}>{claim.claimNumber}</TableCell>
+                                <TableCell sx={{ fontSize: '0.8rem', color: '#4a5568' }}>{claim.patient}</TableCell>
+                                <TableCell sx={{ fontSize: '0.8rem', color: '#4a5568' }}>{claim.carrier}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 600, color: '#1a3a6b' }}>${claim.openAmount.toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    )}
+                  </Box>
                 </Box>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search for Carrier"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#7994c6', fontSize: 18 }} /></InputAdornment>
-                  }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '4px' } }}
-                />
-              </Paper>
 
-              {/* Claims Box */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a5568', ml: 0.5, textTransform: 'uppercase' }}>Claims</Typography>
-                <Paper sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, borderRadius: '6px', border: '1px solid #e0e6ed', boxShadow: 'none', bgcolor: '#f8fafc', minHeight: '150px' }}>
-                  <Box sx={{ color: '#1a3a6b', mb: 1 }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a3a6b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                      <polyline points="13 2 13 9 20 9"></polyline>
-                      <line x1="9" y1="15" x2="15" y2="15"></line>
-                      <line x1="3" y1="3" x2="21" y2="21"></line>
-                    </svg>
+                {/* Right Column: Selected Claims */}
+                <Box sx={{ flex: 1.2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a5568', ml: 0.5, textTransform: 'uppercase' }}>Selected Claims ({allocations.filter(a => a.checked).length})</Typography>
+                    {allocations.filter(a => a.checked).length === 0 ? (
+                      <Paper sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, borderRadius: '6px', border: '1px solid #e0e6ed', boxShadow: 'none', bgcolor: '#f8fafc', minHeight: '150px' }}>
+                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a3a6b', mb: 0.5 }}>No Claims Selected Yet</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#718096', textAlign: 'center' }}>Start by selecting claims from the list on the left</Typography>
+                      </Paper>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: '380px', overflowY: 'auto' }}>
+                        {allocations.filter(a => a.checked).map(claim => (
+                          <Paper key={claim.claimId} variant="outlined" sx={{ p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '4px', bgcolor: 'white' }}>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{claim.claimNumber}</Typography>
+                              <Typography variant="caption" sx={{ color: '#718096' }}>{claim.patient}</Typography>
+                            </Box>
+                            <Typography sx={{ fontWeight: 700, color: '#1a3a6b', fontSize: '0.85rem' }}>${claim.openAmount.toFixed(2)}</Typography>
+                          </Paper>
+                        ))}
+                      </Box>
+                    )}
                   </Box>
-                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a3a6b', mb: 0.5 }}>No Claims Yet</Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#718096' }}>Start by searching for a carrier or patient and select it</Typography>
-                </Paper>
-              </Box>
-            </Box>
+                </Box>
+              </>
+            )}
 
-            {/* Right Column: Selected Claims */}
-            <Box sx={{ flex: 1.2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a5568', ml: 0.5, textTransform: 'uppercase' }}>Selected Claims</Typography>
-                <Paper sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, borderRadius: '6px', border: '1px solid #e0e6ed', boxShadow: 'none', bgcolor: '#f8fafc', minHeight: '150px' }}>
-                  <Box sx={{ color: '#1a3a6b', mb: 1 }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a3a6b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                      <polyline points="13 2 13 9 20 9"></polyline>
-                      <line x1="9" y1="15" x2="15" y2="15"></line>
-                      <line x1="3" y1="3" x2="21" y2="21"></line>
-                    </svg>
-                  </Box>
-                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a3a6b', mb: 0.5 }}>No Claims Selected Yet</Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#718096', textAlign: 'center' }}>Start by selecting claims from the list on the left</Typography>
-                </Paper>
-              </Box>
-            </Box>
+            {activeModalStep === 1 && (
+              <>
+                {/* Left Column: Allocation Inputs */}
+                <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a3a6b' }}>Allocate Check Amounts to Claims</Typography>
+                  <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px' }}>
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: '#fafbfe' }}>
+                        <TableRow>
+                          <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>CLAIM # / PATIENT</TableCell>
+                          <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700 }}>OPEN AMT</TableCell>
+                          <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, width: '120px' }}>PAID AMT</TableCell>
+                          <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, width: '120px' }}>WRITE OFF</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {allocations.filter(a => a.checked).map((claim) => (
+                          <TableRow key={claim.claimId}>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{claim.claimNumber}</Typography>
+                              <Typography variant="caption" sx={{ color: '#718096' }}>{claim.patient}</Typography>
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>${claim.openAmount.toFixed(2)}</TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                placeholder="0.00"
+                                value={claim.allocatedPaid || ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setAllocations(prev => prev.map(c => c.claimId === claim.claimId ? { ...c, allocatedPaid: val } : c));
+                                }}
+                                inputProps={{ style: { fontSize: '0.8rem', padding: '6px' } }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                placeholder="0.00"
+                                value={claim.allocatedWriteOff || ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setAllocations(prev => prev.map(c => c.claimId === claim.claimId ? { ...c, allocatedWriteOff: val } : c));
+                                }}
+                                inputProps={{ style: { fontSize: '0.8rem', padding: '6px' } }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Right Column: Allocation Summary */}
+                <Box sx={{ flex: 1.2 }}>
+                  <Paper sx={{ p: 2, borderRadius: '6px', border: '1px solid #e0e6ed', bgcolor: 'white', boxShadow: 'none' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a3a6b', mb: 2 }}>Allocation Summary</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: '#4a5568' }}>Total Claims:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{allocations.filter(a => a.checked).length}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: '#4a5568' }}>Total Allocated Paid:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#1a3a6b' }}>
+                          ${allocations.filter(a => a.checked).reduce((sum, c) => sum + (c.allocatedPaid || 0), 0).toFixed(2)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: '#4a5568' }}>Total Write-offs:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#b45309' }}>
+                          ${allocations.filter(a => a.checked).reduce((sum, c) => sum + (c.allocatedWriteOff || 0), 0).toFixed(2)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Box>
+              </>
+            )}
+
+            {activeModalStep === 2 && (
+              <>
+                {/* Left Column: Form Details */}
+                <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a3a6b' }}>Enter Check Details</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#4a5568', display: 'block', mb: 0.5 }}>Check/Reference Number:</Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={newPaymentRef}
+                        onChange={(e) => setNewPaymentRef(e.target.value)}
+                        placeholder="e.g. EFT-90284"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#4a5568', display: 'block', mb: 0.5 }}>Total Check Amount ($):</Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        type="number"
+                        value={checkAmount}
+                        onChange={(e) => setCheckAmount(e.target.value)}
+                        placeholder="e.g. 500.00"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#4a5568', display: 'block', mb: 0.5 }}>Insurance Carrier:</Typography>
+                      <FormControl fullWidth size="small">
+                        <Select value={newPaymentCarrier} onChange={(e) => setNewPaymentCarrier(e.target.value)}>
+                          <MenuItem value="CIGNA">Cigna Dental</MenuItem>
+                          <MenuItem value="Delta Dental">Delta Dental</MenuItem>
+                          <MenuItem value="MetLife">MetLife Dental</MenuItem>
+                          <MenuItem value="Aetna">Aetna PPO</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#4a5568', display: 'block', mb: 0.5 }}>Check Date:</Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        type="date"
+                        value={newPaymentDate}
+                        onChange={(e) => setNewPaymentDate(e.target.value)}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {/* Right Column: Check Summary */}
+                <Box sx={{ flex: 1.2 }}>
+                  <Paper sx={{ p: 2, borderRadius: '6px', border: '1px solid #e0e6ed', bgcolor: 'white', boxShadow: 'none' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a3a6b', mb: 2 }}>Summary Details</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: '#4a5568' }}>Carrier:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{newPaymentCarrier}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: '#4a5568' }}>Total Allocated:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#10b981' }}>
+                          ${allocations.filter(a => a.checked).reduce((sum, c) => sum + (c.allocatedPaid || 0), 0).toFixed(2)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: '#4a5568' }}>Reference #:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{newPaymentRef || 'Not entered'}</Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Box>
+              </>
+            )}
           </Box>
         </DialogContent>
       </Dialog>
