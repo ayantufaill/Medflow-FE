@@ -24,14 +24,16 @@ const AuthLeftPanel = () => {
       }}
     >
       {/* ── Logo Row ── */}
+      {/* Figma: 476×28px, top: 52px, left: 52px */}
       <Box
         sx={{
           position: "absolute",
-          top: 32,
-          left: 32,
+          top: 52,
+          left: 52,
+          height: 28,
           display: "flex",
           alignItems: "center",
-          gap: 1,
+          gap: "8px",
           zIndex: 2,
         }}
       >
@@ -50,6 +52,7 @@ const AuthLeftPanel = () => {
             fontFamily: "Manrope, sans-serif",
             fontWeight: 700,
             fontSize: "18px",
+            lineHeight: "28px",
             color: "#ffffff",
             letterSpacing: "-0.2px",
           }}
@@ -87,30 +90,33 @@ const AuthLeftPanel = () => {
         }}
       >
         {/* Hero Headline */}
+        {/* Figma: 420×135px, Manrope 800 ExtraBold, 42px, lh 44.94px, ls -0.84px */}
         <Typography
           component="h2"
           sx={{
             fontFamily: "Manrope, sans-serif",
-            fontWeight: 700,
-            fontSize: { md: "32px", lg: "40px" },
-            lineHeight: 1.1,
+            fontWeight: 800,
+            fontSize: "42px",
+            lineHeight: "44.94px",
             color: "#ffffff",
-            mb: 2,
-            letterSpacing: "-0.5px",
+            mb: "21px",
+            letterSpacing: "-0.84px",
           }}
         >
           The clinical operating system for modern dentistry.
         </Typography>
 
         {/* Sub-copy */}
+        {/* Figma: 420×70px, Manrope 400 Regular, 14px, lh 23.1px, ls 0% */}
         <Typography
           sx={{
             fontFamily: "Manrope, sans-serif",
             fontWeight: 400,
-            fontSize: "13px",
-            lineHeight: 1.6,
+            fontSize: "14px",
+            lineHeight: "23.1px",
             color: "rgba(255, 255, 255, 0.65)",
-            mb: 0,
+            mb: "38px",
+            letterSpacing: 0,
           }}
         >
           Unified patient records, precision charting, intelligent scheduling,
@@ -122,12 +128,14 @@ const AuthLeftPanel = () => {
       </Box>
 
       {/* ── Footer Bar ── */}
+      {/* Figma: 476×13.2px, top: 754.8px, left: 52px → bottom: 52px (820-754.8-13.2) */}
       <Box
         sx={{
           position: "absolute",
-          bottom: 24,
-          left: 32,
-          right: 32,
+          bottom: "52px",
+          left: "52px",
+          width: "476px",
+          height: "13.2px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -137,7 +145,9 @@ const AuthLeftPanel = () => {
         <Typography
           sx={{
             fontFamily: "Manrope, sans-serif",
+            fontWeight: 400,
             fontSize: "11px",
+            lineHeight: "13.2px",
             color: "rgba(255, 255, 255, 0.4)",
             letterSpacing: "0.04em",
           }}
@@ -147,7 +157,9 @@ const AuthLeftPanel = () => {
         <Typography
           sx={{
             fontFamily: "Manrope, sans-serif",
+            fontWeight: 400,
             fontSize: "11px",
+            lineHeight: "13.2px",
             color: "rgba(255, 255, 255, 0.4)",
           }}
         >
