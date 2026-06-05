@@ -15,18 +15,19 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { useAuth } from "../../contexts/AuthContext";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../../store/slices/authSlice";
 import { loginValidations } from "../../validations/auth.validations";
 import { getPostLoginRoute } from "../../utils/auth-routing";
 
 const LoginPage = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const { loading } = useSelector((state) => state.auth);
 
   // Check for success message from navigation state or URL params
   useEffect(() => {
@@ -136,30 +137,20 @@ const LoginPage = () => {
   const onSubmit = async (data) => {
     setError("");
     setSuccessMessage(""); // Clear success message when new error occurs
-    setLoading(true);
 
     try {
-      const result = await login(data);
-      if (result.success) {
-        navigate(getPostLoginRoute(result.user), { replace: true });
+      const resultAction = await dispatch(loginUser(data));
+      if (loginUser.fulfilled.match(resultAction)) {
+        navigate(getPostLoginRoute(resultAction.payload), { replace: true });
       } else {
-        // Use the error object if available, otherwise use the error message
-        if (result.errorObj) {
-          const errorMessage = extractErrorMessage(result.errorObj);
-          setError(errorMessage);
-          // Log the full error object for debugging if needed
-          console.error('Login error:', result.errorObj);
-        } else {
-          setError(result.error || "Login failed. Please try again.");
-        }
+        // rejected
+        setError(resultAction.payload || "Login failed. Please try again.");
       }
     } catch (err) {
-      // This should rarely happen now, but keeping as fallback
+      // Catch any unexpected errors during dispatch
       const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
-      setSuccessMessage(""); // Clear success message on error
-    } finally {
-      setLoading(false);
+      setSuccessMessage("");
     }
   };
 
