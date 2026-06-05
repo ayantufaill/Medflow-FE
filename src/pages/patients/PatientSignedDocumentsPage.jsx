@@ -19,8 +19,8 @@ import {
   Assignment as ChecklistIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { documentService } from "../../services/document.service";
-import { patientService } from "../../services/patient.service";
+import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
+import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 
 const isHipaDocument = (doc) => {
@@ -110,40 +110,18 @@ const PatientSignedDocumentsPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
-  const [patient, setPatient] = useState(null);
-  const [documents, setDocuments] = useState([]);
+  // Redux hooks
+  const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
+  const { documents, loading: docsLoading, fetch: fetchDocuments } = usePatientDocuments(patientId);
 
   useEffect(() => {
-    let cancelled = false;
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [patientData, result] = await Promise.all([
-          patientService.getPatientById(patientId),
-          documentService.getDocumentsByPatient(patientId, 1, 100),
-        ]);
-        if (!cancelled) {
-          setPatient(patientData);
-          setDocuments(result?.documents || []);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          showSnackbar(
-            err.response?.data?.error?.message ||
-              "Failed to load signed documents",
-            "error",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => {
-      cancelled = true;
-    };
-  }, [patientId, showSnackbar]);
+    if (patientId) {
+      fetchPatient(patientId);
+      fetchDocuments();
+    }
+  }, [patientId, fetchPatient, fetchDocuments]);
+
+  const isActuallyLoading = docsLoading && documents.length === 0;
 
   const hipaaDocs = documents.filter(isHipaDocument);
   const signedDocs = documents.filter((d) => !isHipaDocument(d));
@@ -156,7 +134,7 @@ const PatientSignedDocumentsPage = () => {
 
   const allSignedDocs = [...hipaaDocs, ...signedDocs];
 
-  if (loading && !patient) {
+  if (isActuallyLoading && !patient) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
         <CircularProgress />
@@ -228,7 +206,7 @@ const PatientSignedDocumentsPage = () => {
         </Box>
       </Box>
 
-      {loading ? (
+      {isActuallyLoading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
         </Box>

@@ -5,9 +5,10 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { PatientDetailOverview, AddFamilyMemberDialog } from '../../components/patient-detail';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
 import { PatientInsuranceTabContent } from '../../components/patient-tabs';
-import { patientService } from '../../services/patient.service';
-import { providerService } from '../../services/provider.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { usePatient } from '../../hooks/redux/usePatient';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchAllProvidersForDropdown } from '../../store/slices/providerSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
 import { validateUSPhoneNumber } from '../../validations/patientValidations';
@@ -25,104 +26,35 @@ const PatientDetailPage = () => {
   const tabParam = searchParams.get('tab') || 'details';
 
   const patientFromNav = location.state?.patient;
-  // Always start with null to force fresh fetch on mount/refresh
-  const [patient, setPatient] = useState(null);
-  // Only use loading state if we don't have patient from nav
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const dispatch = useDispatch();
+  const { currentPatient: patient, loading, error, fetchById, updatePatient, sendUpdateRequest } = usePatient();
+  const providerDropdownList = useSelector((state) => state.provider.dropdownList);
+  
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, patientName: '' });
   const [activateDialog, setActivateDialog] = useState({ open: false, patientName: '' });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
-  const [adjacentIds, setAdjacentIds] = useState({ prev: null, next: null });
-  const [preferredDentists, setPreferredDentists] = useState([]);
-  const [preferredHygienists, setPreferredHygienists] = useState([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPatientData, setEditedPatientData] = useState(null);
   const [addFamilyDialogOpen, setAddFamilyDialogOpen] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    patientService.getAllPatients(1, 500).then((data) => {
-      if (cancelled || !data?.patients?.length) return;
-      const list = data.patients;
-      const idx = list.findIndex((p) => String(p._id ?? p.id) === String(patientId));
-      if (idx < 0) return;
-      const prevId = idx > 0 ? list[idx - 1]._id ?? list[idx - 1].id : null;
-      const nextId = idx < list.length - 1 ? list[idx + 1]._id ?? list[idx + 1].id : null;
-      setAdjacentIds({ prev: prevId, next: nextId });
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [patientId]);
-
-  useEffect(() => {
     if (!patientId) return;
-    // Always fetch fresh data from API, ignore location.state.patient
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    console.log('🔍 Fetching patient workspace for ID:', patientId);
-    Promise.all([
-      patientService.getPatientWorkspace(patientId),
-      providerService.getAllProviders(1, 100, '', true).catch(() => ({ providers: [] })),
-    ])
-      .then(([data, providerData]) => {
-        console.log('📦 Raw patient data from API:', data);
-        if (!cancelled && data) {
-          setPatient(data);
-          console.log('✅ Patient data set in state:', data);
-        }
-        if (!cancelled) {
-          const providers = Array.isArray(providerData?.providers) ? providerData.providers : [];
-          const options = providers.map((provider) => {
-            const providerUser = provider?.userId || {};
-            const name =
-              [providerUser.firstName, providerUser.lastName].filter(Boolean).join(' ').trim() ||
-              provider.providerCode ||
-              `Provider ${provider._id}`;
-            return {
-              id: String(provider._id),
-              name,
-            };
-          });
-          setPreferredDentists(options);
-          setPreferredHygienists(options);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          console.error('❌ Error fetching patient:', err);
-          setError(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to load patient');
-          setPatient(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [patientId]);
+    fetchById(patientId);
+    dispatch(fetchAllProvidersForDropdown());
+  }, [patientId, fetchById, dispatch]);
 
   const fetchPatient = () => {
     if (!patientId) return;
-    console.log('🔄 Manually fetching patient workspace for ID:', patientId);
-    patientService.getPatientWorkspace(patientId).then((data) => {
-      console.log('📦 Manual fetch - Raw API response:', data);
-      console.log('📝 firstName from API:', data?.firstName);
-      console.log('📅 dateOfBirth from API:', data?.dateOfBirth);
-      data && setPatient(data);
-      console.log('✅ Patient state updated to:', data);
-    });
+    console.log('🔄 Manually fetching patient via Redux for ID:', patientId);
+    fetchById(patientId);
   };
 
   const handleSendUpdateRequest = async (payload) => {
     try {
-      await patientService.createPatientUpdateRequest(patientId, payload);
+      await sendUpdateRequest(patientId, payload).unwrap();
       showSnackbar('Patient update request sent', 'success');
     } catch (err) {
-      const message =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to send update request';
-      showSnackbar(message, 'error');
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to send update request', 'error');
     }
   };
 
@@ -190,26 +122,15 @@ const PatientDetailPage = () => {
         return;
       }
       
-      const response = await patientService.updatePatient(patientId, dataToSave);
-      console.log('✅ Backend response:', response);
-      console.log('📝 Data we sent:', dataToSave);
-      console.log('📥 Data received back:', response);
+      // Dispatch the Redux update thunk
+      await updatePatient(patientId, dataToSave).unwrap();
       
       showSnackbar('Patient information updated successfully', 'success');
-      // Wait a moment for backend to process, then refresh
-      setTimeout(() => {
-        fetchPatient();
-        console.log('🔄 Refreshed patient data from backend');
-      }, 500);
       
       setIsEditMode(false);
       setEditedPatientData(null);
     } catch (err) {
-      console.error('Update patient error:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
-      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to update patient';
-      showSnackbar(msg, 'error');
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to update patient', 'error');
     }
   };
 
@@ -235,13 +156,11 @@ const PatientDetailPage = () => {
   const handleDeactivateConfirm = async () => {
     try {
       setDeactivateLoading(true);
-      await patientService.updatePatient(patientId, { isActive: false });
+      await updatePatient(patientId, { isActive: false }).unwrap();
       showSnackbar('Patient deactivated', 'success');
       setDeactivateDialog({ open: false, patientName: '' });
-      setPatient((prev) => (prev ? { ...prev, isActive: false } : null));
     } catch (err) {
-      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate';
-      showSnackbar(msg, 'error');
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to deactivate', 'error');
     } finally {
       setDeactivateLoading(false);
     }
@@ -250,13 +169,11 @@ const PatientDetailPage = () => {
   const handleActivateConfirm = async () => {
     try {
       setDeactivateLoading(true);
-      await patientService.updatePatient(patientId, { isActive: true });
+      await updatePatient(patientId, { isActive: true }).unwrap();
       showSnackbar('Patient activated', 'success');
       setActivateDialog({ open: false, patientName: '' });
-      setPatient((prev) => (prev ? { ...prev, isActive: true } : null));
     } catch (err) {
-      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to activate';
-      showSnackbar(msg, 'error');
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to activate', 'error');
     } finally {
       setDeactivateLoading(false);
     }
@@ -305,8 +222,8 @@ const PatientDetailPage = () => {
             <PatientDetailOverview
               patient={patient}
               patientNumber={patient?.patientCode ?? patientId}
-              preferredDentists={preferredDentists}
-              preferredHygienists={preferredHygienists}
+              preferredDentists={providerDropdownList}
+              preferredHygienists={providerDropdownList}
               isEditMode={isEditMode}
               onEdit={() => setIsEditMode(true)}
               onSave={handleSavePatient}
@@ -380,11 +297,10 @@ const PatientDetailPage = () => {
             };
 
             const updatedHousehold = [...currentHousehold, newMember];
-            await patientService.updatePatient(patientId, { household: updatedHousehold });
+            await updatePatient(patientId, { household: updatedHousehold }).unwrap();
             showSnackbar('Family member linked successfully', 'success');
-            fetchPatient();
           } catch (err) {
-            showSnackbar('Failed to link family member', 'error');
+            showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');
           }
         }}
       />

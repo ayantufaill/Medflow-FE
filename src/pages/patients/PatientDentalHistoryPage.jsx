@@ -26,12 +26,13 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 
-import { patientService } from "../../services/patient.service";
+import { useSnackbar } from "../../contexts/SnackbarContext";
+import { useDentalHistory } from "../../hooks/redux/useDentalHistory";
+import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { DentalGeneralInfo, DentalHistorySummary, DentalHistoryFullView } from "../../components/dental-history";
-import { useSnackbar } from "../../contexts/SnackbarContext";
 
 const EMPTY_HISTORY = {
   generalInfo: {
@@ -210,135 +211,91 @@ const PatientDentalHistoryPage = () => {
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
 
-  const [loading, setLoading] = useState(true);
+  const { dentalHistory, loading, error, fetch, update } = useDentalHistory();
+  const { currentPatient: patient, fetchById } = usePatient();
+
   const [saving, setSaving] = useState(false);
-  const [patient, setPatient] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  const [error, setError] = useState("");
-  const [dentalHistory, setDentalHistory] = useState(EMPTY_HISTORY);
   const [visitDates, setVisitDates] = useState([]);
   const [signature, setSignature] = useState(null);
 
-  const fetchDentalHistory = async (cancelled = false) => {
-    try {
-      setLoading(true);
-      setError("");
-      const data = await patientService.getDentalHistory(patientId);
-      if (cancelled) return;
-      setPatient(data?.patient || null);
-      setDentalHistory({
-        generalInfo: {
-          ...EMPTY_HISTORY.generalInfo,
-          ...(data?.generalInfo || {}),
-        },
-        personalHistory: Array.isArray(data?.personalHistory) ? data.personalHistory : [],
-        gumAndBone: Array.isArray(data?.gumAndBone) ? data.gumAndBone : [],
-        biteAndJawJoint: Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : [],
-        reviewStatus: Boolean(data?.reviewStatus),
-        lastUpdateDate: data?.lastUpdateDate || null,
-        review: {
-          ...EMPTY_HISTORY.review,
-          ...(data?.review || {}),
-        },
-        visitDates: Array.isArray(data?.visitDates) ? data.visitDates : [],
-      });
-      
-      // Process visitDates the same way as medical history
-      const labels = Array.isArray(data?.visitDates)
-        ? data.visitDates
-            .map((item, index) => {
-              // Handle both string dates and objects with date/label properties
-              const dateStr = typeof item === 'string' ? item : item?.date;
-              const existingLabel = typeof item === 'object' ? item?.label : null;
-              
-              // If there's already a formatted label, use it
-              if (existingLabel) {
-                return existingLabel;
-              }
-              
-              // Log for debugging
-              if (!dateStr || dateStr === "" || dateStr === null) {
-                console.warn(`Visit date at index ${index} is empty or null:`, item);
-                return null;
-              }
-              
-              const formatted = formatDate(dateStr);
-              if (!formatted) {
-                console.warn(`Failed to format visit date at index ${index}:`, item);
-              }
-              // Only include valid formatted dates
-              return formatted || null;
-            })
-            .filter(Boolean)
-        : [];
-      
-      // TEMPORARY: Add mock dates for testing if no data from backend
-      const testDates = labels.length > 0 ? labels : [
-        'Jan 15, 2025',
-        'Feb 20, 2025',
-        'Mar 10, 2025',
-      ];
-      setVisitDates(testDates);
-      
-      setSignature(data?.review?.signatureDataUrl || null);
-    } catch (err) {
-      if (cancelled) return;
-      setError(
-        err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          "Failed to load dental history"
-      );
-      setPatient(null);
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  };
+  // Local draft state to prevent UI freezing
+  const [localGeneralInfo, setLocalGeneralInfo] = useState(EMPTY_HISTORY.generalInfo);
+  const [localPersonalHistory, setLocalPersonalHistory] = useState([]);
+  const [localGumAndBone, setLocalGumAndBone] = useState([]);
+  const [localBiteAndJawJoint, setLocalBiteAndJawJoint] = useState([]);
+
+  // isActuallyLoading flag like Medical History
+  const isActuallyLoading = loading || (!dentalHistory && !error);
 
   useEffect(() => {
-    let cancelled = false;
-    fetchDentalHistory(cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [patientId]);
+    if (!patientId) return;
+    
+    // Fetch both concurrently
+    fetchById(patientId);
+
+    fetch(patientId).unwrap()
+      .then((data) => {
+        // Initialize local drafting state with fetched data or empty defaults
+        setLocalGeneralInfo({
+          ...EMPTY_HISTORY.generalInfo,
+          ...(data?.generalInfo || {}),
+        });
+        setLocalPersonalHistory(Array.isArray(data?.personalHistory) ? data.personalHistory : []);
+        setLocalGumAndBone(Array.isArray(data?.gumAndBone) ? data.gumAndBone : []);
+        setLocalBiteAndJawJoint(Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : []);
+        
+        // Process visitDates
+        const labels = Array.isArray(data?.visitDates)
+          ? data.visitDates
+              .map((item, index) => {
+                const dateStr = typeof item === 'string' ? item : item?.date;
+                const existingLabel = typeof item === 'object' ? item?.label : null;
+                if (existingLabel) return existingLabel;
+                if (!dateStr || dateStr === "" || dateStr === null) return null;
+                const formatted = formatDate(dateStr);
+                return formatted || null;
+              })
+              .filter(Boolean)
+          : [];
+        
+        const testDates = labels.length > 0 ? labels : [
+          'Jan 15, 2025',
+          'Feb 20, 2025',
+          'Mar 10, 2025',
+        ];
+        setVisitDates(testDates);
+        setSignature(data?.review?.signatureDataUrl || null);
+      })
+      .catch((err) => {
+        if (err?.name === 'ConditionError') return;
+        showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to load dental history", "error");
+      });
+  }, [patientId, fetchById, fetch, showSnackbar]);
 
   const updateGeneralInfo = (field, value) => {
-    setDentalHistory((prev) => ({
-      ...prev,
-      generalInfo: { ...prev.generalInfo, [field]: value },
-    }));
+    setLocalGeneralInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const updatePersonalHistory = (id, field, value) => {
-    setDentalHistory((prev) => ({
-      ...prev,
-      personalHistory: prev.personalHistory.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
+    setLocalPersonalHistory((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
   };
 
   const updateGumAndBone = (id, field, value) => {
-    setDentalHistory((prev) => ({
-      ...prev,
-      gumAndBone: prev.gumAndBone.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
+    setLocalGumAndBone((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
   };
 
   const updateBiteAndJawJoint = (id, field, value) => {
-    setDentalHistory((prev) => ({
-      ...prev,
-      biteAndJawJoint: prev.biteAndJawJoint.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
+    setLocalBiteAndJawJoint((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
   };
 
-  const dentalGroups = groupDentalHistoryRows(dentalHistory.personalHistory);
-  const gumAndBoneGroups = groupDentalHistoryRows(dentalHistory.gumAndBone);
-  const biteAndJawJointGroups = groupDentalHistoryRows(dentalHistory.biteAndJawJoint);
+
 
   const saveDentalHistory = async (reviewedWithPatient = false) => {
     if (!patientId) return;
@@ -346,57 +303,42 @@ const PatientDentalHistoryPage = () => {
       setSaving(true);
       const review = reviewedWithPatient
         ? {
-            ...(dentalHistory.review || {}),
+            ...(dentalHistory?.review || {}),
             reviewedWithPatient: true,
             reviewedAt: new Date().toISOString(),
-            signatureDataUrl: signature || dentalHistory.review?.signatureDataUrl || null,
+            signatureDataUrl: signature || dentalHistory?.review?.signatureDataUrl || null,
           }
         : {
-            ...(dentalHistory.review || {}),
-            signatureDataUrl: signature || dentalHistory.review?.signatureDataUrl || null,
+            ...(dentalHistory?.review || {}),
+            signatureDataUrl: signature || dentalHistory?.review?.signatureDataUrl || null,
           };
 
-      const data = await patientService.updateDentalHistory(patientId, {
-        generalInfo: dentalHistory.generalInfo,
-        personalHistory: dentalHistory.personalHistory,
-        gumAndBone: dentalHistory.gumAndBone,
-        biteAndJawJoint: dentalHistory.biteAndJawJoint,
+      const data = await update(patientId, {
+        generalInfo: localGeneralInfo,
+        personalHistory: localPersonalHistory,
+        gumAndBone: localGumAndBone,
+        biteAndJawJoint: localBiteAndJawJoint,
         review,
-      });
+      }).unwrap();
 
-      setPatient(data?.patient || null);
-      setDentalHistory({
-        generalInfo: {
-          ...EMPTY_HISTORY.generalInfo,
-          ...(data?.generalInfo || {}),
-        },
-        personalHistory: Array.isArray(data?.personalHistory) ? data.personalHistory : [],
-        gumAndBone: Array.isArray(data?.gumAndBone) ? data.gumAndBone : [],
-        biteAndJawJoint: Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : [],
-        reviewStatus: Boolean(data?.reviewStatus),
-        lastUpdateDate: data?.lastUpdateDate || null,
-        review: {
-          ...EMPTY_HISTORY.review,
-          ...(data?.review || {}),
-        },
-        visitDates: Array.isArray(data?.visitDates) ? data.visitDates : [],
+      setLocalGeneralInfo({
+        ...EMPTY_HISTORY.generalInfo,
+        ...(data?.generalInfo || {}),
       });
+      setLocalPersonalHistory(Array.isArray(data?.personalHistory) ? data.personalHistory : []);
+      setLocalGumAndBone(Array.isArray(data?.gumAndBone) ? data.gumAndBone : []);
+      setLocalBiteAndJawJoint(Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : []);
       setVisitDates(Array.isArray(data?.visitDates) ? data.visitDates : []);
       setSignature(data?.review?.signatureDataUrl || signature || null);
       showSnackbar(reviewedWithPatient ? "Dental history reviewed" : "Dental history updated", "success");
     } catch (err) {
-      showSnackbar(
-        err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          "Failed to update dental history",
-        "error"
-      );
+      showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to update dental history", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const showContent = !loading || patient;
+  const showContent = !isActuallyLoading || patient;
 
   const handlePrint = () => {
     window.print();
@@ -526,7 +468,7 @@ const PatientDentalHistoryPage = () => {
             }}
           >
             <DentalGeneralInfo 
-              info={dentalHistory.generalInfo} 
+              info={localGeneralInfo} 
               onChange={updateGeneralInfo} 
             />
           </Paper>
@@ -550,9 +492,9 @@ const PatientDentalHistoryPage = () => {
 
           {tabValue === 0 && (
             <DentalHistorySummary
-              personalHistory={dentalHistory.personalHistory}
-              gumAndBone={dentalHistory.gumAndBone}
-              biteAndJawJoint={dentalHistory.biteAndJawJoint}
+              personalHistory={localPersonalHistory}
+              gumAndBone={localGumAndBone}
+              biteAndJawJoint={localBiteAndJawJoint}
               onUpdateItem={handleUpdateItem}
             />
           )}
@@ -565,7 +507,7 @@ const PatientDentalHistoryPage = () => {
             <PatientSignatureSection
               value={signature}
               onChange={setSignature}
-              reviewedWithPatient={dentalHistory.reviewStatus}
+              reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
             />
           </Box>
         </>
