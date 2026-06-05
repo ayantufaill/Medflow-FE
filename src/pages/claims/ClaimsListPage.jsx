@@ -75,18 +75,18 @@ const CARRIERS = [
   { value: 'geha', label: 'GEHA Connection' },
 ];
 
-// Claim Status Options
+// Claim Status Options (aligned with backend ClaimStatus values)
 const CLAIM_STATUSES = [
   { value: 'all', label: 'All' },
-  { value: 'readyForSubmission', label: 'readyForSubmission' },
-  { value: 'inProcess', label: 'inProcess' },
-  { value: 'accepted', label: 'accepted' },
-  { value: 'acceptedPaid', label: 'acceptedPaid' },
-  { value: 'error', label: 'error' },
-  { value: 'rejected', label: 'rejected' },
-  { value: 'eobUploaded', label: 'eobUploaded' },
-  { value: 'manualClaim', label: 'manualClaim' },
-  { value: 'acceptedForProcessing', label: 'acceptedForProcessing' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'partial', label: 'Partial' },
+  { value: 'denied', label: 'Denied' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 // Group Date By Range Options (Specific to Outstanding Claims)
@@ -1105,74 +1105,37 @@ const ClaimsListPage = () => {
             setEraReports(data.reports || []);
           }
         } else {
+          // Helper: map API claim to display-ready shape
+          const mapClaimFields = (c, tab) => ({
+            ...c,
+            tab,
+            patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
+            patientCode: c.patient ? `(${c.patient.patientCode})` : '',
+            patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
+            carrier: c.insuranceCompany?.name || 'No Carrier',
+            claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary',
+            claimNumber: c.claimNumber || c.claimCode || `#${c.id}`,
+            createdDate: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+            sentDate: c.submittedDate ? new Date(c.submittedDate).toLocaleDateString() : (c.submissionDate ? new Date(c.submissionDate).toLocaleDateString() : ''),
+            printedDate: '',
+            procedures: c.procedures || [],
+            clearingHouseMessage: c.denialReason || '',
+            eraStatus: '',
+            description: c.notes || '',
+          });
+
           // Claims (tab specific)
           let fetchedClaims = [];
-          if (activeTab === 0) {
-            const data = await claimService.getAllClaims(1, 100, { tab: 'unsent' });
-            fetchedClaims = (data.claims || []).map(c => ({
-              ...c,
-              tab: 'unsent',
-              patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
-              patientCode: c.patient ? `(${c.patient.patientCode})` : '',
-              patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
-              carrier: c.insuranceCompany?.name || 'No Carrier',
-              claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary'
-            }));
-          } else if (activeTab === 1) {
-            const data = await claimService.getAllClaims(1, 100, { tab: 'errored' });
-            fetchedClaims = (data.claims || []).map(c => ({
-              ...c,
-              tab: 'errored',
-              patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
-              patientCode: c.patient ? `(${c.patient.patientCode})` : '',
-              patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
-              carrier: c.insuranceCompany?.name || 'No Carrier',
-              claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary'
-            }));
-          } else if (activeTab === 2) {
-            const data = await claimService.getAllClaims(1, 100, { tab: 'rejected' });
-            fetchedClaims = (data.claims || []).map(c => ({
-              ...c,
-              tab: 'rejected',
-              patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
-              patientCode: c.patient ? `(${c.patient.patientCode})` : '',
-              patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
-              carrier: c.insuranceCompany?.name || 'No Carrier',
-              claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary'
-            }));
-          } else if (activeTab === 3) {
-            const data = await claimService.getAllClaims(1, 100, { tab: 'history' });
-            fetchedClaims = (data.claims || []).map(c => ({
-              ...c,
-              tab: 'history',
-              patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
-              patientCode: c.patient ? `(${c.patient.patientCode})` : '',
-              patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
-              carrier: c.insuranceCompany?.name || 'No Carrier',
-              claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary'
-            }));
+          if (activeTab >= 0 && activeTab <= 3) {
+            // Fetch all claims for tabs 0-3; filter by status client-side
+            const data = await claimService.getAllClaims({ page: 1, limit: 500 });
+            fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'claims'));
           } else if (activeTab === 4) {
             const data = await claimService.getOutstandingClaims({ limit: 100, dateRange: groupDateRange, groupBy: groupByOption });
-            fetchedClaims = (data.claims || []).map(c => ({
-              ...c,
-              tab: 'outstanding',
-              patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
-              patientCode: c.patient ? `(${c.patient.patientCode})` : '',
-              patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
-              carrier: c.insuranceCompany?.name || 'No Carrier',
-              claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary'
-            }));
+            fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'outstanding'));
           } else if (activeTab === 5) {
             const data = await claimService.getPredeterminations({ limit: 100 });
-            fetchedClaims = (data.claims || []).map(c => ({
-              ...c,
-              tab: 'predetermination',
-              patientName: c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : 'Unknown Patient',
-              patientCode: c.patient ? `(${c.patient.patientCode})` : '',
-              patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
-              carrier: c.insuranceCompany?.name || 'No Carrier',
-              claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary'
-            }));
+            fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'predetermination'));
           }
           if (active) {
             setClaims(fetchedClaims);
@@ -1210,7 +1173,7 @@ const ClaimsListPage = () => {
 
   // Statistics & Alerts
   const validationErrorCount = useMemo(() => {
-    return claims.filter((c) => c.tab === 'unsent' && c.status === 'validationError').length;
+    return claims.filter((c) => c.status === 'denied' || c.status === 'rejected').length;
   }, [claims]);
 
   // Handle Note Popover Open
@@ -1387,15 +1350,19 @@ const ClaimsListPage = () => {
   // Filter & Sort Claims based on Active Tab, Filter inputs and Sort choice
   const filteredClaims = useMemo(() => {
     let result = claims.filter((claim) => {
-      // 1. Tab filtration mapping
+      // 1. Tab filtration mapping (status-based for tabs 0-3)
       if (activeTab === 0) {
-        if (claim.tab !== 'unsent') return false;
+        // Unsent: draft claims
+        if (!['draft'].includes(claim.status)) return false;
       } else if (activeTab === 1) {
-        if (claim.tab !== 'errored') return false;
+        // Errored: rejected or denied claims
+        if (!['rejected', 'denied'].includes(claim.status)) return false;
       } else if (activeTab === 2) {
-        if (claim.tab !== 'rejected') return false;
+        // Rejected only
+        if (claim.status !== 'rejected') return false;
       } else if (activeTab === 3) {
-        if (claim.tab !== 'history') return false;
+        // History: everything that has been processed (not draft)
+        if (claim.status === 'draft') return false;
       } else if (activeTab === 4) {
         if (claim.tab !== 'outstanding') return false;
       } else if (activeTab === 5) {
@@ -1506,7 +1473,8 @@ const ClaimsListPage = () => {
 
   // ERA Reports Filter & Slice logic based on search ERA input and Active ERA sub-tab
   const filteredEraReports = useMemo(() => {
-    let result = eraReports.filter((r) => r.eraTab === activeEraTab);
+    // Backend already filters by eraTab, so no need to filter again here
+    let result = [...eraReports];
 
     if (searchEraContent.trim()) {
       const s = searchEraContent.toLowerCase();
@@ -2968,7 +2936,7 @@ const ClaimsListPage = () => {
                 filteredClaims.map((claim) => {
                   const isSelected = !!selectedClaims[claim.id];
                   const isExpanded = !!expandedProcedures[claim.id];
-                  const isError = claim.status === 'validationError' || claim.status === 'error' || claim.status === 'rejected';
+                  const isError = claim.status === 'denied' || claim.status === 'rejected';
 
                   // Determine attachment color badge background/icon styling
                   let attachIconColor = '#7d9cc4';
@@ -3129,19 +3097,19 @@ const ClaimsListPage = () => {
                                 sx={{
                                   fontSize: '0.72rem',
                                   fontWeight: 500,
-                                  color: claim.status === 'error' || claim.status === 'rejected' ? '#d93838' : '#2d3748',
+                                  color: claim.status === 'denied' || claim.status === 'rejected' ? '#d93838' : '#2d3748',
                                   '& .MuiSelect-select': { py: 0.5, pr: 2 },
                                 }}
                               >
-                                <MenuItem value="readyForSubmission" sx={{ fontSize: '0.7rem' }}>readyForSubmission</MenuItem>
-                                <MenuItem value="inProcess" sx={{ fontSize: '0.7rem' }}>inProcess</MenuItem>
-                                <MenuItem value="accepted" sx={{ fontSize: '0.7rem' }}>accepted</MenuItem>
-                                <MenuItem value="acceptedPaid" sx={{ fontSize: '0.7rem' }}>acceptedPaid</MenuItem>
-                                <MenuItem value="error" sx={{ fontSize: '0.7rem', color: '#d93838' }}>error</MenuItem>
-                                <MenuItem value="rejected" sx={{ fontSize: '0.7rem', color: '#d93838' }}>rejected</MenuItem>
-                                <MenuItem value="eobUploaded" sx={{ fontSize: '0.7rem' }}>eobUploaded</MenuItem>
-                                <MenuItem value="manualClaim" sx={{ fontSize: '0.7rem' }}>manualClaim</MenuItem>
-                                <MenuItem value="acceptedForProcessing" sx={{ fontSize: '0.7rem' }}>acceptedForProcessing</MenuItem>
+                                <MenuItem value="draft" sx={{ fontSize: '0.7rem' }}>Draft</MenuItem>
+                                <MenuItem value="submitted" sx={{ fontSize: '0.7rem' }}>Submitted</MenuItem>
+                                <MenuItem value="pending" sx={{ fontSize: '0.7rem' }}>Pending</MenuItem>
+                                <MenuItem value="accepted" sx={{ fontSize: '0.7rem' }}>Accepted</MenuItem>
+                                <MenuItem value="paid" sx={{ fontSize: '0.7rem' }}>Paid</MenuItem>
+                                <MenuItem value="partial" sx={{ fontSize: '0.7rem' }}>Partial</MenuItem>
+                                <MenuItem value="denied" sx={{ fontSize: '0.7rem', color: '#d93838' }}>Denied</MenuItem>
+                                <MenuItem value="rejected" sx={{ fontSize: '0.7rem', color: '#d93838' }}>Rejected</MenuItem>
+                                <MenuItem value="cancelled" sx={{ fontSize: '0.7rem' }}>Cancelled</MenuItem>
                               </Select>
                             </FormControl>
                           ) : (
@@ -3149,7 +3117,7 @@ const ClaimsListPage = () => {
                             isError ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <Typography sx={{ fontWeight: 600, color: '#d93838', fontSize: '0.72rem' }}>
-                                  validationError
+                                  {claim.status}
                                 </Typography>
                                 <Tooltip title="Click to Revalidate / Resolve errors">
                                   <IconButton size="small" onClick={() => handleRevalidate(claim.id)} sx={{ p: 0.2, color: '#1a3a6b' }}>
