@@ -128,12 +128,14 @@ const AuthLeftPanel = () => {
       </Box>
 
       {/* ── Footer Bar ── */}
+      {/* Figma: 476×13.2px, top: 754.8px, left: 52px → bottom: 52px (820-754.8-13.2) */}
       <Box
         sx={{
           position: "absolute",
-          bottom: 24,
-          left: 32,
-          right: 32,
+          bottom: "52px",
+          left: "52px",
+          width: "476px",
+          height: "13.2px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -143,7 +145,9 @@ const AuthLeftPanel = () => {
         <Typography
           sx={{
             fontFamily: "Manrope, sans-serif",
+            fontWeight: 400,
             fontSize: "11px",
+            lineHeight: "13.2px",
             color: "rgba(255, 255, 255, 0.4)",
             letterSpacing: "0.04em",
           }}
@@ -153,7 +157,9 @@ const AuthLeftPanel = () => {
         <Typography
           sx={{
             fontFamily: "Manrope, sans-serif",
+            fontWeight: 400,
             fontSize: "11px",
+            lineHeight: "13.2px",
             color: "rgba(255, 255, 255, 0.4)",
           }}
         >

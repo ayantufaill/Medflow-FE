@@ -14,26 +14,29 @@ const AuthLayout = ({ children }) => {
       sx={{
         display: "flex",
         height: "100vh",
+        width: "100vw",
         overflow: "hidden",
         backgroundColor: "#ffffff",
       }}
     >
-      {/* Left Panel — hidden on mobile */}
+      {/* Left Panel — fixed 472px wide, full height, hidden on mobile */}
+      {/* Figma: content block is left: 52px + width: 420px = 472px minimum */}
       <Box
         sx={{
           display: { xs: "none", md: "flex" },
           flexShrink: 0,
-          width: { md: "40%", lg: "45%" },
-          minWidth: 360,
+          width: "580px",
+          height: "100vh",
         }}
       >
         <AuthLeftPanel />
       </Box>
 
-      {/* Right Panel — centered form area */}
+      {/* Right Panel — takes remaining width, centers the form */}
       <Box
         sx={{
           flex: 1,
+          height: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
