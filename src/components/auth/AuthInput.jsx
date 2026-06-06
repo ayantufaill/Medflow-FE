@@ -79,7 +79,7 @@ const AuthInput = ({
           onBlur={() => setFocused(false)}
           sx={{
             flex: 1,
-            height: "40px",
+            height: "44px",
             padding: "0 12px",
             border: "none",
             outline: "none",
