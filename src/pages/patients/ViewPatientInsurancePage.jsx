@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -16,7 +16,10 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
-import { patientService } from '../../services/patient.service';
+
+// Redux hooks
+import { usePatient } from '../../hooks/redux/usePatient';
+import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
 import { insuranceCompanyService } from '../../services/insurance.service';
 
 const ViewPatientInsurancePage = () => {
@@ -25,53 +28,52 @@ const ViewPatientInsurancePage = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [insurance, setInsurance] = useState(null);
-  const [patient, setPatient] = useState(null);
   const [companyName, setCompanyName] = useState('');
 
+  const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
+  const { insurances, fetch: fetchInsurances } = usePatientInsurance(patientId);
+
+  // Find the exact insurance from Redux store
+  const insurance = useMemo(() => {
+    return insurances?.find(ins => (ins._id || ins.id) === insuranceId) || null;
+  }, [insurances, insuranceId]);
+
   useEffect(() => {
-    const fetchData = async () => {
+    const initData = async () => {
       try {
         setLoading(true);
-        setError('');
-
-        const [insuranceData, patientData] = await Promise.all([
-          patientService.getPatientInsuranceById(patientId, insuranceId),
-          patientService.getPatientById(patientId),
+        // Fetch patient and insurances via Redux concurrently
+        await Promise.all([
+          fetchPatient(patientId),
+          fetchInsurances()
         ]);
-
-        setInsurance(insuranceData);
-        setPatient(patientData);
-
-        if (insuranceData.insuranceCompanyId) {
-          if (typeof insuranceData.insuranceCompanyId === 'object') {
-            setCompanyName(insuranceData.insuranceCompanyId.name || 'Unknown');
-          } else {
-            try {
-              const company = await insuranceCompanyService.getInsuranceCompanyById(
-                insuranceData.insuranceCompanyId
-              );
-              setCompanyName(company?.name || 'Unknown');
-            } catch {
-              setCompanyName('Unknown');
-            }
-          }
-        }
       } catch (err) {
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            'Failed to load insurance details. Please try again.'
-        );
+        setError('Failed to load insurance details. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-
-    if (patientId && insuranceId) {
-      fetchData();
+    if (patientId) {
+      initData();
     }
-  }, [patientId, insuranceId]);
+  }, [patientId, fetchPatient, fetchInsurances]);
+
+  // Load company name once insurance is found
+  useEffect(() => {
+    if (!insurance?.insuranceCompanyId) return;
+    
+    if (typeof insurance.insuranceCompanyId === 'object') {
+      setCompanyName(insurance.insuranceCompanyId.name || 'Unknown');
+    } else {
+      insuranceCompanyService.getInsuranceCompanyById(insurance.insuranceCompanyId)
+        .then((company) => {
+          setCompanyName(company?.name || 'Unknown');
+        })
+        .catch(() => {
+          setCompanyName('Unknown');
+        });
+    }
+  }, [insurance]);
 
   const handleBack = () => {
     navigate(`/patients/${patientId}`);

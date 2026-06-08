@@ -57,7 +57,9 @@ const AddFamilyMemberDialog = ({ open, onClose, onConfirm, currentPatientId }) =
     if (mode === 'search' && selectedPatient) {
       onConfirm(selectedPatient);
     } else if (mode === 'add_new') {
-      navigate('/patients/new');
+      navigate('/patients/new', { 
+        state: { returnToPatientId: currentPatientId } 
+      });
       onClose();
     }
   };
@@ -183,7 +185,7 @@ const AddFamilyMemberDialog = ({ open, onClose, onConfirm, currentPatientId }) =
         {mode === 'add_new' && (
           <Box sx={{ p: 3, bgcolor: '#f1f5f9', borderRadius: 1, ml: 1 }}>
             <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-              Redirecting to Add Patient form...
+              Click "{mode === 'search' ? 'Link to Profile' : 'Create Profile'}" to proceed to the Add Patient form.
             </Typography>
           </Box>
         )}
@@ -201,12 +203,11 @@ const AddFamilyMemberDialog = ({ open, onClose, onConfirm, currentPatientId }) =
             px: 3.5, 
             py: 0.8,
             fontWeight: 500,
-            borderRadius: '6px',
             fontSize: '0.95rem',
             '&.Mui-disabled': { bgcolor: '#e2e8f0', color: '#94a3b8' }
           }}
         >
-          Link to Profile
+          {mode === 'search' ? 'Link to Profile' : 'Create Profile'}
         </Button>
         <Button 
           onClick={onClose} 

@@ -108,11 +108,33 @@ export const deletePatientInsuranceThunk = createAsyncThunk(
   }
 );
 
+export const createPatientThunk = createAsyncThunk(
+  'patient/createPatient',
+  async (payload, { dispatch, rejectWithValue }) => {
+    try {
+      const data = await patientService.createPatient(payload);
+      // Invalidate the patient list so the next fetch gets the new patient
+      dispatch(invalidatePatients());
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create patient');
+    }
+  }
+);
+
 export const updatePatientThunk = createAsyncThunk(
   'patient/updatePatient',
   async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
     try {
       const response = await patientService.updatePatient(patientId, payload);
+      
+      // Also update workspace metadata (spouseInfo, referralSource, etc.)
+      try {
+        await patientService.updatePatientWorkspace(patientId, payload);
+      } catch (metaErr) {
+        console.warn('Failed to update workspace meta, but core patient updated', metaErr);
+      }
+      
       // After a successful update, we should refresh the workspace payload to ensure Redux has all relational data
       dispatch(fetchPatientById(patientId));
       return response;

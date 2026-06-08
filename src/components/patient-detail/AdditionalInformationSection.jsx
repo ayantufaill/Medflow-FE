@@ -40,6 +40,10 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
     }
   };
 
+  const stripPatientId = (name) => {
+    return name ? name.replace(/\s*\(PAT\d+\)/, '').trim() : name;
+  };
+
   return (
     <Box>
       <Typography variant="subtitle1" sx={sectionTitleSx}>
@@ -48,8 +52,14 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <InlineFieldRow 
           label="Referred By" 
-          value={localPatientData?.referralSource}
-          onChange={(e) => handleFieldChange('referralSource', e.target.value)}
+          value={stripPatientId(localPatientData?.customFields?.referringPatient) || localPatientData?.referralSource || ''}
+          onChange={(e) => {
+            // Update both to be safe, though normally you'd only update one depending on the UI paradigm
+            handleFieldChange('referralSource', e.target.value);
+            if (localPatientData?.customFields?.referringPatient) {
+              handleFieldChange('customFields', { ...localPatientData.customFields, referringPatient: e.target.value });
+            }
+          }}
           InputProps={{ readOnly: !isEditMode }}
         />
         {isEditMode ? (

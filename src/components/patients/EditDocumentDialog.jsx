@@ -44,8 +44,21 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
     category: category || "",
   });
 
-  // Update local state when props change
+  const [nameSuggestions, setNameSuggestions] = useState(EDIT_NAME_SUGGESTIONS);
+  const [categorySuggestions, setCategorySuggestions] = useState(EDIT_CATEGORY_SUGGESTIONS);
+
+  // Load from localStorage on mount
   useState(() => {
+    try {
+      const savedNames = localStorage.getItem("medflow_doc_names");
+      if (savedNames) setNameSuggestions(JSON.parse(savedNames));
+      
+      const savedCats = localStorage.getItem("medflow_doc_categories");
+      if (savedCats) setCategorySuggestions(JSON.parse(savedCats));
+    } catch (e) {
+      console.error("Failed to load suggestions from localStorage", e);
+    }
+    
     setEditData({
       name: name || "",
       type: type || "",
@@ -60,6 +73,32 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
       name: editData.name,
       category: editData.category,
     });
+  };
+
+  const handleSaveNameDefault = () => {
+    const val = editData.name.trim();
+    if (!val || nameSuggestions.includes(val)) return;
+    const newSuggestions = [val, ...nameSuggestions];
+    setNameSuggestions(newSuggestions);
+    localStorage.setItem("medflow_doc_names", JSON.stringify(newSuggestions));
+  };
+
+  const handleResetNameDefaults = () => {
+    setNameSuggestions(EDIT_NAME_SUGGESTIONS);
+    localStorage.removeItem("medflow_doc_names");
+  };
+
+  const handleSaveCategoryDefault = () => {
+    const val = editData.category.trim();
+    if (!val || categorySuggestions.includes(val)) return;
+    const newSuggestions = [val, ...categorySuggestions];
+    setCategorySuggestions(newSuggestions);
+    localStorage.setItem("medflow_doc_categories", JSON.stringify(newSuggestions));
+  };
+
+  const handleResetCategoryDefaults = () => {
+    setCategorySuggestions(EDIT_CATEGORY_SUGGESTIONS);
+    localStorage.removeItem("medflow_doc_categories");
   };
 
   return (
@@ -153,7 +192,7 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
                   overflowY: "auto",
                 }}
               >
-                {EDIT_NAME_SUGGESTIONS.map((label) => (
+                {nameSuggestions.map((label) => (
                   <Chip
                     key={label}
                     label={label}
@@ -189,6 +228,7 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
               <Button
                 variant="contained"
                 size="small"
+                onClick={handleSaveNameDefault}
                 sx={{
                   textTransform: "none",
                   px: 2,
@@ -202,9 +242,10 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
                 component="button"
                 variant="caption"
                 underline="hover"
+                onClick={handleResetNameDefaults}
                 sx={{ color: "#3f5f98" }}
               >
-                Re-order
+                Reset Defaults
               </Link>
             </Box>
           </Box>
@@ -219,18 +260,24 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
             >
               Category:
             </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                borderBottom: "1px solid #cccccc",
-                minWidth: 180,
-                pb: 0.25,
-                fontSize: "0.9rem",
-                color: "#333333",
+            <TextField
+              variant="standard"
+              fullWidth
+              value={editData.category}
+              onChange={(e) =>
+                setEditData((prev) => ({ ...prev, category: e.target.value }))
+              }
+              placeholder="e.g. custom_form"
+              InputProps={{
+                disableUnderline: false,
               }}
-            >
-              {editData.category || "Claim Attachment"}
-            </Typography>
+              sx={{
+                "& .MuiInputBase-input": {
+                  fontSize: "0.9rem",
+                  py: 0.25,
+                },
+              }}
+            />
           </Box>
 
           <Box
@@ -251,7 +298,7 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
                   overflowY: "auto",
                 }}
               >
-                {EDIT_CATEGORY_SUGGESTIONS.map((label) => (
+                {categorySuggestions.map((label) => (
                   <Chip
                     key={label}
                     label={label}
@@ -287,6 +334,7 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
               <Button
                 variant="contained"
                 size="small"
+                onClick={handleSaveCategoryDefault}
                 sx={{
                   textTransform: "none",
                   px: 2,
@@ -300,9 +348,10 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
                 component="button"
                 variant="caption"
                 underline="hover"
+                onClick={handleResetCategoryDefaults}
                 sx={{ color: "#3f5f98" }}
               >
-                Re-order
+                Reset Defaults
               </Link>
             </Box>
           </Box>
