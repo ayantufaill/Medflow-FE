@@ -47,6 +47,7 @@ import {
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { usePatients } from '../../hooks/redux/usePatient';
+import { useProviders } from '../../hooks/queries/useProviders';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
@@ -70,13 +71,19 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     fetch: fetchPatientsRedux,
     refetch,
     removeFromList,
+    updateInList,
   } = usePatients();
+
+  const { data: providersData } = useProviders({ activeOnly: true });
+  const providerList = providersData?.providers || [];
 
   // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [genderFilter, setGenderFilter] = useState('');
+  const [providerFilter, setProviderFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
@@ -95,7 +102,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [sortByName, setSortByName] = useState(true);
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, count: 0 });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
-  const [debouncedSearch] = useDebounce(search, 500);
+  const [debouncedSearch] = useDebounce(search, 300);
   
   // Inline editing state
   const [editingField, setEditingField] = useState(null); // { patientId, field, value }
@@ -115,10 +122,12 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       limit: rowsPerPage,
       search: sanitizedSearch,
       status: effectiveStatus,
+      gender: genderFilter,
+      providerId: providerFilter,
       dobStart: '',
       dobEnd: '',
     });
-  }, [page, rowsPerPage, debouncedSearch, effectiveStatus, fetchPatientsRedux]);
+  }, [page, rowsPerPage, debouncedSearch, effectiveStatus, genderFilter, providerFilter, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
@@ -187,6 +196,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       setSaveLoading(true);
       await patientService.updatePatient(patientId, { isActive: !isActive });
       showSnackbar(`Patient ${!isActive ? 'marked inactive' : 'activated'} successfully`, 'success');
+      updateInList({ _id: patientId, isActive: !isActive });
       refetch();
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient status.';
@@ -241,6 +251,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       setSaveLoading(true);
       if (!editingField) return;
       
+      let updateData = {};
       // Validate phone number if editing phonePrimary field
       if (editingField.field === 'phonePrimary' && editValue) {
         const digits = editValue.replace(/\D/g, '');
@@ -250,7 +261,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           return;
         }
         // Store as digits only (backend requirement)
-        const updateData = { [editingField.field]: digits };
+        updateData = { [editingField.field]: digits };
         await patientService.updatePatient(editingField.patientId, updateData);
       } else if (editingField.field === 'dateOfBirth' && editValue) {
         // Validate date of birth
@@ -261,14 +272,15 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
         }
         // Convert to ISO-8601 format for backend
         const isoDate = new Date(editValue).toISOString();
-        const updateData = { [editingField.field]: isoDate };
+        updateData = { [editingField.field]: isoDate };
         await patientService.updatePatient(editingField.patientId, updateData);
       } else {
-        const updateData = { [editingField.field]: editValue };
+        updateData = { [editingField.field]: editValue };
         await patientService.updatePatient(editingField.patientId, updateData);
       }
       
       showSnackbar('Patient updated successfully', 'success');
+      updateInList({ _id: editingField.patientId, ...updateData });
       refetch();
       setEditingField(null);
       setEditValue('');
@@ -293,6 +305,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       };
       await patientService.updatePatient(editingField.patientId, updateData);
       showSnackbar('Patient name updated successfully', 'success');
+      updateInList({ _id: editingField.patientId, ...updateData });
       refetch();
       setEditingField(null);
       setEditValue({ firstName: '', lastName: '' });
@@ -319,6 +332,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const handleResetFilters = () => {
     setSearch('');
     setStatusFilter('');
+    setGenderFilter('');
+    setProviderFilter('');
     setPage(0);
   };
 
@@ -349,6 +364,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       setDeactivateLoading(true);
       for (const id of selectedIds) {
         await patientService.updatePatient(id, { isActive: false });
+        updateInList({ _id: id, isActive: false });
       }
       showSnackbar(`Deactivated ${selectedIds.length} patient(s)`, 'success');
       setSelectedIds([]);
@@ -381,7 +397,13 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   };
 
   const displayPatients = useMemo(() => {
-    const list = [...patients];
+    let list = [...patients];
+    if (genderFilter) {
+      list = list.filter((p) => p.gender === genderFilter);
+    }
+    if (providerFilter) {
+      list = list.filter((p) => p.preferredDentistId === providerFilter);
+    }
     if (sortByName) {
       list.sort((a, b) => {
         const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
@@ -390,9 +412,9 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       });
     }
     return list;
-  }, [patients, sortByName]);
+  }, [patients, sortByName, genderFilter, providerFilter]);
 
-  const totalPatients = pagination?.total || 0;
+  const totalPatients = (genderFilter || providerFilter) ? displayPatients.length : (pagination?.total || 0);
 
   return (
     <Box>
@@ -412,9 +434,16 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
-                      <SearchIcon />
-                    </IconButton>
+                    {loading && search ? (
+                      <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                    ) : null}
+                    {search ? (
+                      <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
+                        <ClearIcon />
+                      </IconButton>
+                    ) : (
+                      <SearchIcon color="action" />
+                    )}
                   </InputAdornment>
                 ),
               }}
@@ -456,8 +485,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
             </Box>
           </Box>
 
-          {/* Row 2: Filter checkboxes */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2, flexWrap: 'wrap' }}>
+          {/* Row 2: Filter checkboxes and Dropdowns */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
             <FormControlLabel
               control={
                 <Checkbox
@@ -468,7 +497,70 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               }
               label="Sort By Name"
             />
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 1 }}>
+
+            <TextField
+              select
+              label="Status"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+              size="small"
+              sx={{ minWidth: 120 }}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </TextField>
+
+            <TextField
+              select
+              label="Gender"
+              value={genderFilter}
+              onChange={(e) => {
+                setGenderFilter(e.target.value);
+                setPage(0);
+              }}
+              size="small"
+              sx={{ minWidth: 120 }}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <option value="">All Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="unknown">Unknown</option>
+            </TextField>
+
+            <TextField
+              select
+              label="Provider"
+              value={providerFilter}
+              onChange={(e) => {
+                setProviderFilter(e.target.value);
+                setPage(0);
+              }}
+              size="small"
+              sx={{ minWidth: 150 }}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <option value="">All Providers</option>
+              {providerList.map((p) => {
+                const u = p.userId || p;
+                const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || p.providerCode || `Provider ${p._id}`;
+                return (
+                  <option key={p._id} value={p._id}>
+                    {name}
+                  </option>
+                );
+              })}
+            </TextField>
+
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 'auto' }}>
               <Tooltip title="Refresh">
                 <IconButton size="small" onClick={handleRefresh} disabled={loading}><RefreshIcon /></IconButton>
               </Tooltip>

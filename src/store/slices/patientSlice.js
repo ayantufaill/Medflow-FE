@@ -14,12 +14,6 @@ export const fetchPatients = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch patients');
     }
-  },
-  {
-    condition: (_, { getState }) => {
-      const { patient } = getState();
-      return !patient.listLoading;
-    },
   }
 );
 
@@ -361,12 +355,14 @@ const patientSlice = createSlice({
     // Update a patient in the list after edit
     updatePatientInList: (state, action) => {
       const updated = action.payload;
-      const idx = state.list.findIndex(p => p._id === updated._id);
+      const updatedId = updated._id || updated.id;
+      const idx = state.list.findIndex(p => (p._id || p.id) === updatedId);
       if (idx !== -1) state.list[idx] = { ...state.list[idx], ...updated };
     },
     // Remove from list after delete
     removePatientFromList: (state, action) => {
-      state.list = state.list.filter(p => p._id !== action.payload);
+      const targetId = action.payload;
+      state.list = state.list.filter(p => (p._id || p.id) !== targetId);
       state.pagination.total = Math.max(0, state.pagination.total - 1);
     },
   },
