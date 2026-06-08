@@ -25,7 +25,12 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import { Save as SaveIcon } from "@mui/icons-material";
 import { patientService } from "../../services/patient.service";
-import { providerService } from "../../services/provider.service";
+import { useSelector, useDispatch } from "react-redux";
+import { 
+  fetchAllProvidersForDropdown, 
+  selectProviderDropdownList, 
+  selectProviderDropdownLoading 
+} from "../../store/slices/providerSlice";
 
 const COUNTRY_OPTIONS = ["United States", "Canada", "Other"];
 
@@ -487,11 +492,13 @@ const patientLabel = (patient) => {
 };
 
 const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
+  const dispatch = useDispatch();
+  const providers = useSelector(selectProviderDropdownList);
+  const providersLoading = useSelector(selectProviderDropdownLoading);
+
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
   const [patientSearchText, setPatientSearchText] = useState("");
-  const [providers, setProviders] = useState([]);
-  const [providersLoading, setProvidersLoading] = useState(false);
 
   const {
     register,
@@ -531,30 +538,8 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
   }, [patientSearchText]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchProviders = async () => {
-      try {
-        setProvidersLoading(true);
-        const result = await providerService.getAllProviders(1, 100, "", true);
-        if (!isMounted) return;
-        setProviders(result?.providers || result?.items || []);
-      } catch {
-        if (!isMounted) return;
-        setProviders([]);
-      } finally {
-        if (isMounted) {
-          setProvidersLoading(false);
-        }
-      }
-    };
-
-    fetchProviders();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    dispatch(fetchAllProvidersForDropdown());
+  }, [dispatch]);
 
   const providerOptions = useMemo(
     () =>
@@ -567,13 +552,6 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
 
   const handleFormSubmit = (values) => {
     const customFields = removeEmptyCustomFields({
-      title: trimValue(values.title),
-      sexAtBirth: values.sexAtBirth,
-      genderIdentity: values.genderIdentity,
-      preferredDentistId: values.preferredDentistId,
-      preferredHygienistId: values.preferredHygienistId,
-      occupation: trimValue(values.occupation),
-      guardianEmployer: trimValue(values.guardianEmployer),
       workCountry: trimValue(values.workCountry),
       workAddressLine1: trimValue(values.workAddressLine1),
       workAddressLine2: trimValue(values.workAddressLine2),
@@ -581,7 +559,6 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       workState: trimValue(values.workState),
       workPostalCode: trimValue(values.workPostalCode),
       workPhoneNumber: trimValue(values.workPhoneNumber),
-      maritalStatus: values.maritalStatus,
       spouseFirstName: trimValue(values.spouseFirstName),
       spouseMiddleName: trimValue(values.spouseMiddleName),
       spouseLastName: trimValue(values.spouseLastName),
@@ -639,6 +616,16 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       ),
     });
 
+    const spouseFirstName = trimValue(values.spouseFirstName);
+    const spouseLastName = trimValue(values.spouseLastName);
+    const spouseName = (spouseFirstName || spouseLastName) ? `${spouseFirstName} ${spouseLastName}`.trim() : "";
+    
+    const spouseInfo = removeEmptyCustomFields({
+      name: spouseName,
+      phone: normalizePhone(values.spouseWorkPhoneNumber) || "",
+      email: trimValue(values.spouseEmailAddress) || "",
+    });
+
     const payload = removeEmptyCustomFields({
       firstName: trimValue(values.firstName),
       lastName: trimValue(values.lastName),
@@ -667,6 +654,16 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       isActive: true,
       address: Object.keys(address).length ? address : undefined,
       emergencyContact: Object.keys(emergencyContact).length ? emergencyContact : undefined,
+      spouseInfo: Object.keys(spouseInfo).length ? spouseInfo : undefined,
+      title: trimValue(values.title),
+      sexAtBirth: values.sexAtBirth,
+      genderIdentity: values.genderIdentity,
+      preferredDentistId: values.preferredDentistId,
+      preferredHygienistId: values.preferredHygienistId,
+      maritalStatus: values.maritalStatus,
+      occupation: trimValue(values.occupation),
+      employer: trimValue(values.employer) || trimValue(values.spouseEmployer),
+      guardianEmployer: trimValue(values.guardianEmployer),
       customFields: Object.keys(customFields).length ? customFields : undefined,
     });
 

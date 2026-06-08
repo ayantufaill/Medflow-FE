@@ -24,8 +24,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { patientService } from '../../services/patient.service';
-import { insuranceCompanyService, insurancePlanService } from '../../services/insurance.service';
+import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
+import { useInsuranceCatalog } from '../../hooks/redux/useInsuranceCatalog';
 import InsuranceDialog from '../insurance/InsuranceDialog';
 import ImportedCoverageModal from '../insurance/ImportedCoverageModal';
 import EditCoverageModal from '../insurance/EditCoverageModal';
@@ -34,8 +34,21 @@ import ConfirmationDialog from '../shared/ConfirmationDialog';
 export default function PatientInsuranceTabContent({ patientId }) {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [insurances, setInsurances] = useState([]);
-  const [allCompanies, setAllCompanies] = useState({ companies: [] });
+  const {
+    insurances,
+    fetch: fetchInsurances,
+    create: createInsurance,
+    update: updateInsurance,
+    remove: removeInsurance,
+  } = usePatientInsurance(patientId);
+
+  const {
+    companies,
+    plans: planCatalog,
+    templates: coverageTemplates,
+    fetchAllCatalog,
+  } = useInsuranceCatalog();
+
   const [insuranceDialog, setInsuranceDialog] = useState({ open: false, mode: 'add', insurance: null });
   const [insuranceMenu, setInsuranceMenu] = useState({ anchorEl: null, insurance: null });
   const [insuranceSaving, setInsuranceSaving] = useState(false);
@@ -45,21 +58,13 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const [editCoverageModal, setEditCoverageModal] = useState({ open: false, insurance: null, mode: 'edit' });
   const [creatingPolicy, setCreatingPolicy] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
-  const [planCatalog, setPlanCatalog] = useState([]);
-  const [coverageTemplates, setCoverageTemplates] = useState([]);
 
   const fetchInsurancesAndCompanies = async () => {
     try {
-      const [insList, companies, plans, templates] = await Promise.all([
-        patientService.getPatientInsurances(patientId, undefined),
-        insuranceCompanyService.getAllInsuranceCompanies(1, 500),
-        insurancePlanService.getInsurancePlans(1, 100, ''),
-        insurancePlanService.getCoverageTemplates(),
+      await Promise.all([
+        fetchInsurances(),
+        fetchAllCatalog(),
       ]);
-      setInsurances(insList || []);
-      setAllCompanies(companies || { companies: [] });
-      setPlanCatalog(plans?.plans || []);
-      setCoverageTemplates(templates?.templates || []);
     } catch (err) {
       console.error('Failed to load insurance data', err);
     }
@@ -79,7 +84,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
       return insuranceCompanyId.name || 'Unknown';
     }
     if (typeof insuranceCompanyId === 'string') {
-      const company = (allCompanies.companies || []).find((c) => (c._id || c.id) === insuranceCompanyId);
+      const company = (companies || []).find((c) => (c._id || c.id) === insuranceCompanyId);
       return company?.name || 'Unknown';
     }
     return 'Unknown';
@@ -107,9 +112,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const handleInsuranceActivate = async (insurance) => {
     setInsuranceMenu({ anchorEl: null, insurance: null });
     try {
-      await patientService.updatePatientInsurance(patientId, insurance._id || insurance.id, { isActive: true });
+      await updateInsurance(insurance._id || insurance.id, { isActive: true }).unwrap();
       showSnackbar('Insurance activated successfully', 'success');
-      await fetchInsurancesAndCompanies();
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to activate', 'error');
     }
@@ -117,9 +121,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const handleInsuranceDeactivate = async (insurance) => {
     setInsuranceMenu({ anchorEl: null, insurance: null });
     try {
-      await patientService.updatePatientInsurance(patientId, insurance._id || insurance.id, { isActive: false });
+      await updateInsurance(insurance._id || insurance.id, { isActive: false }).unwrap();
       showSnackbar('Insurance deactivated successfully', 'success');
-      await fetchInsurancesAndCompanies();
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate', 'error');
     }
@@ -131,9 +134,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const handleCreatePolicyFromImported = async (insurance) => {
     try {
       setCreatingPolicy(true);
-      await patientService.updatePatientInsurance(patientId, insurance._id || insurance.id, { isActive: true });
+      await updateInsurance(insurance._id || insurance.id, { isActive: true }).unwrap();
       showSnackbar('Policy created successfully', 'success');
-      await fetchInsurancesAndCompanies();
       setImportedCoverageModalOpen(false);
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create policy', 'error');
@@ -162,9 +164,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
         isActive: true,
         verificationStatus: 'pending',
       };
-      await patientService.createPatientInsurance(patientId, payload);
+      await createInsurance(payload).unwrap();
       showSnackbar('Plan saved successfully', 'success');
-      await fetchInsurancesAndCompanies();
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save plan', 'error');
       throw err;
@@ -177,10 +178,9 @@ export default function PatientInsuranceTabContent({ patientId }) {
     if (!insuranceDeleteDialog.insurance) return;
     try {
       setDeleteLoading(true);
-      await patientService.deletePatientInsurance(patientId, insuranceDeleteDialog.insurance._id || insuranceDeleteDialog.insurance.id);
+      await removeInsurance(insuranceDeleteDialog.insurance._id || insuranceDeleteDialog.insurance.id).unwrap();
       showSnackbar('Insurance deleted successfully', 'success');
       setInsuranceDeleteDialog({ open: false, insurance: null });
-      await fetchInsurancesAndCompanies();
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete', 'error');
     } finally {
@@ -439,10 +439,10 @@ export default function PatientInsuranceTabContent({ patientId }) {
         patientId={patientId}
         insurance={insuranceDialog.insurance}
         mode={insuranceDialog.mode}
-        companies={allCompanies.companies || []}
+        companies={companies || []}
         existingInsurances={insurances}
         onSave={async () => {
-          await fetchInsurancesAndCompanies();
+          await fetchInsurances();
           setInsuranceDialog({ open: false, mode: 'add', insurance: null });
         }}
         saving={insuranceSaving}

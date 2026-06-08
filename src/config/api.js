@@ -10,7 +10,7 @@ const getDefaultApiUrl = () => {
   return 'http://localhost:5001/api';
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getDefaultApiUrl();
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getDefaultApiUrl();
 
 // Verify base URL is loaded from env
 console.log('API_BASE_URL:', API_BASE_URL);

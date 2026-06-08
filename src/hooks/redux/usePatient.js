@@ -25,6 +25,9 @@ import {
   invalidatePatientInsurances,
   updatePatientInList,
   removePatientFromList,
+  createPatientThunk,
+  updatePatientThunk,
+  sendPatientUpdateRequestThunk,
 } from '../../store/slices/patientSlice';
 
 /**
@@ -120,6 +123,18 @@ export const usePatient = () => {
     dispatch(invalidatePatientDetail(patientId));
   }, [dispatch]);
 
+  const createPatient = useCallback((payload) => {
+    return dispatch(createPatientThunk(payload));
+  }, [dispatch]);
+
+  const updatePatient = useCallback((patientId, payload) => {
+    return dispatch(updatePatientThunk({ patientId, payload }));
+  }, [dispatch]);
+
+  const sendUpdateRequest = useCallback((patientId, payload) => {
+    return dispatch(sendPatientUpdateRequestThunk({ patientId, payload }));
+  }, [dispatch]);
+
   return {
     currentPatient,
     selectedPatientId,
@@ -130,6 +145,9 @@ export const usePatient = () => {
     setPatientId,
     clear,
     invalidate,
+    createPatient,
+    updatePatient,
+    sendUpdateRequest,
   };
 };
 

@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Paper,
   Alert,
 } from "@mui/material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { patientService } from "../../services/patient.service";
+import { usePatient } from "../../hooks/redux/usePatient";
 import NewPatientIntakeForm from "../../components/patients/NewPatientIntakeForm";
 
 const CreatePatientPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showSnackbar } = useSnackbar();
+  const { createPatient } = usePatient();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,10 +26,18 @@ const CreatePatientPage = () => {
       setSaving(true);
       setError("");
 
-      await patientService.createPatient(data);
+      await createPatient(data).unwrap();
 
       showSnackbar("Patient created successfully", "success");
-      navigate("/patients");
+      
+      const returnToPatientId = location.state?.returnToPatientId;
+      if (returnToPatientId) {
+        navigate(`/patients/details/${returnToPatientId}?tab=details`, {
+          state: { openFamilyDialog: true }
+        });
+      } else {
+        navigate("/patients");
+      }
     } catch (err) {
       let errorMessage = "Failed to create patient. Please try again.";
       

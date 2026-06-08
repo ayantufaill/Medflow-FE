@@ -20,10 +20,15 @@ export const CustomFormsSection = ({
       </Typography>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {customForms.map((f) => (
-          <Box
-            key={f.id}
-            sx={{
+        {customForms.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+            No custom forms uploaded yet. Click the upload button to add one.
+          </Typography>
+        ) : (
+          customForms.map((f) => (
+            <Box
+              key={f.id}
+              sx={{
               width: 190,
               textAlign: "center",
               cursor: "pointer",
@@ -76,13 +81,13 @@ export const CustomFormsSection = ({
                 color: "#424242",
               }}
             >
-              {truncateLabel(f.title.replace(/\n/g, " "))}
+              {truncateLabel((f.title || f.name || "Unknown Form").replace(/\n/g, " "))}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {f.status}
             </Typography>
           </Box>
-        ))}
+        )))}
       </Box>
     </Box>
   );

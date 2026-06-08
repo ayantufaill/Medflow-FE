@@ -16,7 +16,8 @@ import {
 import { Add as AddIcon } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { documentService } from "../../services/document.service";
-import { patientService } from "../../services/patient.service";
+import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
+import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, FloatingActions } from "../../components/patients";
@@ -67,60 +68,28 @@ const PatientAdditionalDocumentsPage = () => {
   const { showSnackbar } = useSnackbar();
   
   // State management
-  const [loading, setLoading] = useState(true);
-  const [patient, setPatient] = useState(null);
+  // Redux hooks
+  const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
+  const { 
+    documents: reduxDocuments, 
+    loading: docsLoading, 
+    fetch: fetchDocuments,
+    refresh: refreshDocuments,
+    remove: deleteDocumentThunk 
+  } = usePatientDocuments(patientId);
+
+  // Local state for demo data
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState("thumbnails");
   const [sortMode, setSortMode] = useState("category");
   
-  // Demo data state
-  const [demoClaimAttachments, setDemoClaimAttachments] = useState([
-    {
-      id: "demo-1",
-      name: "Progress Notes 1",
-      uploadedBy: "B.M",
-      uploadedDate: "03/18/2026",
-      status: "Open",
-      type: "IMAGE",
-    },
-    {
-      id: "demo-2",
-      name: "Perio Chart 1",
-      uploadedBy: "B.M",
-      uploadedDate: "02/19/2026",
-      status: "Open",
-      type: "PDF",
-    },
-  ]);
-  const [demoConsents, setDemoConsents] = useState([
-    {
-      id: "demo-c1",
-      name: "Invisalign consent",
-      uploadedBy: "K.H",
-      uploadedDate: "02/19/2026",
-      status: "Open",
-      type: "PDF",
-    },
-  ]);
-  const [customForms, setCustomForms] = useState([
-    {
-      id: "form-1",
-      title: "Consent for Braces\nRemoval -Orthodontic\nRetention - 02/18/2026",
-      status: "Not Signed",
-    },
-    {
-      id: "form-2",
-      title: "Retainer Consent Form\n02/18/2026",
-      status: "Signed",
-    },
-    {
-      id: "form-3",
-      title: "TDS Form",
-      status: "Signed",
-    },
-  ]);
-  
+  console.log("Documents:", documents);
+  const claimAttachments = documents.filter(d => d.category.includes('claim') || d.category === 'attachment');
+  const consents = documents.filter(d => d.category.includes('consent'));
+  const forms = documents.filter(d => d.category.includes('form') || d.category === 'custom_form');
+  const otherDocs = documents.filter(d => !d.category.includes('claim') && d.category !== 'attachment' && !d.category.includes('consent') && !d.category.includes('form') && d.category !== 'custom_form');
+
   // Dialog states
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
@@ -135,7 +104,7 @@ const PatientAdditionalDocumentsPage = () => {
   });
   const [editDialog, setEditDialog] = useState({
     open: false,
-    section: null,
+    section: "",
     docId: null,
     name: "",
     type: "",
@@ -143,42 +112,39 @@ const PatientAdditionalDocumentsPage = () => {
   });
 
   // Fetch patient and documents on mount
+  // Fetch data on mount using Redux thunks
   useEffect(() => {
-    let cancelled = false;
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [patientData, result] = await Promise.all([
-          patientService.getPatientById(patientId),
-          documentService.getDocumentsByPatient(patientId, 1, 100),
-        ]);
-        if (!cancelled) {
-          setPatient(patientData);
-          const allDocs = result?.documents || [];
-          const nonHipaaDocs = allDocs.filter((doc) => {
-            const type = (doc.documentType || "").toLowerCase();
-            const name = (doc.documentName || "").toLowerCase();
-            return type !== "hipaa" && !name.includes("hipaa");
-          });
-          setDocuments(nonHipaaDocs);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          showSnackbar(
-            err.response?.data?.error?.message ||
-              "Failed to load additional documents",
-            "error",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => {
-      cancelled = true;
-    };
-  }, [patientId, showSnackbar]);
+    if (patientId) {
+      fetchPatient(patientId);
+      fetchDocuments();
+    }
+  }, [patientId, fetchPatient, fetchDocuments]);
+
+  // Sync documents from Redux to local state for filtering
+  useEffect(() => {
+    if (reduxDocuments) {
+      const nonHipaaDocs = reduxDocuments
+        .filter((doc) => {
+          const type = (doc.documentType || "").toLowerCase();
+          const name = (doc.documentName || "").toLowerCase();
+          return type !== "hipaa" && !name.includes("hipaa");
+        })
+        .map(doc => ({
+          id: doc._id || doc.id,
+          name: doc.documentName || "Unknown Document",
+          uploadedBy: doc.uploadedBy?.name || "System",
+          uploadedDate: new Date(doc.uploadDate || doc.createdAt || new Date()).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' }),
+          status: doc.status || "Completed",
+          type: (doc.fileType || "PDF").toUpperCase(),
+          category: (doc.documentType || "Other").toLowerCase(),
+          title: doc.documentName || "Unknown Form"
+        }));
+      setDocuments(nonHipaaDocs);
+    }
+  }, [reduxDocuments]);
+
+  // Loading state (only show loading if we don't have data in cache yet)
+  const isActuallyLoading = docsLoading && documents.length === 0;
 
   const getPatientName = () => {
     if (patient?.firstName && patient?.lastName)
@@ -217,29 +183,12 @@ const PatientAdditionalDocumentsPage = () => {
           formData.append("documentType", "other");
           const displayName = file.name || `Additional document ${i + 1}`;
           formData.append("documentName", displayName);
+          
           await documentService.uploadDocument(formData);
-
-          const ext = (file.name || "").split(".").pop() || "";
-          const type =
-            ext.toLowerCase() === "pdf"
-              ? "PDF"
-              : ext
-                ? ext.toUpperCase()
-                : "IMAGE";
-
-          newRows.push({
-            id: `demo-upload-${Date.now()}-${i}`,
-            name: displayName,
-            uploadedBy,
-            uploadedDate,
-            status: "Open",
-            type,
-          });
         }
 
-        if (newRows.length) {
-          setDemoClaimAttachments((prev) => [...newRows, ...prev]);
-        }
+        // Fetch documents to refresh UI instead of locally mocking
+        await refreshDocuments();
 
         showSnackbar(`Uploaded ${files.length} document(s)`, "success");
       } catch (err) {
@@ -288,16 +237,25 @@ const PatientAdditionalDocumentsPage = () => {
     showSnackbar(`${row.name} shared with patient via portal`, "success");
   };
 
-  const handleConfirmDeleteCustomForm = () => {
+  const handleConfirmDeleteCustomForm = async () => {
     if (!customFormDeleteDialog.formId) {
       setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
       return;
     }
-    setCustomForms((prev) =>
-      prev.filter((item) => item.id !== customFormDeleteDialog.formId),
-    );
-    setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
-    showSnackbar("Custom form removed", "success");
+    try {
+      await deleteDocumentThunk(customFormDeleteDialog.formId).unwrap();
+      await refreshDocuments();
+      showSnackbar("Custom form removed", "success");
+    } catch (err) {
+      showSnackbar(
+        err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          "Failed to remove custom form",
+        "error"
+      );
+    } finally {
+      setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" });
+    }
   };
 
   const handleUploadCustomFormDocument = () => {
@@ -318,18 +276,12 @@ const PatientAdditionalDocumentsPage = () => {
           formData.append("patientId", patientId);
           formData.append("documentType", "custom_form");
           formData.append("documentName", file.name || `Custom form ${i + 1}`);
+          
           await documentService.uploadDocument(formData);
-
-          newForms.push({
-            id: `form-upload-${Date.now()}-${i}`,
-            title: file.name || `Custom form ${i + 1}`,
-            status: "Not Signed",
-          });
         }
 
-        if (newForms.length) {
-          setCustomForms((prev) => [...newForms, ...prev]);
-        }
+        // Fetch documents to refresh UI instead of locally mocking
+        await refreshDocuments();
 
         showSnackbar(
           `Uploaded ${files.length} custom form document(s)`,
@@ -356,33 +308,29 @@ const PatientAdditionalDocumentsPage = () => {
       docId: row.id,
       name: row.name,
       type: row.type,
-      category: row.type || "",
+      category: row.category || "",
     });
   };
 
-  const handleSaveEditDialog = () => {
-    const { section, docId, name, category } = editDialog;
-    if (!section || !docId) {
+  const handleSaveEditDialog = async () => {
+    const { docId, name, category } = editDialog;
+    if (!docId) {
       setEditDialog((prev) => ({ ...prev, open: false }));
       return;
     }
 
-    if (section === "claim") {
-      setDemoClaimAttachments((prev) =>
-        prev.map((row) =>
-          row.id === docId ? { ...row, name, type: category || row.type } : row,
-        ),
-      );
-    } else {
-      setDemoConsents((prev) =>
-        prev.map((row) =>
-          row.id === docId ? { ...row, name, type: category || row.type } : row,
-        ),
-      );
+    try {
+      await documentService.updateDocument(docId, {
+        documentName: name,
+        documentType: category || "other"
+      });
+      await refreshDocuments();
+      showSnackbar("Document details updated", "success");
+    } catch (err) {
+      showSnackbar("Failed to update document details", "error");
+    } finally {
+      setEditDialog((prev) => ({ ...prev, open: false }));
     }
-
-    showSnackbar("Document details updated", "success");
-    setEditDialog((prev) => ({ ...prev, open: false }));
   };
 
   // Delete document handler
@@ -393,46 +341,11 @@ const PatientAdditionalDocumentsPage = () => {
       return;
     }
 
-    // Demo rows: delete locally without hitting API
-    if (documentId.startsWith("demo-")) {
-      setDeleteLoading(true);
-      try {
-        if (documentId.startsWith("demo-c")) {
-          setDemoConsents((prev) =>
-            prev.filter((row) => row.id !== documentId),
-          );
-        } else {
-          setDemoClaimAttachments((prev) =>
-            prev.filter((row) => row.id !== documentId),
-          );
-        }
-        showSnackbar("Document removed", "success");
-      } finally {
-        setDeleteLoading(false);
-        setDeleteDialog({ open: false, documentId: null, documentName: "" });
-      }
-      return;
-    }
-
-    // Real documents: call API
     try {
       setDeleteLoading(true);
-      await documentService.deleteDocument(documentId);
+      await deleteDocumentThunk(documentId).unwrap();
+      await refreshDocuments();
       showSnackbar("Document deleted successfully", "success");
-      setDeleteDialog({ open: false, documentId: null, documentName: "" });
-      // Refresh documents
-      const result = await documentService.getDocumentsByPatient(
-        patientId,
-        1,
-        100,
-      );
-      const allDocs = result?.documents || [];
-      const nonHipaaDocs = allDocs.filter((doc) => {
-        const type = (doc.documentType || "").toLowerCase();
-        const name = (doc.documentName || "").toLowerCase();
-        return type !== "hipaa" && !name.includes("hipaa");
-      });
-      setDocuments(nonHipaaDocs);
     } catch (err) {
       showSnackbar(
         err?.response?.data?.error?.message ||
@@ -442,10 +355,11 @@ const PatientAdditionalDocumentsPage = () => {
       );
     } finally {
       setDeleteLoading(false);
+      setDeleteDialog({ open: false, documentId: null, documentName: "" });
     }
   };
 
-  if (loading && !patient) {
+  if (isActuallyLoading && !patient) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
         <CircularProgress />
@@ -506,25 +420,23 @@ const PatientAdditionalDocumentsPage = () => {
       </Box>
 
       {/* Custom Forms Section */}
-      {customForms.length > 0 && (
-        <CustomFormsSection
-          customForms={customForms}
-          selectedFormId={customFormDeleteDialog.formId}
-          onFormClick={(f) =>
-            showSnackbar(
-              `Opening form: ${f.title.replace(/\n/g, " ")}`,
-              "info",
-            )
-          }
-          onFormDeleteClick={(f) =>
-            setCustomFormDeleteDialog({
-              open: true,
-              formId: f.id,
-              formTitle: f.title.replace(/\n/g, " "),
-            })
-          }
-        />
-      )}
+      <CustomFormsSection
+        customForms={forms}
+        selectedFormId={customFormDeleteDialog.formId}
+        onFormClick={(f) =>
+          showSnackbar(
+            `Opening form: ${(f.title || f.name || "Unknown Form").replace(/\n/g, " ")}`,
+            "info",
+          )
+        }
+        onFormDeleteClick={(f) =>
+          setCustomFormDeleteDialog({
+            open: true,
+            formId: f.id,
+            formTitle: (f.title || f.name || "Unknown Form").replace(/\n/g, " "),
+          })
+        }
+      />
 
       {/* Additional Documents Section */}
       <Card>
@@ -636,20 +548,18 @@ const PatientAdditionalDocumentsPage = () => {
         </Box>
 
         <Box sx={{ mt: 2 }}>
-          {loading ? (
+          {isActuallyLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress />
             </Box>
-          ) : documents.length === 0 && 
-                    demoClaimAttachments.length === 0 && 
-                    demoConsents.length === 0 ? (
+          ) : documents.length === 0 ? (
             <Alert severity="info">
               No additional documents for this patient. Click "Upload new
               document" to add one.
             </Alert>
           ) : viewMode === "thumbnails" ? (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {[...demoClaimAttachments, ...demoConsents].map((doc) => (
+              {[...claimAttachments, ...consents, ...otherDocs].map((doc) => (
                 <DocumentThumbnail
                   key={doc.id}
                   document={doc}
@@ -662,11 +572,11 @@ const PatientAdditionalDocumentsPage = () => {
           ) : (
             <Box>
               {/* Claim Attachment section */}
-              {demoClaimAttachments.length > 0 && (
+              {claimAttachments.length > 0 && (
                 <DocumentTable
                   title="Claim Attachment"
                   tooltipTitle="Uploaded claim-related attachments"
-                  documents={demoClaimAttachments}
+                  documents={claimAttachments}
                   sortMode={sortMode}
                   onEdit={(row) => handleEditDocument("claim", row)}
                   onOpen={handleOpenDocument}
@@ -683,13 +593,34 @@ const PatientAdditionalDocumentsPage = () => {
               )}
 
               {/* Consent section */}
-              {demoConsents.length > 0 && (
+              {consents.length > 0 && (
                 <DocumentTable
                   title="Consent"
                   tooltipTitle="Uploaded consent documents"
-                  documents={demoConsents}
+                  documents={consents}
                   sortMode={sortMode}
                   onEdit={(row) => handleEditDocument("consent", row)}
+                  onOpen={handleOpenDocument}
+                  onDownload={handleDownloadDocument}
+                  onShare={handleShareWithPatient}
+                  onDelete={(row) =>
+                    setDeleteDialog({
+                      open: true,
+                      documentId: row.id,
+                      documentName: row.name,
+                    })
+                  }
+                />
+              )}
+
+              {/* Other Documents section */}
+              {otherDocs.length > 0 && (
+                <DocumentTable
+                  title="Other Documents"
+                  tooltipTitle="Additional uncategorized documents"
+                  documents={otherDocs}
+                  sortMode={sortMode}
+                  onEdit={(row) => handleEditDocument("other", row)}
                   onOpen={handleOpenDocument}
                   onDownload={handleDownloadDocument}
                   onShare={handleShareWithPatient}
