@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchPatientDocumentsThunk,
   deleteDocumentThunk,
+  invalidatePatientDocuments,
   selectPatientDocumentsCache,
   selectPatientDocumentsLoading,
   selectPatientDocumentsError,
@@ -22,6 +23,12 @@ export const usePatientDocuments = (patientId) => {
     return dispatch(fetchPatientDocumentsThunk({ patientId, page, limit }));
   }, [dispatch, patientId]);
 
+  const refresh = useCallback((page = 1, limit = 50) => {
+    if (!patientId) return;
+    dispatch(invalidatePatientDocuments(patientId));
+    return dispatch(fetchPatientDocumentsThunk({ patientId, page, limit }));
+  }, [dispatch, patientId]);
+
   const remove = useCallback((documentId) => {
     if (!patientId || !documentId) return;
     return dispatch(deleteDocumentThunk({ documentId, patientId }));
@@ -32,6 +39,7 @@ export const usePatientDocuments = (patientId) => {
     loading,
     error,
     fetch,
+    refresh,
     remove,
   };
 };

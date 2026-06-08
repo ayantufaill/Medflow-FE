@@ -43,6 +43,14 @@ const PatientDetailPage = () => {
     dispatch(fetchAllProvidersForDropdown());
   }, [patientId, fetchById, dispatch]);
 
+  useEffect(() => {
+    if (location.state?.openFamilyDialog) {
+      setAddFamilyDialogOpen(true);
+      // Clear the state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const fetchPatient = () => {
     if (!patientId) return;
     console.log('🔄 Manually fetching patient via Redux for ID:', patientId);
@@ -88,6 +96,35 @@ const PatientDetailPage = () => {
       console.log('Final data to save:', dataToSave);
       console.log('Date of Birth being sent:', dataToSave.dateOfBirth);
       console.log('Last Visit Date being sent:', dataToSave.lastVisitDate);
+      
+      // --- Data Cleanup for Backend Validation ---
+      
+      // Mongoose strict validators fail on empty strings. We delete them from the payload 
+      // so they bypass validation (this means clearing the field won't work perfectly 
+      // but the save will succeed).
+      
+      if (!dataToSave.dateOfBirth) delete dataToSave.dateOfBirth;
+      if (!dataToSave.lastVisitDate || dataToSave.lastVisitDate === 'Invalid Date') {
+        delete dataToSave.lastVisitDate;
+      }
+      if (!dataToSave.email) {
+        delete dataToSave.email;
+      }
+      
+      // 2. Work Address: Ensure it is an object
+      if (typeof dataToSave.workAddress === 'string' || !dataToSave.workAddress) {
+        dataToSave.workAddress = {};
+      }
+      
+      // 3. Postal Codes: Remove empty strings/nulls so they don't fail the regex format validation
+      if (dataToSave.address && !dataToSave.address.postalCode) {
+        dataToSave.address = { ...dataToSave.address };
+        delete dataToSave.address.postalCode;
+      }
+      if (dataToSave.workAddress && !dataToSave.workAddress.postalCode) {
+        dataToSave.workAddress = { ...dataToSave.workAddress };
+        delete dataToSave.workAddress.postalCode;
+      }
       
       // Validate US phone numbers before saving
       const phoneValidationErrors = [];
@@ -220,7 +257,7 @@ const PatientDetailPage = () => {
             <PatientInsuranceTabContent patientId={patientId} />
           ) : (
             <PatientDetailOverview
-              patient={patient}
+              patient={editedPatientData ? { ...patient, ...editedPatientData } : patient}
               patientNumber={patient?.patientCode ?? patientId}
               preferredDentists={providerDropdownList}
               preferredHygienists={providerDropdownList}

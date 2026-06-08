@@ -258,13 +258,13 @@ const PatientDentalHistoryPage = () => {
               })
               .filter(Boolean)
           : [];
-        
-        const testDates = labels.length > 0 ? labels : [
-          'Jan 15, 2025',
-          'Feb 20, 2025',
-          'Mar 10, 2025',
+
+        // Fallback to today's date if no visit dates exist so the timeline doesn't disappear
+        const fallbackDates = labels.length > 0 ? labels : [
+          formatDate(new Date())
         ];
-        setVisitDates(testDates);
+        
+        setVisitDates(fallbackDates);
         setSignature(data?.review?.signatureDataUrl || null);
       })
       .catch((err) => {
@@ -328,7 +328,7 @@ const PatientDentalHistoryPage = () => {
       setLocalPersonalHistory(Array.isArray(data?.personalHistory) ? data.personalHistory : []);
       setLocalGumAndBone(Array.isArray(data?.gumAndBone) ? data.gumAndBone : []);
       setLocalBiteAndJawJoint(Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : []);
-      setVisitDates(Array.isArray(data?.visitDates) ? data.visitDates : []);
+      
       setSignature(data?.review?.signatureDataUrl || signature || null);
       showSnackbar(reviewedWithPatient ? "Dental history reviewed" : "Dental history updated", "success");
     } catch (err) {

@@ -311,7 +311,9 @@ export default function PatientDetailOverview({
         <Divider sx={{ my: 4 }} />
         <PatientPreferencesGrid 
           patient={patient} 
-          isEditMode={isEditMode} 
+          isEditMode={isEditMode}
+          onPatientDataChange={onPatientDataChange}
+          providers={preferredDentists}
         />
       </Paper>
 
