@@ -286,10 +286,13 @@ const AddNewPatientAppointmentForm = ({
   return (
     <Dialog
       open={open}
-      onClose={onCancel}
+      onClose={(event, reason) => {
+        if (reason !== 'backdropClick' && onCancel) {
+          onCancel();
+        }
+      }}
       maxWidth="lg"
       fullWidth
-      disableBackdropClick
       disableScrollLock
       BackdropProps={{
         sx: {

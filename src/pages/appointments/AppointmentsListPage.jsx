@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDebounce } from 'use-debounce';
 import {
   Box,
   Typography,
@@ -31,6 +32,7 @@ import {
   Select,
   Grid,
   Alert,
+  Skeleton,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -91,7 +93,8 @@ const AppointmentsListPage = () => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [checkInDialog, setCheckInDialog] = useState({ open: false, appointment: null, copayAmount: 0 });
   const [checkInLoading, setCheckInLoading] = useState(false);
-  const searchDebounceTimerRef = useRef(null);
+
+  const [debouncedSearch] = useDebounce(search, 500);
 
   const hasActiveFilters = search || statusFilter || startDate || endDate;
   const roleNames = (user?.roles || []).map((role) => (typeof role === 'string' ? role : role?.name || '')).filter(Boolean);
@@ -106,20 +109,13 @@ const AppointmentsListPage = () => {
       status: statusFilter || '',
       startDate: startDate ? dayjs(startDate).format('YYYY-MM-DDTHH:mm') : '',
       endDate: endDate ? dayjs(endDate).format('YYYY-MM-DDTHH:mm') : '',
-      search: search || '',
+      search: debouncedSearch || '',
     });
-  }, [fetchAppointmentsRedux, page, rowsPerPage, statusFilter, startDate, endDate, search]);
+  }, [fetchAppointmentsRedux, page, rowsPerPage, statusFilter, startDate, endDate, debouncedSearch]);
 
   useEffect(() => {
-    // Debounce search
-    if (searchDebounceTimerRef.current) clearTimeout(searchDebounceTimerRef.current);
-    searchDebounceTimerRef.current = setTimeout(() => {
-      doFetch();
-    }, search ? 500 : 0);
-    return () => {
-      if (searchDebounceTimerRef.current) clearTimeout(searchDebounceTimerRef.current);
-    };
-  }, [doFetch, search]);
+    doFetch();
+  }, [doFetch]);
 
   useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
 
@@ -279,7 +275,7 @@ const AppointmentsListPage = () => {
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <Grid container spacing={2} sx={{ mb: 3, alignItems: 'flex-end' }}>
-            <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 fullWidth size="small" label="Search" placeholder="Search by patient, provider name, code..."
                 value={search}
@@ -290,7 +286,7 @@ const AppointmentsListPage = () => {
                 }}
               />
             </Grid>
-            <Grid item size={{ xs: 12, sm: 6, md: 2 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size="small">
                 <InputLabel id="status-filter-label">Status</InputLabel>
                 <Select labelId="status-filter-label" value={statusFilter} label="Status" onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
@@ -304,13 +300,13 @@ const AppointmentsListPage = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <DateTimePicker label="Start Date & Time" value={startDate} onChange={(v) => { setStartDate(v); setPage(0); }} slotProps={{ textField: { fullWidth: true, size: 'small' } }} />
             </Grid>
-            <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <DateTimePicker label="End Date & Time" value={endDate} onChange={(v) => { setEndDate(v); setPage(0); }} slotProps={{ textField: { fullWidth: true, size: 'small' } }} minDateTime={startDate} />
             </Grid>
-            <Grid item size={{ xs: 12, sm: 6, md: 1 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 1 }}>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Tooltip title="Refresh"><IconButton onClick={refetch} disabled={loading} color="primary"><RefreshIcon /></IconButton></Tooltip>
                 {hasActiveFilters && <Tooltip title="Reset Filters"><IconButton onClick={handleResetFilters} color="secondary"><FilterAltOffIcon /></IconButton></Tooltip>}
@@ -320,7 +316,46 @@ const AppointmentsListPage = () => {
         </LocalizationProvider>
 
         {loading ? (
-          <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                  <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                  <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                  <TableCell><Skeleton variant="text" width={80} /></TableCell>
+                  <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                  <TableCell><Skeleton variant="text" width={80} /></TableCell>
+                  <TableCell align="right"><Skeleton variant="text" width={50} sx={{ ml: 'auto' }} /></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {[...Array(rowsPerPage || 5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Box>
+                        <Skeleton variant="text" width={100} height={20} />
+                        <Skeleton variant="text" width={60} height={15} sx={{ mt: 0.5 }} />
+                      </Box>
+                    </TableCell>
+                    <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                    <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                    <TableCell><Skeleton variant="text" width={80} /></TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: 1 }} />
+                        <Skeleton variant="text" width={60} height={16} />
+                      </Box>
+                    </TableCell>
+                    <TableCell><Skeleton variant="rectangular" width={70} height={24} sx={{ borderRadius: 1 }} /></TableCell>
+                    <TableCell align="right">
+                      <IconButton disabled><MoreVertIcon /></IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
           <>
             <TableContainer>
@@ -388,6 +423,14 @@ const AppointmentsListPage = () => {
                 <ListItemText>Edit</ListItemText>
               </MenuItem>
             );
+            if (canReschedule(appointment)) {
+              items.push(
+                <MenuItem key="reschedule" onClick={() => handleReschedule(actionMenu.appointmentId)}>
+                  <ListItemIcon><CalendarTodayIcon fontSize="small" /></ListItemIcon>
+                  <ListItemText>Reschedule</ListItemText>
+                </MenuItem>
+              );
+            }
             if (canCheckIn(appointment)) {
               items.push(
                 <MenuItem key="check-in" onClick={() => handleCheckIn(actionMenu.appointmentId)}>
