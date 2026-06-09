@@ -3,20 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Paper,
+  Alert,
   IconButton,
-  Button,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentService } from '../../services/appointment.service';
 import { patientService } from '../../services/patient.service';
-import { useDropdownData } from '../../hooks/redux/useDropdownData';
-import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
+import { languageService } from '../../services/language.service';
+import AppointmentForm from '../../components/appointments/AppointmentForm';
 
 const CreateAppointmentPage = () => {
   const navigate = useNavigate();
@@ -26,7 +23,7 @@ const CreateAppointmentPage = () => {
   const [error, setError] = useState('');
   const [patients, setPatients] = useState([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
-  const { providers } = useDropdownData({ providers: true });
+  const [languages, setLanguages] = useState([]);
 
   const initialDateTime = useMemo(() => {
     const date = searchParams.get('date');
@@ -40,6 +37,16 @@ const CreateAppointmentPage = () => {
     }
     return d.hour(9).minute(5);
   }, [searchParams]);
+
+  const initialData = useMemo(() => {
+    if (!initialDateTime) return null;
+    return {
+      appointmentDate: initialDateTime,
+      startTime: initialDateTime,
+      endTime: initialDateTime.add(30, 'minute'),
+      durationMinutes: 30,
+    };
+  }, [initialDateTime]);
 
   const searchPatients = useCallback(async (search = '') => {
     try {
@@ -56,49 +63,14 @@ const CreateAppointmentPage = () => {
 
   useEffect(() => {
     searchPatients('');
+    languageService.getAllLanguages(true).then((result) => setLanguages(result || [])).catch(() => {});
   }, [searchPatients]);
 
-  const handleSubmit = async (formData) => {
-    const patientId = formData.patientId;
-    if (!patientId) {
-      showSnackbar('Please select a patient.', 'warning');
-      return;
-    }
-    const start = formData.appointmentDate && formData.startTime
-      ? dayjs(`${formData.appointmentDate}T${formData.startTime}`)
-      : dayjs();
-    const duration = formData.durationMinutes || 30;
-    const end = start.add(duration, 'minute');
-    const provider = providers?.find(
-      (p) =>
-        (p.firstName &&
-          p.lastName &&
-          `${p.firstName} ${p.lastName}` === formData.providerId) ||
-        p._id === formData.providerId,
-    );
-    const effectiveProvider = provider || (providers && providers[0]);
-    const payload = {
-      patientId,
-      providerId: effectiveProvider?._id,
-      appointmentDate: start.format('YYYY-MM-DD'),
-      startTime: start.format('HH:mm'),
-      endTime: end.format('HH:mm'),
-      durationMinutes: duration,
-      chiefComplaint: '',
-      notes: formData.notes || '',
-      roomId: undefined,
-      requiresInterpreter: false,
-      interpreterLanguage: '',
-      insuranceVerified: false,
-      copayCollected: 0,
-      reminderSent: false,
-      customFields: {},
-      status: formData.status || 'scheduled',
-    };
+  const onSubmit = async (formData) => {
     try {
       setSaving(true);
       setError('');
-      await appointmentService.createAppointment(payload);
+      await appointmentService.createAppointment(formData);
       showSnackbar('Appointment created successfully', 'success');
       navigate('/appointments');
     } catch (err) {
@@ -114,37 +86,39 @@ const CreateAppointmentPage = () => {
   };
 
   return (
-    <Box sx={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Dialog open={!!error} onClose={() => setError('')} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6" color="error">
-              Error
-            </Typography>
-            <IconButton size="small" onClick={() => setError('')}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography>{error}</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setError('')} variant="contained" color="error">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+        <IconButton onClick={() => window.history.back()}>
+          <ArrowBackIcon />
+        </IconButton>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            New Appointment
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Fill in the details below to schedule a new patient appointment.
+          </Typography>
+        </Box>
+      </Box>
 
-      <AddNewPatientAppointmentForm
-        patients={patients}
-        loadingPatients={loadingPatients}
-        onPatientSearch={searchPatients}
-        onSubmit={handleSubmit}
-        onCancel={() => navigate('/appointments')}
-        loading={saving}
-        initialDateTime={initialDateTime || dayjs().hour(9).minute(5)}
-      />
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <AppointmentForm
+          onSubmit={onSubmit}
+          initialData={initialData}
+          loading={saving}
+          isEditMode={false}
+          patients={patients}
+          loadingPatients={loadingPatients}
+          languages={languages}
+          onPatientSearch={searchPatients}
+        />
+      </Paper>
     </Box>
   );
 };
