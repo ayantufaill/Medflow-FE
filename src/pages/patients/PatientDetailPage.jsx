@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams, Navigate } from 'react-router-dom';
 import { Box, Button, CircularProgress, Alert } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { PatientDetailOverview, AddFamilyMemberDialog } from '../../components/patient-detail';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
-import { PatientInsuranceTabContent } from '../../components/patient-tabs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatient } from '../../hooks/redux/usePatient';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,6 +10,10 @@ import { fetchAllProvidersForDropdown } from '../../store/slices/providerSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
 import { validateUSPhoneNumber } from '../../validations/patientValidations';
+
+const PatientDetailOverview = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.PatientDetailOverview })));
+const AddFamilyMemberDialog = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.AddFamilyMemberDialog })));
+const PatientInsuranceTabContent = lazy(() => import('../../components/patient-tabs').then(module => ({ default: module.PatientInsuranceTabContent })));
 
 /**
  * Lightweight patient details page — dedicated route like signed-documents.
@@ -253,39 +255,45 @@ const PatientDetailPage = () => {
       <PatientSectionTabs activeTab={tabParam} patientId={patientId} />
       <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
         <ErrorBoundary>
-          {tabParam === 'insurance' ? (
-            <PatientInsuranceTabContent patientId={patientId} />
-          ) : (
-            <PatientDetailOverview
-              patient={editedPatientData ? { ...patient, ...editedPatientData } : patient}
-              patientNumber={patient?.patientCode ?? patientId}
-              preferredDentists={providerDropdownList}
-              preferredHygienists={providerDropdownList}
-              isEditMode={isEditMode}
-              onEdit={() => setIsEditMode(true)}
-              onSave={handleSavePatient}
-              onCancelEdit={handleCancelEdit}
-              onPatientDataChange={handlePatientDataChange}
-              onRefresh={fetchPatient}
-              onDeactivate={() =>
-                setDeactivateDialog({
-                  open: true,
-                  patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
-                })
-              }
-              onActivate={() =>
-                setActivateDialog({
-                  open: true,
-                  patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
-                })
-              }
-              onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
-              onBalance={() => navigate(`/patients/details/${patientId}?tab=insurance`)}
-              onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
-              onAddFamilyMember={() => setAddFamilyDialogOpen(true)}
-              onSendUpdateRequest={handleSendUpdateRequest}
-            />
-          )}
+          <Suspense fallback={
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          }>
+            {tabParam === 'insurance' ? (
+              <PatientInsuranceTabContent patientId={patientId} />
+            ) : (
+              <PatientDetailOverview
+                patient={editedPatientData ? { ...patient, ...editedPatientData } : patient}
+                patientNumber={patient?.patientCode ?? patientId}
+                preferredDentists={providerDropdownList}
+                preferredHygienists={providerDropdownList}
+                isEditMode={isEditMode}
+                onEdit={() => setIsEditMode(true)}
+                onSave={handleSavePatient}
+                onCancelEdit={handleCancelEdit}
+                onPatientDataChange={handlePatientDataChange}
+                onRefresh={fetchPatient}
+                onDeactivate={() =>
+                  setDeactivateDialog({
+                    open: true,
+                    patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
+                  })
+                }
+                onActivate={() =>
+                  setActivateDialog({
+                    open: true,
+                    patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient',
+                  })
+                }
+                onConvertToNonPatient={() => showSnackbar('Convert to non-patient — coming soon', 'info')}
+                onBalance={() => navigate(`/patients/details/${patientId}?tab=insurance`)}
+                onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
+                onAddFamilyMember={() => setAddFamilyDialogOpen(true)}
+                onSendUpdateRequest={handleSendUpdateRequest}
+              />
+            )}
+          </Suspense>
         </ErrorBoundary>
       </Box>
       <ConfirmationDialog
@@ -310,37 +318,39 @@ const PatientDetailPage = () => {
         confirmColor="success"
         loading={deactivateLoading}
       />
-      <AddFamilyMemberDialog
-        open={addFamilyDialogOpen}
-        onClose={() => setAddFamilyDialogOpen(false)}
-        currentPatientId={patientId}
-        onConfirm={async (selectedPatient) => {
-          try {
-            setAddFamilyDialogOpen(false);
-            const currentHousehold = Array.isArray(patient?.household) ? patient.household : [];
-            
-            // Check if already in household
-            if (currentHousehold.some(m => (m._id || m.id) === (selectedPatient._id || selectedPatient.id))) {
-              showSnackbar('This patient is already a family member', 'info');
-              return;
+      <Suspense fallback={null}>
+        <AddFamilyMemberDialog
+          open={addFamilyDialogOpen}
+          onClose={() => setAddFamilyDialogOpen(false)}
+          currentPatientId={patientId}
+          onConfirm={async (selectedPatient) => {
+            try {
+              setAddFamilyDialogOpen(false);
+              const currentHousehold = Array.isArray(patient?.household) ? patient.household : [];
+              
+              // Check if already in household
+              if (currentHousehold.some(m => (m._id || m.id) === (selectedPatient._id || selectedPatient.id))) {
+                showSnackbar('This patient is already a family member', 'info');
+                return;
+              }
+
+              const newMember = {
+                id: selectedPatient._id || selectedPatient.id,
+                firstName: selectedPatient.firstName,
+                lastName: selectedPatient.lastName,
+                dateOfBirth: selectedPatient.dateOfBirth,
+                relationship: 'Family Member'
+              };
+
+              const updatedHousehold = [...currentHousehold, newMember];
+              await updatePatient(patientId, { household: updatedHousehold }).unwrap();
+              showSnackbar('Family member linked successfully', 'success');
+            } catch (err) {
+              showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');
             }
-
-            const newMember = {
-              id: selectedPatient._id || selectedPatient.id,
-              firstName: selectedPatient.firstName,
-              lastName: selectedPatient.lastName,
-              dateOfBirth: selectedPatient.dateOfBirth,
-              relationship: 'Family Member'
-            };
-
-            const updatedHousehold = [...currentHousehold, newMember];
-            await updatePatient(patientId, { household: updatedHousehold }).unwrap();
-            showSnackbar('Family member linked successfully', 'success');
-          } catch (err) {
-            showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');
-          }
-        }}
-      />
+          }}
+        />
+      </Suspense>
     </Box>
   );
 };
