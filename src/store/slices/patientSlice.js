@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { patientService } from '../../services/patient.service';
 import { documentService } from '../../services/document.service';
+import { invoiceService } from '../../services/invoice.service';
 
 // ─── Async Thunks ────────────────────────────────────────────
 
@@ -63,6 +64,33 @@ export const fetchPatientInsurances = createAsyncThunk(
       }
       if (patient.insurancesCache && patient.insurancesCache[patientId]) {
         return false;
+      }
+      return true;
+    }
+  }
+);
+
+export const fetchPatientBalance = createAsyncThunk(
+  'patient/fetchBalance',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const balance = await invoiceService.getPatientBalance(patientId);
+      return { patientId, balance };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch balance');
+    }
+  },
+  {
+    condition: (patientId, { getState }) => {
+      const { patient } = getState();
+      if (patient.balanceLoading) {
+        return false;
+      }
+      if (patient.balanceCache && patient.balanceCache[patientId]) {
+        const cached = patient.balanceCache[patientId];
+        if ((Date.now() - cached.timestamp) < 5 * 60 * 1000) {
+          return false;
+        }
       }
       return true;
     }
@@ -277,6 +305,10 @@ const initialState = {
   // Insurances cache
   insurancesCache: {}, // { [patientId]: { data, timestamp } }
   patientInsurancesLoading: false,
+
+  // Balance cache
+  balanceCache: {}, // { [patientId]: { data, timestamp } }
+  balanceLoading: false,
 };
 
 // Cache disabled - always fetch fresh data from backend
@@ -310,11 +342,21 @@ const patientSlice = createSlice({
     invalidatePatients: (state) => {
       state.lastFetched = null;
     },
-    invalidatePatientDetail: (state, action) => {
-      delete state.cache[action.payload];
-    },
     invalidatePatientInsurances: (state, action) => {
-      delete state.insurancesCache[action.payload];
+      const patientId = action.payload;
+      if (patientId) {
+        delete state.insurancesCache[patientId];
+      } else {
+        state.insurancesCache = {};
+      }
+    },
+    invalidatePatientBalance: (state, action) => {
+      const patientId = action.payload;
+      if (patientId) {
+        delete state.balanceCache[patientId];
+      } else {
+        state.balanceCache = {};
+      }
     },
     // Update a patient in the list after edit
     updatePatientInList: (state, action) => {
@@ -373,6 +415,21 @@ const patientSlice = createSlice({
       .addCase(fetchPatientInsurances.rejected, (state) => {
         state.patientInsurancesLoading = false;
       })
+      // Fetch Patient Balance
+      .addCase(fetchPatientBalance.pending, (state) => {
+        state.balanceLoading = true;
+      })
+      .addCase(fetchPatientBalance.fulfilled, (state, action) => {
+        const { patientId, balance } = action.payload;
+        state.balanceCache[patientId] = {
+          data: balance,
+          timestamp: Date.now(),
+        };
+        state.balanceLoading = false;
+      })
+      .addCase(fetchPatientBalance.rejected, (state) => {
+        state.balanceLoading = false;
+      })
       // fetchMedicalHistoryThunk
       .addCase(fetchMedicalHistoryThunk.pending, (state) => {
         state.medicalHistoryLoading = true;
@@ -411,6 +468,7 @@ export const {
   invalidatePatients,
   invalidatePatientDetail,
   invalidatePatientInsurances,
+  invalidatePatientBalance,
   updatePatientInList,
   removePatientFromList,
 } = patientSlice.actions;
@@ -435,6 +493,7 @@ export const selectMedicalHistoryError = (state) => state.patient.medicalHistory
 export const selectCurrentDentalHistory = (state) => state.patient.currentDentalHistory;
 export const selectDentalHistoryLoading = (state) => state.patient.dentalHistoryLoading;
 export const selectDentalHistoryError = (state) => state.patient.dentalHistoryError;
+export const selectPatientBalanceCache = (state) => state.patient.balanceCache;
 
 // Check if cache is valid
 export const selectIsCacheValid = (state) => {

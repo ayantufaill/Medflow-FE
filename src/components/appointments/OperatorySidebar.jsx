@@ -47,10 +47,9 @@ import PatientChat from "../shared/PatientChat";
 import AppointmentPage from "../shared/AppointmentPage";
 import { compactInputLabelSx, compactInputValueSx } from "../../constants/styles";
 import PatientRouteSlipDialog from "./PatientRouteSlipDialog";
-import { patientService } from "../../services/patient.service";
-import { invoiceService } from "../../services/invoice.service";
 import FamilyAppointmentsDialog from "./FamilyAppointmentsDialog";
 import AppointmentHistoryDialog from "./AppointmentHistoryDialog";
+import { usePatient, usePatientBalance } from "../../hooks/redux/usePatient";
 
 const StyledDateCalendar = ({ value, onChange }) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -230,13 +229,16 @@ const OperatorySidebar = ({
 }) => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [appointmentStatus, setAppointmentStatus] = useState("confirmed");
-  const [patientDetails, setPatientDetails] = useState(null);
-  const [patientBalance, setPatientBalance] = useState(null);
+  const [viewMode, setViewMode] = useState("schedule");
+  // Derived patient details from Redux hook
+  const { currentPatient: patientDetails, loading: patientLoading, fetchById, clear: clearPatientDetail } = usePatient();
+  const { getBalance, fetchBalance, loading: balanceLoading } = usePatientBalance();
+  const patientBalance = getBalance(selectedPatient?.id || selectedPatient?._id);
+  const loadingDetails = patientLoading || balanceLoading;
   const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [familyExpanded, setFamilyExpanded] = useState(true);
   const [proceduresExpanded, setProceduresExpanded] = useState(true);
   const [recareExpanded, setRecareExpanded] = useState(true);
-  const [loadingDetails, setLoadingDetails] = useState(false);
   
   // --- Search Form State ---
   const [searchProvider, setSearchProvider] = useState(null);
@@ -301,31 +303,14 @@ const OperatorySidebar = ({
   const handleAppointmentHistoryClick = () => setAppointmentHistoryOpen(true);
   const handleCloseAppointmentHistory = () => setAppointmentHistoryOpen(false);
 
-  // Fetch detailed patient data when a patient is selected
+  // Fetch detailed patient data via Redux when a patient is selected
   useEffect(() => {
     if (selectedPatient?.id || selectedPatient?._id) {
       const pid = selectedPatient.id || selectedPatient._id;
-      const fetchPatientFullDetails = async () => {
-        setLoadingDetails(true);
-        try {
-          const [details, balance] = await Promise.all([
-            patientService.getPatientWorkspace(pid),
-            invoiceService.getPatientBalance(pid)
-          ]);
-          setPatientDetails(details);
-          setPatientBalance(balance);
-        } catch (error) {
-          console.error("Error fetching patient details:", error);
-        } finally {
-          setLoadingDetails(false);
-        }
-      };
-      fetchPatientFullDetails();
-    } else {
-      setPatientDetails(null);
-      setPatientBalance(null);
+      fetchById(pid);
+      fetchBalance(pid);
     }
-  }, [selectedPatient]);
+  }, [selectedPatient, fetchById, fetchBalance]);
 
   useEffect(() => {
     if (isCreatingPatient) return;
@@ -414,6 +399,11 @@ const OperatorySidebar = ({
                   }
                 }}
                 inputValue={patientQuery}
+                onOpen={() => {
+                  if (!patients || patients.length === 0) {
+                    onPatientSearch?.("");
+                  }
+                }}
                 onInputChange={(_, value, reason) => {
                   if (reason === 'input') {
                     setPatientQuery(value);
@@ -422,7 +412,7 @@ const OperatorySidebar = ({
                   } else if (reason === 'clear') {
                     setPatientQuery('');
                     setSelectedPatient(null);
-                    setPatientDetails(null);
+                    clearPatientDetail();
                     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
                     onPatientSearch?.('');
                   }

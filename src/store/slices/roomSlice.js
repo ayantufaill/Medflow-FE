@@ -36,6 +36,12 @@ export const fetchAllRoomsForDropdown = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch rooms');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { room } = getState();
+      return !room.dropdownLoading;
+    },
   }
 );
 

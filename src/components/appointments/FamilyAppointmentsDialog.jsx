@@ -31,7 +31,8 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { appointmentService } from "../../services/appointment.service";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchFamilyAppointments, selectFamilyAppointmentsList, selectFamilyAppointmentsLoading } from "../../store/slices/appointmentSlice";
 
 /**
  * ChecklistItem Component
@@ -168,38 +169,25 @@ const ScheduledAppointmentCard = ({ appointment }) => {
  */
 const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }) => {
   const [tabValue, setTabValue] = useState(0); // Default to "Scheduled" for this task
-  const [loading, setLoading] = useState(false);
-  const [allAppointments, setAllAppointments] = useState([]);
+  
+  const dispatch = useDispatch();
+  const allAppointments = useSelector(selectFamilyAppointmentsList);
+  const loading = useSelector(selectFamilyAppointmentsLoading);
 
-  const fetchFamilyAppointments = useCallback(async () => {
+  const fetchFamilyAppointmentsData = useCallback(() => {
     if (!patient) return;
+    const patientId = patient.id || patient._id;
+    const familyIds = familyMembers.map((m) => m.id || m._id).filter((id) => id && id !== patientId);
+    const allIds = [patientId, ...familyIds];
 
-    setLoading(true);
-    try {
-      const patientId = patient.id || patient._id;
-      const familyIds = familyMembers.map((m) => m.id || m._id).filter((id) => id && id !== patientId);
-      const allIds = [patientId, ...familyIds];
-
-      const appointmentPromises = allIds.map((id) =>
-        appointmentService.getAppointmentsByPatient(id).catch(() => [])
-      );
-
-      const results = await Promise.all(appointmentPromises);
-      const flattened = results.flat();
-
-      setAllAppointments(flattened);
-    } catch (err) {
-      console.error("Failed to fetch family appointments:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [patient, familyMembers]);
+    dispatch(fetchFamilyAppointments(allIds));
+  }, [patient, familyMembers, dispatch]);
 
   useEffect(() => {
     if (open) {
-      fetchFamilyAppointments();
+      fetchFamilyAppointmentsData();
     }
-  }, [open, fetchFamilyAppointments]);
+  }, [open, fetchFamilyAppointmentsData]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -274,7 +262,17 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column" }}>
+      <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column", "@media print": { p: 0, '& .no-print': { display: 'none !important' } } }}>
+        <style>
+          {`
+            @media print {
+              body * { visibility: hidden; }
+              .printable-content, .printable-content * { visibility: visible; }
+              .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+            }
+          `}
+        </style>
+        <Box className="printable-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* TABS & PRINT */}
         <Box
           sx={{
@@ -293,6 +291,7 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
           <Button
             variant="contained"
             size="small"
+            onClick={() => window.print()}
             startIcon={<PrintIcon />}
             sx={{
               bgcolor: "#1a3353",
@@ -416,6 +415,7 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
             </TableContainer>
           </Box>
         )}
+        </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 2, borderTop: "1px solid #eee" }}>

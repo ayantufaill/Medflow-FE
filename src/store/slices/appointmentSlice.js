@@ -5,18 +5,31 @@ import { appointmentService } from '../../services/appointment.service';
 
 export const fetchAppointments = createAsyncThunk(
   'appointment/fetchAppointments',
-  async ({ page = 1, limit = 10, providerId = '', patientId = '', status = '', startDate = '', endDate = '', appointmentTypeId = '', search = '' } = {}, { rejectWithValue }) => {
+  async (args = {}, { rejectWithValue }) => {
+    const { page = 1, limit = 10, providerId = '', patientId = '', status = '', startDate = '', endDate = '', appointmentTypeId = '', search = '' } = args;
     try {
       const result = await appointmentService.getAllAppointments(page, limit, providerId, patientId, status, startDate, endDate, appointmentTypeId, search);
-      return result;
+      return { data: result, args };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointments');
     }
   },
   {
-    condition: (_, { getState }) => {
+    condition: (args = {}, { getState }) => {
       const { appointment } = getState();
-      return !appointment.listLoading;
+      if (appointment.listLoading) return false;
+      
+      const { page = 1, limit = 10, providerId = '', patientId = '', status = '', startDate = '', endDate = '', appointmentTypeId = '', search = '' } = args;
+      const currentArgs = { page, limit, providerId, patientId, status, startDate, endDate, appointmentTypeId, search };
+      
+      if (appointment.lastFetched && appointment.lastParams) {
+        if (JSON.stringify(currentArgs) !== JSON.stringify(appointment.lastParams)) {
+          return true; // arguments changed, so fetch
+        }
+        // If arguments are exactly the same, still fetch (timer removed)
+        // returning true will allow the fetch to proceed.
+      }
+      return true;
     },
   }
 );
@@ -33,6 +46,80 @@ export const fetchAppointmentById = createAsyncThunk(
   }
 );
 
+export const createAppointmentThunk = createAsyncThunk(
+  'appointment/create',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await appointmentService.createAppointment(payload);
+      return response;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment');
+    }
+  }
+);
+
+export const updateAppointmentThunk = createAsyncThunk(
+  'appointment/update',
+  async ({ appointmentId, payload }, { rejectWithValue }) => {
+    try {
+      const response = await appointmentService.updateAppointment(appointmentId, payload);
+      return response;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update appointment');
+    }
+  }
+);
+
+export const fetchCheckoutAppointments = createAsyncThunk(
+  'appointment/fetchCheckoutAppointments',
+  async (args = {}, { rejectWithValue }) => {
+    const { page = 1, limit = 200, providerId = '', startDate = '', endDate = '' } = args;
+    try {
+      const result = await appointmentService.getAllAppointments(page, limit, providerId, "", "checkout complete", startDate, endDate);
+      return { data: result, args };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch checkout appointments');
+    }
+  }
+);
+
+export const fetchFamilyAppointments = createAsyncThunk(
+  'appointment/fetchFamilyAppointments',
+  async (patientIds, { rejectWithValue }) => {
+    try {
+      const promises = patientIds.map(id => appointmentService.getAppointmentsByPatient(id).catch(() => []));
+      const results = await Promise.all(promises);
+      return results.flat();
+    } catch (err) {
+      return rejectWithValue(err.message || 'Failed to fetch family appointments');
+    }
+  }
+);
+
+export const fetchPatientHistory = createAsyncThunk(
+  'appointment/fetchPatientHistory',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const data = await appointmentService.getAppointmentsByPatient(patientId);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointment history');
+    }
+  }
+);
+
+export const fetchAvailableSlots = createAsyncThunk(
+  'appointment/fetchAvailableSlots',
+  async ({ providerId, date, duration }, { rejectWithValue }) => {
+    try {
+      const data = await appointmentService.getAvailableSlots(providerId, date, duration);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch available slots');
+    }
+  }
+);
+
 // ─── Slice ───────────────────────────────────────────────────
 
 const initialState = {
@@ -43,6 +130,15 @@ const initialState = {
   listLoading: false,
   listError: null,
   lastFetched: null,
+  lastParams: null,
+
+  // Secondary lists
+  checkoutCompleteList: [],
+  checkoutLoading: false,
+  familyAppointmentsList: [],
+  familyAppointmentsLoading: false,
+  patientHistoryList: [],
+  patientHistoryLoading: false,
 
   // Detail cache
   cache: {},
@@ -119,14 +215,28 @@ const appointmentSlice = createSlice({
         state.listError = null;
       })
       .addCase(fetchAppointments.fulfilled, (state, action) => {
-        state.list = action.payload.appointments || [];
-        state.pagination = action.payload.pagination || initialState.pagination;
+        const raw = Array.isArray(action.payload.data) ? action.payload.data : (action.payload.data?.appointments || []);
+        state.list = raw;
+        state.pagination = action.payload.data?.pagination || initialState.pagination;
         state.listLoading = false;
         state.lastFetched = Date.now();
+        const { page = 1, limit = 10, providerId = '', patientId = '', status = '', startDate = '', endDate = '', appointmentTypeId = '', search = '' } = action.payload.args || {};
+        state.lastParams = { page, limit, providerId, patientId, status, startDate, endDate, appointmentTypeId, search };
       })
       .addCase(fetchAppointments.rejected, (state, action) => {
         state.listLoading = false;
         state.listError = action.payload;
+      })
+      .addCase(fetchCheckoutAppointments.pending, (state) => {
+        state.checkoutLoading = true;
+      })
+      .addCase(fetchCheckoutAppointments.fulfilled, (state, action) => {
+        state.checkoutLoading = false;
+        const raw = Array.isArray(action.payload.data) ? action.payload.data : (action.payload.data?.appointments || []);
+        state.checkoutCompleteList = raw;
+      })
+      .addCase(fetchCheckoutAppointments.rejected, (state) => {
+        state.checkoutLoading = false;
       })
       .addCase(fetchAppointmentById.pending, (state) => {
         state.detailLoading = true;
@@ -141,6 +251,19 @@ const appointmentSlice = createSlice({
       .addCase(fetchAppointmentById.rejected, (state, action) => {
         state.detailLoading = false;
         state.detailError = action.payload;
+      })
+      .addCase(createAppointmentThunk.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.list.push(action.payload);
+        }
+      })
+      .addCase(updateAppointmentThunk.fulfilled, (state, action) => {
+        if (action.payload) {
+          const idx = state.list.findIndex(a => a._id === action.payload._id || a.id === action.payload.id);
+          if (idx !== -1) {
+            state.list[idx] = action.payload;
+          }
+        }
       });
   },
 });
@@ -168,6 +291,16 @@ export const selectAppointmentPagination = (state) => state.appointment.paginati
 export const selectAppointmentFilters = (state) => state.appointment.filters;
 export const selectAppointmentListLoading = (state) => state.appointment.listLoading;
 export const selectAppointmentListError = (state) => state.appointment.listError;
+
+export const selectCheckoutCompleteList = (state) => state.appointment.checkoutCompleteList;
+export const selectCheckoutLoading = (state) => state.appointment.checkoutLoading;
+
+export const selectFamilyAppointmentsList = (state) => state.appointment.familyAppointmentsList;
+export const selectFamilyAppointmentsLoading = (state) => state.appointment.familyAppointmentsLoading;
+
+export const selectPatientHistoryList = (state) => state.appointment.patientHistoryList;
+export const selectPatientHistoryLoading = (state) => state.appointment.patientHistoryLoading;
+
 export const selectAppointmentLastFetched = (state) => state.appointment.lastFetched;
 export const selectCurrentAppointment = (state) => state.appointment.currentAppointment;
 export const selectSelectedAppointmentId = (state) => state.appointment.selectedAppointmentId;
