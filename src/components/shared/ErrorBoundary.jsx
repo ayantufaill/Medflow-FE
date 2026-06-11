@@ -3,6 +3,7 @@ import { Box, Typography, Button } from '@mui/material';
 
 /**
  * Catches React rendering errors and displays a fallback.
+ * Supports an optional `onReset` prop for external cleanup (e.g., React Query cache reset).
  */
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -23,7 +24,10 @@ export default class ErrorBoundary extends Component {
           </Typography>
           <Button
             variant="outlined"
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={() => {
+              if (this.props.onReset) this.props.onReset();
+              this.setState({ hasError: false, error: null });
+            }}
           >
             Try again
           </Button>

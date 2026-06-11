@@ -1,4 +1,6 @@
 import { Route } from 'react-router-dom';
+import { QueryErrorResetBoundary } from '@tanstack/react-query';
+import ErrorBoundary from '../components/shared/ErrorBoundary';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import ClinicalPage from '../pages/clinical/ClinicalPage';
@@ -39,6 +41,16 @@ const adminDoctor = (children) => (
   </ProtectedRoute>
 );
 
+const wrapWithBoundary = (children) => (
+  <QueryErrorResetBoundary>
+    {({ reset }) => (
+      <ErrorBoundary onReset={reset}>
+        {children}
+      </ErrorBoundary>
+    )}
+  </QueryErrorResetBoundary>
+);
+
 const clinicalRoutes = [
   <Route key="/clinical" path="/clinical" element={adminDoctor(<ClinicalPage />)} />,
   <Route key="/clinical/exam" path="/clinical/exam" element={adminDoctor(<ExamPage />)} />,
@@ -66,11 +78,11 @@ const clinicalRoutes = [
   <Route key="/clinical-notes/create" path="/clinical-notes/create" element={adminDoctor(<CreateClinicalNotePage />)} />,
   <Route key="/clinical-notes/:clinicalNoteId" path="/clinical-notes/:clinicalNoteId" element={adminDoctor(<ViewClinicalNotePage />)} />,
   <Route key="/clinical-notes/:clinicalNoteId/edit" path="/clinical-notes/:clinicalNoteId/edit" element={adminDoctor(<EditClinicalNotePage />)} />,
-  <Route key="/vital-signs" path="/vital-signs" element={adminDoctor(<VitalSignsListPage />)} />,
-  <Route key="/vital-signs/create" path="/vital-signs/create" element={adminDoctor(<CreateVitalSignPage />)} />,
-  <Route key="/vital-signs/patient/:patientId" path="/vital-signs/patient/:patientId" element={adminDoctor(<PatientVitalHistoryPage />)} />,
-  <Route key="/vital-signs/:vitalSignId" path="/vital-signs/:vitalSignId" element={adminDoctor(<ViewVitalSignPage />)} />,
-  <Route key="/vital-signs/:vitalSignId/edit" path="/vital-signs/:vitalSignId/edit" element={adminDoctor(<EditVitalSignPage />)} />,
+  <Route key="/vital-signs" path="/vital-signs" element={adminDoctor(wrapWithBoundary(<VitalSignsListPage />))} />,
+  <Route key="/vital-signs/create" path="/vital-signs/create" element={adminDoctor(wrapWithBoundary(<CreateVitalSignPage />))} />,
+  <Route key="/vital-signs/patient/:patientId" path="/vital-signs/patient/:patientId" element={adminDoctor(wrapWithBoundary(<PatientVitalHistoryPage />))} />,
+  <Route key="/vital-signs/:vitalSignId" path="/vital-signs/:vitalSignId" element={adminDoctor(wrapWithBoundary(<ViewVitalSignPage />))} />,
+  <Route key="/vital-signs/:vitalSignId/edit" path="/vital-signs/:vitalSignId/edit" element={adminDoctor(wrapWithBoundary(<EditVitalSignPage />))} />,
 ];
 
 export default clinicalRoutes;

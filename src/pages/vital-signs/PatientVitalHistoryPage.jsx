@@ -48,10 +48,16 @@ import {
   Tooltip as ChartTooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
 } from 'recharts';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { vitalSignService } from '../../services/vital-sign.service';
 import { patientService } from '../../services/patient.service';
+import {
+  usePatientVitalSigns,
+  usePatientVitalsTrend,
+  useLatestPatientVitals,
+  useVitalNormalRanges,
+} from '../../hooks/queries/useVitalSigns';
 import {
   getBloodPressureCategory,
   getBMICategory,
@@ -63,63 +69,70 @@ const PatientVitalHistoryPage = () => {
   const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
   
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [patient, setPatient] = useState(null);
-  const [vitalSigns, setVitalSigns] = useState([]);
-  const [trendData, setTrendData] = useState([]);
-  const [latestVitals, setLatestVitals] = useState(null);
+  const [patientLoading, setPatientLoading] = useState(true);
+  const [patientError, setPatientError] = useState('');
   const [viewMode, setViewMode] = useState('chart');
   const [trendDays, setTrendDays] = useState(30);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    total: 0,
-    pages: 0,
   });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const patientData = await patientService.getPatientById(patientId);
-      setPatient(patientData);
-
-      const [vitalsResult, trend, latest] = await Promise.all([
-        vitalSignService.getVitalSignsByPatient(patientId, pagination.page, pagination.limit),
-        vitalSignService.getVitalsTrend(patientId, trendDays),
-        vitalSignService.getLatestVitalsByPatient(patientId),
-      ]);
-      
-      setVitalSigns(vitalsResult.vitalSigns || []);
-      setPagination(vitalsResult.pagination || pagination);
-      setTrendData(trend || []);
-      setLatestVitals(latest);
-    } catch (err) {
-      const errorMessage = err.response?.data?.error?.message || 
-        err.response?.data?.message || 
-        'Failed to load vital signs history';
-      
-      if (err.response?.status === 403) {
-        setError('You do not have permission to view this patient\'s vital signs history. Please contact your administrator.');
-      } else if (err.response?.status === 401) {
-        setError('Your session has expired. Please log in again.');
-      } else {
-        setError(errorMessage);
-      }
-      showSnackbar(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Fetch patient info (not a vital-sign query, stays manual)
   useEffect(() => {
-    fetchData();
-  }, [patientId, pagination.page, pagination.limit, trendDays]);
+    const fetchPatient = async () => {
+      try {
+        setPatientLoading(true);
+        const patientData = await patientService.getPatientById(patientId);
+        setPatient(patientData);
+      } catch (err) {
+        const errorMessage = err.response?.data?.error?.message || 
+          err.response?.data?.message || 
+          'Failed to load patient';
+        
+        if (err.response?.status === 403) {
+          setPatientError('You do not have permission to view this patient\'s vital signs history. Please contact your administrator.');
+        } else if (err.response?.status === 401) {
+          setPatientError('Your session has expired. Please log in again.');
+        } else {
+          setPatientError(errorMessage);
+        }
+        showSnackbar(errorMessage, 'error');
+      } finally {
+        setPatientLoading(false);
+      }
+    };
+    fetchPatient();
+  }, [patientId, showSnackbar]);
+
+  // React Query hooks for vitals data
+  const {
+    data: vitalsData,
+    isLoading: vitalsLoading,
+    isError: vitalsError,
+  } = usePatientVitalSigns(patientId, pagination.page, pagination.limit);
+
+  const {
+    data: trendData,
+    isLoading: trendLoading,
+  } = usePatientVitalsTrend(patientId, trendDays);
+
+  const {
+    data: latestVitals,
+  } = useLatestPatientVitals(patientId);
+
+  const { data: normalRanges } = useVitalNormalRanges();
+
+  const vitalSigns = vitalsData?.vitalSigns || [];
+  const totalVitals = vitalsData?.pagination?.total || 0;
+  const trendVitals = trendData || [];
+
+  const loading = patientLoading || vitalsLoading;
+  const error = patientError;
 
   const chartData = useMemo(() => {
-    return trendData.map((vital) => ({
+    return trendVitals.map((vital) => ({
       date: new Date(vital.recordedDate).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -131,7 +144,38 @@ const PatientVitalHistoryPage = () => {
       weight: vital.weight,
       oxygenSaturation: vital.oxygenSaturation,
     }));
-  }, [trendData]);
+  }, [trendVitals]);
+
+  // Custom dot renderer that highlights out-of-range values in red
+  const CustomDot = (props) => {
+    const { cx, cy, value, dataKey, stroke } = props;
+    if (value === undefined || value === null || !normalRanges || !cx || !cy) return null;
+    
+    let isOut = false;
+    const ranges = {
+      systolic: normalRanges.bloodPressureSystolic,
+      diastolic: normalRanges.bloodPressureDiastolic,
+      heartRate: normalRanges.heartRate,
+      temperature: normalRanges.temperature,
+      oxygenSaturation: normalRanges.oxygenSaturation,
+    };
+    
+    const range = ranges[dataKey];
+    if (range) {
+      isOut = value < range.min || value > range.max;
+    }
+    
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={isOut ? 6 : 4}
+        fill={isOut ? '#ff1744' : stroke}
+        stroke={isOut ? '#ff1744' : stroke}
+        strokeWidth={isOut ? 2 : 1}
+      />
+    );
+  };
 
   const handlePageChange = (event, newPage) => {
     setPagination((prev) => ({ ...prev, page: newPage + 1 }));
@@ -184,11 +228,6 @@ const PatientVitalHistoryPage = () => {
         <Alert 
           severity="error" 
           sx={{ mb: 2 }}
-          action={
-            <Button color="inherit" size="small" onClick={fetchData}>
-              Retry
-            </Button>
-          }
         >
           {error}
         </Alert>
@@ -366,10 +405,30 @@ const PatientVitalHistoryPage = () => {
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis yAxisId="left" domain={[60, 200]} />
+                <YAxis yAxisId="left" domain={[40, 200]} />
                 <YAxis yAxisId="right" orientation="right" domain={[40, 120]} />
                 <ChartTooltip />
                 <Legend />
+                {normalRanges?.bloodPressureSystolic && (
+                  <ReferenceArea
+                    yAxisId="left"
+                    y1={normalRanges.bloodPressureSystolic.min}
+                    y2={normalRanges.bloodPressureSystolic.max}
+                    fill="#4caf50"
+                    fillOpacity={0.08}
+                    label=""
+                  />
+                )}
+                {normalRanges?.heartRate && (
+                  <ReferenceArea
+                    yAxisId="right"
+                    y1={normalRanges.heartRate.min}
+                    y2={normalRanges.heartRate.max}
+                    fill="#4caf50"
+                    fillOpacity={0.08}
+                    label=""
+                  />
+                )}
                 <Line
                   yAxisId="left"
                   type="monotone"
@@ -377,7 +436,7 @@ const PatientVitalHistoryPage = () => {
                   stroke="#f44336"
                   name="Systolic"
                   strokeWidth={2}
-                  dot={{ r: 4 }}
+                  dot={<CustomDot />}
                 />
                 <Line
                   yAxisId="left"
@@ -386,7 +445,7 @@ const PatientVitalHistoryPage = () => {
                   stroke="#2196f3"
                   name="Diastolic"
                   strokeWidth={2}
-                  dot={{ r: 4 }}
+                  dot={<CustomDot />}
                 />
                 <Line
                   yAxisId="right"
@@ -395,7 +454,7 @@ const PatientVitalHistoryPage = () => {
                   stroke="#4caf50"
                   name="Heart Rate"
                   strokeWidth={2}
-                  dot={{ r: 4 }}
+                  dot={<CustomDot />}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -410,9 +469,19 @@ const PatientVitalHistoryPage = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis yAxisId="left" domain={['auto', 'auto']} />
-                <YAxis yAxisId="right" orientation="right" domain={[95, 105]} />
+                <YAxis yAxisId="right" orientation="right" domain={[93, 105]} />
                 <ChartTooltip />
                 <Legend />
+                {normalRanges?.temperature && (
+                  <ReferenceArea
+                    yAxisId="right"
+                    y1={normalRanges.temperature.min}
+                    y2={normalRanges.temperature.max}
+                    fill="#ff9800"
+                    fillOpacity={0.1}
+                    label=""
+                  />
+                )}
                 <Line
                   yAxisId="left"
                   type="monotone"
@@ -429,7 +498,7 @@ const PatientVitalHistoryPage = () => {
                   stroke="#ff9800"
                   name="Temp (°F)"
                   strokeWidth={2}
-                  dot={{ r: 4 }}
+                  dot={<CustomDot />}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -460,36 +529,51 @@ const PatientVitalHistoryPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {vitalSigns.map((vital) => (
-                        <TableRow key={vital._id} hover>
-                          <TableCell>{formatDate(vital.recordedDate)}</TableCell>
-                          <TableCell>{vital.recordedTime || '-'}</TableCell>
-                          <TableCell>
-                            {formatBloodPressure(vital.bloodPressureSystolic, vital.bloodPressureDiastolic)}
-                          </TableCell>
-                          <TableCell>{vital.heartRate || '-'}</TableCell>
-                          <TableCell>{vital.temperature || '-'}</TableCell>
-                          <TableCell>{vital.oxygenSaturation || '-'}</TableCell>
-                          <TableCell>{vital.weight || '-'}</TableCell>
-                          <TableCell>{vital.bmi || '-'}</TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="View Details">
-                              <IconButton
-                                size="small"
-                                onClick={() => navigate(`/vital-signs/${vital._id}`)}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {vitalSigns.map((vital) => {
+                        // Check if any vitals are out of range
+                        const isOutOfRange = normalRanges && (
+                          (vital.bloodPressureSystolic && (vital.bloodPressureSystolic < normalRanges.bloodPressureSystolic?.min || vital.bloodPressureSystolic > normalRanges.bloodPressureSystolic?.max)) ||
+                          (vital.bloodPressureDiastolic && (vital.bloodPressureDiastolic < normalRanges.bloodPressureDiastolic?.min || vital.bloodPressureDiastolic > normalRanges.bloodPressureDiastolic?.max)) ||
+                          (vital.heartRate && (vital.heartRate < normalRanges.heartRate?.min || vital.heartRate > normalRanges.heartRate?.max)) ||
+                          (vital.temperature && (vital.temperature < normalRanges.temperature?.min || vital.temperature > normalRanges.temperature?.max)) ||
+                          (vital.oxygenSaturation && vital.oxygenSaturation < normalRanges.oxygenSaturation?.min)
+                        );
+
+                        return (
+                          <TableRow
+                            key={vital._id}
+                            hover
+                            sx={isOutOfRange ? { bgcolor: 'error.50', '&:hover': { bgcolor: 'error.100' } } : {}}
+                          >
+                            <TableCell>{formatDate(vital.recordedDate)}</TableCell>
+                            <TableCell>{vital.recordedTime || '-'}</TableCell>
+                            <TableCell>
+                              {formatBloodPressure(vital.bloodPressureSystolic, vital.bloodPressureDiastolic)}
+                            </TableCell>
+                            <TableCell>{vital.heartRate || '-'}</TableCell>
+                            <TableCell>{vital.temperature || '-'}</TableCell>
+                            <TableCell>{vital.oxygenSaturation || '-'}</TableCell>
+                            <TableCell>{vital.weight || '-'}</TableCell>
+                            <TableCell>{vital.bmi || '-'}</TableCell>
+                            <TableCell align="right">
+                              <Tooltip title="View Details">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => navigate(`/vital-signs/${vital._id}`)}
+                                >
+                                  <ViewIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
                 <TablePagination
                   component="div"
-                  count={pagination.total}
+                  count={totalVitals}
                   page={pagination.page - 1}
                   onPageChange={handlePageChange}
                   rowsPerPage={pagination.limit}

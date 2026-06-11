@@ -114,12 +114,12 @@ const menuItems = [
     path: '/clinical-notes',
     requiredRoles: ['Admin', 'Doctor'],
   },*/
-  // {
-  //   text: 'Vital Signs',
-  //   icon: <MonitorHeart />,
-  //   path: '/vital-signs',
-  //   requiredRoles: ['Admin', 'Doctor', 'Nurse'],
-  // },
+  {
+    text: 'Vital Signs',
+    icon: <MonitorHeart />,
+    path: '/vital-signs',
+    requiredRoles: ['Admin', 'Doctor', 'Receptionist'],
+  },
   // {
   //   text: 'Documents',
   //   icon: <Folder />,
