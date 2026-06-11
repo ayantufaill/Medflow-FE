@@ -43,19 +43,16 @@ import {
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { serviceCatalogService } from '../../services/service-catalog.service';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { useServices, useDeleteService, useUpdateService } from '../../hooks/queries';
 
 const ServicesListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalServices, setTotalServices] = useState(0);
-  const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({
@@ -69,9 +66,9 @@ const ServicesListPage = () => {
     serviceName: '',
     isActive: null,
   });
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleResetFilters = () => {
+    setSearchInput('');
     setSearch('');
     setCategoryFilter('');
     setStatusFilter('');
@@ -80,48 +77,37 @@ const ServicesListPage = () => {
 
   const hasActiveFilters = search || categoryFilter || statusFilter;
 
-  const fetchServices = useCallback(async (searchValue) => {
-    try {
-      setLoading(true);
-      setError('');
+  // Set up React Query hooks
+  const params = {
+    page: page + 1,
+    limit: rowsPerPage,
+    search: search.trim() || undefined,
+    category: categoryFilter || undefined,
+    isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
+  };
 
-      const params = {
-        page: page + 1,
-        limit: rowsPerPage,
-        search: searchValue?.trim() || undefined,
-        category: categoryFilter || undefined,
-        isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
-      };
+  const {
+    data,
+    isLoading: loading,
+    error: servicesQueryError,
+    refetch: fetchServices,
+  } = useServices(params);
 
-      const result = await serviceCatalogService.getAllServices(params);
-      setServices(result.services || []);
-      setTotalServices(result.pagination?.total || 0);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch services. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, categoryFilter, statusFilter]);
+  const services = data?.services || [];
+  const totalServices = data?.pagination?.total || 0;
 
-  const debouncedFetch = useDebouncedCallback((searchValue) => {
-    if (page === 0) {
-      fetchServices(searchValue);
-    } else {
-      setPage(0);
-    }
+  const deleteMutation = useDeleteService();
+  const updateMutation = useUpdateService();
+
+  const debouncedSearch = useDebouncedCallback((val) => {
+    setSearch(val);
+    setPage(0);
   }, 500);
 
-  useEffect(() => {
-    fetchServices(search);
-  }, [page, rowsPerPage, categoryFilter, statusFilter]);
-
-  useEffect(() => {
-    debouncedFetch(search);
-  }, [search, debouncedFetch]);
+  const handleSearchChange = (event) => {
+    setSearchInput(event.target.value);
+    debouncedSearch(event.target.value);
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -146,33 +132,24 @@ const ServicesListPage = () => {
       return;
     }
     
-    // Validate service ID format (should be a string, not empty)
     const serviceId = String(deleteDialog.serviceId).trim();
-    if (!serviceId || serviceId.length === 0) {
+    if (!serviceId) {
       showSnackbar('Invalid service ID format', 'error');
       return;
     }
     
-    // Debug: Log the service ID being sent
-    console.log('Deleting service with ID:', serviceId);
-    
-    try {
-      setDeleteLoading(true);
-      await serviceCatalogService.deleteService(serviceId);
-      showSnackbar('Service deleted successfully', 'success');
-      setDeleteDialog({ open: false, serviceId: null, serviceName: '' });
-      await fetchServices(search);
-    } catch (err) {
-      console.error('Delete service error:', err);
-      console.error('Service ID used:', serviceId);
-      const errorMsg = err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to delete service. Please try again.';
-      setError(errorMsg);
-      showSnackbar(errorMsg, 'error');
-    } finally {
-      setDeleteLoading(false);
-    }
+    deleteMutation.mutate(serviceId, {
+      onSuccess: () => {
+        showSnackbar('Service deleted successfully', 'success');
+        setDeleteDialog({ open: false, serviceId: null, serviceName: '' });
+      },
+      onError: (err) => {
+        const errorMsg = err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          'Failed to delete service. Please try again.';
+        showSnackbar(errorMsg, 'error');
+      }
+    });
   };
 
   const handleDeleteCancel = () => {
@@ -180,7 +157,6 @@ const ServicesListPage = () => {
   };
 
   const handleActionMenuOpen = (event, serviceId, serviceName, isActive) => {
-    // Ensure we have a valid service ID (use _id if id is not available)
     const validServiceId = serviceId || event.currentTarget.closest('tr')?.dataset?.serviceId;
     if (!validServiceId) {
       showSnackbar('Service ID is missing', 'error');
@@ -226,23 +202,21 @@ const ServicesListPage = () => {
     const { serviceId, serviceName, isActive: currentStatus } = actionMenu;
     setActionMenu((prev) => ({ ...prev, anchorEl: null }));
     if (!serviceId) return;
-    try {
-      setLoading(true);
-      await serviceCatalogService.updateService(serviceId, { isActive: !currentStatus });
-      showSnackbar(
-        `Service "${serviceName}" ${currentStatus ? 'deactivated' : 'activated'} successfully`,
-        'success'
-      );
-      await fetchServices(search);
-    } catch (err) {
-      const errorMsg = err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to update service status. Please try again.';
-      setError(errorMsg);
-      showSnackbar(errorMsg, 'error');
-    } finally {
-      setLoading(false);
-    }
+
+    updateMutation.mutate({ serviceId, updates: { isActive: !currentStatus } }, {
+      onSuccess: () => {
+        showSnackbar(
+          `Service "${serviceName}" ${currentStatus ? 'deactivated' : 'activated'} successfully`,
+          'success'
+        );
+      },
+      onError: (err) => {
+        const errorMsg = err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          'Failed to update service status. Please try again.';
+        showSnackbar(errorMsg, 'error');
+      }
+    });
   };
 
   const formatPrice = (price) => {
@@ -251,6 +225,7 @@ const ServicesListPage = () => {
       currency: 'USD',
     }).format(price || 0);
   };
+
 
   return (
     <Box>
@@ -288,8 +263,8 @@ const ServicesListPage = () => {
             <TextField
               fullWidth
               placeholder="Search by name, CPT code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={handleSearchChange}
               size="small"
               InputProps={{
                 startAdornment: (
@@ -297,13 +272,14 @@ const ServicesListPage = () => {
                     <SearchIcon />
                   </InputAdornment>
                 ),
-                endAdornment: search.length > 0 && (
-                  <IconButton size="small" onClick={() => setSearch('')}>
+                endAdornment: searchInput.length > 0 && (
+                  <IconButton size="small" onClick={() => { setSearchInput(''); setSearch(''); setPage(0); }}>
                     <Clear />
                   </IconButton>
                 ),
               }}
             />
+
           </Grid>
           <Grid size={3}>
             <FormControl fullWidth size="small">

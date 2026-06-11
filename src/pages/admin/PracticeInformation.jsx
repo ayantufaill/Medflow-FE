@@ -30,7 +30,7 @@ import {
   Close as CloseIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-import { practiceInfoService } from '../../services/practice-info.service';
+import { usePracticeInfo, useUpdatePracticeInfo, useCreatePracticeInfo } from '../../hooks/queries';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const US_STATES = [
@@ -205,34 +205,35 @@ const PracticeInformation = () => {
     logoFile: null,
   });
 
+  const { data, isLoading } = usePracticeInfo();
+  const updateMutation = useUpdatePracticeInfo();
+  const createMutation = useCreatePracticeInfo();
+
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await practiceInfoService.getCurrentPracticeInfo();
-        if (data) {
-          setPracticeId(data._id || data.id);
-          setForm((prev) => ({
-            ...prev,
-            practiceName:  data.practiceName         || '',
-            phone:         data.phone                || '',
-            fax:           data.fax                  || '',
-            email:         data.email                || '',
-            website:       data.website              || '',
-            timezone:      data.timezone             || 'America/Chicago',
-            addressLine1:  data.address?.line1       || '',
-            addressLine2:  data.address?.line2       || '',
-            city:          data.address?.city        || '',
-            state:         data.address?.state       || '',
-            zipCode:       data.address?.postalCode  || '',
-            googleMeasurementId: data.googleMeasurementId || '',
-            smilePayMerchantId: data.smilePayMerchantId || '',
-          }));
-          if (data.logoPath) setLogoPreview(data.logoPath);
-        }
-      } catch { /* show empty form */ }
-      finally { setLoading(false); }
-    })();
-  }, []);
+    if (data) {
+      setPracticeId(data._id || data.id);
+      setForm((prev) => ({
+        ...prev,
+        practiceName:  data.practiceName         || '',
+        phone:         data.phone                || '',
+        fax:           data.fax                  || '',
+        email:         data.email                || '',
+        website:       data.website              || '',
+        timezone:      data.timezone             || 'America/Chicago',
+        addressLine1:  data.address?.line1       || '',
+        addressLine2:  data.address?.line2       || '',
+        city:          data.address?.city        || '',
+        state:         data.address?.state       || '',
+        zipCode:       data.address?.postalCode  || '',
+        googleMeasurementId: data.googleMeasurementId || '',
+        smilePayMerchantId: data.smilePayMerchantId || '',
+      }));
+      if (data.logoPath) setLogoPreview(data.logoPath);
+      setLoading(false);
+    } else if (data === null) {
+      setLoading(false);
+    }
+  }, [data]);
 
   const set      = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
   const setCheck = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.checked }));
@@ -256,38 +257,43 @@ const PracticeInformation = () => {
   };
 
   const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError('');
-      const payload = {
-        practiceName: form.practiceName,
-        phone: form.phone,
-        fax: form.fax,
-        email: form.email,
-        website: form.website,
-        timezone: form.timezone,
-        address: {
-          line1: form.addressLine1,
-          line2: form.addressLine2,
-          city: form.city,
-          state: form.state,
-          postalCode: form.zipCode,
-        },
-        googleMeasurementId: form.googleMeasurementId,
-        smilePayMerchantId: form.smilePayMerchantId,
-        ...(form.logoFile ? { logo: form.logoFile } : {}),
-      };
-      if (practiceId) {
-        await practiceInfoService.updatePracticeInfo(practiceId, payload);
-      } else {
-        await practiceInfoService.createPracticeInfo(payload);
+    setSaving(true);
+    setError('');
+    const payload = {
+      practiceName: form.practiceName,
+      phone: form.phone,
+      fax: form.fax,
+      email: form.email,
+      website: form.website,
+      timezone: form.timezone,
+      address: {
+        line1: form.addressLine1,
+        line2: form.addressLine2,
+        city: form.city,
+        state: form.state,
+        postalCode: form.zipCode,
+      },
+      googleMeasurementId: form.googleMeasurementId,
+      smilePayMerchantId: form.smilePayMerchantId,
+      ...(form.logoFile ? { logo: form.logoFile } : {}),
+    };
+
+    const mutationOptions = {
+      onSuccess: () => {
+        setSuccess('Saved successfully.');
+        setTimeout(() => setSuccess(''), 3000);
+        setSaving(false);
+      },
+      onError: (err) => {
+        setError(err.response?.data?.message || 'Failed to save.');
+        setSaving(false);
       }
-      setSuccess('Saved successfully.');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save.');
-    } finally {
-      setSaving(false);
+    };
+
+    if (practiceId) {
+      updateMutation.mutate({ practiceId, updates: payload }, mutationOptions);
+    } else {
+      createMutation.mutate(payload, mutationOptions);
     }
   };
 

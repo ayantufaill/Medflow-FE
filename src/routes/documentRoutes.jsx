@@ -1,6 +1,7 @@
 import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
+import { wrapWithBoundary } from '../components/shared';
 import DocumentsListPage from '../pages/documents/DocumentsListPage';
 import UploadDocumentPage from '../pages/documents/UploadDocumentPage';
 import EditDocumentPage from '../pages/documents/EditDocumentPage';
@@ -14,7 +15,8 @@ const adminDoctor = (children) => (
 );
 
 const documentRoutes = [
-  <Route key="/documents" path="/documents" element={adminDoctor(<DocumentsListPage />)} />,
+  <Route key="/documents" path="/documents" element={adminDoctor(wrapWithBoundary(<DocumentsListPage />))} />,
+
   <Route key="/documents/upload" path="/documents/upload" element={adminDoctor(<UploadDocumentPage />)} />,
   <Route key="/documents/patient/:patientId" path="/documents/patient/:patientId" element={adminDoctor(<PatientDocumentsPage />)} />,
   <Route key="/documents/:documentId" path="/documents/:documentId" element={adminDoctor(<ViewDocumentPage />)} />,

@@ -5,3 +5,7 @@ export * from './useProviders';
 export * from './useRoles';
 export * from './useUsers';
 export * from './useVitalSigns';
+export * from './useAppointments';
+export * from './useServices';
+export * from './usePracticeInfo';
+export * from './useDocuments';

@@ -1,6 +1,7 @@
 import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
+import { wrapWithBoundary } from '../components/shared';
 import PatientManagementPage from '../pages/patients/PatientManagementPage';
 import CreatePatientPage from '../pages/patients/CreatePatientPage';
 import EditPatientPage from '../pages/patients/EditPatientPage';
@@ -37,10 +38,11 @@ const adminDoctorReception = (children) => (
 );
 
 const patientRoutes = [
-  <Route key="/patients" path="/patients" element={adminReception(<PatientManagementPage />)} />,
+  <Route key="/patients" path="/patients" element={adminReception(wrapWithBoundary(<PatientManagementPage />))} />,
   <Route key="/patients/new" path="/patients/new" element={adminReception(<CreatePatientPage />)} />,
   <Route key="/patients/import" path="/patients/import" element={adminReception(<ImportPatientsPage />)} />,
-  <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={adminReception(<PatientDetailPage />)} />,
+  <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={adminReception(wrapWithBoundary(<PatientDetailPage />))} />,
+
   <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={adminReception(<EditPatientPage />)} />,
   <Route key="/patients/:patientId/view" path="/patients/:patientId/view" element={adminReception(<ViewPatientPage />)} />,
   <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={adminReception(<MembershipPlanPage />)} />,

@@ -1,6 +1,7 @@
 import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
+import { wrapWithBoundary } from '../components/shared';
 import InsurancePage from '../pages/insurance/InsurancePage';
 import AddCoveragePage from '../pages/patients/AddCoveragePage';
 import FinancePage from '../pages/finance/FinancePage';
@@ -62,7 +63,8 @@ const billingRoutes = [
   <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />)} />,
   <Route key="/finance" path="/finance" element={adminBillingReception(<FinancePage />)} />,
 
-  <Route key="/services" path="/services" element={adminBilling(<ServicesListPage />)} />,
+  <Route key="/services" path="/services" element={adminBilling(wrapWithBoundary(<ServicesListPage />))} />,
+
   <Route key="/services/new" path="/services/new" element={adminBilling(<CreateServicePage />)} />,
   <Route key="/services/:serviceId" path="/services/:serviceId" element={adminBilling(<ViewServicePage />)} />,
   <Route key="/services/:serviceId/edit" path="/services/:serviceId/edit" element={adminBilling(<EditServicePage />)} />,

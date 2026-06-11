@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+
 import { useDebouncedCallback } from 'use-debounce';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -35,7 +36,6 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { documentService } from '../../services/document.service';
-import { patientService } from '../../services/patient.service';
 import {
   DOCUMENT_TYPES,
   getDocumentTypeLabel,
@@ -43,14 +43,12 @@ import {
   formatFileSize,
 } from '../../validations/documentValidations';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { useDocuments, usePatients, useDeleteDocument } from '../../hooks/queries';
 
 const DocumentsListPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
-  const [documents, setDocuments] = useState([]);
-  const [patients, setPatients] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -67,39 +65,18 @@ const DocumentsListPage = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, documentId: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const fetchDocuments = async () => {
-    try {
-      setLoading(true);
-      const result = await documentService.getAllDocuments(
-        pagination.page,
-        pagination.limit,
-        filters
-      );
-      setDocuments(result.documents);
-      setPagination(result.pagination);
-    } catch (err) {
-      showSnackbar('Failed to load documents', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // React Query hooks
+  const {
+    data: documentsData,
+    isLoading: loading,
+    refetch: fetchDocuments,
+  } = useDocuments(pagination.page, pagination.limit, filters);
 
-  const fetchPatients = async () => {
-    try {
-      const result = await patientService.getAllPatients(1, 100);
-      setPatients(result.patients || []);
-    } catch (err) {
-      console.error('Failed to fetch patients', err);
-    }
-  };
+  const { data: patients = [] } = usePatients({ page: 1, limit: 100, status: 'active' });
 
-  useEffect(() => {
-    fetchPatients();
-  }, []);
+  const deleteMutation = useDeleteDocument();
 
-  useEffect(() => {
-    fetchDocuments();
-  }, [pagination.page, pagination.limit, filters]);
+  const documents = documentsData?.documents || [];
 
   const handlePageChange = (event, newPage) => {
     setPagination((prev) => ({ ...prev, page: newPage + 1 }));
@@ -140,20 +117,23 @@ const DocumentsListPage = () => {
   };
 
   const handleDelete = async () => {
-    try {
-      setDeleteLoading(true);
-      await documentService.deleteDocument(deleteDialog.documentId);
-      showSnackbar('Document deleted successfully', 'success');
-      fetchDocuments();
-    } catch (err) {
-      showSnackbar(
-        err.response?.data?.error?.message || 'Failed to delete document',
-        'error'
-      );
-    } finally {
-      setDeleteLoading(false);
-      setDeleteDialog({ open: false, documentId: null });
-    }
+    if (!deleteDialog.documentId) return;
+    setDeleteLoading(true);
+    deleteMutation.mutate(deleteDialog.documentId, {
+      onSuccess: () => {
+        showSnackbar('Document deleted successfully', 'success');
+        setDeleteLoading(false);
+        setDeleteDialog({ open: false, documentId: null });
+      },
+      onError: (err) => {
+        showSnackbar(
+          err.response?.data?.error?.message || 'Failed to delete document',
+          'error'
+        );
+        setDeleteLoading(false);
+        setDeleteDialog({ open: false, documentId: null });
+      }
+    });
   };
 
   const getPatientName = (document) => {

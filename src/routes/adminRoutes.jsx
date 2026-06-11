@@ -1,6 +1,7 @@
 import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
+import { wrapWithBoundary } from '../components/shared';
 import AdminPage from '../pages/admin/AdminPage';
 import PracticeOnboardingPage from '../pages/admin/PracticeOnboardingPage';
 import KioskAccountsView from '../pages/admin/KioskAccountsView';
@@ -14,6 +15,7 @@ import DocumentCategorySetup from '../pages/admin/DocumentCategorySetup';
 import ScheduleConfiguration from '../pages/admin/ScheduleConfiguration';
 import PracticeSettings from '../pages/admin/PracticeSettings';
 import PracticeInformation from '../pages/admin/PracticeInformation';
+
 import ProductsManagement from '../pages/admin/ProductsManagement';
 import PrescriptionTemplates from '../pages/admin/PrescriptionTemplates';
 import ProcedureCodesManagement from '../pages/admin/ProcedureCodesManagement';
@@ -75,7 +77,8 @@ const adminRoutes = [
   <Route key="/admin/practice-setup/document-category-setup" path="/admin/practice-setup/document-category-setup" element={adminOnly(<DocumentCategorySetup />)} />,
   <Route key="/admin/practice-setup/schedule-configuration" path="/admin/practice-setup/schedule-configuration" element={adminOnly(<ScheduleConfiguration />)} />,
   <Route key="/admin/practice-setup/practice-settings" path="/admin/practice-setup/practice-settings" element={adminOnly(<PracticeSettings />)} />,
-  <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(<PracticeInformation />)} />,
+  <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(wrapWithBoundary(<PracticeInformation />))} />,
+
   <Route key="/admin/practice-setup/office-timings" path="/admin/practice-setup/office-timings" element={adminOnly(<OfficeTimings />)} />,
   <Route key="/admin/practice-setup/online-schedule" path="/admin/practice-setup/online-schedule" element={adminOnly(<OnlineSchedule />)} />,
   <Route key="/admin/practice-setup/installation-guide" path="/admin/practice-setup/installation-guide" element={adminOnly(<AdminPage />)} />,

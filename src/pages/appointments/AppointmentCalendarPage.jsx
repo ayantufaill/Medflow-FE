@@ -43,16 +43,13 @@ import dayjs from "dayjs";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { appointmentService } from "../../services/appointment.service";
 import { useDropdownData } from "../../hooks/redux/useDropdownData";
+import { useAppointmentCalendar } from "../../hooks/queries";
 
 const AppointmentCalendarPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const calendarRef = useRef(null);
-  const fetchingRef = useRef(false);
-  const lastFetchedRangeRef = useRef({ startDate: "", endDate: "", providerId: "" });
   const slotsFetchTimeoutRef = useRef(null);
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("");
   const [currentView, setCurrentView] = useState("timeGridWeek");
@@ -66,12 +63,17 @@ const AppointmentCalendarPage = () => {
   const [providerSearchText, setProviderSearchText] = useState('');
   const providerSearchTimerRef = useRef(null);
 
+  // Date range state to drive the React Query hook
+  const [dateRange, setDateRange] = useState({
+    startDate: dayjs().startOf("month").format("YYYY-MM-DD"),
+    endDate: dayjs().endOf("month").format("YYYY-MM-DD"),
+  });
+
   // ─── Redux cached providers (no extra API call) ─────────
   const { providers, providersLoading: loadingProviders } = useDropdownData({ providers: true });
 
   // searchProviders is no longer needed - providers come from Redux cache
   const searchProviders = useCallback(() => {}, []);
-
 
   const handleProviderSearchChange = (event, newInputValue) => {
     setProviderSearchText(newInputValue);
@@ -83,69 +85,32 @@ const AppointmentCalendarPage = () => {
     }, 300);
   };
 
+  // Consume the new custom query hook
+  const {
+    data: calendarData,
+    isLoading: loading,
+    error: calendarQueryError,
+    refetch: fetchCalendarData,
+  } = useAppointmentCalendar(
+    dateRange.startDate,
+    dateRange.endDate,
+    selectedProvider ? [selectedProvider] : []
+  );
 
-  const fetchCalendarData = useCallback(async () => {
-    // Prevent concurrent fetches
-    if (fetchingRef.current) return;
+  const events = calendarData?.events || [];
 
-    try {
-      const calendarApi = calendarRef.current?.getApi();
-      let startDate, endDate;
-
-      if (calendarApi) {
-        startDate = dayjs(calendarApi.view.activeStart).format("YYYY-MM-DD");
-        endDate = dayjs(calendarApi.view.activeEnd).format("YYYY-MM-DD");
-      } else {
-        startDate = dayjs(currentDate).startOf("month").format("YYYY-MM-DD");
-        endDate = dayjs(currentDate).endOf("month").format("YYYY-MM-DD");
-      }
-
-      const providerId = selectedProvider || "";
-
-      // Check if we need to fetch (range or provider changed)
-      const lastRange = lastFetchedRangeRef.current;
-      if (
-        lastRange.startDate === startDate &&
-        lastRange.endDate === endDate &&
-        lastRange.providerId === providerId
-      ) {
-        // Same range and provider, no need to fetch
-        return;
-      }
-
-      fetchingRef.current = true;
-      setLoading(true);
-      setError("");
-
-      // Update last fetched range
-      lastFetchedRangeRef.current = { startDate, endDate, providerId };
-
-      const providerIds = selectedProvider ? [selectedProvider] : [];
-      const result = await appointmentService.getCalendarSchedule(
-        startDate,
-        endDate,
-        providerIds
-      );
-
-      setEvents(result.events || []);
-    } catch (err) {
+  // Effect to display query-level errors
+  useEffect(() => {
+    if (calendarQueryError) {
       const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
+        calendarQueryError.response?.data?.error?.message ||
+        calendarQueryError.response?.data?.message ||
+        calendarQueryError.message ||
         "Failed to load calendar data. Please try again.";
       setError(errorMessage);
       showSnackbar(errorMessage, "error");
-    } finally {
-      setLoading(false);
-      fetchingRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProvider, currentDate]); // Removed showSnackbar to prevent infinite loop
-
-  useEffect(() => {
-    fetchCalendarData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProvider, currentDate]); // Use direct dependencies instead of callback
+  }, [calendarQueryError, showSnackbar]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -329,14 +294,9 @@ const AppointmentCalendarPage = () => {
       const newStartDate = dayjs(dateInfo.start).format("YYYY-MM-DD");
       const newEndDate = dayjs(dateInfo.end).format("YYYY-MM-DD");
 
-      // Update current date
+      // Update current date and range
       setCurrentDate(newDate);
-
-      // Reset the lastFetchedRangeRef to force refetch when dates change
-      const lastRange = lastFetchedRangeRef.current;
-      if (lastRange.startDate !== newStartDate || lastRange.endDate !== newEndDate) {
-        lastFetchedRangeRef.current = { startDate: "", endDate: "", providerId: "" };
-      }
+      setDateRange({ startDate: newStartDate, endDate: newEndDate });
 
       // Debounce available slots fetching to prevent too many requests
       // Only refetch if provider is selected and we're not already loading

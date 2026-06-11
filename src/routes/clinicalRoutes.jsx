@@ -1,7 +1,7 @@
 import { Route } from 'react-router-dom';
-import { QueryErrorResetBoundary } from '@tanstack/react-query';
-import ErrorBoundary from '../components/shared/ErrorBoundary';
+import { wrapWithBoundary } from '../components/shared';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
+
 import Layout from '../components/layout/Layout';
 import ClinicalPage from '../pages/clinical/ClinicalPage';
 import ExamPage from '../pages/clinical/ExamPage';
@@ -41,15 +41,6 @@ const adminDoctor = (children) => (
   </ProtectedRoute>
 );
 
-const wrapWithBoundary = (children) => (
-  <QueryErrorResetBoundary>
-    {({ reset }) => (
-      <ErrorBoundary onReset={reset}>
-        {children}
-      </ErrorBoundary>
-    )}
-  </QueryErrorResetBoundary>
-);
 
 const clinicalRoutes = [
   <Route key="/clinical" path="/clinical" element={adminDoctor(<ClinicalPage />)} />,

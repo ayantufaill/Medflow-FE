@@ -1,6 +1,7 @@
 import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
+import { wrapWithBoundary } from '../components/shared';
 import AppointmentsListPage from '../pages/appointments/AppointmentsListPage';
 import CreateAppointmentPage from '../pages/appointments/CreateAppointmentPage';
 import EditAppointmentPage from '../pages/appointments/EditAppointmentPage';
@@ -35,7 +36,8 @@ const appointmentRoutes = [
   />,
   <Route key="/appointments/new" path="/appointments/new" element={adminReception(<CreateAppointmentPage />)} />,
   <Route key="/appointments/schedule" path="/appointments/schedule" element={adminReception(<SchedulePage />)} />,
-  <Route key="/appointments/calendar" path="/appointments/calendar" element={adminReception(<AppointmentCalendarPage />)} />,
+  <Route key="/appointments/calendar" path="/appointments/calendar" element={adminReception(wrapWithBoundary(<AppointmentCalendarPage />))} />,
+
   <Route key="/appointments/operatory-schedule" path="/appointments/operatory-schedule" element={adminReception(<OperatorySchedulePage />)} />,
   <Route
     key="/appointments/:appointmentId"
