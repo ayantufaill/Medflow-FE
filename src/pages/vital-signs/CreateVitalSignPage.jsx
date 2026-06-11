@@ -29,9 +29,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { Save as SaveIcon, ArrowBack as ArrowBackIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { vitalSignService } from '../../services/vital-sign.service';
 import { patientService } from '../../services/patient.service';
 import { appointmentService } from '../../services/appointment.service';
+import { useCreateVitalSign } from '../../hooks/queries/useVitalSigns';
 import {
   vitalSignValidations,
   validateAtLeastOneVital,
@@ -45,7 +45,6 @@ const CreateVitalSignPage = () => {
   const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -286,9 +285,10 @@ const CreateVitalSignPage = () => {
     await submitVitalSigns(data);
   };
 
+  const { mutateAsync: createVitalSign, isPending: submitting } = useCreateVitalSign();
+
   const submitVitalSigns = async (data) => {
     try {
-      setSubmitting(true);
       setError('');
 
       let temperatureInF = data.temperature ? parseFloat(data.temperature) : undefined;
@@ -318,7 +318,7 @@ const CreateVitalSignPage = () => {
         notes: data.notes || undefined,
       };
 
-      await vitalSignService.createVitalSign(vitalSignData);
+      await createVitalSign(vitalSignData);
       showSnackbar('Vital signs recorded successfully', 'success');
       navigate(`/patients/${data.patientId}`);
     } catch (err) {
@@ -328,8 +328,6 @@ const CreateVitalSignPage = () => {
         'Failed to record vital signs';
       setError(errorMessage);
       showSnackbar(errorMessage, 'error');
-    } finally {
-      setSubmitting(false);
     }
   };
 

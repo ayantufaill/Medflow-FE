@@ -20,10 +20,12 @@ export const vitalSignService = {
     return response.data.data.vitalSign;
   },
 
-  async getVitalSignsByPatient(patientId, page = 1, limit = 10) {
+  async getVitalSignsByPatient(patientId, page = 1, limit = 10, filters = {}) {
     const params = new URLSearchParams();
     params.append('page', page);
     params.append('limit', limit);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
 
     const response = await apiClient.get(
       `/vital-signs/patient/${patientId}?${params.toString()}`
@@ -65,5 +67,10 @@ export const vitalSignService = {
   async deleteVitalSign(vitalSignId) {
     const response = await apiClient.delete(`/vital-signs/${vitalSignId}`);
     return response.data;
+  },
+
+  async getNormalRanges() {
+    const response = await apiClient.get('/vital-signs/normal-ranges');
+    return response.data.data;
   },
 };
