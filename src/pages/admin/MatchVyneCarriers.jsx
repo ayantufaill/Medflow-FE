@@ -24,6 +24,12 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import {
+  selectVyneOfficePayers,
+  selectVynePayersList,
+  selectVyneMatchedPayers
+} from '../../store/slices/insuranceSlice';
 
 const MatchVyneCarriers = () => {
   const navigate = useNavigate();
@@ -32,10 +38,10 @@ const MatchVyneCarriers = () => {
   const [matchedSearch, setMatchedSearch] = useState('');
   const [isLiveData, setIsLiveData] = useState(false);
 
-  // Mock data placeholders
-  const officePayers = Array(15).fill({ name: 'Arizona Blue Cross Blue Shield of Georgia', id: '60054' });
-  const vynePayers = [];
-  const matchedPayers = [];
+  // Fetch mock data from Redux
+  const officePayers = useSelector(selectVyneOfficePayers);
+  const vynePayers = useSelector(selectVynePayersList);
+  const matchedPayers = useSelector(selectVyneMatchedPayers);
 
   // Reusable search field with blue icon prefix
   const SearchField = ({ value, onChange, placeholder = "Search list", width = '100%' }) => (

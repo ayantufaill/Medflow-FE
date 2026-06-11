@@ -11,15 +11,14 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { providerService } from '../../services/provider.service';
+
 import ProviderForm from '../../components/providers/ProviderForm';
 import {
   fetchProviderById,
   selectCachedProviderById,
   selectProviderDetailLoading,
   selectProviderListError,
-  updateProviderInList,
-  invalidateProviderDetail,
+  updateProvider,
 } from '../../store/slices/providerSlice';
 
 const EditProviderPage = () => {
@@ -45,17 +44,14 @@ const EditProviderPage = () => {
       setSaving(true);
       setError('');
 
-      const updated = await providerService.updateProvider(providerId, data);
-      dispatch(updateProviderInList(updated));
-      dispatch(invalidateProviderDetail(providerId));
+      await dispatch(updateProvider({ providerId, updates: data })).unwrap();
 
       showSnackbar('Provider updated successfully', 'success');
       navigate('/providers');
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to update provider. Please try again.';
+      if (err?.name === 'ConditionError') return;
+      const errorMessage = typeof err === 'string' ? err : 
+        (err?.message || 'Failed to update provider. Please try again.');
       setError(errorMessage);
       showSnackbar(errorMessage, 'error');
     } finally {

@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { practiceInfoService } from '../../services/practice-info.service';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  createPracticeInfo,
+  updatePracticeSettings,
+  selectPracticeInfo,
+} from '../../store/slices/practiceInfoSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
@@ -163,48 +169,41 @@ const PracticeSettings = () => {
   const contentRef                  = useRef(null);
   const { showSnackbar } = useSnackbar();
   
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
   const [settings, setSettings] = useState({});
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.practiceSettings) {
-            setSettings(practiceInfo.practiceSettings);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch practice info:', error);
-      }
-    };
-    fetchSettings();
-  }, []);
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (practiceInfo?.practiceSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSettings(practiceInfo.practiceSettings);
+    }
+  }, [practiceInfo?.practiceSettings]);
 
   const handleChange = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
 
   const handleSave = async () => {
     try {
-      let id = practiceInfoId;
+      let id = practiceInfo?._id || practiceInfo?.id;
       if (!id) {
-        const newPractice = await practiceInfoService.createPracticeInfo({
+        const newPractice = await dispatch(createPracticeInfo({
           practiceName: 'Default Practice',
           phone: '555-000-0000',
           email: 'info@defaultpractice.com',
           address: { line1: '123 St', city: 'Metropolis', state: 'NY', postalCode: '10001', country: 'US' }
-        });
+        })).unwrap();
         id = newPractice._id || newPractice.id;
-        setPracticeInfoId(id);
       }
       
-      await practiceInfoService.updatePracticeSettings(id, settings);
+      await dispatch(updatePracticeSettings({ practiceInfoId: id, practiceSettingsData: settings })).unwrap();
       showSnackbar('Practice Settings saved successfully', 'success');
     } catch (error) {
       console.error(error);
-      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save settings';
-      showSnackbar(errMsg, 'error');
+      showSnackbar(error || 'Failed to save settings', 'error');
     }
   };
 

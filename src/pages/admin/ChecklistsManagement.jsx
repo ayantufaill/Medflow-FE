@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Typography, Divider, Checkbox, FormControlLabel, Snackbar, Popover, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Divider, Checkbox, FormControlLabel, Snackbar, Popover, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, CircularProgress } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -8,6 +8,21 @@ import CopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchChecklists,
+  addChecklistCategory,
+  addChecklist,
+  addChecklistItem,
+  addChoiceToChecklistItem,
+  addProductToChecklistItem,
+  updateChecklist,
+  deleteChecklist,
+  deleteChecklistItem,
+  selectChecklists,
+  selectLoadingChecklists
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 const INITIAL_CHECKLISTS = {
   'Anesthetic': [
@@ -389,7 +404,12 @@ const ChecklistIcon = ({ iconId, color = '#1a3a6b' }) => {
 
 const ChecklistsManagement = () => {
   const navigate = useNavigate();
-  const [checklists, setChecklists] = useState(INITIAL_CHECKLISTS);
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+  
+  const checklists = useSelector(selectChecklists);
+  const loading = useSelector(selectLoadingChecklists);
+
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [expandedChecklists, setExpandedChecklists] = useState([]);
   const [activeInput, setActiveInput] = useState(null); // { type, category, checklistIdx, itemIdx, value }
@@ -397,6 +417,16 @@ const ChecklistsManagement = () => {
   const [iconPickerAnchor, setIconPickerAnchor] = useState(null);
   const [activeIconPicker, setActiveIconPicker] = useState(null); // { category, checklistIdx }
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchChecklists());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (checklists && Object.keys(checklists).length > 0 && expandedCategories.length === 0) {
+      setExpandedCategories([Object.keys(checklists)[0]]);
+    }
+  }, [checklists]);
 
   const handleOpenSyncDialog = (e) => {
     e.stopPropagation();
@@ -412,12 +442,21 @@ const ChecklistsManagement = () => {
     setActiveIconPicker({ category, checklistIdx });
   };
 
-  const handleIconSelect = (iconId) => {
+  const handleIconSelect = async (iconId) => {
     if (activeIconPicker) {
       const { category, checklistIdx } = activeIconPicker;
-      const updatedChecklists = { ...checklists };
-      updatedChecklists[category][checklistIdx].iconId = iconId;
-      setChecklists(updatedChecklists);
+      const checklist = checklists[category][checklistIdx];
+      try {
+        await dispatch(updateChecklist({
+          checklistId: checklist.id,
+          updates: { iconId }
+        })).unwrap();
+        dispatch(fetchChecklists());
+        showSnackbar('Icon updated successfully', 'success');
+      } catch (err) {
+        console.error(err);
+        showSnackbar('Failed to update icon', 'error');
+      }
     }
     setIconPickerAnchor(null);
     setActiveIconPicker(null);
@@ -435,42 +474,92 @@ const ChecklistsManagement = () => {
     );
   };
 
-  const handleInputSubmit = (e) => {
+  const handleToggleChecklistField = async (category, checklistIdx, field, value) => {
+    const checklist = checklists[category][checklistIdx];
+    try {
+      await dispatch(updateChecklist({
+        checklistId: checklist.id,
+        updates: { [field]: value }
+      })).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Checklist updated successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to update checklist', 'error');
+    }
+  };
+
+  const handleInputSubmit = async (e) => {
     if (e.key === 'Enter' && activeInput.value.trim()) {
       const { type, category, checklistIdx, itemIdx, value } = activeInput;
-      const updatedChecklists = { ...checklists };
       
       if (type === 'choice') {
-        updatedChecklists[category][checklistIdx].items[itemIdx].choices.push(value);
-      } else if (type === 'product') {
-        if (!updatedChecklists[category][checklistIdx].items[itemIdx].products) {
-          updatedChecklists[category][checklistIdx].items[itemIdx].products = [];
+        const item = checklists[category][checklistIdx].items[itemIdx];
+        try {
+          await dispatch(addChoiceToChecklistItem({ itemId: item.id, choice: value })).unwrap();
+          dispatch(fetchChecklists());
+          showSnackbar('Choice added successfully', 'success');
+        } catch (err) {
+          console.error(err);
+          showSnackbar('Failed to add choice', 'error');
         }
-        updatedChecklists[category][checklistIdx].items[itemIdx].products.push(value);
+      } else if (type === 'product') {
+        const item = checklists[category][checklistIdx].items[itemIdx];
+        try {
+          await dispatch(addProductToChecklistItem({ itemId: item.id, product: value })).unwrap();
+          dispatch(fetchChecklists());
+          showSnackbar('Product added successfully', 'success');
+        } catch (err) {
+          console.error(err);
+          showSnackbar('Failed to add product', 'error');
+        }
       } else if (type === 'item') {
-        updatedChecklists[category][checklistIdx].items.push({
-          id: updatedChecklists[category][checklistIdx].items.length + 1,
-          text: value,
-          choices: [],
-          products: []
-        });
+        const checklist = checklists[category][checklistIdx];
+        try {
+          await dispatch(addChecklistItem({
+            checklistId: checklist.id,
+            itemData: {
+              text: value,
+              choices: [],
+              products: []
+            }
+          })).unwrap();
+          dispatch(fetchChecklists());
+          showSnackbar('Item added successfully', 'success');
+        } catch (err) {
+          console.error(err);
+          showSnackbar('Failed to add item', 'error');
+        }
       } else if (type === 'checklist') {
-        updatedChecklists[category].push({
-          name: value,
-          shortName: value,
-          isTreatment: true,
-          isHygiene: false,
-          iconId: 'tooth-prep',
-          items: []
-        });
+        try {
+          await dispatch(addChecklist({
+            categoryName: category,
+            checklistData: {
+              name: value,
+              shortName: value,
+              isTreatment: true,
+              isHygiene: false,
+              iconId: 'tooth-prep'
+            }
+          })).unwrap();
+          dispatch(fetchChecklists());
+          showSnackbar('Checklist created successfully', 'success');
+        } catch (err) {
+          console.error(err);
+          showSnackbar('Failed to create checklist', 'error');
+        }
       } else if (type === 'category') {
-        if (!updatedChecklists[value]) {
-          updatedChecklists[value] = [];
+        try {
+          await dispatch(addChecklistCategory(value)).unwrap();
+          dispatch(fetchChecklists());
           setExpandedCategories(prev => [...prev, value]);
+          showSnackbar('Category created successfully', 'success');
+        } catch (err) {
+          console.error(err);
+          showSnackbar('Failed to create category', 'error');
         }
       }
 
-      setChecklists(updatedChecklists);
       setActiveInput(null);
     } else if (e.key === 'Escape') {
       setActiveInput(null);
@@ -506,10 +595,28 @@ const ChecklistsManagement = () => {
       .catch(err => console.error('Failed to copy: ', err));
   };
 
-  const handleDeleteItem = (category, checklistIdx, itemIdx) => {
-    const updatedChecklists = { ...checklists };
-    updatedChecklists[category][checklistIdx].items.splice(itemIdx, 1);
-    setChecklists(updatedChecklists);
+  const handleDeleteItem = async (category, checklistIdx, itemIdx) => {
+    const item = checklists[category][checklistIdx].items[itemIdx];
+    try {
+      await dispatch(deleteChecklistItem(item.id)).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Item deleted successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to delete item', 'error');
+    }
+  };
+
+  const handleDeleteChecklist = async (category, checklistIdx) => {
+    const checklist = checklists[category][checklistIdx];
+    try {
+      await dispatch(deleteChecklist(checklist.id)).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Checklist deleted successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to delete checklist', 'error');
+    }
   };
 
   const renderItemTable = (items, category, checklistIdx) => (
@@ -691,6 +798,7 @@ const ChecklistsManagement = () => {
                   <Checkbox 
                     size="small" 
                     checked={item.isTreatment} 
+                    onChange={(e) => handleToggleChecklistField(category, idx, 'isTreatment', e.target.checked)}
                     sx={{ p: 0.5, color: '#999', '&.Mui-checked': { color: '#1a3a6b' } }} 
                   />
                 }
@@ -702,6 +810,7 @@ const ChecklistsManagement = () => {
                   <Checkbox 
                     size="small" 
                     checked={item.isHygiene} 
+                    onChange={(e) => handleToggleChecklistField(category, idx, 'isHygiene', e.target.checked)}
                     sx={{ p: 0.5, color: '#999', '&.Mui-checked': { color: '#1a3a6b' } }} 
                   />
                 }
@@ -716,11 +825,7 @@ const ChecklistsManagement = () => {
               />
               <SettingsIcon sx={{ color: '#666', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} />
               <DeleteIcon 
-                onClick={() => {
-                  const updatedChecklists = { ...checklists };
-                  updatedChecklists[category].splice(idx, 1);
-                  setChecklists(updatedChecklists);
-                }}
+                onClick={() => handleDeleteChecklist(category, idx)}
                 sx={{ color: '#666', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { color: '#d32f2f' } }} 
               />
             </Box>

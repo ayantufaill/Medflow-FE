@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -27,6 +27,7 @@ import {
   MenuItem,
   Checkbox,
   FormControlLabel,
+  Autocomplete,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -36,11 +37,21 @@ import {
   Restore as RestoreIcon,
 } from '@mui/icons-material';
 import { useDebounce } from 'use-debounce';
+import { useSelector, useDispatch } from 'react-redux';
 import { insurancePlanService } from '../../services/insurance.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import AuditInsurancePlanHistory from '../../components/insurance/AuditInsurancePlanHistory';
 import PlanFeeGuideDialog from '../../components/insurance/PlanFeeGuideDialog';
+import { 
+  fetchPlansList, 
+  deletePlanThunk, 
+  addPlanOptimistic, 
+  selectPlansList, 
+  selectPlansListLoading,
+  fetchCarriersList,
+  selectCarriersList
+} from '../../store/slices/insuranceSlice';
 
 const INITIAL_PLANS = [
   {
@@ -83,9 +94,13 @@ const INITIAL_PLANS = [
 
 const InsurancePlans = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
-  const [plans, setPlans] = useState(INITIAL_PLANS);
-  const [loading, setLoading] = useState(false);
+  
+  const plans = useSelector(selectPlansList);
+  const loading = useSelector(selectPlansListLoading);
+  const carriersList = useSelector(selectCarriersList);
+
   const [searchCarrier, setSearchCarrier] = useState('');
   const [searchGeneral, setSearchGeneral] = useState('');
   const [debouncedSearchCarrier] = useDebounce(searchCarrier, 500);
@@ -121,23 +136,28 @@ const InsurancePlans = () => {
     familyMaxUnlimited: true,
   });
 
+  const lastFetchRef = React.useRef(null);
+
   const fetchPlans = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await insurancePlanService.getInsurancePlans(1, 100, debouncedSearchGeneral);
-      if (result && result.plans) {
-        setPlans(result.plans);
-      }
-    } catch (err) {
-      console.error('Failed to fetch plans:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearchGeneral]);
+    const params = { page: 1, limit: 100, search: debouncedSearchGeneral };
+    const paramsStr = JSON.stringify(params);
+    if (lastFetchRef.current === paramsStr) return;
+    lastFetchRef.current = paramsStr;
+
+    setTimeout(() => {
+      if (lastFetchRef.current === paramsStr) lastFetchRef.current = null;
+    }, 100);
+
+    dispatch(fetchPlansList(params));
+  }, [dispatch, debouncedSearchGeneral]);
 
   useEffect(() => {
-    // fetchPlans();
-  }, [fetchPlans]);
+    fetchPlans();
+    // Also fetch carriers if they aren't loaded yet
+    if (carriersList.length === 0) {
+      dispatch(fetchCarriersList({ page: 1, limit: 100, search: '' }));
+    }
+  }, [fetchPlans, dispatch, carriersList.length]);
 
   const handleDeleteClick = (id, name) => {
     setDeleteDialog({ open: true, planId: id, groupName: name });
@@ -145,7 +165,7 @@ const InsurancePlans = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      setPlans(prev => prev.filter(p => p.id !== deleteDialog.planId));
+      await dispatch(deletePlanThunk(deleteDialog.planId)).unwrap();
       showSnackbar('Insurance plan deleted successfully', 'success');
       setDeleteDialog({ open: false, planId: null, groupName: '' });
     } catch (err) {
@@ -155,8 +175,8 @@ const InsurancePlans = () => {
 
   const handleSavePlan = async () => {
     try {
-      if (!newPlan.groupName || !newPlan.groupNumber) {
-        showSnackbar('Group Name and Group # are required', 'error');
+      if (!newPlan.groupName || !newPlan.groupNumber || !newPlan.payerId) {
+        showSnackbar('Group Name, Group #, and Payer ID (Insurance Company ID) are required', 'error');
         return;
       }
       
@@ -174,11 +194,10 @@ const InsurancePlans = () => {
         subscribers: 0
       };
 
-      // Optimistic update
-      setPlans(prev => [createdPlan, ...prev]);
-      
       try {
-        await insurancePlanService.createInsurancePlan({
+        const response = await insurancePlanService.createInsurancePlan({
+          name: newPlan.groupName || newPlan.employer,
+          insuranceCompanyId: newPlan.payerId,
           groupNumber: newPlan.groupNumber,
           groupName: newPlan.groupName,
           employer: newPlan.employer,
@@ -187,10 +206,14 @@ const InsurancePlans = () => {
           payerId: newPlan.payerId,
           notes: newPlan.notes
         });
+        if (response) {
+          createdPlan.id = response._id || response.id;
+        }
       } catch (apiErr) {
         console.error('API failed to create plan, keeping optimistic update');
       }
 
+      dispatch(addPlanOptimistic(createdPlan));
       showSnackbar('Insurance plan added successfully', 'success');
       setViewMode('list');
       setNewPlan({
@@ -218,32 +241,33 @@ const InsurancePlans = () => {
           {/* Left Column */}
           <Grid item xs={4}>
             <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" fontWeight={600}>Payer Name*:</Typography>
-              <TextField 
-                fullWidth size="small" 
-                value={newPlan.payerName}
-                onChange={(e) => setNewPlan({...newPlan, payerName: e.target.value})}
-                sx={{ '& .MuiOutlinedInput-root': { height: 35 } }}
+              <Typography variant="caption" fontWeight={600}>Select Payer (Carrier)*:</Typography>
+              <Autocomplete
+                size="small"
+                options={carriersList || []}
+                getOptionLabel={(option) => option.name || ''}
+                value={carriersList.find(c => (c._id || c.id) === newPlan.payerId) || null}
+                onChange={(event, newValue) => {
+                  setNewPlan({
+                    ...newPlan,
+                    payerName: newValue ? newValue.name : '',
+                    payerId: newValue ? (newValue._id || newValue.id) : ''
+                  });
+                }}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    placeholder="Search for an insurance company" 
+                    sx={{ '& .MuiOutlinedInput-root': { height: 35, py: 0 } }}
+                  />
+                )}
               />
               <FormControlLabel
                 control={<Checkbox size="small" />}
                 label={<Typography sx={{ fontSize: '0.75rem' }}>Exclude System Carriers</Typography>}
               />
             </Box>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" fontWeight={600}>Payer ID*:</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField 
-                  fullWidth size="small" 
-                  value={newPlan.payerId}
-                  onChange={(e) => setNewPlan({...newPlan, payerId: e.target.value})}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 35 } }}
-                />
-                <Button size="small" variant="contained" sx={{ textTransform: 'none', bgcolor: '#6b8fb9', minWidth: '100px' }}>
-                  Edit carrier
-                </Button>
-              </Box>
-            </Box>
+            {/* Removed standalone Payer ID textfield since it's handled by the Autocomplete */}
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" fontWeight={600}>Group Name*:</Typography>
               <TextField 

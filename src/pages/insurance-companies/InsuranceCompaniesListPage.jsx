@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -42,18 +42,30 @@ import {
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { insuranceCompanyService } from '../../services/insurance.service';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { useSelector, useDispatch } from 'react-redux';
+import { 
+  fetchCarriersList, 
+  deleteCarrierThunk, 
+  selectCarriersList, 
+  selectCarriersTotal, 
+  selectCarriersLoading 
+} from '../../store/slices/insuranceSlice';
+import { insuranceCompanyService } from '../../services/insurance.service';
 
 const InsuranceCompaniesListPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
-  const [companies, setCompanies] = useState([]);
+
+  const companies = useSelector(selectCarriersList);
+  const totalCompanies = useSelector(selectCarriersTotal);
+  const reduxLoading = useSelector(selectCarriersLoading);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalCompanies, setTotalCompanies] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({
@@ -70,32 +82,39 @@ const InsuranceCompaniesListPage = () => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const [debouncedSearch] = useDebounce(search, 500);
+  const debouncedSearch = useDebounce(search, 500)[0];
+
+  const lastFetchRef = React.useRef(null);
 
   const fetchCompanies = useCallback(async () => {
+    const params = {
+      page: page + 1,
+      limit: rowsPerPage,
+      search: debouncedSearch,
+      status: statusFilter
+    };
+    
+    const paramsStr = JSON.stringify(params);
+    if (lastFetchRef.current === paramsStr) return;
+    lastFetchRef.current = paramsStr;
+
+    // Reset the ref after a brief delay to allow intentional identical refetches (like after deletion)
+    setTimeout(() => {
+      if (lastFetchRef.current === paramsStr) {
+        lastFetchRef.current = null;
+      }
+    }, 100);
+
     try {
       setLoading(true);
       setError('');
-
-      const result = await insuranceCompanyService.getAllInsuranceCompanies(
-        page + 1,
-        rowsPerPage,
-        debouncedSearch,
-        statusFilter
-      );
-
-      setCompanies(result.companies || []);
-      setTotalCompanies(result.pagination?.total || 0);
+      await dispatch(fetchCarriersList(params)).unwrap();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to fetch insurance companies. Please try again.'
-      );
+      setError(err || 'Failed to fetch insurance companies. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, statusFilter]);
+  }, [dispatch, page, rowsPerPage, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     fetchCompanies();
@@ -121,24 +140,16 @@ const InsuranceCompaniesListPage = () => {
   const handleDeleteConfirm = async () => {
     try {
       setDeleteLoading(true);
-      await insuranceCompanyService.deleteInsuranceCompany(
-        deleteDialog.companyId
-      );
+      await dispatch(deleteCarrierThunk(deleteDialog.companyId)).unwrap();
       showSnackbar('Insurance company deleted successfully', 'success');
       setDeleteDialog({ open: false, companyId: null, companyName: '' });
+      // Clear deduplication ref and refetch
+      lastFetchRef.current = null;
       await fetchCompanies();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete insurance company. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to delete insurance company. Please try again.',
-        'error'
-      );
+      const errMsg = err || 'Failed to delete insurance company. Please try again.';
+      setError(errMsg);
+      showSnackbar(errMsg, 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -184,23 +195,13 @@ const InsuranceCompaniesListPage = () => {
       await insuranceCompanyService.updateInsuranceCompany(companyId, {
         isActive: true,
       });
-      showSnackbar(
-        `Insurance company "${companyName}" activated successfully`,
-        'success'
-      );
+      showSnackbar(`Insurance company "${companyName}" activated successfully`, 'success');
+      lastFetchRef.current = null;
       await fetchCompanies();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to activate insurance company. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to activate insurance company. Please try again.',
-        'error'
-      );
+      const errMsg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to activate insurance company. Please try again.';
+      setError(errMsg);
+      showSnackbar(errMsg, 'error');
     } finally {
       setStatusLoading(false);
     }
@@ -214,23 +215,13 @@ const InsuranceCompaniesListPage = () => {
       await insuranceCompanyService.updateInsuranceCompany(companyId, {
         isActive: false,
       });
-      showSnackbar(
-        `Insurance company "${companyName}" deactivated successfully`,
-        'success'
-      );
+      showSnackbar(`Insurance company "${companyName}" deactivated successfully`, 'success');
+      lastFetchRef.current = null;
       await fetchCompanies();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to deactivate insurance company. Please try again.'
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to deactivate insurance company. Please try again.',
-        'error'
-      );
+      const errMsg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate insurance company. Please try again.';
+      setError(errMsg);
+      showSnackbar(errMsg, 'error');
     } finally {
       setStatusLoading(false);
     }
@@ -341,7 +332,10 @@ const InsuranceCompaniesListPage = () => {
               <Tooltip title="Refresh">
                 <span>
                 <IconButton
-                  onClick={fetchCompanies}
+                  onClick={() => {
+                    lastFetchRef.current = null;
+                    fetchCompanies();
+                  }}
                   disabled={loading}
                   color="primary"
                   sx={{ flexShrink: 0 }}

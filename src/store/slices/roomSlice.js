@@ -45,6 +45,18 @@ export const fetchAllRoomsForDropdown = createAsyncThunk(
   }
 );
 
+export const deleteRoom = createAsyncThunk(
+  'room/deleteRoom',
+  async (id, { rejectWithValue }) => {
+    try {
+      await roomService.deleteRoom(id);
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to delete room');
+    }
+  }
+);
+
 // ─── Slice ───────────────────────────────────────────────────
 
 const initialState = {
@@ -105,6 +117,12 @@ const roomSlice = createSlice({
       })
       .addCase(fetchAllRoomsForDropdown.rejected, (state) => {
         state.dropdownLoading = false;
+      })
+      .addCase(deleteRoom.fulfilled, (state, action) => {
+        const deletedId = action.payload;
+        state.list = state.list.filter(r => r._id !== deletedId && r.roomNumber !== deletedId);
+        state.dropdownList = state.dropdownList.filter(r => r._id !== deletedId && r.roomNumber !== deletedId);
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
       });
   },
 });

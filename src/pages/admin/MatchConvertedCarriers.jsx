@@ -21,6 +21,12 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
+import { useSelector } from 'react-redux';
+import {
+  selectConvertedOldPayers,
+  selectConvertedOryxPayers,
+  selectConvertedMatchedPayers
+} from '../../store/slices/insuranceSlice';
 
 const MatchConvertedCarriers = () => {
   const navigate = useNavigate();
@@ -28,10 +34,10 @@ const MatchConvertedCarriers = () => {
   const [oryxSearch, setOryxSearch] = useState('');
   const [testRealmUrl, setTestRealmUrl] = useState('https://test.local-ofe.com/fhirservlet/onyx/v1/');
 
-  // Mock data placeholders
-  const oldPayers = [];
-  const oryxPayers = [];
-  const matchedPayers = [];
+  // Fetch mock data from Redux
+  const oldPayers = useSelector(selectConvertedOldPayers);
+  const oryxPayers = useSelector(selectConvertedOryxPayers);
+  const matchedPayers = useSelector(selectConvertedMatchedPayers);
 
   // Reusable search field with blue icon prefix
   const SearchField = ({ value, onChange }) => (

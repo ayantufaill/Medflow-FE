@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -151,8 +151,12 @@ const UserManagementView = () => {
   const [error,        setError]        = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [drawerOpen,   setDrawerOpen]   = useState(false);
+  
+  const fetchingRef = useRef(false);
 
   const fetchAllUsers = useCallback(async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       setLoading(true);
       setError('');
@@ -171,13 +175,12 @@ const UserManagementView = () => {
       }
       setUsers(allUsers);
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to fetch users.'
-      );
+      const errorMsg = typeof err === 'string' ? err : 
+        (err.response?.data?.error?.message || err.response?.data?.message || err?.message || 'Failed to fetch users.');
+      setError(errorMsg);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [showInactive]);
 

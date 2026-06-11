@@ -1,4 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchCurrentPracticeInfo, updateScheduleConfig } from '../../store/slices/practiceInfoSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+import SaveIcon from '@mui/icons-material/Save';
+import CircularProgress from '@mui/material/CircularProgress';
+
 import {
   Box,
   Typography,
@@ -32,7 +38,43 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import InfoIcon from '@mui/icons-material/Info';
 
+
 const ScheduleConfiguration = () => {
+  const dispatch = useDispatch();
+  const { data: practiceData, updateLoading } = useSelector((state) => state.practiceInfo);
+  const { showSnackbar } = useSnackbar();
+
+  useEffect(() => {
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  // Sync route slip settings from Redux
+  useEffect(() => {
+    if (practiceData?.scheduleConfig?.routeSlipSettings) {
+      setRouteSlipSettings(prev => ({...prev, ...practiceData.scheduleConfig.routeSlipSettings}));
+    }
+    if (practiceData?.scheduleConfig?.enableRouteSlip !== undefined) {
+      setEnableRouteSlip(practiceData.scheduleConfig.enableRouteSlip);
+    }
+  }, [practiceData]);
+
+  const handleSave = async () => {
+    if (!practiceData || (!practiceData._id && !practiceData.id)) {
+      showSnackbar('Practice Info not found. Please fill it out first.', 'error');
+      return;
+    }
+    try {
+      const payload = {
+        enableRouteSlip,
+        routeSlipSettings,
+      };
+      await dispatch(updateScheduleConfig({ practiceInfoId: practiceData._id || practiceData.id, scheduleConfigData: payload })).unwrap();
+      showSnackbar('Schedule Configuration saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err || 'Failed to save configuration', 'error');
+    }
+  };
+
   const [routeSlipOpen, setRouteSlipOpen] = useState(true);
   const [enableRouteSlip, setEnableRouteSlip] = useState(true);
   const [defaultColorsOpen, setDefaultColorsOpen] = useState(true);
@@ -117,9 +159,21 @@ const ScheduleConfiguration = () => {
             >
             Practice Setup
         </Link>
-      <Typography variant="h4" gutterBottom fontWeight="bold">
-        Practice Setup → Schedule Configuration
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ m: 0 }}>
+          Practice Setup → Schedule Configuration
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="success" 
+          startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+          onClick={handleSave}
+          disabled={updateLoading}
+          sx={{ borderRadius: 5, textTransform: 'none', px: 3, bgcolor: '#003366' }}
+        >
+          {updateLoading ? 'Saving...' : 'Save Configuration'}
+        </Button>
+      </Box>
 
       {/* General Settings */}
       <Paper sx={{ p: 3, mb: 4 }}>

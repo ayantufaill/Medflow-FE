@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { practiceInfoService } from '../../services/practice-info.service';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  createPracticeInfo,
+  updateDocumentCategories,
+  selectPracticeInfo,
+} from '../../store/slices/practiceInfoSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
 import {
@@ -34,49 +40,47 @@ const defaultCategoryList = [
 ];
 
 const DocumentCategorySetup = () => {
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
   const [documents, setDocuments] = useState(defaultDocumentList);
   const [categories, setCategories] = useState(defaultCategoryList);
   const { showSnackbar } = useSnackbar();
+  
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.documentCategories) {
-            setDocuments(practiceInfo.documentCategories.documents || defaultDocumentList);
-            setCategories(practiceInfo.documentCategories.categories || defaultCategoryList);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch practice info:', error);
-      }
-    };
-    fetchSettings();
-  }, []);
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (practiceInfo?.documentCategories) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDocuments(practiceInfo.documentCategories.documents || defaultDocumentList);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategories(practiceInfo.documentCategories.categories || defaultCategoryList);
+    }
+  }, [practiceInfo?.documentCategories]);
 
   const handleSave = async () => {
     try {
-      let id = practiceInfoId;
+      let id = practiceInfo?._id || practiceInfo?.id;
       if (!id) {
-        const newPractice = await practiceInfoService.createPracticeInfo({
+        const newPractice = await dispatch(createPracticeInfo({
           practiceName: 'Default Practice',
           phone: '555-000-0000',
           email: 'info@defaultpractice.com',
           address: { line1: '123 St', city: 'Metropolis', state: 'NY', postalCode: '10001', country: 'US' }
-        });
+        })).unwrap();
         id = newPractice._id || newPractice.id;
-        setPracticeInfoId(id);
       }
       
-      await practiceInfoService.updateDocumentCategories(id, { documents, categories });
+      await dispatch(updateDocumentCategories({
+        practiceInfoId: id,
+        documentCategoriesData: { documents, categories }
+      })).unwrap();
       showSnackbar('Document Categories saved successfully', 'success');
     } catch (error) {
       console.error(error);
-      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save configuration';
-      showSnackbar(errMsg, 'error');
+      showSnackbar(error || 'Failed to save configuration', 'error');
     }
   };
 

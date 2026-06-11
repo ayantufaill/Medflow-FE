@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchBillingConfiguration,
+  saveBillingConfiguration,
+  selectBillingConfiguration,
+  selectBillingConfigLoading
+} from '../../store/slices/billingSlice';
 import {
   Box,
   Typography,
@@ -14,7 +21,10 @@ import {
   Divider,
   FormControl,
   InputLabel,
-  Radio as MuiRadio
+  Radio as MuiRadio,
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import PreviewStatementDialog from '../../components/admin/PreviewStatementDialog';
@@ -69,7 +79,41 @@ const BillingConfiguration = () => {
     honorWriteOff: true,
   });
 
+  const dispatch = useDispatch();
+  const savedConfig = useSelector(selectBillingConfiguration);
+  const loading = useSelector(selectBillingConfigLoading);
+  
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+
+  useEffect(() => {
+    const promise = dispatch(fetchBillingConfiguration());
+    return () => {
+      promise.abort();
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (savedConfig) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormData(prev => ({
+        ...prev,
+        ...savedConfig
+      }));
+    }
+  }, [savedConfig]);
+
+  const handleSave = async () => {
+    try {
+      await dispatch(saveBillingConfiguration(formData)).unwrap();
+      setToast({ open: true, message: 'Billing configuration saved successfully!', severity: 'success' });
+    } catch (err) {
+      console.error(err);
+      setToast({ open: true, message: 'Failed to save configuration.', severity: 'error' });
+    }
+  };
+
+  const handleCloseToast = () => setToast(prev => ({ ...prev, open: false }));
 
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -91,18 +135,26 @@ const BillingConfiguration = () => {
   return (
     <Box sx={{ p: 0 }}>
       {/* Breadcrumb */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="body2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Link to="/admin/finance-management" style={{ textDecoration: 'none', color: '#4b71a1' }}>Finance Management</Link> &gt; Billing Configuration
         </Typography>
+        <Button 
+          variant="contained" 
+          onClick={handleSave} 
+          disabled={loading}
+          sx={{ backgroundColor: '#4b71a1', '&:hover': { backgroundColor: '#3b5a80' } }}
+        >
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Configuration'}
+        </Button>
       </Box>
 
       {/* Main Content Card */}
-      <Box 
-        sx={{ 
-          backgroundColor: 'white', 
-          border: '1px solid #e0e0e0', 
-          borderRadius: 1, 
+      <Box
+        sx={{
+          backgroundColor: 'white',
+          border: '1px solid #e0e0e0',
+          borderRadius: 1,
           p: 4,
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
         }}
@@ -114,7 +166,7 @@ const BillingConfiguration = () => {
               <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main', textDecoration: 'underline' }}>
                 General Settings
               </Typography>
-              <MuiLink 
+              <MuiLink
                 component="button"
                 onClick={() => setPreviewOpen(true)}
                 sx={{ fontSize: '0.8125rem', textDecoration: 'none', color: 'primary.main', border: 'none', background: 'none', cursor: 'pointer' }}
@@ -125,12 +177,12 @@ const BillingConfiguration = () => {
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, backgroundColor: '#fdfdfd' }}>
               {generalSettingsItems.map((item) => (
-                <Box 
-                  key={item.key} 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    py: 0.5, 
+                <Box
+                  key={item.key}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    py: 0.5,
                     px: 1,
                     border: '1px solid #edf2f7',
                     mb: -'1px',
@@ -139,11 +191,11 @@ const BillingConfiguration = () => {
                 >
                   <FormControlLabel
                     control={
-                      <Checkbox 
-                        size="small" 
-                        checked={formData[item.key]} 
+                      <Checkbox
+                        size="small"
+                        checked={formData[item.key]}
                         onChange={handleChange(item.key)}
-                        sx={{ color: '#cbd5e0', '&.Mui-checked': { color: '#4a5568' } }} 
+                        sx={{ color: '#cbd5e0', '&.Mui-checked': { color: '#4a5568' } }}
                       />
                     }
                     label={
@@ -180,7 +232,7 @@ const BillingConfiguration = () => {
                   sx={{ m: 0 }}
                 />
               </Box>
-              
+
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 0 }}>
                 {[
                   { key: 'country', label: 'Country:', value: 'Country', type: 'select' },
@@ -284,12 +336,12 @@ const BillingConfiguration = () => {
                   <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'primary.main', minWidth: '150px', textDecoration: 'underline' }}>
                     {item.label}
                   </Typography>
-                  <TextField 
-                    variant="standard" 
-                    placeholder={item.placeholder} 
+                  <TextField
+                    variant="standard"
+                    placeholder={item.placeholder}
                     value={formData[item.key]}
                     onChange={handleChange(item.key)}
-                    sx={{ width: '250px', '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInputBase-input': { py: 0, fontSize: '0.8125rem' } }} 
+                    sx={{ width: '250px', '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInputBase-input': { py: 0, fontSize: '0.8125rem' } }}
                   />
                 </Box>
               ))}
@@ -351,9 +403,9 @@ const BillingConfiguration = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography sx={{ fontSize: '0.8125rem', color: '#4a5568' }}>Version:</Typography>
-                  <Select 
-                    size="small" 
-                    value={formData.statementVersion} 
+                  <Select
+                    size="small"
+                    value={formData.statementVersion}
                     onChange={(e) => setFormData(prev => ({ ...prev, statementVersion: e.target.value }))}
                     sx={{ height: 24, fontSize: '0.8125rem', width: '50px' }}
                   >
@@ -415,9 +467,9 @@ const BillingConfiguration = () => {
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'primary.main', width: '120px', textDecoration: 'underline' }}>
                   Clearing House
                 </Typography>
-                <Select 
-                  size="small" 
-                  value={formData.clearingHouse} 
+                <Select
+                  size="small"
+                  value={formData.clearingHouse}
                   onChange={(e) => setFormData(prev => ({ ...prev, clearingHouse: e.target.value }))}
                   sx={{ height: 24, fontSize: '0.8125rem', width: '100px' }}
                 >
@@ -508,12 +560,12 @@ const BillingConfiguration = () => {
                     label={<Typography sx={{ fontSize: '0.8125rem', color: '#4a5568' }}>Honor Write Off</Typography>}
                     sx={{ m: 0 }}
                   />
-                  <Button 
-                    variant="contained" 
+                  <Button
+                    variant="contained"
                     size="small"
-                    sx={{ 
-                      textTransform: 'none', 
-                      fontSize: '0.75rem', 
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.75rem',
                       backgroundColor: '#5a8dee',
                       '&:hover': { backgroundColor: '#4a7dce' }
                     }}
@@ -532,6 +584,12 @@ const BillingConfiguration = () => {
         open={previewOpen} 
         onClose={() => setPreviewOpen(false)} 
       />
+
+      <Snackbar open={toast.open} autoHideDuration={4000} onClose={handleCloseToast} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseToast} severity={toast.severity} sx={{ width: '100%' }}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

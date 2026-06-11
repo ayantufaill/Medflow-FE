@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchARAutomationConfig,
+  saveARAutomationConfig,
+  selectARAutomationConfig,
+  selectARAutomationLoading,
+} from '../../store/slices/billingSlice';
 import {
   Box,
   Typography,
@@ -8,6 +15,7 @@ import {
   Chip,
   Breadcrumbs,
   Link,
+  CircularProgress,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -20,15 +28,69 @@ import {
 } from '@mui/icons-material';
 
 const ARAutomation = () => {
+  const dispatch = useDispatch();
+  const savedConfig = useSelector(selectARAutomationConfig);
+  const loading = useSelector(selectARAutomationLoading);
+
   const [enabled, setEnabled] = useState(false);
   const [skipOpenClaims, setSkipOpenClaims] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
-
-  const notifications = [
+  const [notifications, setNotifications] = useState([
     { id: 1, title: '#1 Notification', template: 'AR Automation 15 Days', method: 'Email', after: '15 Days' },
     { id: 2, title: '#2 Notification', template: 'AR Automation 30 Days', method: 'Email', after: '30 Days' },
     { id: 3, title: '#3 Notification', template: 'AR Automation 45 Days', method: 'Email', after: '45 Days' },
-  ];
+  ]);
+
+  useEffect(() => {
+    const promise = dispatch(fetchARAutomationConfig());
+    return () => {
+      promise.abort();
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (savedConfig) {
+      setEnabled(savedConfig.enabled ?? false);
+      setSkipOpenClaims(savedConfig.skipOpenClaims ?? false);
+      if (savedConfig.notifications) {
+        setNotifications(savedConfig.notifications);
+      }
+    }
+  }, [savedConfig]);
+
+  const handleToggleEnabled = async (checked) => {
+    setEnabled(checked);
+    try {
+      await dispatch(saveARAutomationConfig({
+        enabled: checked,
+        skipOpenClaims,
+        notifications
+      })).unwrap();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleSkipOpenClaims = async (checked) => {
+    setSkipOpenClaims(checked);
+    try {
+      await dispatch(saveARAutomationConfig({
+        enabled,
+        skipOpenClaims: checked,
+        notifications
+      })).unwrap();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (loading && !savedConfig) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 0 }}>
@@ -59,7 +121,7 @@ const ARAutomation = () => {
           </Box>
           <Switch 
             checked={enabled} 
-            onChange={(e) => setEnabled(e.target.checked)}
+            onChange={(e) => handleToggleEnabled(e.target.checked)}
             sx={{ 
               '& .MuiSwitch-switchBase.Mui-checked': { color: '#fff' },
               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4a89dc', opacity: 1 }
@@ -115,7 +177,7 @@ const ARAutomation = () => {
           </Typography>
           <Switch 
             checked={skipOpenClaims} 
-            onChange={(e) => setSkipOpenClaims(e.target.checked)}
+            onChange={(e) => handleToggleSkipOpenClaims(e.target.checked)}
             sx={{ 
               '& .MuiSwitch-switchBase.Mui-checked': { color: '#fff' },
               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4a89dc', opacity: 1 }

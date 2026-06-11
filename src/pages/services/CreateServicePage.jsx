@@ -9,7 +9,8 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { serviceCatalogService } from '../../services/service-catalog.service';
+import { useDispatch } from 'react-redux';
+import { createService } from '../../store/slices/serviceSlice';
 import ServiceForm from '../../components/services/ServiceForm';
 
 const CreateServicePage = () => {
@@ -18,18 +19,18 @@ const CreateServicePage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const dispatch = useDispatch();
+
   const handleSubmit = async (data) => {
     try {
       setSaving(true);
       setError('');
-      await serviceCatalogService.createService(data);
+      await dispatch(createService(data)).unwrap();
       showSnackbar('Service created successfully', 'success');
       navigate('/services');
     } catch (err) {
       const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to create service. Please try again.';
+        err || 'Failed to create service. Please try again.';
       setError(errorMessage);
       showSnackbar(errorMessage, 'error');
     } finally {

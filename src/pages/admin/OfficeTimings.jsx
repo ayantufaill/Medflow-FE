@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  updateOfficeTimings as updateOfficeTimingsThunk,
+} from '../../store/slices/practiceInfoSlice';
 import {
   Box,
   Typography,
@@ -25,8 +30,11 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SaveIcon from '@mui/icons-material/Save';
 import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { practiceInfoService } from '../../services/practice-info.service';
+
+dayjs.extend(customParseFormat);
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -42,39 +50,28 @@ const defaultTimings = {
 };
 
 const OfficeTimings = () => {
+  const dispatch = useDispatch();
+  const { data: practiceData, loading, updateLoading } = useSelector((state) => state.practiceInfo);
+
   const [tabValue, setTabValue] = useState(0);
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
   const [timings, setTimings] = useState(defaultTimings);
-  const [loading, setLoading] = useState(true);
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [newCycle, setNewCycle] = useState({ name: '', fromDate: '', toDate: '' });
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.officeTimings && Object.keys(practiceInfo.officeTimings).length > 0) {
-            // Merge fetched settings over default settings to avoid undefined fields
-            setTimings(prev => ({
-              cycles: practiceInfo.officeTimings.cycles || prev.cycles,
-              openingHours: { ...prev.openingHours, ...practiceInfo.officeTimings.openingHours },
-              schedulingAppt: { ...prev.schedulingAppt, ...practiceInfo.officeTimings.schedulingAppt }
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch practice info:', error);
-        showSnackbar('Failed to load settings', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, [showSnackbar]);
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (practiceData && practiceData.officeTimings && Object.keys(practiceData.officeTimings).length > 0) {
+      setTimings(prev => ({
+        cycles: practiceData.officeTimings.cycles || prev.cycles,
+        openingHours: { ...prev.openingHours, ...practiceData.officeTimings.openingHours },
+        schedulingAppt: { ...prev.schedulingAppt, ...practiceData.officeTimings.schedulingAppt }
+      }));
+    }
+  }, [practiceData]);
 
   const handleAddCycle = () => {
     if (!newCycle.name) return;
@@ -93,32 +90,36 @@ const OfficeTimings = () => {
     }));
   };
 
-  const handleSave = async () => {
-    try {
-      let id = practiceInfoId;
-      if (!id) {
-        // Auto-create a default practice info so the user is unblocked
-        const newPractice = await practiceInfoService.createPracticeInfo({
-          practiceName: 'Default Practice',
-          phone: '555-000-0000',
-          email: 'info@defaultpractice.com',
-          address: {
-            line1: '123 Default St',
-            city: 'Metropolis',
-            state: 'NY',
-            postalCode: '10001',
-            country: 'United States'
+  const validateTimes = () => {
+    for (const section of ['openingHours', 'schedulingAppt']) {
+      for (const day of days) {
+        const { from, to, closed } = timings[section][day];
+        if (!closed && from && to) {
+          const fromTime = dayjs(from, ['hh:mm A', 'h:mm A']);
+          const toTime = dayjs(to, ['hh:mm A', 'h:mm A']);
+          if (fromTime.isValid() && toTime.isValid() && fromTime.isAfter(toTime)) {
+            showSnackbar(`${section === 'openingHours' ? 'Opening Hours' : 'Scheduling Appt'} on ${day}: 'From' time must be before 'To' time.`, 'error');
+            return false;
           }
-        });
-        id = newPractice._id || newPractice.id;
-        setPracticeInfoId(id);
+        }
       }
-      await practiceInfoService.updateOfficeTimings(id, timings);
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateTimes()) return;
+
+    try {
+      if (!practiceData || (!practiceData._id && !practiceData.id)) {
+        showSnackbar('Practice Information not found. Please fill it out first.', 'error');
+        return;
+      }
+      const id = practiceData._id || practiceData.id;
+      await dispatch(updateOfficeTimingsThunk({ practiceInfoId: id, officeTimingsData: timings })).unwrap();
       showSnackbar('Office timings saved successfully', 'success');
     } catch (error) {
-      console.error(error);
-      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save office timings';
-      showSnackbar(errMsg, 'error');
+      showSnackbar(error || 'Failed to save office timings', 'error');
     }
   };
 
@@ -135,7 +136,7 @@ const OfficeTimings = () => {
     }));
   };
 
-  if (loading) {
+  if (loading && !practiceData) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
         <CircularProgress />
@@ -168,11 +169,12 @@ const OfficeTimings = () => {
           <Button 
             variant="contained" 
             color="success" 
-            startIcon={<SaveIcon />}
+            startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
             onClick={handleSave}
+            disabled={updateLoading}
             sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
           >
-            Save Timings
+            {updateLoading ? 'Saving...' : 'Save Timings'}
           </Button>
         </Box>
 

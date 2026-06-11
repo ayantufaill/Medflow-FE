@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { useSelector, useDispatch } from 'react-redux';
 import { 
   Dialog, 
   DialogTitle, 
@@ -45,6 +46,11 @@ import {
   FormControl,
   FormLabel,
 } from '@mui/material';
+import {
+  selectMembershipPlansList,
+  deleteMembershipPlanThunk,
+  addMembershipPlanOptimistic
+} from '../../store/slices/insuranceSlice';
 
 const INITIAL_MEMBERSHIP_PLANS = [
   {
@@ -91,10 +97,13 @@ const INITIAL_MEMBERSHIP_PLANS = [
 
 const MembershipPlans = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
-  const [plans, setPlans] = useState(INITIAL_MEMBERSHIP_PLANS);
+  
+  const plans = useSelector(selectMembershipPlansList);
+  const loading = false; // Mock loading since we don't fetch membership plans from backend yet
+
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
   const [view, setView] = useState('list'); // 'list' or 'grid'
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'add'
   const [showBanner, setShowBanner] = useState(true);
@@ -126,8 +135,8 @@ const MembershipPlans = () => {
     setDeleteDialog({ open: true, planId: id, planName: name });
   };
 
-  const handleDeleteConfirm = () => {
-    setPlans(prev => prev.filter(p => p.id !== deleteDialog.planId));
+  const handleDeleteConfirm = async () => {
+    await dispatch(deleteMembershipPlanThunk(deleteDialog.planId)).unwrap();
     showSnackbar('Membership plan deleted successfully', 'success');
     setDeleteDialog({ open: false, planId: null, planName: '' });
   };
@@ -145,7 +154,7 @@ const MembershipPlans = () => {
       annualFee: `$${newPlan.annualFee || '0.00'}`,
       monthlyFee: `$${newPlan.monthlyFee || '0.00'}`,
     };
-    setPlans(prev => [...prev, planToAdd]);
+    dispatch(addMembershipPlanOptimistic(planToAdd));
     showSnackbar('Membership plan created successfully', 'success');
     setViewMode('list');
     setNewPlan({

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { roomService } from '../../services/room.service';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchRooms, deleteRoom, selectRoomList, selectRoomListLoading } from '../../store/slices/roomSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
@@ -25,32 +26,19 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 
 const OperatorySetup = () => {
-  const [operatories, setOperatories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const operatories = useSelector(selectRoomList);
+  const dispatch = useDispatch();
 
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
-    const fetchOperatories = async () => {
-      try {
-        setLoading(true);
-        const res = await roomService.getAllRooms(1, 100);
-        setOperatories(res.rooms || []);
-      } catch (error) {
-        console.error('Failed to fetch operatories:', error);
-        showSnackbar('Failed to load operatories', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOperatories();
-  }, [showSnackbar]);
+    dispatch(fetchRooms({ page: 1, limit: 100 }));
+  }, [dispatch]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this operatory?')) return;
     try {
-      await roomService.deleteRoom(id);
-      setOperatories(prev => prev.filter(op => op._id !== id && op.roomNumber !== id));
+      await dispatch(deleteRoom(id)).unwrap();
       showSnackbar('Operatory deleted successfully', 'success');
     } catch (error) {
       console.error(error);

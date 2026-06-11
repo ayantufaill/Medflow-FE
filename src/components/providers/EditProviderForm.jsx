@@ -18,6 +18,8 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Info as InfoIcon, Add as AddIcon } from '@mui/icons-material';
+import ReactPhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -102,6 +104,48 @@ const Label = ({ children, required }) => (
   <Typography variant="caption" fontWeight={600} display="block" mb={0.5}>
     {children}{required && <span style={{ color: '#e53935' }}> *</span>}
   </Typography>
+);
+
+const PhoneInput = ({ label, required, name, control }) => (
+  <Box>
+    <Label required={required}>{label}</Label>
+    <Controller
+      name={name}
+      control={control}
+      rules={{
+        required: required ? 'Required' : false,
+        validate: (value) => {
+          if (!value && !required) return true;
+          if (!value && required) return 'Required';
+          const cleanPhone = (value || '').replace(/\D/g, '');
+          if (cleanPhone.length > 0 && cleanPhone.length < 10) return 'Phone number appears incomplete';
+          if (cleanPhone.length > 15) return 'Phone number is too long';
+          return true;
+        }
+      }}
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <Box>
+          <ReactPhoneInput
+            country={'us'}
+            value={value}
+            onChange={(phone) => onChange(phone)}
+            inputStyle={{
+              width: '100%',
+              height: '40px',
+              borderColor: error ? '#d32f2f' : '#ccc',
+              borderRadius: '4px'
+            }}
+            containerStyle={{ width: '100%' }}
+          />
+          {error && (
+            <Typography color="error" variant="caption" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
+              {error.message}
+            </Typography>
+          )}
+        </Box>
+      )}
+    />
+  </Box>
 );
 
 // ─── Main form ────────────────────────────────────────────────────────────────
@@ -225,19 +269,8 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
             </FormControl>
           )} />
         </Grid>
-        <Grid size={4}>
-          <Label required>Mobile Phone Number</Label>
-          <TextField fullWidth size="small" placeholder="(201) 555-0123"
-            InputProps={{ startAdornment: <InputAdornment position="start">🇺🇸 ·</InputAdornment> }}
-            {...register('mobilePhone', { required: 'Required' })}
-            error={!!errors.mobilePhone} helperText={errors.mobilePhone?.message} />
-        </Grid>
-        <Grid size={4}>
-          <Label>Home Phone Number</Label>
-          <TextField fullWidth size="small" placeholder="(201) 555-0123"
-            InputProps={{ startAdornment: <InputAdornment position="start">🇺🇸 ·</InputAdornment> }}
-            {...register('homePhone')} />
-        </Grid>
+        <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" control={control} /></Grid>
+        <Grid size={4}><PhoneInput label="Home Phone Number" name="homePhone" control={control} /></Grid>
 
         {/* Row 7: License Number | Tax Id Type */}
         <Grid size={6}>

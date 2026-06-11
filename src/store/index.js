@@ -6,10 +6,14 @@ import roomReducer from './slices/roomSlice';
 import appointmentTypeReducer from './slices/appointmentTypeSlice';
 import billingReducer from './slices/billingSlice';
 import clinicalReducer from './slices/clinicalSlice';
+import clinicalManagementReducer from './slices/clinicalManagementSlice';
 import uiReducer from './slices/uiSlice';
 import authReducer from './slices/authSlice';
 import insuranceReducer from './slices/insuranceSlice';
 import documentReducer from './slices/documentSlice';
+import serviceReducer from './slices/serviceSlice';
+import practiceInfoReducer from './slices/practiceInfoSlice';
+import userReducer from './slices/userSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -19,10 +23,14 @@ const appReducer = combineReducers({
   appointmentType: appointmentTypeReducer,
   billing: billingReducer,
   clinical: clinicalReducer,
+  clinicalManagement: clinicalManagementReducer,
   ui: uiReducer,
   auth: authReducer,
   insurance: insuranceReducer,
   document: documentReducer,
+  services: serviceReducer,
+  practiceInfo: practiceInfoReducer,
+  user: userReducer,
 });
 
 const rootReducer = (state, action) => {

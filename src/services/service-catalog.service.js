@@ -102,6 +102,14 @@ export const serviceCatalogService = {
   },
 
   /**
+   * Toggle service active status
+   */
+  async toggleServiceStatus(serviceId) {
+    const response = await apiClient.patch(`/services/${serviceId}/toggle`);
+    return response.data.data;
+  },
+
+  /**
    * Get service categories
    */
   async getCategories() {

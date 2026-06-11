@@ -19,7 +19,14 @@ import {
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SaveIcon from '@mui/icons-material/Save';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { practiceInfoService } from '../../services/practice-info.service';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  createPracticeInfo,
+  updateMyChartSettings,
+  selectPracticeInfo,
+  selectPracticeInfoLoading
+} from '../../store/slices/practiceInfoSlice';
 
 // Reusable component for the repeated "Label + Switch + Required/Optional" pattern
 const ConfigRow = ({ 
@@ -122,54 +129,45 @@ const defaultSettings = {
   }
 };
 
+const deepMerge = (target, source) => {
+  if (!source) return target;
+  const output = { ...target };
+  Object.keys(target).forEach((key) => {
+    if (source[key] !== undefined) {
+      if (typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])) {
+        output[key] = deepMerge(target[key], source[key]);
+      } else {
+        output[key] = source[key];
+      }
+    }
+  });
+  return output;
+};
+
 const MyChartConfiguration = () => {
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(defaultSettings);
   const { showSnackbar } = useSnackbar();
-
-  const deepMerge = (target, source) => {
-    if (!source) return target;
-    const output = { ...target };
-    Object.keys(target).forEach((key) => {
-      if (source[key] !== undefined) {
-        if (typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])) {
-          output[key] = deepMerge(target[key], source[key]);
-        } else {
-          output[key] = source[key];
-        }
-      }
-    });
-    return output;
-  };
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const loading = useSelector(selectPracticeInfoLoading);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.myChartSettings && Object.keys(practiceInfo.myChartSettings).length > 0) {
-            setSettings(prev => deepMerge(prev, practiceInfo.myChartSettings));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch mychart settings:', error);
-        showSnackbar('Failed to load MyChart settings', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, [showSnackbar]);
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (practiceInfo?.myChartSettings && Object.keys(practiceInfo.myChartSettings).length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSettings(prev => deepMerge(prev, practiceInfo.myChartSettings));
+    }
+  }, [practiceInfo?.myChartSettings]);
 
   const handleSave = async () => {
     try {
-      let id = practiceInfoId;
+      let id = practiceInfo?._id || practiceInfo?.id;
       if (!id) {
         // Auto-create a default practice info so the user is unblocked
-        const newPractice = await practiceInfoService.createPracticeInfo({
+        const newPractice = await dispatch(createPracticeInfo({
           practiceName: 'Default Practice',
           phone: '555-000-0000',
           email: 'info@defaultpractice.com',
@@ -180,17 +178,18 @@ const MyChartConfiguration = () => {
             postalCode: '10001',
             country: 'United States'
           }
-        });
+        })).unwrap();
         id = newPractice._id || newPractice.id;
-        setPracticeInfoId(id);
       }
       
-      await practiceInfoService.updateMyChartSettings(id, settings);
+      await dispatch(updateMyChartSettings({
+        practiceInfoId: id,
+        mychartSettingsData: settings
+      })).unwrap();
       showSnackbar('MyChart configuration saved successfully', 'success');
     } catch (error) {
       console.error(error);
-      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save MyChart configuration';
-      showSnackbar(errMsg, 'error');
+      showSnackbar(error || 'Failed to save MyChart configuration', 'error');
     }
   };
 
