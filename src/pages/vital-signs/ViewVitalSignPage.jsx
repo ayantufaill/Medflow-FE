@@ -129,7 +129,7 @@ const ViewVitalSignPage = () => {
       <Box>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/vital-signs')}
+          onClick={() => navigate(-1)}
           sx={{ mb: 2 }}
         >
           Back to Vital Signs
@@ -174,7 +174,7 @@ const ViewVitalSignPage = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/vital-signs')}
+            onClick={() => navigate(-1)}
           >
             Back
           </Button>
