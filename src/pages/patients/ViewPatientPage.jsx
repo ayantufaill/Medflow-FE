@@ -27,7 +27,7 @@ import {
 } from '../../components/patient-tabs';
 import { usePatient } from '../../hooks/queries/usePatients';
 
-const TAB_PARAMS = { insurance: 1, notes: 2, documents: 3, vitals: 4 };
+const TAB_PARAMS = { insurance: 1, allergies: 2, vitals: 3, notes: 4, documents: 5 };
 
 const ViewPatientPage = () => {
   const navigate = useNavigate();

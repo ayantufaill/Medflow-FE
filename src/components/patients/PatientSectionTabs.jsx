@@ -3,6 +3,7 @@ import { Box, Button } from '@mui/material';
 
 export const PATIENT_SECTION_TABS = [
   { id: 'details', label: 'PATIENT DETAILS' },
+  { id: 'vitals', label: 'VITALS' },
   { id: 'medical', label: 'MEDICAL HISTORY' },
   { id: 'dental', label: 'DENTAL HISTORY' },
   { id: 'insurance', label: 'INSURANCE' },
@@ -21,6 +22,11 @@ const PatientSectionTabs = ({ activeTab, patientId = '' }) => {
     if (tabId === 'details') {
       if (patientId) navigate(`/patients/details/${patientId}`);
       else navigate('/patients');
+      return;
+    }
+    if (tabId === 'vitals') {
+      if (patientId) navigate(`/vital-signs/patient/${patientId}`);
+      else navigate('/vital-signs');
       return;
     }
     if (tabId === 'signed_docs') {

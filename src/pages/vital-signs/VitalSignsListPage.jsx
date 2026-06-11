@@ -33,22 +33,18 @@ import {
   FavoriteBorder as HeartIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { vitalSignService } from '../../services/vital-sign.service';
 import { patientService } from '../../services/patient.service';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { useVitalSigns, useDeleteVitalSign } from '../../hooks/queries/useVitalSigns';
 
 const VitalSignsListPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
-  const [vitalSigns, setVitalSigns] = useState([]);
   const [patients, setPatients] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    total: 0,
-    pages: 0,
   });
   const [filters, setFilters] = useState({
     patientId: searchParams.get('patientId') || '',
@@ -56,24 +52,12 @@ const VitalSignsListPage = () => {
     endDate: '',
   });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, vitalSignId: null });
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const fetchVitalSigns = async () => {
-    try {
-      setLoading(true);
-      const result = await vitalSignService.getAllVitalSigns(
-        pagination.page,
-        pagination.limit,
-        filters
-      );
-      setVitalSigns(result.vitalSigns);
-      setPagination(result.pagination);
-    } catch (err) {
-      showSnackbar('Failed to load vital signs', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading, refetch } = useVitalSigns(pagination.page, pagination.limit, filters);
+  const vitalSigns = data?.vitalSigns || [];
+  const total = data?.pagination?.total || 0;
+
+  const { mutateAsync: deleteVitalSign, isPending: deleteLoading } = useDeleteVitalSign();
 
   const fetchPatients = async () => {
     try {
@@ -87,10 +71,6 @@ const VitalSignsListPage = () => {
   useEffect(() => {
     fetchPatients();
   }, []);
-
-  useEffect(() => {
-    fetchVitalSigns();
-  }, [pagination.page, pagination.limit, filters]);
 
   const handlePageChange = (event, newPage) => {
     setPagination((prev) => ({ ...prev, page: newPage + 1 }));
@@ -111,17 +91,14 @@ const VitalSignsListPage = () => {
 
   const handleDelete = async () => {
     try {
-      setDeleteLoading(true);
-      await vitalSignService.deleteVitalSign(deleteDialog.vitalSignId);
+      await deleteVitalSign(deleteDialog.vitalSignId);
       showSnackbar('Vital sign record deleted successfully', 'success');
-      fetchVitalSigns();
     } catch (err) {
       showSnackbar(
         err.response?.data?.error?.message || 'Failed to delete vital sign record',
         'error'
       );
     } finally {
-      setDeleteLoading(false);
       setDeleteDialog({ open: false, vitalSignId: null });
     }
   };
@@ -158,7 +135,7 @@ const VitalSignsListPage = () => {
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
-            onClick={fetchVitalSigns}
+            onClick={() => refetch()}
           >
             Refresh
           </Button>
@@ -216,7 +193,7 @@ const VitalSignsListPage = () => {
         </Grid>
       </Paper>
 
-      {loading ? (
+      {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
@@ -300,7 +277,7 @@ const VitalSignsListPage = () => {
           </TableContainer>
           <TablePagination
             component="div"
-            count={pagination.total}
+            count={total}
             page={pagination.page - 1}
             onPageChange={handlePageChange}
             rowsPerPage={pagination.limit}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -24,12 +24,16 @@ import {
   WaterDrop as OxygenIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  History as HistoryIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { vitalSignService } from '../../services/vital-sign.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
+import {
+  usePatientVitalSigns,
+  useDeleteVitalSign,
+} from '../../hooks/queries/useVitalSigns';
 import {
   calculateBMI,
   getBMICategory,
@@ -39,30 +43,22 @@ import {
 const PatientVitalsTab = ({ patientId }) => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
-  const [vitals, setVitals] = useState([]);
-  const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({ open: false, vital: null });
-  const [deleting, setDeleting] = useState(false);
 
-  const fetchVitals = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const result = await vitalSignService.getVitalSignsByPatient(patientId, 1, 50);
-      setVitals(result.vitalSigns || []);
-    } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to load vital signs');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch only the last 3 readings for the tab preview
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    error: queryError,
+    refetch,
+  } = usePatientVitalSigns(patientId, 1, 3);
 
-  useEffect(() => {
-    if (patientId) {
-      fetchVitals();
-    }
-  }, [patientId]);
+  const vitals = data?.vitalSigns || [];
+  const totalCount = data?.pagination?.total || 0;
+  const error = isError ? (queryError?.response?.data?.error?.message || 'Failed to load vital signs') : '';
+
+  const { mutateAsync: deleteVitalSign, isPending: deleting } = useDeleteVitalSign();
 
   const formatDateTime = (dateString, timeString) => {
     if (!dateString) return '-';
@@ -80,18 +76,14 @@ const PatientVitalsTab = ({ patientId }) => {
   const handleDeleteConfirm = async () => {
     if (!deleteDialog.vital) return;
     try {
-      setDeleting(true);
-      await vitalSignService.deleteVitalSign(deleteDialog.vital._id);
+      await deleteVitalSign(deleteDialog.vital._id);
       showSnackbar('Vital signs deleted successfully', 'success');
       setDeleteDialog({ open: false, vital: null });
-      fetchVitals();
     } catch (err) {
       showSnackbar(
         err.response?.data?.error?.message || 'Failed to delete vital signs',
         'error'
       );
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -107,14 +99,22 @@ const PatientVitalsTab = ({ patientId }) => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h6" fontWeight="medium">
-          Vital Signs ({vitals.length})
+          Vital Signs ({totalCount})
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Refresh">
-            <IconButton onClick={fetchVitals} size="small">
+            <IconButton onClick={() => refetch()} size="small">
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<HistoryIcon />}
+            onClick={() => navigate(`/vital-signs/patient/${patientId}`)}
+          >
+            View Full History
+          </Button>
           <Button
             variant="contained"
             size="small"
@@ -291,6 +291,18 @@ const PatientVitalsTab = ({ patientId }) => {
               </Card>
             );
           })}
+
+          {totalCount > 3 && (
+            <Button
+              variant="text"
+              color="primary"
+              startIcon={<HistoryIcon />}
+              onClick={() => navigate(`/vital-signs/patient/${patientId}`)}
+              sx={{ alignSelf: 'center', mt: 1 }}
+            >
+              View all {totalCount} vital sign records
+            </Button>
+          )}
         </Box>
       )}
 
