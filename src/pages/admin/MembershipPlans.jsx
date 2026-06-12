@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -48,8 +48,10 @@ import {
 } from '@mui/material';
 import {
   selectMembershipPlansList,
+  selectMembershipPlansLoading,
   deleteMembershipPlanThunk,
-  addMembershipPlanOptimistic
+  fetchMembershipPlansThunk,
+  createMembershipPlanThunk
 } from '../../store/slices/insuranceSlice';
 
 const INITIAL_MEMBERSHIP_PLANS = [
@@ -101,12 +103,15 @@ const MembershipPlans = () => {
   const { showSnackbar } = useSnackbar();
   
   const plans = useSelector(selectMembershipPlansList);
-  const loading = false; // Mock loading since we don't fetch membership plans from backend yet
+  const loading = useSelector(selectMembershipPlansLoading);
+
+  useEffect(() => {
+    dispatch(fetchMembershipPlansThunk());
+  }, [dispatch]);
 
   const [search, setSearch] = useState('');
   const [view, setView] = useState('list'); // 'list' or 'grid'
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'add'
-  const [showBanner, setShowBanner] = useState(true);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isAuditDialogOpen, setIsAuditDialogOpen] = useState(false);
   
@@ -154,7 +159,7 @@ const MembershipPlans = () => {
       annualFee: `$${newPlan.annualFee || '0.00'}`,
       monthlyFee: `$${newPlan.monthlyFee || '0.00'}`,
     };
-    dispatch(addMembershipPlanOptimistic(planToAdd));
+    dispatch(createMembershipPlanThunk(planToAdd));
     showSnackbar('Membership plan created successfully', 'success');
     setViewMode('list');
     setNewPlan({

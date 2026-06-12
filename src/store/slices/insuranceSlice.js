@@ -143,14 +143,6 @@ export const deletePlanThunk = createAsyncThunk(
   }
 );
 
-export const deleteMembershipPlanThunk = createAsyncThunk(
-  'insurance/deleteMembershipPlan',
-  async (planId, { rejectWithValue }) => {
-    // Mock deletion
-    return planId;
-  }
-);
-
 const INITIAL_MEMBERSHIP_PLANS = [
   { id: '1', name: 'Bright Beginning', templateName: '', subscribers: 1, annualFee: '$550.00', monthlyFee: '$46.00' },
   { id: '2', name: 'Clean + Confident - Existing Patient', templateName: '', subscribers: 2, annualFee: '$800.00', monthlyFee: '$75.00' },
@@ -158,6 +150,112 @@ const INITIAL_MEMBERSHIP_PLANS = [
   { id: '4', name: 'Foundations (Perio) Program - New Patient', templateName: 'Foundations', subscribers: 3, annualFee: '$1,495.00', monthlyFee: '$133.00' },
   { id: '5', name: 'Foundations (Perio) Program Existing Patient', templateName: '', subscribers: 1, annualFee: '$1,195.00', monthlyFee: '$105.00' },
 ];
+
+export const deleteMembershipPlanThunk = createAsyncThunk(
+  'insurance/deleteMembershipPlan',
+  async (planId) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return planId;
+  }
+);
+
+export const fetchMembershipPlansThunk = createAsyncThunk(
+  'insurance/fetchMembershipPlans',
+  async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return INITIAL_MEMBERSHIP_PLANS;
+  },
+  {
+    condition: (_, { getState }) => {
+      const { insurance } = getState();
+      if (insurance.membershipPlansLoading || insurance.membershipPlansList.length > 0) return false;
+      return true;
+    }
+  }
+);
+
+export const createMembershipPlanThunk = createAsyncThunk(
+  'insurance/createMembershipPlan',
+  async (plan) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return plan;
+  }
+);
+
+// ─── CONVERTED CARRIERS THUNKS (MOCKED) ──────────────────────────────────────
+export const fetchConvertedCarriersThunk = createAsyncThunk(
+  'insurance/fetchConvertedCarriers',
+  async () => {
+    // Mocked delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      oldPayers: [
+        { name: 'Delta Dental', id: '12345', patientIds: 'P001, P002' },
+        { name: 'Cigna', id: '67890', patientIds: 'P003' }
+      ],
+      oryxPayers: [
+        { name: 'Delta Dental of California', id: 'DD-CA' },
+        { name: 'Cigna Health', id: 'CG-HLTH' }
+      ],
+      matchedPayers: []
+    };
+  },
+  {
+    condition: (_, { getState }) => {
+      const { insurance } = getState();
+      if (insurance.convertedOldPayers.length > 0) return false;
+      return true;
+    }
+  }
+);
+
+export const matchConvertedCarrierThunk = createAsyncThunk(
+  'insurance/matchConvertedCarrier',
+  async (matchData) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return matchData; // { oldName, oryxName, oldId, oryxId }
+  }
+);
+
+export const clearConvertedMatchesThunk = createAsyncThunk(
+  'insurance/clearConvertedMatches',
+  async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return [];
+  }
+);
+
+// ─── VYNE CARRIERS THUNKS (MOCKED) ─────────────────────────────────────────────
+export const fetchVyneCarriersThunk = createAsyncThunk(
+  'insurance/fetchVyneCarriers',
+  async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      officePayers: Array(15).fill({ name: 'Arizona Blue Cross Blue Shield of Georgia', id: '60054' }),
+      vynePayers: [
+        { name: 'BCBS AZ', id: 'VY-BCBS-AZ' },
+        { name: 'BCBS GA', id: 'VY-BCBS-GA' }
+      ],
+      matchedPayers: []
+    };
+  },
+  {
+    condition: (_, { getState }) => {
+      const { insurance } = getState();
+      if (insurance.vynePayersList && insurance.vynePayersList.length > 0) return false;
+      return true;
+    }
+  }
+);
+
+export const matchVyneCarrierThunk = createAsyncThunk(
+  'insurance/matchVyneCarrier',
+  async (matchData) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return matchData; // { officeName, vyneName, officeId, vyneId, vyneMasterId }
+  }
+);
+
 
 const initialState = {
   // Dropdown lists
@@ -193,7 +291,7 @@ const initialState = {
   plansListLoading: false,
   plansListError: null,
 
-  membershipPlansList: INITIAL_MEMBERSHIP_PLANS,
+  membershipPlansList: [],
   membershipPlansLoading: false,
 };
 
@@ -303,9 +401,45 @@ const insuranceSlice = createSlice({
       .addCase(deletePlanThunk.fulfilled, (state, action) => {
         state.plansList = state.plansList.filter(p => (p._id || p.id) !== action.payload);
       })
-      // Admin Membership Plans List (mock deletes)
+      // Admin Membership Plans List
+      .addCase(fetchMembershipPlansThunk.pending, (state) => {
+        state.membershipPlansLoading = true;
+      })
+      .addCase(fetchMembershipPlansThunk.fulfilled, (state, action) => {
+        state.membershipPlansLoading = false;
+        if (state.membershipPlansList.length === 0) {
+          state.membershipPlansList = action.payload;
+        }
+      })
+      .addCase(fetchMembershipPlansThunk.rejected, (state) => {
+        state.membershipPlansLoading = false;
+      })
+      .addCase(createMembershipPlanThunk.fulfilled, (state, action) => {
+        state.membershipPlansList.push(action.payload);
+      })
       .addCase(deleteMembershipPlanThunk.fulfilled, (state, action) => {
         state.membershipPlansList = state.membershipPlansList.filter(p => p.id !== action.payload);
+      })
+      // Converted Carriers Mock
+      .addCase(fetchConvertedCarriersThunk.fulfilled, (state, action) => {
+        state.convertedOldPayers = action.payload.oldPayers;
+        state.convertedOryxPayers = action.payload.oryxPayers;
+        state.convertedMatchedPayers = action.payload.matchedPayers;
+      })
+      .addCase(matchConvertedCarrierThunk.fulfilled, (state, action) => {
+        state.convertedMatchedPayers.push(action.payload);
+      })
+      .addCase(clearConvertedMatchesThunk.fulfilled, (state) => {
+        state.convertedMatchedPayers = [];
+      })
+      // Vyne Carriers Mock
+      .addCase(fetchVyneCarriersThunk.fulfilled, (state, action) => {
+        state.vyneOfficePayers = action.payload.officePayers;
+        state.vynePayersList = action.payload.vynePayers;
+        state.vyneMatchedPayers = action.payload.matchedPayers;
+      })
+      .addCase(matchVyneCarrierThunk.fulfilled, (state, action) => {
+        state.vyneMatchedPayers.push(action.payload);
       });
   }
 });

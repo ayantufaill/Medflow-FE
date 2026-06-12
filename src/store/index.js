@@ -14,6 +14,8 @@ import documentReducer from './slices/documentSlice';
 import serviceReducer from './slices/serviceSlice';
 import practiceInfoReducer from './slices/practiceInfoSlice';
 import userReducer from './slices/userSlice';
+import feeGuideReducer from './slices/feeGuideSlice';
+import dashboardGoalsReducer from './slices/dashboardGoalsSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -31,6 +33,8 @@ const appReducer = combineReducers({
   services: serviceReducer,
   practiceInfo: practiceInfoReducer,
   user: userReducer,
+  feeGuides: feeGuideReducer,
+  dashboardGoals: dashboardGoalsReducer,
 });
 
 const rootReducer = (state, action) => {

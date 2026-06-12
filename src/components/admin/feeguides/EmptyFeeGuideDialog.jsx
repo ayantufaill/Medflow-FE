@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import {
   Dialog,
   DialogTitle,
@@ -8,8 +9,19 @@ import {
   Box,
   Button,
 } from '@mui/material';
+import { createFeeGuide } from '../../../store/slices/feeGuideSlice';
 
 const EmptyFeeGuideDialog = ({ open, onClose }) => {
+  const dispatch = useDispatch();
+  const [name, setName] = useState('');
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    dispatch(createFeeGuide(name));
+    setName('');
+    onClose();
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -26,7 +38,7 @@ const EmptyFeeGuideDialog = ({ open, onClose }) => {
         fontSize: '1rem',
         fontWeight: 600
       }}>
-        Copy Fee Guide from
+        Empty Fee Guide
       </DialogTitle>
       <DialogContent sx={{ py: 3, px: 2 }}>
         <Typography variant="body2" sx={{ mb: 1, fontWeight: 700, color: '#333' }}>
@@ -35,6 +47,8 @@ const EmptyFeeGuideDialog = ({ open, onClose }) => {
         <TextField
           size="small"
           fullWidth
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           sx={{ 
             mb: 3,
             '& .MuiOutlinedInput-root': { 
@@ -48,7 +62,8 @@ const EmptyFeeGuideDialog = ({ open, onClose }) => {
           <Button 
             variant="contained" 
             sx={{ bgcolor: '#d9a366', textTransform: 'none', minWidth: 80, '&:hover': { bgcolor: '#c08d50' } }}
-            onClick={onClose}
+            onClick={handleSave}
+            disabled={!name.trim()}
           >
             Save
           </Button>

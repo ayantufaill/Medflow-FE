@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import {
   Dialog,
   DialogTitle,
@@ -10,8 +11,19 @@ import {
   ListItemText,
   Button,
 } from '@mui/material';
+import { copyFeeGuide } from '../../../store/slices/feeGuideSlice';
 
 const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
+  const dispatch = useDispatch();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredGuides = feeGuidesData.filter(g => g.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const handleCopy = (guide) => {
+    dispatch(copyFeeGuide({ sourceId: guide.id, newName: guide.name + ' - Copy' }));
+    onClose();
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -35,6 +47,8 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
           <TextField
             size="small"
             fullWidth
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search fee guide"
             sx={{ 
               '& .MuiInputBase-root': { bgcolor: 'white' },
@@ -43,11 +57,11 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
           />
         </Box>
         <List sx={{ pt: 0, maxHeight: 300, overflow: 'auto' }}>
-          {feeGuidesData.map((guide) => (
+          {filteredGuides.map((guide) => (
             <ListItem 
               key={guide.id} 
               button 
-              onClick={onClose}
+              onClick={() => handleCopy(guide)}
               sx={{ borderBottom: '1px solid #f0f0f0', py: 0.2 }}
             >
               <ListItemText 

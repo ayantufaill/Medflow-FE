@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,6 +16,7 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -34,7 +36,13 @@ import EmptyFeeGuideDialog from '../../components/admin/feeguides/EmptyFeeGuideD
 import ReestimateDialog from '../../components/admin/feeguides/ReestimateDialog';
 import EditFeeGuideDialog from '../../components/admin/feeguides/EditFeeGuideDialog';
 import AuditHistoryDialog from '../../components/admin/feeguides/AuditHistoryDialog';
-import { feeService } from '../../services/fee.service';
+import { 
+  fetchFeeGuides, 
+  deleteFeeGuide, 
+  selectFeeGuides, 
+  selectDefaultFeeGuideId,
+  selectFeeGuidesLoading 
+} from '../../store/slices/feeGuideSlice';
 
 const FeeGuides = () => {
   const navigate = useNavigate();
@@ -48,36 +56,48 @@ const FeeGuides = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [selectedFeeGuide, setSelectedFeeGuide] = useState('');
+  const [selectedFeeGuideObj, setSelectedFeeGuideObj] = useState(null);
 
-  const [feeGuidesData, setFeeGuidesData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const feeGuidesRaw = useSelector(selectFeeGuides);
+  const loading = useSelector(selectFeeGuidesLoading);
+  const overrideDefaultId = useSelector(selectDefaultFeeGuideId);
 
   useEffect(() => {
-    fetchFeeGuides();
-  }, []);
+    dispatch(fetchFeeGuides());
+  }, [dispatch]);
 
-  const fetchFeeGuides = async () => {
-    try {
-      setLoading(true);
-      const data = await feeService.getFeeSchedules();
-      const mappedData = data.map(fs => ({
-        id: fs.FeeSchedNum.toString(),
-        name: fs.Description,
-        default: fs.FeeSchedType === 0 ? 'Yes' : 'No', // Simplified logic
-        defaultProvider: '',
-        plans: 0 // Mocked for now
-      }));
-      setFeeGuidesData(mappedData);
-    } catch (error) {
-      console.error('Failed to fetch fee guides:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const feeGuidesData = (feeGuidesRaw || []).map((fs, index) => {
+    const fsId = fs?._id?.toString() || fs?.id?.toString() || fs?.FeeSchedNum?.toString() || `fallback-${index}`;
+    return {
+      id: fsId,
+      name: fs?.description || fs?.Description || 'Unnamed',
+      default: overrideDefaultId ? (overrideDefaultId === fsId ? 'Yes' : 'No') : (index === 0 ? 'Yes' : 'No'),
+      defaultProvider: '',
+      plans: 0 // Mocked for now
+    };
+  });
 
   const handleOpenPlans = (name) => {
-    setSelectedFeeGuide(name.toUpperCase());
+    setSelectedFeeGuide((name || '').toUpperCase());
     setPlansDialogOpen(true);
+  };
+
+  const handleExportCSV = (e) => {
+    e.stopPropagation();
+    const csvContent = [
+      ['Name', 'Default', 'Default Provider'],
+      ...feeGuidesData.map(row => [row.name, row.default, row.defaultProvider])
+    ].map(e => `"${e.join('","')}"`).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'fee_guides.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const tanButtonStyle = {
@@ -107,6 +127,14 @@ const FeeGuides = () => {
     gap: 0.5,
   };
 
+  if (loading && feeGuidesRaw.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 0 }}>
       {/* Breadcrumb & Top Sync */}
@@ -115,7 +143,7 @@ const FeeGuides = () => {
           <Link to="/admin/finance-management" style={{ textDecoration: 'none', color: '#4b71a1' }}>Finance Management</Link> &gt; Fee Guides
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography sx={actionLinkStyle}>
+          <Typography sx={actionLinkStyle} onClick={() => dispatch(fetchFeeGuides())}>
             <SyncIcon fontSize="small" /> Sync
           </Typography>
         </Box>
@@ -192,17 +220,17 @@ const FeeGuides = () => {
                 <TableCell sx={{ py: 1, color: '#666' }}>{row.defaultProvider}</TableCell>
                 <TableCell align="right" sx={{ py: 1 }} onClick={(e) => e.stopPropagation()}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5 }}>
-                    <Typography sx={actionLinkStyle}>Export as CSV</Typography>
-                    <Typography sx={actionLinkStyle}><SyncIcon sx={{ fontSize: '1rem' }} /> Sync</Typography>
-                    <IconButton size="small" sx={{ color: '#ccc' }}>
+                    <Typography sx={actionLinkStyle} onClick={handleExportCSV}>Export as CSV</Typography>
+                    <Typography sx={actionLinkStyle} onClick={(e) => { e.stopPropagation(); dispatch(fetchFeeGuides()); }}><SyncIcon sx={{ fontSize: '1rem' }} /> Sync</Typography>
+                    <IconButton size="small" sx={{ color: '#ccc' }} onClick={(e) => { e.stopPropagation(); dispatch(deleteFeeGuide(row.id)); }}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
-                    <Typography sx={actionLinkStyle} onClick={() => { setSelectedFeeGuide(row.name); setEditDialogOpen(true); }}>Edit</Typography>
+                    <Typography sx={actionLinkStyle} onClick={(e) => { e.stopPropagation(); setSelectedFeeGuideObj(row); setEditDialogOpen(true); }}>Edit</Typography>
                     <IconButton size="small" sx={{ color: '#4b71a1' }}>
                       <VisibilityIcon fontSize="small" />
                     </IconButton>
-                    <Typography sx={actionLinkStyle} onClick={() => handleOpenPlans(row.name)}>{row.plans} Plan(s)</Typography>
-                    <IconButton size="small" sx={{ color: '#4b71a1' }} onClick={() => setAuditDialogOpen(true)}>
+                    <Typography sx={actionLinkStyle} onClick={(e) => { e.stopPropagation(); handleOpenPlans(row.name); }}>{row.plans} Plan(s)</Typography>
+                    <IconButton size="small" sx={{ color: '#4b71a1' }} onClick={(e) => { e.stopPropagation(); setAuditDialogOpen(true); }}>
                       <DescriptionIcon fontSize="small" />
                     </IconButton>
                   </Box>
@@ -243,8 +271,7 @@ const FeeGuides = () => {
       <EditFeeGuideDialog 
         open={editDialogOpen} 
         onClose={() => setEditDialogOpen(false)} 
-        selectedFeeGuide={selectedFeeGuide}
-        setSelectedFeeGuide={setSelectedFeeGuide}
+        feeGuideObj={selectedFeeGuideObj}
       />
       <AuditHistoryDialog 
         open={auditDialogOpen} 

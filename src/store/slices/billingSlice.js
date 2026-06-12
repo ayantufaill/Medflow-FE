@@ -81,6 +81,140 @@ export const saveARAutomationConfig = createAsyncThunk(
   }
 );
 
+export const fetchAdjustmentTypes = createAsyncThunk(
+  'billing/fetchAdjustmentTypes',
+  async (_, { signal, rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/admin-finance/definitions/1', { signal });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.adjustmentTypesLoading || billing.adjustmentTypes.length > 0) return false;
+      return true;
+    }
+  }
+);
+
+export const createAdjustmentType = createAsyncThunk(
+  'billing/createAdjustmentType',
+  async (adjustmentData, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post('/admin-finance/definitions/1', adjustmentData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const updateAdjustmentType = createAsyncThunk(
+  'billing/updateAdjustmentType',
+  async ({ id, ...updateData }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/admin-finance/definitions/item/${id}`, updateData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const deleteAdjustmentType = createAsyncThunk(
+  'billing/deleteAdjustmentType',
+  async (id, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/admin-finance/definitions/item/${id}`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const fetchPaymentTypes = createAsyncThunk(
+  'billing/fetchPaymentTypes',
+  async (_, { signal, rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/admin-finance/definitions/4', { signal });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.paymentTypesLoading || billing.paymentTypes.length > 0) return false;
+      return true;
+    }
+  }
+);
+
+export const createPaymentType = createAsyncThunk(
+  'billing/createPaymentType',
+  async (paymentData, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post('/admin-finance/definitions/4', paymentData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const updatePaymentType = createAsyncThunk(
+  'billing/updatePaymentType',
+  async ({ id, ...updateData }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/admin-finance/definitions/item/${id}`, updateData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const deletePaymentType = createAsyncThunk(
+  'billing/deletePaymentType',
+  async (id, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/admin-finance/definitions/item/${id}`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const fetchPaymentTypeDefaults = createAsyncThunk(
+  'billing/fetchPaymentTypeDefaults',
+  async (_, { signal, rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/admin-finance/settings/payment_types_defaults', { signal });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const savePaymentTypeDefaults = createAsyncThunk(
+  'billing/savePaymentTypeDefaults',
+  async (defaultsData, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put('/admin-finance/settings/payment_types_defaults', defaultsData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const initialState = {
   // Current invoice being viewed/edited
   currentInvoice: null,
@@ -104,6 +238,15 @@ const initialState = {
   // AR Automation Configuration
   arAutomationConfig: null,
   arAutomationLoading: false,
+
+  // Adjustment Types
+  adjustmentTypes: [],
+  adjustmentTypesLoading: false,
+
+  // Payment Types
+  paymentTypes: [],
+  paymentTypesLoading: false,
+  paymentTypeDefaults: { patient: 'Master Card', insurance: 'Master Card', family: '' },
   
   // UI state
   loading: false,
@@ -238,6 +381,68 @@ const billingSlice = createSlice({
       .addCase(saveARAutomationConfig.rejected, (state, action) => {
         state.arAutomationLoading = false;
         state.error = action.payload;
+      })
+      // Adjustment Types
+      .addCase(fetchAdjustmentTypes.pending, (state) => {
+        state.adjustmentTypesLoading = true;
+      })
+      .addCase(fetchAdjustmentTypes.fulfilled, (state, action) => {
+        state.adjustmentTypesLoading = false;
+        state.adjustmentTypes = action.payload;
+      })
+      .addCase(fetchAdjustmentTypes.rejected, (state, action) => {
+        state.adjustmentTypesLoading = false;
+        if (action.meta.aborted) return;
+        state.error = action.payload;
+      })
+      .addCase(createAdjustmentType.fulfilled, (state, action) => {
+        state.adjustmentTypes.push(action.payload);
+      })
+      .addCase(updateAdjustmentType.fulfilled, (state, action) => {
+        const index = state.adjustmentTypes.findIndex((adj) => adj.id === action.payload.id);
+        if (index !== -1) {
+          state.adjustmentTypes[index] = action.payload;
+        }
+      })
+      .addCase(deleteAdjustmentType.fulfilled, (state, action) => {
+        const index = state.adjustmentTypes.findIndex((adj) => adj.id === action.payload);
+        if (index !== -1) {
+          state.adjustmentTypes[index].isHidden = true;
+        }
+      })
+      // Payment Types
+      .addCase(fetchPaymentTypes.pending, (state) => {
+        state.paymentTypesLoading = true;
+      })
+      .addCase(fetchPaymentTypes.fulfilled, (state, action) => {
+        state.paymentTypesLoading = false;
+        state.paymentTypes = action.payload;
+      })
+      .addCase(fetchPaymentTypes.rejected, (state, action) => {
+        state.paymentTypesLoading = false;
+        if (action.meta.aborted) return;
+        state.error = action.payload;
+      })
+      .addCase(createPaymentType.fulfilled, (state, action) => {
+        state.paymentTypes.push(action.payload);
+      })
+      .addCase(updatePaymentType.fulfilled, (state, action) => {
+        const index = state.paymentTypes.findIndex((pt) => pt.id === action.payload.id);
+        if (index !== -1) {
+          state.paymentTypes[index] = action.payload;
+        }
+      })
+      .addCase(deletePaymentType.fulfilled, (state, action) => {
+        const index = state.paymentTypes.findIndex((pt) => pt.id === action.payload);
+        if (index !== -1) {
+          state.paymentTypes[index].isHidden = true;
+        }
+      })
+      .addCase(fetchPaymentTypeDefaults.fulfilled, (state, action) => {
+        state.paymentTypeDefaults = action.payload;
+      })
+      .addCase(savePaymentTypeDefaults.fulfilled, (state, action) => {
+        state.paymentTypeDefaults = action.payload;
       });
   },
 });
@@ -266,6 +471,11 @@ export const selectBillingConfiguration = (state) => state.billing.billingConfig
 export const selectBillingConfigLoading = (state) => state.billing.billingConfigLoading;
 export const selectARAutomationConfig = (state) => state.billing.arAutomationConfig;
 export const selectARAutomationLoading = (state) => state.billing.arAutomationLoading;
+export const selectAdjustmentTypes = (state) => state.billing.adjustmentTypes;
+export const selectAdjustmentTypesLoading = (state) => state.billing.adjustmentTypesLoading;
+export const selectPaymentTypes = (state) => state.billing.paymentTypes;
+export const selectPaymentTypesLoading = (state) => state.billing.paymentTypesLoading;
+export const selectPaymentTypeDefaults = (state) => state.billing.paymentTypeDefaults;
 export const selectBillingLoading = (state) => state.billing.loading;
 export const selectBillingError = (state) => state.billing.error;
 

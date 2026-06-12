@@ -21,15 +21,86 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   selectConvertedOldPayers,
   selectConvertedOryxPayers,
-  selectConvertedMatchedPayers
+  selectConvertedMatchedPayers,
+  fetchConvertedCarriersThunk,
+  matchConvertedCarrierThunk,
+  clearConvertedMatchesThunk
 } from '../../store/slices/insuranceSlice';
+import { useEffect } from 'react';
+
+// Reusable search field with blue icon prefix
+const SearchField = ({ value, onChange }) => (
+  <TextField
+    size="small"
+    placeholder="Search list"
+    value={value}
+    onChange={onChange}
+    InputProps={{
+      startAdornment: (
+        <InputAdornment position="start" sx={{ m: 0 }}>
+          <Box sx={{
+            bgcolor: '#1a3a6b',
+            height: 28,
+            width: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            ml: -1.75,
+            borderRadius: '3px 0 0 3px',
+          }}>
+            <SearchIcon sx={{ fontSize: '0.85rem', color: '#fff' }} />
+          </Box>
+        </InputAdornment>
+      ),
+    }}
+    sx={{
+      width: '100%',
+      '& .MuiOutlinedInput-root': {
+        height: 28,
+        bgcolor: '#fff',
+        pl: 1.5,
+        fontSize: '0.75rem',
+        '& fieldset': { borderColor: '#ccc' },
+      },
+    }}
+  />
+);
+
+// Styled action button
+const ActionButton = ({ children, variant = 'blue', onClick, disabled, sx: extraSx = {} }) => (
+  <Button
+    variant="contained"
+    onClick={onClick}
+    disabled={disabled}
+    sx={{
+      textTransform: 'none',
+      fontSize: '0.65rem',
+      fontWeight: 600,
+      px: 1.5,
+      py: 0.3,
+      minHeight: 24,
+      lineHeight: 1.4,
+      bgcolor: variant === 'tan' ? '#d4c9a8' : '#4b71a1',
+      color: variant === 'tan' ? '#333' : '#fff',
+      '&:hover': {
+        bgcolor: variant === 'tan' ? '#c4b998' : '#3d5c85',
+      },
+      boxShadow: 'none',
+      borderRadius: '3px',
+      ...extraSx,
+    }}
+  >
+    {children}
+  </Button>
+);
 
 const MatchConvertedCarriers = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [oldSearch, setOldSearch] = useState('');
   const [oryxSearch, setOryxSearch] = useState('');
   const [testRealmUrl, setTestRealmUrl] = useState('https://test.local-ofe.com/fhirservlet/onyx/v1/');
@@ -38,71 +109,30 @@ const MatchConvertedCarriers = () => {
   const oldPayers = useSelector(selectConvertedOldPayers);
   const oryxPayers = useSelector(selectConvertedOryxPayers);
   const matchedPayers = useSelector(selectConvertedMatchedPayers);
+  
+  const [selectedOld, setSelectedOld] = useState(null);
+  const [selectedOryx, setSelectedOryx] = useState(null);
 
-  // Reusable search field with blue icon prefix
-  const SearchField = ({ value, onChange }) => (
-    <TextField
-      size="small"
-      placeholder="Search list"
-      value={value}
-      onChange={onChange}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start" sx={{ m: 0 }}>
-            <Box sx={{
-              bgcolor: '#1a3a6b',
-              height: 28,
-              width: 28,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              ml: -1.75,
-              borderRadius: '3px 0 0 3px',
-            }}>
-              <SearchIcon sx={{ fontSize: '0.85rem', color: '#fff' }} />
-            </Box>
-          </InputAdornment>
-        ),
-      }}
-      sx={{
-        width: '100%',
-        '& .MuiOutlinedInput-root': {
-          height: 28,
-          bgcolor: '#fff',
-          pl: 1.5,
-          fontSize: '0.75rem',
-          '& fieldset': { borderColor: '#ccc' },
-        },
-      }}
-    />
-  );
+  useEffect(() => {
+    dispatch(fetchConvertedCarriersThunk());
+  }, [dispatch]);
 
-  // Styled action button
-  const ActionButton = ({ children, variant = 'blue', onClick, sx: extraSx = {} }) => (
-    <Button
-      variant="contained"
-      onClick={onClick}
-      sx={{
-        textTransform: 'none',
-        fontSize: '0.65rem',
-        fontWeight: 600,
-        px: 1.5,
-        py: 0.3,
-        minHeight: 24,
-        lineHeight: 1.4,
-        bgcolor: variant === 'tan' ? '#d4c9a8' : '#4b71a1',
-        color: variant === 'tan' ? '#333' : '#fff',
-        '&:hover': {
-          bgcolor: variant === 'tan' ? '#c4b998' : '#3d5c85',
-        },
-        boxShadow: 'none',
-        borderRadius: '3px',
-        ...extraSx,
-      }}
-    >
-      {children}
-    </Button>
-  );
+  const handleMatch = () => {
+    if (selectedOld && selectedOryx) {
+      dispatch(matchConvertedCarrierThunk({
+        oldName: selectedOld.name,
+        oryxName: selectedOryx.name,
+        oldId: selectedOld.id,
+        oryxId: selectedOryx.id
+      }));
+      setSelectedOld(null);
+      setSelectedOryx(null);
+    }
+  };
+
+  const handleClear = () => {
+    dispatch(clearConvertedMatchesThunk());
+  };
 
   return (
     <Box sx={{ px: 2, py: 3 }}>
@@ -157,7 +187,15 @@ const MatchConvertedCarriers = () => {
                   </TableRow>
                 ) : (
                   oldPayers.map((p, i) => (
-                    <TableRow key={i}>
+                    <TableRow 
+                      key={i} 
+                      onClick={() => setSelectedOld(p)}
+                      sx={{ 
+                        cursor: 'pointer',
+                        bgcolor: selectedOld?.id === p.id ? '#e3f2fd' : 'transparent',
+                        '&:hover': { bgcolor: '#f5f5f5' }
+                      }}
+                    >
                       <TableCell sx={{ fontSize: '0.7rem' }}>{p.name}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{p.id}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{p.patientIds}</TableCell>
@@ -200,7 +238,15 @@ const MatchConvertedCarriers = () => {
                   </TableRow>
                 ) : (
                   oryxPayers.map((p, i) => (
-                    <TableRow key={i}>
+                    <TableRow 
+                      key={i}
+                      onClick={() => setSelectedOryx(p)}
+                      sx={{ 
+                        cursor: 'pointer',
+                        bgcolor: selectedOryx?.id === p.id ? '#e3f2fd' : 'transparent',
+                        '&:hover': { bgcolor: '#f5f5f5' }
+                      }}
+                    >
                       <TableCell sx={{ fontSize: '0.7rem' }}>{p.name}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{p.id}</TableCell>
                     </TableRow>
@@ -216,7 +262,7 @@ const MatchConvertedCarriers = () => {
       <Box sx={{ mb: 1 }}>
         <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', justifyContent: 'center' }}>
           <ActionButton variant="tan">Match Manually</ActionButton>
-          <ActionButton>Match Payer</ActionButton>
+          <ActionButton onClick={handleMatch} disabled={!selectedOld || !selectedOryx}>Match Payer</ActionButton>
           <ActionButton>Create Patient Policies</ActionButton>
           <ActionButton>Update Matched Payer Names</ActionButton>
           <ActionButton>Update Matched Payers Metadata</ActionButton>
@@ -234,7 +280,7 @@ const MatchConvertedCarriers = () => {
           <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: '#1a3a6b' }}>Matched Payers</Typography>
           <Box
             component="button"
-            onClick={() => {}}
+            onClick={handleClear}
             sx={{
               position: 'absolute',
               right: 0,
