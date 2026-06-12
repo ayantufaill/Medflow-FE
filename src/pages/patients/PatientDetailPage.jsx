@@ -113,6 +113,14 @@ const PatientDetailPage = () => {
         delete dataToSave.email;
       }
       
+      // Prevent "null" string or empty string CastErrors for Providers
+      if (dataToSave.preferredDentistId === "null" || dataToSave.preferredDentistId === "") {
+        dataToSave.preferredDentistId = null;
+      }
+      if (dataToSave.preferredHygienistId === "null" || dataToSave.preferredHygienistId === "") {
+        dataToSave.preferredHygienistId = null;
+      }
+      
       // 2. Work Address: Ensure it is an object
       if (typeof dataToSave.workAddress === 'string' || !dataToSave.workAddress) {
         dataToSave.workAddress = {};

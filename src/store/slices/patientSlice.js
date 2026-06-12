@@ -148,14 +148,7 @@ export const updatePatientThunk = createAsyncThunk(
   'patient/updatePatient',
   async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await patientService.updatePatient(patientId, payload);
-      
-      // Also update workspace metadata (spouseInfo, referralSource, etc.)
-      try {
-        await patientService.updatePatientWorkspace(patientId, payload);
-      } catch (metaErr) {
-        console.warn('Failed to update workspace meta, but core patient updated', metaErr);
-      }
+      const response = await patientService.updatePatientWorkspace(patientId, payload);
       
       // After a successful update, we should refresh the workspace payload to ensure Redux has all relational data
       dispatch(fetchPatientById(patientId));

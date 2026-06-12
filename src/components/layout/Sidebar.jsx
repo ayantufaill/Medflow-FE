@@ -55,7 +55,12 @@ const DRAWER_WIDTH_EXPANDED = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/admin/reports' },
+  {
+    text: 'Dashboard',
+    icon: <Dashboard />,
+    path: '/admin/reports',
+    requiredRoles: ['Admin'],
+  },
   // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
   // { text: 'Patients', icon: <People />, path: '/patients' },
   // { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },

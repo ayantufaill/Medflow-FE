@@ -13,3 +13,4 @@ export { default as ProtectedRoute } from './ProtectedRoute';
 export { default as PublicRoute } from './PublicRoute';
 export { default as RoleBasedPortalMessagesRoute } from './RoleBasedPortalMessagesRoute';
 export { default as SignaturePad } from './SignaturePad';
+export { default as DashboardRoute } from './DashboardRoute';

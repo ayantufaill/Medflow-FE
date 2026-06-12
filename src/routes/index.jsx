@@ -1,5 +1,6 @@
 import { Route } from 'react-router-dom';
 import HomeRoute from '../components/shared/HomeRoute';
+import DashboardRoute from '../components/shared/DashboardRoute';
 import authRoutes from './authRoutes';
 import portalRoutes from './portalRoutes';
 import adminRoutes from './adminRoutes';
@@ -28,6 +29,7 @@ const allRoutes = [
   ...documentRoutes,
   ...billingRoutes,
   ...configRoutes,
+  <Route key="dashboard" path="/dashboard" element={<DashboardRoute />} />,
   <Route key="home" path="/" element={<HomeRoute />} />,
   <Route key="fallback" path="*" element={<HomeRoute />} />,
 ];

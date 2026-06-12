@@ -289,6 +289,15 @@ const formatPostalCodeInput = (value) => {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
 
+const formatSSNInput = (value) => {
+  const digits = (value || "").replace(/\D/g, "").slice(0, 9);
+  
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+};
+
 const formatDateValue = (value) => {
   if (!value) return undefined;
   const parsed = dayjs(value);
@@ -398,6 +407,7 @@ const StandardSelect = ({
   error,
   helperText,
   multiple = false,
+  ...props
 }) => (
   <TextField
     select
@@ -411,6 +421,7 @@ const StandardSelect = ({
     error={error}
     helperText={helperText}
     sx={STANDARD_FIELD_SX}
+    {...props}
   >
     {children}
   </TextField>
@@ -444,9 +455,24 @@ const PostalCodeTextInput = ({ onChange, inputProps, ...props }) => (
   />
 );
 
-const AddressSelect = ({ field, label, children, sx }) => (
+const SSNTextInput = ({ onChange, inputProps, ...props }) => (
+  <StandardTextInput
+    {...props}
+    onChange={(event) => {
+      event.target.value = formatSSNInput(event.target.value);
+      onChange?.(event);
+    }}
+    inputProps={{
+      inputMode: "numeric",
+      maxLength: 11,
+      ...inputProps,
+    }}
+  />
+);
+
+const AddressSelect = ({ field, label, children, sx, ...props }) => (
   <AddressFieldRow label={label}>
-    <StandardSelect field={field} sx={sx}>
+    <StandardSelect field={field} sx={sx} {...props}>
       {children}
     </StandardSelect>
   </AddressFieldRow>
@@ -505,12 +531,18 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: DEFAULT_VALUES,
   });
 
   const sendWelcome = watch("sendWelcome");
+  const maritalStatus = watch("maritalStatus");
+  const isSingle = maritalStatus === "single";
+
+  const referringSources = watch("referringSources");
+  const isReferringPatientEnabled = referringSources === "Walk In" || referringSources === "Existing Patient";
 
   useEffect(() => {
     let isMounted = true;
@@ -658,8 +690,8 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       title: trimValue(values.title),
       sexAtBirth: values.sexAtBirth,
       genderIdentity: values.genderIdentity,
-      preferredDentistId: values.preferredDentistId,
-      preferredHygienistId: values.preferredHygienistId,
+      preferredDentistId: values.preferredDentistId === "null" ? "" : values.preferredDentistId,
+      preferredHygienistId: values.preferredHygienistId === "null" ? "" : values.preferredHygienistId,
       maritalStatus: values.maritalStatus,
       occupation: trimValue(values.occupation),
       employer: trimValue(values.employer) || trimValue(values.spouseEmployer),
@@ -858,9 +890,16 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                     labelSize={5.2}
                     fieldSize={6.8}
                   >
-                    <StandardTextInput
-                      {...register("ssn")}
-                      placeholder="ssNumber"
+                    <SSNTextInput
+                      {...register("ssn", {
+                        pattern: {
+                          value: /^\d{3}-\d{2}-\d{4}$/,
+                          message: "SSN must be in format XXX-XX-XXXX",
+                        },
+                      })}
+                      placeholder="555-12-3456"
+                      error={!!errors.ssn}
+                      helperText={errors.ssn?.message}
                       sx={{ ml: 0.75 }}
                     />
                   </Row>
@@ -875,22 +914,25 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                     <StandardTextInput
                       {...register("spouseFirstName")}
                       placeholder="First name"
+                      disabled={isSingle}
                     />
                     <StandardTextInput
                       {...register("spouseMiddleName")}
                       placeholder="Middle name"
+                      disabled={isSingle}
                     />
                     <StandardTextInput
                       {...register("spouseLastName")}
                       placeholder="Last name"
+                      disabled={isSingle}
                     />
                   </Stack>
                 </Row>
                 <Row label="Occupation:">
-                  <StandardTextInput {...register("spouseOccupation")} />
+                  <StandardTextInput {...register("spouseOccupation")} disabled={isSingle} />
                 </Row>
                 <Row label="Spouse's Employer:">
-                  <StandardTextInput {...register("spouseEmployer")} />
+                  <StandardTextInput {...register("spouseEmployer")} disabled={isSingle} />
                 </Row>
                 <Row label="Work Address:" alignTop>
                   <Stack spacing={1}>
@@ -902,6 +944,7 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                           field={field}
                           label="Country:"
                           sx={{ "& .MuiSelect-select": { fontWeight: 600 } }}
+                          disabled={isSingle}
                         >
                           {COUNTRY_OPTIONS.map((country) => (
                             <MenuItem key={country} value={country}>
@@ -915,22 +958,25 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                       {...register("spouseAddressLine1")}
                       label="Address Line 1:"
                       placeholder="Address line 1"
+                      disabled={isSingle}
                     />
                     <AddressTextInput
                       {...register("spouseAddressLine2")}
                       label="Address Line 2:"
                       placeholder="Address line 2"
+                      disabled={isSingle}
                     />
                     <AddressTextInput
                       {...register("spouseCity")}
                       label="City:"
                       placeholder="City"
+                      disabled={isSingle}
                     />
                     <Controller
                       name="spouseState"
                       control={control}
                       render={({ field }) => (
-                        <AddressSelect field={field} label="State:">
+                        <AddressSelect field={field} label="State:" disabled={isSingle}>
                           <MenuItem value="">Select state</MenuItem>
                           {US_STATES.map((state) => (
                             <MenuItem key={state} value={state}>
@@ -944,6 +990,7 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                       {...register("spousePostalCode")}
                       label="Zip/Postal Code:"
                       placeholder="Zip/Postal Code"
+                      disabled={isSingle}
                       sx={{
                         "& .MuiInputBase-input": {
                           ...STANDARD_INPUT_TEXT_SX,
@@ -954,10 +1001,10 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                   </Stack>
                 </Row>
                 <Row label="Work Phone Number:" labelSize={4.8} fieldSize={7.2}>
-                  <PhoneTextInput {...register("spouseWorkPhoneNumber")} />
+                  <PhoneTextInput {...register("spouseWorkPhoneNumber")} disabled={isSingle} />
                 </Row>
                 <Row label="Email Address:">
-                  <StandardTextInput {...register("spouseEmailAddress")} />
+                  <StandardTextInput {...register("spouseEmailAddress")} disabled={isSingle} />
                 </Row>
               </Section>
             </Box>
@@ -986,6 +1033,7 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                   render={({ field }) => (
                     <Autocomplete
                       freeSolo
+                      disabled={!isReferringPatientEnabled}
                       options={patients}
                       filterOptions={(options) => options}
                       getOptionLabel={(option) =>
@@ -1276,12 +1324,13 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                 render={({ field }) => (
                   <FormControlLabel
                     control={
-                      <Radio
+                      <Checkbox
                         checked={!!field.value}
                         onChange={(event) =>
                           field.onChange(event.target.checked)
                         }
                         size="small"
+                        disabled={isSingle}
                       />
                     }
                     label="Spouse / Common-law partner"
@@ -1298,7 +1347,7 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                 render={({ field }) => (
                   <FormControlLabel
                     control={
-                      <Radio
+                      <Checkbox
                         checked={!!field.value}
                         onChange={(event) =>
                           field.onChange(event.target.checked)
@@ -1320,7 +1369,7 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                 render={({ field }) => (
                   <FormControlLabel
                     control={
-                      <Radio
+                      <Checkbox
                         checked={!!field.value}
                         onChange={(event) =>
                           field.onChange(event.target.checked)
@@ -1574,18 +1623,46 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                 name="reminderPreference"
                 control={control}
                 render={({ field }) => (
-                  <RadioRow
-                    value={field.value}
-                    onChange={field.onChange}
-                    row={false}
-                    options={[
-                      { label: "No, it is unnecessary", value: "none" },
-                      {
-                        label: "Yes, it is a helpful reminder",
-                        value: "helpful",
-                      },
-                    ]}
-                  />
+                  <Stack spacing={0.25} sx={{ mb: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={field.value === "none"}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              field.onChange("none");
+                              setValue("stopReminderAfterConfirmation", false);
+                              setValue("dontRequestReview", false);
+                            } else {
+                              field.onChange("");
+                            }
+                          }}
+                        />
+                      }
+                      label="No, it is unnecessary"
+                      slotProps={{ typography: { fontSize: "0.84rem" } }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={field.value === "helpful"}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              field.onChange("helpful");
+                              setValue("stopReminderAfterConfirmation", false);
+                              setValue("dontRequestReview", false);
+                            } else {
+                              field.onChange("");
+                            }
+                          }}
+                        />
+                      }
+                      label="Yes, it is a helpful reminder"
+                      slotProps={{ typography: { fontSize: "0.84rem" } }}
+                    />
+                  </Stack>
                 )}
               />
               <Controller
@@ -1594,12 +1671,16 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                 render={({ field }) => (
                   <FormControlLabel
                     control={
-                      <Radio
+                      <Checkbox
                         size="small"
                         checked={!!field.value}
-                        onChange={(event) =>
-                          field.onChange(event.target.checked)
-                        }
+                        onChange={(event) => {
+                          field.onChange(event.target.checked);
+                          if (event.target.checked) {
+                            setValue("reminderPreference", "");
+                            setValue("dontRequestReview", false);
+                          }
+                        }}
                       />
                     }
                     label="Stop Reminding After Confirmation"
@@ -1616,12 +1697,16 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                 render={({ field }) => (
                   <FormControlLabel
                     control={
-                      <Radio
+                      <Checkbox
                         size="small"
                         checked={!!field.value}
-                        onChange={(event) =>
-                          field.onChange(event.target.checked)
-                        }
+                        onChange={(event) => {
+                          field.onChange(event.target.checked);
+                          if (event.target.checked) {
+                            setValue("reminderPreference", "");
+                            setValue("stopReminderAfterConfirmation", false);
+                          }
+                        }}
                       />
                     }
                     label="Don't request review"
