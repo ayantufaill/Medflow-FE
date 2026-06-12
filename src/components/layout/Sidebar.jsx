@@ -55,7 +55,7 @@ const DRAWER_WIDTH_EXPANDED = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+  { text: 'Dashboard', icon: <Dashboard />, path: '/admin/reports' },
   // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
   // { text: 'Patients', icon: <People />, path: '/patients' },
   // { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },
@@ -622,7 +622,6 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             'Batch Actions',
             'Reports',
             'Advanced Reporting',
-            'Dashboard',
             'KPI Dashboard',
             'Automations',
             'Admin',
@@ -635,7 +634,6 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
                 if (item === 'Batch Actions') navigate('/batch-actions');
                 if (item === 'Advanced Reporting') navigate('/admin/advanced-reporting');
                 if (item === 'Admin') navigate('/admin/user-management');
-                if (item === 'Dashboard') navigate('/admin/reports');
                 if (item === 'Reports') navigate('/admin/reports/financial');
                 if (item === 'KPI Dashboard') {
                   console.log("Navigating to KPI Dashboard route: /admin/reports/kpi");

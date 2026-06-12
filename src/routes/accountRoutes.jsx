@@ -1,7 +1,6 @@
 import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
-import DashboardPage from '../pages/DashboardPage';
 import ProfilePage from '../pages/account/ProfilePage';
 import ChangePasswordPage from '../pages/account/ChangePasswordPage';
 import InsuranceFormMockupPage from '../pages/demo/InsuranceFormMockupPage';
@@ -13,7 +12,6 @@ const anyRole = (children) => (
 );
 
 const accountRoutes = [
-  <Route key="/dashboard" path="/dashboard" element={anyRole(<DashboardPage />)} />,
   <Route key="/profile" path="/profile" element={anyRole(<ProfilePage />)} />,
   <Route key="/change-password" path="/change-password" element={anyRole(<ChangePasswordPage />)} />,
   <Route

@@ -103,7 +103,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, count: 0 });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [debouncedSearch] = useDebounce(search, 300);
-  
+
   // Inline editing state
   const [editingField, setEditingField] = useState(null); // { patientId, field, value }
   const [editValue, setEditValue] = useState('');
@@ -250,7 +250,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     try {
       setSaveLoading(true);
       if (!editingField) return;
-      
+
       let updateData = {};
       // Validate phone number if editing phonePrimary field
       if (editingField.field === 'phonePrimary' && editValue) {
@@ -278,7 +278,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
         updateData = { [editingField.field]: editValue };
         await patientService.updatePatient(editingField.patientId, updateData);
       }
-      
+
       showSnackbar('Patient updated successfully', 'success');
       updateInList({ _id: editingField.patientId, ...updateData });
       refetch();
@@ -298,7 +298,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     try {
       setSaveLoading(true);
       if (!editingField || editingField.field !== 'name') return;
-      
+
       const updateData = {
         firstName: editValue.firstName || '',
         lastName: editValue.lastName || ''
@@ -424,151 +424,151 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Row 1: Search + Action buttons (reference layout) */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-            <TextField
-              placeholder="Search Patient"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              sx={{ flex: '1 1 280px', maxWidth: 480 }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {loading && search ? (
-                      <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                    ) : null}
-                    {search ? (
-                      <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
-                        <ClearIcon />
-                      </IconButton>
-                    ) : (
-                      <SearchIcon color="action" />
-                    )}
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Tooltip title="Search help">
-              <IconButton size="small" color="info"><InfoIcon /></IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+          <TextField
+            placeholder="Search Patient"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size="small"
+            sx={{ flex: '1 1 280px', maxWidth: 480 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  {loading && search ? (
+                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                  ) : null}
+                  {search ? (
+                    <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
+                      <ClearIcon />
+                    </IconButton>
+                  ) : (
+                    <SearchIcon color="action" />
+                  )}
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Tooltip title="Search help">
+            <IconButton size="small" color="info"><InfoIcon /></IconButton>
+          </Tooltip>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
+            <Button
+              startIcon={<CalendarIcon />}
+              onClick={() => navigate('/appointments/operatory-schedule')}
+            >
+            </Button>
+            <Button
+              variant="contained"
+              color="warning"
+              startIcon={<PersonAddIcon />}
+              onClick={() => navigate('/patients/new')}
+            >
+              Add Patient
+            </Button>
+            <Button
+              variant="contained"
+              color="warning"
+              startIcon={<UploadIcon />}
+              onClick={handleImportPatient}
+            >
+              Import Patient
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<PersonOffIcon />}
+              disabled={selectedIds.length === 0}
+              onClick={handleDeactivateSelected}
+            >
+              Deactivate Patient(s)
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Row 2: Filter checkboxes and Dropdowns */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sortByName}
+                onChange={(e) => setSortByName(e.target.checked)}
+                size="small"
+              />
+            }
+            label="Sort By Name"
+          />
+
+          <TextField
+            select
+            label="Status"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(0);
+            }}
+            size="small"
+            sx={{ minWidth: 120 }}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </TextField>
+
+          <TextField
+            select
+            label="Gender"
+            value={genderFilter}
+            onChange={(e) => {
+              setGenderFilter(e.target.value);
+              setPage(0);
+            }}
+            size="small"
+            sx={{ minWidth: 120 }}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">All Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="unknown">Unknown</option>
+          </TextField>
+
+          <TextField
+            select
+            label="Provider"
+            value={providerFilter}
+            onChange={(e) => {
+              setProviderFilter(e.target.value);
+              setPage(0);
+            }}
+            size="small"
+            sx={{ minWidth: 150 }}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">All Providers</option>
+            {providerList.map((p) => {
+              const u = p.userId || p;
+              const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || p.providerCode || `Provider ${p._id}`;
+              return (
+                <option key={p._id} value={p._id}>
+                  {name}
+                </option>
+              );
+            })}
+          </TextField>
+
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 'auto' }}>
+            <Tooltip title="Refresh">
+              <IconButton size="small" onClick={handleRefresh} disabled={loading}><RefreshIcon /></IconButton>
             </Tooltip>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
-              <Button
-                startIcon={<CalendarIcon />}
-                onClick={() => navigate('/appointments/operatory-schedule')}
-              >
-              </Button>
-              <Button
-                variant="contained"
-                color="warning"
-                startIcon={<PersonAddIcon />}
-                onClick={() => navigate('/patients/new')}
-              >
-                Add Patient
-              </Button>
-               <Button
-                variant="contained"
-                color="warning"
-                startIcon={<UploadIcon />}
-                onClick={handleImportPatient}
-              >
-                Import Patient
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<PersonOffIcon />}
-                disabled={selectedIds.length === 0}
-                onClick={handleDeactivateSelected}
-              >
-                Deactivate Patient(s)
-              </Button>
-            </Box>
+            <Tooltip title="Reset Filters">
+              <IconButton size="small" onClick={handleResetFilters}><FilterAltOff /></IconButton>
+            </Tooltip>
           </Box>
-
-          {/* Row 2: Filter checkboxes and Dropdowns */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={sortByName}
-                  onChange={(e) => setSortByName(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="Sort By Name"
-            />
-
-            <TextField
-              select
-              label="Status"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(0);
-              }}
-              size="small"
-              sx={{ minWidth: 120 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </TextField>
-
-            <TextField
-              select
-              label="Gender"
-              value={genderFilter}
-              onChange={(e) => {
-                setGenderFilter(e.target.value);
-                setPage(0);
-              }}
-              size="small"
-              sx={{ minWidth: 120 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">All Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="unknown">Unknown</option>
-            </TextField>
-
-            <TextField
-              select
-              label="Provider"
-              value={providerFilter}
-              onChange={(e) => {
-                setProviderFilter(e.target.value);
-                setPage(0);
-              }}
-              size="small"
-              sx={{ minWidth: 150 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">All Providers</option>
-              {providerList.map((p) => {
-                const u = p.userId || p;
-                const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || p.providerCode || `Provider ${p._id}`;
-                return (
-                  <option key={p._id} value={p._id}>
-                    {name}
-                  </option>
-                );
-              })}
-            </TextField>
-
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 'auto' }}>
-              <Tooltip title="Refresh">
-                <IconButton size="small" onClick={handleRefresh} disabled={loading}><RefreshIcon /></IconButton>
-              </Tooltip>
-              <Tooltip title="Reset Filters">
-                <IconButton size="small" onClick={handleResetFilters}><FilterAltOff /></IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
+        </Box>
 
         {loading ? (
           <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
@@ -619,12 +619,11 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                             key={pid}
                             hover
                             selected={isSelected}
-                            sx={{ 
-                              cursor: 'pointer', 
+                            sx={{
+                              cursor: 'pointer',
                               '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' },
-                              '& .editable-cell:hover': { 
+                              '& .editable-cell:hover': {
                                 bgcolor: 'action.hover',
-                                cursor: 'cell'
                               }
                             }}
                             onClick={(e) => {
@@ -645,7 +644,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                               />
                             </TableCell>
                             <TableCell>{patient.patientCode || '-'}</TableCell>
-                            <TableCell 
+                            <TableCell
                               className="editable-cell"
                               onDoubleClick={(e) => handleDoubleClick(e, patient, 'name', { firstName: patient.firstName, lastName: patient.lastName })}
                             >
@@ -687,7 +686,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                               )}
                             </TableCell>
                             <TableCell>{computeAge(patient.dateOfBirth)}</TableCell>
-                            <TableCell 
+                            <TableCell
                               className="editable-cell"
                               onDoubleClick={(e) => handleDoubleClick(e, patient, 'dateOfBirth', patient.dateOfBirth)}
                             >
@@ -701,7 +700,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                     onClick={(e) => e.stopPropagation()}
                                     autoFocus
                                     fullWidth
-                                    inputProps={{ 
+                                    inputProps={{
                                       max: new Date().toISOString().split('T')[0], // Don't allow future dates
                                       sx: { py: 0.5, fontSize: '0.78rem' }
                                     }}
@@ -718,7 +717,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                 formatDate(patient.dateOfBirth)
                               )}
                             </TableCell>
-                            <TableCell 
+                            <TableCell
                               className="editable-cell"
                               onDoubleClick={(e) => handleDoubleClick(e, patient, 'email', patient.email)}
                             >
@@ -746,7 +745,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                 patient.email || '-'
                               )}
                             </TableCell>
-                            <TableCell 
+                            <TableCell
                               className="editable-cell"
                               onDoubleClick={(e) => handleDoubleClick(e, patient, 'phonePrimary', patient.phonePrimary)}
                             >
@@ -779,16 +778,16 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                     autoFocus
                                     fullWidth
                                     placeholder="1234567890 or 11234567890"
-                                    error={editValue.length > 0 && 
-                                          editValue.length !== 10 && 
-                                          !(editValue.length === 11 && editValue.startsWith('1'))}
-                                    helperText={editValue.length > 0 ? 
-                                      (editValue.length === 11 && editValue.startsWith('1') 
-                                        ? 'Valid: 1 country code included' 
-                                        : `${editValue.length}/10 or 11 digits`) 
+                                    error={editValue.length > 0 &&
+                                      editValue.length !== 10 &&
+                                      !(editValue.length === 11 && editValue.startsWith('1'))}
+                                    helperText={editValue.length > 0 ?
+                                      (editValue.length === 11 && editValue.startsWith('1')
+                                        ? 'Valid: 1 country code included'
+                                        : `${editValue.length}/10 or 11 digits`)
                                       : ''}
                                     sx={{ fontSize: '0.78rem' }}
-                                    inputProps={{ 
+                                    inputProps={{
                                       sx: { py: 0.5, fontSize: '0.78rem' },
                                       maxLength: 11,
                                       inputMode: 'numeric',
@@ -806,7 +805,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                 patient.phonePrimary || '-'
                               )}
                             </TableCell>
-                            <TableCell 
+                            <TableCell
                               className="editable-cell"
                               onDoubleClick={(e) => handleDoubleClick(e, patient, 'gender', patient.gender)}
                             >
@@ -893,7 +892,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem> */}
-        <MenuItem 
+        <MenuItem
           onClick={() => handleToggleInactive(actionMenu.patientId, actionMenu.patientName, actionMenu.isActive)}
           sx={{ color: actionMenu.isActive ? 'error.main' : 'success.main' }}
         >
