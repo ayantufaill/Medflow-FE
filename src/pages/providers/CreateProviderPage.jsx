@@ -11,11 +11,13 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { providerService } from '../../services/provider.service';
+import { useDispatch } from 'react-redux';
+import { createProvider } from '../../store/slices/providerSlice';
 import ProviderForm from '../../components/providers/ProviderForm';
 
 const CreateProviderPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -29,15 +31,14 @@ const CreateProviderPage = () => {
       setSaving(true);
       setError('');
 
-      await providerService.createProvider(data);
+      await dispatch(createProvider(data)).unwrap();
 
       showSnackbar('Provider created successfully', 'success');
       navigate('/providers');
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to create provider. Please try again.';
+      if (err?.name === 'ConditionError') return;
+      const errorMessage = typeof err === 'string' ? err : 
+        (err?.message || 'Failed to create provider. Please try again.');
       setError(errorMessage);
       showSnackbar(errorMessage, 'error');
     } finally {

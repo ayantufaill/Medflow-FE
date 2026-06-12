@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -6,6 +7,7 @@ import {
   Button,
   Divider,
   Grid,
+  CircularProgress,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -14,60 +16,109 @@ import {
 // Sub-components
 import AdjustmentTable from '../../components/admin/AdjustmentTable';
 
+// Redux
+import {
+  fetchAdjustmentTypes,
+  createAdjustmentType,
+  updateAdjustmentType,
+  deleteAdjustmentType,
+  selectAdjustmentTypes,
+  selectAdjustmentTypesLoading
+} from '../../store/slices/billingSlice';
+
 const AdjustmentTypes = () => {
-  const [creditAdjustments, setCreditAdjustments] = useState([
-    { id: 1, type: 'Insurance Write Off', amount: '', percent: '', note: 'Applied to procedure fee', deletable: false },
-    { id: 2, type: 'Un-Collected', amount: '', percent: '', note: 'Applied to patient balance', deletable: false },
-    { id: 3, type: 'Professional Courtesy', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 4, type: 'Immediate Family Courtesy', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 5, type: 'OON paid', amount: '', percent: '', note: 'Applied to patient balance under production', deletable: true },
-    { id: 6, type: 'Sunbit Fee', amount: '', percent: '', note: 'Applied to patient balance under production', deletable: true },
-    { id: 7, type: 'Courtesy 3% for cash pay', amount: '', percent: '', note: 'Applied to patient balance under production', deletable: true },
-    { id: 8, type: 'Alle Rewards', amount: '', percent: '', note: 'Applied to patient balance under production', deletable: true },
-    { id: 9, type: 'Uncollect: de-escalate situation', amount: '', percent: '', note: 'Applied to patient balance under production', deletable: true },
-    { id: 10, type: 'No balance billing', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 11, type: 'Pro bono', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 12, type: 'Fee included in Invisalign treatment', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 13, type: 'Downgrade', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 14, type: 'Care Credit fee', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 15, type: 'Employee benefit', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 16, type: 'Cherry Fee', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 17, type: 'HFD Fee', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-    { id: 18, type: 'May 2026 Invisalign special', amount: '', percent: '', note: 'Applied to patient balance', deletable: true },
-  ]);
+  const dispatch = useDispatch();
+  const adjustmentTypes = useSelector(selectAdjustmentTypes);
+  const loading = useSelector(selectAdjustmentTypesLoading);
 
-  const [debitAdjustments, setDebitAdjustments] = useState([
-    { id: 1, type: 'Insurance charge back', amount: '', percent: '', deletable: true },
-    { id: 2, type: 'Refinement fee', amount: '500', percent: '', deletable: true },
-    { id: 3, type: 'Forefeit deposit', amount: '', percent: '', deletable: true },
-  ]);
+  useEffect(() => {
+    dispatch(fetchAdjustmentTypes());
+  }, [dispatch]);
 
-  const [financeCharges, setFinanceCharges] = useState([
-    { id: 1, type: 'Broken appt', amount: '100', percent: '', deletable: true },
-    { id: 2, type: 'Late cancellation', amount: '100', percent: '', deletable: true },
-    { id: 3, type: 'Late payment 30 days', amount: '', percent: '5', deletable: true },
-    { id: 4, type: 'Late payment 60 days', amount: '', percent: '10', deletable: true },
-    { id: 5, type: 'Late payment 90 days', amount: '', percent: '15', deletable: true },
-    { id: 6, type: 'Flat rate', amount: '15', percent: '', deletable: true },
-    { id: 7, type: 'Percentage', amount: '', percent: '15', deletable: true },
-  ]);
+  // Derived state from Redux
+  const creditAdjustments = [];
+  const debitAdjustments = [];
+  const financeCharges = [];
+
+  adjustmentTypes.forEach((adj) => {
+    if (adj.isHidden) return;
+
+    let section = 'credit';
+    let note = adj.note || '';
+
+    if (note.startsWith('[debit]')) {
+      section = 'debit';
+      note = note.replace('[debit]', '');
+    } else if (note.startsWith('[finance]')) {
+      section = 'finance';
+      note = note.replace('[finance]', '');
+    } else if (note.startsWith('[credit]')) {
+      section = 'credit';
+      note = note.replace('[credit]', '');
+    }
+
+    const mappedAdj = {
+      id: adj.id,
+      type: adj.type,
+      amount: adj.amount || '',
+      percent: adj.percent || '',
+      note,
+      deletable: true,
+      isNew: false
+    };
+
+    if (section === 'credit') creditAdjustments.push(mappedAdj);
+    else if (section === 'debit') debitAdjustments.push(mappedAdj);
+    else if (section === 'finance') financeCharges.push(mappedAdj);
+  });
 
   const handleInputChange = (section, id, field, value) => {
-    const updateFn = section === 'credit' ? setCreditAdjustments : section === 'debit' ? setDebitAdjustments : setFinanceCharges;
-    updateFn((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+    // Immediate debounced save can be complex, for now we will trigger an update directly
+    // Wait, the UI expects immediate input change. So we should use local state for editing,
+    // OR we just dispatch an update on blur, but we don't have onBlur in AdjustmentTable.
+    // Let's dispatch update directly.
+    const adj = adjustmentTypes.find(a => a.id === id);
+    if (!adj) return;
+
+    const prefix = `[${section}]`;
+    let newNote = adj.note || '';
+    if (!newNote.startsWith('[credit]') && !newNote.startsWith('[debit]') && !newNote.startsWith('[finance]')) {
+      newNote = prefix + newNote;
+    }
+
+    const updatePayload = {
+      id,
+      name: field === 'type' ? value : adj.type,
+      type: field === 'type' ? value : adj.type,
+      amount: field === 'amount' ? value : adj.amount,
+      percent: field === 'percent' ? value : adj.percent,
+      note: field === 'note' ? prefix + value : newNote,
+    };
+    dispatch(updateAdjustmentType(updatePayload));
   };
 
   const handleDelete = (section, id) => {
-    const updateFn = section === 'credit' ? setCreditAdjustments : section === 'debit' ? setDebitAdjustments : setFinanceCharges;
-    updateFn((prev) => prev.filter((row) => row.id !== id));
+    dispatch(deleteAdjustmentType(id));
   };
 
   const handleAdd = (section) => {
-    const updateFn = section === 'credit' ? setCreditAdjustments : section === 'debit' ? setDebitAdjustments : setFinanceCharges;
-    const currentData = section === 'credit' ? creditAdjustments : section === 'debit' ? debitAdjustments : financeCharges;
-    const newId = Math.max(...currentData.map(r => r.id), 0) + 1;
-    updateFn((prev) => [...prev, { id: newId, type: 'New Adjustment', amount: '', percent: '', note: section === 'credit' ? 'Applied to patient balance' : '', deletable: true }]);
+    const newAdj = {
+      name: 'New Adjustment',
+      type: 'New Adjustment',
+      amount: '',
+      percent: '',
+      note: `[${section}]`,
+    };
+    dispatch(createAdjustmentType(newAdj));
   };
+
+  if (loading && adjustmentTypes.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 0 }}>
@@ -78,6 +129,7 @@ const AdjustmentTypes = () => {
         <Button
           startIcon={<SyncIcon />}
           size="small"
+          onClick={() => dispatch(fetchAdjustmentTypes())}
           sx={{ textTransform: 'none', color: '#4b71a1' }}
         >
           Sync

@@ -1,5 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchConsentTemplates,
+  addConsentTemplate,
+  deleteConsentTemplate,
+  selectConsentTemplates,
+  selectLoadingConsent
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -84,15 +93,41 @@ const INITIAL_SYSTEM_CONSENTS = [
   }
 ];
 
+
+
+const mapBackendToFrontend = (backend) => {
+  let contentData = {};
+  try {
+    if (backend.content) {
+      contentData = JSON.parse(backend.content);
+    }
+  } catch (e) {
+    contentData = { procedures: [] };
+  }
+  return {
+    id: backend.id || backend.TemplateId?.toString(),
+    name: backend.name || '',
+    procedures: contentData.procedures || [],
+    signatures: contentData.signatures || { guardian: false, office: false, patient: false, witness: false, doctor: false, other: false },
+    fileType: contentData.fileType || 'Upload PDF',
+    isSystem: contentData.isSystem || false
+  };
+};
+
 const InformedConsent = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
   const [customExpanded, setCustomExpanded] = useState(true);
   const [systemExpanded, setSystemExpanded] = useState(true);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [customConsents, setCustomConsents] = useState(INITIAL_CUSTOM_CONSENTS);
-  const [systemConsents, setSystemConsents] = useState(INITIAL_SYSTEM_CONSENTS);
+  const templates = useSelector(selectConsentTemplates);
+  const loading = useSelector(selectLoadingConsent);
+
+  const [customConsents, setCustomConsents] = useState([]);
+  const [systemConsents, setSystemConsents] = useState([]);
 
   const [newConsentDraft, setNewConsentDraft] = useState({
     name: '',
@@ -101,6 +136,21 @@ const InformedConsent = () => {
     selectedFile: null,
     signatures: { guardian: false, office: false, patient: false, witness: false, doctor: false, other: false }
   });
+
+  useEffect(() => {
+    dispatch(fetchConsentTemplates());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (templates && templates.length > 0) {
+      const loaded = templates.map(mapBackendToFrontend);
+      setCustomConsents(loaded.filter(c => !c.isSystem));
+      setSystemConsents(loaded.filter(c => c.isSystem));
+    } else {
+      setCustomConsents(INITIAL_CUSTOM_CONSENTS.map((c, i) => ({ id: `c_${i}`, ...c, isSystem: false })));
+      setSystemConsents(INITIAL_SYSTEM_CONSENTS.map((c, i) => ({ id: `s_${i}`, ...c, isSystem: true })));
+    }
+  }, [templates]);
 
   const fileInputRef = useRef(null);
 
@@ -116,29 +166,71 @@ const InformedConsent = () => {
   const filteredCustom = customConsents.filter(c => c.name.toLowerCase().includes(searchQuery));
   const filteredSystem = systemConsents.filter(c => c.name.toLowerCase().includes(searchQuery));
 
-  const handleDeleteCustom = (idx) => setCustomConsents(customConsents.filter((_, i) => i !== idx));
-  const handleDeleteSystem = (idx) => setSystemConsents(systemConsents.filter((_, i) => i !== idx));
+  const handleDeleteCustom = async (idx) => {
+    const item = customConsents[idx];
+    if (item.id && !item.id.toString().startsWith('c_')) {
+      try {
+        await dispatch(deleteConsentTemplate(item.id)).unwrap();
+        dispatch(fetchConsentTemplates());
+        showSnackbar('Consent template deleted successfully', 'success');
+      } catch (e) {
+        console.error(e);
+        showSnackbar('Failed to delete consent template', 'error');
+        return;
+      }
+    }
+    setCustomConsents(customConsents.filter((_, i) => i !== idx));
+  };
 
-  const handleSaveConsent = () => {
+  const handleDeleteSystem = async (idx) => {
+    const item = systemConsents[idx];
+    if (item.id && !item.id.toString().startsWith('s_')) {
+      try {
+        await dispatch(deleteConsentTemplate(item.id)).unwrap();
+        dispatch(fetchConsentTemplates());
+        showSnackbar('Consent template deleted successfully', 'success');
+      } catch (e) {
+        console.error(e);
+        showSnackbar('Failed to delete consent template', 'error');
+        return;
+      }
+    }
+    setSystemConsents(systemConsents.filter((_, i) => i !== idx));
+  };
+
+  const handleSaveConsent = async () => {
     if (newConsentDraft.name) {
-      const procedureParts = newConsentDraft.procedures.split('-').map(s => s.trim());
-      const newEntry = {
-        name: newConsentDraft.name,
-        procedures: [{ 
+      try {
+        const procedureParts = newConsentDraft.procedures.split('-').map(s => s.trim());
+        const procs = [{ 
           code: procedureParts[0] || 'N/A', 
           desc: procedureParts[1] || procedureParts[0] || 'No description' 
-        }]
-      };
-      setCustomConsents([newEntry, ...customConsents]);
-      setAddDialogOpen(false);
-      // Reset state
-      setNewConsentDraft({
-        name: '',
-        procedures: '',
-        fileType: 'Upload PDF',
-        selectedFile: null,
-        signatures: { guardian: false, office: false, patient: false, witness: false, doctor: false, other: false }
-      });
+        }];
+
+        const contentObj = {
+          procedures: procs,
+          signatures: newConsentDraft.signatures,
+          fileType: newConsentDraft.fileType,
+          isSystem: false
+        };
+
+        await dispatch(addConsentTemplate({ name: newConsentDraft.name, content: JSON.stringify(contentObj) })).unwrap();
+        dispatch(fetchConsentTemplates());
+        setAddDialogOpen(false);
+        showSnackbar('Consent template created successfully', 'success');
+
+        // Reset state
+        setNewConsentDraft({
+          name: '',
+          procedures: '',
+          fileType: 'Upload PDF',
+          selectedFile: null,
+          signatures: { guardian: false, office: false, patient: false, witness: false, doctor: false, other: false }
+        });
+      } catch (e) {
+        console.error(e);
+        showSnackbar('Failed to create consent template', 'error');
+      }
     }
   };
 

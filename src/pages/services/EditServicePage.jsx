@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -10,58 +11,68 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { serviceCatalogService } from '../../services/service-catalog.service';
+import {
+  fetchServiceById,
+  updateService,
+  selectServiceDetails,
+  selectServicesLoading,
+  selectServicesError
+} from '../../store/slices/serviceSlice';
 import ServiceForm from '../../components/services/ServiceForm';
 
 const EditServicePage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { serviceId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const [service, setService] = useState(null);
+  
+  const service = useSelector(selectServiceDetails);
+  const reduxLoading = useSelector(selectServicesLoading);
+  const reduxError = useSelector(selectServicesError);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
 
   useEffect(() => {
-    const fetchService = async () => {
+    const loadService = async () => {
       try {
         setLoading(true);
-        setError('');
-        const serviceData = await serviceCatalogService.getServiceById(serviceId);
-        setService(serviceData);
+        setLocalError('');
+        await dispatch(fetchServiceById(serviceId)).unwrap();
       } catch (err) {
-        const errorMessage =
-          err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to load service.';
-        setError(errorMessage);
+        if (err?.name === 'ConditionError') return;
+        setLocalError(typeof err === 'string' ? err : err?.message || 'Failed to load service.');
       } finally {
         setLoading(false);
       }
     };
-    fetchService();
-  }, [serviceId]);
+    if (serviceId) {
+      loadService();
+    }
+  }, [dispatch, serviceId]);
 
   const handleSubmit = async (data) => {
     try {
       setSaving(true);
-      setError('');
-      await serviceCatalogService.updateService(serviceId, data);
+      setLocalError('');
+      await dispatch(updateService({ id: serviceId, updates: data })).unwrap();
       showSnackbar('Service updated successfully', 'success');
       navigate('/services'); // Navigate to service catalog page
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to update service.';
-      setError(errorMessage);
+      if (err?.name === 'ConditionError') return;
+      const errorMessage = typeof err === 'string' ? err : err?.message || 'Failed to update service.';
+      setLocalError(errorMessage);
       showSnackbar(errorMessage, 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
+  const isInitialLoading = loading || (reduxLoading && !service);
+  const error = localError || reduxError;
+
+  if (isInitialLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
         <CircularProgress />
@@ -81,7 +92,7 @@ const EditServicePage = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setLocalError('')}>
           {error}
         </Alert>
       )}

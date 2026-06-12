@@ -36,6 +36,12 @@ export const fetchAllAppointmentTypesForDropdown = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointment types');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { appointmentType } = getState();
+      return !appointmentType.dropdownLoading;
+    },
   }
 );
 

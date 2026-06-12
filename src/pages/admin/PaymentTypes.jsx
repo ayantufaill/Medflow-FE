@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -14,72 +15,108 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Link as MuiLink,
-  Tooltip
+  CircularProgress
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import {
   Delete as DeleteIcon,
   Sync as SyncIcon,
-  Add as AddIcon
 } from '@mui/icons-material';
 
+import {
+  fetchPaymentTypes,
+  createPaymentType,
+  updatePaymentType,
+  deletePaymentType,
+  fetchPaymentTypeDefaults,
+  savePaymentTypeDefaults,
+  selectPaymentTypes,
+  selectPaymentTypesLoading,
+  selectPaymentTypeDefaults
+} from '../../store/slices/billingSlice';
+
+const DebouncedNoteField = ({ value, onBlur, ...props }) => {
+  const [localVal, setLocalVal] = useState(value || '');
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setLocalVal(value || ''); }, [value]);
+  
+  return (
+    <TextField
+      {...props}
+      value={localVal}
+      onChange={(e) => setLocalVal(e.target.value)}
+      onBlur={() => onBlur(localVal)}
+    />
+  );
+};
+
 const PaymentTypes = () => {
-  const [paymentTypes, setPaymentTypes] = useState([
-    { id: 1, type: 'Do not use', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 2, type: 'Check', depositSlip: true, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 3, type: 'Account Credit', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, disabled: true, deleted: false },
-    { id: 4, type: 'Debit Card', depositSlip: false, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, deleted: false },
-    { id: 5, type: 'EFT', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 6, type: 'Cash', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 7, type: 'Care Credit', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 8, type: 'Master Card', depositSlip: false, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, deleted: false },
-    { id: 9, type: 'Visa Card', depositSlip: false, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, deleted: false },
-    { id: 10, type: 'ACH Payment', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, disabled: true, deleted: false },
-    { id: 11, type: 'Patient Overpayment', depositSlip: false, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, disabled: true, deleted: false },
-    { id: 12, type: 'American Express', depositSlip: false, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, deleted: false },
-    { id: 13, type: 'Discover', depositSlip: false, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, deleted: false },
-    { id: 14, type: 'Card on File', depositSlip: false, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, disabled: true, deleted: false },
-    { id: 15, type: 'Online Card', depositSlip: true, openEdge: false, prosperipay: false, smilepay: true, note: 'Added automatically and used for online (MyChart) card payments', deletable: false, deleted: false },
-    { id: 16, type: 'Sunbit', depositSlip: true, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 17, type: 'Cherry', depositSlip: true, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 18, type: 'HFD', depositSlip: true, openEdge: false, prosperipay: false, smilepay: false, note: '', deletable: true, deleted: false },
-    { id: 19, type: 'VCC', depositSlip: true, openEdge: false, prosperipay: false, smilepay: true, note: '', deletable: true, deleted: false },
-  ]);
+  const dispatch = useDispatch();
+  const paymentTypes = useSelector(selectPaymentTypes);
+  const loading = useSelector(selectPaymentTypesLoading);
+  const defaultTypes = useSelector(selectPaymentTypeDefaults);
 
   const [showDeleted, setShowDeleted] = useState(false);
-  const [defaultTypes, setDefaultTypes] = useState({
-    patient: 'Master Card',
-    insurance: 'Master Card',
-    family: ''
-  });
 
-  const handleToggle = (id, field) => {
-    setPaymentTypes(prev => prev.map(pt => 
-      pt.id === id ? { ...pt, [field]: !pt[field] } : pt
-    ));
+  useEffect(() => {
+    dispatch(fetchPaymentTypes());
+    dispatch(fetchPaymentTypeDefaults());
+  }, [dispatch]);
+
+  const handleToggle = (pt, field) => {
+    dispatch(updatePaymentType({
+      id: pt.id,
+      [field]: !pt[field]
+    }));
   };
 
-  const handleNoteChange = (id, value) => {
-    setPaymentTypes(prev => prev.map(pt => 
-      pt.id === id ? { ...pt, note: value } : pt
-    ));
+  const handleNoteChange = (pt, value) => {
+    if (pt.note === value) return;
+    dispatch(updatePaymentType({
+      id: pt.id,
+      note: value
+    }));
   };
 
   const handleDelete = (id) => {
-    setPaymentTypes(prev => prev.map(pt => 
-      pt.id === id ? { ...pt, deleted: true } : pt
-    ));
+    dispatch(deletePaymentType(id));
   };
 
-  const handleRestore = (id) => {
-    setPaymentTypes(prev => prev.map(pt => 
-      pt.id === id ? { ...pt, deleted: false } : pt
-    ));
+  const handleRestore = (pt) => {
+    dispatch(updatePaymentType({
+      id: pt.id,
+      isHidden: false
+    }));
   };
 
-  const visiblePaymentTypes = paymentTypes.filter(pt => showDeleted || !pt.deleted);
+  const handleAdd = () => {
+    dispatch(createPaymentType({
+      name: 'New Payment Type',
+      depositSlip: false,
+      openEdge: false,
+      prosperipay: false,
+      smilepay: false,
+      note: ''
+    }));
+  };
+
+  const handleDefaultChange = (field, value) => {
+    dispatch(savePaymentTypeDefaults({
+      ...defaultTypes,
+      [field]: value
+    }));
+  };
+
+  if (loading && paymentTypes.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  const visiblePaymentTypes = paymentTypes.filter(pt => showDeleted || !pt.isHidden);
 
   return (
     <Box sx={{ p: 0 }}>
@@ -96,6 +133,7 @@ const PaymentTypes = () => {
           />
           <MuiLink 
             component="button" 
+            onClick={() => dispatch(fetchPaymentTypes())}
             sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem', color: '#4b71a1', textDecoration: 'none' }}
           >
             <SyncIcon sx={{ fontSize: '1rem' }} /> Sync
@@ -120,39 +158,39 @@ const PaymentTypes = () => {
             </TableHead>
             <TableBody>
               {visiblePaymentTypes.map((pt) => (
-                <TableRow key={pt.id} sx={{ '&:hover': { bgcolor: '#fbfbfb' }, opacity: pt.deleted ? 0.6 : 1 }}>
-                  <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: pt.deleted ? '#e53e3e' : (pt.disabled ? '#a0aec0' : '#4a5568') }}>
-                    {pt.type} {pt.deleted && '(Deleted)'}
+                <TableRow key={pt.id} sx={{ '&:hover': { bgcolor: '#fbfbfb' }, opacity: pt.isHidden ? 0.6 : 1 }}>
+                  <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: pt.isHidden ? '#e53e3e' : '#4a5568' }}>
+                    {pt.type} {pt.isHidden && '(Deleted)'}
                   </TableCell>
                   <TableCell align="center">
-                    <Checkbox size="small" checked={pt.depositSlip} onChange={() => handleToggle(pt.id, 'depositSlip')} />
+                    <Checkbox size="small" checked={pt.depositSlip || false} onChange={() => handleToggle(pt, 'depositSlip')} />
                   </TableCell>
                   <TableCell align="center">
-                    <Checkbox size="small" checked={pt.openEdge} onChange={() => handleToggle(pt.id, 'openEdge')} />
+                    <Checkbox size="small" checked={pt.openEdge || false} onChange={() => handleToggle(pt, 'openEdge')} />
                   </TableCell>
                   <TableCell align="center">
-                    <Checkbox size="small" checked={pt.prosperipay} onChange={() => handleToggle(pt.id, 'prosperipay')} />
+                    <Checkbox size="small" checked={pt.prosperipay || false} onChange={() => handleToggle(pt, 'prosperipay')} />
                   </TableCell>
                   <TableCell align="center">
-                    <Checkbox size="small" checked={pt.smilepay} onChange={() => handleToggle(pt.id, 'smilepay')} />
+                    <Checkbox size="small" checked={pt.smilepay || false} onChange={() => handleToggle(pt, 'smilepay')} />
                   </TableCell>
                   <TableCell sx={{ width: '40%' }}>
-                    <TextField
+                    <DebouncedNoteField
                       variant="standard"
                       fullWidth
                       value={pt.note}
-                      onChange={(e) => handleNoteChange(pt.id, e.target.value)}
-                      sx={{ '& .MuiInput-underline:before': { borderBottomColor: '#e2e8f0' }, '& .MuiInputBase-input': { fontSize: '0.75rem', color: pt.deletable ? '#4a5568' : '#a0aec0' } }}
+                      onBlur={(newVal) => handleNoteChange(pt, newVal)}
+                      sx={{ '& .MuiInput-underline:before': { borderBottomColor: '#e2e8f0' }, '& .MuiInputBase-input': { fontSize: '0.75rem', color: '#4a5568' } }}
                     />
                   </TableCell>
                   <TableCell align="center">
-                    {pt.deleted ? (
-                      <MuiLink component="button" onClick={() => handleRestore(pt.id)} sx={{ fontSize: '0.75rem', textDecoration: 'none' }}>
-                        Restore
+                    {pt.isHidden ? (
+                      <MuiLink component="button" onClick={() => handleRestore(pt)} sx={{ fontSize: '0.75rem', textDecoration: 'none' }}>
+                         Restore
                       </MuiLink>
                     ) : (
-                      <IconButton size="small" disabled={!pt.deletable} onClick={() => handleDelete(pt.id)}>
-                        <DeleteIcon sx={{ fontSize: '1rem', color: pt.deletable ? '#feb2b2' : '#edf2f7' }} />
+                      <IconButton size="small" onClick={() => handleDelete(pt.id)}>
+                        <DeleteIcon sx={{ fontSize: '1rem', color: '#feb2b2' }} />
                       </IconButton>
                     )}
                   </TableCell>
@@ -165,6 +203,7 @@ const PaymentTypes = () => {
         <Box sx={{ mt: 2 }}>
           <MuiLink 
             component="button" 
+            onClick={handleAdd}
             sx={{ fontSize: '0.8125rem', color: '#4b71a1', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 0.5 }}
           >
             +add
@@ -184,36 +223,40 @@ const PaymentTypes = () => {
               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#4a5568', width: '220px' }}>Patient Payment Default Type:</Typography>
               <Select
                 size="small"
-                value={defaultTypes.patient}
-                onChange={(e) => setDefaultTypes({ ...defaultTypes, patient: e.target.value })}
+                value={defaultTypes.patient || ''}
+                onChange={(e) => handleDefaultChange('patient', e.target.value)}
                 sx={{ height: 24, fontSize: '0.8125rem', width: '150px' }}
               >
-                <MenuItem value="Master Card">Master Card</MenuItem>
-                <MenuItem value="Visa Card">Visa Card</MenuItem>
+                {paymentTypes.filter(pt => !pt.isHidden).map(pt => (
+                  <MenuItem key={pt.id} value={pt.type}>{pt.type}</MenuItem>
+                ))}
               </Select>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#4a5568', width: '220px' }}>Insurance Payment Default Type:</Typography>
               <Select
                 size="small"
-                value={defaultTypes.insurance}
-                onChange={(e) => setDefaultTypes({ ...defaultTypes, insurance: e.target.value })}
+                value={defaultTypes.insurance || ''}
+                onChange={(e) => handleDefaultChange('insurance', e.target.value)}
                 sx={{ height: 24, fontSize: '0.8125rem', width: '150px' }}
               >
-                <MenuItem value="Master Card">Master Card</MenuItem>
-                <MenuItem value="Check">Check</MenuItem>
+                {paymentTypes.filter(pt => !pt.isHidden).map(pt => (
+                  <MenuItem key={pt.id} value={pt.type}>{pt.type}</MenuItem>
+                ))}
               </Select>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#4a5568', width: '220px' }}>Family Payment Default Type:</Typography>
               <Select
                 size="small"
-                value={defaultTypes.family}
-                onChange={(e) => setDefaultTypes({ ...defaultTypes, family: e.target.value })}
+                value={defaultTypes.family || ''}
+                onChange={(e) => handleDefaultChange('family', e.target.value)}
                 sx={{ height: 24, fontSize: '0.8125rem', width: '150px' }}
               >
                 <MenuItem value="">None</MenuItem>
-                <MenuItem value="Check">Check</MenuItem>
+                {paymentTypes.filter(pt => !pt.isHidden).map(pt => (
+                  <MenuItem key={pt.id} value={pt.type}>{pt.type}</MenuItem>
+                ))}
               </Select>
             </Box>
           </Box>

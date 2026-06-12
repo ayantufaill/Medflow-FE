@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
   Typography,
@@ -23,18 +24,32 @@ import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
 } from "@mui/icons-material";
-import { useProvider } from "../../hooks/queries/useProviders";
+import { 
+  fetchProviderById, 
+  selectCurrentProvider, 
+  selectProviderDetailLoading, 
+  selectProviderListError 
+} from "../../store/slices/providerSlice";
 
 const ViewProviderPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { providerId } = useParams();
-  const { data: provider, isLoading: loading, error: queryError } = useProvider(providerId);
+  
+  const provider = useSelector(selectCurrentProvider);
+  const loading = useSelector(selectProviderDetailLoading);
+  const queryError = useSelector(selectProviderListError);
+  
   const [tabValue, setTabValue] = useState(0);
 
+  useEffect(() => {
+    if (providerId) {
+      dispatch(fetchProviderById(providerId));
+    }
+  }, [providerId, dispatch]);
+
   const error = queryError
-    ? queryError.response?.data?.error?.message ||
-      queryError.response?.data?.message ||
-      "Failed to load provider. Please try again."
+    ? queryError.message || queryError
     : "";
 
   const formatSpecialty = (value) => {

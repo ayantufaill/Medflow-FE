@@ -446,7 +446,6 @@ const OperatoryScheduleGrid = ({
                       
                       const statusColor = getStatusColor ? getStatusColor(a.status, a.color) : a.color;
                       const isNewAppointment = a.id === newlyCreatedAppointmentId;
-                      
                       return (
                         <div key={a.id} ref={isNewAppointment ? newAppointmentRef : null}>
                           <AppointmentCard

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDispatch } from 'react-redux';
 import {
   Dialog,
   DialogTitle,
@@ -8,8 +9,24 @@ import {
   Box,
   Button,
 } from '@mui/material';
+import { updateFeeGuide, setDefaultFeeGuide } from '../../../store/slices/feeGuideSlice';
 
-const EditFeeGuideDialog = ({ open, onClose, selectedFeeGuide, setSelectedFeeGuide }) => {
+const EditFeeGuideDialog = ({ open, onClose, feeGuideObj }) => {
+  const dispatch = useDispatch();
+  const [localName, setLocalName] = React.useState('');
+
+  React.useEffect(() => {
+    if (feeGuideObj) {
+      setLocalName(feeGuideObj.name || '');
+    }
+  }, [feeGuideObj, open]);
+
+  const handleSave = () => {
+    if (!feeGuideObj || !localName.trim()) return;
+    dispatch(updateFeeGuide({ id: feeGuideObj.id, name: localName }));
+    onClose();
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -26,7 +43,7 @@ const EditFeeGuideDialog = ({ open, onClose, selectedFeeGuide, setSelectedFeeGui
         fontSize: '1rem',
         fontWeight: 600
       }}>
-        Add New Fee Guide
+        Edit Fee Guide
       </DialogTitle>
       <DialogContent sx={{ py: 3, px: 2 }}>
         <Typography variant="body2" sx={{ mb: 1, fontWeight: 700, color: '#333' }}>
@@ -35,8 +52,8 @@ const EditFeeGuideDialog = ({ open, onClose, selectedFeeGuide, setSelectedFeeGui
         <TextField
           size="small"
           fullWidth
-          value={selectedFeeGuide}
-          onChange={(e) => setSelectedFeeGuide(e.target.value)}
+          value={localName}
+          onChange={(e) => setLocalName(e.target.value)}
           sx={{ 
             mb: 2,
             '& .MuiOutlinedInput-root': { 
@@ -46,6 +63,12 @@ const EditFeeGuideDialog = ({ open, onClose, selectedFeeGuide, setSelectedFeeGui
         />
         <Button 
           variant="contained" 
+          onClick={() => {
+            if (feeGuideObj) {
+              dispatch(setDefaultFeeGuide(feeGuideObj.id));
+              onClose();
+            }
+          }}
           sx={{ 
             bgcolor: '#d9a366', 
             textTransform: 'none', 
@@ -60,7 +83,7 @@ const EditFeeGuideDialog = ({ open, onClose, selectedFeeGuide, setSelectedFeeGui
           <Button 
             variant="contained" 
             sx={{ bgcolor: '#d9a366', textTransform: 'none', minWidth: 80, '&:hover': { bgcolor: '#c08d50' } }}
-            onClick={onClose}
+            onClick={handleSave}
           >
             Save
           </Button>

@@ -17,6 +17,20 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 
+const DebouncedTextField = ({ value, onBlur, ...props }) => {
+  const [localVal, setLocalVal] = React.useState(value || '');
+  React.useEffect(() => { setLocalVal(value || ''); }, [value]);
+  
+  return (
+    <TextField
+      {...props}
+      value={localVal}
+      onChange={(e) => setLocalVal(e.target.value)}
+      onBlur={() => onBlur(localVal)}
+    />
+  );
+};
+
 const AdjustmentTable = ({ title, subtitle, data, section, hasNote, onAdd, onInputChange, onDelete }) => (
   <Box sx={{ mb: 4 }}>
     <Typography variant="subtitle1" sx={{ color: '#4b71a1', fontWeight: 600, borderBottom: '1px solid #e0e0e0', pb: 0.5, mb: 0.5 }}>
@@ -38,23 +52,32 @@ const AdjustmentTable = ({ title, subtitle, data, section, hasNote, onAdd, onInp
         <TableBody>
           {data.map((row) => (
             <TableRow key={row.id} sx={{ '&:hover': { bgcolor: '#f9fafb' } }}>
-              <TableCell sx={{ fontWeight: 500 }}>{row.type}</TableCell>
+              <TableCell sx={{ fontWeight: 500 }}>
+                <DebouncedTextField
+                  size="small"
+                  variant="standard"
+                  value={row.type}
+                  onBlur={(newVal) => onInputChange(section, row.id, 'type', newVal)}
+                  InputProps={{ disableUnderline: false }}
+                  sx={{ width: '100%', '& .MuiInput-root': { fontSize: '0.875rem', fontWeight: 500 } }}
+                />
+              </TableCell>
               <TableCell>
-                <TextField
+                <DebouncedTextField
                   size="small"
                   variant="standard"
                   value={row.amount}
-                  onChange={(e) => onInputChange(section, row.id, 'amount', e.target.value)}
+                  onBlur={(newVal) => onInputChange(section, row.id, 'amount', newVal)}
                   InputProps={{ disableUnderline: false }}
                   sx={{ width: '100%', '& .MuiInput-root': { fontSize: '0.875rem' } }}
                 />
               </TableCell>
               <TableCell>
-                <TextField
+                <DebouncedTextField
                   size="small"
                   variant="standard"
                   value={row.percent}
-                  onChange={(e) => onInputChange(section, row.id, 'percent', e.target.value)}
+                  onBlur={(newVal) => onInputChange(section, row.id, 'percent', newVal)}
                   InputProps={{ disableUnderline: false }}
                   sx={{ width: '100%', '& .MuiInput-root': { fontSize: '0.875rem' } }}
                 />

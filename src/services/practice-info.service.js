@@ -55,8 +55,8 @@ export const practiceInfoService = {
       if (key === 'logo' && practiceInfoData[key] instanceof File) {
         // Append logo file
         formData.append('logo', practiceInfoData[key]);
-      } else if (key === 'address' || key === 'businessHours') {
-        // Stringify nested objects
+      } else if (typeof practiceInfoData[key] === 'object' && practiceInfoData[key] !== null) {
+        // Stringify all nested objects and arrays
         formData.append(key, JSON.stringify(practiceInfoData[key]));
       } else if (practiceInfoData[key] !== null && practiceInfoData[key] !== undefined) {
         formData.append(key, practiceInfoData[key]);
@@ -85,7 +85,7 @@ export const practiceInfoService = {
       if (key === 'logo' && updates[key] instanceof File) {
         // Append logo file
         formData.append('logo', updates[key]);
-      } else if (key === 'address' || key === 'businessHours') {
+      } else if (typeof updates[key] === 'object' && updates[key] !== null) {
         // Stringify nested objects
         formData.append(key, JSON.stringify(updates[key]));
       } else if (updates[key] !== null && updates[key] !== undefined) {

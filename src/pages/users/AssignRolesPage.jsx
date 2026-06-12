@@ -15,50 +15,56 @@ import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchUserById,
+  assignRole,
+  removeRole,
+  selectCurrentUser,
+} from "../../store/slices/userSlice";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { userService } from "../../services/user.service";
 import { roleService } from "../../services/role.service";
 
 const AssignRolesPage = () => {
   const navigate = useNavigate();
   const { userId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
+  const user = useSelector(selectCurrentUser);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
-  const [user, setUser] = useState(null);
   const [allRoles, setAllRoles] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const [userData, rolesData] = await Promise.all([
-        userService.getUserById(userId),
-        roleService.getAllRoles(),
-      ]);
-
-      setUser(userData);
-      setAllRoles(rolesData || []);
-      setUserRoles(userData?.roles || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to load data. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [userResult, rolesData] = await Promise.all([
+          dispatch(fetchUserById(userId)).unwrap(),
+          roleService.getAllRoles(),
+        ]);
+
+        const userData = userResult.user || userResult;
+        setAllRoles(rolesData || []);
+        setUserRoles(userData?.roles || []);
+      } catch (err) {
+        if (err?.name === 'ConditionError') return;
+        const errorMsg = typeof err === 'string' ? err : 
+          (err?.message || "Failed to load data. Please try again.");
+        setError(errorMsg);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (userId) {
       fetchData();
     }
-  }, [userId]);
+  }, [userId, dispatch]);
 
   const isRoleAssigned = (roleId) => {
     return userRoles.some((role) => role._id === roleId || role.id === roleId);
@@ -73,30 +79,17 @@ const AssignRolesPage = () => {
       setError("");
 
       if (isAssigned) {
-        await userService.removeRole(userId, roleId);
+        await dispatch(removeRole({ userId, roleId })).unwrap();
         setUserRoles((prev) => prev.filter((r) => (r._id || r.id) !== roleId));
         showSnackbar(`Role "${role.name}" removed successfully`, "success");
       } else {
-        await userService.assignRole(userId, roleId);
+        await dispatch(assignRole({ userId, roleId })).unwrap();
         setUserRoles((prev) => [...prev, role]);
         showSnackbar(`Role "${role.name}" assigned successfully`, "success");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          `Failed to ${
-            isAssigned ? "remove" : "assign"
-          } role. Please try again.`
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          `Failed to ${
-            isAssigned ? "remove" : "assign"
-          } role. Please try again.`,
-        "error"
-      );
+      setError(err || `Failed to ${isAssigned ? "remove" : "assign"} role. Please try again.`);
+      showSnackbar(err || `Failed to ${isAssigned ? "remove" : "assign"} role. Please try again.`, "error");
     } finally {
       setUpdating(false);
     }

@@ -9,6 +9,7 @@ import {
   FormControlLabel,
   Switch,
   InputAdornment,
+  MenuItem,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
 
@@ -31,6 +32,7 @@ const ServiceForm = ({ onSubmit, initialData = null, loading = false, isEditMode
       isBillable: true,
       taxRate: '',
       isActive: true,
+      color: '#5c7cbc',
     },
   });
 
@@ -47,6 +49,7 @@ const ServiceForm = ({ onSubmit, initialData = null, loading = false, isEditMode
         isBillable: initialData.isBillable !== false,
         taxRate: initialData.taxRate?.toString() || '',
         isActive: initialData.isActive !== false,
+        color: initialData.color || '#5c7cbc',
       });
     }
   }, [initialData, reset]);
@@ -63,6 +66,7 @@ const ServiceForm = ({ onSubmit, initialData = null, loading = false, isEditMode
       isBillable: data.isBillable,
       taxRate: data.taxRate ? parseFloat(data.taxRate) : undefined,
       isActive: data.isActive,
+      color: data.color,
     };
     onSubmit(formattedData);
   };
@@ -153,15 +157,42 @@ const ServiceForm = ({ onSubmit, initialData = null, loading = false, isEditMode
 
         {/* Category */}
         <Grid size={{ xs: 12, sm: 4 }}>
+          <Controller
+            name="category"
+            control={control}
+            rules={{ required: 'Category is required' }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Category *"
+                fullWidth
+                error={!!errors.category}
+                helperText={errors.category?.message}
+              >
+                <MenuItem value="Office Visit">Office Visit</MenuItem>
+                <MenuItem value="Lab">Lab</MenuItem>
+                <MenuItem value="Imaging">Imaging</MenuItem>
+                <MenuItem value="Procedure">Procedure</MenuItem>
+                <MenuItem value="Surgery">Surgery</MenuItem>
+                <MenuItem value="Consultation">Consultation</MenuItem>
+                <MenuItem value="Therapy">Therapy</MenuItem>
+                <MenuItem value="Preventive Care">Preventive Care</MenuItem>
+                <MenuItem value="Emergency">Emergency</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </TextField>
+            )}
+          />
+        </Grid>
+
+        {/* Color Picker */}
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
-            {...register('category', {
-              maxLength: { value: 100, message: 'Max 100 characters' },
-            })}
-            label="Category"
+            {...register('color')}
+            label="Color Theme"
+            type="color"
             fullWidth
-            error={!!errors.category}
-            helperText={errors.category?.message}
-            placeholder="e.g., Lab, Imaging, Consult"
+            sx={{ '& input': { height: '23px', cursor: 'pointer' } }}
           />
         </Grid>
 

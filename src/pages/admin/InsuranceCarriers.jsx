@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -36,9 +36,17 @@ import {
   Sync as SyncIcon,
 } from '@mui/icons-material';
 import { useDebounce } from 'use-debounce';
+import { useSelector, useDispatch } from 'react-redux';
 import { insuranceCompanyService } from '../../services/insurance.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import { 
+  fetchCarriersList, 
+  deleteCarrierThunk, 
+  addCarrierOptimistic, 
+  selectCarriersList, 
+  selectCarriersLoading 
+} from '../../store/slices/insuranceSlice';
 
 const INITIAL_COMPANIES = [
   {
@@ -78,9 +86,12 @@ const INITIAL_COMPANIES = [
 
 const InsuranceCarriers = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
-  const [companies, setCompanies] = useState(INITIAL_COMPANIES);
-  const [loading, setLoading] = useState(false);
+  
+  const companies = useSelector(selectCarriersList);
+  const loading = useSelector(selectCarriersLoading);
+
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -111,17 +122,20 @@ const InsuranceCarriers = () => {
     providersOutOfNetwork: [],
   });
 
+  const lastFetchRef = React.useRef(null);
+
   const fetchCompanies = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await insuranceCompanyService.getAllInsuranceCompanies(1, 100, debouncedSearch);
-      setCompanies(result.companies || []);
-    } catch (err) {
-      console.error('Failed to fetch companies:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch]);
+    const params = { page: 1, limit: 100, search: debouncedSearch };
+    const paramsStr = JSON.stringify(params);
+    if (lastFetchRef.current === paramsStr) return;
+    lastFetchRef.current = paramsStr;
+
+    setTimeout(() => {
+      if (lastFetchRef.current === paramsStr) lastFetchRef.current = null;
+    }, 100);
+
+    dispatch(fetchCarriersList(params));
+  }, [dispatch, debouncedSearch]);
 
   useEffect(() => {
     fetchCompanies();
@@ -133,15 +147,7 @@ const InsuranceCarriers = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      // Optimistically update local state
-      setCompanies(prev => prev.filter(c => (c._id || c.id) !== deleteDialog.companyId));
-
-      try {
-        await insuranceCompanyService.deleteInsuranceCompany(deleteDialog.companyId);
-      } catch (apiErr) {
-        console.error('Backend delete failed:', apiErr);
-      }
-
+      await dispatch(deleteCarrierThunk(deleteDialog.companyId)).unwrap();
       showSnackbar('Insurance carrier deleted successfully', 'success');
       setDeleteDialog({ open: false, companyId: null, companyName: '' });
     } catch (err) {
@@ -156,37 +162,30 @@ const InsuranceCarriers = () => {
         return;
       }
 
-      // Prepare new carrier data for local state
       const createdCarrier = {
         ...newCarrier,
         id: Date.now().toString(), // Temporary ID for local state
         plansCount: 0
       };
 
-      // Try to save to backend but also update local state for immediate feedback
       try {
         const response = await insuranceCompanyService.createInsuranceCompany(newCarrier);
         if (response) {
-          // If we got a real response with an ID, use it
           createdCarrier.id = response._id || response.id;
         }
       } catch (apiErr) {
-        console.error('Backend save failed, using local state only:', apiErr);
+        console.error('Backend save failed, using optimistic state:', apiErr);
       }
 
-      setCompanies(prev => [createdCarrier, ...prev]);
+      dispatch(addCarrierOptimistic(createdCarrier));
       showSnackbar('Insurance carrier added successfully', 'success');
       setIsAddDialogOpen(false);
 
-      // Reset form
       setNewCarrier({
         name: '', payerId: '', phone: '', email: '', fax: '', website: '',
         address: '', address2: '', city: '', state: '', zipCode: '', country: 'United States',
         notes: '', claimType: '', providersOutOfNetwork: [],
       });
-
-      // Optional: re-fetch to ensure sync with backend if needed
-      // fetchCompanies();
     } catch (err) {
       showSnackbar('Failed to add insurance carrier', 'error');
     }

@@ -16,25 +16,40 @@
  * @author Senior Software Engineer
  */
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { clinicalNoteService } from '../../services/clinical-note.service';
 
 const initialState = {
   // Current clinical note being viewed/edited
   currentNote: null,
-  
   // Selected note ID
   selectedNoteId: null,
-  
   // Selected template for note creation
   selectedTemplate: null,
-  
   // Draft notes (keyed by appointmentId or noteId)
   drafts: {},
-  
   // UI state
   loading: false,
   error: null,
+  // Collections for lists
+  signedNotes: [],
+  unsignedNotes: [],
+  listLoading: false,
+  listError: null,
 };
+
+// --- Async Thunks ---
+export const fetchClinicalNotes = createAsyncThunk(
+  'clinical/fetchClinicalNotes',
+  async ({ page = 1, limit = 100, filters = {} }, { rejectWithValue }) => {
+    try {
+      const response = await clinicalNoteService.getAllClinicalNotes(page, limit, filters);
+      return { data: response.clinicalNotes || [], isSigned: filters.isSigned };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch clinical notes');
+    }
+  }
+);
 
 const clinicalSlice = createSlice({
   name: 'clinical',
@@ -112,13 +127,29 @@ const clinicalSlice = createSlice({
       state.loading = action.payload;
     },
     
-    /**
-     * Set error state
-     */
     setError: (state, action) => {
       state.error = action.payload;
       state.loading = false;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchClinicalNotes.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchClinicalNotes.fulfilled, (state, action) => {
+        state.listLoading = false;
+        if (action.payload.isSigned) {
+          state.signedNotes = action.payload.data;
+        } else {
+          state.unsignedNotes = action.payload.data;
+        }
+      })
+      .addCase(fetchClinicalNotes.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload;
+      });
   },
 });
 
@@ -143,5 +174,10 @@ export const selectDraft = (state, key) => state.clinical.drafts[key];
 export const selectAllDrafts = (state) => state.clinical.drafts;
 export const selectClinicalLoading = (state) => state.clinical.loading;
 export const selectClinicalError = (state) => state.clinical.error;
+
+// List selectors
+export const selectSignedNotes = (state) => state.clinical.signedNotes;
+export const selectUnsignedNotes = (state) => state.clinical.unsignedNotes;
+export const selectClinicalListLoading = (state) => state.clinical.listLoading;
 
 export default clinicalSlice.reducer;

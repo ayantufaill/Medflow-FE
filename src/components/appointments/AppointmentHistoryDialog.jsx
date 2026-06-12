@@ -30,34 +30,29 @@ import {
   Print as PrintIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { appointmentService } from "../../services/appointment.service";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../store/slices/appointmentSlice";
 
 const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
-  const [loading, setLoading] = useState(false);
-  const [appointments, setAppointments] = useState([]);
+  const dispatch = useDispatch();
+  const appointments = useSelector(selectPatientHistoryList);
+  const loading = useSelector(selectPatientHistoryLoading);
+
   const [filterType, setFilterType] = useState("all"); // all, past, future
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date"); // date, lastStatusChange
 
-  const fetchHistory = useCallback(async () => {
+  const fetchHistoryData = useCallback(() => {
     if (!patient) return;
     const pid = patient.id || patient._id;
-    setLoading(true);
-    try {
-      const data = await appointmentService.getAppointmentsByPatient(pid);
-      setAppointments(data || []);
-    } catch (err) {
-      console.error("Failed to fetch appointment history:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [patient]);
+    dispatch(fetchPatientHistory(pid));
+  }, [patient, dispatch]);
 
   useEffect(() => {
     if (open) {
-      fetchHistory();
+      fetchHistoryData();
     }
-  }, [open, fetchHistory]);
+  }, [open, fetchHistoryData]);
 
   const filteredAndSortedAppointments = useMemo(() => {
     let result = [...appointments];
@@ -132,7 +127,17 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column" }}>
+      <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column", "@media print": { p: 0, '& .no-print': { display: 'none !important' } } }}>
+        <style>
+          {`
+            @media print {
+              body * { visibility: hidden; }
+              .printable-content, .printable-content * { visibility: visible; }
+              .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+            }
+          `}
+        </style>
+        <Box className="printable-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* FILTERS & SORTING AREA */}
         <Box sx={{ p: 2, bgcolor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
           <Stack spacing={1}>
@@ -272,6 +277,7 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
               </Table>
             </TableContainer>
           )}
+        </Box>
         </Box>
       </DialogContent>
 

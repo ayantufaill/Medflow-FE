@@ -14,6 +14,38 @@ export const feeService = {
   },
 
   /**
+   * Create a new fee schedule
+   */
+  async createFeeSchedule(name) {
+    const response = await apiClient.post('/fee-management/guides', { description: name });
+    return response.data.data;
+  },
+
+  /**
+   * Update a fee schedule
+   */
+  async updateFeeSchedule(id, name) {
+    const response = await apiClient.put(`/fee-management/guides/${id}`, { description: name });
+    return response.data.data;
+  },
+
+  /**
+   * Delete a fee schedule
+   */
+  async deleteFeeSchedule(id) {
+    const response = await apiClient.delete(`/fee-management/guides/${id}`);
+    return response.data.data;
+  },
+
+  /**
+   * Copy a fee schedule
+   */
+  async copyFeeSchedule(sourceId, newName) {
+    const response = await apiClient.post(`/fee-management/guides/${sourceId}/copy`, { description: newName });
+    return response.data.data;
+  },
+
+  /**
    * List dental procedure codes with optional search/filters
    * @param {Object} params - { search, category, page, limit }
    */

@@ -28,6 +28,9 @@ import {
   createPatientThunk,
   updatePatientThunk,
   sendPatientUpdateRequestThunk,
+  fetchPatientBalance,
+  selectPatientBalanceCache,
+  invalidatePatientBalance,
 } from '../../store/slices/patientSlice';
 
 /**
@@ -174,4 +177,29 @@ export const usePatientInsurances = () => {
   }, [dispatch]);
 
   return { fetchInsurances, getInsurances, invalidate, cache };
+};
+
+/**
+ * usePatientBalance - hook for patient balance with caching
+ */
+export const usePatientBalance = () => {
+  const dispatch = useDispatch();
+  const cache = useSelector(selectPatientBalanceCache);
+
+  const fetchBalance = useCallback((patientId) => {
+    return dispatch(fetchPatientBalance(patientId));
+  }, [dispatch]);
+
+  const getBalance = useCallback((patientId) => {
+    const cached = cache[patientId];
+    if (!cached) return null;
+    if ((Date.now() - cached.timestamp) > 5 * 60 * 1000) return null; // Expired
+    return cached.data;
+  }, [cache]);
+
+  const invalidate = useCallback((patientId) => {
+    dispatch(invalidatePatientBalance(patientId));
+  }, [dispatch]);
+
+  return { fetchBalance, getBalance, invalidate, cache };
 };

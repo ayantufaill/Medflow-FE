@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  fetchSystemSettings, 
+  updateSystemSetting,
+  selectSettingsMap,
+  selectLoadingSettings
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -19,6 +27,14 @@ import {
   CircularProgress,
   Grid,
   InputAdornment,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Paper,
+  IconButton,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -111,6 +127,17 @@ const INITIAL_CODES_TAB = [
   { name: 'Myofunctional Therapy', subItems: [] },
   { name: 'Adjunctive', subItems: [] },
   { name: 'Prosthodontics, Resection', subItems: [] },
+];
+
+const DEFAULT_ELIGIBILITY_CODES = [
+  { ProcCode: 'D0120', Descript: 'periodic oral evaluation - established patient' },
+  { ProcCode: 'D0150', Descript: 'comprehensive oral evaluation - new or established patient' },
+  { ProcCode: 'D0210', Descript: 'intraoral - complete series of radiographic images' },
+  { ProcCode: 'D0220', Descript: 'intraoral - periapical first radiographic image' },
+  { ProcCode: 'D0274', Descript: 'bitewings - four radiographic images' },
+  { ProcCode: 'D1110', Descript: 'prophylaxis - adult' },
+  { ProcCode: 'D1208', Descript: 'topical application of fluoride - excluding varnish' },
+  { ProcCode: 'D4341', Descript: 'periodontal scaling and root planing - four or more teeth per quadrant' },
 ];
 
 const INITIAL_NO_CHARGE = [
@@ -707,6 +734,23 @@ const ProcedureIcon = ({ type }) => {
   }
 };
 
+const INITIAL_CATEGORIES = [
+  { name: 'No Charge', hasIcon: true, subItems: INITIAL_NO_CHARGE },
+  { name: 'Power Codes', hasIcon: true, hasInfo: true, subItems: INITIAL_POWER_CODES },
+  { name: 'Quick Codes', isHeader: true, hasInfo: true },
+  { name: 'Diagnostic', hasIcon: true, subItems: INITIAL_DIAGNOSTIC },
+  { name: 'Preventive', hasIcon: true, subItems: INITIAL_PREVENTIVE },
+  { name: 'Restorative', hasIcon: true, subItems: INITIAL_RESTORATIVE },
+  { name: 'Endodontics', hasIcon: true, subItems: INITIAL_ENDODONTICS },
+  { name: 'Periodontics', hasIcon: true, subItems: INITIAL_PERIODONTICS },
+  { name: 'Prosthodontics, Removable', hasIcon: true, subItems: INITIAL_PROSTHO_REMOVABLE },
+  { name: 'Implant Services', hasIcon: true, subItems: INITIAL_IMPLANT_SERVICES },
+  { name: 'Prosthodontics, Fixed', hasIcon: true, subItems: INITIAL_PROSTHO_FIXED },
+  { name: 'Oral Surgery', hasIcon: true, subItems: INITIAL_ORAL_SURGERY },
+  { name: 'Orthodontics', hasIcon: true, subItems: INITIAL_ORTHO },
+  { name: 'Adjunctive General Services', hasIcon: true, subItems: INITIAL_ADJUNCTIVE },
+];
+
 const ProcedureCodesManagement = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
@@ -717,6 +761,65 @@ const ProcedureCodesManagement = () => {
   const [expandedSubItems, setExpandedSubItems] = useState([]);
   const [expandedCodesCategories, setExpandedCodesCategories] = useState([]);
   const [expandedSubTypes, setExpandedSubTypes] = useState([]);
+  const [editableCodes, setEditableCodes] = useState({});
+  const [eligibilityCodes, setEligibilityCodes] = useState([]);
+
+  const handleAddEligibilityCode = async () => {
+    if (!eligibilityQuery) return;
+    
+    let code = eligibilityQuery.trim().toUpperCase();
+    if (/^\d+$/.test(code)) {
+      code = `D${code}`;
+    }
+
+    if (eligibilityCodes.some(c => c.ProcCode === code)) {
+      showSnackbar('Procedure code is already in the eligibility list', 'warning');
+      return;
+    }
+
+    let description = 'Standard Procedure Code';
+    try {
+      const result = await feeService.getProcedureCodes({ search: code, limit: 1 });
+      if (result && result.data && result.data.length > 0) {
+        const match = result.data.find(c => c.ProcCode.toUpperCase() === code.toUpperCase());
+        if (match) description = match.Descript;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const newCode = { ProcCode: code, Descript: description };
+    const updatedList = [...eligibilityCodes, newCode];
+    setEligibilityCodes(updatedList);
+    setEligibilityQuery('');
+
+    try {
+      await dispatch(updateSystemSetting({
+        key: 'clinical_eligibility_ada_codes',
+        value: JSON.stringify(updatedList)
+      })).unwrap();
+      showSnackbar('Eligibility procedure code added successfully', 'success');
+    } catch (err) {
+      console.error('Failed to save eligibility codes:', err);
+      showSnackbar('Failed to save eligibility codes', 'error');
+    }
+  };
+
+  const handleDeleteEligibilityCode = async (codeToDelete) => {
+    const updatedList = eligibilityCodes.filter(c => c.ProcCode !== codeToDelete);
+    setEligibilityCodes(updatedList);
+
+    try {
+      await dispatch(updateSystemSetting({
+        key: 'clinical_eligibility_ada_codes',
+        value: JSON.stringify(updatedList)
+      })).unwrap();
+      showSnackbar('Eligibility procedure code removed successfully', 'success');
+    } catch (err) {
+      console.error('Failed to save eligibility codes:', err);
+      showSnackbar('Failed to save eligibility codes', 'error');
+    }
+  };
 
   const handleToggleSubType = (subTypeName) => {
     if (expandedSubTypes.includes(subTypeName)) {
@@ -727,24 +830,58 @@ const ProcedureCodesManagement = () => {
   };
 
   const getProcedureCodesForSubType = (subTypeName) => {
-    // Return specific mocks if available
-    if (MOCK_SUBTYPE_CODES[subTypeName]) {
-      return MOCK_SUBTYPE_CODES[subTypeName];
+    if (editableCodes[subTypeName]) {
+      return editableCodes[subTypeName];
     }
     
-    // Check if we have local custom codes added to this category/subtype
-    const custom = localCustomCodes.filter(c => c.Category.toLowerCase() === subTypeName.toLowerCase());
-    if (custom.length > 0) {
-      return custom;
+    let baseList = [];
+    if (MOCK_SUBTYPE_CODES[subTypeName]) {
+      baseList = MOCK_SUBTYPE_CODES[subTypeName];
+    } else {
+      const custom = localCustomCodes.filter(c => c.Category.toLowerCase() === subTypeName.toLowerCase());
+      if (custom.length > 0) {
+        baseList = custom;
+      } else {
+        const baseCodeNum = 1000 + Math.abs(subTypeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 8000;
+        baseList = [
+          { ProcCode: `D${baseCodeNum}`, Descript: `${subTypeName} standard procedure code`, site: 'None', dbi: false, provider: 'Default', officeCode: '', officeDesc: '' },
+          { ProcCode: `D${baseCodeNum + 1}`, Descript: `${subTypeName} additional level procedure`, site: 'None', dbi: false, provider: 'Dentist', officeCode: '', officeDesc: '' },
+        ];
+      }
+    }
+    return baseList;
+  };
+
+  const handleUpdateProcedureCodeField = async (subTypeName, procCode, field, value) => {
+    const currentList = getProcedureCodesForSubType(subTypeName);
+    const updatedList = currentList.map(item => {
+      if (item.ProcCode === procCode) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    });
+
+    const updatedCodes = {
+      ...editableCodes,
+      [subTypeName]: updatedList
+    };
+
+    setEditableCodes(updatedCodes);
+
+    try {
+      await dispatch(updateSystemSetting({
+        key: 'clinical_procedure_codes_customizations',
+        value: JSON.stringify(updatedCodes)
+      })).unwrap();
+    } catch (e) {
+      console.error('Failed to save procedure code customizations:', e);
     }
 
-    // Otherwise generate realistic generic codes
-    const baseCodeNum = 1000 + Math.abs(subTypeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 8000;
-    return [
-      { ProcCode: `D${baseCodeNum}`, Descript: `${subTypeName} standard procedure code`, site: 'None', dbi: false, provider: 'Default' },
-      { ProcCode: `D${baseCodeNum + 1}`, Descript: `${subTypeName} additional level procedure`, site: 'None', dbi: false, provider: 'Dentist' },
-    ];
+    if (localCustomCodes.some(c => c.ProcCode === procCode)) {
+      setLocalCustomCodes(prev => prev.map(c => c.ProcCode === procCode ? { ...c, [field]: value } : c));
+    }
   };
+
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
   const [editingPath, setEditingPath] = useState(null);
   const [procedureCodes, setProcedureCodes] = useState([]);
@@ -781,15 +918,39 @@ const ProcedureCodesManagement = () => {
     setAddCustomCodeOpen(false);
   };
 
-  const handleSaveCustomCode = (e) => {
+  const handleSaveCustomCode = async (e) => {
     e.preventDefault();
     const finalCode = customCodeForm.code.startsWith('C') ? customCodeForm.code : `C${customCodeForm.code}`;
     const newCode = {
       ProcCode: finalCode,
       Descript: customCodeForm.description || customCodeForm.codeName,
       Category: customCodeForm.category,
+      site: customCodeForm.site || 'None',
+      dbi: false,
+      provider: 'Default',
+      officeCode: '',
+      officeDesc: ''
     };
     setLocalCustomCodes((prev) => [newCode, ...prev]);
+
+    const cat = customCodeForm.category;
+    const currentList = getProcedureCodesForSubType(cat);
+    const updatedCodes = {
+      ...editableCodes,
+      [cat]: [newCode, ...currentList.filter(c => c.ProcCode !== finalCode)]
+    };
+    
+    setEditableCodes(updatedCodes);
+
+    try {
+      await dispatch(updateSystemSetting({
+        key: 'clinical_procedure_codes_customizations',
+        value: JSON.stringify(updatedCodes)
+      })).unwrap();
+    } catch (err) {
+      console.error('Failed to save new custom code to customizations:', err);
+    }
+
     setAddCustomCodeOpen(false);
   };
 
@@ -835,23 +996,86 @@ const ProcedureCodesManagement = () => {
     setSyncDialogOpen(false);
   };
 
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+
+  const settingsMap = useSelector(selectSettingsMap);
+  const loadingCategories = useSelector(selectLoadingSettings);
+
   // Dynamic State for Categories and Items
-  const [categories, setCategories] = useState([
-    { name: 'No Charge', hasIcon: true, subItems: INITIAL_NO_CHARGE },
-    { name: 'Power Codes', hasIcon: true, hasInfo: true, subItems: INITIAL_POWER_CODES },
-    { name: 'Quick Codes', isHeader: true, hasInfo: true },
-    { name: 'Diagnostic', hasIcon: true, subItems: INITIAL_DIAGNOSTIC },
-    { name: 'Preventive', hasIcon: true, subItems: INITIAL_PREVENTIVE },
-    { name: 'Restorative', hasIcon: true, subItems: INITIAL_RESTORATIVE },
-    { name: 'Endodontics', hasIcon: true, subItems: INITIAL_ENDODONTICS },
-    { name: 'Periodontics', hasIcon: true, subItems: INITIAL_PERIODONTICS },
-    { name: 'Prosthodontics, Removable', hasIcon: true, subItems: INITIAL_PROSTHO_REMOVABLE },
-    { name: 'Implant Services', hasIcon: true, subItems: INITIAL_IMPLANT_SERVICES },
-    { name: 'Prosthodontics, Fixed', hasIcon: true, subItems: INITIAL_PROSTHO_FIXED },
-    { name: 'Oral Surgery', hasIcon: true, subItems: INITIAL_ORAL_SURGERY },
-    { name: 'Orthodontics', hasIcon: true, subItems: INITIAL_ORTHO },
-    { name: 'Adjunctive General Services', hasIcon: true, subItems: INITIAL_ADJUNCTIVE },
-  ]);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    dispatch(fetchSystemSettings());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (settingsMap && settingsMap.clinical_quick_codes_config) {
+      try {
+        const parsed = JSON.parse(settingsMap.clinical_quick_codes_config);
+        setCategories(parsed);
+      } catch (e) {
+        console.error('Failed to parse clinical_quick_codes_config setting:', e);
+        setCategories(INITIAL_CATEGORIES);
+      }
+    } else {
+      setCategories(INITIAL_CATEGORIES);
+    }
+  }, [settingsMap]);
+
+  useEffect(() => {
+    if (settingsMap && settingsMap.clinical_procedure_codes_customizations) {
+      try {
+        const parsed = JSON.parse(settingsMap.clinical_procedure_codes_customizations);
+        setEditableCodes(parsed);
+      } catch (e) {
+        console.error('Failed to parse clinical_procedure_codes_customizations setting:', e);
+      }
+    }
+  }, [settingsMap]);
+
+  useEffect(() => {
+    if (settingsMap && settingsMap.clinical_eligibility_ada_codes) {
+      try {
+        const parsed = JSON.parse(settingsMap.clinical_eligibility_ada_codes);
+        setEligibilityCodes(parsed);
+      } catch (e) {
+        console.error('Failed to parse clinical_eligibility_ada_codes:', e);
+        setEligibilityCodes(DEFAULT_ELIGIBILITY_CODES);
+      }
+    } else {
+      setEligibilityCodes(DEFAULT_ELIGIBILITY_CODES);
+    }
+  }, [settingsMap]);
+
+  const saveCategories = async (updatedCategories) => {
+    setCategories(updatedCategories);
+    try {
+      await dispatch(updateSystemSetting({
+        key: 'clinical_quick_codes_config',
+        value: JSON.stringify(updatedCategories)
+      })).unwrap();
+    } catch (error) {
+      console.error('Failed to save procedure categories setting:', error);
+      showSnackbar('Failed to save procedure categories setting', 'error');
+    }
+  };
+
+  const handleResetCategories = async () => {
+    try {
+      await saveCategories(INITIAL_CATEGORIES);
+      showSnackbar('Power Codes reset to default successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to reset Power Codes', 'error');
+    }
+  };
+
+  const handleToggleItemField = (catIdx, itemIdx, field, value) => {
+    const newCategories = JSON.parse(JSON.stringify(categories));
+    newCategories[catIdx].subItems[itemIdx][field] = value;
+    saveCategories(newCategories);
+  };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -871,7 +1095,7 @@ const ProcedureCodesManagement = () => {
 
   // Add/Delete Logic
   const handleAddPowerCode = (catIdx) => {
-    const newCategories = [...categories];
+    const newCategories = JSON.parse(JSON.stringify(categories));
     const category = newCategories[catIdx];
     const newId = category.subItems.length ? Math.max(...category.subItems.map(i => i.id)) + 1 : 0;
     
@@ -879,20 +1103,22 @@ const ProcedureCodesManagement = () => {
       id: newId,
       name: 'New Power Code',
       icon: 'default',
-      procedures: []
+      procedures: [],
+      showInSchedule: false,
+      hidePowerCode: false,
     });
     
-    setCategories(newCategories);
+    saveCategories(newCategories);
   };
 
   const handleDeletePowerCode = (catIdx, itemIdx) => {
-    const newCategories = [...categories];
+    const newCategories = JSON.parse(JSON.stringify(categories));
     newCategories[catIdx].subItems.splice(itemIdx, 1);
-    setCategories(newCategories);
+    saveCategories(newCategories);
   };
 
   const handleAddProcedure = (catIdx, itemIdx) => {
-    const newCategories = [...categories];
+    const newCategories = JSON.parse(JSON.stringify(categories));
     const item = newCategories[catIdx].subItems[itemIdx];
     
     if (!item.procedures) item.procedures = [];
@@ -908,25 +1134,25 @@ const ProcedureCodesManagement = () => {
       visit: ''
     });
     
-    setCategories(newCategories);
+    saveCategories(newCategories);
   };
 
   const handleDeleteProcedure = (catIdx, itemIdx, procIdx) => {
-    const newCategories = [...categories];
+    const newCategories = JSON.parse(JSON.stringify(categories));
     newCategories[catIdx].subItems[itemIdx].procedures.splice(procIdx, 1);
-    setCategories(newCategories);
+    saveCategories(newCategories);
   };
 
   const handleUpdateProcedureField = (catIdx, itemIdx, procIdx, field, value) => {
-    const newCategories = [...categories];
+    const newCategories = JSON.parse(JSON.stringify(categories));
     newCategories[catIdx].subItems[itemIdx].procedures[procIdx][field] = value;
-    setCategories(newCategories);
+    saveCategories(newCategories);
   };
 
   const handleUpdateItemName = (catIdx, itemIdx, name) => {
-    const newCategories = [...categories];
+    const newCategories = JSON.parse(JSON.stringify(categories));
     newCategories[catIdx].subItems[itemIdx].name = name;
-    setCategories(newCategories);
+    saveCategories(newCategories);
   };
 
   const renderNestedDetails = (catIdx, itemIdx, procedures, isLocked) => (
@@ -1073,7 +1299,15 @@ const ProcedureCodesManagement = () => {
           <Box sx={{ width: 160 }}>
             <FormControlLabel
               onClick={(e) => e.stopPropagation()}
-              control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
+              control={
+                <Checkbox 
+                  size="small" 
+                  sx={{ p: 0.5 }} 
+                  disabled={editingPath !== `${catIdx}-${itemIdx}`} 
+                  checked={item.showInSchedule || false}
+                  onChange={(e) => handleToggleItemField(catIdx, itemIdx, 'showInSchedule', e.target.checked)}
+                />
+              }
               label={<Typography sx={{ fontSize: '0.75rem' }}>Show in Schedule</Typography>}
               sx={{ ml: 2, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
             />
@@ -1082,7 +1316,15 @@ const ProcedureCodesManagement = () => {
           <Box sx={{ width: 160 }}>
             <FormControlLabel
               onClick={(e) => e.stopPropagation()}
-              control={<Checkbox size="small" sx={{ p: 0.5 }} disabled={editingPath !== `${catIdx}-${itemIdx}`} />}
+              control={
+                <Checkbox 
+                  size="small" 
+                  sx={{ p: 0.5 }} 
+                  disabled={editingPath !== `${catIdx}-${itemIdx}`} 
+                  checked={item.hidePowerCode || false}
+                  onChange={(e) => handleToggleItemField(catIdx, itemIdx, 'hidePowerCode', e.target.checked)}
+                />
+              }
               label={<Typography sx={{ fontSize: '0.75rem' }}>Hide Power Code</Typography>}
               sx={{ ml: 1, opacity: editingPath !== `${catIdx}-${itemIdx}` ? 0.7 : 1 }}
             />
@@ -1215,11 +1457,12 @@ const ProcedureCodesManagement = () => {
             />
             <Button
               variant="contained"
+              onClick={handleResetCategories}
               sx={{
                 textTransform: 'none',
                 backgroundColor: '#d9a36d',
                 '&:hover': { backgroundColor: '#c28e5a' },
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 px: 3,
                 borderRadius: '4px',
                 boxShadow: 'none',
@@ -1230,52 +1473,58 @@ const ProcedureCodesManagement = () => {
             </Button>
           </Box>
 
-          <Box sx={{ pl: 1 }}>
-            {categories.map((cat, catIdx) => (
-              <Box key={catIdx} sx={{ mb: 1 }}>
-                {cat.isHeader ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 1, mt: 1 }}>
-                    <Typography sx={{ color: '#1a3a6b', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                      {cat.name}
-                    </Typography>
-                    {cat.hasInfo && <InfoIcon sx={{ color: '#999', fontSize: '1rem', ml: 0.5 }} />}
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.2, cursor: 'pointer' }} onClick={() => toggleCategory(cat.name)}>
-                    {expandedCategories.includes(cat.name) ? (
-                       <KeyboardArrowDownIcon sx={{ color: '#1a3a6b', fontSize: '1.1rem' }} />
-                    ) : (
-                       <ChevronRightIcon sx={{ color: '#1a3a6b', fontSize: '1.1rem' }} />
-                    )}
-                    <Box sx={{ width: 14, height: 14, backgroundColor: '#1a3a6b', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <CheckIcon sx={{ color: '#fff', fontSize: '0.8rem' }} />
+          {loadingCategories ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : (
+            <Box sx={{ pl: 1 }}>
+              {categories.map((cat, catIdx) => (
+                <Box key={catIdx} sx={{ mb: 1 }}>
+                  {cat.isHeader ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 1, mt: 1 }}>
+                      <Typography sx={{ color: '#1a3a6b', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                        {cat.name}
+                      </Typography>
+                      {cat.hasInfo && <InfoIcon sx={{ color: '#999', fontSize: '1rem', ml: 0.5 }} />}
                     </Box>
-                    <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>{cat.name}</Typography>
-                    {cat.hasInfo && <InfoIcon sx={{ color: '#999', fontSize: '0.9rem', ml: 0.5 }} />}
-                  </Box>
-                )}
-
-                {expandedCategories.includes(cat.name) && !cat.isHeader && (
-                  <Box>
-                    {cat.subItems?.map((item, itemIdx) => (
-                       <Box key={itemIdx}>{renderSubItem(catIdx, itemIdx, item)}</Box>
-                    ))}
-                    {cat.subItems && (
-                      <Box sx={{ mt: 1, pl: 3.5 }}>
-                        <Typography 
-                          onClick={() => handleAddPowerCode(catIdx)}
-                          variant="caption" 
-                          sx={{ color: '#1a3a6b', cursor: 'pointer', fontWeight: 500, fontSize: '0.75rem', '&:hover': { textDecoration: 'underline' } }}
-                        >
-                          + Add Power Code
-                        </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.2, cursor: 'pointer' }} onClick={() => toggleCategory(cat.name)}>
+                      {expandedCategories.includes(cat.name) ? (
+                         <KeyboardArrowDownIcon sx={{ color: '#1a3a6b', fontSize: '1.1rem' }} />
+                      ) : (
+                         <ChevronRightIcon sx={{ color: '#1a3a6b', fontSize: '1.1rem' }} />
+                      )}
+                      <Box sx={{ width: 14, height: 14, backgroundColor: '#1a3a6b', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CheckIcon sx={{ color: '#fff', fontSize: '0.8rem' }} />
                       </Box>
-                    )}
-                  </Box>
-                )}
-              </Box>
-            ))}
-          </Box>
+                      <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>{cat.name}</Typography>
+                      {cat.hasInfo && <InfoIcon sx={{ color: '#999', fontSize: '0.9rem', ml: 0.5 }} />}
+                    </Box>
+                  )}
+
+                  {expandedCategories.includes(cat.name) && !cat.isHeader && (
+                    <Box>
+                      {cat.subItems?.map((item, itemIdx) => (
+                         <Box key={itemIdx}>{renderSubItem(catIdx, itemIdx, item)}</Box>
+                      ))}
+                      {cat.subItems && (
+                        <Box sx={{ mt: 1, pl: 3.5 }}>
+                          <Typography 
+                            onClick={() => handleAddPowerCode(catIdx)}
+                            variant="caption" 
+                            sx={{ color: '#1a3a6b', cursor: 'pointer', fontWeight: 500, fontSize: '0.75rem', '&:hover': { textDecoration: 'underline' } }}
+                          >
+                            + Add Power Code
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          )}
         </Box>
       )}
 
@@ -1446,59 +1695,64 @@ const ProcedureCodesManagement = () => {
                                           {procItem.Descript}
                                         </Typography>
 
-                                        {/* Add Custom Site Link */}
-                                        <Typography
-                                          sx={{
-                                            color: '#3b82f6',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 500,
-                                            cursor: 'pointer',
-                                            minWidth: 100,
-                                            '&:hover': { textDecoration: 'underline' }
-                                          }}
+                                        {/* Custom Site Dropdown */}
+                                        <Select
+                                          size="small"
+                                          value={procItem.site || 'None'}
+                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'site', e.target.value)}
+                                          sx={{ height: 26, fontSize: '0.75rem', minWidth: 110, backgroundColor: '#fff' }}
                                         >
-                                          + Add Custom Site
-                                        </Typography>
+                                          <MenuItem value="None">None</MenuItem>
+                                          <MenuItem value="Upper Right">Upper Right</MenuItem>
+                                          <MenuItem value="Upper Left">Upper Left</MenuItem>
+                                          <MenuItem value="Lower Right">Lower Right</MenuItem>
+                                          <MenuItem value="Lower Left">Lower Left</MenuItem>
+                                          <MenuItem value="Upper Arch">Upper Arch</MenuItem>
+                                          <MenuItem value="Lower Arch">Lower Arch</MenuItem>
+                                        </Select>
 
                                         {/* Checkbox DBI */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 60 }}>
-                                          <Checkbox size="small" sx={{ p: 0.5 }} checked={procItem.dbi || false} />
+                                          <Checkbox
+                                            size="small"
+                                            sx={{ p: 0.5 }}
+                                            checked={procItem.dbi || false}
+                                            onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'dbi', e.target.checked)}
+                                          />
                                           <Typography sx={{ fontSize: '0.75rem', color: '#475569', ml: 0.5 }}>DBI</Typography>
                                         </Box>
 
-                                        {/* Stacking Office Code / Office Desc links */}
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 130 }}>
-                                          <Typography
-                                            sx={{
-                                              color: '#3b82f6',
-                                              fontSize: '0.75rem',
-                                              fontWeight: 500,
-                                              cursor: 'pointer',
-                                              lineHeight: 1.2,
-                                              '&:hover': { textDecoration: 'underline' }
-                                            }}
-                                          >
-                                            + Add Office Code
-                                          </Typography>
-                                          <Typography
-                                            sx={{
-                                              color: '#3b82f6',
-                                              fontSize: '0.75rem',
-                                              fontWeight: 500,
-                                              cursor: 'pointer',
-                                              lineHeight: 1.2,
-                                              mt: 0.3,
-                                              '&:hover': { textDecoration: 'underline' }
-                                            }}
-                                          >
-                                            + Add Office Desc.
-                                          </Typography>
-                                        </Box>
+                                        {/* Office Code Input */}
+                                        <TextField
+                                          size="small"
+                                          placeholder="Office Code"
+                                          value={procItem.officeCode || ''}
+                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'officeCode', e.target.value)}
+                                          sx={{ 
+                                            width: 100,
+                                            '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 },
+                                            '& .MuiOutlinedInput-root': { borderRadius: '4px', height: 26 }
+                                          }}
+                                        />
+
+                                        {/* Office Desc Input */}
+                                        <TextField
+                                          size="small"
+                                          placeholder="Office Desc."
+                                          value={procItem.officeDesc || ''}
+                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'officeDesc', e.target.value)}
+                                          sx={{ 
+                                            width: 120,
+                                            '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 },
+                                            '& .MuiOutlinedInput-root': { borderRadius: '4px', height: 26 }
+                                          }}
+                                        />
 
                                         {/* Provider Dropdown */}
                                         <Select
                                           size="small"
                                           value={procItem.provider || 'Default'}
+                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'provider', e.target.value)}
                                           sx={{ height: 26, fontSize: '0.75rem', minWidth: 90, backgroundColor: '#fff' }}
                                         >
                                           <MenuItem value="Default">Default</MenuItem>
@@ -1552,24 +1806,95 @@ const ProcedureCodesManagement = () => {
       {/* Tab Content: Eligibility Used ADA Codes */}
       {activeTab === 2 && (
         <Box sx={{ mt: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pl: 1 }}>
+          {/* Search/Add Row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, pl: 1 }}>
             <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#333' }}>
               Add Procedure Code
             </Typography>
             <TextField
-              placeholder="Enter code or procedure"
-              variant="standard"
+              placeholder="Enter code (e.g. D0180)"
               size="small"
               value={eligibilityQuery}
               onChange={(e) => setEligibilityQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddEligibilityCode();
+              }}
               sx={{
                 width: 250,
-                '& .MuiInput-input': { fontSize: '0.85rem', color: '#666' },
-                '& .MuiInput-underline:before': { borderBottomColor: '#ccc' },
-                '& .MuiInput-underline:after': { borderBottomColor: '#1a3a6b' }
+                '& .MuiInputBase-input': { fontSize: '0.85rem', py: 0.7 },
+                '& .MuiOutlinedInput-root': { borderRadius: '4px' }
               }}
             />
+            <Button
+              variant="contained"
+              onClick={handleAddEligibilityCode}
+              sx={{
+                textTransform: 'none',
+                backgroundColor: '#1a3a6b',
+                color: '#fff',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                height: 32,
+                px: 3,
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#0c2447', boxShadow: 'none' }
+              }}
+            >
+              Add Code
+            </Button>
           </Box>
+
+          {/* List Table */}
+          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eef2f6', borderRadius: 2, width: '100%' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f8fafc' }}>
+                  <TableCell sx={{ py: 1.5, fontWeight: 600, color: '#1a3a6b', fontSize: '0.8rem', width: '25%' }}>Procedure Code</TableCell>
+                  <TableCell sx={{ py: 1.5, fontWeight: 600, color: '#1a3a6b', fontSize: '0.8rem' }}>Description</TableCell>
+                  <TableCell align="right" sx={{ py: 1.5, fontWeight: 600, color: '#1a3a6b', fontSize: '0.8rem', width: 80 }}>Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {eligibilityCodes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center" sx={{ py: 8 }}>
+                      <Typography sx={{ color: '#999', fontSize: '0.85rem' }}>No procedure codes configured for real-time eligibility verification</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  eligibilityCodes.map((item) => (
+                    <TableRow key={item.ProcCode} sx={{ '&:hover': { backgroundColor: '#fbfcfd' } }}>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Box
+                          sx={{
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '4px',
+                            px: 1.2,
+                            py: 0.3,
+                            backgroundColor: '#f8fafc',
+                            width: 65,
+                            textAlign: 'center'
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>
+                            {item.ProcCode}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ py: 1.5, fontSize: '0.8rem', color: '#475569' }}>
+                        {item.Descript}
+                      </TableCell>
+                      <TableCell align="right" sx={{ py: 0.5 }}>
+                        <IconButton size="small" onClick={() => handleDeleteEligibilityCode(item.ProcCode)} sx={{ color: '#e57373' }}>
+                          <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Box>
       )}
 

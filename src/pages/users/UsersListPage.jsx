@@ -46,7 +46,15 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { userService } from "../../services/user.service";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchUsers,
+  deleteUser,
+  activateUser,
+  deactivateUser,
+  selectUserList,
+  selectUserListLoading,
+} from "../../store/slices/userSlice";
 import { useRoles } from "../../hooks/queries/useRoles";
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
@@ -54,12 +62,14 @@ const UsersListPage = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { showSnackbar } = useSnackbar();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const users = useSelector(selectUserList);
+  const loading = useSelector(selectUserListLoading);
   const [error, setError] = useState("");
+  
+  // Get pagination from Redux, but component also holds local filters
+  const { pagination } = useSelector((state) => state.user);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -81,6 +91,8 @@ const UsersListPage = () => {
   const [debouncedSearch] = useDebounce(search, 500);
   const fetchingRef = useRef(false);
 
+  const dispatch = useDispatch();
+
   const handleResetFilters = () => {
     setSearch('');
     setRoleFilter('');
@@ -90,36 +102,31 @@ const UsersListPage = () => {
 
   const hasActiveFilters = search || roleFilter || statusFilter;
 
-  const fetchUsers = useCallback(async () => {
+  const loadUsers = useCallback(async () => {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     try {
-      setLoading(true);
       setError("");
-      const result = await userService.getAllUsers(
-        page + 1,
-        rowsPerPage,
-        debouncedSearch,
-        roleFilter,
-        statusFilter
-      );
-      setUsers(result.users || []);
-      setTotalUsers(result.pagination?.total || 0);
+      await dispatch(fetchUsers({
+        page: page + 1,
+        limit: rowsPerPage,
+        search: debouncedSearch,
+        roleId: roleFilter,
+        status: statusFilter
+      })).unwrap();
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to fetch users. Please try again."
-      );
+      if (err?.name === 'ConditionError') return;
+      const errorMsg = typeof err === 'string' ? err : 
+        (err?.message || "Failed to fetch users. Please try again.");
+      setError(errorMsg);
     } finally {
-      setLoading(false);
       fetchingRef.current = false;
     }
-  }, [page, rowsPerPage, debouncedSearch, roleFilter, statusFilter]);
+  }, [dispatch, page, rowsPerPage, debouncedSearch, roleFilter, statusFilter]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    loadUsers();
+  }, [loadUsers]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -141,17 +148,12 @@ const UsersListPage = () => {
   const handleDeleteConfirm = async () => {
     try {
       setDeleteLoading(true);
-      await userService.deleteUser(deleteDialog.userId);
+      await dispatch(deleteUser(deleteDialog.userId)).unwrap();
       showSnackbar("User deleted successfully", "success");
-      setUsers((prev) => prev.filter((u) => (u._id || u.id) !== deleteDialog.userId));
-      setTotalUsers((prev) => Math.max(0, prev - 1));
       setDeleteDialog({ open: false, userId: null, userName: "" });
     } catch (err) {
-      const msg = err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        "Failed to delete user. Please try again.";
-      setError(msg);
-      showSnackbar(msg, "error");
+      setError(err || "Failed to delete user. Please try again.");
+      showSnackbar(err || "Failed to delete user.", "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -208,15 +210,11 @@ const UsersListPage = () => {
     try {
       setStatusLoading(true);
       setError("");
-      await userService.activateUser(userId);
+      await dispatch(activateUser(userId)).unwrap();
       showSnackbar(`User "${userName}" activated successfully`, "success");
-      setUsers((prev) => prev.map((u) => (u._id || u.id) === userId ? { ...u, isActive: true } : u));
     } catch (err) {
-      const msg = err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        "Failed to activate user. Please try again.";
-      setError(msg);
-      showSnackbar(msg, "error");
+      setError(err || "Failed to activate user. Please try again.");
+      showSnackbar(err || "Failed to activate user.", "error");
     } finally {
       setStatusLoading(false);
     }
@@ -227,15 +225,11 @@ const UsersListPage = () => {
     try {
       setStatusLoading(true);
       setError("");
-      await userService.deactivateUser(userId);
+      await dispatch(deactivateUser(userId)).unwrap();
       showSnackbar(`User "${userName}" deactivated successfully`, "success");
-      setUsers((prev) => prev.map((u) => (u._id || u.id) === userId ? { ...u, isActive: false } : u));
     } catch (err) {
-      const msg = err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        "Failed to deactivate user. Please try again.";
-      setError(msg);
-      showSnackbar(msg, "error");
+      setError(err || "Failed to deactivate user. Please try again.");
+      showSnackbar(err || "Failed to deactivate user.", "error");
     } finally {
       setStatusLoading(false);
     }
@@ -381,7 +375,7 @@ const UsersListPage = () => {
             <Tooltip title="Refresh">
               <span>
                 <IconButton
-                  onClick={fetchUsers}
+                  onClick={loadUsers}
                   disabled={loading}
                   color="primary"
                 >
@@ -499,7 +493,7 @@ const UsersListPage = () => {
             </Box>
             <TablePagination
               component="div"
-              count={totalUsers}
+              count={pagination.total || 0}
               page={page}
               onPageChange={handleChangePage}
               rowsPerPage={rowsPerPage}

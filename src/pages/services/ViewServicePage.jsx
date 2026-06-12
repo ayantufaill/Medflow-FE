@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -8,7 +9,7 @@ import {
   Chip,
   Button,
   Alert,
-  CircularProgress,
+  Skeleton,
   Divider,
 } from '@mui/material';
 import {
@@ -17,54 +18,59 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { serviceCatalogService } from '../../services/service-catalog.service';
+import {
+  fetchServiceById,
+  deleteService,
+  selectServiceDetails,
+  selectServicesLoading,
+  selectServicesError
+} from '../../store/slices/serviceSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const ViewServicePage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { serviceId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const [service, setService] = useState(null);
+  
+  const service = useSelector(selectServiceDetails);
+  const reduxLoading = useSelector(selectServicesLoading);
+  const reduxError = useSelector(selectServicesError);
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
-    const fetchService = async () => {
+    const loadService = async () => {
       if (!serviceId || serviceId === 'undefined') {
-        setError('Invalid service ID');
+        setLocalError('Invalid service ID');
         setLoading(false);
         return;
       }
       try {
         setLoading(true);
-        const data = await serviceCatalogService.getServiceById(serviceId);
-        setService(data);
+        await dispatch(fetchServiceById(serviceId)).unwrap();
       } catch (err) {
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            'Failed to load service details.'
-        );
+        if (err?.name === 'ConditionError') return;
+        setLocalError(typeof err === 'string' ? err : err?.message || 'Failed to load service details.');
       } finally {
         setLoading(false);
       }
     };
-    fetchService();
-  }, [serviceId]);
+    loadService();
+  }, [dispatch, serviceId]);
 
   const handleDelete = async () => {
     try {
       setDeleteLoading(true);
-      await serviceCatalogService.deleteService(serviceId);
+      await dispatch(deleteService(serviceId)).unwrap();
       showSnackbar('Service deleted successfully', 'success');
       navigate('/services');
     } catch (err) {
-      showSnackbar(
-        err.response?.data?.error?.message || 'Failed to delete service',
-        'error'
-      );
+      if (err?.name === 'ConditionError') return;
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to delete service', 'error');
     } finally {
       setDeleteLoading(false);
       setDeleteDialog(false);
@@ -78,10 +84,30 @@ const ViewServicePage = () => {
     }).format(price || 0);
   };
 
-  if (loading) {
+  const error = localError || reduxError;
+  const isInitialLoading = loading || (reduxLoading && !service);
+
+  if (isInitialLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-        <CircularProgress />
+      <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/services')}>
+            Back
+          </Button>
+          <Typography variant="h5" fontWeight="bold">
+            Service Details
+          </Typography>
+        </Box>
+        <Paper sx={{ p: 3 }}>
+          <Grid container spacing={3}>
+            {[...Array(6)].map((_, i) => (
+              <Grid size={{ xs: 12, sm: 6 }} key={i}>
+                <Skeleton variant="text" width={100} />
+                <Skeleton variant="text" width={200} height={32} />
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
       </Box>
     );
   }
@@ -181,17 +207,50 @@ const ViewServicePage = () => {
               {service?.duration ? `${service.duration} minutes` : 'Not specified'}
             </Typography>
           </Grid>
-          {service?.description && (
-            <Grid size={12}>
-              <Divider sx={{ my: 1 }} />
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Typography variant="caption" color="text.secondary">
+              Billable
+            </Typography>
+            <Typography variant="body1">
+              {service?.isBillable !== false ? 'Yes' : 'No'}
+            </Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Typography variant="caption" color="text.secondary">
+              Requires Pre-Authorization
+            </Typography>
+            <Typography variant="body1">
+              {service?.requiresAuthorization ? 'Yes' : 'No'}
+            </Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Typography variant="caption" color="text.secondary">
+              Tax Rate
+            </Typography>
+            <Typography variant="body1">
+              {service?.taxRate ? `${service.taxRate}%` : '0%'}
+            </Typography>
+          </Grid>
+          {service?.color && (
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="caption" color="text.secondary">
-                Description
+                Color Theme
               </Typography>
-              <Typography variant="body1" sx={{ mt: 0.5 }}>
-                {service.description}
-              </Typography>
+              <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: service.color }} />
+                <Typography variant="body2">{service.color}</Typography>
+              </Box>
             </Grid>
           )}
+          <Grid size={12}>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="caption" color="text.secondary">
+              Description
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 0.5 }}>
+              {service?.description || 'No description provided'}
+            </Typography>
+          </Grid>
         </Grid>
       </Paper>
 

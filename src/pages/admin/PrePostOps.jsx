@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchInstructionTemplates,
+  addInstructionTemplate,
+  updateInstructionTemplate,
+  deleteInstructionTemplate,
+  selectInstructionTemplates,
+  selectLoadingInstructions
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -26,18 +36,46 @@ import {
   FileUploadOutlined as UploadIcon,
 } from '@mui/icons-material';
 
+const INITIAL_MOCK_OPS = [
+  { id: 'm1', name: 'Implant Placement Post-Op', type: 'Post Operation', procedures: 'D6010', description: 'Post-op: No hot liquids for 24 hours. Take prescribed pain relievers.', sendHours: '24', sendUnit: 'hours', fileOption: 'Upload PDF' },
+  { id: 'm2', name: 'Wisdom Tooth Extraction Post-Op', type: 'Post Operation', procedures: 'D7240', description: 'Post-op: Use ice pack for swelling. Do not use straws for 48 hours.', sendHours: '48', sendUnit: 'hours', fileOption: 'Upload PDF' }
+];
+
+const mapBackendToFrontend = (backend) => {
+  let contentData = {};
+  try {
+    if (backend.content) {
+      contentData = JSON.parse(backend.content);
+    }
+  } catch (e) {
+    contentData = { description: backend.content || '' };
+  }
+  return {
+    id: backend.id || backend.TemplateId?.toString(),
+    name: backend.name || '',
+    type: backend.type || 'Post Operation',
+    procedures: contentData.procedures || 'General',
+    description: contentData.description || '',
+    sendHours: contentData.sendHours || '',
+    sendUnit: contentData.sendUnit || 'hours',
+    fileOption: contentData.fileOption || 'Upload PDF'
+  };
+};
+
 const PrePostOps = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
   const [searchQuery, setSearchQuery] = useState('');
   
   // Views: 'list' or 'add'
   const [view, setView] = useState('list');
-
-  // List State
-  const [prePostOps, setPrePostOps] = useState([
-    { id: 1, name: 'Implant Placement Post-Op', type: 'Post Operation', procedures: 'D6010', description: 'Post-op: No hot liquids for 24 hours. Take prescribed pain relievers.' },
-    { id: 2, name: 'Wisdom Tooth Extraction Post-Op', type: 'Post Operation', procedures: 'D7240', description: 'Post-op: Use ice pack for swelling. Do not use straws for 48 hours.' }
-  ]);
+  const [prePostOps, setPrePostOps] = useState([]);
+  
+  const instructionTemplates = useSelector(selectInstructionTemplates);
+  const loading = useSelector(selectLoadingInstructions);
+  
+  const [editingId, setEditingId] = useState(null);
 
   // Form State for Add screen
   const [type, setType] = useState('Post Operation');
@@ -47,30 +85,81 @@ const PrePostOps = () => {
   const [docName, setDocName] = useState('');
   const [procedures, setProcedures] = useState('');
 
+  useEffect(() => {
+    dispatch(fetchInstructionTemplates());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (instructionTemplates && instructionTemplates.length > 0) {
+      setPrePostOps(instructionTemplates.map(mapBackendToFrontend));
+    } else {
+      setPrePostOps(INITIAL_MOCK_OPS);
+    }
+  }, [instructionTemplates]);
+
   const handleSearch = (e) => setSearchQuery(e.target.value.toLowerCase());
 
-  const handleDeleteOp = (id) => {
-    setPrePostOps(prePostOps.filter(op => op.id !== id));
+  const handleDeleteOp = async (id) => {
+    if (id && !id.toString().startsWith('m')) {
+      try {
+        await dispatch(deleteInstructionTemplate(id)).unwrap();
+        dispatch(fetchInstructionTemplates());
+        showSnackbar('Instruction template deleted successfully', 'success');
+      } catch (e) {
+        console.error(e);
+        showSnackbar('Failed to delete template', 'error');
+        return;
+      }
+    } else {
+      setPrePostOps(prePostOps.filter(op => op.id !== id));
+    }
   };
 
-  const handleSaveDocument = () => {
+  const handleSaveDocument = async () => {
     if (!docName) return;
-    const newDoc = {
-      id: Date.now(),
-      name: docName,
-      type: type,
+    const desc = `${type} instructions. Send ${sendHours || '0'} ${sendUnit} after appointment. Mode: ${fileOption}`;
+    const contentObj = {
       procedures: procedures || 'General',
-      description: `${type} instructions. Send ${sendHours || '0'} ${sendUnit} after appointment. Mode: ${fileOption}`
+      description: desc,
+      sendHours: sendHours,
+      sendUnit: sendUnit,
+      fileOption: fileOption
     };
-    setPrePostOps([newDoc, ...prePostOps]);
-    
-    // Reset Form and return to list
-    setDocName('');
-    setProcedures('');
-    setSendHours('');
-    setType('Post Operation');
-    setFileOption('Upload PDF');
-    setView('list');
+
+    try {
+      if (editingId && !editingId.toString().startsWith('m')) {
+        await dispatch(updateInstructionTemplate({
+          templateId: editingId,
+          updates: {
+            name: docName,
+            type: type,
+            content: JSON.stringify(contentObj)
+          }
+        })).unwrap();
+        dispatch(fetchInstructionTemplates());
+        showSnackbar('Instruction template updated successfully', 'success');
+      } else {
+        await dispatch(addInstructionTemplate({
+          name: docName,
+          type: type,
+          content: JSON.stringify(contentObj)
+        })).unwrap();
+        dispatch(fetchInstructionTemplates());
+        showSnackbar('Instruction template created successfully', 'success');
+      }
+      
+      // Reset Form and return to list
+      setEditingId(null);
+      setDocName('');
+      setProcedures('');
+      setSendHours('');
+      setType('Post Operation');
+      setFileOption('Upload PDF');
+      setView('list');
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Failed to save instruction template', 'error');
+    }
   };
 
   const filteredOps = prePostOps.filter(op => 
@@ -426,9 +515,13 @@ const PrePostOps = () => {
                   <TableCell align="right" sx={{ py: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                       <IconButton size="small" onClick={() => {
+                        setEditingId(op.id);
                         setDocName(op.name);
                         setProcedures(op.procedures);
                         setType(op.type || 'Post Operation');
+                        setSendHours(op.sendHours || '');
+                        setSendUnit(op.sendUnit || 'hours');
+                        setFileOption(op.fileOption || 'Upload PDF');
                         setView('add');
                       }} sx={{ color: '#4a90e2' }}>
                         <EditIcon sx={{ fontSize: '1.1rem' }} />
