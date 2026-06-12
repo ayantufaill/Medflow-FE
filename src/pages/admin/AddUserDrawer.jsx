@@ -39,8 +39,9 @@ import { DatePicker }         from '@mui/x-date-pickers/DatePicker';
 import { TimePicker }         from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs }       from '@mui/x-date-pickers/AdapterDayjs';
-import { userService }        from '../../services/user.service';
 import { useSnackbar }        from '../../contexts/SnackbarContext';
+import { useDispatch } from 'react-redux';
+import { createUser } from '../../store/slices/userSlice';
 
 // ─── Role mapping ─────────────────────────────────────────────────────────────
 
@@ -144,6 +145,7 @@ const DEFAULT_VALUES = {
 
 const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
 
   const [saving,          setSaving]          = useState(false);
   const [formError,       setFormError]       = useState('');
@@ -319,15 +321,14 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
         };
       }
 
-      await userService.createUser(payload);
+      await dispatch(createUser(payload)).unwrap();
       showSnackbar('User created successfully', 'success');
       handleClose();
       onCreated();
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to create user.';
+      if (err?.name === 'ConditionError') return;
+      const msg = typeof err === 'string' ? err : 
+        (err?.message || 'Failed to create user.');
       setFormError(msg);
       showSnackbar(msg, 'error');
     } finally {

@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  fetchSystemSettings, 
+  updateSystemSetting,
+  selectSettingsMap,
+  selectLoadingSettings
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -17,6 +25,11 @@ import {
 
 const ClinicalSystemSettings = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+
+  const settingsMap = useSelector(selectSettingsMap);
+  const loading = useSelector(selectLoadingSettings);
 
   // State for all settings
   const [directions, setDirections] = useState({
@@ -52,8 +65,121 @@ const ClinicalSystemSettings = () => {
   );
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
 
+  useEffect(() => {
+    dispatch(fetchSystemSettings());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (settingsMap) {
+      if (settingsMap.clinical_directions_settings) {
+        try {
+          setDirections(JSON.parse(settingsMap.clinical_directions_settings));
+        } catch(e) {}
+      }
+      if (settingsMap.clinical_perio_settings) {
+        try {
+          setPerio(JSON.parse(settingsMap.clinical_perio_settings));
+        } catch(e) {}
+      }
+      if (settingsMap.clinical_progress_notes_settings) {
+        try {
+          setProgressNotes(JSON.parse(settingsMap.clinical_progress_notes_settings));
+        } catch(e) {}
+      }
+      if (settingsMap.clinical_treatment_plan_settings) {
+        try {
+          setTreatmentPlan(JSON.parse(settingsMap.clinical_treatment_plan_settings));
+        } catch(e) {}
+      }
+      if (settingsMap.clinical_pediatric_settings) {
+        try {
+          setPediatric(JSON.parse(settingsMap.clinical_pediatric_settings));
+        } catch(e) {}
+      }
+      if (settingsMap.clinical_ai_prompt_settings) {
+        setAiPrompt(settingsMap.clinical_ai_prompt_settings);
+      }
+    }
+  }, [settingsMap]);
+
   const handleDirectionChange = (key, value) => {
     setDirections((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveDirections = async () => {
+    try {
+      await dispatch(updateSystemSetting({ key: 'clinical_directions_settings', value: JSON.stringify(directions) })).unwrap();
+      showSnackbar('Direction settings saved successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to save direction settings', 'error');
+    }
+  };
+
+  const handlePerioChange = async (updates) => {
+    const newPerio = { ...perio, ...updates };
+    setPerio(newPerio);
+    try {
+      await dispatch(updateSystemSetting({ key: 'clinical_perio_settings', value: JSON.stringify(newPerio) })).unwrap();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleProgressNotesChange = async (updates) => {
+    const newProgressNotes = { ...progressNotes, ...updates };
+    setProgressNotes(newProgressNotes);
+    try {
+      await dispatch(updateSystemSetting({ key: 'clinical_progress_notes_settings', value: JSON.stringify(newProgressNotes) })).unwrap();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleTreatmentPlanChange = async (updates) => {
+    const newTreatmentPlan = { ...treatmentPlan, ...updates };
+    setTreatmentPlan(newTreatmentPlan);
+    try {
+      await dispatch(updateSystemSetting({ key: 'clinical_treatment_plan_settings', value: JSON.stringify(newTreatmentPlan) })).unwrap();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handlePediatricChange = async (updates) => {
+    const newPediatric = { ...pediatric, ...updates };
+    setPediatric(newPediatric);
+    try {
+      await dispatch(updateSystemSetting({ key: 'clinical_pediatric_settings', value: JSON.stringify(newPediatric) })).unwrap();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleToggleEditPrompt = async () => {
+    if (isEditingPrompt) {
+      try {
+        await dispatch(updateSystemSetting({ key: 'clinical_ai_prompt_settings', value: aiPrompt })).unwrap();
+        showSnackbar('AI prompt saved successfully', 'success');
+      } catch (error) {
+        console.error(error);
+        showSnackbar('Failed to save AI prompt', 'error');
+      }
+    }
+    setIsEditingPrompt(!isEditingPrompt);
+  };
+
+  const handleResetPrompt = async () => {
+    const defaultPrompt = `# ROLE\nYou are an AI clinical assistant specializing in summarizing dental patient encounters.\nYour primary function is to transform conversational transcripts into concise, structured clinical notes.\n\n# INPUT\nA JSON transcript of a conversation between a dentist and a patient.`;
+    try {
+      await dispatch(updateSystemSetting({ key: 'clinical_ai_prompt_settings', value: defaultPrompt })).unwrap();
+      setAiPrompt(defaultPrompt);
+      setIsEditingPrompt(false);
+      showSnackbar('AI prompt reset to default', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to reset AI prompt', 'error');
+    }
   };
 
   return (
@@ -123,6 +249,7 @@ const ClinicalSystemSettings = () => {
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', maxWidth: 400 }}>
           <Button
             variant="contained"
+            onClick={handleSaveDirections}
             sx={{
               backgroundColor: '#d9a36d',
               color: '#fff',
@@ -150,20 +277,20 @@ const ClinicalSystemSettings = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, mb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '0.8rem', color: '#4a90e2', minWidth: 60 }}>Gingiva</Typography>
-              <RadioGroup row value={perio.gingiva} onChange={(e) => setPerio({ ...perio, gingiva: e.target.value })}>
+              <RadioGroup row value={perio.gingiva} onChange={(e) => handlePerioChange({ gingiva: e.target.value })}>
                 <FormControlLabel value="One" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>One</Typography>} />
                 <FormControlLabel value="Three" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>Three</Typography>} />
               </RadioGroup>
             </Box>
             <FormControlLabel
-              control={<Checkbox size="small" checked={perio.attachedGingiva} onChange={(e) => setPerio({ ...perio, attachedGingiva: e.target.checked })} />}
+              control={<Checkbox size="small" checked={perio.attachedGingiva} onChange={(e) => handlePerioChange({ attachedGingiva: e.target.checked })} />}
               label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Perio Chart Attached Gingiva <Typography component="span" sx={{ color: '#666' }}>(add and display attached gingiva measurement on the perio chart)</Typography></Typography>}
             />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, mb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '0.8rem', color: '#4a90e2', minWidth: 60 }}>Recession</Typography>
-              <RadioGroup row value={perio.recession} onChange={(e) => setPerio({ ...perio, recession: e.target.value })}>
+              <RadioGroup row value={perio.recession} onChange={(e) => handlePerioChange({ recession: e.target.value })}>
                 <FormControlLabel value="One" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>One</Typography>} />
                 <FormControlLabel value="Three" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>Three</Typography>} />
               </RadioGroup>
@@ -173,7 +300,7 @@ const ClinicalSystemSettings = () => {
             <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b' }}>Probing Depth Limit</Typography>
             <Select
               value={perio.probingDepthLimit}
-              onChange={(e) => setPerio({ ...perio, probingDepthLimit: e.target.value })}
+              onChange={(e) => handlePerioChange({ probingDepthLimit: e.target.value })}
               size="small"
               variant="standard"
               sx={{ fontSize: '0.8rem', '&:before': { border: 'none' } }}
@@ -193,7 +320,7 @@ const ClinicalSystemSettings = () => {
         </Typography>
         <Box sx={{ pl: 2 }}>
           <FormControlLabel
-            control={<Checkbox size="small" checked={progressNotes.showWarning} onChange={(e) => setProgressNotes({ ...progressNotes, showWarning: e.target.checked })} />}
+            control={<Checkbox size="small" checked={progressNotes.showWarning} onChange={(e) => handleProgressNotesChange({ showWarning: e.target.checked })} />}
             label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Always show warning when creating a new progress note</Typography>}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
@@ -202,7 +329,7 @@ const ClinicalSystemSettings = () => {
               size="small"
               variant="standard"
               value={progressNotes.lockDays}
-              onChange={(e) => setProgressNotes({ ...progressNotes, lockDays: e.target.value })}
+              onChange={(e) => handleProgressNotesChange({ lockDays: e.target.value })}
               sx={{ width: 30, '& .MuiInputBase-input': { fontSize: '0.8rem', textAlign: 'center', py: 0 } }}
             />
             <Typography sx={{ fontSize: '0.8rem', color: '#333' }}>days from creation</Typography>
@@ -221,14 +348,14 @@ const ClinicalSystemSettings = () => {
         <Box sx={{ pl: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
             <Typography sx={{ fontSize: '0.8rem', color: '#4a90e2' }}>Default Procedure State on Treatment Plan</Typography>
-            <RadioGroup row value={treatmentPlan.defaultState} onChange={(e) => setTreatmentPlan({ ...treatmentPlan, defaultState: e.target.value })}>
+            <RadioGroup row value={treatmentPlan.defaultState} onChange={(e) => handleTreatmentPlanChange({ defaultState: e.target.value })}>
               <FormControlLabel value="Diagnosed" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>Diagnosed</Typography>} />
               <FormControlLabel value="Accepted" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>Accepted</Typography>} />
               <FormControlLabel value="Presented" control={<Radio size="small" sx={{ color: '#999' }} />} label={<Typography sx={{ fontSize: '0.8rem' }}>Presented</Typography>} />
             </RadioGroup>
           </Box>
           <FormControlLabel
-            control={<Checkbox size="small" checked={treatmentPlan.hideFeeAndProvider} onChange={(e) => setTreatmentPlan({ ...treatmentPlan, hideFeeAndProvider: e.target.checked })} />}
+            control={<Checkbox size="small" checked={treatmentPlan.hideFeeAndProvider} onChange={(e) => handleTreatmentPlanChange({ hideFeeAndProvider: e.target.checked })} />}
             label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Hide Fee and Provider on Existing out Procedures</Typography>}
           />
         </Box>
@@ -241,7 +368,7 @@ const ClinicalSystemSettings = () => {
         </Typography>
         <Box sx={{ pl: 2 }}>
           <FormControlLabel
-            control={<Checkbox size="small" checked={pediatric.activateExam} onChange={(e) => setPediatric({ ...pediatric, activateExam: e.target.checked })} />}
+            control={<Checkbox size="small" checked={pediatric.activateExam} onChange={(e) => handlePediatricChange({ activateExam: e.target.checked })} />}
             label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Activate Pediatric Exam</Typography>}
           />
         </Box>
@@ -272,7 +399,7 @@ const ClinicalSystemSettings = () => {
           <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
             <Button
               variant="contained"
-              onClick={() => setIsEditingPrompt(!isEditingPrompt)}
+              onClick={handleToggleEditPrompt}
               sx={{
                 backgroundColor: isEditingPrompt ? '#d9a36d' : '#1a3a6b',
                 color: '#fff',
@@ -287,10 +414,7 @@ const ClinicalSystemSettings = () => {
             </Button>
             <Button
               variant="contained"
-              onClick={() => {
-                setAiPrompt(`# ROLE\nYou are an AI clinical assistant specializing in summarizing dental patient encounters.\nYour primary function is to transform conversational transcripts into concise, structured clinical notes.\n\n# INPUT\nA JSON transcript of a conversation between a dentist and a patient.`);
-                setIsEditingPrompt(false);
-              }}
+              onClick={handleResetPrompt}
               sx={{
                 backgroundColor: '#1a3a6b',
                 color: '#fff',

@@ -13,11 +13,13 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { insuranceCompanyService } from "../../services/insurance.service";
+import { useDispatch } from "react-redux";
+import { createCarrierThunk } from "../../store/slices/insuranceSlice";
 import InsuranceCompanyForm from "../../components/insurance-companies/InsuranceCompanyForm";
 
 const CreateInsuranceCompanyPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -31,22 +33,14 @@ const CreateInsuranceCompanyPage = () => {
       setSaving(true);
       setError("");
 
-      await insuranceCompanyService.createInsuranceCompany(data);
+      await dispatch(createCarrierThunk(data)).unwrap();
 
       showSnackbar("Insurance company created successfully", "success");
       navigate("/insurance-companies");
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to create insurance company. Please try again."
-      );
-      showSnackbar(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to create insurance company. Please try again.",
-        "error"
-      );
+      const errMsg = err || "Failed to create insurance company. Please try again.";
+      setError(errMsg);
+      showSnackbar(errMsg, "error");
     } finally {
       setSaving(false);
     }

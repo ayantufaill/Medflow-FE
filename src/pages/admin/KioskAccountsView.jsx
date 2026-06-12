@@ -33,7 +33,13 @@ import {
   MenuBook as MenuBookIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { practiceInfoService } from '../../services/practice-info.service';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  updateKioskSettings,
+  selectPracticeInfo,
+  selectPracticeInfoLoading
+} from '../../store/slices/practiceInfoSlice';
 
 const NAVY = '#1a3a6b';
 const GOLD = '#b8960c';
@@ -211,34 +217,20 @@ const KioskAccountsView = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [accounts, setAccounts] = useState([]);
   const [showAddRow, setShowAddRow] = useState(false);
   const [newAccount, setNewAccount] = useState({ email: '', firstName: '', lastName: '' });
   const [showMoveData, setShowMoveData] = useState(false);
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
-  const [loading, setLoading] = useState(true);
   const { showSnackbar } = useSnackbar();
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const loading = useSelector(selectPracticeInfoLoading);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.kioskAccounts && Array.isArray(practiceInfo.kioskAccounts)) {
-            setAccounts(practiceInfo.kioskAccounts.map((acc, index) => ({ ...acc, id: Date.now() + index })));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch practice info:', error);
-        showSnackbar('Failed to load settings', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, [showSnackbar]);
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  const practiceInfoId = practiceInfo?._id || practiceInfo?.id;
+  const accounts = practiceInfo?.kioskAccounts || [];
 
   const strength = getPasswordStrength(password);
 
@@ -249,16 +241,19 @@ const KioskAccountsView = () => {
       return;
     }
     try {
-      await practiceInfoService.updateKioskSettings(practiceInfoId, {
-        password,
-        accounts: accounts.map(({ id, ...rest }) => rest)
-      });
+      await dispatch(updateKioskSettings({
+        practiceInfoId,
+        kioskSettingsData: {
+          password,
+          accounts
+        }
+      })).unwrap();
       showSnackbar('Password saved successfully', 'success');
       setPassword('');
       setConfirmPassword('');
     } catch (error) {
       console.error(error);
-      showSnackbar('Failed to save password', 'error');
+      showSnackbar(error || 'Failed to save password', 'error');
     }
   };
 
@@ -269,19 +264,21 @@ const KioskAccountsView = () => {
       return;
     }
 
-    const updatedAccounts = [...accounts, { ...newAccount, id: Date.now() }];
+    const updatedAccounts = [...accounts, { ...newAccount }];
     
     try {
-      await practiceInfoService.updateKioskSettings(practiceInfoId, {
-        accounts: updatedAccounts.map(({ id, ...rest }) => rest)
-      });
-      setAccounts(updatedAccounts);
+      await dispatch(updateKioskSettings({
+        practiceInfoId,
+        kioskSettingsData: {
+          accounts: updatedAccounts
+        }
+      })).unwrap();
       setNewAccount({ email: '', firstName: '', lastName: '' });
       setShowAddRow(false);
       showSnackbar('Account added successfully', 'success');
     } catch (error) {
       console.error(error);
-      showSnackbar('Failed to add account', 'error');
+      showSnackbar(error || 'Failed to add account', 'error');
     }
   };
 
@@ -469,8 +466,8 @@ const KioskAccountsView = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {accounts.map((account) => (
-              <TableRow key={account.id} sx={{ '& td': { fontSize: '0.85rem' } }}>
+            {accounts.map((account, index) => (
+              <TableRow key={account._id || index} sx={{ '& td': { fontSize: '0.85rem' } }}>
                 <TableCell>{account.email}</TableCell>
                 <TableCell>{account.firstName}</TableCell>
                 <TableCell>{account.lastName}</TableCell>

@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchPrescriptionTemplates,
+  addPrescriptionTemplate,
+  updatePrescriptionTemplate,
+  deletePrescriptionTemplate,
+  selectPrescriptionTemplates,
+  selectLoadingPrescriptions
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -155,9 +165,73 @@ const INITIAL_PRESCRIPTIONS = [
   },
 ];
 
+const mapBackendToFrontend = (backend) => {
+  let sigData = {};
+  const isJsonSig = backend.sig && backend.sig.trim().startsWith('{');
+  try {
+    if (backend.sig) {
+      sigData = JSON.parse(backend.sig);
+    }
+  } catch (e) {
+    sigData = { description: backend.sig || '' };
+  }
+  return {
+    id: backend.id,
+    name: backend.name || '',
+    medication: backend.drug || '',
+    refills: backend.refills || '0',
+    description: isJsonSig ? (sigData.description || '') : (backend.sig || ''),
+    dose: sigData.dose || '',
+    duration: sigData.duration || '',
+    longTerm: isJsonSig ? (sigData.longTerm || sigData.description || '') : (backend.sig || ''),
+    provider: sigData.provider || 'Clinic Doctor',
+    route: sigData.route || 'Oral',
+    forms: sigData.forms || 'Tablet',
+    frequency: sigData.frequency || '',
+    quantity: sigData.quantity || '',
+    spelledOutQuantity: sigData.spelledOutQuantity || '',
+    maySubstitute: sigData.maySubstitute !== undefined ? sigData.maySubstitute : true,
+    isLongTerm: sigData.isLongTerm !== undefined ? sigData.isLongTerm : false,
+    patientInstructions: sigData.patientInstructions || '',
+    rxInstructions: sigData.rxInstructions || '',
+  };
+};
+
+const mapFrontendToBackend = (frontend) => {
+  const sigObj = {
+    description: frontend.description,
+    dose: frontend.dose,
+    duration: frontend.duration,
+    longTerm: frontend.longTerm || frontend.description,
+    provider: frontend.provider,
+    route: frontend.route || 'Oral',
+    forms: frontend.forms || 'Tablet',
+    frequency: frontend.frequency || '',
+    quantity: frontend.quantity || '',
+    spelledOutQuantity: frontend.spelledOutQuantity || '',
+    maySubstitute: frontend.maySubstitute !== undefined ? frontend.maySubstitute : true,
+    isLongTerm: frontend.isLongTerm !== undefined ? frontend.isLongTerm : false,
+    patientInstructions: frontend.patientInstructions || '',
+    rxInstructions: frontend.rxInstructions || '',
+  };
+  return {
+    name: frontend.name,
+    drug: frontend.medication,
+    sig: JSON.stringify(sigObj),
+    disp: frontend.quantity || '',
+    refills: frontend.refills || '0'
+  };
+};
+
 const PrescriptionTemplates = () => {
   const navigate = useNavigate();
-  const [prescriptions, setPrescriptions] = useState(INITIAL_PRESCRIPTIONS);
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+  
+  const templates = useSelector(selectPrescriptionTemplates);
+  const loading = useSelector(selectLoadingPrescriptions);
+
+  const [prescriptions, setPrescriptions] = useState([]);
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editDraft, setEditDraft] = useState({});
@@ -181,6 +255,18 @@ const PrescriptionTemplates = () => {
     patientInstructions: '',
     rxInstructions: '',
   });
+
+  useEffect(() => {
+    dispatch(fetchPrescriptionTemplates());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (templates) {
+      setPrescriptions(templates.map(mapBackendToFrontend));
+    } else {
+      setPrescriptions([]);
+    }
+  }, [templates]);
 
   const handleOpenSyncDialog = () => {
     setSyncDialogOpen(true);
@@ -217,25 +303,34 @@ const PrescriptionTemplates = () => {
     setAddDialogOpen(false);
   };
 
-  const handleSaveNewTemplate = () => {
-    const newEntry = {
-      name: newTemplateDraft.name || 'Untitled Template',
-      description: newTemplateDraft.description,
-      medication: newTemplateDraft.medication,
-      dose: newTemplateDraft.dose,
-      duration: `${newTemplateDraft.duration} ${newTemplateDraft.durationUnit}`,
-      longTerm: newTemplateDraft.description, // Mocking based on existing data
-      refills: newTemplateDraft.refills,
-      provider: newTemplateDraft.provider,
-    };
-    setPrescriptions([...prescriptions, newEntry]);
-    setAddDialogOpen(false);
+  const handleSaveNewTemplate = async () => {
+    try {
+      const fullDraft = {
+        ...newTemplateDraft,
+        duration: `${newTemplateDraft.duration} ${newTemplateDraft.durationUnit}`,
+        longTerm: newTemplateDraft.description
+      };
+      const payload = mapFrontendToBackend(fullDraft);
+      await dispatch(addPrescriptionTemplate(payload)).unwrap();
+      dispatch(fetchPrescriptionTemplates());
+      setAddDialogOpen(false);
+      showSnackbar('Prescription template created successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to create prescription template', 'error');
+    }
   };
 
-  const handleDelete = (index) => {
-    const updated = [...prescriptions];
-    updated.splice(index, 1);
-    setPrescriptions(updated);
+  const handleDelete = async (index) => {
+    try {
+      const templateToDelete = prescriptions[index];
+      await dispatch(deletePrescriptionTemplate(templateToDelete.id)).unwrap();
+      dispatch(fetchPrescriptionTemplates());
+      showSnackbar('Prescription template deleted successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to delete prescription template', 'error');
+    }
   };
 
   const handleStartEdit = (index) => {
@@ -243,24 +338,31 @@ const PrescriptionTemplates = () => {
     setEditDraft({ ...prescriptions[index] });
   };
 
-  const handleSaveEdit = () => {
-    const updated = [...prescriptions];
-    updated[editingIndex] = editDraft;
-    setPrescriptions(updated);
-    setEditingIndex(null);
+  const handleSaveEdit = async () => {
+    try {
+      const templateToUpdate = prescriptions[editingIndex];
+      const payload = mapFrontendToBackend(editDraft);
+      await dispatch(updatePrescriptionTemplate({ templateId: templateToUpdate.id, updates: payload })).unwrap();
+      dispatch(fetchPrescriptionTemplates());
+      setEditingIndex(null);
+      showSnackbar('Prescription template updated successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to update prescription template', 'error');
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingIndex(null);
   };
 
-  const handleRefreshRow = (index) => {
-    // Resetting row to initial data as a "refresh" mock
-    const initialRow = INITIAL_PRESCRIPTIONS.find(p => p.name === prescriptions[index].name);
-    if (initialRow) {
-      const updated = [...prescriptions];
-      updated[index] = { ...initialRow };
-      setPrescriptions(updated);
+  const handleRefreshRow = async (index) => {
+    try {
+      await dispatch(fetchPrescriptionTemplates()).unwrap();
+      showSnackbar('Row refreshed from server', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar('Failed to refresh row', 'error');
     }
   };
 

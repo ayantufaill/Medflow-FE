@@ -14,9 +14,16 @@ import {
   ContentCopy as ContentCopyIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { practiceInfoService } from '../../services/practice-info.service';
-import { providerService } from '../../services/provider.service';
-import { roomService } from '../../services/room.service';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  createPracticeInfo,
+  updateOnlineSchedule,
+  selectPracticeInfo,
+  selectPracticeInfoLoading
+} from '../../store/slices/practiceInfoSlice';
+import { fetchProviders, selectProviderList } from '../../store/slices/providerSlice';
+import { fetchRooms, deleteRoom, selectRoomList } from '../../store/slices/roomSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
 const deepMerge = (target, source) => {
@@ -59,43 +66,28 @@ const appointmentTypes = [
 // Dummy constants removed, fetching from API instead.
 
 const OnlineScheduleConfiguration = () => {
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
   const [settings, setSettings] = useState(defaultSettings);
-  const [providersData, setProvidersData] = useState([]);
-  const [operatoriesData, setOperatoriesData] = useState([]);
   const [providerSearch, setProviderSearch] = useState('');
   const [providerSpecialty, setProviderSpecialty] = useState('');
-  const [loading, setLoading] = useState(true);
   const { showSnackbar } = useSnackbar();
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const loading = useSelector(selectPracticeInfoLoading);
+  const providersData = useSelector(selectProviderList);
+  const operatoriesData = useSelector(selectRoomList);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const [practiceInfo, providersRes, operatoriesRes] = await Promise.all([
-          practiceInfoService.getCurrentPracticeInfo().catch(() => null),
-          providerService.getAllProviders(1, 100).catch(() => ({ providers: [] })),
-          roomService.getAllRooms(1, 100).catch(() => ({ rooms: [] }))
-        ]);
+    dispatch(fetchCurrentPracticeInfo());
+    dispatch(fetchProviders({ page: 1, limit: 100 }));
+    dispatch(fetchRooms({ page: 1, limit: 100 }));
+  }, [dispatch]);
 
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.onlineSchedule && Object.keys(practiceInfo.onlineSchedule).length > 0) {
-            setSettings(prev => deepMerge(prev, practiceInfo.onlineSchedule));
-          }
-        }
-
-        setProvidersData(providersRes?.providers || []);
-        setOperatoriesData(operatoriesRes?.rooms || []);
-      } catch (error) {
-        console.error('Failed to fetch online schedule:', error);
-        showSnackbar('Failed to load settings', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, [showSnackbar]);
+  useEffect(() => {
+    if (practiceInfo?.onlineSchedule && Object.keys(practiceInfo.onlineSchedule).length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSettings(prev => deepMerge(prev, practiceInfo.onlineSchedule));
+    }
+  }, [practiceInfo?.onlineSchedule]);
 
   const handleChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
@@ -123,9 +115,9 @@ const OnlineScheduleConfiguration = () => {
 
   const handleSave = async () => {
     try {
-      let id = practiceInfoId;
+      let id = practiceInfo?._id || practiceInfo?.id;
       if (!id) {
-        const newPractice = await practiceInfoService.createPracticeInfo({
+        const newPractice = await dispatch(createPracticeInfo({
           practiceName: 'Default Practice',
           phone: '555-000-0000',
           email: 'info@defaultpractice.com',
@@ -136,29 +128,29 @@ const OnlineScheduleConfiguration = () => {
             postalCode: '10001',
             country: 'United States'
           }
-        });
+        })).unwrap();
         id = newPractice._id || newPractice.id;
-        setPracticeInfoId(id);
       }
       
-      await practiceInfoService.updateOnlineSchedule(id, settings);
+      await dispatch(updateOnlineSchedule({
+        practiceInfoId: id,
+        onlineScheduleData: settings
+      })).unwrap();
       showSnackbar('Online Schedule configuration saved successfully', 'success');
     } catch (error) {
       console.error(error);
-      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save configuration';
-      showSnackbar(errMsg, 'error');
+      showSnackbar(error || 'Failed to save configuration', 'error');
     }
   };
 
   const handleDeleteOperatory = async (id) => {
     if (!window.confirm('Are you sure you want to delete this operatory?')) return;
     try {
-      await roomService.deleteRoom(id);
-      setOperatoriesData(prev => prev.filter(op => op._id !== id && op.roomNumber !== id));
+      await dispatch(deleteRoom(id)).unwrap();
       showSnackbar('Operatory deleted successfully', 'success');
     } catch (error) {
       console.error(error);
-      showSnackbar('Failed to delete operatory', 'error');
+      showSnackbar(error || 'Failed to delete operatory', 'error');
     }
   };
 

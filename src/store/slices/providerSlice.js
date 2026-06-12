@@ -17,8 +17,57 @@ export const fetchProviders = createAsyncThunk(
     // Prevent duplicate in-flight requests
     condition: (_, { getState }) => {
       const { provider } = getState();
-      return !provider.listLoading;
+      if (provider.listLoading) return false;
+      return true;
     },
+  }
+);
+
+export const createProvider = createAsyncThunk(
+  'provider/createProvider',
+  async (providerData, { rejectWithValue }) => {
+    try {
+      const result = await providerService.createProvider(providerData);
+      return result;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to create provider');
+    }
+  }
+);
+
+export const updateProvider = createAsyncThunk(
+  'provider/updateProvider',
+  async ({ providerId, updates }, { rejectWithValue }) => {
+    try {
+      const result = await providerService.updateProvider(providerId, updates);
+      return result;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to update provider');
+    }
+  }
+);
+
+export const activateProvider = createAsyncThunk(
+  'provider/activateProvider',
+  async (providerId, { rejectWithValue }) => {
+    try {
+      const result = await providerService.activateProvider(providerId);
+      return { _id: providerId, isActive: true, ...result };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to activate provider');
+    }
+  }
+);
+
+export const deactivateProvider = createAsyncThunk(
+  'provider/deactivateProvider',
+  async (providerId, { rejectWithValue }) => {
+    try {
+      const result = await providerService.deactivateProvider(providerId);
+      return { _id: providerId, isActive: false, ...result };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to deactivate provider');
+    }
   }
 );
 
@@ -188,6 +237,53 @@ const providerSlice = createSlice({
         state.listLoading = false;
         state.listError = action.payload;
       })
+      .addCase(createProvider.fulfilled, (state, action) => {
+        const newProvider = action.payload.provider || action.payload;
+        if (newProvider && newProvider._id) {
+          state.list.unshift(newProvider);
+          state.dropdownList.push(newProvider);
+          state.pagination.total += 1;
+        }
+      })
+      .addCase(updateProvider.fulfilled, (state, action) => {
+        const updated = action.payload.provider || action.payload;
+        if (!updated || !updated._id) return;
+        
+        const idx = state.list.findIndex(p => p._id === updated._id);
+        if (idx !== -1) state.list[idx] = { ...state.list[idx], ...updated };
+        
+        const ddIdx = state.dropdownList.findIndex(p => p._id === updated._id);
+        if (ddIdx !== -1) state.dropdownList[ddIdx] = { ...state.dropdownList[ddIdx], ...updated };
+        
+        if (state.currentProvider && state.currentProvider._id === updated._id) {
+          state.currentProvider = { ...state.currentProvider, ...updated };
+        }
+        state.cache[updated._id] = { data: updated, timestamp: Date.now() };
+      })
+      .addCase(activateProvider.fulfilled, (state, action) => {
+        const updatedId = action.payload._id;
+        const idx = state.list.findIndex(p => p._id === updatedId);
+        if (idx !== -1) state.list[idx].isActive = true;
+        
+        if (state.currentProvider && state.currentProvider._id === updatedId) {
+          state.currentProvider.isActive = true;
+        }
+        if (state.cache[updatedId]?.data) {
+          state.cache[updatedId].data.isActive = true;
+        }
+      })
+      .addCase(deactivateProvider.fulfilled, (state, action) => {
+        const updatedId = action.payload._id;
+        const idx = state.list.findIndex(p => p._id === updatedId);
+        if (idx !== -1) state.list[idx].isActive = false;
+        
+        if (state.currentProvider && state.currentProvider._id === updatedId) {
+          state.currentProvider.isActive = false;
+        }
+        if (state.cache[updatedId]?.data) {
+          state.cache[updatedId].data.isActive = false;
+        }
+      })
       .addCase(fetchProviderById.pending, (state) => {
         state.detailLoading = true;
         state.detailError = null;
@@ -213,7 +309,7 @@ const providerSlice = createSlice({
         }
         state.dropdownLoading = false;
       })
-      .addCase(fetchAllProvidersForDropdown.rejected, (state, action) => {
+      .addCase(fetchAllProvidersForDropdown.rejected, (state) => {
         state.dropdownLoading = false;
       })
       .addCase(fetchSpecialties.pending, (state) => {

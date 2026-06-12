@@ -32,6 +32,7 @@ import {
   FileDownload as ExportIcon
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
+import { exportToCSV } from '../../utils/exportUtils';
 
 /**
  * LabCasesDialog
@@ -78,6 +79,12 @@ const LabCasesDialog = ({ open, onClose }) => {
     { label: 'Notes', sortable: false },
   ];
 
+  const handleExport = () => {
+    // Currently no real data is passed, but setup structure
+    const data = [];
+    exportToCSV(data, headers.map(h => ({ header: h.label, key: h.label.toLowerCase().replace(/ /g, '_') })), 'Lab_Cases');
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -114,7 +121,17 @@ const LabCasesDialog = ({ open, onClose }) => {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 4 }}>
+      <DialogContent sx={{ p: 4, "@media print": { p: 0, '& .no-print': { display: 'none !important' } } }}>
+        <style>
+          {`
+            @media print {
+              body * { visibility: hidden; }
+              .printable-content, .printable-content * { visibility: visible; }
+              .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+            }
+          `}
+        </style>
+        <Box className="printable-content" sx={{ width: '100%' }}>
         {/* TOP LINK */}
         <Link 
           href="#" 
@@ -253,6 +270,7 @@ const LabCasesDialog = ({ open, onClose }) => {
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mb: 1 }}>
           <Button
             variant="contained"
+            onClick={handleExport}
             startIcon={<ExportIcon sx={{ fontSize: 18 }} />}
             sx={{ bgcolor: '#445164', textTransform: 'none', fontSize: '0.85rem', height: '32px', px: 2 }}
           >
@@ -260,6 +278,7 @@ const LabCasesDialog = ({ open, onClose }) => {
           </Button>
           <Button
             variant="contained"
+            onClick={() => window.print()}
             startIcon={<PrintIcon sx={{ fontSize: 18 }} />}
             sx={{ 
               bgcolor: '#d8b16b', // Tan color from image
@@ -314,6 +333,7 @@ const LabCasesDialog = ({ open, onClose }) => {
             </TableBody>
           </Table>
         </TableContainer>
+        </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 4, pt: 0 }}>

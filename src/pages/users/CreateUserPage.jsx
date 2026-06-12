@@ -15,13 +15,15 @@ import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
+import { useDispatch } from "react-redux";
+import { createUser } from "../../store/slices/userSlice";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { userService } from "../../services/user.service";
 import { roleService } from "../../services/role.service";
 import UserForm from "../../components/users/UserForm";
 
 const CreateUserPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -69,7 +71,11 @@ const CreateUserPage = () => {
       }
 
       // Extract only the fields we need, excluding roleId and password fields
-      const { password, confirmPassword, roleId, isActive, ...userData } = data;
+      const userData = { ...data };
+      delete userData.password;
+      delete userData.confirmPassword;
+      delete userData.roleId;
+      delete userData.isActive;
 
       const createUserData = {
         email: userData.email,
@@ -80,10 +86,10 @@ const CreateUserPage = () => {
         roleIds: selectedRoleIds.length > 0 ? selectedRoleIds : undefined,
       };
 
-      await userService.createUser(createUserData);
+      await dispatch(createUser(createUserData)).unwrap();
 
       showSnackbar("User created successfully", "success");
-      navigate("/users");
+      navigate("/admin/user-management");
     } catch (err) {
       setError(
         err.response?.data?.error?.message ||

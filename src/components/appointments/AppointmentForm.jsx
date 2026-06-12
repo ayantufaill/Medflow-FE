@@ -46,11 +46,12 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { appointmentValidations } from '../../validations/appointmentValidations';
-import { patientService } from '../../services/patient.service';
-import { appointmentService } from '../../services/appointment.service';
 import { waitlistService } from '../../services/waitlist.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
+import { useDispatch } from 'react-redux';
+import { fetchAppointments, fetchAvailableSlots } from '../../store/slices/appointmentSlice';
+import { fetchPatientInsurances } from '../../store/slices/patientSlice';
 
 const AppointmentForm = ({
   onSubmit,
@@ -70,6 +71,8 @@ const AppointmentForm = ({
     rooms,
     appointmentTypes,
   } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
+
+  const dispatch = useDispatch();
 
   const patientSearchTimerRef = useRef(null);
   const [addingToWaitlist, setAddingToWaitlist] = useState(false);
@@ -175,11 +178,11 @@ const AppointmentForm = ({
 
         if (dateStr && providerIdValue && appointmentDuration) {
           try {
-            const availableSlotsResult = await appointmentService.getAvailableSlots(
-              providerIdValue,
-              dateStr,
-              appointmentDuration
-            );
+            const availableSlotsResult = await dispatch(fetchAvailableSlots({
+              providerId: providerIdValue,
+              date: dateStr,
+              duration: appointmentDuration
+            })).unwrap();
 
             const availableSlots = availableSlotsResult?.availableSlots || [];
 
@@ -211,9 +214,9 @@ const AppointmentForm = ({
         }
 
         try {
-          const result = await appointmentService.getAllAppointments(
-            1, 100, providerIdValue, '', '', dateStr, dateStr, ''
-          );
+          const result = await dispatch(fetchAppointments({
+            page: 1, limit: 100, providerId: providerIdValue, startDate: dateStr, endDate: dateStr
+          })).unwrap();
 
           const existingAppointments = result.appointments || [];
 
@@ -255,9 +258,9 @@ const AppointmentForm = ({
 
           if (conflictingAppointments.length > 0) {
             try {
-              const availableSlotsResult = await appointmentService.getAvailableSlots(
-                providerIdValue, dateStr, appointmentDuration
-              );
+              const availableSlotsResult = await dispatch(fetchAvailableSlots({
+                providerId: providerIdValue, date: dateStr, duration: appointmentDuration
+              })).unwrap();
               const slots = availableSlotsResult?.availableSlots || [];
               if (slots.length > 0) {
                 setAvailableSlots(slots);
@@ -393,7 +396,8 @@ const AppointmentForm = ({
       return;
     }
     try {
-      const insurances = await patientService.getPatientInsurances(patientId, true);
+      const result = await dispatch(fetchPatientInsurances({ patientId, activeOnly: true })).unwrap();
+      const insurances = result?.insurances || [];
       const primaryInsurance = insurances?.find(
         (ins) => ins.isActive === true && ins.insuranceType === 'primary'
       );

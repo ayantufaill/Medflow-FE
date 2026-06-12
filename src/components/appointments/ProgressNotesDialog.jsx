@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  Box,
   Typography,
-  TextField,
+  Box,
   IconButton,
+  Tooltip,
+  CircularProgress,
+  Divider,
   Table,
   TableBody,
   TableCell,
@@ -18,22 +21,37 @@ import {
   Paper,
   Select,
   MenuItem,
+  TextField,
   FormControl,
   InputLabel,
-  CircularProgress,
-  Divider,
 } from "@mui/material";
-import {
-  Close as CloseIcon,
-  Refresh as RefreshIcon,
-  FileDownload as ExportIcon,
-  Print as PrintIcon,
-  KeyboardArrowDown as ExpandMoreIcon,
-  KeyboardArrowUp as ExpandLessIcon,
-} from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningIcon from "@mui/icons-material/Warning";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExportIcon from "@mui/icons-material/FileDownload";
+import PrintIcon from "@mui/icons-material/Print";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import EditNoteIcon from "@mui/icons-material/EditNote";
+import PersonIcon from "@mui/icons-material/Person";
 import dayjs from "dayjs";
-import { clinicalNoteService } from "../../services/clinical-note.service";
-import { appointmentService } from "../../services/appointment.service";
+import { exportToCSV } from "../../utils/exportUtils";
+
+// Redux imports
+import { 
+  fetchClinicalNotes, 
+  selectSignedNotes, 
+  selectUnsignedNotes, 
+  selectClinicalListLoading 
+} from "../../store/slices/clinicalSlice";
+import { 
+  fetchCheckoutAppointments, 
+  selectCheckoutCompleteList, 
+  selectCheckoutLoading 
+} from "../../store/slices/appointmentSlice";
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────
 const MOCK_MISSING_NOTES = [
@@ -171,9 +189,10 @@ ASA: II.
 
 /**
  * ProgressNotesDialog
- * High-fidelity implementation of "Today's Progress Notes" dashboard.
  */
 const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
+  const dispatch = useDispatch();
+  
   const today = dayjs().format("YYYY-MM-DD");
   
   // ─── Filter State ───────────
@@ -182,16 +201,18 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
   const [kind, setKind] = useState("All");
   const [providerId, setProviderId] = useState("All");
 
-  // ─── Data State ─────────────
-  const [loading, setLoading] = useState(false);
-  const [missingNotes, setMissingNotes] = useState([]);
-  const [unsignedNotes, setUnsignedNotes] = useState([]);
-  const [signedNotes, setSignedNotes] = useState([]);
+  // Redux Selectors
+  const signedData = useSelector(selectSignedNotes);
+  const unsignedData = useSelector(selectUnsignedNotes);
+  const checkoutAppointments = useSelector(selectCheckoutCompleteList);
+  const clinicalLoading = useSelector(selectClinicalListLoading);
+  const checkoutLoading = useSelector(selectCheckoutLoading);
+
   const [expandedNoteIds, setExpandedNoteIds] = useState(new Set());
-  
-  // ─── Editing State ──────────
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingContent, setEditingContent] = useState("");
+
+  const loading = clinicalLoading || checkoutLoading;
 
   const toggleNoteExpansion = (id) => {
     setExpandedNoteIds(prev => {
@@ -202,52 +223,71 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
     });
   };
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const filters = {
-        startDate,
-        endDate,
-        providerId: providerId === "All" ? "" : providerId,
-        noteType: kind === "All" ? "" : kind,
-      };
+  const fetchData = useCallback(() => {
+    const filters = {
+      startDate,
+      endDate,
+      providerId: providerId === "All" ? "" : providerId,
+      noteType: kind === "All" ? "" : kind,
+    };
 
-      // 1 & 2. Fetch Signed and Unsigned Notes
-      const [signedData, unsignedData, allAppointments] = await Promise.all([
-        clinicalNoteService.getAllClinicalNotes(1, 100, { ...filters, isSigned: true }).catch(() => ({ clinicalNotes: [] })),
-        clinicalNoteService.getAllClinicalNotes(1, 100, { ...filters, isSigned: false }).catch(() => ({ clinicalNotes: [] })),
-        appointmentService.getAllAppointments(1, 200, filters.providerId, "", "checkout complete", startDate, endDate).catch(() => ({ appointments: [] }))
-      ]);
+    dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: true } }));
+    dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: false } }));
+    dispatch(fetchCheckoutAppointments({ page: 1, limit: 200, ...filters }));
+  }, [dispatch, startDate, endDate, providerId, kind]);
 
-      // Combine real data with mock data for demonstration
-      setSignedNotes([...(signedData.clinicalNotes || []), ...MOCK_SIGNED_NOTES]);
-      setUnsignedNotes([...(unsignedData.clinicalNotes || []), ...MOCK_UNSIGNED_NOTES]);
+  // Derived state combining API + Mock data
+  const signedNotes = useMemo(() => [...(signedData || []), ...MOCK_SIGNED_NOTES], [signedData]);
+  const unsignedNotes = useMemo(() => [...(unsignedData || []), ...MOCK_UNSIGNED_NOTES], [unsignedData]);
 
-      // 3. Logic for "Missing Notes"
-      const noteApptIds = new Set([
-        ...(signedData.clinicalNotes || []).map(n => n.appointmentId?._id || n.appointmentId),
-        ...(unsignedData.clinicalNotes || []).map(n => n.appointmentId?._id || n.appointmentId)
-      ]);
+  // Derived state to find Missing Notes
+  const missingNotes = useMemo(() => {
+    const allFetchedNotes = [...signedNotes, ...unsignedNotes];
+    const missing = [];
+    const appointments = checkoutAppointments || [];
+    
+    appointments.forEach(appt => {
+      const ptId = appt.patientId?._id || appt.patientId?.id || appt.patientId;
+      if (ptId) {
+        const hasNote = allFetchedNotes.some(n => {
+          const nId = n.patientId?._id || n.patientId?.id || n.patientId;
+          return nId === ptId;
+        });
+        
+        if (!hasNote) {
+          missing.push({
+            _id: `m-${appt._id || appt.id}`,
+            patientName: appt.patientName || `${appt.patientId?.firstName || ''} ${appt.patientId?.lastName || ''}`.trim() || 'Unknown Patient',
+            appointmentType: appt.appointmentType || appt.appointmentTypeId?.name || "Visit",
+            providerName: appt.providerId?.firstName ? `${appt.providerId.firstName} ${appt.providerId.lastName}` : (appt.providerId?.name || "Unknown Provider"),
+            time: appt.startTime || "Unknown Time"
+          });
+        }
+      }
+    });
+    
+    return [...missing, ...MOCK_MISSING_NOTES];
+  }, [signedNotes, unsignedNotes, checkoutAppointments]);
 
-      const missing = (allAppointments.appointments || []).filter(a => !noteApptIds.has(a._id || a.id));
-      setMissingNotes([...missing, ...MOCK_MISSING_NOTES]);
+  const handleExport = () => {
+    const data = [
+      ...missingNotes.map(n => ({ status: 'Missing', patient: n.patientName, date: dayjs(n.appointmentDate).format('YYYY-MM-DD'), provider: n.providerId?.name || 'Unknown' })),
+      ...unsignedNotes.map(n => ({ status: 'Unsigned', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.appointmentDate).format('YYYY-MM-DD'), provider: n.providerId?.name || 'Unknown' })),
+      ...signedNotes.map(n => ({ status: 'Signed', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.appointmentDate).format('YYYY-MM-DD'), provider: n.providerId?.name || 'Unknown' }))
+    ];
+    exportToCSV(data, [
+      { header: 'Status', key: 'status' },
+      { header: 'Patient', key: 'patient' },
+      { header: 'Date', key: 'date' },
+      { header: 'Provider', key: 'provider' }
+    ], 'Progress_Notes');
+  };
 
-    } catch (err) {
-      console.error("Failed to fetch progress notes data:", err);
-      // Fallback to purely mock data if error occurs
-      setSignedNotes(MOCK_SIGNED_NOTES);
-      setUnsignedNotes(MOCK_UNSIGNED_NOTES);
-      setMissingNotes(MOCK_MISSING_NOTES);
-    } finally {
-      setLoading(false);
-    }
-  }, [startDate, endDate, kind, providerId]);
-
+  // Handle open dialog
   useEffect(() => {
     if (open) fetchData();
   }, [open, fetchData]);
 
-  const handleApply = () => fetchData();
 
   const handleEditStart = (n) => {
     setEditingNoteId(n._id || n.id);
@@ -322,7 +362,17 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
         <IconButton onClick={onClose} size="small" sx={{ position: "absolute", right: 8, top: 8, color: "#fff" }}><CloseIcon /></IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
+      <DialogContent sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3, "@media print": { p: 0, '& .no-print': { display: 'none !important' } } }}>
+        <style>
+          {`
+            @media print {
+              body * { visibility: hidden; }
+              .printable-content, .printable-content * { visibility: visible; }
+              .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+            }
+          `}
+        </style>
+        <Box className="printable-content" sx={{ width: '100%' }}>
         {/* FILTERS */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "wrap", mb: 1, mt: 1.5 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -355,15 +405,31 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
           </Box>
 
           <Box sx={{ display: "flex", gap: 1.5 }}>
-            <Button variant="contained" size="small" onClick={handleApply} sx={{ bgcolor: "#7d99d1", "&:hover": { bgcolor: "#6a85bd" }, textTransform: "none", height: 32, px: 2, fontWeight: 600 }}>Apply</Button>
+            <Button variant="contained" size="small" onClick={fetchData} sx={{ bgcolor: "#7d99d1", "&:hover": { bgcolor: "#6a85bd" }, textTransform: "none", height: 32, px: 2, fontWeight: 600 }}>Apply</Button>
             <Button variant="contained" size="small" onClick={fetchData} startIcon={<RefreshIcon sx={{ fontSize: 16 }} />} sx={{ bgcolor: "#5c7cbc", "&:hover": { bgcolor: "#4a6496" }, textTransform: "none", height: 32, px: 2, fontWeight: 600 }}>Refresh</Button>
           </Box>
         </Box>
 
         {/* ACTIONS */}
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-          <Button variant="contained" size="small" startIcon={<ExportIcon />} sx={{ bgcolor: "#5c7cbc", textTransform: "none", fontSize: "0.75rem" }}>Export as CSV</Button>
-          <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.75rem" }}>Print</Button>
+          <Button 
+            variant="contained" 
+            size="small" 
+            startIcon={<ExportIcon />} 
+            onClick={handleExport}
+            sx={{ bgcolor: "#5c7cbc", textTransform: "none", fontSize: "0.75rem" }}
+          >
+            Export as CSV
+          </Button>
+          <Button 
+            variant="contained" 
+            size="small" 
+            startIcon={<PrintIcon />} 
+            onClick={() => window.print()}
+            sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.75rem" }}
+          >
+            Print
+          </Button>
         </Box>
 
         {loading ? (
@@ -557,6 +623,7 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
 
           </Box>
         )}
+        </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 2, borderTop: "1px solid #eee" }}>

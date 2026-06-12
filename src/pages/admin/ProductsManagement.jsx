@@ -1,5 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchProducts,
+  addProductCategory,
+  addProductChoice,
+  updateProductChoice,
+  deleteProductCategory,
+  deleteProductChoice,
+  selectProducts,
+  selectLoadingProducts
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+import { CircularProgress } from '@mui/material';
 import {
   Box,
   Typography,
@@ -231,9 +244,16 @@ const INITIAL_PROGRESS_CATEGORIES = [
 
 const ProductsManagement = () => {
   const navigate = useNavigate();
-  const [topCategories, setTopCategories] = useState(INITIAL_TOP_CATEGORIES);
-  const [progressCategories, setProgressCategories] = useState(INITIAL_PROGRESS_CATEGORIES);
-  const [expandedId, setExpandedId] = useState('11');
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+  
+  const products = useSelector(selectProducts);
+  const loading = useSelector(selectLoadingProducts);
+
+  const topCategories = products.filter(c => c.section === 'top');
+  const progressCategories = products.filter(c => c.section === 'progress');
+
+  const [expandedId, setExpandedId] = useState(null);
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
 
   // Inline Choice Draft State
@@ -252,30 +272,58 @@ const ProductsManagement = () => {
   const [isAddingProductInSection, setIsAddingProductInSection] = useState(null); // 'top' or 'progress'
   const [productDraftName, setProductDraftName] = useState('');
 
+  useEffect(() => {
+    dispatch(fetchProducts());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (products.length > 0 && !expandedId) {
+      setExpandedId(products[0].id);
+    }
+  }, [products, expandedId]);
+
   const handleToggleAccordion = (id) => {
     setExpandedId(prev => (prev === id ? null : id));
   };
 
-  const handleCheckboxChange = (section, categoryId, choiceId, field) => {
-    const setter = section === 'top' ? setTopCategories : setProgressCategories;
-    setter(prevCategories =>
-      prevCategories.map(cat => {
-        if (cat.id !== categoryId) return cat;
+  const handleCheckboxChange = async (section, categoryId, choiceId, field) => {
+    const categoriesList = section === 'top' ? topCategories : progressCategories;
+    const category = categoriesList.find(c => c.id === categoryId);
+    if (!category) return;
+    const choice = category.choices.find(c => c.id === choiceId);
+    if (!choice) return;
 
-        return {
-          ...cat,
-          choices: cat.choices.map(choice => {
-            if (choice.id === choiceId) {
-              return { ...choice, [field]: !choice[field] };
-            }
-            if (field === 'isDefault') {
-              return { ...choice, isDefault: false };
-            }
-            return choice;
-          }),
-        };
-      })
-    );
+    const updatedValue = !choice[field];
+    
+    try {
+      const updates = { [field]: updatedValue };
+      await dispatch(updateProductChoice({ choiceId, updates })).unwrap();
+      dispatch(fetchProducts());
+      showSnackbar('Choice updated successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to update choice', 'error');
+    }
+  };
+
+  const handleDeactivateCategory = async (section, categoryId) => {
+    try {
+      await dispatch(deleteProductCategory(categoryId)).unwrap();
+      showSnackbar('Category deactivated successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to deactivate category', 'error');
+    }
+  };
+
+  const handleDeactivateChoice = async (section, categoryId, choiceId) => {
+    try {
+      await dispatch(deleteProductChoice(choiceId)).unwrap();
+      showSnackbar('Choice deactivated successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to deactivate choice', 'error');
+    }
   };
 
   const handleOpenSyncDialog = (e) => {
@@ -306,31 +354,29 @@ const ProductsManagement = () => {
     setEditingSection(null);
   };
 
-  const handleSaveInlineChoice = () => {
+  const handleSaveInlineChoice = async () => {
     if (!inlineChoiceDraft.name) return;
 
-    const setter = editingSection === 'top' ? setTopCategories : setProgressCategories;
-    const newChoice = {
-      id: Date.now().toString(),
-      ...inlineChoiceDraft,
-      price: inlineChoiceDraft.price || '00.0',
-    };
-
-    setter(prevCategories =>
-      prevCategories.map(cat => {
-        if (cat.id !== editingCategoryId) return cat;
-
-        let updatedChoices = [...cat.choices];
-        if (newChoice.isDefault) {
-          updatedChoices = updatedChoices.map(c => ({ ...c, isDefault: false }));
+    try {
+      await dispatch(addProductChoice({
+        categoryId: editingCategoryId,
+        choiceData: {
+          name: inlineChoiceDraft.name,
+          isDefault: inlineChoiceDraft.isDefault,
+          quickList: inlineChoiceDraft.quickList,
+          isRecommended: inlineChoiceDraft.isRecommended,
+          price: inlineChoiceDraft.price || '0.0',
+          code: inlineChoiceDraft.code || '',
         }
-        updatedChoices.push(newChoice);
-
-        return { ...cat, choices: updatedChoices };
-      })
-    );
-
-    handleCancelInlineChoice();
+      })).unwrap();
+      dispatch(fetchProducts());
+      showSnackbar('Choice added successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to add choice', 'error');
+    } finally {
+      handleCancelInlineChoice();
+    }
   };
 
   // Inline Product Handlers
@@ -344,19 +390,20 @@ const ProductsManagement = () => {
     setProductDraftName('');
   };
 
-  const handleSaveInlineProduct = () => {
+  const handleSaveInlineProduct = async () => {
     if (!productDraftName) return;
 
-    const setter = isAddingProductInSection === 'top' ? setTopCategories : setProgressCategories;
-    const newProduct = {
-      id: Date.now().toString(),
-      name: productDraftName,
-      choices: [],
-    };
-
-    setter(prev => [...prev, newProduct]);
-    setExpandedId(newProduct.id);
-    handleCancelInlineProduct();
+    try {
+      const section = isAddingProductInSection;
+      const created = await dispatch(addProductCategory({ name: productDraftName, section })).unwrap();
+      setExpandedId(created.id);
+      showSnackbar('Category created successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to create category', 'error');
+    } finally {
+      handleCancelInlineProduct();
+    }
   };
 
   const renderCategoryList = (list, section) => (
@@ -419,6 +466,7 @@ const ProductsManagement = () => {
               <Button
                 size="small"
                 variant="contained"
+                onClick={() => handleDeactivateCategory(section, category.id)}
                 sx={{
                   textTransform: 'none',
                   backgroundColor: '#e57373',
@@ -476,6 +524,7 @@ const ProductsManagement = () => {
                         <Button
                           size="small"
                           variant="contained"
+                          onClick={() => handleDeactivateChoice(section, category.id, choice.id)}
                           sx={{
                             textTransform: 'none',
                             backgroundColor: '#e57373',

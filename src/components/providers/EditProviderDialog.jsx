@@ -23,8 +23,7 @@ import {
   fetchProviderById,
   selectCachedProviderById,
   selectProviderDetailLoading,
-  updateProviderInList,
-  invalidateProviderDetail,
+  updateProvider,
 } from '../../store/slices/providerSlice';
 
 const FORM_ID = 'edit-provider-dialog-form';
@@ -53,17 +52,21 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
     try {
       setSaving(true);
       setError('');
-      const updated = await providerService.updateProvider(providerId, data);
-      dispatch(updateProviderInList(updated));
-      dispatch(invalidateProviderDetail(providerId));
+      const updated = await dispatch(updateProvider({ providerId, updates: data })).unwrap();
       showSnackbar('Provider updated successfully', 'success');
       onSaved?.(updated);
       onClose();
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to update provider. Please try again.';
+      // The unwrap() handles the ConditionError object safely
+      let msg = 'Failed to update provider. Please try again.';
+      if (err?.name === 'ConditionError') return; // Aborted by Redux internally
+      
+      if (typeof err === 'string') {
+        msg = err;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+
       setError(msg);
       showSnackbar(msg, 'error');
     } finally {

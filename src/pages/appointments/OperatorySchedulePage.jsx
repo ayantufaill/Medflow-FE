@@ -38,9 +38,11 @@ import CompleteProceduresDialog from "../../components/appointments/CompleteProc
 import SelectProductsDialog from "../../components/appointments/SelectProductsDialog";
 import AddNewPatientAppointmentForm from "../../components/appointments/AddNewPatientAppointmentForm";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { appointmentService } from "../../services/appointment.service";
+
 import { patientService } from "../../services/patient.service";
 import { useDropdownData } from "../../hooks/redux/useDropdownData";
+import { useAppointments } from "../../hooks/redux/useAppointments";
+import { usePatients } from "../../hooks/redux/usePatient";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
 import LabCasesDialog from "../../components/appointments/LabCasesDialog";
@@ -99,8 +101,6 @@ const OperatorySchedulePage = () => {
   const showSnackbarRef = useRef(showSnackbar);
   useEffect(() => { showSnackbarRef.current = showSnackbar; });
 
-  const { providers, rooms, appointmentTypes } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
-
   const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
@@ -108,6 +108,25 @@ const OperatorySchedulePage = () => {
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [showConsult, setShowConsult] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(false);
+  const [addAppointmentFormOpen, setAddAppointmentFormOpen] = useState(false);
+
+  // Dialogs
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [completeProceduresOpen, setCompleteProceduresOpen] = useState(false);
+  const [selectProductsOpen, setSelectProductsOpen] = useState(false);
+  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
+  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
+  const [loadingFormPatients, setLoadingFormPatients] = useState(false);
+  const [formSaving, setFormSaving] = useState(false);
+
+  const { providers, rooms, appointmentTypes } = useDropdownData({ 
+    providers: addAppointmentFormOpen, 
+    rooms: true, 
+    appointmentTypes: addAppointmentFormOpen 
+  });
+
+
 
   // Dynamically generate operatory columns from rooms
   const OPERATORY_COLUMNS = useMemo(() => {
@@ -231,13 +250,11 @@ const OperatorySchedulePage = () => {
     return cols;
   }, [rooms, showConsult]);
 
-  const [sidebarPatients, setSidebarPatients] = useState([]);
+  const { patients: reduxPatients, fetch: fetchPatientsRedux, createPatient: createPatientRedux } = usePatients();
+
   const [loadingSidebarPatients, setLoadingSidebarPatients] = useState(false);
   const [creatingSidebarPatient, setCreatingSidebarPatient] = useState(false);
-  const [appointments, setAppointments] = useState([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [newlyCreatedAppointmentId, setNewlyCreatedAppointmentId] = useState(null); // Track newly created appointment for auto-scroll
   const [draft, setDraft] = useState({
     title: "",
@@ -268,14 +285,7 @@ const OperatorySchedulePage = () => {
   });
   const [checkOutExpanded, setCheckOutExpanded] = useState(false);
   const [completeBillDialogOpen, setCompleteBillDialogOpen] = useState(false);
-  const [purchaseProductsDialogOpen, setPurchaseProductsDialogOpen] =
-    useState(false);
-  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
-  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
-  const [addAppointmentFormOpen, setAddAppointmentFormOpen] = useState(false);
-  const [formPatients, setFormPatients] = useState([]);
-  const [loadingFormPatients, setLoadingFormPatients] = useState(false);
-  const [formSaving, setFormSaving] = useState(false);
+  const [purchaseProductsDialogOpen, setPurchaseProductsDialogOpen] = useState(false);
   const [labCasesDialogOpen, setLabCasesDialogOpen] = useState(false);
 
   // Lab Filters Popover state
@@ -351,17 +361,13 @@ const OperatorySchedulePage = () => {
   const searchSidebarPatients = useCallback(async (search = "") => {
     try {
       setLoadingSidebarPatients(true);
-      // No status filter — matches the patients table which shows all patients
-      // regardless of isActive, so seeded/imported patients are included.
-      const result = await patientService.getAllPatients(1, 20, search, "");
-      setSidebarPatients(result.patients || []);
+      await fetchPatientsRedux({ page: 1, limit: 20, search, status: "" });
     } catch (err) {
       console.error("Error searching sidebar patients:", err);
-      setSidebarPatients([]);
     } finally {
       setLoadingSidebarPatients(false);
     }
-  }, []);
+  }, [fetchPatientsRedux]);
 
   const handleCreateSidebarPatient = useCallback(
     async (data) => {
@@ -376,8 +382,8 @@ const OperatorySchedulePage = () => {
           sendWelcomeEmail: !!data.sendWelcomeEmail,
           isNewPatient: !!data.isNewPatient,
         };
-        const patient = await patientService.createPatient(payload);
-        setSidebarPatients((prev) => [patient, ...prev]);
+        const actionResult = await createPatientRedux(payload).unwrap();
+        const patient = actionResult.patient || actionResult;
         setSelectedPatientId(patient._id || patient.id || null);
         setPatientQuery(
           patient.firstName && patient.lastName
@@ -397,31 +403,29 @@ const OperatorySchedulePage = () => {
         setCreatingSidebarPatient(false);
       }
     },
-    [showSnackbar],
+    [showSnackbar, createPatientRedux],
   );
 
   const searchFormPatients = useCallback(async (search = "") => {
     try {
       setLoadingFormPatients(true);
-      // No status filter — same as sidebar, includes seeded/imported patients
-      const result = await patientService.getAllPatients(1, 20, search, "");
-      setFormPatients(result.patients || []);
+      await fetchPatientsRedux({ page: 1, limit: 20, search, status: "" });
     } catch (err) {
       console.error("Error searching patients:", err);
-      setFormPatients([]);
     } finally {
       setLoadingFormPatients(false);
     }
-  }, []);
+  }, [fetchPatientsRedux]);
 
   useEffect(() => {
     if (addAppointmentFormOpen) searchFormPatients("");
   }, [addAppointmentFormOpen, searchFormPatients]);
 
-  // Load initial patients on mount
-  useEffect(() => {
-    searchSidebarPatients("");
-  }, []);
+  // Load initial patients on mount removed for optimization
+  // They will be loaded dynamically when the user searches
+  // useEffect(() => {
+  //   searchSidebarPatients("");
+  // }, []);
 
   // No auto-selection — the search box should start empty so the user
   // can pick a patient manually. Auto-selecting was causing the first
@@ -441,15 +445,24 @@ const OperatorySchedulePage = () => {
     try {
       const iso = String(a.appointmentDate || "");
       const dateOnly = iso.includes("T") ? iso.split("T")[0] : iso.slice(0, 10);
-      if (!dateOnly) return null;
+      if (!dateOnly) {
+        console.warn("mapAppointment dropped: missing dateOnly", a);
+        return null;
+      }
 
       const startObj = a.startTime ? dayjs(`${dateOnly}T${a.startTime}`) : null;
-      if (!startObj || !startObj.isValid()) return null;
+      if (!startObj || !startObj.isValid()) {
+        console.warn("mapAppointment dropped: invalid startObj", a);
+        return null;
+      }
 
       const endObj = a.endTime
         ? dayjs(`${dateOnly}T${a.endTime}`)
         : startObj.add(a.durationMinutes || SLOT_MINUTES, "minute");
-      if (!endObj.isValid()) return null;
+      if (!endObj.isValid()) {
+        console.warn("mapAppointment dropped: invalid endObj", a);
+        return null;
+      }
 
       const fullName =
         (a.patientId &&
@@ -471,7 +484,7 @@ const OperatorySchedulePage = () => {
         apptTitle.includes("exam") ||
         apptTitle.includes("hygiene");
 
-      if (isConsultation) {
+      if (isConsultation && showConsult) {
         columnId = "consult";
       } else if (a.roomId) {
         // Match the column ID format used in OPERATORY_COLUMNS generation
@@ -517,39 +530,36 @@ const OperatorySchedulePage = () => {
     }
   };
 
-  // Fetch appointments for the selected patient across the current year.
-  // Re-runs whenever the selected patient changes.
-  // showSnackbar is intentionally omitted from deps — it is not memoized in
-  // SnackbarContext, so including it would cause this effect to loop infinitely.
+  // Uses the new custom hook to automatically fetch and cache via Redux
+  const fetchStartDate = selectedDate.startOf('month').format('YYYY-MM-DD');
+  const fetchEndDate = selectedDate.endOf('month').format('YYYY-MM-DD');
+  
+  const { 
+    appointments: reduxAppointments, 
+    refresh: refreshAppointments,
+    createAppointment: reduxCreateAppointment,
+    updateAppointment,
+  } = useAppointments({
+    patientId: selectedPatientId || "", // Filter by selected patient, otherwise show all
+    startDate: fetchStartDate,
+    endDate: fetchEndDate,
+    limit: 100, // required to see a full day's or week's schedule
+  });
+
+  // Derived state to map Redux appointments to the Grid format
+  const mappedAppointments = useMemo(() => {
+    if (!reduxAppointments) return [];
+    console.log("Raw reduxAppointments:", reduxAppointments);
+    const mapped = reduxAppointments.map(mapAppointment).filter(Boolean);
+    console.log("Mapped appointments:", mapped);
+    return mapped;
+  }, [reduxAppointments]);
+
+  const [appointments, setAppointments] = useState([]);
+
   useEffect(() => {
-    if (!selectedPatientId) {
-      setAppointments([]);
-      return;
-    }
-    const fetchAppointments = async () => {
-      try {
-        const year = selectedDate.year();
-        const result = await appointmentService.getAllAppointments(
-          1,
-          100,                     // max allowed by backend
-          "",                      // providerId — no filter for now
-          selectedPatientId,       // patientId
-          "",                      // status — no filter for now
-          `${year}-01-01`,         // startDate — full year
-          `${year}-12-31`,         // endDate
-        );
-        const raw = Array.isArray(result)
-          ? result
-          : result?.appointments || [];
-        setAppointments(raw.map(mapAppointment).filter(Boolean));
-      } catch (err) {
-        console.error("Failed to load appointments for patient", err);
-        showSnackbarRef.current("Failed to load appointments.", "error");
-        setAppointments([]);
-      }
-    };
-    fetchAppointments();
-  }, [selectedPatientId]); // eslint-disable-line react-hooks/exhaustive-deps
+    setAppointments(mappedAppointments);
+  }, [mappedAppointments]);
 
   // Add sample consult appointments when showConsult is toggled on (for demo)
   useEffect(() => {
@@ -645,33 +655,19 @@ const OperatorySchedulePage = () => {
         ...(formData.customFields && { customFields: formData.customFields }),
       };
 
-      await appointmentService.createAppointment(payload);
+      const newAppt = await reduxCreateAppointment(payload).unwrap();
+      const newApptId = newAppt?.data?._id || newAppt?.data?.id || newAppt?._id || newAppt?.id;
 
       showSnackbar("Appointment created successfully", "success");
       setAddAppointmentFormOpen(false);
 
-      // Re-fetch this patient's appointments so the grid updates immediately
+      if (newApptId) {
+        setNewlyCreatedAppointmentId(newApptId);
+      }
+
+      // Re-fetch via Redux hook to sync cache
       if (patientId) {
-        const year = selectedDate.year();
-        const result = await appointmentService.getAllAppointments(
-          1, 100, "", patientId, "", `${year}-01-01`, `${year}-12-31`,
-        );
-        const raw = Array.isArray(result) ? result : result?.appointments || [];
-        const mappedAppointments = raw.map(mapAppointment).filter(Boolean);
-        setAppointments(mappedAppointments);
-
-        // Find the newly created appointment by matching payload properties
-        const newAppt = mappedAppointments.find(appt =>
-          appt.patientId === patientId &&
-          appt.date === payload.appointmentDate &&
-          appt.start === dayjs(`${payload.appointmentDate}T${payload.startTime}`).toISOString()
-        );
-
-        if (newAppt && newAppt.id) {
-          setNewlyCreatedAppointmentId(newAppt.id);
-          // Clear the ID after scrolling completes (handled in the grid component)
-          setTimeout(() => setNewlyCreatedAppointmentId(null), 2000);
-        }
+        await refreshAppointments();
       }
     } catch (err) {
       const msg =
@@ -778,9 +774,9 @@ const OperatorySchedulePage = () => {
 
   const selectedPatient = useMemo(
     () =>
-      sidebarPatients.find((p) => (p._id || p.id) === selectedPatientId) ||
+      reduxPatients.find((p) => (p._id || p.id) === selectedPatientId) ||
       null,
-    [sidebarPatients, selectedPatientId],
+    [reduxPatients, selectedPatientId],
   );
 
   // Filter appointments based on view mode
@@ -1020,7 +1016,7 @@ const OperatorySchedulePage = () => {
           onDateChange={setSelectedDate}
           patientQuery={patientQuery}
           setPatientQuery={setPatientQuery}
-          patients={sidebarPatients}
+          patients={reduxPatients}
           loadingPatients={loadingSidebarPatients || creatingSidebarPatient}
           onPatientSearch={searchSidebarPatients}
           onPatientSelect={(patient) =>
@@ -1086,12 +1082,15 @@ const OperatorySchedulePage = () => {
         onClose={() => setDetailsDialogOpen(false)}
         selectedAppointment={selectedAppointment}
         OPERATORY_COLUMNS={OPERATORY_COLUMNS}
-        onStatusChange={(appointmentId, newStatus) => {
-          setAppointments((prev) =>
-            prev.map((a) =>
-              a.id === appointmentId ? { ...a, status: newStatus } : a,
-            ),
-          );
+        onStatusChange={async (appointmentId, newStatus) => {
+          try {
+            await updateAppointment(appointmentId, { status: newStatus }).unwrap();
+            showSnackbar("Status updated successfully", "success");
+            await refreshAppointments();
+          } catch (err) {
+            const msg = typeof err === 'string' ? err : err?.response?.data?.error?.message || err?.message || "Failed to update status";
+            showSnackbar(msg, "error");
+          }
         }}
       />
 
@@ -1115,9 +1114,10 @@ const OperatorySchedulePage = () => {
       {/* AddNewPatientAppointmentForm has its own Dialog wrapper */}
       <AddNewPatientAppointmentForm
         open={addAppointmentFormOpen}
-        patients={formPatients}
+        patients={reduxPatients}
         loadingPatients={loadingFormPatients}
-        onPatientSearch={searchFormPatients}
+        saving={formSaving}
+        onSearchPatients={searchFormPatients}
         onSubmit={handleAddAppointmentSubmit}
         onCancel={() => setAddAppointmentFormOpen(false)}
         loading={formSaving}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -12,10 +12,13 @@ import {
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { insuranceCompanyService } from "../../services/insurance.service";
+import { useDispatch } from "react-redux";
+import { updateCarrierThunk } from "../../store/slices/insuranceSlice";
 import InsuranceCompanyForm from "../../components/insurance-companies/InsuranceCompanyForm";
 
 const EditInsuranceCompanyPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { insuranceCompanyId } = useParams();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
@@ -38,8 +41,11 @@ const EditInsuranceCompanyPage = () => {
     }
   };
 
+  const lastFetchedIdRef = React.useRef(null);
+
   useEffect(() => {
-    if (insuranceCompanyId) {
+    if (insuranceCompanyId && lastFetchedIdRef.current !== insuranceCompanyId) {
+      lastFetchedIdRef.current = insuranceCompanyId;
       fetchInsuranceCompany();
     }
   }, [insuranceCompanyId]);
@@ -49,15 +55,13 @@ const EditInsuranceCompanyPage = () => {
       setSaving(true);
       setError("");
 
-      await insuranceCompanyService.updateInsuranceCompany(insuranceCompanyId, data);
+      await dispatch(updateCarrierThunk({ id: insuranceCompanyId, payload: data })).unwrap();
 
       showSnackbar("Insurance company updated successfully", "success");
       navigate("/insurance-companies");
     } catch (err) {
       setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to update insurance company. Please try again."
+        err || "Failed to update insurance company. Please try again."
       );
     } finally {
       setSaving(false);

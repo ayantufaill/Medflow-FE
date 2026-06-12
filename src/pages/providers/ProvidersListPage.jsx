@@ -40,11 +40,12 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { providerService } from '../../services/provider.service';
 import {
   fetchProviders,
+  activateProvider,
+  deactivateProvider,
   selectProviderList,
   selectProviderPagination,
   selectProviderListLoading,
   selectProviderListError,
-  updateProviderInList,
 } from '../../store/slices/providerSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import EditProviderDialog from '../../components/providers/EditProviderDialog';
@@ -67,7 +68,7 @@ const SUB_TABS = [
     heading: 'Referral Providers:',
     buttonLabel: 'Add Referral Provider',
     addPath: '/providers/new',
-    useRedux: false,
+    useRedux: true,
     apiParams: { providerCategory: 'referral' },
     columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
   },
@@ -76,7 +77,7 @@ const SUB_TABS = [
     heading: 'Care Team Providers:',
     buttonLabel: 'Add Care Team Provider',
     addPath: '/providers/new',
-    useRedux: false,
+    useRedux: true,
     apiParams: { providerCategory: 'care_team' },
     columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone'],
   },
@@ -85,7 +86,7 @@ const SUB_TABS = [
     heading: 'Labs:',
     buttonLabel: 'Add Lab Provider',
     addPath: '/providers/new',
-    useRedux: false,
+    useRedux: true,
     apiParams: { providerCategory: 'lab' },
     columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
     columnOverrides: { provider: 'Lab' },
@@ -330,15 +331,17 @@ const InactiveSectionTable = ({ section, onEdit, onActivate, actionLoading }) =>
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const isActive = section.apiParams.isActive;
+  const providerCategory = section.apiParams.providerCategory;
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     providerService
-      .getAllProviders(1, 50, '', section.apiParams.isActive, '', section.apiParams.providerCategory || '')
+      .getAllProviders(1, 50, '', isActive, '', providerCategory || '')
       .then((result) => { if (!cancelled) { setRows(result.providers || []); setLoading(false); } })
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [isActive, providerCategory]);
 
   return (
     <Box sx={{ mb: 4 }}>
@@ -467,20 +470,17 @@ const ProvidersListPage = () => {
   const useRedux = tabConfig.useRedux;
 
   const providers = useRedux ? reduxProviders : localProviders;
-  const totalProviders = useRedux ? (reduxPagination?.total || 0) : localTotal;
   const loading = useRedux ? reduxLoading : localLoading;
 
   // ─── Fetch (Redux tabs) ───────────────────────────────────────
   useEffect(() => {
     if (!useRedux) return;
     dispatch(fetchProviders({
-      page: page + 1,
-      limit: rowsPerPage,
-      search: debouncedSearch.trim(),
-      specialty: specialtyFilter,
+      page: 1,
+      limit: 100,
       ...tabConfig.apiParams,
     }));
-  }, [dispatch, page, rowsPerPage, debouncedSearch, specialtyFilter, activeSubTab, useRedux]);
+  }, [dispatch, activeSubTab, useRedux]);
 
   useEffect(() => { if (reduxError) setError(reduxError); }, [reduxError]);
 
@@ -490,15 +490,14 @@ const ProvidersListPage = () => {
     setLocalError('');
     try {
       const result = await providerService.getAllProviders(
-        page + 1,
-        rowsPerPage,
-        debouncedSearch.trim(),
-        null,
-        specialtyFilter,
+        1,
+        100,
+        '', // search
+        null, // isActive
+        '', // specialtyFilter
         tabConfig.apiParams.providerCategory || ''
       );
       setLocalProviders(result.providers || []);
-      setLocalTotal(result.pagination?.total || 0);
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Failed to load providers';
       setLocalError(msg);
@@ -506,12 +505,55 @@ const ProvidersListPage = () => {
     } finally {
       setLocalLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, specialtyFilter, activeSubTab]);
+  }, [tabConfig.apiParams.providerCategory]);
 
   useEffect(() => {
     if (useRedux) return;
     fetchLocal();
   }, [fetchLocal, useRedux]);
+
+  // ─── Frontend Filtering ────────────────────────────────────────
+  const normalizeSpecialty = (str) => {
+    if (!str) return '';
+    return str.toLowerCase()
+      .replace(/orthodont(ist|ics?)/g, 'orthodont')
+      .replace(/periodont(ist|ics?)/g, 'periodont')
+      .replace(/endodont(ist|ics?)/g, 'endodont')
+      .replace(/prosthodont(ist|ics?)/g, 'prosthodont')
+      .replace(/pedodont(ist|ics?)/g, 'pedodont')
+      .replace(/dent(ist|istry?)/g, 'dent')
+      .replace(/surge(on|ry)/g, 'surge')
+      .replace(/hygien(ist|e)/g, 'hygien')
+      .replace(/radiolog(ist|y)/g, 'radiolog')
+      .replace(/physician/g, 'doctor');
+  };
+
+  const filteredProviders = providers.filter((p) => {
+    if (specialtyFilter) {
+      const specialtyValue = typeof p.specialty === 'string' 
+        ? p.specialty 
+        : (Array.isArray(p.specialty) ? p.specialty.join(' ') : '');
+      const normalizedProviderSpecialty = normalizeSpecialty(specialtyValue);
+      const normalizedFilter = normalizeSpecialty(specialtyFilter);
+      
+      if (!normalizedProviderSpecialty.includes(normalizedFilter)) {
+        return false;
+      }
+    }
+    if (debouncedSearch) {
+      const searchStr = debouncedSearch.toLowerCase();
+      const name = getProviderName(p).toLowerCase();
+      const email = (p.userId?.email || p.email || '').toLowerCase();
+      const phone = (p.phone || p.userId?.phone || p.mobilePhone || '').toLowerCase();
+      if (!name.includes(searchStr) && !email.includes(searchStr) && !phone.includes(searchStr)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const displayedProviders = filteredProviders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const totalProviders = filteredProviders.length;
 
   // ─── Handlers ────────────────────────────────────────────────
   const handleSubTabChange = (_, newValue) => {
@@ -532,12 +574,18 @@ const ProvidersListPage = () => {
     } else {
       try {
         setActionLoading(true);
-        await providerService.activateProvider(id);
+        if (useRedux) {
+          await dispatch(activateProvider(id)).unwrap();
+        } else {
+          await providerService.activateProvider(id);
+          fetchLocal();
+        }
         showSnackbar(`Provider "${name}" activated`, 'success');
-        if (useRedux) dispatch(updateProviderInList({ _id: id, isActive: true }));
-        else fetchLocal();
       } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to activate provider', 'error');
+        if (err?.name === 'ConditionError') return;
+        const msg = typeof err === 'string' ? err : 
+          (err?.message || 'Failed to activate provider');
+        showSnackbar(msg, 'error');
       } finally {
         setActionLoading(false);
       }
@@ -547,13 +595,19 @@ const ProvidersListPage = () => {
   const handleDeactivateConfirm = async () => {
     try {
       setActionLoading(true);
-      await providerService.deactivateProvider(deactivateDialog.providerId);
+      if (useRedux) {
+        await dispatch(deactivateProvider(deactivateDialog.providerId)).unwrap();
+      } else {
+        await providerService.deactivateProvider(deactivateDialog.providerId);
+        fetchLocal();
+      }
       showSnackbar(`Provider "${deactivateDialog.providerName}" deactivated`, 'success');
-      if (useRedux) dispatch(updateProviderInList({ _id: deactivateDialog.providerId, isActive: false }));
-      else fetchLocal();
       setDeactivateDialog({ open: false, providerId: null, providerName: '' });
     } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || 'Failed to deactivate provider', 'error');
+      if (err?.name === 'ConditionError') return;
+      const msg = typeof err === 'string' ? err : 
+        (err?.message || 'Failed to deactivate provider');
+      showSnackbar(msg, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -681,14 +735,14 @@ const ProvidersListPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {providers.length === 0 ? (
+                      {displayedProviders.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={tabConfig.columns.length + (dragEnabled ? 2 : 1)} align="center" sx={{ py: 4 }}>
                             <Typography color="text.secondary">No providers found</Typography>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        providers.map((provider) => {
+                        displayedProviders.map((provider) => {
                           const id = provider._id || provider.id;
                           const isExpanded = expandedRowId === id;
                           const totalCols = tabConfig.columns.length + (dragEnabled ? 2 : 1);
@@ -792,7 +846,7 @@ const ProvidersListPage = () => {
         onSaved={() => {
           setAddDialog({ open: false });
           if (useRedux) {
-            dispatch(fetchProviders({ page: page + 1, limit: rowsPerPage, search: debouncedSearch.trim(), specialty: specialtyFilter, ...tabConfig.apiParams }));
+            dispatch(fetchProviders({ page: 1, limit: 100, ...tabConfig.apiParams }));
           } else {
             fetchLocal();
           }

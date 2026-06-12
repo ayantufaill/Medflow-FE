@@ -10,18 +10,25 @@ import {
   IconButton,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchUserById,
+  updateUser,
+  selectCurrentUser,
+  selectCurrentUserLoading,
+} from "../../store/slices/userSlice";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import { userService } from "../../services/user.service";
 import UserForm from "../../components/users/UserForm";
 
 const EditUserPage = () => {
   const navigate = useNavigate();
   const { userId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const user = useSelector(selectCurrentUser);
+  const loading = useSelector(selectCurrentUserLoading);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [user, setUser] = useState(null);
   const fetchingRef = useRef(false);
 
   useEffect(() => {
@@ -29,38 +36,33 @@ const EditUserPage = () => {
     fetchingRef.current = true;
     const load = async () => {
       try {
-        const userData = await userService.getUserById(userId);
-        setUser(userData);
+        await dispatch(fetchUserById(userId)).unwrap();
       } catch (err) {
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            "Failed to load user data. Please try again."
-        );
+        if (err?.name === 'ConditionError') return;
+        const errorMsg = typeof err === 'string' ? err : 
+          (err?.message || "Failed to load user data. Please try again.");
+        setError(errorMsg);
       } finally {
-        setLoading(false);
         fetchingRef.current = false;
       }
     };
     load();
-  }, [userId]);
+  }, [userId, dispatch]);
 
   const onSubmit = async (data) => {
     try {
       setSaving(true);
       setError("");
 
-      const { password, confirmPassword, isActive, ...userData } = data;
-      await userService.updateUser(userId, userData);
+      const userData = { ...data };
+      delete userData.password;
+      delete userData.confirmPassword;
+      await dispatch(updateUser({ userId, updates: userData })).unwrap();
 
       showSnackbar("User updated successfully", "success");
-      navigate("/users");
+      navigate("/admin/user-management");
     } catch (err) {
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to update user. Please try again."
-      );
+      setError(err || "Failed to update user. Please try again.");
     } finally {
       setSaving(false);
     }

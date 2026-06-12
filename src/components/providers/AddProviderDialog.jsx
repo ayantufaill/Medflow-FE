@@ -26,8 +26,11 @@ import {
   Chip,
 } from '@mui/material';
 import { Close as CloseIcon, Info as InfoIcon, Add as AddIcon } from '@mui/icons-material';
+import ReactPhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
+import { useDispatch } from 'react-redux';
+import { createProvider } from '../../store/slices/providerSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { providerService } from '../../services/provider.service';
 
 const FORM_ID = 'add-provider-dialog-form';
 
@@ -76,14 +79,44 @@ const Label = ({ children, required }) => (
   </Typography>
 );
 
-const PhoneInput = ({ label, required, name, register, errors }) => (
+const PhoneInput = ({ label, required, name, control }) => (
   <Box>
     <Label required={required}>{label}</Label>
-    <TextField
-      fullWidth size="small" placeholder="(201) 555-0123"
-      InputProps={{ startAdornment: <InputAdornment position="start">🇺🇸 ·</InputAdornment> }}
-      {...register(name, required ? { required: 'Required' } : {})}
-      error={!!errors[name]} helperText={errors[name]?.message}
+    <Controller
+      name={name}
+      control={control}
+      rules={{
+        required: required ? 'Required' : false,
+        validate: (value) => {
+          if (!value && !required) return true;
+          if (!value && required) return 'Required';
+          const cleanPhone = (value || '').replace(/\D/g, '');
+          if (cleanPhone.length > 0 && cleanPhone.length < 10) return 'Phone number appears incomplete';
+          if (cleanPhone.length > 15) return 'Phone number is too long';
+          return true;
+        }
+      }}
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <Box>
+          <ReactPhoneInput
+            country={'us'}
+            value={value}
+            onChange={(phone) => onChange(phone)}
+            inputStyle={{
+              width: '100%',
+              height: '40px',
+              borderColor: error ? '#d32f2f' : '#ccc',
+              borderRadius: '4px'
+            }}
+            containerStyle={{ width: '100%' }}
+          />
+          {error && (
+            <Typography color="error" variant="caption" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
+              {error.message}
+            </Typography>
+          )}
+        </Box>
+      )}
     />
   </Box>
 );
@@ -245,8 +278,8 @@ const ActiveProviderForm = ({ register, control, errors, watch, setValue }) => {
           </FormControl>
         )} />
       </Grid>
-      <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" register={register} errors={errors} /></Grid>
-      <Grid size={4}><PhoneInput label="Home Phone Number" name="homePhone" register={register} errors={errors} /></Grid>
+      <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" control={control} /></Grid>
+      <Grid size={4}><PhoneInput label="Home Phone Number" name="homePhone" control={control} /></Grid>
 
       {/* Row 7: License Number | Tax Id Type */}
       <Grid size={6}>
@@ -390,8 +423,8 @@ const ReferralForm = ({ register, control, errors }) => (
       <TextField fullWidth size="small" placeholder="Enter Suffix" {...register('suffix')} />
     </Grid>
 
-    <Grid size={4}><PhoneInput label="Office Phone Number" required name="officePhone" register={register} errors={errors} /></Grid>
-    <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" register={register} errors={errors} /></Grid>
+    <Grid size={4}><PhoneInput label="Office Phone Number" required name="officePhone" control={control} /></Grid>
+    <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" control={control} /></Grid>
     <Grid size={4}>
       <Label required>Email</Label>
       <TextField fullWidth size="small" type="email" placeholder="Enter Email"
@@ -399,7 +432,7 @@ const ReferralForm = ({ register, control, errors }) => (
         error={!!errors.email} helperText={errors.email?.message} />
     </Grid>
 
-    <Grid size={4}><PhoneInput label="Fax Number" name="faxNumber" register={register} errors={errors} /></Grid>
+    <Grid size={4}><PhoneInput label="Fax Number" name="faxNumber" control={control} /></Grid>
     <Grid size={4}>
       <Label>Specialty</Label>
       <Controller name="specialty" control={control} render={({ field }) => (
@@ -450,8 +483,8 @@ const LabForm = ({ register, control, errors }) => (
       )} />
     </Grid>
 
-    <Grid size={4}><PhoneInput label="Office Phone Number" required name="officePhone" register={register} errors={errors} /></Grid>
-    <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" register={register} errors={errors} /></Grid>
+    <Grid size={4}><PhoneInput label="Office Phone Number" required name="officePhone" control={control} /></Grid>
+    <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" control={control} /></Grid>
     <Grid size={4}>
       <Label required>Email</Label>
       <TextField fullWidth size="small" type="email" placeholder="Enter Email"
@@ -459,7 +492,7 @@ const LabForm = ({ register, control, errors }) => (
         error={!!errors.email} helperText={errors.email?.message} />
     </Grid>
 
-    <Grid size={4}><PhoneInput label="Fax Number" name="faxNumber" register={register} errors={errors} /></Grid>
+    <Grid size={4}><PhoneInput label="Fax Number" name="faxNumber" control={control} /></Grid>
     <Grid size={4}>
       <Label>Specialty</Label>
       <Controller name="specialty" control={control} render={({ field }) => (
@@ -511,6 +544,7 @@ const LAB_DEFAULTS = {
 // ─── Dialog ───────────────────────────────────────────────────────────────────
 
 const AddProviderDialog = ({ open, title = 'Add Provider', providerCategory, onClose, onSaved }) => {
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -602,15 +636,21 @@ const AddProviderDialog = ({ open, title = 'Add Provider', providerCategory, onC
         };
       }
 
-      const created = await providerService.createProvider(payload);
+      const created = await dispatch(createProvider(payload)).unwrap();
       showSnackbar('Provider created successfully', 'success');
       handleClose();
       onSaved?.(created);
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Failed to create provider. Please try again.';
+      // The unwrap() handles the ConditionError object safely
+      let msg = 'Failed to create provider. Please try again.';
+      if (err?.name === 'ConditionError') return; // Aborted by Redux internally
+      
+      if (typeof err === 'string') {
+        msg = err;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+
       setError(msg);
       showSnackbar(msg, 'error');
     } finally {

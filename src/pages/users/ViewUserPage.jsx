@@ -36,14 +36,17 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchUserById, selectCurrentUser } from '../../store/slices/userSlice';
 import { userService } from '../../services/user.service';
 
 const ViewUserPage = () => {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [user, setUser] = useState(null);
+  const user = useSelector(selectCurrentUser);
   const [userRoles, setUserRoles] = useState([]);
   const [tabValue, setTabValue] = useState(0);
 
@@ -141,19 +144,17 @@ const ViewUserPage = () => {
         setLoading(true);
         setError('');
 
-        const [userData, rolesData] = await Promise.all([
-          userService.getUserById(userId),
+        const [, rolesData] = await Promise.all([
+          dispatch(fetchUserById(userId)).unwrap(),
           userService.getUserRoles(userId),
         ]);
 
-        setUser(userData);
         setUserRoles(rolesData);
       } catch (err) {
-        setError(
-          err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          'Failed to load user data. Please try again.'
-        );
+        if (err?.name === 'ConditionError') return;
+        const errorMsg = typeof err === 'string' ? err : 
+          (err?.message || 'Failed to load user data. Please try again.');
+        setError(errorMsg);
       } finally {
         setLoading(false);
         userFetchInProgressRef.current = false;
@@ -161,7 +162,7 @@ const ViewUserPage = () => {
     };
 
     fetchData();
-  }, [userId]);
+  }, [userId, dispatch]);
 
   // Fetch activities
   const fetchActivities = useCallback(
@@ -269,13 +270,14 @@ const ViewUserPage = () => {
       { threshold: 0.1 }
     );
 
-    if (activitiesObserverRef.current) {
-      observer.observe(activitiesObserverRef.current);
+    const currentObserver = activitiesObserverRef.current;
+    if (currentObserver) {
+      observer.observe(currentObserver);
     }
 
     return () => {
-      if (activitiesObserverRef.current) {
-        observer.unobserve(activitiesObserverRef.current);
+      if (currentObserver) {
+        observer.unobserve(currentObserver);
       }
     };
   }, [tabValue, activitiesHasMore, activitiesLoading, activitiesPage, fetchActivities]);
@@ -295,13 +297,14 @@ const ViewUserPage = () => {
       { threshold: 0.1 }
     );
 
-    if (loginHistoryObserverRef.current) {
-      observer.observe(loginHistoryObserverRef.current);
+    const currentObserver = loginHistoryObserverRef.current;
+    if (currentObserver) {
+      observer.observe(currentObserver);
     }
 
     return () => {
-      if (loginHistoryObserverRef.current) {
-        observer.unobserve(loginHistoryObserverRef.current);
+      if (currentObserver) {
+        observer.unobserve(currentObserver);
       }
     };
   }, [tabValue, loginHistoryHasMore, loginHistoryLoading, loginHistoryPage, fetchLoginHistory]);
@@ -314,11 +317,12 @@ const ViewUserPage = () => {
   };
 
   const getRoleChips = (roles) => {
-    if (!roles || roles.length === 0) {
+    const rolesToRender = (roles && roles.length > 0) ? roles : (user?.roles || []);
+    if (!rolesToRender || rolesToRender.length === 0) {
       return <Chip label="No roles" size="small" color="default" />;
     }
 
-    return roles.map((role, index) => {
+    return rolesToRender.map((role, index) => {
       const roleName = typeof role === 'string' ? role : role?.name || 'Unknown';
       const isAdmin = roleName === 'Admin';
 
@@ -359,9 +363,7 @@ const ViewUserPage = () => {
     }
   };
 
-  const handleMenuOpen = (event) => {
-    setMenuAnchor(event.currentTarget);
-  };
+
 
   const handleMenuClose = () => {
     setMenuAnchor(null);

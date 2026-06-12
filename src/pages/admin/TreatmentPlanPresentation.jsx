@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchSystemSettings,
+  updateSystemSetting,
+  selectSettingsMap,
+  selectLoadingSettings
+} from '../../store/slices/clinicalManagementSlice';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
   Typography,
@@ -26,46 +34,117 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-const INITIAL_SAVED_FORMS = [
-  'Adjusted Fee Treatment Plan',
-  '15% Friends + Family',
-  'No Grouping',
-  'Grouped By Tooth/Area',
-  'Grouped By Code - Non-Contracted Ins',
-  'Without Insurance Estimates - Itemized',
-  'Grouped By Code - Contracted Ins',
-  'With Insurance Estimates Itemized',
-  'New Presentation1002250375',
+const DEFAULT_TEMPLATES = [
+  {
+    name: 'Adjusted Fee Treatment Plan',
+    headerChecks: { logo: true, phone: true, address: false, website: false, email: false },
+    displayBy: 'itemized',
+    displayPerItem: {
+      dateDiagnosed: true, toothNumber: true, procCode: true, shortDesc: true, officeDesc: false,
+      procNote: false, showProcs: true, officeFee: true, newFee: false, billedFee: true,
+      contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
+    },
+    totals: { officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true },
+    addedPaymentTypes: [],
+    acknowledgments: [
+      "This treatment plan and alternatives have been described to me. I fully understand the risks, benefits, and alternatives of the recommended treatment. My questions have been answered.",
+      "I understand that as the treatment progresses, modifications may be necessary and these may affect the fee."
+    ]
+  },
+  {
+    name: '15% Friends + Family',
+    headerChecks: { logo: true, phone: true, address: false, website: false, email: false },
+    displayBy: 'itemized',
+    displayPerItem: {
+      dateDiagnosed: true, toothNumber: true, procCode: true, shortDesc: true, officeDesc: false,
+      procNote: false, showProcs: true, officeFee: true, newFee: false, billedFee: true,
+      contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
+    },
+    totals: { officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true },
+    addedPaymentTypes: [],
+    acknowledgments: [
+      "This estimate is valid for 90 days from the date of this letter."
+    ]
+  }
 ];
 
 const TreatmentPlanPresentation = () => {
   const navigate = useNavigate();
-  const [formName, setFormName] = useState('New Presentation1002250375');
-  const [activeForm, setActiveForm] = useState('New Presentation1002250375');
-  const [savedForms, setSavedForms] = useState(INITIAL_SAVED_FORMS);
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+
+  const settingsMap = useSelector(selectSettingsMap);
+  const loading = useSelector(selectLoadingSettings);
+
+  const [formName, setFormName] = useState('');
+  const [activeForm, setActiveForm] = useState('');
+  const [savedForms, setSavedForms] = useState([]);
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
 
-  // Form states (simplified for demonstration)
-  const [headerChecks, setHeaderChecks] = useState({ logo: true, phone: true });
+  // Form configurations
+  const [headerChecks, setHeaderChecks] = useState({ logo: true, phone: true, address: false, website: false, email: false });
+  const [displayBy, setDisplayBy] = useState('itemized');
+  const [displayPerItem, setDisplayPerItem] = useState({
+    dateDiagnosed: true, toothNumber: true, procCode: true, shortDesc: true, officeDesc: false,
+    procNote: false, showProcs: true, officeFee: true, newFee: false, billedFee: true,
+    contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
+  });
+  const [totals, setTotals] = useState({ officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true });
   
   // Payment Options States
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [addedPaymentTypes, setAddedPaymentTypes] = useState([
-    {
-      id: '1',
-      typeName: 'Payment Type 1',
-      kind: 'Payment Plan',
-      title: '',
-      body: '',
-      variables: [
-        { name: 'Duration (months)', placeholder: 'Duration (months)', value: '' },
-        { name: 'Management Fee (%)', placeholder: 'Management Fee', value: '' },
-        { name: 'Down Payment (% of total)', placeholder: 'Down Payment (%', value: '' },
-        { name: 'Down Payment', value: 'Auto calculated', isAuto: true },
-        { name: 'Monthly Payment', value: 'Auto calculated', isAuto: true }
-      ]
+  const [addedPaymentTypes, setAddedPaymentTypes] = useState([]);
+  
+  // Acknowledgment Paragraphs state
+  const [acknowledgments, setAcknowledgments] = useState([]);
+
+  useEffect(() => {
+    dispatch(fetchSystemSettings());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (settingsMap) {
+      if (settingsMap.clinical_treatment_plan_templates) {
+        try {
+          const parsed = JSON.parse(settingsMap.clinical_treatment_plan_templates);
+          setSavedForms(parsed);
+          if (parsed.length > 0) {
+            const first = parsed[0];
+            setActiveForm(first.name);
+            setFormName(first.name);
+            setHeaderChecks(first.headerChecks || { logo: true, phone: true });
+            setDisplayBy(first.displayBy || 'itemized');
+            setDisplayPerItem(first.displayPerItem || {});
+            setTotals(first.totals || {});
+            setAddedPaymentTypes(first.addedPaymentTypes || []);
+            setAcknowledgments(first.acknowledgments || []);
+          }
+        } catch (e) {
+          setSavedForms(DEFAULT_TEMPLATES);
+          const first = DEFAULT_TEMPLATES[0];
+          setActiveForm(first.name);
+          setFormName(first.name);
+          setHeaderChecks(first.headerChecks);
+          setDisplayBy(first.displayBy);
+          setDisplayPerItem(first.displayPerItem);
+          setTotals(first.totals);
+          setAddedPaymentTypes(first.addedPaymentTypes);
+          setAcknowledgments(first.acknowledgments);
+        }
+      } else {
+        setSavedForms(DEFAULT_TEMPLATES);
+        const first = DEFAULT_TEMPLATES[0];
+        setActiveForm(first.name);
+        setFormName(first.name);
+        setHeaderChecks(first.headerChecks);
+        setDisplayBy(first.displayBy);
+        setDisplayPerItem(first.displayPerItem);
+        setTotals(first.totals);
+        setAddedPaymentTypes(first.addedPaymentTypes);
+        setAcknowledgments(first.acknowledgments);
+      }
     }
-  ]);
+  }, [settingsMap]);
 
   const handleAddPaymentOption = (type) => {
     const nextIndex = addedPaymentTypes.length + 1;
@@ -135,15 +214,6 @@ const TreatmentPlanPresentation = () => {
     }, 0);
   };
 
-  // Acknowledgment Paragraphs state
-  const [acknowledgments, setAcknowledgments] = useState([
-    "This treatment plan and alternatives have been described to me. I fully understand the risks, benefits, and alternatives of the recommended treatment. My questions have been answered.",
-    "I understand that as the treatment progresses, modifications may be necessary and these may affect the fee. Should this occur, I further understand that the modification of treatment and the change in fee will be discussed with me at the earliest possible time.",
-    "I understand that I am responsible to pay up front for all my treatment. The treatment will be submitted to my dental insurance company on my behalf, but our office will not accept assignment payments from my dental insurance company on my behalf.",
-    "This estimate is valid for 90 days from the date of this letter.",
-    "If treatment commences, but the entire treatment plan is not completed, I acknowledge that the expected outcome for whatever procedures are completed may be compromised."
-  ]);
-
   // Click outside listener for dropdown
   React.useEffect(() => {
     const handleOutsideClick = () => {
@@ -164,17 +234,92 @@ const TreatmentPlanPresentation = () => {
   const handleOpenSyncDialog = () => setSyncDialogOpen(true);
   const handleCloseSyncDialog = () => setSyncDialogOpen(false);
 
-  const handleDeleteForm = (formToDelete) => {
-    setSavedForms(savedForms.filter(f => f !== formToDelete));
-    if (activeForm === formToDelete) {
-      setActiveForm(savedForms[0]);
-      setFormName(savedForms[0]);
+  const handleSaveForm = async () => {
+    try {
+      const exists = savedForms.some(f => f.name === activeForm);
+      let newSavedForms = [];
+      const currentFormObj = {
+        name: formName || 'Untitled Presentation',
+        headerChecks,
+        displayBy,
+        displayPerItem,
+        totals,
+        addedPaymentTypes,
+        acknowledgments
+      };
+
+      if (exists) {
+        newSavedForms = savedForms.map(f => f.name === activeForm ? currentFormObj : f);
+      } else {
+        newSavedForms = [...savedForms, currentFormObj];
+      }
+
+      await dispatch(updateSystemSetting({ key: 'clinical_treatment_plan_templates', value: JSON.stringify(newSavedForms) })).unwrap();
+      dispatch(fetchSystemSettings());
+      setActiveForm(formName || 'Untitled Presentation');
+      showSnackbar('Presentation template saved successfully', 'success');
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Failed to save presentation template', 'error');
     }
   };
 
+  const handleDeleteForm = async (formToDelete) => {
+    try {
+      const filtered = savedForms.filter(f => f.name !== formToDelete);
+      await dispatch(updateSystemSetting({ key: 'clinical_treatment_plan_templates', value: JSON.stringify(filtered) })).unwrap();
+      dispatch(fetchSystemSettings());
+      showSnackbar('Presentation template deleted successfully', 'success');
+      if (activeForm === formToDelete) {
+        if (filtered.length > 0) {
+          const first = filtered[0];
+          setActiveForm(first.name);
+          setFormName(first.name);
+          setHeaderChecks(first.headerChecks || { logo: true, phone: true });
+          setDisplayBy(first.displayBy || 'itemized');
+          setDisplayPerItem(first.displayPerItem || {});
+          setTotals(first.totals || {});
+          setAddedPaymentTypes(first.addedPaymentTypes || []);
+          setAcknowledgments(first.acknowledgments || []);
+        } else {
+          setActiveForm('');
+          setFormName('');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Failed to delete presentation template', 'error');
+    }
+  };
+
+  const handleCreateNewForm = () => {
+    const newName = `New Presentation ${Date.now().toString().slice(-4)}`;
+    const newForm = {
+      name: newName,
+      headerChecks: { logo: true, phone: true, address: false, website: false, email: false },
+      displayBy: 'itemized',
+      displayPerItem: {
+        dateDiagnosed: true, toothNumber: true, procCode: true, shortDesc: true, officeDesc: false,
+        procNote: false, showProcs: true, officeFee: true, newFee: false, billedFee: true,
+        contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
+      },
+      totals: { officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true },
+      addedPaymentTypes: [],
+      acknowledgments: ["This estimate is valid for 90 days from the date of this letter."]
+    };
+    setSavedForms([...savedForms, newForm]);
+    setActiveForm(newName);
+    setFormName(newName);
+    setHeaderChecks(newForm.headerChecks);
+    setDisplayBy(newForm.displayBy);
+    setDisplayPerItem(newForm.displayPerItem);
+    setTotals(newForm.totals);
+    setAddedPaymentTypes(newForm.addedPaymentTypes);
+    setAcknowledgments(newForm.acknowledgments);
+  };
+
   const handleRefresh = () => {
-    // Mock refresh logic: Reset form name to active form's initial name
-    setFormName(activeForm);
+    dispatch(fetchSystemSettings());
   };
 
   return (
@@ -241,37 +386,37 @@ const TreatmentPlanPresentation = () => {
                   <Grid size={3}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Office Info</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.logo} onChange={(e) => setHeaderChecks({...headerChecks, logo: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Logo</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.phone} onChange={(e) => setHeaderChecks({...headerChecks, phone: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Phone Number</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Address</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Website</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Email</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.logo || false} onChange={(e) => setHeaderChecks({...headerChecks, logo: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Logo</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.phone || false} onChange={(e) => setHeaderChecks({...headerChecks, phone: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Phone Number</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.address || false} onChange={(e) => setHeaderChecks({...headerChecks, address: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Address</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.website || false} onChange={(e) => setHeaderChecks({...headerChecks, website: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Website</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.email || false} onChange={(e) => setHeaderChecks({...headerChecks, email: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Email</Typography>} />
                     </Box>
                   </Grid>
                   <Grid item xs={3}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Patient Info</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Full Name</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Title</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Age</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient DOB</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Phone Number</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.fullName || false} onChange={(e) => setHeaderChecks({...headerChecks, fullName: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Full Name</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.title || false} onChange={(e) => setHeaderChecks({...headerChecks, title: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Title</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.age || false} onChange={(e) => setHeaderChecks({...headerChecks, age: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Age</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.dob || false} onChange={(e) => setHeaderChecks({...headerChecks, dob: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient DOB</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.patientPhone || false} onChange={(e) => setHeaderChecks({...headerChecks, patientPhone: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Phone Number</Typography>} />
                     </Box>
                   </Grid>
                   <Grid item xs={3}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Benefits</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Carrier</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Deductible</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Remaining</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Carrier</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Deductible</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Remaining</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.carrier || false} onChange={(e) => setHeaderChecks({...headerChecks, carrier: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Carrier</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.deductible || false} onChange={(e) => setHeaderChecks({...headerChecks, deductible: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Deductible</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.remaining || false} onChange={(e) => setHeaderChecks({...headerChecks, remaining: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Remaining</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.secCarrier || false} onChange={(e) => setHeaderChecks({...headerChecks, secCarrier: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Carrier</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.secDeductible || false} onChange={(e) => setHeaderChecks({...headerChecks, secDeductible: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Deductible</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.secRemaining || false} onChange={(e) => setHeaderChecks({...headerChecks, secRemaining: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Remaining</Typography>} />
                     </Box>
                   </Grid>
                   <Grid item xs={3}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Other</Typography>
-                    <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Show treatment plan name</Typography>} />
+                    <FormControlLabel control={<Checkbox size="small" checked={headerChecks.showPlanName || false} onChange={(e) => setHeaderChecks({...headerChecks, showPlanName: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Show treatment plan name</Typography>} />
                   </Grid>
                 </Grid>
               </Grid>
@@ -288,7 +433,7 @@ const TreatmentPlanPresentation = () => {
                 <Grid container spacing={3}>
                   <Grid size={4}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Display by</Typography>
-                    <RadioGroup value="itemized">
+                    <RadioGroup value={displayBy} onChange={(e) => setDisplayBy(e.target.value)}>
                       <FormControlLabel value="itemized" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Itemized per Phase & Visit Show Totals</Typography>} />
                       <FormControlLabel value="no_sep" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Itemized (no separation)</Typography>} />
                       <FormControlLabel value="code" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Grouped per Code</Typography>} />
@@ -298,26 +443,26 @@ const TreatmentPlanPresentation = () => {
                   <Grid item xs={4}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Display per item</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Date diagnosed</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Tooth number</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Procedure Code</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>System Short Description</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Description</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Procedure Note</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Show Procedures</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.dateDiagnosed || false} onChange={(e) => setDisplayPerItem({...displayPerItem, dateDiagnosed: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Date diagnosed</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.toothNumber || false} onChange={(e) => setDisplayPerItem({...displayPerItem, toothNumber: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Tooth number</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.procCode || false} onChange={(e) => setDisplayPerItem({...displayPerItem, procCode: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Procedure Code</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.shortDesc || false} onChange={(e) => setDisplayPerItem({...displayPerItem, shortDesc: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>System Short Description</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.officeDesc || false} onChange={(e) => setDisplayPerItem({...displayPerItem, officeDesc: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Description</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.procNote || false} onChange={(e) => setDisplayPerItem({...displayPerItem, procNote: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Procedure Note</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.showProcs || false} onChange={(e) => setDisplayPerItem({...displayPerItem, showProcs: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Show Procedures</Typography>} />
                     </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box sx={{ mt: 3.5, display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Fee/UCR</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>New Fee</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Billed Fee</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Contracted fee</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated pt portion</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Coverage</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Adj</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Applied Adjustment</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Applied Adjustment Percentage</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.officeFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, officeFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Fee/UCR</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.newFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, newFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>New Fee</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.billedFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, billedFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Billed Fee</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.contractedFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, contractedFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Contracted fee</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.ptPortion || false} onChange={(e) => setDisplayPerItem({...displayPerItem, ptPortion: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated pt portion</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.insCoverage || false} onChange={(e) => setDisplayPerItem({...displayPerItem, insCoverage: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Coverage</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.insAdj || false} onChange={(e) => setDisplayPerItem({...displayPerItem, insAdj: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Adj</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.appliedAdj || false} onChange={(e) => setDisplayPerItem({...displayPerItem, appliedAdj: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Applied Adjustment</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.appliedAdjPct || false} onChange={(e) => setDisplayPerItem({...displayPerItem, appliedAdjPct: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Applied Adjustment Percentage</Typography>} />
                     </Box>
                   </Grid>
                 </Grid>
@@ -336,16 +481,16 @@ const TreatmentPlanPresentation = () => {
                 <Grid container spacing={2}>
                   <Grid size={4}>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office fees/UCR</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Billed fees</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Contracted fees</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={totals.officeFees || false} onChange={(e) => setTotals({...totals, officeFees: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office fees/UCR</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={totals.billedFees || false} onChange={(e) => setTotals({...totals, billedFees: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Billed fees</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={totals.contractedFees || false} onChange={(e) => setTotals({...totals, contractedFees: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Contracted fees</Typography>} />
                     </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.75rem' }}>Adjustment</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated pt portion</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Coverage</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={totals.adjustment || false} onChange={(e) => setTotals({...totals, adjustment: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Adjustment</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={totals.ptPortion || false} onChange={(e) => setTotals({...totals, ptPortion: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated pt portion</Typography>} />
+                      <FormControlLabel control={<Checkbox size="small" checked={totals.insCoverage || false} onChange={(e) => setTotals({...totals, insCoverage: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Coverage</Typography>} />
                     </Box>
                   </Grid>
                 </Grid>
@@ -653,10 +798,18 @@ const TreatmentPlanPresentation = () => {
 
           {/* Bottom Footer Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 10 }}>
-            <Button variant="contained" sx={{ backgroundColor: '#a0aec0', color: '#fff', textTransform: 'none', px: 5, boxShadow: 'none', '&:hover': { backgroundColor: '#718096', boxShadow: 'none' } }}>
+            <Button 
+              variant="contained" 
+              onClick={handleRefresh}
+              sx={{ backgroundColor: '#a0aec0', color: '#fff', textTransform: 'none', px: 5, boxShadow: 'none', '&:hover': { backgroundColor: '#718096', boxShadow: 'none' } }}
+            >
               Cancel
             </Button>
-            <Button variant="contained" sx={{ backgroundColor: '#6b8fb9', color: '#fff', textTransform: 'none', px: 5, boxShadow: 'none', '&:hover': { backgroundColor: '#4a6a8a', boxShadow: 'none' } }}>
+            <Button 
+              variant="contained" 
+              onClick={handleSaveForm}
+              sx={{ backgroundColor: '#6b8fb9', color: '#fff', textTransform: 'none', px: 5, boxShadow: 'none', '&:hover': { backgroundColor: '#4a6a8a', boxShadow: 'none' } }}
+            >
               Save
             </Button>
           </Box>
@@ -667,6 +820,7 @@ const TreatmentPlanPresentation = () => {
           <Button
             variant="contained"
             fullWidth
+            onClick={handleCreateNewForm}
             sx={{ backgroundColor: '#6b8fb9', color: '#fff', textTransform: 'none', mb: 3, py: 1, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#4a6a8a', boxShadow: 'none' } }}
           >
             Create new Presentation
@@ -694,30 +848,36 @@ const TreatmentPlanPresentation = () => {
             <Box sx={{ backgroundColor: '#fff' }}>
               {savedForms.map((form) => (
                 <Box
-                  key={form}
+                  key={form.name}
                   onClick={() => {
-                    setActiveForm(form);
-                    setFormName(form);
+                    setActiveForm(form.name);
+                    setFormName(form.name);
+                    setHeaderChecks(form.headerChecks || {});
+                    setDisplayBy(form.displayBy || 'itemized');
+                    setDisplayPerItem(form.displayPerItem || {});
+                    setTotals(form.totals || {});
+                    setAddedPaymentTypes(form.addedPaymentTypes || []);
+                    setAcknowledgments(form.acknowledgments || []);
                   }}
                   sx={{
                     p: 2,
                     borderBottom: '1px solid #f0f0f0',
                     cursor: 'pointer',
-                    backgroundColor: activeForm === form ? '#718096' : 'transparent',
-                    color: activeForm === form ? '#fff' : '#444',
+                    backgroundColor: activeForm === form.name ? '#718096' : 'transparent',
+                    color: activeForm === form.name ? '#fff' : '#444',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     transition: '0.2s',
-                    '&:hover': { backgroundColor: activeForm === form ? '#718096' : '#f8f9fa' }
+                    '&:hover': { backgroundColor: activeForm === form.name ? '#718096' : '#f8f9fa' }
                   }}
                 >
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 500, flex: 1, pr: 1 }}>{form}</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 500, flex: 1, pr: 1 }}>{form.name}</Typography>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenSyncDialog(); }} sx={{ p: 0, color: activeForm === form ? '#fff' : '#4a90e2' }}>
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenSyncDialog(); }} sx={{ p: 0, color: activeForm === form.name ? '#fff' : '#4a90e2' }}>
                       <SyncIcon sx={{ fontSize: '1rem' }} />
                     </IconButton>
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteForm(form); }} sx={{ p: 0, color: activeForm === form ? '#fff' : '#f8d7da' }}>
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteForm(form.name); }} sx={{ p: 0, color: activeForm === form.name ? '#fff' : '#f8d7da' }}>
                       <DeleteIcon sx={{ fontSize: '1rem' }} />
                     </IconButton>
                   </Box>

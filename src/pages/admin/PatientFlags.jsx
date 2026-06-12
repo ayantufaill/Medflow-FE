@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { practiceInfoService } from '../../services/practice-info.service';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchCurrentPracticeInfo,
+  createPracticeInfo,
+  updatePatientFlags,
+  selectPracticeInfo,
+  selectPracticeInfoLoading
+} from '../../store/slices/practiceInfoSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import {
   Box,
@@ -37,7 +44,6 @@ const defaultFlags = [
 ];
 
 const PatientFlags = () => {
-  const [practiceInfoId, setPracticeInfoId] = useState(null);
   const [flags, setFlags] = useState(defaultFlags);
   const { showSnackbar } = useSnackbar();
 
@@ -48,43 +54,41 @@ const PatientFlags = () => {
   const [editFlagId, setEditFlagId] = useState(null);
   const [formData, setFormData] = useState({ categoryName: '', name: '', color: '#1976d2' });
 
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const dispatch = useDispatch();
+
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const practiceInfo = await practiceInfoService.getCurrentPracticeInfo();
-        if (practiceInfo) {
-          setPracticeInfoId(practiceInfo._id || practiceInfo.id);
-          if (practiceInfo.patientFlags && practiceInfo.patientFlags.length > 0) {
-            setFlags(practiceInfo.patientFlags);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch practice info:', error);
-      }
-    };
-    fetchSettings();
-  }, []);
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (practiceInfo?.patientFlags && practiceInfo.patientFlags.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFlags(practiceInfo.patientFlags);
+    }
+  }, [practiceInfo?.patientFlags]);
 
   const handleSave = async () => {
     try {
-      let id = practiceInfoId;
+      let id = practiceInfo?._id || practiceInfo?.id;
       if (!id) {
-        const newPractice = await practiceInfoService.createPracticeInfo({
+        const newPractice = await dispatch(createPracticeInfo({
           practiceName: 'Default Practice',
           phone: '555-000-0000',
           email: 'info@defaultpractice.com',
           address: { line1: '123 St', city: 'Metropolis', state: 'NY', postalCode: '10001', country: 'US' }
-        });
+        })).unwrap();
         id = newPractice._id || newPractice.id;
-        setPracticeInfoId(id);
       }
       
-      await practiceInfoService.updatePatientFlags(id, flags);
+      await dispatch(updatePatientFlags({
+        practiceInfoId: id,
+        patientFlagsData: flags
+      })).unwrap();
       showSnackbar('Patient Flags saved successfully', 'success');
     } catch (error) {
       console.error(error);
-      const errMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save flags';
-      showSnackbar(errMsg, 'error');
+      showSnackbar(error || 'Failed to save flags', 'error');
     }
   };
 
@@ -127,8 +131,6 @@ const PatientFlags = () => {
     if (!window.confirm(`Are you sure you want to delete this flag?`)) return;
     setFlags(prev => prev.filter(f => f.id !== id));
   };
-
-  const primaryNavy = '#002855';
 
   const FlagRow = ({ flag }) => (
     <Box 

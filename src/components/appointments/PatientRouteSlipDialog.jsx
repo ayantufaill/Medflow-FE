@@ -22,10 +22,12 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
 import dayjs from 'dayjs';
-import { patientService } from '../../services/patient.service';
-import { appointmentService } from '../../services/appointment.service';
+import { useDispatch } from 'react-redux';
+import { fetchPatientInsurances } from '../../store/slices/patientSlice';
+import { fetchPatientHistory } from '../../store/slices/appointmentSlice';
 
 const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patientBalance }) => {
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [insurances, setInsurances] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -44,20 +46,20 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
   const fetchExtraData = async () => {
     setLoading(true);
     try {
-      const [insData, apptData] = await Promise.all([
-        patientService.getPatientInsurances(patientId),
-        appointmentService.getAppointmentsByPatient(patientId)
+      const [insResult, apptData] = await Promise.all([
+        dispatch(fetchPatientInsurances({ patientId })).unwrap(),
+        dispatch(fetchPatientHistory(patientId)).unwrap()
       ]);
 
-      setInsurances(insData);
-      setAppointments(apptData);
+      setInsurances(insResult?.insurances || insResult || []);
+      setAppointments(apptData || []);
 
       // Process appointments
       const today = dayjs().startOf('day');
-      const todayAppts = apptData.filter(a => dayjs(a.startTime).isSame(today, 'day'));
+      const todayAppts = (apptData || []).filter(a => dayjs(a.startTime).isSame(today, 'day'));
       setTodayAppointment(todayAppts[0] || null);
 
-      const futureAppts = apptData
+      const futureAppts = (apptData || [])
         .filter(a => dayjs(a.startTime).isAfter(dayjs().endOf('day')))
         .sort((a, b) => dayjs(a.startTime).diff(dayjs(b.startTime)));
       setNextAppointment(futureAppts[0] || null);

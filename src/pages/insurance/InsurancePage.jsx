@@ -13,7 +13,12 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import { useNavigate } from 'react-router-dom';
-import { patientService } from '../../services/patient.service';
+import { useSelector, useDispatch } from 'react-redux';
+import { 
+  fetchPatientInsurances, 
+  updatePatientInsuranceThunk, 
+  deletePatientInsuranceThunk 
+} from '../../store/slices/patientSlice';
 
 const InsurancePage = () => {
   const { patientId } = useParams();
@@ -37,38 +42,40 @@ const InsurancePage = () => {
   const [newCoverageType, setNewCoverageType] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const [activeCoverages, setActiveCoverages] = useState([]);
+  const dispatch = useDispatch();
+  const insurancesData = useSelector(state => state.patient.insurancesCache[patientId]?.data || []);
+  const isFetching = useSelector(state => state.patient.patientInsurancesLoading);
+
+  const mappedData = React.useMemo(() => {
+    return insurancesData.map(item => ({
+      ...item,
+      id: item._id || item.id,
+      payer: item.insuranceCompany?.name || item.payer || 'Unknown Payer',
+      plan: item.planType || item.plan || 'No Plan',
+      subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
+      status: (item.isActive === true || item.status === 'active') ? 'active' : 'inactive',
+      eligibilityChecked: item.lastEligibilityCheckDate || 'Not checked',
+      dentist: item.provider?.name || 'Default Dentist'
+    }));
+  }, [insurancesData]);
+
+  const activeCoverages = mappedData.filter(i => i.status === 'active');
+  const archivedCoverages = mappedData.filter(i => i.status === 'inactive');
 
   useEffect(() => {
-    const fetchInsurances = async () => {
-      if (!patientId) return;
-      try {
-        setLoading(true);
-        const data = await patientService.getPatientInsurances(patientId);
-        console.log('Fetched Insurance Data:', data);
-        
-        // Map data to ensure consistent field names
-        const mappedData = data.map(item => ({
-          ...item,
-          payer: item.insuranceCompany?.name || item.payer || 'Unknown Payer',
-          plan: item.planType || item.plan || 'No Plan',
-          subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
-          status: (item.isActive === true || item.status === 'active') ? 'active' : 'inactive',
-          eligibilityChecked: item.lastEligibilityCheckDate || 'Not checked',
-          dentist: item.provider?.name || 'Default Dentist'
-        }));
-        
-        setActiveCoverages(mappedData.filter(i => i.status === 'active'));
-      } catch (error) {
-        console.error('Error fetching insurances:', error);
-        showSnackbar('Failed to load insurance coverage', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInsurances();
-  }, [patientId]);
+    if (patientId) {
+      setLoading(true);
+      dispatch(fetchPatientInsurances({ patientId }))
+        .unwrap()
+        .catch((error) => {
+          console.error('Error fetching insurances:', error);
+          showSnackbar('Failed to load insurance coverage', 'error');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [patientId, dispatch]);
 
   const [familyCoverages] = useState([
     {
@@ -79,17 +86,6 @@ const InsurancePage = () => {
       members: ['John Doe', 'Jane Doe', 'Jimmy Doe'],
       eligibilityChecked: '03/05/2026',
       status: 'active'
-    }
-  ]);
-
-  const [archivedCoverages] = useState([
-    {
-      id: 5,
-      payer: 'Aetna Dental',
-      plan: 'ARCHIVED',
-      subscriber: 'Old Patient',
-      archivedDate: '01/15/2026',
-      status: 'archived'
     }
   ]);
 
@@ -138,10 +134,18 @@ const InsurancePage = () => {
     handleRowMenuClose();
   };
 
-  const handleConfirmDeactivate = () => {
+  const handleConfirmDeactivate = async () => {
     if (selectedRow) {
-      setActiveCoverages(prev => prev.filter(cov => cov.id !== selectedRow.id));
-      showSnackbar(`${selectedRow.payer} coverage deactivated`, 'success');
+      try {
+        await dispatch(updatePatientInsuranceThunk({ 
+          patientId, 
+          insuranceId: selectedRow.id, 
+          payload: { isActive: false, status: 'inactive' } 
+        })).unwrap();
+        showSnackbar(`${selectedRow.payer} coverage deactivated`, 'success');
+      } catch (error) {
+        showSnackbar('Failed to deactivate coverage', 'error');
+      }
       setDeactivateDialogOpen(false);
       setSelectedRow(null);
     }
@@ -153,10 +157,18 @@ const InsurancePage = () => {
     handleRowMenuClose();
   };
 
-  const handleArchive = (row) => {
+  const handleArchive = async (row) => {
     if (window.confirm(`Are you sure you want to archive ${row.payer}?`)) {
-      setActiveCoverages(prev => prev.filter(cov => cov.id !== row.id));
-      showSnackbar(`${row.payer} archived successfully`, 'success');
+      try {
+        await dispatch(updatePatientInsuranceThunk({ 
+          patientId, 
+          insuranceId: row.id, 
+          payload: { isActive: false, status: 'inactive' } 
+        })).unwrap();
+        showSnackbar(`${row.payer} archived successfully`, 'success');
+      } catch (error) {
+        showSnackbar('Failed to archive coverage', 'error');
+      }
       handleRowMenuClose();
     }
   };

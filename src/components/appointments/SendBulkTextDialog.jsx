@@ -28,13 +28,15 @@ import {
   Send as SendIcon,
 } from "@mui/icons-material";
 import { usePatients } from "../../hooks/redux/usePatient";
-import { appointmentService } from "../../services/appointment.service";
+import { useDispatch } from "react-redux";
+import { fetchAppointments } from "../../store/slices/appointmentSlice";
 
 /**
  * SendBulkTextDialog - Final Optimized Version
  * High-fidelity UI matching user images with compact Filter Popover.
  */
 const SendBulkTextDialog = ({ open, onClose, providers = [], selectedDate }) => {
+  const dispatch = useDispatch();
   // ─── Data Source ───────────
   const { patients: reduxPatients, fetch: fetchPatientsRedux, loading: patientsLoading } = usePatients();
   const [appointments, setAppointments] = useState([]);
@@ -103,8 +105,8 @@ const SendBulkTextDialog = ({ open, onClose, providers = [], selectedDate }) => 
     setApptsLoading(true);
     try {
       const todayStr = (selectedDate || new Date()).toISOString().split("T")[0];
-      const result = await appointmentService.getAllAppointments(1, 200, "", "", "", todayStr, todayStr);
-      setAppointments(result?.appointments || []);
+      const result = await dispatch(fetchAppointments({ page: 1, limit: 200, startDate: todayStr, endDate: todayStr })).unwrap();
+      setAppointments(result?.data?.appointments || []);
     } catch (err) {
       console.error("Failed to fetch schedule data:", err);
     } finally {
@@ -324,7 +326,7 @@ const SendBulkTextDialog = ({ open, onClose, providers = [], selectedDate }) => 
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 800, color: '#999', fontSize: '0.6rem' }}>BY APPOINTMENT STATUS</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.1, mt: 0.5 }}>
-              {["unconfirmed", "preconfirmed", "confirmed", "arrived", "seated", "no show", "checkout incomplete"].map(s => {
+              {["scheduled", "confirmed", "checked_in", "completed", "no_show", "cancelled"].map(s => {
                 const badge = getBadgeStyle(s);
                 return (
                   <Box key={s} sx={{ display: 'flex', alignItems: 'center' }}>

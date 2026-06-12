@@ -13,6 +13,8 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -71,7 +73,7 @@ const UserForm = ({
         firstName: initialData.firstName || "",
         lastName: initialData.lastName || "",
         email: initialData.email || "",
-        phone: initialData.phone.replace("+", "") || "",
+        phone: initialData.phone ? initialData.phone.replace("+", "") : "",
         roleId: initialData.roles?.[0]?._id || "",
         password: "",
         confirmPassword: "",
@@ -199,6 +201,26 @@ const UserForm = ({
             )}
           />
         </Grid>
+        {isEditMode && (
+          <Grid size={{xs: 12, sm: 6}} sx={{ display: "flex", alignItems: "center", pl: 1 }}>
+            <Controller
+              name="isActive"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="User Active Status"
+                />
+              )}
+            />
+          </Grid>
+        )}
         {!isEditMode && !hideRoleSelection && (
           <Grid size={{xs: 12, sm: 6}}>
             <FormControl fullWidth>
