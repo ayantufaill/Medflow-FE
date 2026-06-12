@@ -5,6 +5,7 @@ export const PATIENT_SECTION_TABS = [
   { id: 'details', label: 'PATIENT DETAILS' },
   { id: 'vitals', label: 'VITALS' },
   { id: 'medical', label: 'MEDICAL HISTORY' },
+  { id: 'allergies', label: 'ALLERGIES' },
   { id: 'dental', label: 'DENTAL HISTORY' },
   { id: 'insurance', label: 'INSURANCE' },
   { id: 'additional_docs', label: 'ADDITIONAL DOCS' },
@@ -42,6 +43,11 @@ const PatientSectionTabs = ({ activeTab, patientId = '' }) => {
     if (tabId === 'insurance') {
       if (patientId) navigate(`/patients/details/${patientId}?tab=insurance`, { replace: true });
       else navigate('/patients?tab=insurance', { replace: true });
+      return;
+    }
+    if (tabId === 'allergies') {
+      if (patientId) navigate(`/patients/details/${patientId}?tab=allergies`, { replace: true });
+      else navigate('/patients?tab=allergies', { replace: true });
       return;
     }
     if (tabId === 'dental') {

@@ -14,6 +14,7 @@ import { validateUSPhoneNumber } from '../../validations/patientValidations';
 const PatientDetailOverview = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.PatientDetailOverview })));
 const AddFamilyMemberDialog = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.AddFamilyMemberDialog })));
 const PatientInsuranceTabContent = lazy(() => import('../../components/patient-tabs').then(module => ({ default: module.PatientInsuranceTabContent })));
+const PatientAllergyTab = lazy(() => import('../../components/patient-tabs').then(module => ({ default: module.PatientAllergyTab })));
 
 /**
  * Lightweight patient details page — dedicated route like signed-documents.
@@ -262,6 +263,8 @@ const PatientDetailPage = () => {
           }>
             {tabParam === 'insurance' ? (
               <PatientInsuranceTabContent patientId={patientId} />
+            ) : tabParam === 'allergies' ? (
+              <PatientAllergyTab patientId={patientId} />
             ) : (
               <PatientDetailOverview
                 patient={editedPatientData ? { ...patient, ...editedPatientData } : patient}

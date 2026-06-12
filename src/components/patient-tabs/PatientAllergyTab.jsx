@@ -47,16 +47,19 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useForm, Controller } from 'react-hook-form';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { patientService } from '../../services/patient.service';
+import { useAllergies, useCreateAllergy, useUpdateAllergy, useDeleteAllergy } from '../../hooks/queries/useAllergies';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 
 // ─── AllergyDialog ────────────────────────────────────────────────────────────
 
 const ALLERGY_DEFAULTS = { allergen: '', reaction: '', severity: 'mild', isActive: true, documentedDate: null };
 
-const AllergyDialog = ({ open, onClose, patientId, allergy, mode, onSave, saving, setSaving }) => {
+const AllergyDialog = ({ open, onClose, patientId, allergy, mode }) => {
   const { showSnackbar } = useSnackbar();
   const today = useMemo(() => dayjs(), []);
+  const createMutation = useCreateAllergy();
+  const updateMutation = useUpdateAllergy();
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const { register, handleSubmit, control, formState: { errors }, reset } = useForm({
     defaultValues: allergy || ALLERGY_DEFAULTS,
@@ -88,29 +91,27 @@ const AllergyDialog = ({ open, onClose, patientId, allergy, mode, onSave, saving
 
   const onSubmit = async (data) => {
     try {
-      setSaving(true);
       const payload = {
         ...data,
         patientId,
         documentedDate: data.documentedDate ? dayjs(data.documentedDate).toISOString() : dayjs().toISOString(),
       };
+      
       if (mode === 'add') {
-        await patientService.createPatientAllergy(patientId, payload);
+        await createMutation.mutateAsync({ patientId, ...payload });
         showSnackbar('Allergy added successfully', 'success');
         previousAllergyIdRef.current = null;
         reset({ ...ALLERGY_DEFAULTS, documentedDate: dayjs() });
       } else {
-        await patientService.updatePatientAllergy(patientId, allergy._id || allergy.id, payload);
+        await updateMutation.mutateAsync({ patientId, allergyId: allergy._id || allergy.id, updates: payload });
         showSnackbar('Allergy updated successfully', 'success');
       }
-      await onSave();
+      onClose();
     } catch (err) {
       showSnackbar(
         err.response?.data?.error?.message || err.response?.data?.message || `Failed to ${mode === 'add' ? 'add' : 'update'} allergy`,
         'error'
       );
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -165,12 +166,12 @@ const AllergyDialog = ({ open, onClose, patientId, allergy, mode, onSave, saving
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={onClose} disabled={isSaving}>Cancel</Button>
           <Button
-            type="submit" variant="contained" disabled={saving}
-            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
+            type="submit" variant="contained" disabled={isSaving}
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : null}
           >
-            {saving ? 'Saving...' : mode === 'add' ? 'Add' : 'Save'}
+            {isSaving ? 'Saving...' : mode === 'add' ? 'Add' : 'Save'}
           </Button>
         </DialogActions>
       </form>
@@ -184,30 +185,16 @@ const PatientAllergyTab = ({ patientId }) => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
 
-  const [allergies, setAllergies] = useState([]);
+  const { data: allergies = [], isLoading, refetch } = useAllergies(patientId);
+  const deleteMutation = useDeleteAllergy();
+
   const [allergySearch, setAllergySearch] = useState('');
   const [allergySeverityFilter, setAllergySeverityFilter] = useState('');
   const [allergyDocumentedDateStart, setAllergyDocumentedDateStart] = useState(null);
   const [allergyDocumentedDateEnd, setAllergyDocumentedDateEnd] = useState(null);
   const [allergyDialog, setAllergyDialog] = useState({ open: false, mode: 'add', allergy: null });
   const [allergyMenu, setAllergyMenu] = useState({ anchorEl: null, allergy: null });
-  const [allergySaving, setAllergySaving] = useState(false);
   const [allergyDeleteDialog, setAllergyDeleteDialog] = useState({ open: false, allergy: null });
-  const [deleteLoading, setDeleteLoading] = useState(false);
-
-  const fetchAllergies = async () => {
-    try {
-      const list = await patientService.getPatientAllergies(patientId, true);
-      setAllergies(list || []);
-    } catch (err) {
-      console.error('Failed to load allergies', err);
-    }
-  };
-
-  useEffect(() => {
-    if (patientId) fetchAllergies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientId]);
 
   const filteredAllergies = allergies.filter((all) => {
     if (allergySearch.trim()) {
@@ -228,18 +215,14 @@ const PatientAllergyTab = ({ patientId }) => {
 
   const handleDeleteConfirm = async () => {
     try {
-      setDeleteLoading(true);
-      await patientService.deletePatientAllergy(patientId, allergyDeleteDialog.allergy._id || allergyDeleteDialog.allergy.id);
+      await deleteMutation.mutateAsync({ patientId, allergyId: allergyDeleteDialog.allergy._id || allergyDeleteDialog.allergy.id });
       showSnackbar('Allergy deleted successfully', 'success');
       setAllergyDeleteDialog({ open: false, allergy: null });
-      await fetchAllergies();
     } catch (err) {
       showSnackbar(
         err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete allergy',
         'error'
       );
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -309,14 +292,18 @@ const PatientAllergyTab = ({ patientId }) => {
               </Tooltip>
               <Tooltip title="Refresh">
                 <span>
-                  <IconButton onClick={fetchAllergies} color="primary"><RefreshIcon /></IconButton>
+                  <IconButton onClick={() => refetch()} color="primary"><RefreshIcon /></IconButton>
                 </span>
               </Tooltip>
             </Box>
           </Grid>
         </Grid>
 
-        {filteredAllergies.length === 0 ? (
+        {isLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : filteredAllergies.length === 0 ? (
           <Typography variant="body2" color="text.secondary">No active allergies documented.</Typography>
         ) : (
           <TableContainer>
@@ -369,9 +356,6 @@ const PatientAllergyTab = ({ patientId }) => {
         patientId={patientId}
         allergy={allergyDialog.allergy}
         mode={allergyDialog.mode}
-        onSave={async () => { await fetchAllergies(); setAllergyDialog({ open: false, mode: 'add', allergy: null }); }}
-        saving={allergySaving}
-        setSaving={setAllergySaving}
       />
 
       <Menu
@@ -406,7 +390,7 @@ const PatientAllergyTab = ({ patientId }) => {
         confirmText="Delete"
         cancelText="Cancel"
         confirmColor="error"
-        loading={deleteLoading}
+        loading={deleteMutation.isPending}
       />
     </LocalizationProvider>
   );

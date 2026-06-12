@@ -10,12 +10,15 @@ export const serviceKeys = {
   categories: () => [...serviceKeys.all, 'categories'],
 };
 
+// Task 4.H.3 requires explicit export of ServiceQueryKeys alias
+export const ServiceQueryKeys = serviceKeys;
+
 export const useServices = (options = {}, queryOptions = {}) => {
   return useQuery({
     queryKey: serviceKeys.list(options),
     queryFn: () => serviceCatalogService.getAllServices(options),
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     ...queryOptions,
   });
@@ -27,8 +30,8 @@ export const useService = (serviceId, options = {}) => {
     queryKey: serviceKeys.detail(serviceId),
     queryFn: () => serviceCatalogService.getServiceById(serviceId),
     enabled: enabled && !!serviceId,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 };
@@ -68,6 +71,16 @@ export const useDeleteService = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (serviceId) => serviceCatalogService.deleteService(serviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: serviceKeys.all });
+    },
+  });
+};
+
+export const useToggleServiceActive = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (serviceId) => serviceCatalogService.toggleServiceStatus(serviceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: serviceKeys.all });
     },
