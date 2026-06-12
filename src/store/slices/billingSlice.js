@@ -159,7 +159,20 @@ export const createPaymentType = createAsyncThunk(
   'billing/createPaymentType',
   async (paymentData, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post('/admin-finance/definitions/4', paymentData);
+      const { name, id, isHidden, ...settings } = paymentData;
+      const payload = {
+        name,
+        type: JSON.stringify({
+          depositSlip: settings.depositSlip || false,
+          openEdge: settings.openEdge || false,
+          prosperipay: settings.prosperipay || false,
+          smilepay: settings.smilepay || false,
+          note: settings.note || '',
+          deletable: true,
+          disabled: false
+        })
+      };
+      const response = await apiClient.post('/admin-finance/definitions/4', payload);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -169,9 +182,37 @@ export const createPaymentType = createAsyncThunk(
 
 export const updatePaymentType = createAsyncThunk(
   'billing/updatePaymentType',
-  async ({ id, ...updateData }, { rejectWithValue }) => {
+  async (updateData, { getState, rejectWithValue }) => {
     try {
-      const response = await apiClient.put(`/admin-finance/definitions/item/${id}`, updateData);
+      const state = getState();
+      const existing = state.billing.paymentTypes.find(pt => pt.id === updateData.id) || {};
+      
+      const newSettings = {
+        depositSlip: existing.depositSlip,
+        openEdge: existing.openEdge,
+        prosperipay: existing.prosperipay,
+        smilepay: existing.smilepay,
+        note: existing.note,
+        deletable: existing.deletable,
+        disabled: existing.disabled,
+        ...updateData
+      };
+
+      const payload = {
+        name: updateData.name !== undefined ? updateData.name : existing.name,
+        isHidden: updateData.isHidden !== undefined ? updateData.isHidden : existing.isHidden,
+        type: JSON.stringify({
+          depositSlip: newSettings.depositSlip || false,
+          openEdge: newSettings.openEdge || false,
+          prosperipay: newSettings.prosperipay || false,
+          smilepay: newSettings.smilepay || false,
+          note: newSettings.note || '',
+          deletable: newSettings.deletable !== undefined ? newSettings.deletable : true,
+          disabled: newSettings.disabled !== undefined ? newSettings.disabled : false
+        })
+      };
+
+      const response = await apiClient.put(`/admin-finance/definitions/item/${updateData.id}`, payload);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -199,6 +240,13 @@ export const fetchPaymentTypeDefaults = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.paymentTypeDefaultsLoading) return false;
+      return true;
     }
   }
 );
@@ -416,7 +464,15 @@ const billingSlice = createSlice({
       })
       .addCase(fetchPaymentTypes.fulfilled, (state, action) => {
         state.paymentTypesLoading = false;
-        state.paymentTypes = action.payload;
+        state.paymentTypes = action.payload.map(pt => {
+          let parsed = {};
+          try {
+            if (pt.type && pt.type.startsWith('{')) {
+              parsed = JSON.parse(pt.type);
+            }
+          } catch(e) {}
+          return { ...pt, ...parsed, type: pt.name }; // Map actual name to 'type' property for UI, and spread parsed JSON
+        });
       })
       .addCase(fetchPaymentTypes.rejected, (state, action) => {
         state.paymentTypesLoading = false;
@@ -424,12 +480,18 @@ const billingSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(createPaymentType.fulfilled, (state, action) => {
-        state.paymentTypes.push(action.payload);
+        const pt = action.payload;
+        let parsed = {};
+        try { if (pt.type && pt.type.startsWith('{')) parsed = JSON.parse(pt.type); } catch(e) {}
+        state.paymentTypes.push({ ...pt, ...parsed, type: pt.name });
       })
       .addCase(updatePaymentType.fulfilled, (state, action) => {
-        const index = state.paymentTypes.findIndex((pt) => pt.id === action.payload.id);
+        const pt = action.payload;
+        let parsed = {};
+        try { if (pt.type && pt.type.startsWith('{')) parsed = JSON.parse(pt.type); } catch(e) {}
+        const index = state.paymentTypes.findIndex((p) => p.id === pt.id);
         if (index !== -1) {
-          state.paymentTypes[index] = action.payload;
+          state.paymentTypes[index] = { ...pt, ...parsed, type: pt.name };
         }
       })
       .addCase(deletePaymentType.fulfilled, (state, action) => {
