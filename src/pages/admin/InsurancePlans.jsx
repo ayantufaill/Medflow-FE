@@ -53,44 +53,6 @@ import {
   selectCarriersList
 } from '../../store/slices/insuranceSlice';
 
-const INITIAL_PLANS = [
-  {
-    id: '1',
-    groupNumber: 'GRP123',
-    groupName: 'ABC Corp Dental',
-    employer: 'ABC Corp',
-    templateName: 'Standard PPO',
-    phone: '(800) 123-4567',
-    carrier: 'Aetna',
-    electronicId: '60054',
-    feeGuide: 'view plan fee guide',
-    subscribers: 42,
-  },
-  {
-    id: '2',
-    groupNumber: 'GRP987',
-    groupName: 'XYZ Tech Hygiene',
-    employer: 'XYZ Tech',
-    templateName: 'Enhanced HMO',
-    phone: '(800) 765-4321',
-    carrier: 'Cigna',
-    electronicId: '62308',
-    feeGuide: 'none',
-    subscribers: 15,
-  },
-  {
-    id: '3',
-    groupNumber: 'GRP555',
-    groupName: 'Global Sales Dental',
-    employer: 'Global Sales',
-    templateName: 'Basic Plan',
-    phone: '(800) 555-5555',
-    carrier: 'MetLife',
-    electronicId: '65978',
-    feeGuide: 'view plan fee guide',
-    subscribers: 8,
-  },
-];
 
 const InsurancePlans = () => {
   const navigate = useNavigate();
@@ -197,7 +159,7 @@ const InsurancePlans = () => {
       try {
         const response = await insurancePlanService.createInsurancePlan({
           name: newPlan.groupName || newPlan.employer,
-          insuranceCompanyId: newPlan.payerId,
+          insuranceCompanyId: Number(newPlan.payerId),
           groupNumber: newPlan.groupNumber,
           groupName: newPlan.groupName,
           employer: newPlan.employer,
@@ -209,18 +171,18 @@ const InsurancePlans = () => {
         if (response) {
           createdPlan.id = response._id || response.id;
         }
+        dispatch(addPlanOptimistic(createdPlan));
+        showSnackbar('Insurance plan added successfully', 'success');
+        setViewMode('list');
+        setNewPlan({
+          groupNumber: '', groupName: '', employer: '', templateName: '', payerName: '', payerId: '', phone: '',
+          notes: '', isHealthPlan: false, isCopayPlan: false, assignment: 'Assignment',
+          individualMax: '0.00', individualMaxUnlimited: true, familyMax: '0.00', familyMaxUnlimited: true,
+        });
       } catch (apiErr) {
-        console.error('API failed to create plan, keeping optimistic update');
+        console.error(apiErr);
+        showSnackbar('Failed to add insurance plan. Please try again.', 'error');
       }
-
-      dispatch(addPlanOptimistic(createdPlan));
-      showSnackbar('Insurance plan added successfully', 'success');
-      setViewMode('list');
-      setNewPlan({
-        groupNumber: '', groupName: '', employer: '', templateName: '', payerName: '', payerId: '', phone: '',
-        notes: '', isHealthPlan: false, isCopayPlan: false, assignment: 'Assignment',
-        individualMax: '0.00', individualMaxUnlimited: true, familyMax: '0.00', familyMaxUnlimited: true,
-      });
     } catch (err) {
       showSnackbar('Failed to add insurance plan', 'error');
     }

@@ -159,20 +159,7 @@ export const createPaymentType = createAsyncThunk(
   'billing/createPaymentType',
   async (paymentData, { rejectWithValue }) => {
     try {
-      const { name, id, isHidden, ...settings } = paymentData;
-      const payload = {
-        name,
-        type: JSON.stringify({
-          depositSlip: settings.depositSlip || false,
-          openEdge: settings.openEdge || false,
-          prosperipay: settings.prosperipay || false,
-          smilepay: settings.smilepay || false,
-          note: settings.note || '',
-          deletable: true,
-          disabled: false
-        })
-      };
-      const response = await apiClient.post('/admin-finance/definitions/4', payload);
+      const response = await apiClient.post('/admin-finance/definitions/4', paymentData);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -182,37 +169,9 @@ export const createPaymentType = createAsyncThunk(
 
 export const updatePaymentType = createAsyncThunk(
   'billing/updatePaymentType',
-  async (updateData, { getState, rejectWithValue }) => {
+  async ({ id, ...updateData }, { rejectWithValue }) => {
     try {
-      const state = getState();
-      const existing = state.billing.paymentTypes.find(pt => pt.id === updateData.id) || {};
-      
-      const newSettings = {
-        depositSlip: existing.depositSlip,
-        openEdge: existing.openEdge,
-        prosperipay: existing.prosperipay,
-        smilepay: existing.smilepay,
-        note: existing.note,
-        deletable: existing.deletable,
-        disabled: existing.disabled,
-        ...updateData
-      };
-
-      const payload = {
-        name: updateData.name !== undefined ? updateData.name : existing.name,
-        isHidden: updateData.isHidden !== undefined ? updateData.isHidden : existing.isHidden,
-        type: JSON.stringify({
-          depositSlip: newSettings.depositSlip || false,
-          openEdge: newSettings.openEdge || false,
-          prosperipay: newSettings.prosperipay || false,
-          smilepay: newSettings.smilepay || false,
-          note: newSettings.note || '',
-          deletable: newSettings.deletable !== undefined ? newSettings.deletable : true,
-          disabled: newSettings.disabled !== undefined ? newSettings.disabled : false
-        })
-      };
-
-      const response = await apiClient.put(`/admin-finance/definitions/item/${updateData.id}`, payload);
+      const response = await apiClient.put(`/admin-finance/definitions/item/${id}`, updateData);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -263,6 +222,37 @@ export const savePaymentTypeDefaults = createAsyncThunk(
   }
 );
 
+export const fetchPaymentTerminals = createAsyncThunk(
+  'billing/fetchPaymentTerminals',
+  async (_, { signal, rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/admin-finance/settings/payment_terminals', { signal });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.paymentTerminalsLoading) return false;
+      return true;
+    }
+  }
+);
+
+export const savePaymentTerminals = createAsyncThunk(
+  'billing/savePaymentTerminals',
+  async (terminalsData, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put('/admin-finance/settings/payment_terminals', terminalsData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const initialState = {
   // Current invoice being viewed/edited
   currentInvoice: null,
@@ -296,6 +286,10 @@ const initialState = {
   paymentTypesLoading: false,
   paymentTypeDefaults: { patient: 'Master Card', insurance: 'Master Card', family: '' },
   
+  // Payment Terminals
+  paymentTerminals: { openEdge: [], prosperipay: [], payrix: [] },
+  paymentTerminalsLoading: false,
+
   // UI state
   loading: false,
   error: null,
@@ -465,13 +459,11 @@ const billingSlice = createSlice({
       .addCase(fetchPaymentTypes.fulfilled, (state, action) => {
         state.paymentTypesLoading = false;
         state.paymentTypes = action.payload.map(pt => {
-          let parsed = {};
-          try {
-            if (pt.type && pt.type.startsWith('{')) {
-              parsed = JSON.parse(pt.type);
-            }
-          } catch(e) {}
-          return { ...pt, ...parsed, type: pt.name }; // Map actual name to 'type' property for UI, and spread parsed JSON
+          let cleanNote = pt.note;
+          if (typeof cleanNote === 'string' && cleanNote.startsWith('{')) {
+            try { cleanNote = JSON.parse(cleanNote).note || ''; } catch(e) {}
+          }
+          return { ...pt, note: cleanNote };
         });
       })
       .addCase(fetchPaymentTypes.rejected, (state, action) => {
@@ -481,17 +473,21 @@ const billingSlice = createSlice({
       })
       .addCase(createPaymentType.fulfilled, (state, action) => {
         const pt = action.payload;
-        let parsed = {};
-        try { if (pt.type && pt.type.startsWith('{')) parsed = JSON.parse(pt.type); } catch(e) {}
-        state.paymentTypes.push({ ...pt, ...parsed, type: pt.name });
+        let cleanNote = pt.note;
+        if (typeof cleanNote === 'string' && cleanNote.startsWith('{')) {
+          try { cleanNote = JSON.parse(cleanNote).note || ''; } catch(e) {}
+        }
+        state.paymentTypes.push({ ...pt, note: cleanNote });
       })
       .addCase(updatePaymentType.fulfilled, (state, action) => {
         const pt = action.payload;
-        let parsed = {};
-        try { if (pt.type && pt.type.startsWith('{')) parsed = JSON.parse(pt.type); } catch(e) {}
+        let cleanNote = pt.note;
+        if (typeof cleanNote === 'string' && cleanNote.startsWith('{')) {
+          try { cleanNote = JSON.parse(cleanNote).note || ''; } catch(e) {}
+        }
         const index = state.paymentTypes.findIndex((p) => p.id === pt.id);
         if (index !== -1) {
-          state.paymentTypes[index] = { ...pt, ...parsed, type: pt.name };
+          state.paymentTypes[index] = { ...pt, note: cleanNote };
         }
       })
       .addCase(deletePaymentType.fulfilled, (state, action) => {
@@ -505,6 +501,30 @@ const billingSlice = createSlice({
       })
       .addCase(savePaymentTypeDefaults.fulfilled, (state, action) => {
         state.paymentTypeDefaults = action.payload;
+      })
+      .addCase(fetchPaymentTerminals.pending, (state) => {
+        state.paymentTerminalsLoading = true;
+      })
+      .addCase(fetchPaymentTerminals.fulfilled, (state, action) => {
+        state.paymentTerminalsLoading = false;
+        // The backend might return an empty object initially
+        state.paymentTerminals = {
+          openEdge: action.payload?.openEdge || [],
+          prosperipay: action.payload?.prosperipay || [],
+          payrix: action.payload?.payrix || []
+        };
+      })
+      .addCase(fetchPaymentTerminals.rejected, (state, action) => {
+        state.paymentTerminalsLoading = false;
+        if (action.meta.aborted) return;
+        state.error = action.payload;
+      })
+      .addCase(savePaymentTerminals.fulfilled, (state, action) => {
+        state.paymentTerminals = {
+          openEdge: action.payload?.openEdge || [],
+          prosperipay: action.payload?.prosperipay || [],
+          payrix: action.payload?.payrix || []
+        };
       });
   },
 });
@@ -538,6 +558,8 @@ export const selectAdjustmentTypesLoading = (state) => state.billing.adjustmentT
 export const selectPaymentTypes = (state) => state.billing.paymentTypes;
 export const selectPaymentTypesLoading = (state) => state.billing.paymentTypesLoading;
 export const selectPaymentTypeDefaults = (state) => state.billing.paymentTypeDefaults;
+export const selectPaymentTerminals = (state) => state.billing.paymentTerminals;
+export const selectPaymentTerminalsLoading = (state) => state.billing.paymentTerminalsLoading;
 export const selectBillingLoading = (state) => state.billing.loading;
 export const selectBillingError = (state) => state.billing.error;
 

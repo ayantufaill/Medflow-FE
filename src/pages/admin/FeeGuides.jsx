@@ -67,7 +67,9 @@ const FeeGuides = () => {
     dispatch(fetchFeeGuides());
   }, [dispatch]);
 
-  const feeGuidesData = (feeGuidesRaw || []).map((fs, index) => {
+  const feeGuidesData = (feeGuidesRaw || [])
+    .filter(fs => fs && !fs.isHidden && fs.IsHidden !== 1 && fs.IsHidden !== true)
+    .map((fs, index) => {
     const fsId = fs?._id?.toString() || fs?.id?.toString() || fs?.FeeSchedNum?.toString() || `fallback-${index}`;
     return {
       id: fsId,

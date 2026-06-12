@@ -103,4 +103,9 @@ export const insurancePlanService = {
     const response = await apiClient.post('/insurance-plans', payload);
     return response.data.data.plan;
   },
+
+  async deleteInsurancePlan(planId) {
+    const response = await apiClient.delete(`/insurance-plans/${planId}`);
+    return response.data.data;
+  },
 };

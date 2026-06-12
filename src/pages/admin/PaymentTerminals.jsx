@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -21,20 +22,26 @@ import { Link } from 'react-router-dom';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
+import {
+  fetchPaymentTerminals,
+  savePaymentTerminals,
+  selectPaymentTerminals,
+  selectPaymentTerminalsLoading
+} from '../../store/slices/billingSlice';
+
 const PaymentTerminals = () => {
-  // --- STATE FOR OPENEDGE TERMINALS ---
-  const [openEdgeTerminals, setOpenEdgeTerminals] = useState([]);
+  const dispatch = useDispatch();
+  const paymentTerminalsState = useSelector(selectPaymentTerminals);
+  const loading = useSelector(selectPaymentTerminalsLoading);
 
-  // --- STATE FOR PROSPERIPAY TERMINALS ---
-  const [prosperipayTerminals, setProsperipayTerminals] = useState([
-    { id: 1, name: 'Checkin', serialNum: 'XXXX-5678', merchantId: 'XXXX-9012', model: 'Lane/3000', deviceId: 'DEV-112233' },
-    { id: 2, name: 'Checkout', serialNum: 'XXXX-1234', merchantId: 'XXXX-9012', model: 'Lane/5000', deviceId: 'DEV-445566' }
-  ]);
+  useEffect(() => {
+    dispatch(fetchPaymentTerminals());
+  }, [dispatch]);
 
-  // --- STATE FOR PAYRIX TERMINALS ---
-  const [payrixTerminals, setPayrixTerminals] = useState([
-    { id: 1, terminalId: 'Checkout', serialNum: 'XXXX-7788', modelNum: 'Lane/3000', laneId: '2' }
-  ]);
+  // Derive lists from Redux state
+  const openEdgeTerminals = paymentTerminalsState?.openEdge || [];
+  const prosperipayTerminals = paymentTerminalsState?.prosperipay || [];
+  const payrixTerminals = paymentTerminalsState?.payrix || [];
 
   // --- DIALOG OPEN/CLOSE STATES ---
   const [openEdgeManualOpen, setOpenEdgeManualOpen] = useState(false);
@@ -51,37 +58,49 @@ const PaymentTerminals = () => {
   const handleAddOpenEdge = (e) => {
     e.preventDefault();
     if (!openEdgeForm.serialNum || !openEdgeForm.accountToken) return;
-    setOpenEdgeTerminals(prev => [
-      ...prev,
-      { id: Date.now(), serialNum: openEdgeForm.serialNum, accountToken: openEdgeForm.accountToken }
-    ]);
+    const newTerminals = {
+      ...paymentTerminalsState,
+      openEdge: [
+        ...openEdgeTerminals,
+        { id: Date.now(), serialNum: openEdgeForm.serialNum, accountToken: openEdgeForm.accountToken }
+      ]
+    };
+    dispatch(savePaymentTerminals(newTerminals));
     setOpenEdgeForm({ serialNum: '', accountToken: '' });
     setOpenEdgeManualOpen(false);
   };
 
   const handleAddOpenEdgeAuto = (e) => {
     e.preventDefault();
-    setOpenEdgeTerminals(prev => [
-      ...prev,
-      { id: Date.now(), serialNum: 'AUTO-' + Math.floor(1000 + Math.random() * 9000), accountToken: 'TOKEN-' + Math.floor(100000 + Math.random() * 900000) }
-    ]);
+    const newTerminals = {
+      ...paymentTerminalsState,
+      openEdge: [
+        ...openEdgeTerminals,
+        { id: Date.now(), serialNum: 'AUTO-' + Math.floor(1000 + Math.random() * 9000), accountToken: 'TOKEN-' + Math.floor(100000 + Math.random() * 900000) }
+      ]
+    };
+    dispatch(savePaymentTerminals(newTerminals));
     setOpenEdgeAutoOpen(false);
   };
 
   const handleAddProsperipay = (e) => {
     e.preventDefault();
     if (!prosperipayForm.name || !prosperipayForm.serialNum) return;
-    setProsperipayTerminals(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        name: prosperipayForm.name,
-        serialNum: prosperipayForm.serialNum,
-        merchantId: prosperipayForm.merchantId || 'XXXX-9012',
-        model: prosperipayForm.model || 'Model Name',
-        deviceId: prosperipayForm.deviceId || 'DEV-' + Math.floor(100000 + Math.random() * 900000)
-      }
-    ]);
+    const newTerminals = {
+      ...paymentTerminalsState,
+      prosperipay: [
+        ...prosperipayTerminals,
+        {
+          id: Date.now(),
+          name: prosperipayForm.name,
+          serialNum: prosperipayForm.serialNum,
+          merchantId: prosperipayForm.merchantId || 'XXXX-9012',
+          model: prosperipayForm.model || 'Model Name',
+          deviceId: prosperipayForm.deviceId || 'DEV-' + Math.floor(100000 + Math.random() * 900000)
+        }
+      ]
+    };
+    dispatch(savePaymentTerminals(newTerminals));
     setProsperipayForm({ name: '', serialNum: '', merchantId: '', model: '', deviceId: '' });
     setProsperipayOpen(false);
   };
@@ -89,31 +108,38 @@ const PaymentTerminals = () => {
   const handleAddPayrix = (e) => {
     e.preventDefault();
     if (!payrixForm.terminalId || !payrixForm.serialNum) return;
-    setPayrixTerminals(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        terminalId: payrixForm.terminalId,
-        serialNum: payrixForm.serialNum,
-        modelNum: payrixForm.modelNum || 'Model Name',
-        laneId: payrixForm.laneId || '1'
-      }
-    ]);
+    const newTerminals = {
+      ...paymentTerminalsState,
+      payrix: [
+        ...payrixTerminals,
+        {
+          id: Date.now(),
+          terminalId: payrixForm.terminalId,
+          serialNum: payrixForm.serialNum,
+          modelNum: payrixForm.modelNum || 'Model Name',
+          laneId: payrixForm.laneId || '1'
+        }
+      ]
+    };
+    dispatch(savePaymentTerminals(newTerminals));
     setPayrixForm({ terminalId: '', serialNum: '', modelNum: '', laneId: '' });
     setPayrixOpen(false);
   };
 
   // --- HANDLERS FOR DELETING ---
   const handleDeleteOpenEdge = (id) => {
-    setOpenEdgeTerminals(prev => prev.filter(t => t.id !== id));
+    const newTerminals = { ...paymentTerminalsState, openEdge: openEdgeTerminals.filter(t => t.id !== id) };
+    dispatch(savePaymentTerminals(newTerminals));
   };
 
   const handleDeleteProsperipay = (id) => {
-    setProsperipayTerminals(prev => prev.filter(t => t.id !== id));
+    const newTerminals = { ...paymentTerminalsState, prosperipay: prosperipayTerminals.filter(t => t.id !== id) };
+    dispatch(savePaymentTerminals(newTerminals));
   };
 
   const handleDeletePayrix = (id) => {
-    setPayrixTerminals(prev => prev.filter(t => t.id !== id));
+    const newTerminals = { ...paymentTerminalsState, payrix: payrixTerminals.filter(t => t.id !== id) };
+    dispatch(savePaymentTerminals(newTerminals));
   };
 
   // --- STYLING ---

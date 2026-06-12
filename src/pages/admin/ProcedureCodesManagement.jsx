@@ -64,34 +64,6 @@ const CODES_CATEGORIES = [
   'Adjunctive General Services',
 ];
 
-const MOCK_SUBTYPE_CODES = {
-  'Oral evaluation': [
-    { ProcCode: 'D0120', Descript: 'periodic oral evaluation - established patient', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D0140', Descript: 'limited oral evaluation - problem focused', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D0145', Descript: 'oral evaluation for a patient under three years of age and counseling with primary caregiver', site: 'None', dbi: false, provider: 'Default' },
-    { ProcCode: 'D0150', Descript: 'comprehensive oral evaluation - new or established patient', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D0160', Descript: 'detailed and extensive oral evaluation - problem focused, by report', site: 'None', dbi: false, provider: 'Default' },
-    { ProcCode: 'D0170', Descript: 're-evaluation - limited, problem focused (established patient; not post-operative visit)', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D0171', Descript: 're-evaluation - post-operative office visit', site: 'None', dbi: false, provider: 'Default' },
-    { ProcCode: 'D0180', Descript: 'Comprehensive Periodontal Evaluation - New or Established Patient', site: 'None', dbi: false, provider: 'Default' },
-    { ProcCode: 'D0190', Descript: 'screening of a patient', site: 'None', dbi: false, provider: 'Default' },
-    { ProcCode: 'D0191', Descript: 'assessment of a patient', site: 'None', dbi: false, provider: 'Default' },
-  ],
-  'Diagnostic Imaging': [
-    { ProcCode: 'D0330', Descript: 'panoramic radiographic image', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D0210', Descript: 'intraoral - complete series of radiographic images', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D0220', Descript: 'intraoral - periapical first radiographic image', site: 'None', dbi: false, provider: 'Default' },
-  ],
-  'Fluoride': [
-    { ProcCode: 'D1206', Descript: 'topical application of fluoride varnish', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D1208', Descript: 'topical application of fluoride - excluding varnish', site: 'None', dbi: false, provider: 'Default' },
-  ],
-  'Prophy': [
-    { ProcCode: 'D1110', Descript: 'prophylaxis - adult', site: 'None', dbi: false, provider: 'Dentist' },
-    { ProcCode: 'D1120', Descript: 'prophylaxis - child', site: 'None', dbi: false, provider: 'Default' },
-  ],
-};
-
 const INITIAL_CODES_TAB = [
   { 
     name: 'Diagnostic', 
@@ -821,11 +793,22 @@ const ProcedureCodesManagement = () => {
     }
   };
 
-  const handleToggleSubType = (subTypeName) => {
+  const handleToggleSubType = async (subTypeName) => {
     if (expandedSubTypes.includes(subTypeName)) {
       setExpandedSubTypes(expandedSubTypes.filter(s => s !== subTypeName));
     } else {
       setExpandedSubTypes([...expandedSubTypes, subTypeName]);
+      if (!fetchedSubtypeCodes[subTypeName] && !editableCodes[subTypeName]) {
+        try {
+          setLoadingSubTypes(prev => ({ ...prev, [subTypeName]: true }));
+          const result = await feeService.getProcedureCodes({ search: subTypeName, limit: 20 });
+          setFetchedSubtypeCodes(prev => ({ ...prev, [subTypeName]: result.data }));
+        } catch (e) {
+          console.error('Failed to fetch subtype codes:', e);
+        } finally {
+          setLoadingSubTypes(prev => ({ ...prev, [subTypeName]: false }));
+        }
+      }
     }
   };
 
@@ -834,22 +817,23 @@ const ProcedureCodesManagement = () => {
       return editableCodes[subTypeName];
     }
     
-    let baseList = [];
-    if (MOCK_SUBTYPE_CODES[subTypeName]) {
-      baseList = MOCK_SUBTYPE_CODES[subTypeName];
-    } else {
-      const custom = localCustomCodes.filter(c => c.Category.toLowerCase() === subTypeName.toLowerCase());
-      if (custom.length > 0) {
-        baseList = custom;
-      } else {
-        const baseCodeNum = 1000 + Math.abs(subTypeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 8000;
-        baseList = [
-          { ProcCode: `D${baseCodeNum}`, Descript: `${subTypeName} standard procedure code`, site: 'None', dbi: false, provider: 'Default', officeCode: '', officeDesc: '' },
-          { ProcCode: `D${baseCodeNum + 1}`, Descript: `${subTypeName} additional level procedure`, site: 'None', dbi: false, provider: 'Dentist', officeCode: '', officeDesc: '' },
-        ];
-      }
+    if (fetchedSubtypeCodes[subTypeName]) {
+      return fetchedSubtypeCodes[subTypeName].map(c => ({
+        ...c,
+        site: 'None',
+        dbi: false,
+        provider: 'Default',
+        officeCode: '',
+        officeDesc: ''
+      }));
     }
-    return baseList;
+
+    const custom = localCustomCodes.filter(c => c.Category && c.Category.toLowerCase() === subTypeName.toLowerCase());
+    if (custom.length > 0) {
+      return custom;
+    }
+
+    return [];
   };
 
   const handleUpdateProcedureCodeField = async (subTypeName, procCode, field, value) => {
@@ -883,6 +867,8 @@ const ProcedureCodesManagement = () => {
   };
 
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [fetchedSubtypeCodes, setFetchedSubtypeCodes] = useState({});
+  const [loadingSubTypes, setLoadingSubTypes] = useState({});
   const [editingPath, setEditingPath] = useState(null);
   const [procedureCodes, setProcedureCodes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1659,25 +1645,34 @@ const ProcedureCodesManagement = () => {
                                 {/* SubType Expanded Procedure Codes */}
                                 {isSubTypeExpanded && (
                                   <Box sx={{ pl: 3, borderLeft: '1px dashed #cbd5e1', ml: 1.5 }}>
-                                    {getProcedureCodesForSubType(subItem).map((procItem, procIdx) => (
-                                      <Box
-                                        key={procIdx}
-                                        sx={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          py: 1,
-                                          borderBottom: '1px solid #f1f5f9',
-                                          gap: 2
-                                        }}
-                                      >
-                                        {/* Icon */}
-                                        <DescriptionIcon sx={{ color: '#94a3b8', fontSize: '1.1rem' }} />
-
-                                        {/* Code Box */}
+                                    {loadingSubTypes[subItem] ? (
+                                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                        <CircularProgress size={20} />
+                                      </Box>
+                                    ) : getProcedureCodesForSubType(subItem).length === 0 ? (
+                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', py: 1, fontStyle: 'italic' }}>
+                                        No procedures found
+                                      </Typography>
+                                    ) : (
+                                      getProcedureCodesForSubType(subItem).map((procItem, procIdx) => (
                                         <Box
+                                          key={procIdx}
                                           sx={{
-                                            border: '1px solid #cbd5e1',
-                                            borderRadius: '4px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            py: 1,
+                                            borderBottom: '1px solid #f1f5f9',
+                                            gap: 2
+                                          }}
+                                        >
+                                          {/* Icon */}
+                                          <DescriptionIcon sx={{ color: '#94a3b8', fontSize: '1.1rem' }} />
+
+                                          {/* Code Box */}
+                                          <Box
+                                            sx={{
+                                              border: '1px solid #cbd5e1',
+                                              borderRadius: '4px',
                                             px: 1.2,
                                             py: 0.3,
                                             backgroundColor: '#f8fafc',
@@ -1760,7 +1755,8 @@ const ProcedureCodesManagement = () => {
                                           <MenuItem value="Hygienist">Hygienist</MenuItem>
                                         </Select>
                                       </Box>
-                                    ))}
+                                    ))
+                                  )}
                                   </Box>
                                 )}
                               </Box>

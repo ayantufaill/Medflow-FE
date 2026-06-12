@@ -48,41 +48,6 @@ import {
   selectCarriersLoading 
 } from '../../store/slices/insuranceSlice';
 
-const INITIAL_COMPANIES = [
-  {
-    id: '1',
-    name: 'Aetna',
-    phone: '(800) 872-3862',
-    address: '151 Farmington Ave',
-    city: 'Hartford',
-    state: 'CT',
-    zipCode: '06156',
-    payerId: '60054',
-    plansCount: 5,
-  },
-  {
-    id: '2',
-    name: 'Cigna',
-    phone: '(800) 997-1654',
-    address: '900 Cottage Grove Road',
-    city: 'Bloomfield',
-    state: 'CT',
-    zipCode: '06002',
-    payerId: '62308',
-    plansCount: 3,
-  },
-  {
-    id: '3',
-    name: 'MetLife',
-    phone: '(800) 638-5433',
-    address: '200 Park Ave',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10166',
-    payerId: '65978',
-    plansCount: 8,
-  },
-];
 
 const InsuranceCarriers = () => {
   const navigate = useNavigate();

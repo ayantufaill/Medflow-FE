@@ -9,6 +9,10 @@ import {
   Breadcrumbs,
   Link,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -78,7 +82,7 @@ const DebouncedProviderRow = ({ name, value, unit, onChange }) => {
   );
 };
 
-const ProcedureGroupTable = ({ groups }) => (
+const ProcedureGroupTable = ({ groups, onAdd, onEdit, onDelete }) => (
   <Box sx={{ mt: 2, mb: 3 }}>
     <Box sx={{ display: 'flex', px: 2, py: 1, borderBottom: '1.5px solid #7a96b5' }}>
       <Typography sx={{ width: '60px', fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>Color</Typography>
@@ -107,7 +111,8 @@ const ProcedureGroupTable = ({ groups }) => (
         <Box sx={{ width: '120px', display: 'flex', alignItems: 'center', gap: 1 }}>
           <TextField 
             variant="standard" 
-            defaultValue={group.percentage} 
+            value={group.percentage}
+            disabled 
             sx={{ width: 30, '& input': { textAlign: 'center', fontSize: '0.85rem' } }} 
           />
           <Typography sx={{ fontSize: '0.85rem', color: '#333' }}>%</Typography>
@@ -119,12 +124,13 @@ const ProcedureGroupTable = ({ groups }) => (
           {group.hasMore && <Typography sx={{ fontSize: '0.85rem', color: '#4a89dc', cursor: 'pointer' }}>Show more codes...</Typography>}
         </Box>
         <Box sx={{ width: '80px', display: 'flex', justifyContent: 'center', gap: 1 }}>
-          <IconButton size="small" sx={{ color: '#4a89dc' }}><EditIcon fontSize="small" /></IconButton>
-          <IconButton size="small" sx={{ color: '#f56565' }}><DeleteIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => onEdit(idx)} sx={{ color: '#4a89dc' }}><EditIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => onDelete(idx)} sx={{ color: '#f56565' }}><DeleteIcon fontSize="small" /></IconButton>
         </Box>
       </Box>
     ))}
     <Button 
+      onClick={onAdd}
       startIcon={<span>+</span>} 
       sx={{ color: '#4a89dc', textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, mt: 1, px: 2 }}
     >
@@ -138,12 +144,58 @@ const DashboardGoals = () => {
   const [expandedSection, setExpandedSection] = React.useState('');
   const data = useSelector(selectDashboardGoals);
 
+  // Dialog State
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingType, setEditingType] = React.useState(null); // 'hygieneGroups' or 'treatmentGroups'
+  const [editingIndex, setEditingIndex] = React.useState(null);
+  const [formData, setFormData] = React.useState({ name: '', color: '#000000', percentage: '', codes: '' });
+
   React.useEffect(() => {
     dispatch(fetchDashboardGoals());
   }, [dispatch]);
 
   const handleUpdate = (fieldPath, value) => {
     dispatch(updateDashboardGoalField({ fieldPath, value }));
+  };
+
+  const handleOpenDialog = (type, index = null) => {
+    setEditingType(type);
+    setEditingIndex(index);
+    if (index !== null) {
+      const group = data[type][index];
+      setFormData({
+        name: group.name,
+        color: group.color,
+        percentage: group.percentage,
+        codes: group.codes.join(', ')
+      });
+    } else {
+      setFormData({ name: '', color: '#000000', percentage: '', codes: '' });
+    }
+    setDialogOpen(true);
+  };
+
+  const handleSaveGroup = () => {
+    const updatedGroups = [...data[editingType]];
+    const newGroup = {
+      name: formData.name,
+      color: formData.color,
+      percentage: parseInt(formData.percentage) || 0,
+      codes: formData.codes.split(',').map(c => c.trim()).filter(Boolean),
+      hasMore: false,
+    };
+    if (editingIndex !== null) {
+      updatedGroups[editingIndex] = newGroup;
+    } else {
+      updatedGroups.push(newGroup);
+    }
+    handleUpdate(editingType, updatedGroups);
+    setDialogOpen(false);
+  };
+
+  const handleDeleteGroup = (type, index) => {
+    const updatedGroups = data[type].filter((_, i) => i !== index);
+    handleUpdate(type, updatedGroups);
   };
 
   if (!data) return null;
@@ -195,7 +247,12 @@ const DashboardGoals = () => {
             <Typography sx={{ fontSize: '0.85rem', color: '#4a89dc', fontWeight: 500 }}>Hygiene production per procedure group</Typography>
           </Box>
           <Collapse in={expandedSection === 'hygiene'}>
-            <ProcedureGroupTable groups={data.hygieneGroups} />
+            <ProcedureGroupTable 
+              groups={data.hygieneGroups} 
+              onAdd={() => handleOpenDialog('hygieneGroups')}
+              onEdit={(idx) => handleOpenDialog('hygieneGroups', idx)}
+              onDelete={(idx) => handleDeleteGroup('hygieneGroups', idx)}
+            />
           </Collapse>
 
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', py: 0.5 }} onClick={() => setExpandedSection(expandedSection === 'treatment' ? '' : 'treatment')}>
@@ -203,7 +260,12 @@ const DashboardGoals = () => {
             <Typography sx={{ fontSize: '0.85rem', color: '#4a89dc', fontWeight: 500 }}>Treatment production per procedure group</Typography>
           </Box>
           <Collapse in={expandedSection === 'treatment'}>
-            <ProcedureGroupTable groups={data.treatmentGroups} />
+            <ProcedureGroupTable 
+              groups={data.treatmentGroups} 
+              onAdd={() => handleOpenDialog('treatmentGroups')}
+              onEdit={(idx) => handleOpenDialog('treatmentGroups', idx)}
+              onDelete={(idx) => handleDeleteGroup('treatmentGroups', idx)}
+            />
           </Collapse>
         </Box>
       </Box>
@@ -279,6 +341,62 @@ const DashboardGoals = () => {
         <DebouncedGoalInput label="New Pt Case Accept Percent" value={data.acceptanceNewPt} unit="%" onChange={(val) => handleUpdate('acceptanceNewPt', val)} />
         <DebouncedGoalInput label="Existing Pt Case Accept Percent" value={data.acceptanceExistingPt} unit="%" onChange={(val) => handleUpdate('acceptanceExistingPt', val)} />
       </Box>
+
+      {/* Group Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600, color: '#003366', borderBottom: '1px solid #e0e0e0', pb: 1.5 }}>
+          {editingIndex !== null ? 'Edit Procedure Group' : 'Add Procedure Group'}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField
+              label="Group Name"
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Percentage (%)"
+                variant="outlined"
+                size="small"
+                type="number"
+                sx={{ width: '50%' }}
+                value={formData.percentage}
+                onChange={(e) => setFormData(prev => ({ ...prev, percentage: e.target.value }))}
+              />
+              <TextField
+                label="Color Hex"
+                variant="outlined"
+                size="small"
+                type="color"
+                sx={{ width: '50%' }}
+                value={formData.color}
+                onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+              />
+            </Box>
+            <TextField
+              label="Procedure Codes (comma separated)"
+              variant="outlined"
+              size="small"
+              fullWidth
+              multiline
+              rows={3}
+              value={formData.codes}
+              onChange={(e) => setFormData(prev => ({ ...prev, codes: e.target.value }))}
+              placeholder="e.g. D1110, D1120"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1, borderTop: '1px solid #e0e0e0' }}>
+          <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: 'none', color: '#666' }}>Cancel</Button>
+          <Button onClick={handleSaveGroup} variant="contained" sx={{ textTransform: 'none', bgcolor: '#4a89dc', '&:hover': { bgcolor: '#3b75c4' } }}>
+            Save Group
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

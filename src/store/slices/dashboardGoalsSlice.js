@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import apiClient from '../../config/api';
 
 const mockGoals = {
   providerProduction: {
@@ -49,14 +50,21 @@ const mockGoals = {
 
 export const fetchDashboardGoals = createAsyncThunk(
   'dashboardGoals/fetch',
-  async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockGoals;
+  async (_, { signal, rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/admin-finance/settings/dashboard_goals', { signal });
+      // If the backend returns empty or null, fallback to the default mockGoals structure
+      return response.data?.data && Object.keys(response.data.data).length > 0 
+        ? response.data.data 
+        : mockGoals;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
   },
   {
     condition: (_, { getState }) => {
       const { dashboardGoals } = getState();
-      if (dashboardGoals.loading || dashboardGoals.data !== mockGoals) return false;
+      if (dashboardGoals.loading) return false;
       return true;
     }
   }
@@ -64,9 +72,27 @@ export const fetchDashboardGoals = createAsyncThunk(
 
 export const updateDashboardGoalField = createAsyncThunk(
   'dashboardGoals/updateField',
-  async (payload) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return payload; // { fieldPath, value }
+  async ({ fieldPath, value }, { getState, rejectWithValue }) => {
+    try {
+      const { dashboardGoals } = getState();
+      
+      // Deep clone the existing data to mutate
+      const newData = JSON.parse(JSON.stringify(dashboardGoals.data));
+      
+      // Update the specific field using dot notation path
+      const keys = fieldPath.split('.');
+      let current = newData;
+      for (let i = 0; i < keys.length - 1; i++) {
+        current = current[keys[i]];
+      }
+      current[keys[keys.length - 1]] = value;
+
+      // Save the entire updated object to the backend
+      const response = await apiClient.put('/admin-finance/settings/dashboard_goals', newData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
   }
 );
 
@@ -88,14 +114,7 @@ const dashboardGoalsSlice = createSlice({
         state.loading = false;
       })
       .addCase(updateDashboardGoalField.fulfilled, (state, action) => {
-        const { fieldPath, value } = action.payload;
-        // Simple dot notation assignment for mock state
-        const keys = fieldPath.split('.');
-        let current = state.data;
-        for (let i = 0; i < keys.length - 1; i++) {
-          current = current[keys[i]];
-        }
-        current[keys[keys.length - 1]] = value;
+        state.data = action.payload;
       });
   }
 });

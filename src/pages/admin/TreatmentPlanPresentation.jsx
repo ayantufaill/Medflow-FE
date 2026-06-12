@@ -34,39 +34,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-const DEFAULT_TEMPLATES = [
-  {
-    name: 'Adjusted Fee Treatment Plan',
-    headerChecks: { logo: true, phone: true, address: false, website: false, email: false },
-    displayBy: 'itemized',
-    displayPerItem: {
-      dateDiagnosed: true, toothNumber: true, procCode: true, shortDesc: true, officeDesc: false,
-      procNote: false, showProcs: true, officeFee: true, newFee: false, billedFee: true,
-      contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
-    },
-    totals: { officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true },
-    addedPaymentTypes: [],
-    acknowledgments: [
-      "This treatment plan and alternatives have been described to me. I fully understand the risks, benefits, and alternatives of the recommended treatment. My questions have been answered.",
-      "I understand that as the treatment progresses, modifications may be necessary and these may affect the fee."
-    ]
-  },
-  {
-    name: '15% Friends + Family',
-    headerChecks: { logo: true, phone: true, address: false, website: false, email: false },
-    displayBy: 'itemized',
-    displayPerItem: {
-      dateDiagnosed: true, toothNumber: true, procCode: true, shortDesc: true, officeDesc: false,
-      procNote: false, showProcs: true, officeFee: true, newFee: false, billedFee: true,
-      contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
-    },
-    totals: { officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true },
-    addedPaymentTypes: [],
-    acknowledgments: [
-      "This estimate is valid for 90 days from the date of this letter."
-    ]
-  }
-];
+
 
 const TreatmentPlanPresentation = () => {
   const navigate = useNavigate();
@@ -120,28 +88,10 @@ const TreatmentPlanPresentation = () => {
             setAcknowledgments(first.acknowledgments || []);
           }
         } catch (e) {
-          setSavedForms(DEFAULT_TEMPLATES);
-          const first = DEFAULT_TEMPLATES[0];
-          setActiveForm(first.name);
-          setFormName(first.name);
-          setHeaderChecks(first.headerChecks);
-          setDisplayBy(first.displayBy);
-          setDisplayPerItem(first.displayPerItem);
-          setTotals(first.totals);
-          setAddedPaymentTypes(first.addedPaymentTypes);
-          setAcknowledgments(first.acknowledgments);
+          setSavedForms([]);
         }
       } else {
-        setSavedForms(DEFAULT_TEMPLATES);
-        const first = DEFAULT_TEMPLATES[0];
-        setActiveForm(first.name);
-        setFormName(first.name);
-        setHeaderChecks(first.headerChecks);
-        setDisplayBy(first.displayBy);
-        setDisplayPerItem(first.displayPerItem);
-        setTotals(first.totals);
-        setAddedPaymentTypes(first.addedPaymentTypes);
-        setAcknowledgments(first.acknowledgments);
+        setSavedForms([]);
       }
     }
   }, [settingsMap]);

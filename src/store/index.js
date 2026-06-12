@@ -16,6 +16,8 @@ import practiceInfoReducer from './slices/practiceInfoSlice';
 import userReducer from './slices/userSlice';
 import feeGuideReducer from './slices/feeGuideSlice';
 import dashboardGoalsReducer from './slices/dashboardGoalsSlice';
+import statementFormsReducer from './slices/statementFormsSlice';
+import coverageShortcutsReducer from './slices/coverageShortcutsSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -35,6 +37,8 @@ const appReducer = combineReducers({
   user: userReducer,
   feeGuides: feeGuideReducer,
   dashboardGoals: dashboardGoalsReducer,
+  statementForms: statementFormsReducer,
+  coverageShortcuts: coverageShortcutsReducer,
 });
 
 const rootReducer = (state, action) => {

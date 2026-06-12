@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { feeService } from '../../../services/fee.service';
 import {
   Dialog,
   DialogTitle,
@@ -32,6 +33,20 @@ const mockPatients = [
 
 const ClearManualFeeGuideDialog = ({ open, onClose }) => {
   const [selectedPatients, setSelectedPatients] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    try {
+      setLoading(true);
+      await feeService.resetTPlans(selectedPatients);
+      onClose();
+    } catch (error) {
+      console.error('Failed to reset treatment plans:', error);
+      alert('Failed to reset treatment plans.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectAllPatients = () => {
     if (selectedPatients.length === mockPatients.length) {
@@ -116,15 +131,17 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
             variant="contained" 
             sx={{ bgcolor: '#999', textTransform: 'none', '&:hover': { bgcolor: '#888' } }}
             onClick={onClose}
+            disabled={loading}
           >
             Cancel
           </Button>
           <Button 
             variant="contained" 
             sx={{ bgcolor: '#d9a366', textTransform: 'none', '&:hover': { bgcolor: '#c08d50' } }}
-            onClick={onClose}
+            onClick={handleConfirm}
+            disabled={loading}
           >
-            Clear
+            {loading ? 'Clearing...' : 'Clear'}
           </Button>
         </Box>
       </DialogContent>

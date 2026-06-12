@@ -3,7 +3,7 @@ import { TableRow, TableCell, Box, Typography, TextField, Collapse, Table, Table
 import { ChevronRight as ChevronRightIcon, KeyboardArrowDown as ChevronDownIcon } from '@mui/icons-material';
 import GroupRow from './GroupRow';
 
-const CategoryRow = ({ cat, expandedCategories, toggleCategory, expandedGroups, toggleGroup }) => {
+const CategoryRow = ({ cat, expandedCategories, toggleCategory, expandedGroups, toggleGroup, feeGuideId, dispatch, updateProcedureFee }) => {
   const isExpanded = expandedCategories.includes(cat.name);
 
   return (
@@ -54,6 +54,9 @@ const CategoryRow = ({ cat, expandedCategories, toggleCategory, expandedGroups, 
                     catName={cat.name}
                     expandedGroups={expandedGroups}
                     toggleGroup={toggleGroup}
+                    feeGuideId={feeGuideId}
+                    dispatch={dispatch}
+                    updateProcedureFee={updateProcedureFee}
                   />
                 ))}
               </TableBody>

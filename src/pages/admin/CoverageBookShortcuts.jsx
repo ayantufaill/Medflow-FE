@@ -16,189 +16,31 @@ import {
   DeleteOutline as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  fetchCoverageShortcuts, 
+  createCoverageShortcut, 
+  updateCoverageShortcut, 
+  deleteCoverageShortcut,
+  selectCoverageShortcuts 
+} from '../../store/slices/coverageShortcutsSlice';
 import AddCoverageGroupModal from '../../components/admin/coverage/AddCoverageGroupModal';
-
-const INITIAL_DATA = [
-  {
-    id: 1,
-    name: 'Prosthodontics-Removable',
-    groups: [
-      { 
-        id: 101, 
-        name: 'Dentures', 
-        deliveryPattern: '1/5 year(s)',
-        codes: [
-          { code: 'D5110', desc: 'complete denture - maxillary' },
-          { code: 'D5120', desc: 'complete denture - mandibular' },
-          { code: 'D5130', desc: 'immediate denture - maxillary' },
-          { code: 'D5140', desc: 'immediate denture - mandibular' },
-        ]
-      },
-      { 
-        id: 102, 
-        name: 'Partials', 
-        deliveryPattern: '1/5 year(s)',
-        codes: [
-          { code: 'D5211', desc: 'maxillary partial denture - resin base (including any conventional clasps, rests and teeth)' },
-          { code: 'D5212', desc: 'mandibular partial denture - resin base (including any conventional clasps, rests and teeth)' },
-          { code: 'D5213', desc: 'maxillary partial denture - cast metal framework with resin denture bases (including any conventional clasps, rests and teeth)' },
-          { code: 'D5214', desc: 'mandibular partial denture - cast metal framework with resin denture bases (including any conventional clasps, rests and teeth)' },
-        ]
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Perio',
-    groups: [
-      { 
-        id: 201, 
-        name: '4910', 
-        deliveryPattern: '2/1 year(s)',
-        codes: [
-          { code: 'D4910', desc: 'periodontal maintenance' }
-        ]
-      },
-      { 
-        id: 202, 
-        name: 'SRP', 
-        deliveryPattern: '1/24 month(s)',
-        codes: [
-          { code: 'D4341', desc: 'periodontal scaling and root planing - four or more teeth per quadrant' },
-          { code: 'D4342', desc: 'periodontal scaling and root planing - one to three teeth per quadrant' },
-        ]
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Molar Crown Downgrade',
-    groups: [
-      { 
-        id: 301, 
-        name: 'Crown', 
-        deliveryPattern: '1/5 year(s)', 
-        downgrade: '1, 2, 3, 14, 15, 16, 19, 18, 17, 32, 31, 30',
-        codes: [
-          { code: 'D2740', desc: 'crown - porcelain/ceramic substrate' }
-        ]
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Composites',
-    groups: [
-      { 
-        id: 401, 
-        name: '1-surface', 
-        downgrade: true,
-        codes: [
-          { code: 'D2391', desc: 'resin-based composite - one surface, posterior' }
-        ]
-      },
-      { 
-        id: 402, 
-        name: '2-surface', 
-        downgrade: true,
-        codes: [
-          { code: 'D2392', desc: 'resin-based composite - two surfaces, posterior' }
-        ]
-      },
-      { 
-        id: 403, 
-        name: '3-surface', 
-        downgrade: true,
-        codes: [
-          { code: 'D2393', desc: 'resin-based composite - three surfaces, posterior' }
-        ]
-      },
-      { 
-        id: 404, 
-        name: '4-surface', 
-        downgrade: true,
-        codes: [
-          { code: 'D2394', desc: 'resin-based composite - four or more surfaces, posterior' }
-        ]
-      },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Preventive',
-    groups: [
-      { 
-        id: 501, 
-        name: 'Bitewings', 
-        deliveryPattern: '1/1 year(s)',
-        codes: [
-          { code: 'D0270', desc: 'bitewing - single radiographic image' },
-          { code: 'D0272', desc: 'bitewings - two radiographic images' },
-          { code: 'D0274', desc: 'bitewings - four radiographic images' }
-        ]
-      },
-      { 
-        id: 502, 
-        name: 'Exam', 
-        deliveryPattern: '2/1 year(s)',
-        codes: [
-          { code: 'D0120', desc: 'periodic oral evaluation - established patient' },
-          { code: 'D0150', desc: 'comprehensive oral evaluation - new or established patient' }
-        ]
-      },
-      { 
-        id: 503, 
-        name: 'Fluoride', 
-        deliveryPattern: '1/1 year(s)', 
-        ageLimit: '14',
-        codes: [
-          { code: 'D1206', desc: 'topical application of fluoride varnish' },
-          { code: 'D1208', desc: 'topical application of fluoride - excluding varnish' }
-        ]
-      },
-      { 
-        id: 504, 
-        name: 'FMX/pano', 
-        deliveryPattern: '1/36 month(s)',
-        codes: [
-          { code: 'D0330', desc: 'panoramic radiographic image' },
-          { code: 'D0210', desc: 'intraoral - complete series of radiographic images' }
-        ]
-      },
-      { 
-        id: 505, 
-        name: 'Prophy', 
-        deliveryPattern: '2/1 year(s)',
-        codes: [
-          { code: 'D1110', desc: 'prophylaxis - adult' },
-          { code: 'D1120', desc: 'prophylaxis - child' }
-        ]
-      },
-    ],
-  },
-  {
-    id: 6,
-    name: 'Endodontics',
-    groups: [
-      { 
-        id: 601, 
-        name: 'Endo-Root Canals', 
-        deliveryPattern: '1/3 year(s)',
-        codes: [
-          { code: 'D3310', desc: 'endodontic therapy, anterior tooth (excluding final restoration)' },
-          { code: 'D3320', desc: 'endodontic therapy, premolar tooth (excluding final restoration)' },
-          { code: 'D3330', desc: 'endodontic therapy, molar tooth (excluding final restoration)' }
-        ]
-      },
-    ],
-  },
-];
+import CircularProgress from '@mui/material/CircularProgress';
 
 const CoverageBookShortcuts = () => {
+  const dispatch = useDispatch();
+  const shortcuts = useSelector(selectCoverageShortcuts);
+  const initialized = useSelector(state => state.coverageShortcuts.initialized);
+
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+
+  React.useEffect(() => {
+    dispatch(fetchCoverageShortcuts());
+  }, [dispatch]);
 
   const toggleCategory = (id) => {
     setExpandedCategories((prev) =>
@@ -212,17 +54,69 @@ const CoverageBookShortcuts = () => {
     );
   };
 
-  const handleAddGroup = (e) => {
+  const handleAddGroup = (e, categoryId) => {
     e.stopPropagation();
     setSelectedGroup(null);
+    setSelectedCategoryId(categoryId);
     setModalOpen(true);
   };
 
-  const handleEditGroup = (e, group) => {
+  const handleEditGroup = (e, categoryId, group) => {
     e.stopPropagation();
     setSelectedGroup(group);
+    setSelectedCategoryId(categoryId);
     setModalOpen(true);
   };
+
+  const handleAddTemplate = () => {
+    const newTemplateName = prompt("Enter new template name:");
+    if (newTemplateName) {
+      dispatch(createCoverageShortcut({ name: newTemplateName, groups: [] }));
+    }
+  };
+
+  const handleDeleteTemplate = (e, id) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this template?")) {
+      dispatch(deleteCoverageShortcut(id));
+    }
+  };
+
+  const handleDeleteGroup = (e, categoryId, groupId) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this group?")) {
+      const category = shortcuts.find(c => c.id === categoryId);
+      if (category) {
+        const updatedGroups = category.groups.filter(g => g.id !== groupId);
+        dispatch(updateCoverageShortcut({ id: categoryId, updates: { groups: updatedGroups } }));
+      }
+    }
+  };
+
+  const handleSaveGroup = (groupData) => {
+    const category = shortcuts.find(c => c.id === selectedCategoryId);
+    if (!category) return;
+
+    let updatedGroups;
+    if (selectedGroup) {
+      // Edit
+      updatedGroups = category.groups.map(g => g.id === groupData.id ? groupData : g);
+    } else {
+      // Add
+      updatedGroups = [...category.groups, { ...groupData, id: Date.now() }];
+    }
+    
+    dispatch(updateCoverageShortcut({ id: selectedCategoryId, updates: { groups: updatedGroups } }));
+    setModalOpen(false);
+  };
+
+  if (!initialized) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 0 }}>
@@ -242,6 +136,7 @@ const CoverageBookShortcuts = () => {
           Coverage Book Shortcuts
         </Typography>
         <Button
+          onClick={handleAddTemplate}
           startIcon={<AddIcon />}
           sx={{
             color: '#003366',
@@ -257,7 +152,10 @@ const CoverageBookShortcuts = () => {
 
       {/* List */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {INITIAL_DATA.map((category) => {
+        {shortcuts.length === 0 && (
+          <Typography sx={{ p: 2, color: '#666', fontStyle: 'italic' }}>No templates found. Click "Add Template" to create one.</Typography>
+        )}
+        {shortcuts.map((category) => {
           const isExpanded = expandedCategories.includes(category.id);
 
           return (
@@ -289,7 +187,7 @@ const CoverageBookShortcuts = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Button
-                    onClick={handleAddGroup}
+                    onClick={(e) => handleAddGroup(e, category.id)}
                     startIcon={<AddIcon sx={{ fontSize: '1rem !important' }} />}
                     sx={{
                       color: isExpanded ? 'white' : '#003366',
@@ -302,6 +200,7 @@ const CoverageBookShortcuts = () => {
                     Add Group
                   </Button>
                   <IconButton 
+                    onClick={(e) => handleDeleteTemplate(e, category.id)}
                     size="small" 
                     sx={{ color: isExpanded ? 'white' : '#7a96b5' }}
                   >
@@ -312,7 +211,12 @@ const CoverageBookShortcuts = () => {
 
               <Collapse in={isExpanded}>
                 <Box sx={{ pl: 4, mt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  {category.groups.map((group) => {
+                  {(!category.groups || category.groups.length === 0) && (
+                    <Typography sx={{ color: '#888', fontStyle: 'italic', fontSize: '0.8rem', py: 1 }}>
+                      No groups added yet.
+                    </Typography>
+                  )}
+                  {category.groups && category.groups.map((group) => {
                     const isGroupExpanded = expandedGroups.includes(group.id);
 
                     return (
@@ -382,7 +286,7 @@ const CoverageBookShortcuts = () => {
 
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Button
-                              onClick={(e) => handleEditGroup(e, group)}
+                              onClick={(e) => handleEditGroup(e, category.id, group)}
                               sx={{
                                 color: '#003366',
                                 textTransform: 'none',
@@ -393,7 +297,7 @@ const CoverageBookShortcuts = () => {
                             >
                               Edit
                             </Button>
-                            <IconButton size="small" sx={{ color: '#7a96b5' }}>
+                            <IconButton onClick={(e) => handleDeleteGroup(e, category.id, group.id)} size="small" sx={{ color: '#7a96b5' }}>
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Box>
@@ -436,6 +340,7 @@ const CoverageBookShortcuts = () => {
       <AddCoverageGroupModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        onSave={handleSaveGroup}
         groupData={selectedGroup}
       />
     </Box>
