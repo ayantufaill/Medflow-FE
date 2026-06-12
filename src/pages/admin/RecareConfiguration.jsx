@@ -41,22 +41,6 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 
-const INITIAL_RECARE_PROCEDURES = [
-  { name: 'Polishing', intervals: '3,4,6,9,12', unit: 'Months', trigger: false },
-  { name: 'Prophy', intervals: '3,4,6,9,12', unit: 'Months', trigger: true },
-  { name: 'Exam', intervals: '6,9,12,18,24', unit: 'Months', trigger: false },
-  { name: 'BW', intervals: '6,12,24,36', unit: 'Months', trigger: false },
-  { name: 'Fluoride', intervals: '3,4,6,9,12', unit: 'Months', trigger: false },
-  { name: 'Pano/Fmx', intervals: '12,24,36,48,60', unit: 'Months', trigger: false },
-  { name: 'Scaling', intervals: '1,3,4,6,9,12', unit: 'Months', trigger: true },
-  { name: 'Maintenance', intervals: '3,4,6,9,12', unit: 'Months', trigger: false },
-  { name: 'PA', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },
-  { name: 'additional1 TDS Membership', intervals: '12', unit: 'Months', trigger: false },
-  { name: 'additional2', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },
-  { name: 'additional3', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },
-  { name: 'additional4', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },
-  { name: 'additional5', intervals: '6,12,24,36,48', unit: 'Months', trigger: false },
-];
 
 const STAGING_PROCEDURES = [
   'Polishing', 'Prophy', 'Exam', 'BW', 'Fluoride', 'Pano/Fmx', 'Scaling', 'Maintenance', 'PA', 'TDS Membership', 'Additional2', 'Additional3'
@@ -106,10 +90,10 @@ const RecareConfiguration = () => {
         try {
           setProcedures(JSON.parse(settingsMap.clinical_recare_procedures));
         } catch (e) {
-          setProcedures(INITIAL_RECARE_PROCEDURES);
+          setProcedures([]);
         }
       } else {
-        setProcedures(INITIAL_RECARE_PROCEDURES);
+        setProcedures([]);
       }
 
       if (settingsMap.clinical_recare_staging) {
@@ -122,7 +106,7 @@ const RecareConfiguration = () => {
         setStages(DEFAULT_STAGING_CONFIG);
       }
     } else {
-      setProcedures(INITIAL_RECARE_PROCEDURES);
+      setProcedures([]);
       setStages(DEFAULT_STAGING_CONFIG);
     }
   }, [settingsMap]);

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { feeService } from '../../../services/fee.service';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,20 @@ import {
 } from '@mui/material';
 
 const ClearLockedFeeDialog = ({ open, onClose }) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    try {
+      setLoading(true);
+      await feeService.clearLockedFees();
+      onClose();
+    } catch (error) {
+      console.error('Failed to clear locked fees:', error);
+      alert('Failed to clear locked fees.');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <Dialog 
       open={open} 
@@ -30,9 +45,10 @@ const ClearLockedFeeDialog = ({ open, onClose }) => {
               fontSize: '0.875rem',
               '&:hover': { bgcolor: '#c08d50' } 
             }}
-            onClick={onClose}
+            onClick={handleConfirm}
+            disabled={loading}
           >
-            Proceed
+            {loading ? 'Clearing...' : 'Proceed'}
           </Button>
           <Button 
             variant="contained" 
@@ -44,6 +60,7 @@ const ClearLockedFeeDialog = ({ open, onClose }) => {
               '&:hover': { bgcolor: '#888' } 
             }}
             onClick={onClose}
+            disabled={loading}
           >
             Cancel
           </Button>

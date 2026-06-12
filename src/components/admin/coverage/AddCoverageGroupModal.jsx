@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,7 +18,40 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 
-const AddCoverageGroupModal = ({ open, onClose, groupData }) => {
+const AddCoverageGroupModal = ({ open, onClose, onSave, groupData }) => {
+  const [name, setName] = useState('');
+  const [deliveryPattern, setDeliveryPattern] = useState('');
+  const [ageLimit, setAgeLimit] = useState('');
+  const [downgrade, setDowngrade] = useState('');
+
+  // When modal opens or groupData changes, initialize state
+  useEffect(() => {
+    if (open) {
+      if (groupData) {
+        setName(groupData.name || '');
+        setDeliveryPattern(groupData.deliveryPattern || '');
+        setAgeLimit(groupData.ageLimit || '');
+        setDowngrade(groupData.downgrade || '');
+      } else {
+        setName('');
+        setDeliveryPattern('');
+        setAgeLimit('');
+        setDowngrade('');
+      }
+    }
+  }, [open, groupData]);
+
+  const handleSave = () => {
+    onSave({
+      id: groupData?.id,
+      name,
+      deliveryPattern,
+      ageLimit,
+      downgrade,
+      codes: groupData?.codes || [] // preserve existing codes or empty
+    });
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -67,6 +100,8 @@ const AddCoverageGroupModal = ({ open, onClose, groupData }) => {
               Group Name:
             </Typography>
             <TextField
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Enter group name"
               variant="standard"
               fullWidth
@@ -116,24 +151,12 @@ const AddCoverageGroupModal = ({ open, onClose, groupData }) => {
                 />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <TextField 
+                    value={deliveryPattern}
+                    onChange={(e) => setDeliveryPattern(e.target.value)}
                     variant="standard" 
-                    placeholder="Count" 
-                    sx={{ width: 60, '& input': { textAlign: 'center', fontSize: '0.85rem' } }} 
+                    placeholder="Pattern (e.g. 1/5 year(s))" 
+                    sx={{ width: 150, '& input': { textAlign: 'center', fontSize: '0.85rem' } }} 
                   />
-                  <Typography sx={{ color: '#888' }}>/</Typography>
-                  <TextField 
-                    variant="standard" 
-                    placeholder="Frequency" 
-                    sx={{ width: 80, '& input': { textAlign: 'center', fontSize: '0.85rem' } }} 
-                  />
-                  <Select
-                    variant="standard"
-                    defaultValue="Month"
-                    sx={{ fontSize: '0.85rem', color: '#888' }}
-                  >
-                    <MenuItem value="Month">Month</MenuItem>
-                    <MenuItem value="Year">Year</MenuItem>
-                  </Select>
                 </Box>
               </Box>
 
@@ -154,6 +177,8 @@ const AddCoverageGroupModal = ({ open, onClose, groupData }) => {
                     />
                   </Box>
                   <TextField 
+                    value={ageLimit}
+                    onChange={(e) => setAgeLimit(e.target.value)}
                     variant="standard" 
                     placeholder="Age Limit" 
                     sx={{ width: 80, '& input': { fontSize: '0.85rem' } }} 
@@ -173,6 +198,8 @@ const AddCoverageGroupModal = ({ open, onClose, groupData }) => {
                   <Box sx={{ display: 'flex', alignItems: 'center', backgroundColor: '#f0f4fa', px: 1, py: 0.5, borderRadius: 1 }}>
                     <Typography sx={{ mr: 1, fontSize: '0.85rem' }}>🦷</Typography>
                     <TextField 
+                      value={downgrade}
+                      onChange={(e) => setDowngrade(e.target.value)}
                       variant="standard" 
                       placeholder="Code" 
                       sx={{ width: 80, '& input': { fontSize: '0.85rem' } }} 
@@ -191,7 +218,7 @@ const AddCoverageGroupModal = ({ open, onClose, groupData }) => {
       <DialogActions sx={{ px: 4, pb: 4, gap: 2 }}>
         <Button 
           variant="contained" 
-          onClick={onClose}
+          onClick={handleSave}
           sx={{ 
             backgroundColor: '#7a96b5', 
             '&:hover': { backgroundColor: '#6a86a5' },

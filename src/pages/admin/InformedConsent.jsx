@@ -45,53 +45,6 @@ import {
   FileUpload as UploadIcon,
 } from '@mui/icons-material';
 
-const INITIAL_CUSTOM_CONSENTS = [
-  {
-    name: 'ICON Therapy Consent',
-    procedures: [{ code: 'D2990', desc: 'resin infiltration of incipient smooth surface lesions' }]
-  },
-  {
-    name: 'Oral DNA',
-    procedures: [{ code: 'D0699', desc: 'Oral DNA pathogen testing for hygiene customization' }]
-  },
-  {
-    name: 'SRP CONSENT',
-    procedures: [
-      { code: 'D4341', desc: 'periodontal scaling and root planing - four or more teeth per quadrant' },
-      { code: 'D4342', desc: 'periodontal scaling and root planing - one to three teeth per quadrant' }
-    ]
-  },
-  {
-    name: 'Tooth supported bridge',
-    procedures: [
-      { code: 'D6740', desc: 'retainer crown - porcelain/ceramic' },
-      { code: 'D6750', desc: 'retainer crown - porcelain fused to high noble metal' },
-      { code: 'D6751', desc: 'retainer crown - porcelain fused to predominantly base metal' }
-    ]
-  },
-  {
-    name: 'Veneers',
-    procedures: [
-      { code: 'D2960', desc: 'labial veneer (resin laminate) - direct' },
-      { code: 'D2961', desc: 'labial veneer (resin laminate) - indirect' },
-      { code: 'D2962', desc: 'labial veneer (porcelain laminate) - indirect' }
-    ]
-  }
-];
-
-const INITIAL_SYSTEM_CONSENTS = [
-  {
-    name: 'bone-grafting',
-    procedures: [
-      { code: 'D3428', desc: 'bone graft in conjunction with periradicular surgery - per tooth, single site' },
-      { code: 'D7995', desc: 'synthetic graft - mandible or facial bones, by report' }
-    ]
-  },
-  {
-    name: 'build-up',
-    procedures: [{ code: 'D2950', desc: 'core buildup, including any pins when required' }]
-  }
-];
 
 
 
@@ -147,8 +100,8 @@ const InformedConsent = () => {
       setCustomConsents(loaded.filter(c => !c.isSystem));
       setSystemConsents(loaded.filter(c => c.isSystem));
     } else {
-      setCustomConsents(INITIAL_CUSTOM_CONSENTS.map((c, i) => ({ id: `c_${i}`, ...c, isSystem: false })));
-      setSystemConsents(INITIAL_SYSTEM_CONSENTS.map((c, i) => ({ id: `s_${i}`, ...c, isSystem: true })));
+      setCustomConsents([]);
+      setSystemConsents([]);
     }
   }, [templates]);
 

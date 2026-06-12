@@ -3,7 +3,7 @@ import { TableRow, TableCell, Box, Typography, TextField, Collapse, Table, Table
 import { ChevronRight as ChevronRightIcon, KeyboardArrowDown as ChevronDownIcon } from '@mui/icons-material';
 import ProcedureRow from './ProcedureRow';
 
-const GroupRow = ({ group, catName, expandedGroups, toggleGroup }) => {
+const GroupRow = ({ group, catName, expandedGroups, toggleGroup, feeGuideId, dispatch, updateProcedureFee }) => {
   const isExpanded = expandedGroups.includes(`${catName}-${group.name}`);
   
   return (
@@ -49,7 +49,13 @@ const GroupRow = ({ group, catName, expandedGroups, toggleGroup }) => {
             <Table size="small">
               <TableBody>
                 {group.procedures.map((proc, pIdx) => (
-                  <ProcedureRow key={pIdx} procedure={proc} />
+                  <ProcedureRow 
+                    key={pIdx} 
+                    procedure={proc} 
+                    feeGuideId={feeGuideId}
+                    dispatch={dispatch}
+                    updateProcedureFee={updateProcedureFee}
+                  />
                 ))}
               </TableBody>
             </Table>

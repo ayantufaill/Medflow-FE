@@ -46,7 +46,44 @@ export const feeService = {
   },
 
   /**
+   * Get fees for a specific fee schedule with optional filters
+   * @param {string} id
+   * @param {Object} params - { search, category, page, limit }
+   */
+  async getFeeScheduleFees(id, params = {}) {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.category) query.append('category', params.category);
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+
+    const response = await apiClient.get(`/fee-management/guides/${id}/fees?${query.toString()}`);
+    return response.data; // Returns { total, page, limit, data }
+  },
+
+  /**
+   * Update fees for a specific fee schedule
+   * @param {string} id
+   * @param {Array} fees - Array of { procCode, amount }
+   */
+  async updateFeeScheduleFees(id, fees) {
+    const response = await apiClient.put(`/fee-management/guides/${id}/fees`, { fees });
+    return response.data.data;
+  },
+
+  /**
+   * Round all fees in a fee schedule to the nearest specified amount
+   * @param {string} id
+   * @param {number} toNearest
+   */
+  async roundFeeScheduleFees(id, toNearest) {
+    const response = await apiClient.post(`/fee-management/guides/${id}/round`, { toNearest });
+    return response.data.data;
+  },
+
+  /**
    * List dental procedure codes with optional search/filters
+
    * @param {Object} params - { search, category, page, limit }
    */
   async getProcedureCodes(params = {}) {
@@ -76,6 +113,31 @@ export const feeService = {
    */
   async updateProcedureFees(procCode, fees) {
     const response = await apiClient.put(`/fee-management/codes/${procCode}/fees`, { fees });
+    return response.data.data;
+  },
+
+  /**
+   * Reestimate treatment plans
+   */
+  async reestimateTPlans() {
+    const response = await apiClient.post('/fee-management/tools/reestimate');
+    return response.data.data;
+  },
+
+  /**
+   * Clear locked fees
+   */
+  async clearLockedFees() {
+    const response = await apiClient.post('/fee-management/tools/clear-locked');
+    return response.data.data;
+  },
+
+  /**
+   * Reset treatment plans to default fee guide
+   * @param {Array} patientIds - Optional array of patient IDs to reset
+   */
+  async resetTPlans(patientIds = []) {
+    const response = await apiClient.post('/fee-management/tools/reset-tplans', { patientIds });
     return response.data.data;
   }
 };

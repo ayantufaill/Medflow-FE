@@ -68,6 +68,44 @@ export const copyFeeGuide = createAsyncThunk(
   }
 );
 
+export const fetchFeeGuideDetails = createAsyncThunk(
+  'feeGuides/fetchDetails',
+  async ({ id, params }, { rejectWithValue }) => {
+    try {
+      const data = await feeService.getFeeScheduleFees(id, params);
+      return data; // Returns { data: [...], total }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const updateProcedureFee = createAsyncThunk(
+  'feeGuides/updateProcedureFee',
+  async ({ id, procCode, amount }, { rejectWithValue }) => {
+    try {
+      // The API takes an array of fees
+      await feeService.updateFeeScheduleFees(id, [{ procCode, amount }]);
+      return { procCode, amount };
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const roundFeeGuideFees = createAsyncThunk(
+  'feeGuides/roundFees',
+  async ({ id, toNearest }, { rejectWithValue }) => {
+    try {
+      await feeService.roundFeeScheduleFees(id, toNearest);
+      // We don't return the full list here, it's easier to just re-fetch details in the component
+      return toNearest;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const savedDefaultId = localStorage.getItem('defaultFeeGuideId');
 
 const initialState = {
@@ -75,6 +113,11 @@ const initialState = {
   defaultFeeGuideId: savedDefaultId || null,
   loading: false,
   error: null,
+  // Added for Fee Guide Details page
+  selectedFeeGuideFees: [],
+  selectedFeeGuideTotal: 0,
+  detailsLoading: false,
+  detailsError: null,
 };
 
 const feeGuideSlice = createSlice({
@@ -129,6 +172,28 @@ const feeGuideSlice = createSlice({
       // Copy
       .addCase(copyFeeGuide.fulfilled, (state, action) => {
         state.feeGuides.push(action.payload);
+      })
+      // Fetch Details
+      .addCase(fetchFeeGuideDetails.pending, (state) => {
+        state.detailsLoading = true;
+        state.detailsError = null;
+      })
+      .addCase(fetchFeeGuideDetails.fulfilled, (state, action) => {
+        state.detailsLoading = false;
+        state.selectedFeeGuideFees = action.payload.data || [];
+        state.selectedFeeGuideTotal = action.payload.total || 0;
+      })
+      .addCase(fetchFeeGuideDetails.rejected, (state, action) => {
+        state.detailsLoading = false;
+        state.detailsError = action.payload;
+      })
+      // Update Procedure Fee
+      .addCase(updateProcedureFee.fulfilled, (state, action) => {
+        const { procCode, amount } = action.payload;
+        const index = state.selectedFeeGuideFees.findIndex(f => f.code === procCode);
+        if (index !== -1) {
+          state.selectedFeeGuideFees[index].fee = amount;
+        }
       });
   },
 });
@@ -139,5 +204,7 @@ export const selectFeeGuides = (state) => state.feeGuides.feeGuides;
 export const selectDefaultFeeGuideId = (state) => state.feeGuides.defaultFeeGuideId;
 export const selectFeeGuidesLoading = (state) => state.feeGuides.loading;
 export const selectFeeGuidesError = (state) => state.feeGuides.error;
+export const selectFeeGuideDetails = (state) => state.feeGuides.selectedFeeGuideFees;
+export const selectFeeGuideDetailsLoading = (state) => state.feeGuides.detailsLoading;
 
 export default feeGuideSlice.reducer;

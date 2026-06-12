@@ -36,10 +36,6 @@ import {
   FileUploadOutlined as UploadIcon,
 } from '@mui/icons-material';
 
-const INITIAL_MOCK_OPS = [
-  { id: 'm1', name: 'Implant Placement Post-Op', type: 'Post Operation', procedures: 'D6010', description: 'Post-op: No hot liquids for 24 hours. Take prescribed pain relievers.', sendHours: '24', sendUnit: 'hours', fileOption: 'Upload PDF' },
-  { id: 'm2', name: 'Wisdom Tooth Extraction Post-Op', type: 'Post Operation', procedures: 'D7240', description: 'Post-op: Use ice pack for swelling. Do not use straws for 48 hours.', sendHours: '48', sendUnit: 'hours', fileOption: 'Upload PDF' }
-];
 
 const mapBackendToFrontend = (backend) => {
   let contentData = {};
@@ -90,10 +86,10 @@ const PrePostOps = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (instructionTemplates && instructionTemplates.length > 0) {
+    if (instructionTemplates) {
       setPrePostOps(instructionTemplates.map(mapBackendToFrontend));
     } else {
-      setPrePostOps(INITIAL_MOCK_OPS);
+      setPrePostOps([]);
     }
   }, [instructionTemplates]);
 

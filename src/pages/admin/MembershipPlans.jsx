@@ -54,48 +54,6 @@ import {
   createMembershipPlanThunk
 } from '../../store/slices/insuranceSlice';
 
-const INITIAL_MEMBERSHIP_PLANS = [
-  {
-    id: '1',
-    name: 'Bright Beginning',
-    templateName: '',
-    subscribers: 1,
-    annualFee: '$550.00',
-    monthlyFee: '$46.00',
-  },
-  {
-    id: '2',
-    name: 'Clean + Confident - Existing Patient',
-    templateName: '',
-    subscribers: 2,
-    annualFee: '$800.00',
-    monthlyFee: '$75.00',
-  },
-  {
-    id: '3',
-    name: 'Clean + Confident - New Patient',
-    templateName: '',
-    subscribers: 0,
-    annualFee: '$1,050.00',
-    monthlyFee: '$89.00',
-  },
-  {
-    id: '4',
-    name: 'Foundations (Perio) Program - New Patient',
-    templateName: 'Foundations',
-    subscribers: 3,
-    annualFee: '$1,495.00',
-    monthlyFee: '$133.00',
-  },
-  {
-    id: '5',
-    name: 'Foundations (Perio) Program Existing Patient',
-    templateName: '',
-    subscribers: 1,
-    annualFee: '$1,195.00',
-    monthlyFee: '$105.00',
-  },
-];
 
 const MembershipPlans = () => {
   const navigate = useNavigate();

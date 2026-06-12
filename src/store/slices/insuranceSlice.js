@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { insuranceCompanyService, insurancePlanService } from '../../services/insurance.service';
+import { membershipPlanService } from '../../services/membership-plan.service';
+import { carrierMatchingService } from '../../services/carrier-matching.service';
 
 export const fetchAllInsuranceCompaniesThunk = createAsyncThunk(
   'insurance/fetchAllCompanies',
@@ -143,27 +145,27 @@ export const deletePlanThunk = createAsyncThunk(
   }
 );
 
-const INITIAL_MEMBERSHIP_PLANS = [
-  { id: '1', name: 'Bright Beginning', templateName: '', subscribers: 1, annualFee: '$550.00', monthlyFee: '$46.00' },
-  { id: '2', name: 'Clean + Confident - Existing Patient', templateName: '', subscribers: 2, annualFee: '$800.00', monthlyFee: '$75.00' },
-  { id: '3', name: 'Clean + Confident - New Patient', templateName: '', subscribers: 0, annualFee: '$1,050.00', monthlyFee: '$89.00' },
-  { id: '4', name: 'Foundations (Perio) Program - New Patient', templateName: 'Foundations', subscribers: 3, annualFee: '$1,495.00', monthlyFee: '$133.00' },
-  { id: '5', name: 'Foundations (Perio) Program Existing Patient', templateName: '', subscribers: 1, annualFee: '$1,195.00', monthlyFee: '$105.00' },
-];
-
 export const deleteMembershipPlanThunk = createAsyncThunk(
   'insurance/deleteMembershipPlan',
-  async (planId) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return planId;
+  async (planId, { rejectWithValue }) => {
+    try {
+      await membershipPlanService.deleteMembershipPlan(planId);
+      return planId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete membership plan');
+    }
   }
 );
 
 export const fetchMembershipPlansThunk = createAsyncThunk(
   'insurance/fetchMembershipPlans',
-  async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return INITIAL_MEMBERSHIP_PLANS;
+  async (_, { rejectWithValue }) => {
+    try {
+      const plans = await membershipPlanService.getMembershipPlans();
+      return plans;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch membership plans');
+    }
   },
   {
     condition: (_, { getState }) => {
@@ -176,29 +178,30 @@ export const fetchMembershipPlansThunk = createAsyncThunk(
 
 export const createMembershipPlanThunk = createAsyncThunk(
   'insurance/createMembershipPlan',
-  async (plan) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return plan;
+  async (plan, { rejectWithValue }) => {
+    try {
+      const newPlan = await membershipPlanService.createMembershipPlan(plan);
+      return newPlan;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to create membership plan');
+    }
   }
 );
 
-// ─── CONVERTED CARRIERS THUNKS (MOCKED) ──────────────────────────────────────
+// ─── CONVERTED CARRIERS THUNKS ──────────────────────────────────────
 export const fetchConvertedCarriersThunk = createAsyncThunk(
   'insurance/fetchConvertedCarriers',
-  async () => {
-    // Mocked delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      oldPayers: [
-        { name: 'Delta Dental', id: '12345', patientIds: 'P001, P002' },
-        { name: 'Cigna', id: '67890', patientIds: 'P003' }
-      ],
-      oryxPayers: [
-        { name: 'Delta Dental of California', id: 'DD-CA' },
-        { name: 'Cigna Health', id: 'CG-HLTH' }
-      ],
-      matchedPayers: []
-    };
+  async (_, { rejectWithValue }) => {
+    try {
+      const [oldPayers, oryxPayers, matchedPayers] = await Promise.all([
+        carrierMatchingService.getConvertedOldPayers(),
+        carrierMatchingService.getConvertedOryxPayers(),
+        carrierMatchingService.getConvertedMatchedPayers()
+      ]);
+      return { oldPayers, oryxPayers, matchedPayers };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch converted carriers');
+    }
   },
   {
     condition: (_, { getState }) => {
@@ -211,33 +214,44 @@ export const fetchConvertedCarriersThunk = createAsyncThunk(
 
 export const matchConvertedCarrierThunk = createAsyncThunk(
   'insurance/matchConvertedCarrier',
-  async (matchData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return matchData; // { oldName, oryxName, oldId, oryxId }
+  async ({ oldPayerId, oryxPayerId }, { rejectWithValue }) => {
+    try {
+      const matchData = await carrierMatchingService.matchConvertedCarrier(oldPayerId, oryxPayerId);
+      return matchData;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to match converted carrier');
+    }
   }
 );
 
 export const clearConvertedMatchesThunk = createAsyncThunk(
   'insurance/clearConvertedMatches',
-  async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return [];
+  async (oldPayerId, { rejectWithValue }) => {
+    try {
+      if (oldPayerId) {
+        await carrierMatchingService.deleteConvertedMatch(oldPayerId);
+      }
+      return [];
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to clear converted matches');
+    }
   }
 );
 
-// ─── VYNE CARRIERS THUNKS (MOCKED) ─────────────────────────────────────────────
+// ─── VYNE CARRIERS THUNKS ─────────────────────────────────────────────
 export const fetchVyneCarriersThunk = createAsyncThunk(
   'insurance/fetchVyneCarriers',
-  async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      officePayers: Array(15).fill({ name: 'Arizona Blue Cross Blue Shield of Georgia', id: '60054' }),
-      vynePayers: [
-        { name: 'BCBS AZ', id: 'VY-BCBS-AZ' },
-        { name: 'BCBS GA', id: 'VY-BCBS-GA' }
-      ],
-      matchedPayers: []
-    };
+  async (_, { rejectWithValue }) => {
+    try {
+      const [officePayers, vynePayers, matchedPayers] = await Promise.all([
+        carrierMatchingService.getVyneOfficePayers(),
+        carrierMatchingService.getVynePayers(),
+        carrierMatchingService.getVyneMatchedPayers()
+      ]);
+      return { officePayers, vynePayers, matchedPayers };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch vyne carriers');
+    }
   },
   {
     condition: (_, { getState }) => {
@@ -250,9 +264,13 @@ export const fetchVyneCarriersThunk = createAsyncThunk(
 
 export const matchVyneCarrierThunk = createAsyncThunk(
   'insurance/matchVyneCarrier',
-  async (matchData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return matchData; // { officeName, vyneName, officeId, vyneId, vyneMasterId }
+  async ({ officePayerId, vynePayerId, vyneMasterId }, { rejectWithValue }) => {
+    try {
+      const matchData = await carrierMatchingService.matchVyneCarrier(officePayerId, vynePayerId, vyneMasterId);
+      return matchData;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to match vyne carrier');
+    }
   }
 );
 
