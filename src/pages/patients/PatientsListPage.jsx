@@ -621,6 +621,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                             selected={isSelected}
                             sx={{
                               cursor: 'pointer',
+                              bgcolor: patient.isActive === false ? '#f5f5f5' : 'inherit',
+                              color: patient.isActive === false ? 'text.secondary' : 'inherit',
                               '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' },
                               '& .editable-cell:hover': {
                                 bgcolor: 'action.hover',
