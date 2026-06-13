@@ -134,7 +134,7 @@ const AddNewPatientAppointmentForm = ({
   }, [initialPatient]);
 
   // Scheduled procedure table rows
-  const [procedures, setProcedures] = useState(DEFAULT_PROCEDURES);
+  const [procedures, setProcedures] = useState([]);
 
   // Procedure tags: all available tags + which ones are selected
   const [procedureTags, setProcedureTags] = useState(DEFAULT_PROCEDURE_TAGS);
@@ -146,7 +146,7 @@ const AddNewPatientAppointmentForm = ({
   // "Add Procedure" autocomplete state
   const [addingProcedure, setAddingProcedure] = useState(false);
   const [procedureInputValue, setProcedureInputValue] = useState("");
-  const nextProcedureId = useRef(DEFAULT_PROCEDURES.length + 1);
+  const nextProcedureId = useRef(1);
 
   // Right-panel fields
   const [appointmentStatus, setAppointmentStatus] = useState("unconfirmed");

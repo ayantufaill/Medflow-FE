@@ -510,6 +510,25 @@ const OperatorySchedulePage = () => {
         columnId = OPERATORY_COLUMNS[colIndex]?.id || "op1";
       }
 
+      // Resolve provider name
+      const rawProvider = a.providerId;
+      let providerName = "";
+      if (rawProvider) {
+        if (typeof rawProvider === "object") {
+          const u = rawProvider.userId || rawProvider;
+          providerName = [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || rawProvider.providerCode || "";
+        } else {
+          const matched = providers?.find(p => String(p._id || p.id) === String(rawProvider));
+          if (matched) {
+            providerName = providerLabel(matched);
+          }
+        }
+      }
+
+      // Resolve operatory room label
+      const operatoryLabel =
+        OPERATORY_COLUMNS?.find((c) => c.id === columnId)?.label || columnId || "—";
+
       return {
         id: a._id || a.id,
         appointmentDate: a.appointmentDate,
@@ -524,6 +543,10 @@ const OperatorySchedulePage = () => {
         status: a.status || "scheduled",
         note: a.notes || "",
         color: "#1976d2",
+        providerName,
+        operatoryLabel,
+        durationMinutes: a.durationMinutes || dayjs(endObj).diff(startObj, "minute"),
+        customFields: a.customFields,
       };
     } catch {
       return null;

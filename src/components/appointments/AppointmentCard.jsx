@@ -1,11 +1,14 @@
+import { useState } from "react";
 import dayjs from "dayjs";
-import { Box, Paper, Typography, IconButton } from "@mui/material";
+import { Box, Paper, Typography, IconButton, Popover, Divider } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CallIcon from "@mui/icons-material/Call";
 import ScreenShareIcon from "@mui/icons-material/ScreenShare";
 import EmergencyIcon from "@mui/icons-material/Emergency";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import PersonIcon from "@mui/icons-material/Person";
 
 /**
  * AppointmentCard Component
@@ -38,6 +41,18 @@ const AppointmentCard = ({
   isNewAppointment = false,
   privacyMode = false,
 }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleHoverOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleHoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const isHoverOpen = Boolean(anchorEl);
+
   // Calculate responsive sizing values
   const sizing = {
     padding: isUltraCompact ? 0.3 : isCompactAppointment ? 0.5 : 1,
@@ -122,90 +137,198 @@ const AppointmentCard = ({
   }
 
   return (
-    <Paper
-      elevation={2}
-      onClick={(e) => {
-        e.stopPropagation();
-        onAppointmentClick && onAppointmentClick(appointment);
-      }}
-      sx={{
-        position: "absolute",
-        left: "5%",
-        right: "5%",
-        top: topPx + 2,
-        height: finalHeight - 4,
-        borderRadius: 1.5,
-        bgcolor: "#ffffff",
-        color: "#000000",
-        p: 0,
-        cursor: "pointer",
-        transition: isNewAppointment 
-          ? "transform 0.1s, box-shadow 0.1s, border 0.3s ease-out"
-          : "transform 0.1s, box-shadow 0.1s",
-        overflow: "hidden",
-        "&:hover": {
-          transform: "scale(1.02)",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-        },
-        ...(isNewAppointment && {
-          border: "3px solid #4CAF50",
-          boxShadow: "0 0 20px rgba(76, 175, 80, 0.5), 0 0 40px rgba(76, 175, 80, 0.3)",
-          animation: "pulse-green 2s ease-in-out infinite",
-          "@keyframes pulse-green": {
-            "0%": {
-              boxShadow: "0 0 20px rgba(76, 175, 80, 0.5), 0 0 40px rgba(76, 175, 80, 0.3)",
-            },
-            "50%": {
-              boxShadow: "0 0 30px rgba(76, 175, 80, 0.8), 0 0 60px rgba(76, 175, 80, 0.5)",
-            },
-            "100%": {
-              boxShadow: "0 0 20px rgba(76, 175, 80, 0.5), 0 0 40px rgba(76, 175, 80, 0.3)",
-            },
+    <>
+      <Paper
+        elevation={2}
+        onClick={(e) => {
+          e.stopPropagation();
+          setAnchorEl(null);
+          onAppointmentClick && onAppointmentClick(appointment);
+        }}
+        onMouseEnter={handleHoverOpen}
+        onMouseLeave={handleHoverClose}
+        sx={{
+          position: "absolute",
+          left: "5%",
+          right: "5%",
+          top: topPx + 2,
+          height: finalHeight - 4,
+          borderRadius: 1.5,
+          bgcolor: "#ffffff",
+          color: "#000000",
+          p: 0,
+          cursor: "pointer",
+          transition: isNewAppointment 
+            ? "transform 0.1s, box-shadow 0.1s, border 0.3s ease-out"
+            : "transform 0.1s, box-shadow 0.1s",
+          overflow: "hidden",
+          "&:hover": {
+            transform: "scale(1.02)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           },
-        }),
-        display: "flex",
-        flexDirection: "row",
-        border: isNewAppointment ? "none" : "none",
-      }}
-    >
-      {/* Left Column - All Content */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <AppointmentHeader
-          appointment={appointment}
+          ...(isNewAppointment && {
+            border: "3px solid #4CAF50",
+            boxShadow: "0 0 20px rgba(76, 175, 80, 0.5), 0 0 40px rgba(76, 175, 80, 0.3)",
+            animation: "pulse-green 2s ease-in-out infinite",
+            "@keyframes pulse-green": {
+              "0%": {
+                boxShadow: "0 0 20px rgba(76, 175, 80, 0.5), 0 0 40px rgba(76, 175, 80, 0.3)",
+              },
+              "50%": {
+                boxShadow: "0 0 30px rgba(76, 175, 80, 0.8), 0 0 60px rgba(76, 175, 80, 0.5)",
+              },
+              "100%": {
+                boxShadow: "0 0 20px rgba(76, 175, 80, 0.5), 0 0 40px rgba(76, 175, 80, 0.3)",
+              },
+            },
+          }),
+          display: "flex",
+          flexDirection: "row",
+          border: isNewAppointment ? "none" : "none",
+        }}
+      >
+        {/* Left Column - All Content */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <AppointmentHeader
+            appointment={appointment}
+            isShortAppointment={isShortAppointment}
+            isUltraCompact={isUltraCompact}
+            isCompactAppointment={isCompactAppointment}
+            sizing={sizing}
+            privacyMode={privacyMode}
+          />
+
+          <AppointmentStatusBand
+            status={appointment.status}
+            statusColor={statusColor}
+            isUltraCompact={isUltraCompact}
+            isCompactAppointment={isCompactAppointment}
+            zebraHeight={sizing.zebraHeight}
+            zebraMargin={sizing.zebraMargin}
+          />
+
+          <AppointmentContent
+            appointment={appointment}
+            isShortAppointment={isShortAppointment}
+            isUltraCompact={isUltraCompact}
+            isCompactAppointment={isCompactAppointment}
+            statusColor={statusColor}
+            sizing={sizing}
+          />
+        </Box>
+
+        {/* Right Column - Action Icons */}
+        <AppointmentActions
           isShortAppointment={isShortAppointment}
           isUltraCompact={isUltraCompact}
           isCompactAppointment={isCompactAppointment}
           sizing={sizing}
-          privacyMode={privacyMode}
         />
+      </Paper>
+      <Popover
+        id={`hover-popover-${appointment.id}`}
+        sx={{
+          pointerEvents: "none",
+        }}
+        open={isHoverOpen}
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "left",
+        }}
+        onClose={handleHoverClose}
+        disableRestoreFocus
+      >
+        <Paper
+          elevation={4}
+          sx={{
+            p: 2.5,
+            width: 320,
+            borderRadius: 2,
+            border: "1px solid #e2e8f0",
+            background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ mb: 1.5 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: "1rem", color: "#1e293b", mb: 0.5 }}>
+              {privacyMode ? "•••• ••••" : appointment.patientName}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
+              <Box
+                sx={{
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: "4px",
+                  bgcolor: statusColor,
+                  color: "#fff",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                }}
+              >
+                {appointment.status || "unconfirmed"}
+              </Box>
+              <Typography sx={{ fontSize: "11px", color: "#64748b", fontWeight: 500 }}>
+                {appointment.customFields?.visitType === "recare" ? "Recare" : "Treatment"}
+              </Typography>
+            </Box>
+          </Box>
 
-        <AppointmentStatusBand
-          status={appointment.status}
-          statusColor={statusColor}
-          isUltraCompact={isUltraCompact}
-          isCompactAppointment={isCompactAppointment}
-          zebraHeight={sizing.zebraHeight}
-          zebraMargin={sizing.zebraMargin}
-        />
+          <Divider sx={{ mb: 1.5 }} />
 
-        <AppointmentContent
-          appointment={appointment}
-          isShortAppointment={isShortAppointment}
-          isUltraCompact={isUltraCompact}
-          isCompactAppointment={isCompactAppointment}
-          statusColor={statusColor}
-          sizing={sizing}
-        />
-      </Box>
+          {/* Details */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <AccessTimeIcon sx={{ fontSize: 16, color: "#64748b" }} />
+              <Typography sx={{ fontSize: "12px", color: "#334155", fontWeight: 600 }}>
+                {dayjs(appointment.start).format("dddd, MMM D")} @ {dayjs(appointment.start).format("h:mm A")} - {dayjs(appointment.end).format("h:mm A")} ({appointment.durationMinutes || 60} mins)
+              </Typography>
+            </Box>
 
-      {/* Right Column - Action Icons */}
-      <AppointmentActions
-        isShortAppointment={isShortAppointment}
-        isUltraCompact={isUltraCompact}
-        isCompactAppointment={isCompactAppointment}
-        sizing={sizing}
-      />
-    </Paper>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <LocationOnIcon sx={{ fontSize: 16, color: "#64748b" }} />
+              <Typography sx={{ fontSize: "12px", color: "#334155" }}>
+                Room: <span style={{ fontWeight: 600 }}>{appointment.operatoryLabel || "—"}</span>
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <PersonIcon sx={{ fontSize: 16, color: "#64748b" }} />
+              <Typography sx={{ fontSize: "12px", color: "#334155" }}>
+                Provider: <span style={{ fontWeight: 600 }}>{appointment.providerName || "—"}</span>
+              </Typography>
+            </Box>
+
+            {appointment.title && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.5 }}>
+                <Typography sx={{ fontSize: "10px", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                  Chief Complaint / Procedures
+                </Typography>
+                <Typography sx={{ fontSize: "12px", color: "#334155", bgcolor: "#f1f5f9", p: 1, borderRadius: 1 }}>
+                  {appointment.title}
+                </Typography>
+              </Box>
+            )}
+
+            {appointment.note && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.5 }}>
+                <Typography sx={{ fontSize: "10px", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                  Notes
+                </Typography>
+                <Typography sx={{ fontSize: "11px", color: "#475569", fontStyle: "italic" }}>
+                  {appointment.note}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Paper>
+      </Popover>
+    </>
   );
 };
 
