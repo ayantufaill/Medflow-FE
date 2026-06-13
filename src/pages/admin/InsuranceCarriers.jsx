@@ -127,32 +127,48 @@ const InsuranceCarriers = () => {
         return;
       }
 
+      // Sanitize the payload: omit empty optional fields so they satisfy backend validators
+      const sanitizedCarrier = Object.entries(newCarrier).reduce((acc, [key, value]) => {
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed !== '') {
+            acc[key] = trimmed;
+          }
+        } else if (Array.isArray(value)) {
+          if (value.length > 0) {
+            acc[key] = value;
+          }
+        } else if (value !== null && value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+
+      // Await API response. If it fails, execution halts here and moves to the catch block.
+      const response = await insuranceCompanyService.createInsuranceCompany(sanitizedCarrier);
+
+      // Map successfully created carrier to state
       const createdCarrier = {
         ...newCarrier,
-        id: Date.now().toString(), // Temporary ID for local state
+        id: response?._id || response?.id || Date.now().toString(),
         plansCount: 0
       };
-
-      try {
-        const response = await insuranceCompanyService.createInsuranceCompany(newCarrier);
-        if (response) {
-          createdCarrier.id = response._id || response.id;
-        }
-      } catch (apiErr) {
-        console.error('Backend save failed, using optimistic state:', apiErr);
-      }
 
       dispatch(addCarrierOptimistic(createdCarrier));
       showSnackbar('Insurance carrier added successfully', 'success');
       setIsAddDialogOpen(false);
 
+      // Reset form state
       setNewCarrier({
         name: '', payerId: '', phone: '', email: '', fax: '', website: '',
         address: '', address2: '', city: '', state: '', zipCode: '', country: 'United States',
         notes: '', claimType: '', providersOutOfNetwork: [],
       });
     } catch (err) {
-      showSnackbar('Failed to add insurance carrier', 'error');
+      // Handle and display actual backend error details
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to add insurance carrier';
+      showSnackbar(errorMessage, 'error');
+      console.error('Failed to save carrier:', err);
     }
   };
 
