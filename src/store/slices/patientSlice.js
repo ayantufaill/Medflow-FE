@@ -7,11 +7,12 @@ import { invoiceService } from '../../services/invoice.service';
 
 export const fetchPatients = createAsyncThunk(
   'patient/fetchPatients',
-  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '' } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '' } = {}, { rejectWithValue, signal }) => {
     try {
-      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd);
+      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, signal);
       return { ...result, params: { page, limit, search, status, dobStart, dobEnd } };
     } catch (err) {
+      if (err.name === 'AbortError' || err.name === 'CanceledError') throw err;
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch patients');
     }
   }
@@ -148,7 +149,7 @@ export const updatePatientThunk = createAsyncThunk(
   'patient/updatePatient',
   async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await patientService.updatePatientWorkspace(patientId, payload);
+      const response = await patientService.updatePatient(patientId, payload);
       
       // After a successful update, we should refresh the workspace payload to ensure Redux has all relational data
       dispatch(fetchPatientById(patientId));

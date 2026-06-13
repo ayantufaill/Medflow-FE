@@ -117,7 +117,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     if (sanitizedSearch) {
       sanitizedSearch = sanitizedSearch.replace(/^\+/, '').trim();
     }
-    fetchPatientsRedux({
+    const promise = fetchPatientsRedux({
       page: page + 1,
       limit: rowsPerPage,
       search: sanitizedSearch,
@@ -127,6 +127,12 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       dobStart: '',
       dobEnd: '',
     });
+
+    return () => {
+      if (promise && promise.abort) {
+        promise.abort();
+      }
+    };
   }, [page, rowsPerPage, debouncedSearch, effectiveStatus, genderFilter, providerFilter, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
