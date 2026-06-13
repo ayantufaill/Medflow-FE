@@ -101,7 +101,8 @@ const InsurancePlans = () => {
   const lastFetchRef = React.useRef(null);
 
   const fetchPlans = useCallback(async () => {
-    const params = { page: 1, limit: 100, search: debouncedSearchGeneral };
+    const searchTerm = debouncedSearchCarrier || debouncedSearchGeneral;
+    const params = { page: 1, limit: 100, search: searchTerm };
     const paramsStr = JSON.stringify(params);
     if (lastFetchRef.current === paramsStr) return;
     lastFetchRef.current = paramsStr;
@@ -111,7 +112,7 @@ const InsurancePlans = () => {
     }, 100);
 
     dispatch(fetchPlansList(params));
-  }, [dispatch, debouncedSearchGeneral]);
+  }, [dispatch, debouncedSearchGeneral, debouncedSearchCarrier]);
 
   useEffect(() => {
     fetchPlans();
