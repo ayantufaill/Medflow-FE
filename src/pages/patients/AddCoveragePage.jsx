@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box, Grid, Typography, CircularProgress, IconButton, Button, TextField, MenuItem
+  Box, Grid, Typography, CircularProgress, IconButton, Button, TextField, MenuItem, InputAdornment
 } from "@mui/material";
 import { 
   Book as BookIcon,
   ArrowBack as ArrowBackIcon,
-  InfoOutlined as InfoIcon
+  InfoOutlined as InfoIcon,
+  DeleteOutlined as DeleteIcon
 } from "@mui/icons-material";
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
-import { insuranceCompanyService } from '../../services/insurance.service';
+import { insuranceCompanyService, insurancePlanService } from '../../services/insurance.service';
+import { usePatientInsurances } from '../../hooks/redux/usePatient';
 import {
   InsuranceInformation,
   SubscriberInformation,
@@ -18,8 +20,11 @@ import {
   DeductiblesTable,
   CoverageTable,
   PolicyNotes,
-  CoverageBookSummary
+  CoverageBookSummary,
+  FeeGuideModal,
+  CoverageBookModal
 } from '../../components/insurance';
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const AddCoveragePage = () => {
   const { patientId } = useParams();
@@ -28,6 +33,11 @@ const AddCoveragePage = () => {
   const [loading, setLoading] = useState(false);
   const [patient, setPatient] = useState(null);
   const [allCompanies, setAllCompanies] = useState({ companies: [] });
+  const [coverageTemplates, setCoverageTemplates] = useState([]);
+  const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
+  const [isCoverageBookModalOpen, setIsCoverageBookModalOpen] = useState(false);
+  const [templateToApply, setTemplateToApply] = useState(null);
+  const [isTemplateConfirmOpen, setIsTemplateConfirmOpen] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -43,33 +53,38 @@ const AddCoveragePage = () => {
     healthPlan: false,
     assignmentOfBenefits: 1,
     saveAsTemplate: false,
-    planFeeGuide: 'careington',
+    planFeeGuide: '',
     coverageType: 'ppo',
+    providersPlanFeeGuides: [],
     deductibles: [
-      { type: 'Standard', lifetime: false, standard: false, individual: '$50.00', family: '$150.00', metAmount: '$50.00', metDate: '03/03/2026' },
-      { type: 'Preventative', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '03/03/2026' },
-      { type: 'Basic', lifetime: false, standard: true, individual: '', family: '', metAmount: '', metDate: '' },
-      { type: 'Major', lifetime: false, standard: true, individual: '', family: '', metAmount: '', metDate: '' },
-      { type: 'Orthodontics', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '03/03/2026' }
+      { type: 'Standard', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Preventative', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Basic', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Major', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Orthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
     ],
     coverage: {
       individual: {
         unlimited: false,
-        annualMax: '$1,500.00',
-        usedAmount: '$158.00',
+        annualMax: '',
+        usedAmount: '',
         usedAmountDate: ''
       },
       family: {
-        unlimited: true,
+        unlimited: false,
         annualMax: '',
         usedAmount: '',
         usedAmountDate: ''
       },
       ortho: {
-        annualMax: '$2,000.00',
-        usedAmount: '$18.00',
-        usedAmountDate: '03/03/2026'
+        unlimited: false,
+        annualMax: '',
+        usedAmount: '',
+        usedAmountDate: ''
       },
+      diagnostic: { unlimited: false, annualMax: '' },
+      preventative: { unlimited: false, annualMax: '' },
+      major: { unlimited: false, annualMax: '' },
       categories: ['Diagnostic', 'Preventative', 'Major']
     },
     subscriber: {
@@ -80,20 +95,13 @@ const AddCoveragePage = () => {
       dateOfBirth: ''
     },
     renewalMonth: 'January',
-    policyStarted: '',
+    policyStarted: new Date().toISOString().split('T')[0],
     policyEnds: '',
-    honorWriteOff: true
+    honorWriteOff: false
   });
 
   // Coverage book data state
-  const [coverageBookData, setCoverageBookData] = useState([
-    { code: 'CNANOHA', name: 'Alternative to Fl- varnish', age: '18', maxAllowed: '', frequency1: '', frequency2: '', period: 'M', lifetimeLimit: '', hasDowngrade: false, downgrade: '', nc: false, flatPlanPortion: '' },
-    { code: 'D1206', name: 'topical application of fluoride var...', age: '18', maxAllowed: '', frequency1: '', frequency2: '', period: 'M', lifetimeLimit: '', hasDowngrade: false, downgrade: '', nc: false, flatPlanPortion: '' },
-    { code: 'D1208', name: 'topical application of fluoride - ex...', age: '18', maxAllowed: '', frequency1: '', frequency2: '', period: 'M', lifetimeLimit: '', hasDowngrade: false, downgrade: '', nc: false, flatPlanPortion: '' },
-    { code: 'D1351', name: 'sealant - per tooth', age: '15', maxAllowed: '', frequency1: '', frequency2: '', period: 'M', lifetimeLimit: '', hasDowngrade: false, downgrade: '', nc: false, flatPlanPortion: '' },
-    { code: 'D2740', name: 'crown - porcelain/ceramic substr...', age: '18', maxAllowed: '', frequency1: '', frequency2: '', period: 'M', lifetimeLimit: '', hasDowngrade: true, downgrade: 'D2790', nc: false, flatPlanPortion: '' },
-    { code: 'D2750', name: 'crown - porcelain fused to high no...', age: '18', maxAllowed: '', frequency1: '', frequency2: '', period: 'M', lifetimeLimit: '', hasDowngrade: true, downgrade: 'D2790', nc: false, flatPlanPortion: '' }
-  ]);
+  const [coverageBookData, setCoverageBookData] = useState([]);
 
   // Static data arrays for easy API replacement
   // Static data arrays for easy API replacement
@@ -105,8 +113,8 @@ const AddCoveragePage = () => {
 
   const COVERAGE_TYPES = [
     { value: 'ppo', label: 'Percentage Based Coverage (PPO)' },
-    { value: 'flat', label: 'Flat Fee Coverage' },
-    { value: 'ucr', label: 'UCR Based Coverage' }
+    { value: 'table', label: 'Table/Schedule of Benefits' },
+    { value: 'flat', label: 'Flat Fee' }
   ];
 
   const PLAN_FEE_GUIDE_OPTIONS = [
@@ -164,6 +172,7 @@ const AddCoveragePage = () => {
       setLoading(true);
       const promises = [
         insuranceCompanyService.getAllInsuranceCompanies(1, 500),
+        insurancePlanService.getCoverageTemplates()
       ];
       
       if (patientId) {
@@ -173,8 +182,9 @@ const AddCoveragePage = () => {
       const results = await Promise.all(promises);
       
       setAllCompanies(results[0] || { companies: [] });
+      setCoverageTemplates(results[1]?.templates || results[1] || []);
       if (patientId) {
-        setPatient(results[1]);
+        setPatient(results[2]);
       }
     } catch (err) {
       console.error('Failed to load data', err);
@@ -184,17 +194,85 @@ const AddCoveragePage = () => {
     }
   };
 
+  useEffect(() => {
+    if (patient && formData.subscriber.relationship === 'Self' && !formData.subscriber.name) {
+      const { firstName, lastName, dateOfBirth, ssn } = patient;
+      const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        subscriber: {
+          ...prev.subscriber,
+          name: fullName || prev.subscriber.name,
+          dateOfBirth: dateOfBirth ? dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
+          ssn: ssn || prev.subscriber.ssn
+        }
+      }));
+    }
+  }, [patient]);
+
+  const { createInsurance } = usePatientInsurances();
+
   const handleSave = async () => {
     try {
+      if (!formData.insuranceCompanyId && !formData.insurancePlan) {
+        showSnackbar('Please select an insurance carrier', 'error');
+        return;
+      }
+
+      if (!formData.subscriber.subscriberId || formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
+        showSnackbar('Subscriber ID (Policy Number) must be between 5 and 30 characters', 'error');
+        return;
+      }
+
+      if (!formData.subscriber.dateOfBirth) {
+        showSnackbar('Subscriber Date of Birth is required', 'error');
+        return;
+      }
+
+      if (!formData.policyStarted) {
+        showSnackbar('Policy Started date is required (Renewal section)', 'error');
+        return;
+      }
+
       setLoading(true);
-      // TODO: Replace with actual API call
-      // await insuranceService.addCoverage(patientId, formData);
-      console.log('Saving coverage data:', formData);
+      
+      // Map UI state to backend validator requirements
+      const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
+      const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
+
+      const payload = {
+        insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
+        policyNumber: formData.subscriber.subscriberId,
+        groupNumber: formData.groupNumber || undefined,
+        subscriberName: formData.subscriber.name,
+        subscriberDateOfBirth: new Date(formData.subscriber.dateOfBirth).toISOString(),
+        relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
+        insuranceType: 'primary', // Hardcoded as primary for initial coverage
+        effectiveDate: new Date(formData.policyStarted).toISOString(),
+        expirationDate: formData.policyEnds ? new Date(formData.policyEnds).toISOString() : undefined,
+        deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,
+        
+        // Advanced Dentistry Fields
+        deductiblesGrid: formData.deductibles,
+        coverageLimits: formData.coverage,
+        coverageCategoryTable: coverageData,
+        coverageBookData: coverageBookData,
+        planFeeGuide: formData.planFeeGuide,
+        coverageType: formData.coverageType,
+        subscriberSsn: formData.subscriber.ssn || undefined,
+        renewalMonth: renewalMonthNum,
+        assignmentOfBenefits: formData.assignmentOfBenefits.toString(),
+        honorWriteOff: formData.honorWriteOff
+      };
+
+      await createInsurance(patientId, payload).unwrap();
+      
       showSnackbar('Coverage saved successfully', 'success');
       navigate(`/patients/details/${patientId}?tab=insurance`);
     } catch (err) {
       console.error('Failed to save coverage', err);
-      showSnackbar('Failed to save coverage', 'error');
+      const errorMessage = err?.data?.message || err?.message || (typeof err === 'string' ? err : 'Failed to save coverage');
+      showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -217,6 +295,36 @@ const AddCoveragePage = () => {
     }));
   };
 
+  const applyTemplate = (template) => {
+    setFormData(prev => ({
+      ...prev,
+      insurancePlan: template.name || prev.insurancePlan,
+      groupName: template.name || prev.groupName,
+      // Just a mock representation of filling data from a template
+      notes: template.description || prev.notes,
+    }));
+  };
+
+  const handleApplyTemplate = (template) => {
+    // Check if we have existing values that would be overwritten
+    if (formData.insurancePlan || formData.groupName) {
+      setTemplateToApply(template);
+      setIsTemplateConfirmOpen(true);
+    } else {
+      applyTemplate(template);
+      showSnackbar(`Template "${template.name}" applied successfully`, 'success');
+    }
+  };
+
+  const handleViewFullBook = () => {
+    // If they haven't even selected an insurance plan, prompt them to do so
+    if (!formData.insurancePlan) {
+      showSnackbar('Please select an insurance plan or apply a template before viewing the full book.', 'warning');
+      return;
+    }
+    setIsCoverageBookModalOpen(true);
+  };
+
   const handleRemoveOrthoMax = () => {
     setFormData(prev => ({
       ...prev,
@@ -236,14 +344,83 @@ const AddCoveragePage = () => {
     // TODO: Implement add category max logic
   };
 
-  const handleSubscriberChange = (field, value) => {
+  const handleAddProviderFeeGuide = () => {
     setFormData(prev => ({
       ...prev,
-      subscriber: {
+      providersPlanFeeGuides: [...(prev.providersPlanFeeGuides || []), { providerId: '', feeGuide: '' }]
+    }));
+  };
+
+  const handleRemoveProviderFeeGuide = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      providersPlanFeeGuides: (prev.providersPlanFeeGuides || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleProviderFeeGuideChange = (index, field, value) => {
+    setFormData(prev => {
+      const newGuides = [...(prev.providersPlanFeeGuides || [])];
+      newGuides[index] = { ...newGuides[index], [field]: value };
+      return { ...prev, providersPlanFeeGuides: newGuides };
+    });
+  };
+
+  const handleAddDeductibleRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: [
+        ...prev.deductibles,
+        { type: '', isCodeRow: true, lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
+      ]
+    }));
+  };
+
+  const handleRemoveDeductibleRow = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: prev.deductibles.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubscriberChange = (field, value) => {
+    setFormData(prev => {
+      const newSubscriber = {
         ...prev.subscriber,
         [field]: value
+      };
+      
+      if (field === 'relationship') {
+        // Clear previous auto-populated fields
+        newSubscriber.name = '';
+        newSubscriber.dateOfBirth = '';
+        newSubscriber.ssn = '';
+
+        if (value === 'Self' && patient) {
+          const { firstName, lastName, dateOfBirth, ssn } = patient;
+          const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+          if (fullName) newSubscriber.name = fullName;
+          if (dateOfBirth) newSubscriber.dateOfBirth = dateOfBirth.split('T')[0];
+          if (ssn) newSubscriber.ssn = ssn;
+        } else if (value === 'Spouse' && patient) {
+          const spouse = patient.patientMeta?.spouseInfo || patient.spouseInfo;
+          if (spouse) {
+            const spouseName = spouse.name || `${spouse.firstName || ''} ${spouse.lastName || ''}`.trim();
+            if (spouseName) newSubscriber.name = spouseName;
+            
+            const dob = spouse.dateOfBirth || spouse.dob;
+            if (dob) newSubscriber.dateOfBirth = dob.split('T')[0];
+            
+            if (spouse.ssn) newSubscriber.ssn = spouse.ssn;
+          }
+        }
       }
-    }));
+
+      return {
+        ...prev,
+        subscriber: newSubscriber
+      };
+    });
   };
 
   const handleRenewalChange = (field, value) => {
@@ -294,7 +471,11 @@ const AddCoveragePage = () => {
         {/* LEFT COLUMN: Insurance & Subscriber Info */}
         <Grid size={{ xs: 12, md: 4 }} sx={{ borderRight: { md: '1px solid #eee' }, pr: { md: 1.5 }, mb: { xs: 1.5, md: 0 } }}>
           <InsuranceInformation 
-            formData={formData}
+            formData={{
+              ...formData,
+              coverageTemplates,
+              handleApplyTemplate
+            }}
             handleInputChange={handleInputChange}
             insuranceCompanies={allCompanies.companies || []}
             ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
@@ -319,37 +500,42 @@ const AddCoveragePage = () => {
           
           {/* Advanced Section */}
           <Typography sx={{ ...sectionTitle, mt: 3, mb: 1.5, fontSize: '0.8rem' }}>Advanced</Typography>
-          <Grid container spacing={2} alignItems="center">
-            <Grid size={{ xs: 5.5 }}>
+          <Grid container spacing={2} alignItems="flex-start">
+            <Grid size={{ xs: 6 }}>
               <TextField 
                 fullWidth 
                 label="Member Identifier" 
                 size="small" 
+                helperText=" "
+                InputProps={{
+                  endAdornment: <InputAdornment position="end"><InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} /></InputAdornment>
+                }}
                 sx={{ 
                   bgcolor: inputBg,
                   '& .MuiInputBase-input': { fontSize: '0.7rem', py: 0.8 },
-                  '& .MuiInputLabel-root': { fontSize: '0.65rem' }
+                  '& .MuiInputLabel-root': { fontSize: '0.65rem' },
+                  '& .MuiFormHelperText-root': { fontSize: '0.55rem', mx: 0, mt: 0.5, whiteSpace: 'pre' }
                 }} 
               />
             </Grid>
-            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', mt: 0.5 }} />
             
-            <Grid size={{ xs: 5.5 }}>
+            <Grid size={{ xs: 6 }}>
               <TextField 
                 fullWidth 
                 label="Card Sequence" 
                 size="small" 
+                helperText="Required for Dentaide card"
+                InputProps={{
+                  endAdornment: <InputAdornment position="end"><InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} /></InputAdornment>
+                }}
                 sx={{ 
                   bgcolor: inputBg,
                   '& .MuiInputBase-input': { fontSize: '0.7rem', py: 0.8 },
-                  '& .MuiInputLabel-root': { fontSize: '0.65rem' }
+                  '& .MuiInputLabel-root': { fontSize: '0.65rem' },
+                  '& .MuiFormHelperText-root': { fontSize: '0.55rem', mx: 0, mt: 0.5 }
                 }} 
               />
-              <Typography variant="caption" sx={{ fontSize: '0.55rem', color: '#999', display: 'block', mt: 0.5 }}>
-                Required for Dentaide card
-              </Typography>
             </Grid>
-            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', mt: -2 }} />
           </Grid>
           
           <PolicyNotes />
@@ -381,15 +567,45 @@ const AddCoveragePage = () => {
                 <Button 
                   variant="outlined" 
                   size="small" 
+                  disabled={!formData.planFeeGuide || formData.planFeeGuide === 'None'}
+                  onClick={() => setIsFeeGuideModalOpen(true)}
                   sx={{ textTransform: 'none', fontSize: '0.6rem', height: '28px', borderColor: '#ccc', color: '#333', px: 0.5, minWidth: 'auto', whiteSpace: 'nowrap' }}
                 >
                   View Fee Guide
                 </Button>
               </Box>
-              <Typography sx={{ color: '#000000ff', fontSize: '0.85rem', mt: 0.3, cursor: 'pointer', fontWeight: 600 }}>
+              <Typography sx={{ color: '#000000ff', fontSize: '0.85rem', mt: 1, fontWeight: 600 }}>
                 Providers Plan Fee Guides
               </Typography>
-              <Typography sx={{ color: '#1976d2', fontSize: '0.65rem', mt: 0.3, cursor: 'pointer' }}>
+              {formData.providersPlanFeeGuides?.map((guide, index) => (
+                <Box key={index} sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center' }}>
+                  <TextField
+                    placeholder="Provider Name/ID"
+                    size="small"
+                    value={guide.providerId}
+                    onChange={(e) => handleProviderFeeGuideChange(index, 'providerId', e.target.value)}
+                    sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
+                  />
+                  <TextField
+                    select
+                    size="small"
+                    value={guide.feeGuide}
+                    onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
+                    sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
+                  >
+                    {PLAN_FEE_GUIDE_OPTIONS.map(option => (
+                      <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.65rem' }}>{option.label}</MenuItem>
+                    ))}
+                  </TextField>
+                  <IconButton size="small" onClick={() => handleRemoveProviderFeeGuide(index)} sx={{ color: '#d32f2f', p: 0.5 }}>
+                    <DeleteIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              ))}
+              <Typography 
+                onClick={handleAddProviderFeeGuide}
+                sx={{ color: '#1976d2', fontSize: '0.65rem', mt: 0.5, cursor: 'pointer', display: 'inline-block', fontWeight: 600 }}
+              >
                 + Add
               </Typography>
             </Grid>
@@ -417,9 +633,15 @@ const AddCoveragePage = () => {
             </Grid>
           </Grid>
 
-          <DeductiblesTable
+          <DeductiblesTable 
             formData={formData}
-            handleDeductibleChange={handleDeductibleChange}
+            handleDeductibleChange={(index, field, value) => {
+              const newDeductibles = [...formData.deductibles];
+              newDeductibles[index] = { ...newDeductibles[index], [field]: value };
+              setFormData({ ...formData, deductibles: newDeductibles });
+            }}
+            handleAddDeductibleRow={handleAddDeductibleRow}
+            handleRemoveDeductibleRow={handleRemoveDeductibleRow}
             tableHeaderStyle={tableHeaderStyle}
             blueHeader={blueHeader}
           />
@@ -442,9 +664,42 @@ const AddCoveragePage = () => {
             blueHeader={blueHeader}
             coverageData={coverageBookData}
             onCoverageDataChange={setCoverageBookData}
+            onViewFullBook={handleViewFullBook}
           />
         </Grid>
       </Grid>
+
+      <FeeGuideModal 
+        open={isFeeGuideModalOpen} 
+        onClose={() => setIsFeeGuideModalOpen(false)} 
+        feeGuideId={formData.planFeeGuide}
+      />
+
+      <CoverageBookModal
+        open={isCoverageBookModalOpen}
+        onClose={() => setIsCoverageBookModalOpen(false)}
+        coverageData={coverageBookData}
+      />
+
+      <ConfirmationDialog
+        open={isTemplateConfirmOpen}
+        onClose={() => {
+          setIsTemplateConfirmOpen(false);
+          setTemplateToApply(null);
+        }}
+        onConfirm={() => {
+          if (templateToApply) {
+            applyTemplate(templateToApply);
+            showSnackbar(`Template "${templateToApply.name}" applied successfully`, 'success');
+          }
+          setIsTemplateConfirmOpen(false);
+          setTemplateToApply(null);
+        }}
+        title="Apply Coverage Template"
+        content="Are you sure you want to apply this template? This will overwrite your current plan setup."
+        confirmText="Apply Template"
+        confirmColor="primary"
+      />
     </Box>
   );
 };

@@ -13,3 +13,6 @@ export { default as PolicyNotes } from './PolicyNotes';
 export { default as Renewal } from './Renewal';
 export { default as RenewalSection } from './RenewalSection';
 export { default as SubscriberInformation } from './SubscriberInformation';
+export { default as FeeGuideModal } from './FeeGuideModal';
+export { default as ViewCoverage } from './ViewCoverage';
+export { default as CoverageBookModal } from './CoverageBookModal';

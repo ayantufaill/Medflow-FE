@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Box, Typography, TextField, Checkbox, FormControlLabel,
   Table, TableBody, TableCell, TableContainer, TableRow,
-  Paper, Button, InputAdornment, Select, MenuItem
+  Paper, Button, InputAdornment, Select, MenuItem, Menu, ListItemText
 } from "@mui/material";
 import { Search as SearchIcon, InfoOutlined as InfoIcon, PeopleOutline as PeopleIcon } from "@mui/icons-material";
 
@@ -17,13 +17,13 @@ const InsuranceInformation = ({
 }) => {
   const [searchResults, setSearchResults] = React.useState([]);
   const [showDropdown, setShowDropdown] = React.useState(false);
+  const [templateAnchorEl, setTemplateAnchorEl] = React.useState(null);
 
   // Default empty arrays if props are not provided
   const companies = insuranceCompanies.length > 0 ? insuranceCompanies : [];
   const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
     { value: 1, label: 'Pay to dentist (Assignment)' },
-    { value: 2, label: 'Pay to patient (Benefit)' },
-    { value: 3, label: 'Pay to both (Split)' }
+    { value: 2, label: 'Pay to patient (Benefit)' }
   ];
 
   // Robust dummy data to ensure results show up as in the screenshot
@@ -39,35 +39,56 @@ const InsuranceInformation = ({
 
   const handleSearch = (val) => {
     handleInputChange('carrierSearch', val);
-    if (!val) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      return;
-    }
 
     const searchPool = companies.length > 0 ? companies : DUMMY_INSURANCE;
-    const filtered = searchPool.filter(item => 
-      (item.payerId || '').toLowerCase().includes(val.toLowerCase()) ||
-      (item.carrierName || '').toLowerCase().includes(val.toLowerCase()) ||
-      (item.groupName || '').toLowerCase().includes(val.toLowerCase()) ||
-      (item.groupNumber || '').toLowerCase().includes(val.toLowerCase()) ||
-      (item.planName || '').toLowerCase().includes(val.toLowerCase())
-    );
+    let filtered = searchPool;
+    
+    if (val) {
+      filtered = searchPool.filter(item => 
+        (item.payerId || item.id?.toString() || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.carrierName || item.name || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.groupName || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.groupNumber || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.planName || item.name || '').toLowerCase().includes(val.toLowerCase())
+      );
+    }
+
+    // Always filter out inactive companies regardless of the checkbox
+    filtered = filtered.filter(item => item.isActive !== false);
+
+    if (formData.excludeSystemCarriers) {
+      filtered = filtered.filter(item => !item.isSystemCarrier && !item.isSystem);
+    }
 
     setSearchResults(filtered);
     setShowDropdown(true);
   };
 
   const handleSelectResult = (item) => {
-    handleInputChange('carrierName', item.carrierName);
-    handleInputChange('payerId', item.payerId);
-    handleInputChange('carrierPhone', item.carrierPhone);
-    handleInputChange('payerAddress', item.payerAddress);
-    handleInputChange('groupName', item.groupName);
-    handleInputChange('groupNumber', item.groupNumber);
-    handleInputChange('insurancePlan', item.planName);
+    handleInputChange('insuranceCompanyId', item._id || item.id || 1);
+    handleInputChange('carrierName', item.carrierName || item.name || '');
+    handleInputChange('payerId', item.payerId || item.id || '');
+    handleInputChange('carrierPhone', item.carrierPhone || item.phone || '');
+    handleInputChange('payerAddress', item.payerAddress || item.address || item.city || '');
+    handleInputChange('groupName', item.groupName || '');
+    handleInputChange('groupNumber', item.groupNumber || '');
+    handleInputChange('insurancePlan', item.planName || item.name || '');
+    if (item.feeSched || item.feeGuide) {
+      handleInputChange('planFeeGuide', item.feeSched || item.feeGuide);
+    }
     handleInputChange('carrierSearch', '');
     setShowDropdown(false);
+  };
+
+  const formatPhoneNumber = (value) => {
+    if (!value) return value;
+    const phoneNumber = value.replace(/[^\d]/g, '');
+    const phoneNumberLength = phoneNumber.length;
+    if (phoneNumberLength < 4) return phoneNumber;
+    if (phoneNumberLength < 7) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    }
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
   };
 
   return (
@@ -80,7 +101,8 @@ const InsuranceInformation = ({
           sx={{ mb: 0.75, '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 } }}
           value={formData.carrierSearch || ''}
           onChange={(e) => handleSearch(e.target.value)}
-          onFocus={() => formData.carrierSearch && setShowDropdown(true)}
+          onFocus={() => handleSearch(formData.carrierSearch || '')}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
 
         {showDropdown && searchResults.length > 0 && (
@@ -115,11 +137,11 @@ const InsuranceInformation = ({
                     sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }}
                     onClick={() => handleSelectResult(item)}
                   >
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.payerId}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.carrierName}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupName}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupNumber}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupName || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -127,17 +149,31 @@ const InsuranceInformation = ({
           </Paper>
         )}
       </Box>
-      <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Exclude System Carriers</Typography>} sx={{ ml: 0 }} />
+      <FormControlLabel 
+        control={
+          <Checkbox 
+            size="small" 
+            checked={formData.excludeSystemCarriers || false} 
+            onChange={(e) => {
+              handleInputChange('excludeSystemCarriers', e.target.checked);
+              // Trigger a re-search so the dropdown updates immediately
+              setTimeout(() => handleSearch(formData.carrierSearch || ''), 0);
+            }} 
+          />
+        } 
+        label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Exclude System Carriers</Typography>} 
+        sx={{ ml: 0 }} 
+      />
 
       {/* Display carrier info from API or fallback to display data */}
       <Box sx={{ bgcolor: blueHeader, p: 0.75, borderRadius: 1, mt: 1, mb: 1.5, overflow: 'hidden' }}>
          <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier/Payer Name</Typography>
+              <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier/Payer Name <span style={{ color: '#d32f2f' }}>*</span></Typography>
               <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierName || '-'}</Typography>
             </Paper>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer ID</Typography>
+              <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer ID <span style={{ color: '#d32f2f' }}>*</span></Typography>
               <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.payerId || '-'}</Typography>
             </Paper>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
@@ -151,7 +187,6 @@ const InsuranceInformation = ({
          </Paper>
       </Box>
 
-      {/* Checkboxes above the table */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, mt: 1, px: 0.5 }}>
         <FormControlLabel
           control={<Checkbox size="small" sx={{ p: 0.5 }} checked={formData.claimsOnlyPolicy || false} onChange={(e) => handleInputChange('claimsOnlyPolicy', e.target.checked)} />}
@@ -174,7 +209,6 @@ const InsuranceInformation = ({
                   </TableCell>
                   <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
                     <TextField 
-                      variant="standard" 
                       fullWidth 
                       InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
                       value={formData.insurancePlan || ''}
@@ -191,7 +225,6 @@ const InsuranceInformation = ({
                   </TableCell>
                   <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
                     <TextField 
-                      variant="standard" 
                       fullWidth 
                       InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
                       value={formData.groupName || ''}
@@ -211,11 +244,14 @@ const InsuranceInformation = ({
                   </TableCell>
                   <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
                     <TextField 
-                      variant="standard" 
                       fullWidth 
                       InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
                       value={formData.groupNumber || ''}
-                      onChange={(e) => handleInputChange('groupNumber', e.target.value)}
+                      onChange={(e) => {
+                        const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                        handleInputChange('groupNumber', alphanumericValue);
+                      }}
+                      placeholder="e.g. GRP12345"
                       required 
                     />
                   </TableCell>
@@ -226,11 +262,11 @@ const InsuranceInformation = ({
                   <TableCell sx={{ border: '1px solid #e0e0e0', p: '4px 12px', height: '40px', fontSize: '0.8rem', bgcolor: '#f9fafb', width: '40%', color: '#424242' }}>Phone Number</TableCell>
                   <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
                     <TextField 
-                      variant="standard" 
                       fullWidth 
                       InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
                       value={formData.phoneNumber || ''}
-                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                      onChange={(e) => handleInputChange('phoneNumber', formatPhoneNumber(e.target.value))}
+                      placeholder="(XXX) XXX-XXXX"
                     />
                   </TableCell>
                 </TableRow>
@@ -255,7 +291,7 @@ const InsuranceInformation = ({
                 <TableRow>
                   <TableCell sx={{ border: '1px solid #e0e0e0', p: '4px 12px', height: '40px', fontSize: '0.8rem', bgcolor: '#f9fafb', width: '40%', color: '#424242' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Assignment of Benefits
+                      Assignment of Benefits <span style={{ color: '#d32f2f' }}>*</span>
                       <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />
                     </Box>
                   </TableCell>
@@ -288,9 +324,45 @@ const InsuranceInformation = ({
               </TableBody>
             </Table>
          </TableContainer>
-         <Button variant="contained" fullWidth sx={{ mt: 2, bgcolor: '#1a237e', borderRadius: '50px', textTransform: 'none', fontWeight: 600, py: 0.8, fontSize: '0.85rem', '&:hover': { bgcolor: '#0d47a1' } }}>
+         <Button 
+           variant="contained" 
+           fullWidth 
+           onClick={(e) => setTemplateAnchorEl(e.currentTarget)}
+           sx={{ mt: 2, bgcolor: '#1a237e', borderRadius: '50px', textTransform: 'none', fontWeight: 600, py: 0.8, fontSize: '0.85rem', '&:hover': { bgcolor: '#0d47a1' } }}
+         >
             Copy Plan Billing Info From Template
          </Button>
+         <Menu
+           anchorEl={templateAnchorEl}
+           open={Boolean(templateAnchorEl)}
+           onClose={() => setTemplateAnchorEl(null)}
+           PaperProps={{ sx: { width: 300, maxHeight: 300 } }}
+         >
+           {formData.coverageTemplates?.length > 0 ? (
+             formData.coverageTemplates.map((template, idx) => (
+               <MenuItem 
+                 key={idx} 
+                 onClick={() => {
+                   setTemplateAnchorEl(null);
+                   if (formData.handleApplyTemplate) {
+                     formData.handleApplyTemplate(template);
+                   }
+                 }}
+               >
+                 <ListItemText 
+                   primary={template.name || 'Unnamed Template'} 
+                   secondary={template.description || 'No description available'} 
+                   primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
+                   secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                 />
+               </MenuItem>
+             ))
+           ) : (
+             <MenuItem disabled>
+               <ListItemText primary="No templates available" />
+             </MenuItem>
+           )}
+         </Menu>
       </Box>
 
       {/* Patients Covered Info */}

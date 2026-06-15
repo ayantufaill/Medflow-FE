@@ -794,11 +794,6 @@ export default function ImportedCoverageModal({
             })}
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-              {isMockData && (
-                <Typography sx={{ fontFamily: TYPO.fontFamily, ...TYPO.caption }}>
-                  Demo data – replace with backend API when ready
-                </Typography>
-              )}
               <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
                 <Button
                   variant="outlined"

@@ -43,7 +43,7 @@ export const fetchPatientById = createAsyncThunk(
 
 export const fetchPatientInsurances = createAsyncThunk(
   'patient/fetchPatientInsurances',
-  async ({ patientId, activeOnly = false }, { rejectWithValue }) => {
+  async ({ patientId, activeOnly = false, force = false }, { rejectWithValue }) => {
     try {
       const insurances = await patientService.getPatientInsurances(patientId, activeOnly);
       return { patientId, insurances };
@@ -52,7 +52,8 @@ export const fetchPatientInsurances = createAsyncThunk(
     }
   },
   {
-    condition: ({ patientId }, { getState }) => {
+    condition: ({ patientId, force }, { getState }) => {
+      if (force) return true;
       const { patient } = getState();
       if (patient.patientInsurancesLoading) {
         return false;
@@ -97,7 +98,8 @@ export const createPatientInsuranceThunk = createAsyncThunk(
   async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
     try {
       const data = await patientService.createPatientInsurance(patientId, payload);
-      dispatch(fetchPatientInsurances({ patientId }));
+      dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
+      dispatch(fetchPatientInsurances({ patientId, force: true }));
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create insurance');
@@ -110,7 +112,8 @@ export const updatePatientInsuranceThunk = createAsyncThunk(
   async ({ patientId, insuranceId, payload }, { dispatch, rejectWithValue }) => {
     try {
       const data = await patientService.updatePatientInsurance(patientId, insuranceId, payload);
-      dispatch(fetchPatientInsurances({ patientId }));
+      dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
+      dispatch(fetchPatientInsurances({ patientId, force: true }));
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update insurance');
@@ -123,7 +126,8 @@ export const deletePatientInsuranceThunk = createAsyncThunk(
   async ({ patientId, insuranceId }, { dispatch, rejectWithValue }) => {
     try {
       await patientService.deletePatientInsurance(patientId, insuranceId);
-      dispatch(fetchPatientInsurances({ patientId }));
+      dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
+      dispatch(fetchPatientInsurances({ patientId, force: true }));
       return { patientId, insuranceId };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete insurance');
