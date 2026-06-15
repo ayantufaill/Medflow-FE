@@ -24,6 +24,7 @@ const DEDUCTIBLE_CATEGORIES = [
   { category: 'Orthodontics', ind: 50, fam: 100, freq: 'Annual', std: true },
 ];
 
+// Static fallback if no coverageCategoryTable exists
 const COVERAGE_TABLE = {
   left: [
     { name: 'Diagnostic', subs: [{ name: 'Preventative', val: '% 100' }, { name: 'Basic', val: '% 100' }] },
@@ -44,6 +45,13 @@ const COVERAGE_TABLE = {
   ]
 };
 
+const mapCategory = (key, title, data) => {
+  const items = data?.[key] || [];
+  if (items.length === 0) return { name: title, val: '% 0' };
+  if (items.length === 1) return { name: title, val: `% ${items[0].coverage}` };
+  return { name: title, subs: items.map(item => ({ name: item.label, val: `% ${item.coverage}` })) };
+};
+
 const ReadOnlyField = ({ label, value, underlined }) => (
   <Box sx={{ display: 'flex', mb: 1, borderBottom: underlined ? '1px solid #f0f0f0' : 'none', pb: 0.5 }}>
     <Typography sx={{ fontSize: '0.85rem', color: '#666', minWidth: '180px' }}>{label}</Typography>
@@ -53,6 +61,36 @@ const ReadOnlyField = ({ label, value, underlined }) => (
 
 export default function ViewCoverage({ open, onClose, insurance, getInsuranceCompanyName }) {
   const companyName = getInsuranceCompanyName?.(insurance?.insuranceCompanyId) || 'Delta Dental of Washington';
+
+  const covDataArray = insurance?.coverageCategoryTable;
+  let covData = null;
+  if (Array.isArray(covDataArray) && covDataArray.length > 0 && typeof covDataArray[0] === 'object' && covDataArray[0].category) {
+    covData = {};
+    covDataArray.forEach(group => {
+      covData[group.category] = group.items;
+    });
+  } else if (covDataArray && !Array.isArray(covDataArray)) {
+    covData = covDataArray;
+  }
+
+  const coverageLeft = covData && Object.keys(covData).length > 0 ? [
+    mapCategory('diagnostic', 'Diagnostic', covData),
+    mapCategory('preventative', 'Preventative', covData),
+    mapCategory('restorative', 'Restorative', covData),
+    mapCategory('endodontics', 'Endodontics', covData),
+    mapCategory('periodontics', 'Periodontics', covData),
+    mapCategory('prosthodonticsRemovable', 'Prosthodontics, Removable', covData),
+    mapCategory('maxillofacialProsthetics', 'Maxillofacial Prosthetics', covData)
+  ] : COVERAGE_TABLE.left;
+
+  const coverageRight = covData && Object.keys(covData).length > 0 ? [
+    mapCategory('implantServices', 'Implant Services', covData),
+    mapCategory('prosthodonticsFixed', 'Prosthodontics, Fixed', covData),
+    mapCategory('oralSurgery', 'Oral Surgery', covData),
+    mapCategory('adjunctGeneral', 'Adjunctive General Services', covData),
+    { name: 'Medicament carrier', val: '% 50' },
+    mapCategory('orthodontics', 'Orthodontics', covData)
+  ] : COVERAGE_TABLE.right;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: 0 } }}>
@@ -106,23 +144,23 @@ export default function ViewCoverage({ open, onClose, insurance, getInsuranceCom
             <Typography sx={{ fontSize: '0.85rem', color: '#4a73b8', fontWeight: 600, mb: 1 }}>Coverage</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography sx={{ fontSize: '0.85rem', minWidth: '180px' }}>Individual annual max amount:</Typography>
-              <Typography sx={{ fontSize: '0.85rem', color: '#888', mr: 2 }}>${Number(insurance?.individualAnnualMax || 1500).toFixed(2)}</Typography>
+              <Typography sx={{ fontSize: '0.85rem', color: '#888', mr: 2 }}>{insurance?.coverageLimits?.individual?.annualMax || '$1500.00'}</Typography>
               <FormControlLabel 
-                control={<Checkbox size="small" sx={{ p: 0.5, color: '#ccc' }} />} 
+                control={<Checkbox size="small" checked={insurance?.coverageLimits?.individual?.unlimited || false} sx={{ p: 0.5, color: '#ccc', '&.Mui-checked': { color: '#ccc' } }} />} 
                 label={<Typography sx={{fontSize: '0.85rem', color: '#999'}}>unlimited</Typography>} 
               />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography sx={{ fontSize: '0.85rem', minWidth: '180px' }}>Family annual max amount:</Typography>
-              <Typography sx={{ fontSize: '0.85rem', color: '#888', mr: 2 }}>${Number(insurance?.familyAnnualMax || 0).toFixed(2)}</Typography>
+              <Typography sx={{ fontSize: '0.85rem', color: '#888', mr: 2 }}>{insurance?.coverageLimits?.family?.annualMax || '$0.00'}</Typography>
               <FormControlLabel 
-                control={<Checkbox size="small" checked sx={{ p: 0.5, color: '#ccc', '&.Mui-checked': { color: '#ccc' } }} />} 
+                control={<Checkbox size="small" checked={insurance?.coverageLimits?.family?.unlimited || false} sx={{ p: 0.5, color: '#ccc', '&.Mui-checked': { color: '#ccc' } }} />} 
                 label={<Typography sx={{fontSize: '0.85rem', color: '#999'}}>unlimited</Typography>} 
               />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography sx={{ fontSize: '0.85rem', minWidth: '180px' }}>Ortho lifetime limit:</Typography>
-              <Button variant="contained" size="small" sx={{ bgcolor: '#4a73b8', textTransform: 'none', py: 0.2, minWidth: 'auto', borderRadius: 1 }}>Add Limit</Button>
+              <Typography sx={{ fontSize: '0.85rem', color: '#888', mr: 2 }}>{insurance?.coverageLimits?.ortho?.annualMax || '$0.00'}</Typography>
             </Box>
           </Grid>
         </Grid>
@@ -143,19 +181,19 @@ export default function ViewCoverage({ open, onClose, insurance, getInsuranceCom
                 </TableRow>
               </TableHead>
               <TableBody>
-                {DEDUCTIBLE_CATEGORIES.map(row => (
-                  <TableRow key={row.category}>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#555' }}>{row.category}</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#4a73b8' }}>${row.ind.toFixed(2)}</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#4a73b8' }}>${row.fam.toFixed(2)}</TableCell>
+                {(insurance?.deductiblesGrid?.length > 0 ? insurance.deductiblesGrid : DEDUCTIBLE_CATEGORIES.map(d => ({ type: d.category, individual: `$${d.ind.toFixed(2)}`, family: `$${d.fam.toFixed(2)}`, standard: d.std }))).map((row, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell sx={{ fontSize: '0.8rem', color: '#555' }}>{row.type || row.category}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: '#4a73b8' }}>{row.individual || '$0.00'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: '#4a73b8' }}>{row.family || '$0.00'}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#ccc' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        {row.freq} <span style={{fontSize:'8px'}}>▼</span>
+                        Annual <span style={{fontSize:'8px'}}>▼</span>
                       </Box>
                     </TableCell>
                     <TableCell>
                        <FormControlLabel 
-                         control={<Checkbox size="small" checked={row.std} sx={{ p: 0, mr: 0.5, color: '#ccc', '&.Mui-checked': { color: '#ccc' } }} />} 
+                         control={<Checkbox size="small" checked={row.standard || row.std} sx={{ p: 0, mr: 0.5, color: '#ccc', '&.Mui-checked': { color: '#ccc' } }} />} 
                          label={<Typography sx={{fontSize: '0.8rem', color: '#999'}}>standard</Typography>} 
                        />
                     </TableCell>
@@ -177,7 +215,7 @@ export default function ViewCoverage({ open, onClose, insurance, getInsuranceCom
                  {/* Left Coverage */}
                  <Table size="small" sx={{ '& .MuiTableCell-root': { borderBottom: 'none', py: 0.2, px: 2 } }}>
                    <TableBody>
-                     {COVERAGE_TABLE.left.map((item, i) => (
+                     {coverageLeft.map((item, i) => (
                        <React.Fragment key={i}>
                          <TableRow>
                            <TableCell sx={{ fontSize: '0.8rem', color: '#555' }}>{item.name}</TableCell>
@@ -198,7 +236,7 @@ export default function ViewCoverage({ open, onClose, insurance, getInsuranceCom
                  {/* Right Coverage */}
                  <Table size="small" sx={{ '& .MuiTableCell-root': { borderBottom: 'none', py: 0.2, px: 2 }, borderLeft: '1px solid #ddd' }}>
                    <TableBody>
-                     {COVERAGE_TABLE.right.map((item, i) => (
+                     {coverageRight.map((item, i) => (
                        <React.Fragment key={i}>
                          <TableRow>
                            <TableCell sx={{ fontSize: '0.8rem', color: '#555' }}>{item.name}</TableCell>

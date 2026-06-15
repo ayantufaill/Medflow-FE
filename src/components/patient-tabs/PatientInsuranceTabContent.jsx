@@ -225,7 +225,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
     setInsuranceMenu({ anchorEl: null, insurance: null });
   };
   const handleViewPlan = (insurance) => {
-    setViewCoverageModal({ open: true, insurance });
+    navigate(`/patients/${patientId}/insurance/${insurance._id || insurance.id}/edit`);
   };
   const handleInsuranceDelete = (insurance) => {
     setInsuranceDeleteDialog({ open: true, insurance });

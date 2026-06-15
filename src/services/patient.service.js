@@ -211,7 +211,7 @@ export const patientService = {
    */
   async getPatientInsuranceById(patientId, patientInsuranceId) {
     const response = await apiClient.get(
-      `/patients/${patientId}/coverages/${patientInsuranceId}`
+      `/patients/${patientId}/insurance/${patientInsuranceId}`
     );
     return response.data.data.insurance;
   },
@@ -235,8 +235,8 @@ export const patientService = {
    * @returns {Promise<Object>} Updated insurance data
    */
   async updatePatientInsurance(patientId, patientInsuranceId, updates) {
-    const response = await apiClient.patch(
-      `/patients/${patientId}/coverages/${patientInsuranceId}`,
+    const response = await apiClient.put(
+      `/patients/${patientId}/insurance/${patientInsuranceId}`,
       updates
     );
     return response.data.data.insurance;
@@ -250,7 +250,7 @@ export const patientService = {
    */
   async deletePatientInsurance(patientId, patientInsuranceId) {
     const response = await apiClient.delete(
-      `/patients/${patientId}/coverages/${patientInsuranceId}`
+      `/patients/${patientId}/insurance/${patientInsuranceId}`
     );
     return response.data.data;
   },
