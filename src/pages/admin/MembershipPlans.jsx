@@ -68,6 +68,15 @@ const MembershipPlans = () => {
   }, [dispatch]);
 
   const [search, setSearch] = useState('');
+
+  const filteredPlans = plans.filter((plan) => {
+    const query = search.toLowerCase();
+    return (
+      plan.name?.toLowerCase().includes(query) ||
+      plan.templateName?.toLowerCase().includes(query)
+    );
+  });
+
   const [view, setView] = useState('list'); // 'list' or 'grid'
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'add'
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
@@ -447,14 +456,14 @@ const MembershipPlans = () => {
                     <CircularProgress size={30} />
                   </TableCell>
                 </TableRow>
-              ) : plans.length === 0 ? (
+              ) : filteredPlans.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                     <Typography color="text.secondary">No membership plans found</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                plans.map((plan) => (
+                filteredPlans.map((plan) => (
                   <TableRow key={plan.id} sx={{ '& td': { py: 2, borderBottom: '1px solid #f5f5f5' } }}>
                     <TableCell sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 500 }}>
                       {plan.name}
@@ -513,7 +522,7 @@ const MembershipPlans = () => {
           gap: 3,
           width: '100%'
         }}>
-          {plans.map((plan) => (
+          {filteredPlans.map((plan) => (
             <Card key={plan.id} sx={{
               display: 'flex',
               flexDirection: 'column',
