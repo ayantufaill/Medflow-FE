@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
-  Paper,
   Alert,
 } from "@mui/material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { usePatient } from "../../hooks/redux/usePatient";
-import NewPatientIntakeForm from "../../components/patients/NewPatientIntakeForm";
+import NewPatientIntakeFormV2 from "../../components/patients/NewPatientIntakeFormV2";
 
 const CreatePatientPage = () => {
   const navigate = useNavigate();
@@ -76,21 +75,11 @@ const CreatePatientPage = () => {
         </Alert>
       )}
 
-      <Paper
-        sx={{
-          p: { xs: 0.75, sm: 1.25 },
-          borderRadius: 2,
-          border: '1px solid #dfe5eb',
-          boxShadow: '0 4px 18px rgba(15, 23, 42, 0.04)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <NewPatientIntakeForm
-          onSubmit={handleSubmit}
-          loading={saving}
-          onCancel={handleBack}
-        />
-      </Paper>
+      <NewPatientIntakeFormV2
+        onSubmit={handleSubmit}
+        loading={saving}
+        onCancel={handleBack}
+      />
     </Box>
   );
 };

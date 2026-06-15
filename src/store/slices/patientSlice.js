@@ -7,10 +7,10 @@ import { invoiceService } from '../../services/invoice.service';
 
 export const fetchPatients = createAsyncThunk(
   'patient/fetchPatients',
-  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '' } = {}, { rejectWithValue, signal }) => {
+  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '' } = {}, { rejectWithValue, signal }) => {
     try {
-      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, signal);
-      return { ...result, params: { page, limit, search, status, dobStart, dobEnd } };
+      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, gender, providerId, signal);
+      return { ...result, params: { page, limit, search, status, dobStart, dobEnd, gender, providerId } };
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'CanceledError') throw err;
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch patients');
