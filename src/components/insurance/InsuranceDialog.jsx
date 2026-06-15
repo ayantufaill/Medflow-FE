@@ -67,6 +67,7 @@ export default function InsuranceDialog({
       insuranceCompanyId: '',
       policyNumber: '',
       groupNumber: '',
+      groupName: '',
       subscriberName: '',
       subscriberDateOfBirth: null,
       relationshipToPatient: 'self',
@@ -118,6 +119,7 @@ export default function InsuranceDialog({
         insuranceCompanyId: '',
         policyNumber: '',
         groupNumber: '',
+        groupName: '',
         subscriberName: '',
         subscriberDateOfBirth: null,
         relationshipToPatient: 'self',
@@ -254,6 +256,7 @@ export default function InsuranceDialog({
           insuranceCompanyId: '',
           policyNumber: '',
           groupNumber: '',
+          groupName: '',
           subscriberName: '',
           subscriberDateOfBirth: null,
           relationshipToPatient: 'self',
@@ -368,6 +371,9 @@ export default function InsuranceDialog({
               </Grid>
               <Grid item size={{ xs: 12, sm: 6 }}>
                 <TextField fullWidth label="Group Number" {...register('groupNumber')} />
+              </Grid>
+              <Grid item size={{ xs: 12, sm: 6 }}>
+                <TextField fullWidth label="Group Name" {...register('groupName')} />
               </Grid>
               <Grid item size={{ xs: 12, sm: 6 }}>
                 <TextField

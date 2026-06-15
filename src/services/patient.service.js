@@ -188,26 +188,19 @@ export const patientService = {
   /**
    * Get all insurances for a patient
    * @param {string} patientId - Patient ID
-   * @param {boolean} isActive - Filter by active status
+   * @param {boolean} isActive - Optional active filter
    * @returns {Promise<Array>} Array of patient insurances
    */
   async getPatientInsurances(patientId, isActive) {
-    const params = new URLSearchParams();
-    if (isActive !== undefined && isActive !== null) {
-      params.append('isActive', isActive ? 'true' : 'false');
-    }
-    const query = params.toString();
+    const query = isActive !== undefined ? `isActive=${isActive}` : '';
     const url = query
-      ? `/patients/${patientId}/insurance?${query}`
-      : `/patients/${patientId}/insurance`;
-
-    try {
-      const response = await apiClient.get(url);
-      return response.data.data.insurances || [];
-    } catch (error) {
-      if (error.response?.status === 404) return [];
-      throw error;
-    }
+      ? `/patients/${patientId}/coverages?${query}`
+      : `/patients/${patientId}/coverages`;
+      
+    const response = await apiClient.get(url);
+    console.log('📨 RAW GET COVERAGES RESPONSE:', response.data);
+    const result = response.data?.data?.coverages || response.data?.data?.plans || response.data?.data?.insurances || response.data?.data || response.data;
+    return Array.isArray(result) ? result : [];
   },
 
   /**
@@ -230,7 +223,7 @@ export const patientService = {
    * @returns {Promise<Object>} Created insurance data
    */
   async createPatientInsurance(patientId, payload) {
-    const response = await apiClient.post(`/patients/${patientId}/insurance`, payload);
+    const response = await apiClient.post(`/patients/${patientId}/coverages`, payload);
     return response.data.data.insurance;
   },
 
@@ -253,7 +246,7 @@ export const patientService = {
    * Delete patient insurance
    * @param {string} patientId - Patient ID
    * @param {string} patientInsuranceId - Patient Insurance ID
-   * @returns {Promise<Object>} Success message
+   * @returns {Promise<Object>} Deleted insurance data
    */
   async deletePatientInsurance(patientId, patientInsuranceId) {
     const response = await apiClient.delete(

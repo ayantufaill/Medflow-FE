@@ -9,7 +9,8 @@ const CoverageBookSummary = ({
   bodyCellStyle, 
   blueHeader,
   coverageData = [],
-  onCoverageDataChange
+  onCoverageDataChange,
+  onViewFullBook
 }) => {
   const localHeaderStyle = {
     fontSize: "0.55rem",
@@ -45,7 +46,11 @@ const CoverageBookSummary = ({
 
   const handleFieldChange = (index, field, value) => {
     if (onCoverageDataChange) {
-      const updatedData = [...coverageData];
+      let updatedData = [...coverageData];
+      // If coverageData is empty, initialize it with the default rowData template
+      if (updatedData.length === 0) {
+        updatedData = rowData.map(row => ({ ...row }));
+      }
       if (updatedData[index]) {
         updatedData[index] = { ...updatedData[index], [field]: value };
         onCoverageDataChange(updatedData);
@@ -64,6 +69,7 @@ const CoverageBookSummary = ({
         <Typography sx={{ fontWeight: 700, mt: 2, color: "#333", fontSize: "0.85rem" }}>Coverage Book Summary</Typography>
         <Button
           variant="contained"
+          onClick={onViewFullBook}
           sx={{
             bgcolor: "#0d47a1",
             textTransform: "none",
@@ -136,7 +142,7 @@ const CoverageBookSummary = ({
                     <input 
                       style={{
                         border: 'none',
-                        borderBottom: '1px solid #999',
+                        borderBottom: 'none',
                         width: '10px',
                         height: '10px',
                         fontSize: '0.6rem',
@@ -177,25 +183,49 @@ const CoverageBookSummary = ({
                   </Box>
                 </TableCell>
                 {/* Age Limit */}
-                <TableCell align="center" sx={localBodyCellStyle}>{row.age || "—"}</TableCell>
+                <TableCell align="center" sx={localBodyCellStyle}>
+                  <input 
+                    style={{
+                      border: 'none',
+                      width: '20px',
+                      height: '10px',
+                      fontSize: '0.6rem',
+                      backgroundColor: 'transparent',
+                      outline: 'none',
+                      textAlign: 'center'
+                    }}
+                    value={row.age || ''}
+                    placeholder=""
+                    onChange={(e) => handleFieldChange(index, 'age', e.target.value)}
+                  />
+                </TableCell>
                 {/* Teeth Limit */}
                 <TableCell align="center" sx={localBodyCellStyle}>
                   <ToothIcon sx={{ fontSize: 14, color: "#1976d2", cursor: 'pointer' }} onClick={() => handleTeethClick(index)} />
                 </TableCell>
                 {/* Down-grade */}
                 <TableCell sx={localBodyCellStyle}>
-                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
                     <Checkbox 
                       size="small" 
                       checked={!!row.hasDowngrade} 
                       onChange={(e) => handleFieldChange(index, 'hasDowngrade', e.target.checked)}
-                      sx={{ p: 0 }} 
+                      sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 16 } }} 
                     />
                     {row.hasDowngrade && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: -0.3 }}>
-                         <ToothIcon sx={{ fontSize: 10, color: "#1976d2" }} />
-                         <Typography sx={{ fontSize: '0.55rem', ml: 0.3 }}>{row.downgrade || ''}</Typography>
-                      </Box>
+                      <input 
+                        style={{
+                          border: 'none',
+                          borderBottom: '1px solid #999',
+                          width: '30px',
+                          height: '10px',
+                          fontSize: '0.65rem',
+                          backgroundColor: 'transparent',
+                          outline: 'none'
+                        }}
+                        value={row.downgrade || ''}
+                        onChange={(e) => handleFieldChange(index, 'downgrade', e.target.value)}
+                      />
                     )}
                   </Box>
                 </TableCell>
@@ -268,7 +298,7 @@ const CoverageBookSummary = ({
                     <input 
                       style={{
                         border: 'none',
-                        borderBottom: '1px solid #999',
+                        borderBottom: 'none',
                         width: '10px',
                         height: '10px',
                         fontSize: '0.6rem',
@@ -309,14 +339,29 @@ const CoverageBookSummary = ({
                   </Box>
                 </TableCell>
                 {/* Age Limit */}
-                <TableCell align="center" sx={localBodyCellStyle}>{row.age || "—"}</TableCell>
+                <TableCell align="center" sx={localBodyCellStyle}>
+                  <input 
+                    style={{
+                      border: 'none',
+                      width: '20px',
+                      height: '10px',
+                      fontSize: '0.6rem',
+                      backgroundColor: 'transparent',
+                      outline: 'none',
+                      textAlign: 'center'
+                    }}
+                    value={row.age || ''}
+                    placeholder=""
+                    onChange={(e) => handleFieldChange(index, 'age', e.target.value)}
+                  />
+                </TableCell>
                 {/* Teeth Limit */}
                 <TableCell align="center" sx={localBodyCellStyle}>
                   <ToothIcon sx={{ fontSize: 14, color: "#1976d2", cursor: 'pointer' }} onClick={() => handleTeethClick(index)} />
                 </TableCell>
                 {/* Down-grade */}
                 <TableCell sx={localBodyCellStyle}>
-                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
                     <Checkbox 
                       size="small" 
                       checked={!!row.hasDowngrade} 
@@ -324,10 +369,19 @@ const CoverageBookSummary = ({
                       sx={{ p: 0 }} 
                     />
                     {row.hasDowngrade && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: -0.3 }}>
-                         <ToothIcon sx={{ fontSize: 10, color: "#1976d2" }} />
-                         <Typography sx={{ fontSize: '0.55rem', ml: 0.3 }}>{row.downgrade || ''}</Typography>
-                      </Box>
+                      <input 
+                        style={{
+                          border: 'none',
+                          borderBottom: '1px solid #999',
+                          width: '30px',
+                          height: '10px',
+                          fontSize: '0.55rem',
+                          backgroundColor: 'transparent',
+                          outline: 'none'
+                        }}
+                        value={row.downgrade || ''}
+                        onChange={(e) => handleFieldChange(index, 'downgrade', e.target.value)}
+                      />
                     )}
                   </Box>
                 </TableCell>

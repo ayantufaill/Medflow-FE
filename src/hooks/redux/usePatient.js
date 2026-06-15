@@ -31,6 +31,8 @@ import {
   fetchPatientBalance,
   selectPatientBalanceCache,
   invalidatePatientBalance,
+  createPatientInsuranceThunk,
+  updatePatientInsuranceThunk,
 } from '../../store/slices/patientSlice';
 
 /**
@@ -176,7 +178,15 @@ export const usePatientInsurances = () => {
     dispatch(invalidatePatientInsurances(patientId));
   }, [dispatch]);
 
-  return { fetchInsurances, getInsurances, invalidate, cache };
+  const createInsurance = useCallback((patientId, payload) => {
+    return dispatch(createPatientInsuranceThunk({ patientId, payload }));
+  }, [dispatch]);
+
+  const updateInsurance = useCallback((patientId, insuranceId, payload) => {
+    return dispatch(updatePatientInsuranceThunk({ patientId, insuranceId, payload }));
+  }, [dispatch]);
+
+  return { fetchInsurances, getInsurances, invalidate, createInsurance, updateInsurance, cache };
 };
 
 /**

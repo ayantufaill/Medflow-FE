@@ -6,7 +6,8 @@ import {
 import { 
   Book as BookIcon,
   ArrowBack as ArrowBackIcon,
-  InfoOutlined as InfoIcon
+  InfoOutlined as InfoIcon,
+  DeleteOutlined as DeleteIcon
 } from "@mui/icons-material";
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
@@ -19,7 +20,8 @@ import {
   PaymentPlan,
   MemberCoverageTable,
   CoverageBookSummary,
-  MembershipInformation
+  MembershipInformation,
+  FeeGuideModal
 } from '../../components/insurance';
 
 const MemberPage = () => {
@@ -29,6 +31,7 @@ const MemberPage = () => {
   const [loading, setLoading] = useState(false);
   const [patient, setPatient] = useState(null);
   const [allCompanies, setAllCompanies] = useState({ companies: [] });
+  const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -46,12 +49,13 @@ const MemberPage = () => {
     saveAsTemplate: false,
     planFeeGuide: 'careington',
     coverageType: 'ppo',
+    providersPlanFeeGuides: [],
     deductibles: [
-      { type: 'Standard', lifetime: false, standard: false, individual: '$50.00', family: '$150.00', metAmount: '$50.00', metDate: '03/03/2026' },
-      { type: 'Preventative', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '03/03/2026' },
+      { type: 'Standard', lifetime: false, standard: false, individual: '$50.00', family: '$150.00', metAmount: '$50.00', metDate: '2026-03-03' },
+      { type: 'Preventative', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '2026-03-03' },
       { type: 'Basic', lifetime: false, standard: true, individual: '', family: '', metAmount: '', metDate: '' },
       { type: 'Major', lifetime: false, standard: true, individual: '', family: '', metAmount: '', metDate: '' },
-      { type: 'Orthodontics', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '03/03/2026' }
+      { type: 'Orthodontics', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '2026-03-03' }
     ],
     coverage: {
       individual: {
@@ -67,10 +71,14 @@ const MemberPage = () => {
         usedAmountDate: ''
       },
       ortho: {
+        unlimited: false,
         annualMax: '$2,000.00',
         usedAmount: '$18.00',
-        usedAmountDate: '03/03/2026'
+        usedAmountDate: '2026-03-03'
       },
+      diagnostic: { unlimited: false, annualMax: '' },
+      preventative: { unlimited: false, annualMax: '' },
+      major: { unlimited: false, annualMax: '' },
       categories: ['Diagnostic', 'Preventative', 'Major']
     },
     subscriber: {
@@ -114,8 +122,8 @@ const MemberPage = () => {
 
   const COVERAGE_TYPES = [
     { value: 'ppo', label: 'Percentage Based Coverage (PPO)' },
-    { value: 'flat', label: 'Flat Fee Coverage' },
-    { value: 'ucr', label: 'UCR Based Coverage' }
+    { value: 'table', label: 'Table/Schedule of Benefits' },
+    { value: 'flat', label: 'Flat Fee' }
   ];
 
   const PLAN_FEE_GUIDE_OPTIONS = [
@@ -185,6 +193,22 @@ const MemberPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (patient && formData.subscriber.relationship === 'Self' && !formData.subscriber.name) {
+      const { firstName, lastName, dateOfBirth, ssn } = patient;
+      const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        subscriber: {
+          ...prev.subscriber,
+          name: fullName || prev.subscriber.name,
+          dateOfBirth: dateOfBirth ? dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
+          ssn: ssn || prev.subscriber.ssn
+        }
+      }));
+    }
+  }, [patient]);
+
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -235,6 +259,45 @@ const MemberPage = () => {
   const handleAddCategoryMax = (category) => {
     console.log('Add max for category:', category);
     // TODO: Implement add category max logic
+  };
+
+  const handleAddProviderFeeGuide = () => {
+    setFormData(prev => ({
+      ...prev,
+      providersPlanFeeGuides: [...(prev.providersPlanFeeGuides || []), { providerId: '', feeGuide: '' }]
+    }));
+  };
+
+  const handleRemoveProviderFeeGuide = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      providersPlanFeeGuides: (prev.providersPlanFeeGuides || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleProviderFeeGuideChange = (index, field, value) => {
+    setFormData(prev => {
+      const newGuides = [...(prev.providersPlanFeeGuides || [])];
+      newGuides[index] = { ...newGuides[index], [field]: value };
+      return { ...prev, providersPlanFeeGuides: newGuides };
+    });
+  };
+
+  const handleAddDeductibleRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: [
+        ...prev.deductibles,
+        { type: '', isCodeRow: true, lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
+      ]
+    }));
+  };
+
+  const handleRemoveDeductibleRow = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: prev.deductibles.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubscriberChange = (field, value) => {
@@ -303,6 +366,15 @@ const MemberPage = () => {
             inputBg={inputBg}
           />
           
+          <DeductiblesTable 
+            formData={formData}
+            handleDeductibleChange={handleDeductibleChange}
+            handleAddDeductibleRow={handleAddDeductibleRow}
+            handleRemoveDeductibleRow={handleRemoveDeductibleRow}
+            tableHeaderStyle={tableHeaderStyle}
+            blueHeader={blueHeader}
+          />
+          
           <Renewal
             formData={formData}
             handleRenewalChange={handleRenewalChange}
@@ -348,15 +420,44 @@ const MemberPage = () => {
                 <Button 
                   variant="outlined" 
                   size="small" 
+                  onClick={() => setIsFeeGuideModalOpen(true)}
                   sx={{ textTransform: 'none', fontSize: '0.6rem', height: '28px', borderColor: '#ccc', color: '#333', px: 0.5, minWidth: 'auto', whiteSpace: 'nowrap' }}
                 >
                   View Fee Guide
                 </Button>
               </Box>
-              <Typography sx={{ color: '#000000ff', fontSize: '0.85rem', mt: 0.3, cursor: 'pointer', fontWeight: 600 }}>
+              <Typography sx={{ color: '#000000ff', fontSize: '0.85rem', mt: 1, fontWeight: 600 }}>
                 Providers Plan Fee Guides
               </Typography>
-              <Typography sx={{ color: '#1976d2', fontSize: '0.65rem', mt: 0.3, cursor: 'pointer' }}>
+              {formData.providersPlanFeeGuides?.map((guide, index) => (
+                <Box key={index} sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center' }}>
+                  <TextField
+                    placeholder="Provider Name/ID"
+                    size="small"
+                    value={guide.providerId}
+                    onChange={(e) => handleProviderFeeGuideChange(index, 'providerId', e.target.value)}
+                    sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
+                  />
+                  <TextField
+                    select
+                    size="small"
+                    value={guide.feeGuide}
+                    onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
+                    sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
+                  >
+                    {PLAN_FEE_GUIDE_OPTIONS.map(option => (
+                      <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.65rem' }}>{option.label}</MenuItem>
+                    ))}
+                  </TextField>
+                  <IconButton size="small" onClick={() => handleRemoveProviderFeeGuide(index)} sx={{ color: '#d32f2f', p: 0.5 }}>
+                    <DeleteIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              ))}
+              <Typography 
+                onClick={handleAddProviderFeeGuide}
+                sx={{ color: '#1976d2', fontSize: '0.65rem', mt: 0.5, cursor: 'pointer', display: 'inline-block', fontWeight: 600 }}
+              >
                 + Add
               </Typography>
             </Grid>
@@ -406,6 +507,12 @@ const MemberPage = () => {
           />
         </Grid>
       </Grid>
+
+      <FeeGuideModal 
+        open={isFeeGuideModalOpen} 
+        onClose={() => setIsFeeGuideModalOpen(false)} 
+        feeGuideId={formData.planFeeGuide}
+      />
     </Box>
   );
 };

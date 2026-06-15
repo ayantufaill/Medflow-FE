@@ -11,6 +11,8 @@ import {
   MenuItem as MuiMenuItem,
   ListItemIcon,
   ListItemText,
+  Collapse,
+  Grid,
 } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
@@ -19,6 +21,8 @@ import {
   Visibility as VisibilityIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -29,7 +33,124 @@ import { useInsuranceCatalog } from '../../hooks/redux/useInsuranceCatalog';
 import InsuranceDialog from '../insurance/InsuranceDialog';
 import ImportedCoverageModal from '../insurance/ImportedCoverageModal';
 import EditCoverageModal from '../insurance/EditCoverageModal';
+import ViewCoverage from '../insurance/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
+
+const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate }) => {
+  const [expanded, setExpanded] = useState(false);
+  const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
+  const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
+  const maxAmount = ins.individualAnnualMax ?? ins.deductibleAmount ?? 1500;
+
+  const getCompany = (insuranceCompanyId) => {
+    if (insuranceCompanyId && typeof insuranceCompanyId === 'object') return insuranceCompanyId;
+    if (typeof insuranceCompanyId === 'string') return (companies || []).find((c) => (c._id || c.id) === insuranceCompanyId);
+    return null;
+  };
+  const company = getCompany(ins.insuranceCompanyId);
+  const payerId = company?.payerId || company?.electronicId || '-';
+  const address = company?.address ? `${company.address.street || ''} ${company.address.city || ''}, ${company.address.state || ''} ${company.address.zipCode || ''}` : '-';
+
+  return (
+    <Paper variant="outlined" sx={{ borderColor: '#b0c4de', borderRadius: '6px', overflow: 'hidden' }}>
+      <Box sx={{ py: 0.8, px: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ p: 0.2, color: '#5c6b89' }}>
+            {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+          </IconButton>
+          <Typography sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.8125rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Box component="span" sx={{ color: '#4a6da7' }}>{(ins.insuranceType || 'Primary').charAt(0).toUpperCase() + (ins.insuranceType || 'primary').slice(1)}:</Box>{' '}
+            <Box component="span" sx={{ fontWeight: 600, color: '#333' }}>{ins.employerName || ins.planName?.split(' by ')[0] || companyName}</Box>{' '}
+            <Box component="span" sx={{ color: '#5c6b89' }}>by {companyName}</Box>
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
+          <Typography sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+            <Box component="span" sx={{ color: '#5c6b89' }}>Used up-to-date: </Box>
+            <Box component="span" sx={{ color: '#4a6da7', fontWeight: 600 }}>${Number(usedAmount).toFixed(2)} / ${Number(maxAmount).toFixed(2)}</Box>
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          {isInactive ? (
+            <Button size="small" variant="contained" color="success" onClick={() => handleInsuranceActivate(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1 }}>Activate</Button>
+          ) : (
+            <>
+              <Button size="small" variant="contained" onClick={() => handleViewPlan(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#4a6da7', '&:hover': { bgcolor: '#3b588c' } }}>View Plan</Button>
+              <Button size="small" variant="contained" onClick={() => handleInsuranceEdit(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#4a6da7', '&:hover': { bgcolor: '#3b588c' } }}>Edit Policy</Button>
+              <Button size="small" variant="contained" color="error" onClick={() => handleInsuranceDeactivate(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#e55353', '&:hover': { bgcolor: '#c94141' } }}>Deactivate</Button>
+            </>
+          )}
+          <Box sx={{ display: 'flex', flexDirection: 'column', color: '#5c6b89', ml: 0.5, cursor: 'pointer' }}>
+            <KeyboardArrowUpIcon sx={{ fontSize: '0.85rem', mb: -0.5 }} />
+            <KeyboardArrowDownIcon sx={{ fontSize: '0.85rem' }} />
+          </Box>
+        </Box>
+      </Box>
+      <Collapse in={expanded} timeout="auto" unmountOnExit>
+        <Box sx={{ p: 2, pt: 0, borderTop: '1px solid #f0f0f0', bgcolor: '#fafafa' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, gap: 4, mt: 0 }}>
+            <Box sx={{ width: 340, justifySelf: 'start' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Name:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{companyName}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer ID:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{payerId}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Group Name:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.groupName || ins.planName || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Group Number:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.groupNumber || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Notes:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.notes || ''}</Typography>
+              </Box>
+            </Box>
+            <Box sx={{ width: 340, justifySelf: 'center' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Patient's Relationship to Subscriber:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.relationshipToPatient || 'Self'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Subscriber's Name:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.subscriberName || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Subscriber's Birthday:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.subscriberDateOfBirth ? dayjs(ins.subscriberDateOfBirth).format('MM/DD/YYYY') : '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Subscriber's ID:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.subscriberId || ins.policyNumber || '-'}</Typography>
+              </Box>
+            </Box>
+            <Box sx={{ width: 340, justifySelf: 'end' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Employer Name:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.employerName || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Address:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{address}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Contact Info:</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 500, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}>
+                  {ins.payerContactInfo || 'View Contact Info'}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </Collapse>
+    </Paper>
+  );
+};
 
 export default function PatientInsuranceTabContent({ patientId }) {
   const navigate = useNavigate();
@@ -56,6 +177,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [importedCoverageModalOpen, setImportedCoverageModalOpen] = useState(false);
   const [editCoverageModal, setEditCoverageModal] = useState({ open: false, insurance: null, mode: 'edit' });
+  const [viewCoverageModal, setViewCoverageModal] = useState({ open: false, insurance: null });
   const [creatingPolicy, setCreatingPolicy] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
 
@@ -103,7 +225,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
     setInsuranceMenu({ anchorEl: null, insurance: null });
   };
   const handleViewPlan = (insurance) => {
-    setEditCoverageModal({ open: true, insurance, mode: 'view' });
+    navigate(`/patients/${patientId}/insurance/${insurance._id || insurance.id}/edit`);
   };
   const handleInsuranceDelete = (insurance) => {
     setInsuranceDeleteDialog({ open: true, insurance });
@@ -152,6 +274,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
         insuranceCompanyId: companyId,
         policyNumber: String(planData.policyNumber || planData.groupNumber || '00000').slice(0, 30),
         groupNumber: planData.groupNumber,
+        groupName: planData.groupName,
         subscriberName: planData.subscriberName || 'Subscriber',
         subscriberDateOfBirth: planData.subscriberDateOfBirth ? dayjs(planData.subscriberDateOfBirth).toISOString() : dayjs().subtract(25, 'year').toISOString(),
         relationshipToPatient: planData.relationshipToPatient || 'self',
@@ -248,60 +371,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                   New Coverage
                 </Button>
               </Box>
-              {inactiveInsurances.length > 0 && (
-                <Box id="imported-coverage-list" sx={{ mt: 4, width: '100%', maxWidth: 500 }}>
-                  <Typography
-                    sx={{
-                      fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                      fontSize: '0.8125rem',
-                      fontWeight: 600,
-                      color: '#616161',
-                      mb: 1.5,
-                      textAlign: 'left',
-                    }}
-                  >
-                    Inactive coverage (activate to use)
-                  </Typography>
-                  <Stack spacing={1}>
-                    {inactiveInsurances.map((ins) => (
-                      <Paper
-                        key={ins._id || ins.id}
-                        variant="outlined"
-                        sx={{
-                          p: 1.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          borderColor: '#e0e0e0',
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                            fontSize: '0.875rem',
-                            color: '#424242',
-                          }}
-                        >
-                          {getInsuranceCompanyName(ins.insuranceCompanyId)} – {ins.insuranceType || 'Unknown'}
-                        </Typography>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="success"
-                          onClick={() => handleInsuranceActivate(ins)}
-                          sx={{
-                            fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Activate
-                        </Button>
-                      </Paper>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
+
             </Box>
           ) : (
             <>
@@ -344,91 +414,57 @@ export default function PatientInsuranceTabContent({ patientId }) {
                   fontWeight: 600,
                   color: '#616161',
                   mb: 1.5,
-                  textAlign: 'center',
+                  textAlign: 'left',
                 }}
               >
                 Active Insurance Coverages
               </Typography>
               <Stack spacing={1.5} sx={{ mb: 3 }}>
-                {displayInsurances.filter((i) => i.isActive).map((ins) => {
-                  const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
-                  const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
-                  const maxAmount = ins.individualAnnualMax ?? ins.deductibleAmount ?? 1500;
-                  return (
-                    <Paper
-                      key={ins._id || ins.id}
-                      variant="outlined"
-                      sx={{
-                        p: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: 1.5,
-                        borderColor: '#e0e0e0',
-                      }}
-                    >
-                      <Box sx={{ flex: 1, minWidth: 200 }}>
-                        <Typography
-                          sx={{
-                            fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                            fontSize: '0.95rem',
-                            fontWeight: 600,
-                            color: '#424242',
-                          }}
-                        >
-                          {(ins.insuranceType || 'Primary').charAt(0).toUpperCase() + (ins.insuranceType || 'primary').slice(1)}:{' '}
-                          <Box component="span" sx={{ fontWeight: 700 }}>{ins.employerName || ins.planName?.split(' by ')[0] || companyName}</Box>
-                          {' '}by {companyName}
-                        </Typography>
-                        <Typography
-                          sx={{
-                            fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                            fontSize: '0.8125rem',
-                            color: '#757575',
-                            mt: 0.5,
-                          }}
-                        >
-                          Used up-to-date: ${Number(usedAmount).toFixed(2)} / ${Number(maxAmount).toFixed(2)}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="primary"
-                          onClick={() => handleViewPlan(ins)}
-                          sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.75rem', textTransform: 'none' }}
-                        >
-                          View Plan
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="primary"
-                          onClick={() => handleInsuranceEdit(ins)}
-                          sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.75rem', textTransform: 'none' }}
-                        >
-                          Edit Policy
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="error"
-                          onClick={() => handleInsuranceDeactivate(ins)}
-                          sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.75rem', textTransform: 'none' }}
-                        >
-                          Deactivate
-                        </Button>
-                        <IconButton size="small" onClick={(e) => handleInsuranceMenuOpen(e, ins)}>
-                          <MoreVertIcon />
-                        </IconButton>
-                      </Box>
-                    </Paper>
-                  );
-                })}
+                {displayInsurances.filter((i) => i.isActive).map((ins) => (
+                  <CoverageRow
+                    key={ins._id || ins.id}
+                    ins={ins}
+                    companies={companies}
+                    getInsuranceCompanyName={getInsuranceCompanyName}
+                    handleViewPlan={handleViewPlan}
+                    handleInsuranceEdit={handleInsuranceEdit}
+                    handleInsuranceDeactivate={handleInsuranceDeactivate}
+                  />
+                ))}
               </Stack>
             </>
+          )}
+
+          {inactiveInsurances.length > 0 && (
+            <Box id="imported-coverage-list" sx={{ mt: 4, width: '100%' }}>
+              <Typography
+                sx={{
+                  fontFamily: '"Manrope", "Segoe UI", sans-serif',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: '#616161',
+                  mb: 1.5,
+                  textAlign: 'left',
+                }}
+              >
+                Inactive coverage (activate to use)
+              </Typography>
+              <Stack spacing={1.5}>
+                {inactiveInsurances.map((ins) => (
+                  <CoverageRow
+                    key={ins._id || ins.id}
+                    ins={ins}
+                    companies={companies}
+                    getInsuranceCompanyName={getInsuranceCompanyName}
+                    handleViewPlan={handleViewPlan}
+                    handleInsuranceEdit={handleInsuranceEdit}
+                    handleInsuranceDeactivate={handleInsuranceDeactivate}
+                    isInactive={true}
+                    handleInsuranceActivate={handleInsuranceActivate}
+                  />
+                ))}
+              </Stack>
+            </Box>
           )}
         </Box>
       </Box>
@@ -495,6 +531,13 @@ export default function PatientInsuranceTabContent({ patientId }) {
           showSnackbar('Coverage updated', 'success');
           setEditCoverageModal({ open: false, insurance: null, mode: 'edit' });
         }}
+      />
+
+      <ViewCoverage
+        open={viewCoverageModal.open}
+        onClose={() => setViewCoverageModal({ open: false, insurance: null })}
+        insurance={viewCoverageModal.insurance}
+        getInsuranceCompanyName={getInsuranceCompanyName}
       />
 
       <ImportedCoverageModal

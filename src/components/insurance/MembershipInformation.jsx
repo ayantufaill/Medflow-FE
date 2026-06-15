@@ -54,7 +54,6 @@ const MembershipInformation = ({
                  </TableCell>
                  <TableCell sx={{ border: '1px solid #e0e0e0', height: '32px', fontSize: '0.75rem', width: '60%', p: '0px 6px' }}>
                    <TextField 
-                     variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.75rem', '& fieldset': { border: 'none' } } }} 
                      value={formData.insurancePlan || ''}
@@ -71,7 +70,6 @@ const MembershipInformation = ({
                  </TableCell>
                  <TableCell sx={{ border: '1px solid #e0e0e0', height: '32px', fontSize: '0.75rem', width: '60%', p: '0px 6px' }}>
                    <TextField 
-                     variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.75rem', '& fieldset': { border: 'none' } } }} 
                      value={formData.groupName || ''}
@@ -91,7 +89,6 @@ const MembershipInformation = ({
                  </TableCell>
                  <TableCell sx={{ border: '1px solid #e0e0e0', height: '32px', fontSize: '0.75rem', width: '60%', p: '0px 6px' }}>
                    <TextField 
-                     variant="standard" 
                      fullWidth 
                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.75rem', '& fieldset': { border: 'none' } } }} 
                      value={formData.groupNumber || ''}
