@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Grid, Typography, CircularProgress, IconButton, Button, TextField, MenuItem, InputAdornment
@@ -10,9 +10,9 @@ import {
   DeleteOutlined as DeleteIcon
 } from "@mui/icons-material";
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { patientService } from '../../services/patient.service';
-import { insuranceCompanyService, insurancePlanService } from '../../services/insurance.service';
-import { usePatientInsurances } from '../../hooks/redux/usePatient';
+import { useInsuranceCatalog } from '../../hooks/redux/useInsuranceCatalog';
+import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
+import { usePatient } from '../../hooks/redux/usePatient';
 import {
   InsuranceInformation,
   SubscriberInformation,
@@ -32,9 +32,10 @@ const AddCoveragePage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
-  const [patient, setPatient] = useState(null);
-  const [allCompanies, setAllCompanies] = useState({ companies: [] });
-  const [coverageTemplates, setCoverageTemplates] = useState([]);
+  
+  const { companies: allCompanies, companiesLoading, templates: coverageTemplates, templatesLoading, fetchCompanies, fetchTemplates } = useInsuranceCatalog();
+  const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
+  const { insurances, fetch: fetchInsurances, create: createInsurance, update: updateInsurance } = usePatientInsurance(patientId);
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   const [isCoverageBookModalOpen, setIsCoverageBookModalOpen] = useState(false);
   const [templateToApply, setTemplateToApply] = useState(null);
@@ -103,7 +104,7 @@ const AddCoveragePage = () => {
 
   // Coverage book data state
   const [coverageBookData, setCoverageBookData] = useState([]);
-  const [coverageCategoryData, setCoverageCategoryData] = useState(COVERAGE_DATA);
+  const [coverageCategoryData, setCoverageCategoryData] = useState(insuranceId ? {} : COVERAGE_DATA);
 
   // Static data arrays for easy API replacement
   // Static data arrays for easy API replacement
@@ -164,102 +165,96 @@ const AddCoveragePage = () => {
   };
 
   useEffect(() => {
-    if (patientId) {
-      fetchPatientData();
+    if (patientId && !patient) fetchPatient(patientId);
+  }, [patientId, patient, fetchPatient]);
+
+  const initialFetchRef = useRef({ companies: false, templates: false });
+
+  useEffect(() => {
+    if ((!allCompanies || allCompanies.length === 0) && !companiesLoading && !initialFetchRef.current.companies) {
+      initialFetchRef.current.companies = true;
+      fetchCompanies();
     }
-  }, [patientId, insuranceId]);
+    if ((!coverageTemplates || coverageTemplates.length === 0) && !templatesLoading && !initialFetchRef.current.templates) {
+      initialFetchRef.current.templates = true;
+      fetchTemplates();
+    }
+  }, [allCompanies, coverageTemplates, companiesLoading, templatesLoading, fetchCompanies, fetchTemplates]);
 
-  const fetchPatientData = async () => {
-    try {
-      setLoading(true);
-      const promises = [
-        insuranceCompanyService.getAllInsuranceCompanies(1, 500),
-        insurancePlanService.getCoverageTemplates()
-      ];
-      
-      if (patientId) {
-        promises.push(patientService.getPatientWorkspace(patientId));
-      }
-      if (patientId && insuranceId) {
-        promises.push(patientService.getPatientInsurances(patientId));
-      }
+  useEffect(() => {
+    // Only fetch existing insurances if we are editing an existing policy
+    if (patientId && insuranceId && insurances.length === 0) fetchInsurances();
+  }, [patientId, insuranceId, insurances.length, fetchInsurances]);
 
-      const results = await Promise.all(promises);
-      
-      setAllCompanies(results[0] || { companies: [] });
-      setCoverageTemplates(results[1]?.templates || results[1] || []);
-      if (patientId) {
-        setPatient(results[2]);
-      }
-      
-      if (patientId && insuranceId && results[3]) {
-        const insurances = results[3];
-        const editTarget = insurances.find(ins => ins._id === insuranceId);
-        if (editTarget) {
-          const monthMapReverse = { 1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December' };
-          
-          let fullCompany = null;
-          if (results[0] && results[0].companies) {
-            fullCompany = results[0].companies.find(c => c._id === (editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId));
-          }
-          
-          setFormData(prev => ({
-            ...prev,
-            insuranceCompanyId: editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId,
-            carrierName: editTarget.insuranceCompanyId?.name || '',
-            payerId: editTarget.insuranceCompanyId?.payerId || '',
-            carrierPhone: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
-            payerAddress: fullCompany?.addressLine1 || editTarget.insuranceCompanyId?.addressLine1 || fullCompany?.city || editTarget.insuranceCompanyId?.city || '',
-            phoneNumber: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
-            groupNumber: editTarget.groupNumber || '',
-            groupName: editTarget.groupName || '',
-            insurancePlan: editTarget.insurancePlan?.name || editTarget.insurancePlan || fullCompany?.name || editTarget.insuranceCompanyId?.name || '',
-            insuranceType: editTarget.insuranceType || 'primary',
-            planFeeGuide: editTarget.planFeeGuide || '',
-            coverageType: editTarget.coverageType || 'ppo',
-            assignmentOfBenefits: parseInt(editTarget.assignmentOfBenefits) || 1,
-            honorWriteOff: editTarget.honorWriteOff || false,
-            renewalMonth: monthMapReverse[editTarget.renewalMonth] || 'January',
-            policyStarted: editTarget.effectiveDate ? new Date(editTarget.effectiveDate).toISOString().split('T')[0] : prev.policyStarted,
-            policyEnds: editTarget.expirationDate ? new Date(editTarget.expirationDate).toISOString().split('T')[0] : '',
-            subscriber: {
-              ...prev.subscriber,
-              relationship: editTarget.relationshipToPatient?.charAt(0).toUpperCase() + editTarget.relationshipToPatient?.slice(1) || 'Self',
-              name: editTarget.subscriberName || '',
-              subscriberId: editTarget.policyNumber || '',
-              ssn: editTarget.subscriberSsn || '',
-              dateOfBirth: editTarget.subscriberDateOfBirth ? new Date(editTarget.subscriberDateOfBirth).toISOString().split('T')[0] : ''
-            },
-            deductibles: editTarget.deductiblesGrid?.length ? editTarget.deductiblesGrid : prev.deductibles,
-            coverage: editTarget.coverageLimits || prev.coverage,
-          }));
+  useEffect(() => {
+    if (patientId && insuranceId && insurances.length > 0 && allCompanies && allCompanies.length > 0) {
+      const editTarget = insurances.find(ins => (ins._id || ins.id) === insuranceId);
+      if (editTarget) {
+        const monthMapReverse = { 1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December' };
+        
+        const fullCompany = allCompanies.find(c => (c._id || c.id) === (editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId));
+        
+        setFormData(prev => ({
+          ...prev,
+          insuranceCompanyId: editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId,
+          carrierName: editTarget.insuranceCompanyId?.name || '',
+          payerId: editTarget.insuranceCompanyId?.payerId || '',
+          carrierPhone: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
+          payerAddress: fullCompany?.addressLine1 || editTarget.insuranceCompanyId?.addressLine1 || fullCompany?.city || editTarget.insuranceCompanyId?.city || '',
+          phoneNumber: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
+          groupNumber: editTarget.groupNumber || '',
+          groupName: editTarget.groupName || '',
+          insurancePlan: editTarget.insurancePlan?.name || editTarget.insurancePlan || fullCompany?.name || editTarget.insuranceCompanyId?.name || '',
+          insuranceType: editTarget.insuranceType || 'primary',
+          planFeeGuide: editTarget.planFeeGuide || '',
+          coverageType: editTarget.coverageType || 'ppo',
+          assignmentOfBenefits: parseInt(editTarget.assignmentOfBenefits) || 1,
+          honorWriteOff: editTarget.honorWriteOff || false,
+          renewalMonth: monthMapReverse[editTarget.renewalMonth] || 'January',
+          policyStarted: editTarget.effectiveDate ? new Date(editTarget.effectiveDate).toISOString().split('T')[0] : prev.policyStarted,
+          policyEnds: editTarget.expirationDate ? new Date(editTarget.expirationDate).toISOString().split('T')[0] : '',
+          subscriber: {
+            ...prev.subscriber,
+            relationship: editTarget.relationshipToPatient?.charAt(0).toUpperCase() + editTarget.relationshipToPatient?.slice(1) || 'Self',
+            name: editTarget.subscriberName || '',
+            subscriberId: editTarget.policyNumber || '',
+            ssn: editTarget.subscriberSsn || '',
+            dateOfBirth: editTarget.subscriberDateOfBirth ? new Date(editTarget.subscriberDateOfBirth).toISOString().split('T')[0] : ''
+          },
+          deductibles: editTarget.deductiblesGrid?.length ? editTarget.deductiblesGrid : prev.deductibles,
+          coverage: editTarget.coverageLimits || prev.coverage,
+        }));
 
-          if (editTarget.coverageBookData) {
-            setCoverageBookData(editTarget.coverageBookData);
-          }
+        if (editTarget.coverageBookData) {
+          setCoverageBookData(editTarget.coverageBookData);
+        }
 
-          if (editTarget.coverageCategoryTable) {
-             const covDataArray = editTarget.coverageCategoryTable;
-             let covData = null;
-             if (Array.isArray(covDataArray) && covDataArray.length > 0 && typeof covDataArray[0] === 'object' && covDataArray[0].category) {
+        if (editTarget.coverageCategoryTable) {
+           const covDataArray = editTarget.coverageCategoryTable;
+           let covData = null;
+           if (Array.isArray(covDataArray) && covDataArray.length > 0) {
+             if (typeof covDataArray[0] === 'object' && covDataArray[0].category) {
                covData = {};
                covDataArray.forEach(group => {
                  covData[group.category] = group.items;
                });
                setCoverageCategoryData(covData);
-             } else if (covDataArray && !Array.isArray(covDataArray)) {
-               setCoverageCategoryData(covDataArray);
+             } else if (typeof covDataArray[0] === 'object' && !covDataArray[0].category) {
+               setCoverageCategoryData(covDataArray); // Fallback for plain objects
              }
-          }
+             // If it's an array of strings like ["Diagnostic", "Preventative"], 
+             // we deliberately ignore it and let it fallback to COVERAGE_DATA.
+           } else if (covDataArray && !Array.isArray(covDataArray)) {
+             setCoverageCategoryData(covDataArray);
+           } else {
+             setCoverageCategoryData({});
+           }
+        } else {
+           setCoverageCategoryData({});
         }
       }
-    } catch (err) {
-      console.error('Failed to load data', err);
-      showSnackbar('Failed to load required data', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [patientId, insuranceId, insurances, allCompanies]);
 
   useEffect(() => {
     if (patient && formData.subscriber.relationship === 'Self' && !formData.subscriber.name) {
@@ -277,7 +272,7 @@ const AddCoveragePage = () => {
     }
   }, [patient]);
 
-  const { createInsurance, updateInsurance } = usePatientInsurances();
+
 
   const handleSave = async () => {
     try {
@@ -334,10 +329,10 @@ const AddCoveragePage = () => {
       };
 
       if (insuranceId) {
-        await updateInsurance(patientId, insuranceId, payload).unwrap();
+        await updateInsurance(insuranceId, payload).unwrap();
         showSnackbar('Coverage updated successfully', 'success');
       } else {
-        await createInsurance(patientId, payload).unwrap();
+        await createInsurance(payload).unwrap();
         showSnackbar('Coverage saved successfully', 'success');
       }
       
@@ -550,7 +545,7 @@ const AddCoveragePage = () => {
               handleApplyTemplate
             }}
             handleInputChange={handleInputChange}
-            insuranceCompanies={allCompanies.companies || []}
+            insuranceCompanies={allCompanies || []}
             ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
             tinyText={tinyText}
             blueHeader={blueHeader}
@@ -754,6 +749,7 @@ const AddCoveragePage = () => {
         open={isCoverageBookModalOpen}
         onClose={() => setIsCoverageBookModalOpen(false)}
         coverageData={coverageBookData}
+        onSave={(data) => setCoverageBookData(data)}
       />
 
       <ConfirmationDialog

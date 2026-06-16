@@ -28,7 +28,10 @@ import {
   Checkbox,
   FormControlLabel,
   TextareaAutosize,
+  FormHelperText,
 } from '@mui/material';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
@@ -76,8 +79,8 @@ const InsuranceCarriers = () => {
     email: '',
     fax: '',
     website: '',
-    address: '',
-    address2: '',
+    addressLine1: '',
+    addressLine2: '',
     city: '',
     state: '',
     zipCode: '',
@@ -86,6 +89,8 @@ const InsuranceCarriers = () => {
     claimType: '',
     providersOutOfNetwork: [],
   });
+  
+  const [errors, setErrors] = useState({});
 
   const lastFetchRef = React.useRef(null);
 
@@ -120,10 +125,62 @@ const InsuranceCarriers = () => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Required fields
+    if (!newCarrier.name?.trim()) {
+      newErrors.name = 'Carrier Name is required';
+      isValid = false;
+    }
+    if (!newCarrier.payerId?.trim()) {
+      newErrors.payerId = 'Electronic Id is required';
+      isValid = false;
+    }
+
+    // Phone & Fax validation (US Format)
+    const validateUsPhone = (phoneStr) => {
+      if (!phoneStr) return true;
+      const cleanPhone = phoneStr.replace(/\D/g, '');
+      if (cleanPhone.length === 0) return true;
+      
+      // Typical US formatting is 10 digits without country code, or 11 with country code (1)
+      if (cleanPhone.length === 11 && cleanPhone.startsWith('1')) return true;
+      if (cleanPhone.length === 10) return true;
+      return false;
+    };
+
+    if (newCarrier.phone && newCarrier.phone.replace(/\D/g, '').length > 0) {
+      if (!validateUsPhone(newCarrier.phone)) {
+        newErrors.phone = 'Phone number is incomplete or invalid';
+        isValid = false;
+      }
+    }
+
+    if (newCarrier.fax && newCarrier.fax.replace(/\D/g, '').length > 0) {
+      if (!validateUsPhone(newCarrier.fax)) {
+        newErrors.fax = 'Fax number is incomplete or invalid';
+        isValid = false;
+      }
+    }
+
+    if (newCarrier.email?.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newCarrier.email.trim())) {
+        newErrors.email = 'Invalid email format';
+        isValid = false;
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSaveCarrier = async () => {
     try {
-      if (!newCarrier.name || !newCarrier.payerId) {
-        showSnackbar('Carrier Name and Electronic ID are required', 'error');
+      if (!validateForm()) {
+        showSnackbar('Please fix the errors in the form', 'error');
         return;
       }
 
@@ -161,9 +218,10 @@ const InsuranceCarriers = () => {
       // Reset form state
       setNewCarrier({
         name: '', payerId: '', phone: '', email: '', fax: '', website: '',
-        address: '', address2: '', city: '', state: '', zipCode: '', country: 'United States',
+        addressLine1: '', addressLine2: '', city: '', state: '', zipCode: '', country: 'United States',
         notes: '', claimType: '', providersOutOfNetwork: [],
       });
+      setErrors({});
     } catch (err) {
       // Handle and display actual backend error details
       const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to add insurance carrier';
@@ -276,9 +334,9 @@ const InsuranceCarriers = () => {
                   <TableCell sx={{ color: '#1a3a6b', fontWeight: 500 }}>{company.name}</TableCell>
                   <TableCell>{company.phone || '-'}</TableCell>
                   <TableCell>
-                    {company.address ? (
+                    {company.addressLine1 || company.city || company.state ? (
                       <Typography sx={{ fontSize: '0.85rem' }}>
-                        {company.address}, {company.city}, {company.state} {company.zipCode}
+                        {[company.addressLine1, company.city, company.state ? `${company.state} ${company.zipCode || ''}`.trim() : company.zipCode].filter(Boolean).join(', ')}
                       </Typography>
                     ) : '-'}
                   </TableCell>
@@ -347,6 +405,8 @@ const InsuranceCarriers = () => {
                 fullWidth size="small" placeholder="Enter Name"
                 value={newCarrier.name}
                 onChange={(e) => setNewCarrier({ ...newCarrier, name: e.target.value })}
+                error={!!errors.name}
+                helperText={errors.name}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>
@@ -356,6 +416,8 @@ const InsuranceCarriers = () => {
                 fullWidth size="small"
                 value={newCarrier.payerId}
                 onChange={(e) => setNewCarrier({ ...newCarrier, payerId: e.target.value })}
+                error={!!errors.payerId}
+                helperText={errors.payerId}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
               <FormControlLabel
@@ -366,12 +428,35 @@ const InsuranceCarriers = () => {
             </Grid>
             <Grid item xs={4}>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Phone</Typography>
-              <TextField
-                fullWidth size="small"
-                value={newCarrier.phone}
-                onChange={(e) => setNewCarrier({ ...newCarrier, phone: e.target.value })}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
-              />
+              <Box sx={{
+                '& .react-tel-input .form-control': {
+                  width: '100%',
+                  height: '40px',
+                  fontSize: '0.85rem',
+                  borderColor: errors.phone ? '#d32f2f' : '#c4c4c4',
+                  borderRadius: '4px',
+                  paddingLeft: '14px',
+                },
+                '& .react-tel-input .flag-dropdown': {
+                  display: 'none',
+                }
+              }}>
+                <PhoneInput
+                  country={'us'}
+                  disableDropdown={true}
+                  buttonStyle={{ display: 'none' }}
+                  value={newCarrier.phone}
+                  onChange={(phone) => setNewCarrier({ ...newCarrier, phone })}
+                  enableSearch={true}
+                  disableSearchIcon={false}
+                  searchPlaceholder="Search country"
+                />
+                {errors.phone && (
+                  <FormHelperText error sx={{ mt: 0.5, mx: 1.75 }}>
+                    {errors.phone}
+                  </FormHelperText>
+                )}
+              </Box>
             </Grid>
 
             {/* Row 2 */}
@@ -381,17 +466,42 @@ const InsuranceCarriers = () => {
                 fullWidth size="small"
                 value={newCarrier.email}
                 onChange={(e) => setNewCarrier({ ...newCarrier, email: e.target.value })}
+                error={!!errors.email}
+                helperText={errors.email}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>
             <Grid item xs={4}>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Fax</Typography>
-              <TextField
-                fullWidth size="small"
-                value={newCarrier.fax}
-                onChange={(e) => setNewCarrier({ ...newCarrier, fax: e.target.value })}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
-              />
+              <Box sx={{
+                '& .react-tel-input .form-control': {
+                  width: '100%',
+                  height: '40px',
+                  fontSize: '0.85rem',
+                  borderColor: errors.fax ? '#d32f2f' : '#c4c4c4',
+                  borderRadius: '4px',
+                  paddingLeft: '14px',
+                },
+                '& .react-tel-input .flag-dropdown': {
+                  display: 'none',
+                }
+              }}>
+                <PhoneInput
+                  country={'us'}
+                  disableDropdown={true}
+                  buttonStyle={{ display: 'none' }}
+                  value={newCarrier.fax}
+                  onChange={(fax) => setNewCarrier({ ...newCarrier, fax })}
+                  enableSearch={true}
+                  disableSearchIcon={false}
+                  searchPlaceholder="Search country"
+                />
+                {errors.fax && (
+                  <FormHelperText error sx={{ mt: 0.5, mx: 1.75 }}>
+                    {errors.fax}
+                  </FormHelperText>
+                )}
+              </Box>
             </Grid>
             <Grid item xs={4}>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Website</Typography>
@@ -411,34 +521,21 @@ const InsuranceCarriers = () => {
             </Grid> */}
 
             {/* Address Row 1 */}
-            <Grid item xs={4}>
-              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Country:</Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={newCarrier.country}
-                  onChange={(e) => setNewCarrier({ ...newCarrier, country: e.target.value })}
-                  sx={{ fontSize: '0.85rem' }}
-                >
-                  <MenuItem value="United States">United States</MenuItem>
-                  <MenuItem value="Canada">Canada</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={6}>
               <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Address Line 1:</Typography>
               <TextField
                 fullWidth size="small" placeholder="Address line 1"
-                value={newCarrier.address}
-                onChange={(e) => setNewCarrier({ ...newCarrier, address: e.target.value })}
+                value={newCarrier.addressLine1}
+                onChange={(e) => setNewCarrier({ ...newCarrier, addressLine1: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={6}>
               <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Address Line 2:</Typography>
               <TextField
                 fullWidth size="small" placeholder="Address line 2"
-                value={newCarrier.address2}
-                onChange={(e) => setNewCarrier({ ...newCarrier, address2: e.target.value })}
+                value={newCarrier.addressLine2}
+                onChange={(e) => setNewCarrier({ ...newCarrier, addressLine2: e.target.value })}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>

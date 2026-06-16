@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -27,10 +27,16 @@ const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
   const [fees, setFees] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const fetchedIdRef = useRef(null);
+
   useEffect(() => {
     if (open && feeGuideId) {
-      fetchFees();
+      if (fetchedIdRef.current !== feeGuideId) {
+        fetchedIdRef.current = feeGuideId;
+        fetchFees();
+      }
     } else {
+      fetchedIdRef.current = null;
       setFees([]);
       setSearchQuery('');
     }
