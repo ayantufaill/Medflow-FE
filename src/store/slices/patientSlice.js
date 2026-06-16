@@ -280,7 +280,7 @@ const initialState = {
 
   // Current patient being viewed
   currentPatient: null,
-  selectedPatientId: null,
+  selectedPatientId: typeof window !== 'undefined' ? localStorage.getItem('selectedPatientId') : null,
   detailLoading: false,
   detailError: null,
 
@@ -313,10 +313,20 @@ const patientSlice = createSlice({
     setCurrentPatient: (state, action) => {
       state.currentPatient = action.payload;
       state.selectedPatientId = action.payload?._id || action.payload?.id || null;
+      if (state.selectedPatientId) {
+        localStorage.setItem('selectedPatientId', state.selectedPatientId);
+      } else {
+        localStorage.removeItem('selectedPatientId');
+      }
       state.detailError = null;
     },
     setSelectedPatientId: (state, action) => {
       state.selectedPatientId = action.payload;
+      if (action.payload) {
+        localStorage.setItem('selectedPatientId', action.payload);
+      } else {
+        localStorage.removeItem('selectedPatientId');
+      }
     },
     setFilters: (state, action) => {
       state.filters = { ...state.filters, ...action.payload };
@@ -327,6 +337,7 @@ const patientSlice = createSlice({
     clearCurrentPatient: (state) => {
       state.currentPatient = null;
       state.selectedPatientId = null;
+      localStorage.removeItem('selectedPatientId');
       state.currentMedicalHistory = null;
       state.currentDentalHistory = null;
     },
@@ -389,6 +400,11 @@ const patientSlice = createSlice({
       .addCase(fetchPatientById.fulfilled, (state, action) => {
         state.currentPatient = action.payload;
         state.selectedPatientId = action.payload?._id || null;
+        if (state.selectedPatientId) {
+          localStorage.setItem('selectedPatientId', state.selectedPatientId);
+        } else {
+          localStorage.removeItem('selectedPatientId');
+        }
         state.detailLoading = false;
         // Cache it
         state.cache[action.payload._id] = { data: action.payload, timestamp: Date.now() };

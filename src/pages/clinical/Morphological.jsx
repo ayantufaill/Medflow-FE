@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
-  Select, MenuItem, Button, Grid, IconButton, Divider, Chip, TextField, InputAdornment
+  Select, MenuItem, Button, Grid, IconButton, Divider, Chip, TextField, InputAdornment,
+  CircularProgress, Alert
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import AddIcon from '@mui/icons-material/Add';
@@ -10,6 +12,14 @@ import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
+import {
+  useClinicalExamQuery,
+  useUpsertClinicalExam,
+  useSignClinicalExam
+} from '../../hooks/queries/useClinicalExam';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // Custom Radio with the grey/dark theme from the image
 const StyledRadio = (props) => (
@@ -104,6 +114,17 @@ const MORPHOLOGICAL_DATA = {
 };
 
 const Morphological = () => {
+  const { showSnackbar } = useSnackbar();
+  const patientId = useSelector(selectSelectedPatientId);
+  const appointmentId = useSelector(selectSelectedAppointmentId);
+  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('morphological', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('morphological', appointmentId);
+  const signMutation = useSignClinicalExam('morphological', appointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
+
   // State for visit dates timeline
   const [visitDates, setVisitDates] = useState([
     'Sep 29, 2023',
@@ -157,6 +178,48 @@ const Morphological = () => {
     analysisReferred: false,
     noFindings: false
   });
+
+  // Sync data from database to form state when loaded
+  useEffect(() => {
+    if (examRecord?.examData) {
+      setFormData(prev => ({
+        ...prev,
+        ...examRecord.examData
+      }));
+    }
+  }, [examRecord]);
+
+  const handleSaveExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: formData
+      });
+      showSnackbar('Morphological exam saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
+    }
+  };
+
+  const handleSignExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
+      try {
+        await signMutation.mutateAsync();
+        showSnackbar('Morphological exam signed and locked', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
+      }
+    }
+  };
 
   // Handle remove date from timeline
   const handleRemoveDate = (indexToRemove) => {
@@ -232,6 +295,26 @@ const Morphological = () => {
     // TODO: Open photo gallery modal
   };
 
+  if (examLoading) {
+    return (
+      <Box>
+        <ClinicalNavbar />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+            Exam
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: fontSize.sm }}>
+            Patient examination records and clinical findings
+          </Typography>
+        </Box>
+        <ExamNavbar />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -246,6 +329,11 @@ const Morphological = () => {
       <ExamNavbar />
       
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
+        {isSigned && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This exam has been signed and locked. It is now read-only.
+          </Alert>
+        )}
         
         {/* 1. Top Navigation / Timeline */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
@@ -261,6 +349,8 @@ const Morphological = () => {
             New Exam
           </Button>
         </Box>
+
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
 
         {/* 2. Status Row */}
         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -587,13 +677,36 @@ const Morphological = () => {
           </Grid>
         </Grid>
 
-        <Button 
-          variant="contained" 
-          sx={{ mt: 6, bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
-          onClick={handleDeleteExam}
-        >
-          Delete Exam
-        </Button>
+        </fieldset>
+
+        <Box sx={{ mt: 6, display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Save Exam
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleSignExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Sign & Finalize
+          </Button>
+          <Button 
+            variant="contained" 
+            disabled={isSigned}
+            sx={{ bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
+            onClick={handleDeleteExam}
+          >
+            Delete Exam
+          </Button>
+        </Box>
       </Box>
     </Box>
   );

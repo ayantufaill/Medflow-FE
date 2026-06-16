@@ -145,7 +145,7 @@ const initialState = {
 
   // Current appointment
   currentAppointment: null,
-  selectedAppointmentId: null,
+  selectedAppointmentId: typeof window !== 'undefined' ? localStorage.getItem('selectedAppointmentId') : null,
   detailLoading: false,
   detailError: null,
 
@@ -164,10 +164,20 @@ const appointmentSlice = createSlice({
     setCurrentAppointment: (state, action) => {
       state.currentAppointment = action.payload;
       state.selectedAppointmentId = action.payload?._id || action.payload?.id || null;
+      if (state.selectedAppointmentId) {
+        localStorage.setItem('selectedAppointmentId', state.selectedAppointmentId);
+      } else {
+        localStorage.removeItem('selectedAppointmentId');
+      }
       state.detailError = null;
     },
     setSelectedAppointmentId: (state, action) => {
       state.selectedAppointmentId = action.payload;
+      if (action.payload) {
+        localStorage.setItem('selectedAppointmentId', action.payload);
+      } else {
+        localStorage.removeItem('selectedAppointmentId');
+      }
     },
     setCalendarView: (state, action) => {
       state.calendarView = action.payload;
@@ -190,6 +200,7 @@ const appointmentSlice = createSlice({
     clearCurrentAppointment: (state) => {
       state.currentAppointment = null;
       state.selectedAppointmentId = null;
+      localStorage.removeItem('selectedAppointmentId');
       state.conflicts = [];
     },
     invalidateAppointments: (state) => {
@@ -245,6 +256,11 @@ const appointmentSlice = createSlice({
       .addCase(fetchAppointmentById.fulfilled, (state, action) => {
         state.currentAppointment = action.payload;
         state.selectedAppointmentId = action.payload?._id || null;
+        if (state.selectedAppointmentId) {
+          localStorage.setItem('selectedAppointmentId', state.selectedAppointmentId);
+        } else {
+          localStorage.removeItem('selectedAppointmentId');
+        }
         state.detailLoading = false;
         state.cache[action.payload._id] = { data: action.payload, timestamp: Date.now() };
       })

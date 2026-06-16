@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
   Button, Select, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
-  Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogContent, TextField, Stack
+  Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogContent, TextField, Stack,
+  CircularProgress, Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -16,6 +18,14 @@ import ExamNavbar from "../../components/clinical/ExamNavbar";
 import PerioChartGrid from "../../components/clinical/PerioChartGrid";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
+import {
+  useClinicalExamQuery,
+  useUpsertClinicalExam,
+  useSignClinicalExam
+} from '../../hooks/queries/useClinicalExam';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 const SummaryData = [
   { label: '# of sites', bleeding: '50', p4: '150', p5: '0', p6: '0', recession: '43' },
@@ -167,6 +177,17 @@ const initialToothData = () => {
 };
 
 const PeriodontalExamPage = () => {
+  const { showSnackbar } = useSnackbar();
+  const patientId = useSelector(selectSelectedPatientId);
+  const appointmentId = useSelector(selectSelectedAppointmentId);
+  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('periodontal', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('periodontal', appointmentId);
+  const signMutation = useSignClinicalExam('periodontal', appointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
+
   const [visitDates, setVisitDates] = useState([
     'Dec 22, 2023',
     'Mar 29, 2024',
@@ -190,6 +211,50 @@ const PeriodontalExamPage = () => {
   });
 
   const [chartData, setChartData] = useState(initialToothData());
+
+  // Sync data from database to form state when loaded
+  useEffect(() => {
+    if (examRecord?.examData) {
+      if (examRecord.examData.chartData) {
+        setChartData(examRecord.examData.chartData);
+      }
+      if (examRecord.examData.settings) {
+        setSettings(examRecord.examData.settings);
+      }
+    }
+  }, [examRecord]);
+
+  const handleSaveExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: { chartData, settings }
+      });
+      showSnackbar('Periodontal exam saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
+    }
+  };
+
+  const handleSignExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
+      try {
+        await signMutation.mutateAsync();
+        showSnackbar('Periodontal exam signed and locked', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
+      }
+    }
+  };
 
   const handleRemoveDate = (indexToRemove) => {
     setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
@@ -345,6 +410,26 @@ const PeriodontalExamPage = () => {
     });
   };
 
+  if (examLoading) {
+    return (
+      <Box>
+        <ClinicalNavbar />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+            Exam
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+            Patient examination records and clinical findings
+          </Typography>
+        </Box>
+        <ExamNavbar />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -358,6 +443,11 @@ const PeriodontalExamPage = () => {
       </Box>
       <ExamNavbar />
       <Box sx={{ p: 3, bgcolor: '#fff', minHeight: '100vh' }}>
+        {isSigned && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This exam has been signed and locked. It is now read-only.
+          </Alert>
+        )}
         
         {/* 1. TIMELINE HEADER */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, px: 2, overflowX: 'auto' }}>
@@ -404,6 +494,8 @@ const PeriodontalExamPage = () => {
           </Box>
         </Box>
 
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+
         {/* 2. DIAGNOSTIC SECTION */}
         <DiagnosticHeader />
 
@@ -425,6 +517,29 @@ const PeriodontalExamPage = () => {
 
         {/* 4. PERIO CHART GRID */}
         <PerioChartGrid chartData={chartData} setChartData={setChartData} missingTeeth={MISSING_TEETH} />
+
+        </fieldset>
+
+        <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Save Exam
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleSignExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Sign & Finalize
+          </Button>
+        </Box>
 
       </Box>
 

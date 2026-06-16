@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector } from 'react-redux';
 import {
   Box, Typography, Chip, Button, Stack, Divider, Grid,
-  Dialog, IconButton, TextField
+  Dialog, IconButton, TextField, CircularProgress, Alert
 } from "@mui/material";
 import {
   CalendarMonth,
@@ -26,14 +27,80 @@ import {
 } from "../../components/radiographic";
 import { fontSize, fontWeight } from "../../constants/styles";
 import { Popover } from "@mui/material";
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
+import {
+  useClinicalExamQuery,
+  useUpsertClinicalExam,
+  useSignClinicalExam
+} from '../../hooks/queries/useClinicalExam';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 const Radiographic = () => {
+  const { showSnackbar } = useSnackbar();
+  const patientId = useSelector(selectSelectedPatientId);
+  const appointmentId = useSelector(selectSelectedAppointmentId);
+  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('radiographic', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('radiographic', appointmentId);
+  const signMutation = useSignClinicalExam('radiographic', appointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
+
   const [selectedTeeth, setSelectedTeeth] = React.useState([]);
   const [missingTeeth, setMissingTeeth] = React.useState([]);
   const [toothFindings, setToothFindings] = React.useState({});
   const [activeToothNum, setActiveToothNum] = React.useState(null);
   const [detailModalTooth, setDetailModalTooth] = React.useState(null);
   const [newNoteText, setNewNoteText] = React.useState('');
+
+  // Sync data from database to form state when loaded
+  useEffect(() => {
+    if (examRecord?.examData) {
+      setSelectedTeeth(examRecord.examData.selectedTeeth || []);
+      setMissingTeeth(examRecord.examData.missingTeeth || []);
+      setToothFindings(examRecord.examData.toothFindings || {});
+      setAdditionalTeeth(examRecord.examData.additionalTeeth || []);
+    }
+  }, [examRecord]);
+
+  const handleSaveExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: {
+          selectedTeeth,
+          missingTeeth,
+          toothFindings,
+          additionalTeeth
+        }
+      });
+      showSnackbar('Radiographic exam saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
+    }
+  };
+
+  const handleSignExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
+      try {
+        await signMutation.mutateAsync();
+        showSnackbar('Radiographic exam signed and locked', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
+      }
+    }
+  };
 
   // Additional Teeth selection states
   const [additionalTeeth, setAdditionalTeeth] = React.useState([]);
@@ -138,6 +205,26 @@ const Radiographic = () => {
     setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
+  if (examLoading) {
+    return (
+      <Box>
+        <ClinicalNavbar />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+            Exam
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+            Patient examination records and clinical findings
+          </Typography>
+        </Box>
+        <ExamNavbar />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -153,6 +240,11 @@ const Radiographic = () => {
       
       {/* Timeline and Status Section */}
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
+        {isSigned && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This exam has been signed and locked. It is now read-only.
+          </Alert>
+        )}
         
         {/* 1. Top Navigation / Timeline */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
@@ -169,6 +261,7 @@ const Radiographic = () => {
           </Button>
         </Box>
 
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
         {/* 2-Column Layout: Sidebar on left (30%), Image on right (50%) */}
         <Box sx={{ display: 'flex', gap: 2, width: '100%', justifyContent: 'space-between' }}>
           {/* Left Column - Sidebar (30% Width) */}
@@ -568,15 +661,37 @@ const Radiographic = () => {
         </Grid>
       </Box>
 
-      {/* Delete Exam Button */}
-      <Button 
-        variant="contained" 
-        sx={{ mt: 4, bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
-        onClick={handleDeleteExam}
-      >
-        Delete Exam
-      </Button>
-    </Box>
+        </fieldset>
+
+        <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Save Exam
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleSignExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Sign & Finalize
+          </Button>
+          <Button 
+            variant="contained" 
+            disabled={isSigned}
+            sx={{ bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
+            onClick={handleDeleteExam}
+          >
+            Delete Exam
+          </Button>
+        </Box>
+      </Box>
 
     {/* Tooth Details Modal */}
     <Dialog

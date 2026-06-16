@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector } from 'react-redux';
 import { Box, Typography } from "@mui/material";
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
@@ -12,10 +13,20 @@ import {
   Button,
   Chip,
   Checkbox,
-  TextField
+  TextField,
+  CircularProgress,
+  Alert
 } from "@mui/material";
 import { Add as AddIcon, CalendarToday as CalendarIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { fontSize, fontWeight } from "../../constants/styles";
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
+import {
+  useClinicalExamQuery,
+  useUpsertClinicalExam,
+  useSignClinicalExam
+} from '../../hooks/queries/useClinicalExam';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // Custom styles to match the UI precisely
 const labelStyle = {
@@ -259,6 +270,17 @@ const FormField = ({ fieldConfig, value, onChange, onCheckboxChange }) => {
 };
 
 const AirwayPage = () => {
+  const { showSnackbar } = useSnackbar();
+  const patientId = useSelector(selectSelectedPatientId);
+  const appointmentId = useSelector(selectSelectedAppointmentId);
+  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('airway', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('airway', appointmentId);
+  const signMutation = useSignClinicalExam('airway', appointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
+
   const [risk, setRisk] = useState("High");
   const [visitDates, setVisitDates] = useState([
     'May 22, 2025'
@@ -292,6 +314,60 @@ const AirwayPage = () => {
     notes: ""
   });
 
+  // Sync data from database to form state when loaded
+  useEffect(() => {
+    if (examRecord?.examData) {
+      if (examRecord.examData.formData) {
+        setFormData(prev => ({
+          ...prev,
+          ...examRecord.examData.formData
+        }));
+      }
+      if (examRecord.examData.risk) {
+        setRisk(examRecord.examData.risk);
+      }
+    }
+  }, [examRecord]);
+
+  const handleSaveExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: { formData, risk }
+      });
+      showSnackbar('Airway exam saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
+    }
+  };
+
+  const handleSignExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
+      try {
+        await signMutation.mutateAsync();
+        showSnackbar('Airway exam signed and locked', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
+      }
+    }
+  };
+
+  const handleDeleteExam = () => {
+    if (window.confirm('Are you sure you want to delete this exam?')) {
+      console.log('Delete exam');
+      // TODO: API call to delete exam
+    }
+  };
+
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
     setVisitDates([...visitDates, today]);
@@ -320,6 +396,26 @@ const AirwayPage = () => {
     }));
   };
 
+  if (examLoading) {
+    return (
+      <Box>
+        <ClinicalNavbar />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+            Exam
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+            Patient examination records and clinical findings
+          </Typography>
+        </Box>
+        <ExamNavbar />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -333,123 +429,147 @@ const AirwayPage = () => {
       </Box>
       <ExamNavbar />
       <Box sx={{ p: 2, bgcolor: "#fff", minHeight: "100vh", fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
-      {/* Header Actions */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
-        <VisitDatesTimeline
-          visitDates={visitDates}
-          onRemoveDate={handleRemoveDate}
-        />
-        <Button startIcon={<AddIcon />} sx={{ textTransform: "none", color: "#555", minWidth: "auto", px: 1.5, py: 0.5, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleNewExam}>
-          New Exam
-        </Button>
-      </Box>
-
-      {/* Airway Risk Selector */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-        <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>Airway Risk:</Typography>
-        <RadioGroup row value={risk} onChange={(e) => setRisk(e.target.value)}>
-          <FormControlLabel
-            value="Low"
-            control={<SmallRadio sx={{ color: "green", "&.Mui-checked": { color: "green" } }} />}
-            label="Low"
-            sx={optionLabelStyle}
+        {isSigned && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This exam has been signed and locked. It is now read-only.
+          </Alert>
+        )}
+        
+        {/* Header Actions */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
+          <VisitDatesTimeline
+            visitDates={visitDates}
+            onRemoveDate={handleRemoveDate}
           />
-          <FormControlLabel
-            value="Moderate"
-            control={<SmallRadio sx={{ color: "#ffd700", "&.Mui-checked": { color: "#ffd700" } }} />}
-            label="Moderate"
-            sx={optionLabelStyle}
-          />
-          <FormControlLabel
-            value="High"
-            control={<SmallRadio sx={{ color: "red", "&.Mui-checked": { color: "red" } }} />}
-            label="High"
-            sx={optionLabelStyle}
-          />
-        </RadioGroup>
-      </Box>
+          <Button startIcon={<AddIcon />} sx={{ textTransform: "none", color: "#555", minWidth: "auto", px: 1.5, py: 0.5, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleNewExam}>
+            New Exam
+          </Button>
+        </Box>
 
-      <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.sm, mb: 1 }}>FAirEST 15 Exam</Typography>
-      <Divider sx={{ mb: 2 }} />
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
 
-      <Grid container sx={{ display: 'flex', flexWrap: 'nowrap', width: '100%' }}>
-        {/* LEFT COLUMN */}
-        <Grid 
-          item 
-          sx={{ 
-            flex: '0 0 50%',
-            borderRight: "1px solid #e0e0e0", 
-            pr: 2, 
-            boxSizing: 'border-box',
-            minWidth: 0
-          }}
-        >
-          {examFields.leftColumn.map((fieldConfig) => (
-            <SectionRow key={fieldConfig.field} label={fieldConfig.label}>
-              <FormField
-                fieldConfig={fieldConfig}
-                value={formData[fieldConfig.field]}
-                onChange={handleFieldChange}
-                onCheckboxChange={handleLipTieChange}
+          {/* Airway Risk Selector */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+            <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>Airway Risk:</Typography>
+            <RadioGroup row value={risk} onChange={(e) => setRisk(e.target.value)}>
+              <FormControlLabel
+                value="Low"
+                control={<SmallRadio sx={{ color: "green", "&.Mui-checked": { color: "green" } }} />}
+                label="Low"
+                sx={optionLabelStyle}
               />
-            </SectionRow>
-          ))}
-        </Grid>
-
-        {/* RIGHT COLUMN */}
-        <Grid 
-          item 
-          sx={{ 
-            flex: '0 0 50%',
-            pl: 2, 
-            boxSizing: 'border-box',
-            minWidth: 0
-          }}
-        >
-          {examFields.rightColumn.map((fieldConfig) => (
-            <SectionRow key={fieldConfig.field} label={fieldConfig.label}>
-              <FormField
-                fieldConfig={fieldConfig}
-                value={formData[fieldConfig.field]}
-                onChange={handleFieldChange}
+              <FormControlLabel
+                value="Moderate"
+                control={<SmallRadio sx={{ color: "#ffd700", "&.Mui-checked": { color: "#ffd700" } }} />}
+                label="Moderate"
+                sx={optionLabelStyle}
               />
-            </SectionRow>
-          ))}
-        </Grid>
-      </Grid>
+              <FormControlLabel
+                value="High"
+                control={<SmallRadio sx={{ color: "red", "&.Mui-checked": { color: "red" } }} />}
+                label="High"
+                sx={optionLabelStyle}
+              />
+            </RadioGroup>
+          </Box>
 
-      {/* Notes Section */}
-      <Box sx={{ mt: 4, maxWidth: '50%', pr: 2 }}>
-        <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textDecoration: "underline", color: "#333", mb: 1, lineHeight: 1.2 }}>Notes:</Typography>
-        <TextField 
-          fullWidth 
-          multiline 
-          rows={4} 
-          placeholder="Enter clinical notes here..."
-          variant="outlined"
-          value={formData.notes}
-          onChange={(e) => handleFieldChange('notes', e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              fontSize: fontSize.sm,
-            },
-          }}
-        />
-        <Button 
-          variant="contained" 
-          sx={{ 
-            mt: 2, 
-            bgcolor: '#e74c3c', 
-            '&:hover': { bgcolor: '#c0392b' }, 
-            textTransform: 'none', 
-            px: 3,
-            fontWeight: fontWeight.bold,
-            fontSize: fontSize.sm
-          }} 
-        >
-          Delete Exam
-        </Button>
-      </Box>
+          <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.sm, mb: 1 }}>FAirEST 15 Exam</Typography>
+          <Divider sx={{ mb: 2 }} />
+
+          <Grid container sx={{ display: 'flex', flexWrap: 'nowrap', width: '100%' }}>
+            {/* LEFT COLUMN */}
+            <Grid 
+              item 
+              sx={{ 
+                flex: '0 0 50%',
+                borderRight: "1px solid #e0e0e0", 
+                pr: 2, 
+                boxSizing: 'border-box',
+                minWidth: 0
+              }}
+            >
+              {examFields.leftColumn.map((fieldConfig) => (
+                <SectionRow key={fieldConfig.field} label={fieldConfig.label}>
+                  <FormField
+                    fieldConfig={fieldConfig}
+                    value={formData[fieldConfig.field]}
+                    onChange={handleFieldChange}
+                    onCheckboxChange={handleLipTieChange}
+                  />
+                </SectionRow>
+              ))}
+            </Grid>
+
+            {/* RIGHT COLUMN */}
+            <Grid 
+              item 
+              sx={{ 
+                flex: '0 0 50%',
+                pl: 2, 
+                boxSizing: 'border-box',
+                minWidth: 0
+              }}
+            >
+              {examFields.rightColumn.map((fieldConfig) => (
+                <SectionRow key={fieldConfig.field} label={fieldConfig.label}>
+                  <FormField
+                    fieldConfig={fieldConfig}
+                    value={formData[fieldConfig.field]}
+                    onChange={handleFieldChange}
+                  />
+                </SectionRow>
+              ))}
+            </Grid>
+          </Grid>
+
+          {/* Notes Section */}
+          <Box sx={{ mt: 4, maxWidth: '50%', pr: 2 }}>
+            <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textDecoration: "underline", color: "#333", mb: 1, lineHeight: 1.2 }}>Notes:</Typography>
+            <TextField 
+              fullWidth 
+              multiline 
+              rows={4} 
+              placeholder="Enter clinical notes here..."
+              variant="outlined"
+              value={formData.notes}
+              onChange={(e) => handleFieldChange('notes', e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  fontSize: fontSize.sm,
+                },
+              }}
+            />
+          </Box>
+        </fieldset>
+
+        <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Save Exam
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleSignExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Sign & Finalize
+          </Button>
+          <Button 
+            variant="contained" 
+            disabled={isSigned}
+            sx={{ bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
+            onClick={handleDeleteExam}
+          >
+            Delete Exam
+          </Button>
+        </Box>
       </Box>
     </Box>
   );

@@ -47,6 +47,9 @@ import { patientService } from "../../services/patient.service";
 import { useDropdownData } from "../../hooks/redux/useDropdownData";
 import { useAppointments } from "../../hooks/redux/useAppointments";
 import { usePatients } from "../../hooks/redux/usePatient";
+import { useDispatch } from "react-redux";
+import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
+import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
 import LabCasesDialog from "../../components/appointments/LabCasesDialog";
@@ -108,6 +111,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
 // Main Component
 const OperatorySchedulePage = () => {
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
   // Stable ref so useEffects can call showSnackbar without it being a dependency
   // (showSnackbar is not memoized in SnackbarContext, causing infinite loops if used in deps).
@@ -1401,9 +1405,11 @@ const OperatorySchedulePage = () => {
           patients={reduxPatients}
           loadingPatients={loadingSidebarPatients || creatingSidebarPatient}
           onPatientSearch={searchSidebarPatients}
-          onPatientSelect={(patient) =>
-            setSelectedPatientId(patient?._id || patient?.id || null)
-          }
+          onPatientSelect={(patient) => {
+            const pId = patient?._id || patient?.id || null;
+            setSelectedPatientId(pId);
+            dispatch(setSelectedPatientId(pId));
+          }}
           onCreatePatient={handleCreateSidebarPatient}
           hasSelectedPatient={!!selectedPatientId}
           preAppointmentChecklist={preAppointmentChecklist}
@@ -1451,6 +1457,11 @@ const OperatorySchedulePage = () => {
           onAppointmentClick={(appt) => {
             setSelectedAppointment(appt);
             setDetailsDialogOpen(true);
+            dispatch(setSelectedAppointmentId(appt._id || appt.id));
+            const pId = typeof appt.patientId === "string" ? appt.patientId : appt.patientId?._id || appt.patientId?.id;
+            if (pId) {
+              dispatch(setSelectedPatientId(pId));
+            }
           }}
           privacyMode={privacyMode}
           onDropProcedure={handleDropProcedure}

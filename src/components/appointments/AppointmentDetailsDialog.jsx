@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
+import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import {
   Box,
   Button,
@@ -50,6 +54,8 @@ const AppointmentDetailsDialog = ({
   onStatusChange,
   onReschedule,
 }) => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [status, setStatus] = useState("unconfirmed");
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
@@ -303,6 +309,26 @@ const AppointmentDetailsDialog = ({
               }}
             >
               Reschedule
+            </Button>
+            <Button
+              onClick={() => {
+                dispatch(setSelectedAppointmentId(selectedAppointment._id || selectedAppointment.id));
+                const patientId = selectedAppointment.patientId?._id || selectedAppointment.patientId?.id || selectedAppointment.patientId;
+                if (patientId) {
+                  dispatch(setSelectedPatientId(patientId));
+                }
+                onClose();
+                navigate("/clinical/exam/radiographic");
+              }}
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                borderRadius: 1.5,
+                bgcolor: "#2e7d32",
+                "&:hover": { bgcolor: "#1b5e20" },
+              }}
+            >
+              Clinical Exam
             </Button>
             <Button
               onClick={onClose}
