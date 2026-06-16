@@ -24,6 +24,7 @@ import { fontSize, fontWeight } from "../../constants/styles";
 
 const Radiographic = () => {
   const [selectedTeeth, setSelectedTeeth] = React.useState([]);
+  const [missingTeeth, setMissingTeeth] = React.useState([]);
 
   const handleToothClick = (num) => {
     setSelectedTeeth(prev => 
@@ -42,6 +43,19 @@ const Radiographic = () => {
   const handleManToggle = () => {
     const allLowerSelected = LOWER_TEETH.every(t => selectedTeeth.includes(t));
     setSelectedTeeth(prev => allLowerSelected ? prev.filter(t => !LOWER_TEETH.includes(t)) : [...new Set([...prev, ...LOWER_TEETH])]);
+  };
+
+  const handleMarkMissing = () => {
+    if (selectedTeeth.length === 0) return;
+    setMissingTeeth(prev => {
+      const allSelectedAreMissing = selectedTeeth.every(t => prev.includes(t));
+      if (allSelectedAreMissing) {
+        return prev.filter(t => !selectedTeeth.includes(t));
+      } else {
+        return [...new Set([...prev, ...selectedTeeth])];
+      }
+    });
+    setSelectedTeeth([]);
   };
 
   // State for managing section collapse/expand
@@ -137,6 +151,8 @@ const Radiographic = () => {
         <GeneralToothSurvey 
           expanded={expandedSections.generalToothSurvey}
           onToggle={() => toggleSection('generalToothSurvey')}
+          missingTeeth={missingTeeth}
+          onMissingTeethClick={handleMarkMissing}
         />
         
         <CoronalToothStructure 
@@ -179,7 +195,13 @@ const Radiographic = () => {
                   {/* Upper Row (Roots / Crowns) */}
                   <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
                     {[1, 2, 3, 4, 5].map(n => (
-                      <Tooth key={n} num={n} isActive={selectedTeeth.includes(n)} onClick={() => handleToothClick(n)} />
+                      <Tooth 
+                        key={n} 
+                        num={n} 
+                        isActive={selectedTeeth.includes(n)} 
+                        isMissing={missingTeeth.includes(n)}
+                        onClick={() => handleToothClick(n)} 
+                      />
                     ))}
                   </Stack>
                   
@@ -198,7 +220,13 @@ const Radiographic = () => {
                   {/* Lower Row (Crowns / Roots) */}
                   <Stack direction="row" spacing={1} justifyContent="center">
                     {[32, 31, 30, 29, 28].map(n => (
-                      <Tooth key={n} num={n} isActive={selectedTeeth.includes(n)} onClick={() => handleToothClick(n)} />
+                      <Tooth 
+                        key={n} 
+                        num={n} 
+                        isActive={selectedTeeth.includes(n)} 
+                        isMissing={missingTeeth.includes(n)}
+                        onClick={() => handleToothClick(n)} 
+                      />
                     ))}
                   </Stack>
                 </Box>
@@ -211,7 +239,13 @@ const Radiographic = () => {
                   {/* Upper Row */}
                   <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
                     {[6, 7, 8, 9, 10, 11].map(n => (
-                      <Tooth key={n} num={n} isActive={selectedTeeth.includes(n)} onClick={() => handleToothClick(n)} />
+                      <Tooth 
+                        key={n} 
+                        num={n} 
+                        isActive={selectedTeeth.includes(n)} 
+                        isMissing={missingTeeth.includes(n)}
+                        onClick={() => handleToothClick(n)} 
+                      />
                     ))}
                   </Stack>
                   
@@ -228,7 +262,13 @@ const Radiographic = () => {
                   {/* Lower Row */}
                   <Stack direction="row" spacing={1} justifyContent="center">
                     {[27, 26, 25, 24, 23, 22].map(n => (
-                      <Tooth key={n} num={n} isActive={selectedTeeth.includes(n)} onClick={() => handleToothClick(n)} />
+                      <Tooth 
+                        key={n} 
+                        num={n} 
+                        isActive={selectedTeeth.includes(n)} 
+                        isMissing={missingTeeth.includes(n)}
+                        onClick={() => handleToothClick(n)} 
+                      />
                     ))}
                   </Stack>
                 </Box>
@@ -241,7 +281,13 @@ const Radiographic = () => {
                   {/* Upper Row */}
                   <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
                     {[12, 13, 14, 15, 16].map(n => (
-                      <Tooth key={n} num={n} isActive={selectedTeeth.includes(n)} onClick={() => handleToothClick(n)} />
+                      <Tooth 
+                        key={n} 
+                        num={n} 
+                        isActive={selectedTeeth.includes(n)} 
+                        isMissing={missingTeeth.includes(n)}
+                        onClick={() => handleToothClick(n)} 
+                      />
                     ))}
                   </Stack>
                   
@@ -292,7 +338,13 @@ const Radiographic = () => {
                   {/* Lower Row */}
                   <Stack direction="row" spacing={1} justifyContent="center">
                     {[21, 20, 19, 18, 17].map(n => (
-                      <Tooth key={n} num={n} isActive={selectedTeeth.includes(n)} onClick={() => handleToothClick(n)} />
+                      <Tooth 
+                        key={n} 
+                        num={n} 
+                        isActive={selectedTeeth.includes(n)} 
+                        isMissing={missingTeeth.includes(n)}
+                        onClick={() => handleToothClick(n)} 
+                      />
                     ))}
                   </Stack>
                 </Box>

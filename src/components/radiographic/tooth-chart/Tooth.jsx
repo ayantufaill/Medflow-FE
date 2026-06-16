@@ -3,7 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { fontSize, fontWeight } from "../../../constants/styles";
 
 // --- Central Chart Tooth Component with Hover Effects ---
-const Tooth = ({ num, isActive = false, onClick }) => {
+const Tooth = ({ num, isActive = false, isMissing = false, onClick }) => {
   const [isHovered, setIsHovered] = React.useState(false);
   
   return (
@@ -22,25 +22,38 @@ const Tooth = ({ num, isActive = false, onClick }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Typography sx={{ fontSize: fontSize.xs, color: isActive || isHovered ? '#1976d2' : '#666', fontWeight: (isActive || isHovered) ? fontWeight.bold : fontWeight.regular }}>
+      <Typography sx={{ fontSize: fontSize.xs, color: isActive || isHovered || isMissing ? '#1976d2' : '#666', fontWeight: (isActive || isHovered || isMissing) ? fontWeight.bold : fontWeight.regular }}>
         {num}
       </Typography>
-      <Box 
-        component="img" 
-        src={`/teeth${num}.png`} // Uses actual tooth images from public folder
-        alt={`Tooth ${num}`}
-        sx={{ 
+      {isMissing ? (
+        <Box sx={{ 
           width: 30, 
           height: 60, 
           mt: 0.5, 
-          opacity: isHovered ? 1 : 0.9,
-          filter: isActive || isHovered 
-            ? 'drop-shadow(0 0 4px #1976d2) brightness(1.15)' 
-            : 'none',
-          objectFit: 'contain',
-          transition: 'all 0.2s ease-in-out'
-        }} 
-      />
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <Typography sx={{ fontSize: '1.25rem', color: '#1976d2', fontWeight: 'bold' }}>X</Typography>
+        </Box>
+      ) : (
+        <Box 
+          component="img" 
+          src={`/teeth${num}.png`} // Uses actual tooth images from public folder
+          alt={`Tooth ${num}`}
+          sx={{ 
+            width: 30, 
+            height: 60, 
+            mt: 0.5, 
+            opacity: isHovered ? 1 : 0.9,
+            filter: isActive || isHovered 
+              ? 'drop-shadow(0 0 4px #1976d2) brightness(1.15)' 
+              : 'none',
+            objectFit: 'contain',
+            transition: 'all 0.2s ease-in-out'
+          }} 
+        />
+      )}
     </Box>
   );
 };
