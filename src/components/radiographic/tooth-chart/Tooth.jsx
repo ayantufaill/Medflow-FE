@@ -3,11 +3,12 @@ import { Box, Typography } from "@mui/material";
 import { fontSize, fontWeight } from "../../../constants/styles";
 
 // --- Central Chart Tooth Component with Hover Effects ---
-const Tooth = ({ num, isActive = false }) => {
+const Tooth = ({ num, isActive = false, onClick }) => {
   const [isHovered, setIsHovered] = React.useState(false);
   
   return (
     <Box 
+      onClick={onClick}
       sx={{ 
         display: 'flex', 
         flexDirection: 'column', 
