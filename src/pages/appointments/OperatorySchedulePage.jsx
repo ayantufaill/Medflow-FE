@@ -85,6 +85,13 @@ const DUMMY_PROVIDER_ID = "01";
 // Testing mode flag - bypasses provider validation
 const IS_TESTING_MODE = import.meta.env.VITE_APP_ENV === "development" || import.meta.env.VITE_TESTING_MODE === "true";
 
+const providerLabel = (p) => {
+  if (!p) return "";
+  const u = p.userId || p;
+  const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+  return name || p.providerCode || `Provider ${p._id || p.id}`;
+};
+
 const getStatusColor = (status, fallback) => {
   if (!status) return fallback;
   const key = String(status).toLowerCase();
@@ -130,89 +137,7 @@ const OperatorySchedulePage = () => {
     setViewMode("day");
   };
 
-  useEffect(() => {
-    if (printingOrientation && viewMode === "day") {
-      const styleId = "print-orientation-style";
-      let styleEl = document.getElementById(styleId);
-      if (!styleEl) {
-        styleEl = document.createElement("style");
-        styleEl.id = styleId;
-        document.head.appendChild(styleEl);
-      }
-      styleEl.innerHTML = `
-        @media print {
-          @page { 
-            size: ${printingOrientation}; 
-            margin: 5mm;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            box-shadow: none !important;
-          }
-          aside, 
-          .no-print,
-          button,
-          .MuiIconButton-root,
-          .MuiTooltip-root,
-          .MuiTabs-root,
-          .MuiPopover-root { 
-            display: none !important; 
-          }
-          
-          .print-scroll-container {
-            height: auto !important;
-            overflow: visible !important;
-            max-height: none !important;
-            width: 100% !important;
-            min-width: 0 !important;
-          }
 
-          .print-header-container,
-          .print-body-container {
-            min-width: 0 !important;
-            width: 100% !important;
-          }
-
-          .print-columns-grid {
-            grid-template-columns: repeat(${OPERATORY_COLUMNS.length}, 1fr) !important;
-            min-width: 0 !important;
-            width: 100% !important;
-          }
-
-          .print-column-header {
-            min-width: 0 !important;
-            width: auto !important;
-            flex: 1 !important;
-          }
-
-          .print-column {
-            min-width: 0 !important;
-          }
-
-          body, #root {
-            background: white !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            overflow: visible !important;
-          }
-
-          div[class*="MuiBox-root"] {
-            box-shadow: none !important;
-          }
-        }
-      `;
-
-      const timer = setTimeout(() => {
-        window.print();
-        setPrintingOrientation(null);
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [printingOrientation, viewMode, OPERATORY_COLUMNS.length]);
 
   const handleDropOnPending = (dragData) => {
     if (dragData.isAppointment) {
@@ -516,6 +441,91 @@ const OperatorySchedulePage = () => {
 
     return cols;
   }, [rooms, showConsult]);
+
+  useEffect(() => {
+    if (printingOrientation && viewMode === "day") {
+      const styleId = "print-orientation-style";
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+      }
+      styleEl.innerHTML = `
+        @media print {
+          @page { 
+            size: ${printingOrientation}; 
+            margin: 5mm;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-shadow: none !important;
+          }
+          aside, 
+          .no-print,
+          button,
+          .MuiIconButton-root,
+          .MuiTooltip-root,
+          .MuiTabs-root,
+          .MuiPopover-root { 
+            display: none !important; 
+          }
+          
+          .print-scroll-container {
+            height: auto !important;
+            overflow: visible !important;
+            max-height: none !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .print-header-container,
+          .print-body-container {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .print-columns-grid {
+            grid-template-columns: repeat(${OPERATORY_COLUMNS.length}, 1fr) !important;
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .print-column-header {
+            min-width: 0 !important;
+            width: auto !important;
+            flex: 1 !important;
+          }
+
+          .print-column {
+            min-width: 0 !important;
+          }
+
+          body, #root {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          div[class*="MuiBox-root"] {
+            box-shadow: none !important;
+          }
+        }
+      `;
+
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintingOrientation(null);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [printingOrientation, viewMode, OPERATORY_COLUMNS.length]);
+
 
   const { patients: reduxPatients, fetch: fetchPatientsRedux, createPatient: createPatientRedux } = usePatients();
 
