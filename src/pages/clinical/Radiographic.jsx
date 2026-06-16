@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
-  Box, Typography, Chip, Button, Stack, Divider, Grid
+  Box, Typography, Chip, Button, Stack, Divider, Grid,
+  Dialog, IconButton, TextField
 } from "@mui/material";
 import {
   CalendarMonth,
@@ -9,6 +10,7 @@ import {
   VisibilityOutlined,
   ElectricBolt
 } from "@mui/icons-material";
+import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
@@ -25,8 +27,19 @@ import { fontSize, fontWeight } from "../../constants/styles";
 const Radiographic = () => {
   const [selectedTeeth, setSelectedTeeth] = React.useState([]);
   const [missingTeeth, setMissingTeeth] = React.useState([]);
+  const [toothFindings, setToothFindings] = React.useState({});
+  const [activeToothNum, setActiveToothNum] = React.useState(null);
+  const [detailModalTooth, setDetailModalTooth] = React.useState(null);
+  const [newNoteText, setNewNoteText] = React.useState('');
 
   const handleToothClick = (num) => {
+    // If the tooth has findings, open the details modal
+    if (toothFindings[num]) {
+      setDetailModalTooth(num);
+      setActiveToothNum(num);
+      return;
+    }
+    
     setSelectedTeeth(prev => 
       prev.includes(num) ? prev.filter(t => t !== num) : [...prev, num]
     );
@@ -56,6 +69,24 @@ const Radiographic = () => {
       }
     });
     setSelectedTeeth([]);
+  };
+
+  const handleAddNewNote = () => {
+    if (!newNoteText.trim() || detailModalTooth === null) return;
+    
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      
+      const existingNotes = updated[detailModalTooth]?.notes || [];
+      updated[detailModalTooth] = {
+        ...updated[detailModalTooth],
+        notes: [...existingNotes, { date: today, text: newNoteText }]
+      };
+      return updated;
+    });
+    
+    setNewNoteText('');
   };
 
   // State for managing section collapse/expand
@@ -147,230 +178,254 @@ const Radiographic = () => {
               <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500, ml: 0.5 }}>Condition First</Typography>
             </Stack>
 
-        {/* Section Components */}
-        <GeneralToothSurvey 
-          expanded={expandedSections.generalToothSurvey}
-          onToggle={() => toggleSection('generalToothSurvey')}
-          missingTeeth={missingTeeth}
-          onMissingTeethClick={handleMarkMissing}
-        />
-        
-        <CoronalToothStructure 
-          expanded={expandedSections.coronalToothStructure}
-          onToggle={() => toggleSection('coronalToothStructure')}
-        />
-        
-        <RadicularToothStructure 
-          expanded={expandedSections.radicularToothStructure}
-          onToggle={() => toggleSection('radicularToothStructure')}
-        />
-        
-        <SupportingStructure 
-          expanded={expandedSections.supportingStructure}
-          onToggle={() => toggleSection('supportingStructure')}
-        />
-      </Box>
+            {/* Section Components */}
+            <GeneralToothSurvey 
+              expanded={expandedSections.generalToothSurvey}
+              onToggle={() => toggleSection('generalToothSurvey')}
+              missingTeeth={missingTeeth}
+              onMissingTeethClick={handleMarkMissing}
+            />
+            
+            <CoronalToothStructure 
+              expanded={expandedSections.coronalToothStructure}
+              onToggle={() => toggleSection('coronalToothStructure')}
+              toothFindings={toothFindings}
+              setToothFindings={setToothFindings}
+              selectedTeeth={selectedTeeth}
+              setSelectedTeeth={setSelectedTeeth}
+              activeToothNum={activeToothNum}
+              setActiveToothNum={setActiveToothNum}
+            />
+            
+            <RadicularToothStructure 
+              expanded={expandedSections.radicularToothStructure}
+              onToggle={() => toggleSection('radicularToothStructure')}
+            />
+            
+            <SupportingStructure 
+              expanded={expandedSections.supportingStructure}
+              onToggle={() => toggleSection('supportingStructure')}
+            />
+          </Box>
+        </Box>
+
+        {/* Right Column - Tooth Chart */}
+        <Grid item xs={8.5} sx={{ position: 'relative', bgcolor: '#fff', ml: 2, flexGrow: 1 }}>
+          
+          {/* Surface Selection Sidebar */}
+          <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
+              <Box key={lbl} sx={{ 
+                width: 32, height: 28, border: '1px solid #ddd', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: fontSize.xs, color: '#666', borderRadius: '2px'
+              }}>{lbl}</Box>
+            ))}
           </Box>
 
-          {/* Right Column - Tooth Chart */}
-          <Grid size={8.5} sx={{ position: 'relative', bgcolor: '#fff', ml: 2 }}>
-            
-            {/* Surface Selection Sidebar */}
-            <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
-                <Box key={lbl} sx={{ 
-                  width: 32, height: 28, border: '1px solid #ddd', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: fontSize.xs, color: '#666', borderRadius: '2px'
-                }}>{lbl}</Box>
-              ))}
-            </Box>
-
-            {/* Tooth Chart Grid */}
-            <Box sx={{ ml: 6, mt: 4 }}>
-              <Box sx={{ display: 'flex', position: 'relative', width: '100%', alignItems: 'stretch' }}>
+          {/* Tooth Chart Grid */}
+          <Box sx={{ ml: 6, mt: 4 }}>
+            <Box sx={{ display: 'flex', position: 'relative', width: '100%', alignItems: 'stretch' }}>
+              
+              {/* Column 1: Q1 / Q4 */}
+              <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                {/* Upper Row (Roots / Crowns) */}
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <Tooth 
+                      key={n} 
+                      num={n} 
+                      isActive={selectedTeeth.includes(n)} 
+                      isMissing={missingTeeth.includes(n)}
+                      hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal radiolucency'))}
+                      surfaces={toothFindings[n]?.surfaces || []}
+                      depth={toothFindings[n]?.depth || 'Limited to enamel'}
+                      onClick={() => handleToothClick(n)} 
+                    />
+                  ))}
+                </Stack>
                 
-                {/* Column 1: Q1 / Q4 */}
-                <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  {/* Upper Row (Roots / Crowns) */}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-                    {[1, 2, 3, 4, 5].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                  
-                  {/* Upper Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
-                  </Box>
-                  
-                  {/* Lower Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
-                  </Box>
-                  
-                  {/* Lower Row (Crowns / Roots) */}
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    {[32, 31, 30, 29, 28].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
+                {/* Upper Label */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
                 </Box>
-
-                {/* Vertical Divider 1 */}
-                <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
-
-                {/* Column 2: UA / LA */}
-                <Box sx={{ flex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  {/* Upper Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-                    {[6, 7, 8, 9, 10, 11].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                  
-                  {/* Upper Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
-                  </Box>
-                  
-                  {/* Lower Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
-                  </Box>
-                  
-                  {/* Lower Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    {[27, 26, 25, 24, 23, 22].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
+                
+                {/* Lower Label */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
                 </Box>
-
-                {/* Vertical Divider 2 */}
-                <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
-
-                {/* Column 3: Q2 / Q3 */}
-                <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pr: 4, position: 'relative' }}>
-                  {/* Upper Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-                    {[12, 13, 14, 15, 16].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                  
-                  {/* Upper Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
-                    <Typography 
-                      onClick={handleMaxToggle}
-                      sx={{ 
-                        position: 'absolute', 
-                        right: -32, 
-                        top: 0, 
-                        fontSize: '0.75rem', 
-                        color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                        fontWeight: 'bold', 
-                        cursor: 'pointer',
-                        transition: 'color 0.2s',
-                        '&:hover': { color: '#3b82f6' }
-                      }}
-                    >
-                      Max
-                    </Typography>
-                  </Box>
-                  
-                  {/* Lower Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
-                    <Typography 
-                      onClick={handleManToggle}
-                      sx={{ 
-                        position: 'absolute', 
-                        right: -32, 
-                        top: 0, 
-                        fontSize: '0.75rem', 
-                        color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                        fontWeight: 'bold', 
-                        cursor: 'pointer',
-                        transition: 'color 0.2s',
-                        '&:hover': { color: '#3b82f6' }
-                      }}
-                    >
-                      Man
-                    </Typography>
-                  </Box>
-                  
-                  {/* Lower Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    {[21, 20, 19, 18, 17].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                </Box>
-
-                {/* Horizontal Divider Line */}
-                <Box sx={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  borderBottom: '1px dotted #ccc',
-                  zIndex: 0,
-                  pointerEvents: 'none',
-                  opacity: 0.8
-                }} />
+                
+                {/* Lower Row (Crowns / Roots) */}
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  {[32, 31, 30, 29, 28].map(n => (
+                    <Tooth 
+                      key={n} 
+                      num={n} 
+                      isActive={selectedTeeth.includes(n)} 
+                      isMissing={missingTeeth.includes(n)}
+                      hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal radiolucency'))}
+                      surfaces={toothFindings[n]?.surfaces || []}
+                      depth={toothFindings[n]?.depth || 'Limited to enamel'}
+                      onClick={() => handleToothClick(n)} 
+                    />
+                  ))}
+                </Stack>
               </Box>
 
-              {/* Additional Footer Controls */}
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 20, ml: 2, color: '#6b7cb4' }}>
-                <AddCircleIcon fontSize="small" />
-                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Additional teeth</Typography>
-              </Stack>
+              {/* Vertical Divider 1 */}
+              <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
+
+              {/* Column 2: UA / LA */}
+              <Box sx={{ flex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                {/* Upper Row */}
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                  {[6, 7, 8, 9, 10, 11].map(n => (
+                    <Tooth 
+                      key={n} 
+                      num={n} 
+                      isActive={selectedTeeth.includes(n)} 
+                      isMissing={missingTeeth.includes(n)}
+                      hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal radiolucency'))}
+                      surfaces={toothFindings[n]?.surfaces || []}
+                      depth={toothFindings[n]?.depth || 'Limited to enamel'}
+                      onClick={() => handleToothClick(n)} 
+                    />
+                  ))}
+                </Stack>
+                
+                {/* Upper Label */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
+                </Box>
+                
+                {/* Lower Label */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
+                </Box>
+                
+                {/* Lower Row */}
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  {[27, 26, 25, 24, 23, 22].map(n => (
+                    <Tooth 
+                      key={n} 
+                      num={n} 
+                      isActive={selectedTeeth.includes(n)} 
+                      isMissing={missingTeeth.includes(n)}
+                      hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal radiolucency'))}
+                      surfaces={toothFindings[n]?.surfaces || []}
+                      depth={toothFindings[n]?.depth || 'Limited to enamel'}
+                      onClick={() => handleToothClick(n)} 
+                    />
+                  ))}
+                </Stack>
+              </Box>
+
+              {/* Vertical Divider 2 */}
+              <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
+
+              {/* Column 3: Q2 / Q3 */}
+              <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pr: 4, position: 'relative' }}>
+                {/* Upper Row */}
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                  {[12, 13, 14, 15, 16].map(n => (
+                    <Tooth 
+                      key={n} 
+                      num={n} 
+                      isActive={selectedTeeth.includes(n)} 
+                      isMissing={missingTeeth.includes(n)}
+                      hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal radiolucency'))}
+                      surfaces={toothFindings[n]?.surfaces || []}
+                      depth={toothFindings[n]?.depth || 'Limited to enamel'}
+                      onClick={() => handleToothClick(n)} 
+                    />
+                  ))}
+                </Stack>
+                
+                {/* Upper Label */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
+                  <Typography 
+                    onClick={handleMaxToggle}
+                    sx={{ 
+                      position: 'absolute', 
+                      right: -32, 
+                      top: 0, 
+                      fontSize: '0.75rem', 
+                      color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer',
+                      transition: 'color 0.2s',
+                      '&:hover': { color: '#3b82f6' }
+                    }}
+                  >
+                    Max
+                  </Typography>
+                </Box>
+                
+                {/* Lower Label */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
+                  <Typography 
+                    onClick={handleManToggle}
+                    sx={{ 
+                      position: 'absolute', 
+                      right: -32, 
+                      top: 0, 
+                      fontSize: '0.75rem', 
+                      color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer',
+                      transition: 'color 0.2s',
+                      '&:hover': { color: '#3b82f6' }
+                    }}
+                  >
+                    Man
+                  </Typography>
+                </Box>
+                
+                {/* Lower Row */}
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  {[21, 20, 19, 18, 17].map(n => (
+                    <Tooth 
+                      key={n} 
+                      num={n} 
+                      isActive={selectedTeeth.includes(n)} 
+                      isMissing={missingTeeth.includes(n)}
+                      hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal radiolucency'))}
+                      surfaces={toothFindings[n]?.surfaces || []}
+                      depth={toothFindings[n]?.depth || 'Limited to enamel'}
+                      onClick={() => handleToothClick(n)} 
+                    />
+                  ))}
+                </Stack>
+              </Box>
+
+              {/* Horizontal Divider Line */}
+              <Box sx={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                borderBottom: '1px dotted #ccc',
+                zIndex: 0,
+                pointerEvents: 'none',
+                opacity: 0.8
+              }} />
             </Box>
-          </Grid>
-        </Box>
+
+            {/* Additional Footer Controls */}
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 20, ml: 2, color: '#6b7cb4' }}>
+              <AddCircleIcon fontSize="small" />
+              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Additional teeth</Typography>
+            </Stack>
+          </Box>
+        </Grid>
+      </Box>
 
       {/* Delete Exam Button */}
       <Button 
@@ -381,6 +436,144 @@ const Radiographic = () => {
         Delete Exam
       </Button>
     </Box>
+
+    {/* Tooth Details Modal */}
+    <Dialog
+      open={detailModalTooth !== null}
+      onClose={() => setDetailModalTooth(null)}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          p: 4,
+          borderRadius: '8px',
+          position: 'relative',
+          minHeight: '350px'
+        }
+      }}
+    >
+      <IconButton
+        onClick={() => setDetailModalTooth(null)}
+        sx={{ position: 'absolute', right: 8, top: 8, color: '#aaa' }}
+      >
+        <CloseIcon />
+      </IconButton>
+
+      {detailModalTooth !== null && toothFindings[detailModalTooth] && (
+        <Grid container spacing={4}>
+          {/* Left Column: Findings & Diagnosis */}
+          <Grid item xs={6} sx={{ pr: 2 }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 'bold', 
+                color: '#1a2735',
+                borderBottom: '2px solid #0f766e',
+                pb: 1,
+                display: 'inline-block',
+                minWidth: '150px',
+                fontFamily: "'Manrope', sans-serif"
+              }}
+            >
+              Tooth #{detailModalTooth}
+            </Typography>
+
+            <Typography sx={{ mt: 3, fontWeight: 'bold', fontSize: '0.95rem', color: '#333' }}>
+              Initial Findings {toothFindings[detailModalTooth].notes?.[0]?.date || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+            </Typography>
+            
+            <Box sx={{ mt: 1, pl: 1 }}>
+              {toothFindings[detailModalTooth].findings.map(finding => {
+                const depth = toothFindings[detailModalTooth].depth || 'Limited to enamel';
+                const surfacesStr = (toothFindings[detailModalTooth].surfaces || []).map(s => s === 'O/I' ? 'O' : s).join('');
+                
+                // Capitalize depth
+                const depthCapitalized = depth.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                
+                return (
+                  <Typography key={finding} sx={{ fontSize: '0.85rem', color: '#555', mb: 0.5 }}>
+                    - Caries Active {depthCapitalized}: {surfacesStr}
+                  </Typography>
+                );
+              })}
+              <Typography sx={{ fontSize: '0.85rem', color: '#555', mb: 0.5 }}>
+                - Pulpal Concern
+              </Typography>
+            </Box>
+
+            <Typography sx={{ mt: 3, fontWeight: 'bold', fontSize: '0.95rem', color: '#333' }}>
+              Diagnosis
+            </Typography>
+            <Box sx={{ mt: 1, pl: 1 }}>
+              <Typography sx={{ fontSize: '0.85rem', color: '#555' }}>
+                - Caries
+              </Typography>
+            </Box>
+          </Grid>
+
+          {/* Vertical Divider & Right Column: Notes */}
+          <Grid item xs={6} sx={{ borderLeft: '1px solid #0f766e', pl: 4 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1a2735', mb: 2, fontFamily: "'Manrope', sans-serif" }}>
+              Notes
+            </Typography>
+
+            <Box sx={{ maxHeight: '200px', overflowY: 'auto', mb: 2, pr: 1 }}>
+              {(toothFindings[detailModalTooth].notes || []).map((note, index) => (
+                <Box key={index} sx={{ mb: 2 }}>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#555' }}>
+                    {note.date}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.85rem', color: '#666', pl: 1, mt: 0.5 }}>
+                    - {note.text}
+                  </Typography>
+                </Box>
+              ))}
+              {(!toothFindings[detailModalTooth].notes || toothFindings[detailModalTooth].notes.length === 0) && (
+                <Typography sx={{ fontSize: '0.85rem', color: '#bbb', fontStyle: 'italic' }}>
+                  No notes added yet.
+                </Typography>
+              )}
+            </Box>
+
+            {/* New Note input */}
+            <Box sx={{ mt: 4 }}>
+              <TextField
+                variant="standard"
+                placeholder="New Note"
+                fullWidth
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddNewNote();
+                  }
+                }}
+                sx={{
+                  '& .MuiInput-underline:before': { borderBottomColor: '#ccc' },
+                  '& .MuiInput-underline:after': { borderBottomColor: '#0f766e' },
+                  '& input': { fontSize: '0.9rem', color: '#555' }
+                }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleAddNewNote}
+                sx={{ 
+                  mt: 1.5, 
+                  bgcolor: '#0f766e', 
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: '#0d5e58' }
+                }}
+              >
+                Save Note
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      )}
+    </Dialog>
     </Box>
   );
 };
