@@ -63,7 +63,8 @@ const SiteMeasurement = ({ values = ['', '', ''], type }) => (
       }
       
       if (type === 'attachment' && v) {
-        color = '#f39c12';
+        color = '#27ae60';
+        bgcolor = '#e9f7ef';
       }
 
       return <MeasurementCell key={i} value={v} color={color} bgcolor={bgcolor} />;
@@ -81,7 +82,8 @@ const PCSCell = ({ active = [] }) => (
         alignItems: 'center', 
         justifyContent: 'center',
         fontSize: '10px',
-        color: active.includes(label) ? '#f39c12' : '#ccc',
+        color: active.includes(label) ? '#fff' : '#ccc',
+        bgcolor: active.includes(label) ? '#f39c12' : 'transparent',
         border: '0.5px solid #eee',
         fontWeight: active.includes(label) ? 'bold' : 'normal'
       }}>
@@ -178,25 +180,20 @@ const RowLabels = ({ labels, isBottom = false }) => (
   </Box>
 );
 
-const PerioChartGrid = () => {
+const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => {
   const topLabels = ['Mobility', 'Furcation', 'Bleeding', 'Plq/calc/sup', 'Attachment Loss', 'Recession (FGM/CEJ)', 'Probe'];
   const bottomLabels = ['Probe', 'Recession (FGM/CEJ)', 'Attachment Loss', 'Plq/calc/sup', 'Bleeding', 'Furcation', 'Mobility'];
 
-  // Dummy data generator
-  const getDummyData = (n) => ({
-    mobility: n % 5 === 0 ? '1' : 'none',
-    furcation: n % 7 === 0 ? '1' : 'none',
-    bleeding: n % 3 === 0 ? [1] : [],
-    pcs: n % 2 === 0 ? ['P', 'S'] : ['C'],
-    attachment: n % 4 === 0 ? ['4', '5', '4'] : ['', '', ''],
-    recession: n % 4 === 0 ? ['2', '3', '2'] : ['', '', ''],
-    probe: [ (n%3)+2, (n%2)+2, (n%4)+2 ].map(String)
-  });
-
-  const renderQuadrant = (teeth, isBottom = false) => (
+  const renderQuadrant = (teeth, side = 'facial', isBottom = false) => (
     <Box sx={{ display: 'flex', mb: 2, border: '1px solid #ddd' }}>
       {teeth.map(n => (
-        <ToothColumn key={n} number={n} data={getDummyData(n)} isBottom={isBottom} isMissing={n === 3 || n === 12 || n === 17 || n === 30} />
+        <ToothColumn 
+          key={n} 
+          number={n} 
+          data={chartData[n]?.[side]} 
+          isBottom={isBottom} 
+          isMissing={missingTeeth.includes(n)} 
+        />
       ))}
     </Box>
   );
@@ -209,16 +206,16 @@ const PerioChartGrid = () => {
           {/* FACIAL label */}
           <Box sx={{ display: 'flex' }}>
              <RowLabels labels={topLabels} />
-             {renderQuadrant([1, 2, 3, 4, 5, 6, 7, 8])}
-             {renderQuadrant([9, 10, 11, 12, 13, 14, 15, 16])}
+             {renderQuadrant([1, 2, 3, 4, 5, 6, 7, 8], 'facial', false)}
+             {renderQuadrant([9, 10, 11, 12, 13, 14, 15, 16], 'facial', false)}
              <Typography sx={{ ml: 2, mt: 1, fontWeight: 'bold', fontSize: '11px', color: '#999' }}>FACIAL</Typography>
           </Box>
           
           {/* LINGUAL label */}
           <Box sx={{ display: 'flex', mt: -2 }}>
              <RowLabels labels={bottomLabels} isBottom />
-             {renderQuadrant([1, 2, 3, 4, 5, 6, 7, 8], true)}
-             {renderQuadrant([9, 10, 11, 12, 13, 14, 15, 16], true)}
+             {renderQuadrant([1, 2, 3, 4, 5, 6, 7, 8], 'lingual', true)}
+             {renderQuadrant([9, 10, 11, 12, 13, 14, 15, 16], 'lingual', true)}
              <Typography sx={{ ml: 2, mt: 4, fontWeight: 'bold', fontSize: '11px', color: '#999' }}>LINGUAL</Typography>
           </Box>
         </Box>
@@ -230,16 +227,16 @@ const PerioChartGrid = () => {
           {/* LINGUAL label */}
           <Box sx={{ display: 'flex' }}>
              <RowLabels labels={topLabels} />
-             {renderQuadrant([32, 31, 30, 29, 28, 27, 26, 25])}
-             {renderQuadrant([24, 23, 22, 21, 20, 19, 18, 17])}
+             {renderQuadrant([32, 31, 30, 29, 28, 27, 26, 25], 'lingual', false)}
+             {renderQuadrant([24, 23, 22, 21, 20, 19, 18, 17], 'lingual', false)}
              <Typography sx={{ ml: 2, mt: 1, fontWeight: 'bold', fontSize: '11px', color: '#999' }}>LINGUAL</Typography>
           </Box>
           
           {/* FACIAL label */}
           <Box sx={{ display: 'flex', mt: -2 }}>
              <RowLabels labels={bottomLabels} isBottom />
-             {renderQuadrant([32, 31, 30, 29, 28, 27, 26, 25], true)}
-             {renderQuadrant([24, 23, 22, 21, 20, 19, 18, 17], true)}
+             {renderQuadrant([32, 31, 30, 29, 28, 27, 26, 25], 'facial', true)}
+             {renderQuadrant([24, 23, 22, 21, 20, 19, 18, 17], 'facial', true)}
              <Typography sx={{ ml: 2, mt: 4, fontWeight: 'bold', fontSize: '11px', color: '#999' }}>FACIAL</Typography>
           </Box>
         </Box>
