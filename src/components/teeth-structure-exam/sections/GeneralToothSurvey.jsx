@@ -9,9 +9,7 @@ const HeaderLabel = ({ children }) => (
   </Typography>
 );
 
-const GeneralToothSurvey = ({ expanded, onToggle }) => {
-  const missingTeeth = [1, 2, 3, 12, 16, 17, 30];
-
+const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTeethClick }) => {
   return (
     <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
       <Box sx={{ 
@@ -31,7 +29,13 @@ const GeneralToothSurvey = ({ expanded, onToggle }) => {
         <Box sx={{ p: 1.5 }}>
           {/* Missing Teeth Row */}
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack 
+              direction="row" 
+              spacing={0.5} 
+              alignItems="center" 
+              onClick={onMissingTeethClick}
+              sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+            >
               <HeaderLabel>Missing Teeth</HeaderLabel>
               <ChatBubbleOutlineIcon sx={{ fontSize: 14, color: '#999' }} />
             </Stack>
@@ -44,11 +48,16 @@ const GeneralToothSurvey = ({ expanded, onToggle }) => {
                 { l: 'C', c: '#e0f7fa' }, 
                 { l: 'T', c: '#e0f2f1' }
               ].map((item) => (
-                <Box key={item.l} sx={{ 
-                  width: 22, height: 22, border: '1px solid #ccc', bgcolor: item.c,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  fontSize: 10, borderRadius: '3px'
-                }}>
+                <Box 
+                  key={item.l} 
+                  onClick={item.l === 'EX' ? onMissingTeethClick : undefined}
+                  sx={{ 
+                    width: 22, height: 22, border: '1px solid #ccc', bgcolor: item.c,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    fontSize: 10, borderRadius: '3px', cursor: item.l === 'EX' ? 'pointer' : 'default',
+                    '&:hover': item.l === 'EX' ? { opacity: 0.8 } : {}
+                  }}
+                >
                   {item.l}
                 </Box>
               ))}
@@ -56,9 +65,9 @@ const GeneralToothSurvey = ({ expanded, onToggle }) => {
           </Stack>
           
           {/* Tooth Numbers */}
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mt={1}>
-            {missingTeeth.map((n, i) => (
-              <Box key={i} sx={{ px: 0.8, py: 0.3, border: '1px solid #eee', fontSize: 12, bgcolor: 'white', borderRadius: '2px' }}>
+          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mt={1} flexWrap="wrap" gap={0.5}>
+            {[...missingTeeth].sort((a, b) => a - b).map((n) => (
+              <Box key={n} sx={{ px: 0.8, py: 0.3, border: '1px solid #eee', fontSize: 12, bgcolor: 'white', borderRadius: '2px' }}>
                 {n}
               </Box>
             ))}

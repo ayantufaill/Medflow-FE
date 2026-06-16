@@ -5,12 +5,7 @@ import SurveyButton from "../common/SurveyButton";
 import NumberBox from "../common/NumberBox";
 import SurveyRow from "../common/SurveyRow";
 
-const GeneralToothSurvey = ({ expanded, onToggle }) => {
-  // Static display data
-  const staticData = {
-    missingTeeth: [1, 2, 3, 12, 16, 17, 30],
-  };
-
+const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTeethClick }) => {
   return (
     <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
       {/* Header */}
@@ -30,9 +25,9 @@ const GeneralToothSurvey = ({ expanded, onToggle }) => {
       {expanded && (
         <Box sx={{ p: 1.5 }}>
           {/* Missing Teeth Section */}
-          <SurveyRow label="Missing Teeth" hasChat>
+          <SurveyRow label="Missing Teeth" hasChat onLabelClick={onMissingTeethClick}>
             <Stack direction="row" spacing={1}>
-              <SurveyButton label="EX" color="#f3e5ab" border="#d4af37" />
+              <SurveyButton label="EX" color="#f3e5ab" border="#d4af37" onClick={onMissingTeethClick} />
               <SurveyButton label="P" color="#e8f5e9" border="#81c784" />
               <SurveyButton label="B" color="#fce4ec" border="#f06292" />
               <SurveyButton label="F" color="#fffde7" border="#fff176" />
@@ -40,7 +35,7 @@ const GeneralToothSurvey = ({ expanded, onToggle }) => {
               <SurveyButton label="T" color="#e0f2f1" border="#80cbc4" />
             </Stack>
             <Stack direction="row" spacing={0.5}>
-              {staticData.missingTeeth.map(num => <NumberBox key={num} label={num} />)}
+              {[...missingTeeth].sort((a, b) => a - b).map(num => <NumberBox key={num} label={num} />)}
             </Stack>
           </SurveyRow>
 

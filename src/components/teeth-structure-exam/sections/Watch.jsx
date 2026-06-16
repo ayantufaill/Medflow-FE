@@ -1,4 +1,5 @@
-import { Box, Card, Typography, Checkbox, FormControlLabel, Stack } from "@mui/material";
+import React from "react";
+import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Button } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { fontSize, fontWeight } from "../../../constants/styles";
@@ -10,7 +11,44 @@ const HeaderLabel = ({ children }) => (
   </Typography>
 );
 
-const Watch = ({ expanded, onToggle }) => {
+const Watch = ({ 
+  expanded, 
+  onToggle,
+  toothFindings = {},
+  setToothFindings,
+  selectedTeeth = [],
+  setSelectedTeeth,
+  activeToothNum = null,
+  setActiveToothNum,
+  setDetailModalTooth
+}) => {
+
+  const handleApplyWatch = () => {
+    if (!selectedTeeth || selectedTeeth.length === 0) return;
+    
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      selectedTeeth.forEach(num => {
+        if (!updated[num]) {
+          updated[num] = {
+            findings: ['Watch'],
+            surfaces: [],
+            depth: 'Limited to enamel',
+            notes: []
+          };
+        } else if (!updated[num].findings.includes('Watch')) {
+          updated[num] = {
+            ...updated[num],
+            findings: [...updated[num].findings, 'Watch']
+          };
+        }
+      });
+      return updated;
+    });
+    
+    setActiveToothNum(selectedTeeth[0]);
+  };
+
   return (
     <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
       <Box sx={{ 
@@ -29,24 +67,59 @@ const Watch = ({ expanded, onToggle }) => {
       {expanded && (
         <Box sx={{ p: 1.5 }}>
           {/* Watch Row */}
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-            <Stack direction="row" spacing={0.5} alignItems="flex-start">
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack 
+              direction="row" 
+              spacing={0.5} 
+              alignItems="center"
+              onClick={handleApplyWatch}
+              sx={selectedTeeth.length > 0 ? { cursor: 'pointer', '&:hover': { opacity: 0.8 } } : { opacity: 0.8 }}
+            >
               <HeaderLabel>Watch</HeaderLabel>
               <ChatBubbleOutlineIcon sx={{ fontSize: 14, color: '#999' }} />
             </Stack>
             <Stack direction="row" spacing={0.5}>
-              <ToothIcon type="caries" color="#fff" />
-              <ToothIcon type="caries" color="#eee" />
-              <ToothIcon type="watch" color="#fff" />
-              <ToothIcon label="W" color="#b39ddb" />
+              <Box onClick={handleApplyWatch}><ToothIcon type="caries" color="#fff" /></Box>
+              <Box onClick={handleApplyWatch}><ToothIcon type="caries" color="#eee" /></Box>
+              <Box onClick={handleApplyWatch}><ToothIcon type="watch" color="#fff" /></Box>
+              <Box onClick={handleApplyWatch}><ToothIcon label="W" color="#b39ddb" /></Box>
             </Stack>
           </Stack>
           
-          {/* Tooth Number */}
-          <Stack direction="row" justifyContent="flex-end" mt={1}>
-            <Box sx={{ px: 1, py: 0.3, border: '1px solid #eee', fontSize: 12, bgcolor: 'white', borderRadius: '2px' }}>
-              9
-            </Box>
+          {/* Tooth Badges for Watched Teeth */}
+          <Stack direction="row" spacing={0.8} justifyContent="flex-end" flexWrap="wrap" useFlexGap sx={{ mt: 1.5, mb: 1, pr: 0.5 }}>
+            {Object.entries(toothFindings)
+              .filter(([, data]) => data && data.findings && data.findings.includes('Watch'))
+              .map(([toothNum]) => {
+                return (
+                  <Button
+                    key={toothNum}
+                    size="small"
+                    variant="contained"
+                    onClick={() => {
+                      setActiveToothNum(toothNum);
+                      setDetailModalTooth(toothNum);
+                    }}
+                    sx={{
+                      fontSize: '0.75rem',
+                      py: 0.15,
+                      px: 1,
+                      minWidth: 'auto',
+                      lineHeight: 1.2,
+                      textTransform: 'none',
+                      color: '#fff',
+                      bgcolor: '#3b82f6',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      '&:hover': {
+                        bgcolor: '#2563eb'
+                      }
+                    }}
+                  >
+                    {toothNum}
+                  </Button>
+                );
+              })}
           </Stack>
 
           {/* Footer Expand Icon */}
