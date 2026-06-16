@@ -404,12 +404,6 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
 
   const displayPatients = useMemo(() => {
     let list = [...patients];
-    if (genderFilter) {
-      list = list.filter((p) => p.gender === genderFilter);
-    }
-    if (providerFilter) {
-      list = list.filter((p) => p.preferredDentistId === providerFilter);
-    }
     if (sortByName) {
       list.sort((a, b) => {
         const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
@@ -418,9 +412,9 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       });
     }
     return list;
-  }, [patients, sortByName, genderFilter, providerFilter]);
+  }, [patients, sortByName]);
 
-  const totalPatients = (genderFilter || providerFilter) ? displayPatients.length : (pagination?.total || 0);
+  const totalPatients = pagination?.total || 0;
 
   return (
     <Box>

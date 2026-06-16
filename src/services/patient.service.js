@@ -16,7 +16,7 @@ export const patientService = {
    * @param {string} dobEnd - Date of birth end date (YYYY-MM-DD)
    * @returns {Promise<Object>} Patients data with pagination
    */
-  async getAllPatients(page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', signal = null) {
+  async getAllPatients(page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '', signal = null) {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
@@ -24,6 +24,8 @@ export const patientService = {
     if (status) params.append('status', status);
     if (dobStart) params.append('dobStart', dobStart);
     if (dobEnd) params.append('dobEnd', dobEnd);
+    if (gender) params.append('gender', gender);
+    if (providerId) params.append('providerId', providerId);
 
     const config = {};
     if (signal) {
