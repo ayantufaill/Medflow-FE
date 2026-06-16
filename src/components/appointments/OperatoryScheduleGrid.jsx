@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { useMemo, useRef, useEffect } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, IconButton, Chip } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import AppointmentCard from "./AppointmentCard";
 
 const OperatoryScheduleGrid = ({
@@ -19,6 +20,14 @@ const OperatoryScheduleGrid = ({
   onAppointmentClick,
   newlyCreatedAppointmentId,
   privacyMode = false,
+  onDropProcedure,
+  onDropReschedule,
+  scheduleBlocks = [],
+  onDeleteBlock,
+  // New props:
+  isCloseOpenDayMode = false,
+  closedOperatories = {},
+  onToggleOperatoryStatus,
   // Dynamic configuration for breaks (can be loaded from API/practice settings)
   BREAK_TIMES = [
     {
@@ -282,14 +291,18 @@ const OperatoryScheduleGrid = ({
         ref={gridContainerRef}
       >
         {/* Single scrollable container for both header and body */}
-        <Box sx={{ 
-          display: "flex", 
-          flexDirection: "column",
-          height: 640,
-          overflow: "auto"
-        }}>
+        <Box 
+          className="print-scroll-container"
+          sx={{ 
+            display: "flex", 
+            flexDirection: "column",
+            height: 640,
+            overflow: "auto"
+          }}
+        >
           {/* HEADER - Sticky at top */}
           <Box
+            className="print-header-container"
             sx={{
               display: "flex",
               borderBottom: "2px solid #eef2f6",
@@ -301,6 +314,7 @@ const OperatoryScheduleGrid = ({
             }}
           >
             <Box 
+              className="print-time-header"
               sx={{ 
                 p: 1.5, 
                 borderRight: "1px solid #eef2f6", 
@@ -318,32 +332,62 @@ const OperatoryScheduleGrid = ({
             </Box>
             
             <Box sx={{ display: "flex", flex: 1 }}>
-              {OPERATORY_COLUMNS.map((col) => (
-                <Box 
-                  key={col.id} 
-                  sx={{ 
-                    p: 1.5,
-                    borderLeft: "1px solid #eef2f6",
-                    borderBottom: `3px solid ${col.color}20`,
-                    minWidth: "360px",
-                    flexShrink: 0
-                  }}
-                >
-                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                    {col.label}
-                  </Typography>
-                </Box>
-              ))}
+              {OPERATORY_COLUMNS.map((col) => {
+                const dateKey = selectedDate.format("YYYY-MM-DD");
+                const isColumnClosed = !!closedOperatories[`${dateKey}:${col.id}`];
+                return (
+                  <Box 
+                    key={col.id} 
+                    className="print-column-header"
+                    sx={{ 
+                      p: 1.5,
+                      borderLeft: "1px solid #eef2f6",
+                      borderBottom: `3px solid ${col.color}20`,
+                      minWidth: "360px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                        {col.label}
+                      </Typography>
+                      {isCloseOpenDayMode && (
+                        <Chip
+                           label={isColumnClosed ? "CLOSED" : "OPEN"}
+                           size="small"
+                           onClick={() => onToggleOperatoryStatus && onToggleOperatoryStatus(dateKey, col.id)}
+                           sx={{
+                             fontSize: "10px",
+                             fontWeight: "bold",
+                             height: 24,
+                             cursor: "pointer",
+                             backgroundColor: isColumnClosed ? "#ef5350" : "#4caf50",
+                             color: "#fff",
+                             "& .MuiChip-label": { px: 1 },
+                             "&:hover": {
+                               backgroundColor: isColumnClosed ? "#e53935" : "#43a047",
+                             }
+                           }}
+                         />
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
             </Box>
           </Box>
           
           {/* BODY - Scrolls with header */}
-          <Box sx={{ 
-            display: "flex",
-            height: gridHeight,
-            minWidth: `calc(80px + ${OPERATORY_COLUMNS.length} * 360px)`
-          }}>
+          <Box 
+            className="print-body-container"
+            sx={{ 
+              display: "flex",
+              height: gridHeight,
+              minWidth: `calc(80px + ${OPERATORY_COLUMNS.length} * 360px)`
+            }}
+          >
             <Box
+              className="print-time-axis"
               sx={{
                 position: "sticky",
                 left: 0,
@@ -373,22 +417,30 @@ const OperatoryScheduleGrid = ({
               ))}
             </Box>
             
-            <Box sx={{ 
-              display: "grid",
-              gridTemplateColumns: `repeat(${OPERATORY_COLUMNS.length}, minmax(360px, 1fr))`,
-              height: gridHeight
-            }}>
+            <Box 
+              className="print-columns-grid"
+              sx={{ 
+                display: "grid",
+                gridTemplateColumns: `repeat(${OPERATORY_COLUMNS.length}, minmax(360px, 1fr))`,
+                height: gridHeight
+              }}
+            >
               {OPERATORY_COLUMNS.map((col) => {
+                const dateKey = selectedDate.format("YYYY-MM-DD");
+                const isColumnClosed = !!closedOperatories[`${dateKey}:${col.id}`];
                 const colAppointments = dayAppointments.filter(a => a.columnId === col.id);
                 const operatoryBreakTimes = getBreakTimesForOperatory(col.id);
+                // Filter blocks for this operatory (matching room ID suffix)
+                const colBlocks = scheduleBlocks.filter(b => b.roomId === col.id.replace("op", ""));
                 
                 return (
                   <Box 
                     key={col.id} 
+                    className="print-column"
                     sx={{ 
                       position: "relative",
                       borderLeft: "1px solid #eef2f6",
-                      bgcolor: "#ffffff",
+                      bgcolor: isColumnClosed ? "#f8fafc" : "#ffffff",
                     }}
                   >
                     {Array.from({ length: gridTotalMinutes / SLOT_MINUTES }).map((_, i) => {
@@ -399,18 +451,52 @@ const OperatoryScheduleGrid = ({
                       return (
                         <Box
                           key={`${col.id}-slot-${i}`}
-                          onClick={() => onSlotClick && onSlotClick(col.id, i * SLOT_MINUTES)}
+                          onClick={(e) => {
+                            if (isColumnClosed) return;
+                            onSlotClick && onSlotClick(e, col.id, i * SLOT_MINUTES);
+                          }}
+                          onDragOver={(e) => {
+                            if (!isBreak && !isColumnClosed) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onDrop={(e) => {
+                            if (isBreak || isColumnClosed) return;
+                            e.preventDefault();
+                            try {
+                              const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
+                              if (dragData) {
+                                if ((dragData.isAppointment || dragData.isBlockSlot || dragData.isPendingItem) && onDropReschedule) {
+                                  onDropReschedule(col.id, i * SLOT_MINUTES, dragData);
+                                } else if (onDropProcedure) {
+                                  onDropProcedure(col.id, i * SLOT_MINUTES, dragData);
+                                }
+                              }
+                            } catch (err) {
+                              console.error("Error parsing drag data:", err);
+                            }
+                          }}
                           sx={{
                             height: SLOT_HEIGHT,
                             borderBottom: "1px solid #f1f5f9",
-                            cursor: isBreak ? "not-allowed" : "pointer",
+                            cursor: (isBreak || isColumnClosed) ? "not-allowed" : "pointer",
                             transition: "background-color 0.1s",
-                            backgroundColor: isBreak ? breakInfo.color : undefined,
-                            backgroundImage: isBreak 
-                              ? 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.3) 5px, rgba(255,255,255,0.3) 10px)'
-                              : undefined,
+                            backgroundColor: isColumnClosed 
+                              ? "#f1f5f9"
+                              : isBreak 
+                                ? breakInfo.color 
+                                : undefined,
+                            backgroundImage: isColumnClosed
+                              ? 'repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px)'
+                              : isBreak 
+                                ? 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.3) 5px, rgba(255,255,255,0.3) 10px)'
+                                : undefined,
                             "&:hover": { 
-                              backgroundColor: isBreak ? breakInfo.hoverColor : "#f0f9ff" 
+                              backgroundColor: isColumnClosed 
+                                ? "#f1f5f9"
+                                : isBreak 
+                                  ? breakInfo.hoverColor 
+                                  : "#f0f9ff" 
                             },
                           }}
                         >
@@ -427,6 +513,90 @@ const OperatoryScheduleGrid = ({
                               {breakInfo.icon} {breakInfo.label}
                             </Typography>
                           )}
+                        </Box>
+                      );
+                    })}
+
+                    {/* Render Blocked Slots */}
+                    {colBlocks.map((b) => {
+                      const startMin = timeToMinutes(b.startTime) - START_HOUR * 60;
+                      const endMin = timeToMinutes(b.endTime) - START_HOUR * 60;
+                      
+                      const topPx = (clamp(startMin, 0, gridTotalMinutes) / SLOT_MINUTES) * SLOT_HEIGHT;
+                      const heightPx = ((clamp(endMin, 0, gridTotalMinutes) - clamp(startMin, 0, gridTotalMinutes)) / SLOT_MINUTES) * SLOT_HEIGHT;
+                      
+                      return (
+                        <Box
+                          key={b._id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", JSON.stringify({
+                              isBlockSlot: true,
+                              blockId: b._id,
+                              block: b
+                            }));
+                          }}
+                          sx={{
+                            position: "absolute",
+                            top: topPx + 2,
+                            height: heightPx - 4,
+                            left: 4,
+                            right: 4,
+                            bgcolor: b.color || "#ffe082",
+                            borderRadius: 1.5,
+                            borderLeft: `5px solid rgba(0,0,0,0.25)`,
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                            p: 1.5,
+                            zIndex: 10,
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            overflow: "hidden",
+                            cursor: "grab",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+                              transform: "translateY(-1px)"
+                            },
+                            "&:active": {
+                              cursor: "grabbing"
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+                            <Typography sx={{ 
+                              fontSize: 12, 
+                              fontWeight: 700, 
+                              color: "rgba(0,0,0,0.75)",
+                              lineHeight: 1.2,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical"
+                            }}>
+                              {b.notes || "Blocked Slot"}
+                            </Typography>
+                            {onDeleteBlock && (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteBlock(b._id);
+                                }}
+                                sx={{ 
+                                  p: 0.2, 
+                                  color: "rgba(0,0,0,0.4)", 
+                                  "&:hover": { color: "rgba(0,0,0,0.85)", bgcolor: "rgba(0,0,0,0.05)" } 
+                                }}
+                              >
+                                <DeleteIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            )}
+                          </Box>
+                          <Typography sx={{ fontSize: 10, fontWeight: 600, color: "rgba(0,0,0,0.55)", mt: 0.5 }}>
+                            {dayjs(`2000-01-01T${b.startTime}`).format("h:mm A")} - {dayjs(`2000-01-01T${b.endTime}`).format("h:mm A")}
+                          </Typography>
                         </Box>
                       );
                     })}

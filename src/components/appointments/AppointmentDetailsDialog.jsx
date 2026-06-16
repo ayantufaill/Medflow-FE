@@ -18,6 +18,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  TextField,
 } from "@mui/material";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -47,13 +48,24 @@ const AppointmentDetailsDialog = ({
   selectedAppointment,
   OPERATORY_COLUMNS,
   onStatusChange,
+  onReschedule,
 }) => {
   const [status, setStatus] = useState("unconfirmed");
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleRoomId, setRescheduleRoomId] = useState("");
 
   useEffect(() => {
     if (!selectedAppointment) return;
     const next = (selectedAppointment.status || "unconfirmed").toLowerCase();
     setStatus(STATUS_OPTIONS.some((o) => o.value === next) ? next : "unconfirmed");
+
+    const start = dayjs(selectedAppointment.start);
+    setRescheduleDate(start.format("YYYY-MM-DD"));
+    setRescheduleTime(start.format("HH:mm"));
+    setRescheduleRoomId(selectedAppointment.columnId || "");
+    setIsRescheduling(false);
   }, [selectedAppointment?.id, selectedAppointment?.status, open]);
 
   if (!selectedAppointment) return null;
@@ -112,12 +124,36 @@ const AppointmentDetailsDialog = ({
               </Typography>
             </Box>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-              <EventNoteIcon sx={{ color: "#64748b", fontSize: 18 }} />
-              <Typography sx={{ ...FONT_XS, color: "#475569" }}>
-                {start.format("dddd, MMM D, YYYY")} @ {start.format("h:mm A")} – {end.format("h:mm A")}
-              </Typography>
-            </Box>
+            {isRescheduling ? (
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <TextField
+                  type="date"
+                  size="small"
+                  label="Date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ style: { fontSize: 13 } }}
+                />
+                <TextField
+                  type="time"
+                  size="small"
+                  label="Start Time"
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ style: { fontSize: 13 } }}
+                />
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+                <EventNoteIcon sx={{ color: "#64748b", fontSize: 18 }} />
+                <Typography sx={{ ...FONT_XS, color: "#475569" }}>
+                  {start.format("dddd, MMM D, YYYY")} @ {start.format("h:mm A")} – {end.format("h:mm A")}
+                </Typography>
+              </Box>
+            )}
+
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
               <LocationOnIcon sx={{ color: "#64748b", fontSize: 18 }} />
               <Typography sx={{ ...FONT_XS, color: "#475569" }}>
@@ -146,10 +182,21 @@ const AppointmentDetailsDialog = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <TableRow>
-                    <TableCell sx={{ ...FONT_XS, py: 0.75 }}>{selectedAppointment.title || "—"}</TableCell>
-                    <TableCell sx={{ ...FONT_XS, py: 0.75 }}>{selectedAppointment.note || "—"}</TableCell>
-                  </TableRow>
+                  {selectedAppointment.customFields?.procedures && Array.isArray(selectedAppointment.customFields.procedures) ? (
+                    selectedAppointment.customFields.procedures.map((proc, index) => (
+                      <TableRow key={index}>
+                        <TableCell sx={{ ...FONT_XS, py: 0.75 }}>
+                          <strong>{proc.code}</strong> – {proc.treatment}
+                        </TableCell>
+                        <TableCell sx={{ ...FONT_XS, py: 0.75 }}>{proc.charge}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell sx={{ ...FONT_XS, py: 0.75 }}>{selectedAppointment.title || "—"}</TableCell>
+                      <TableCell sx={{ ...FONT_XS, py: 0.75 }}>{selectedAppointment.note || "—"}</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -175,6 +222,7 @@ const AppointmentDetailsDialog = ({
                 onChange={handleStatusChange}
                 label="Appointment Status"
                 sx={FONT_XS}
+                disabled={isRescheduling}
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <MenuItem key={opt.value} value={opt.value} sx={FONT_XS}>
@@ -205,20 +253,71 @@ const AppointmentDetailsDialog = ({
           </Paper>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 2, borderTop: "1px solid #eef2f6" }}>
-        <Button
-          onClick={onClose}
-          variant="contained"
-          sx={{
-            textTransform: "none",
-            borderRadius: 1.5,
-            bgcolor: "#1976d2",
-            px: 3,
-            "&:hover": { bgcolor: "#1565c0" },
-          }}
-        >
-          Close
-        </Button>
+      <DialogActions sx={{ p: 2, borderTop: "1px solid #eef2f6", justifyContent: "flex-end", gap: 1.5 }}>
+        {isRescheduling ? (
+          <>
+            <Button
+              onClick={() => setIsRescheduling(false)}
+              variant="outlined"
+              sx={{
+                textTransform: "none",
+                borderRadius: 1.5,
+                borderColor: "#cbd5e1",
+                color: "#475569",
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (onReschedule && selectedAppointment.id) {
+                  onReschedule(selectedAppointment.id, {
+                    date: rescheduleDate,
+                    time: rescheduleTime,
+                    roomId: rescheduleRoomId,
+                  });
+                }
+                setIsRescheduling(false);
+              }}
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                borderRadius: 1.5,
+                bgcolor: "#2e7d32",
+                "&:hover": { bgcolor: "#1b5e20" },
+              }}
+            >
+              Save Reschedule
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              onClick={() => setIsRescheduling(true)}
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                borderRadius: 1.5,
+                bgcolor: "#e07c24",
+                "&:hover": { bgcolor: "#c96b1a" },
+              }}
+            >
+              Reschedule
+            </Button>
+            <Button
+              onClick={onClose}
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                borderRadius: 1.5,
+                bgcolor: "#1976d2",
+                "&:hover": { bgcolor: "#1565c0" },
+              }}
+            >
+              Close
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );

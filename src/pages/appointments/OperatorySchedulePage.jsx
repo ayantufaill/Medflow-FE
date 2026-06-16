@@ -16,9 +16,13 @@ import {
   Popover,
   Select,
   MenuItem,
+  Menu,
   FormControl,
   Link,
-  Tooltip
+  Tooltip,
+  List,
+  ListItem,
+  ListItemText
 } from "@mui/material";
 import {
   PostAdd, Group, Science, Description, FilterAlt,
@@ -46,6 +50,8 @@ import { usePatients } from "../../hooks/redux/usePatient";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
 import LabCasesDialog from "../../components/appointments/LabCasesDialog";
+import BlockSlotDialog from "../../components/appointments/BlockSlotDialog";
+import { scheduleBlockService } from "../../services/schedule-block.service";
 
 // Constants
 const START_HOUR = 0;
@@ -102,6 +108,222 @@ const OperatorySchedulePage = () => {
   useEffect(() => { showSnackbarRef.current = showSnackbar; });
 
   const [activeTab, setActiveTab] = useState(0); // 0: Patients, 1: Pending, 2: Search, 3: Productivity
+  const [pendingItems, setPendingItems] = useState([]);
+
+  const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
+  const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
+
+  const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
+    const key = `${dateStr}:${columnId}`;
+    setClosedOperatories(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  }, []);
+
+  const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
+  const [printingOrientation, setPrintingOrientation] = useState(null);
+
+  const handlePrint = (orientation) => {
+    setPrintingOrientation(orientation);
+    setViewMode("day");
+  };
+
+  useEffect(() => {
+    if (printingOrientation && viewMode === "day") {
+      const styleId = "print-orientation-style";
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+      }
+      styleEl.innerHTML = `
+        @media print {
+          @page { 
+            size: ${printingOrientation}; 
+            margin: 5mm;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-shadow: none !important;
+          }
+          aside, 
+          .no-print,
+          button,
+          .MuiIconButton-root,
+          .MuiTooltip-root,
+          .MuiTabs-root,
+          .MuiPopover-root { 
+            display: none !important; 
+          }
+          
+          .print-scroll-container {
+            height: auto !important;
+            overflow: visible !important;
+            max-height: none !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .print-header-container,
+          .print-body-container {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .print-columns-grid {
+            grid-template-columns: repeat(${OPERATORY_COLUMNS.length}, 1fr) !important;
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .print-column-header {
+            min-width: 0 !important;
+            width: auto !important;
+            flex: 1 !important;
+          }
+
+          .print-column {
+            min-width: 0 !important;
+          }
+
+          body, #root {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          div[class*="MuiBox-root"] {
+            box-shadow: none !important;
+          }
+        }
+      `;
+
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintingOrientation(null);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [printingOrientation, viewMode, OPERATORY_COLUMNS.length]);
+
+  const handleDropOnPending = (dragData) => {
+    if (dragData.isAppointment) {
+      const appt = dragData.appointment;
+      const apptId = dragData.appointmentId;
+      if (pendingItems.some(item => item.id === apptId)) {
+        showSnackbar("Appointment is already in the pending list", "info");
+        return;
+      }
+      setPendingItems(prev => [...prev, {
+        id: apptId,
+        type: "appointment",
+        data: appt
+      }]);
+      showSnackbar(`Moved ${appt.patientName}'s appointment to Pending`, "success");
+      setActiveTab(1);
+    } else if (dragData.isBlockSlot) {
+      const block = dragData.block;
+      const blockId = dragData.blockId;
+      if (pendingItems.some(item => item.id === blockId)) {
+        showSnackbar("Block is already in the pending list", "info");
+        return;
+      }
+      setPendingItems(prev => [...prev, {
+        id: blockId,
+        type: "block",
+        data: block
+      }]);
+      showSnackbar(`Moved calendar block to Pending`, "success");
+      setActiveTab(1);
+    }
+  };
+
+  const handleRemovePending = (item) => {
+    setPendingItems(prev => prev.filter(i => i.id !== item.id));
+    showSnackbar("Restored item back to calendar", "info");
+  };
+
+  const handleDropReschedule = async (columnId, minutesFromStart, dragData) => {
+    const isAppt = dragData.isAppointment || (dragData.isPendingItem && dragData.type === "appointment");
+    const isBlock = dragData.isBlockSlot || (dragData.isPendingItem && dragData.type === "block");
+    
+    const itemData = dragData.isPendingItem ? dragData.originalData : (dragData.appointment || dragData.block);
+    const itemId = dragData.isPendingItem ? dragData.id : (dragData.appointmentId || dragData.blockId);
+
+    const start = selectedDate
+      .clone()
+      .startOf("day")
+      .add(minutesFromStart, "minute");
+    
+    const duration = isAppt 
+      ? (itemData.durationMinutes || 60) 
+      : 30;
+    
+    let blockDuration = 30;
+    if (isBlock && itemData.startTime && itemData.endTime) {
+      const startMin = minutesSinceStart(dayjs(`${itemData.date}T${itemData.startTime}`));
+      const endMin = minutesSinceStart(dayjs(`${itemData.date}T${itemData.endTime}`));
+      blockDuration = endMin - startMin;
+    }
+    
+    const end = start.clone().add(isAppt ? duration : blockDuration, "minute");
+
+    if (isAppt) {
+      try {
+        setFormSaving(true);
+        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+        
+        await updateAppointment(itemId, {
+          appointmentDate: start.format("YYYY-MM-DD"),
+          startTime: start.format("HH:mm"),
+          endTime: end.format("HH:mm"),
+          roomId: roomId
+        }).unwrap();
+
+        showSnackbar("Appointment rescheduled successfully", "success");
+        setPendingItems(prev => prev.filter(i => i.id !== itemId));
+        await refreshAppointments();
+      } catch (err) {
+        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+        showSnackbar(msg, "error");
+      } finally {
+        setFormSaving(false);
+      }
+    } else if (isBlock) {
+      try {
+        if (itemId && !String(itemId).startsWith("temp-")) {
+          await scheduleBlockService.deleteBlock(itemId);
+        }
+        
+        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+        const newBlockData = {
+          roomId: roomId,
+          date: start.format("YYYY-MM-DD"),
+          startTime: start.format("HH:mm"),
+          endTime: end.format("HH:mm"),
+          notes: itemData.notes || "Blocked Slot",
+          color: itemData.color || "#ffe082"
+        };
+        
+        await scheduleBlockService.createBlock(newBlockData);
+        showSnackbar("Calendar block rescheduled successfully", "success");
+        setPendingItems(prev => prev.filter(i => i.id !== itemId));
+        fetchScheduleBlocks();
+      } catch (err) {
+        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
+        showSnackbar(msg, "error");
+      }
+    }
+  };
+
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
   const [patientQuery, setPatientQuery] = useState("");
@@ -109,6 +331,51 @@ const OperatorySchedulePage = () => {
   const [showConsult, setShowConsult] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(false);
   const [addAppointmentFormOpen, setAddAppointmentFormOpen] = useState(false);
+
+  // Slot blocking and popover state
+  const [customFormDateTime, setCustomFormDateTime] = useState(null);
+  const [scheduleBlocks, setScheduleBlocks] = useState([]);
+  const [blockSlotDialogOpen, setBlockSlotDialogOpen] = useState(false);
+  const [blockSlotDialogData, setBlockSlotDialogData] = useState(null);
+  const [slotPopoverAnchorEl, setSlotPopoverAnchorEl] = useState(null);
+  const [selectedSlotInfo, setSelectedSlotInfo] = useState(null);
+
+  const fetchScheduleBlocks = useCallback(async () => {
+    try {
+      const dateStr = selectedDate.format("YYYY-MM-DD");
+      const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
+      setScheduleBlocks(blocks);
+    } catch (err) {
+      console.error("Error fetching schedule blocks:", err);
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    fetchScheduleBlocks();
+  }, [fetchScheduleBlocks]);
+
+  const handleSaveBlock = async (blockData) => {
+    try {
+      await scheduleBlockService.createBlock(blockData);
+      showSnackbar("Block created successfully", "success");
+      setBlockSlotDialogOpen(false);
+      fetchScheduleBlocks();
+    } catch (err) {
+      const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to block slot";
+      showSnackbar(msg, "error");
+    }
+  };
+
+  const handleDeleteBlock = async (blockId) => {
+    try {
+      await scheduleBlockService.deleteBlock(blockId);
+      showSnackbar("Block deleted successfully", "success");
+      fetchScheduleBlocks();
+    } catch (err) {
+      const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
+      showSnackbar(msg, "error");
+    }
+  };
 
   // Dialogs
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -121,9 +388,9 @@ const OperatorySchedulePage = () => {
   const [formSaving, setFormSaving] = useState(false);
 
   const { providers, rooms, appointmentTypes } = useDropdownData({ 
-    providers: addAppointmentFormOpen, 
+    providers: true, 
     rooms: true, 
-    appointmentTypes: addAppointmentFormOpen 
+    appointmentTypes: true 
   });
 
 
@@ -394,9 +661,11 @@ const OperatorySchedulePage = () => {
         return patient;
       } catch (err) {
         const msg =
-          err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          "Failed to create patient. Please try again.";
+          typeof err === "string"
+            ? err
+            : err.response?.data?.error?.message ||
+              err.response?.data?.message ||
+              "Failed to create patient. Please try again.";
         showSnackbar(msg, "error");
         throw err;
       } finally {
@@ -431,14 +700,13 @@ const OperatorySchedulePage = () => {
   // can pick a patient manually. Auto-selecting was causing the first
   // patient's name to appear pre-filled in the sidebar search input.
 
-  const initialFormDateTime = useMemo(
-    () =>
-      selectedDate
-        .clone()
-        .hour(START_HOUR === 0 ? 9 : START_HOUR)
-        .minute(5),
-    [selectedDate],
-  );
+  const initialFormDateTime = useMemo(() => {
+    if (customFormDateTime) return customFormDateTime;
+    return selectedDate
+      .clone()
+      .hour(START_HOUR === 0 ? 9 : START_HOUR)
+      .minute(5);
+  }, [selectedDate, customFormDateTime]);
 
   // Maps a raw appointment object from the API into the shape the grid expects
   const mapAppointment = (a) => {
@@ -544,9 +812,11 @@ const OperatorySchedulePage = () => {
         note: a.notes || "",
         color: "#1976d2",
         providerName,
+        providerId: (a.providerId && (a.providerId._id || a.providerId.id || a.providerId)) || "",
         operatoryLabel,
         durationMinutes: a.durationMinutes || dayjs(endObj).diff(startObj, "minute"),
         customFields: a.customFields,
+        checklists: a.checklists,
       };
     } catch {
       return null;
@@ -694,9 +964,86 @@ const OperatorySchedulePage = () => {
       }
     } catch (err) {
       const msg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        "Failed to create appointment.";
+        typeof err === "string"
+          ? err
+          : err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            "Failed to create appointment.";
+      showSnackbar(msg, "error");
+    } finally {
+      setFormSaving(false);
+    }
+  };
+
+  const handleDropProcedure = async (columnId, minutesFromStart, dragData) => {
+    const { code, treatment, duration, patientId, patientName, isRecareGroup, procedures } = dragData;
+    if (!patientId) {
+      showSnackbar("Please select a patient before dragging procedures.", "warning");
+      return;
+    }
+
+    const start = selectedDate
+      .clone()
+      .startOf("day")
+      .add(minutesFromStart, "minute");
+    const end = start.clone().add(duration || 60, "minute");
+
+    try {
+      setFormSaving(true);
+      
+      let appointmentProcedures = [];
+      let chiefComplaintText = "";
+      
+      if (isRecareGroup && Array.isArray(procedures)) {
+        appointmentProcedures = procedures.map(p => ({
+          code: p.code,
+          treatment: p.treatment,
+          charge: "$0.00"
+        }));
+        chiefComplaintText = `Recare: ${procedures.map(p => p.code).join(", ")}`;
+      } else {
+        appointmentProcedures = [{ code, treatment, charge: "$0.00" }];
+        chiefComplaintText = `Recare: ${treatment}`;
+      }
+
+      const payload = {
+        patientId,
+        providerId: DUMMY_PROVIDER_ID,
+        roomId: columnId.startsWith("op") ? columnId.substring(2) : columnId,
+        appointmentDate: start.format("YYYY-MM-DD"),
+        startTime: start.format("HH:mm"),
+        endTime: end.format("HH:mm"),
+        durationMinutes: duration || 60,
+        notes: `Scheduled via drag-and-drop from Recare group`,
+        status: "unconfirmed",
+        chiefComplaint: chiefComplaintText,
+        customFields: {
+          procedures: appointmentProcedures,
+          visitType: "recare"
+        }
+      };
+
+      if (providers && providers.length > 0) {
+        payload.providerId = providers[0]._id || providers[0].id;
+      }
+
+      const newAppt = await reduxCreateAppointment(payload).unwrap();
+      const newApptId = newAppt?.data?._id || newAppt?.data?.id || newAppt?._id || newAppt?.id;
+
+      showSnackbar(`Created appointment for ${patientName} with ${appointmentProcedures.length} procedures`, "success");
+      
+      if (newApptId) {
+        setNewlyCreatedAppointmentId(newApptId);
+      }
+
+      await refreshAppointments();
+    } catch (err) {
+      const msg =
+        typeof err === "string"
+          ? err
+          : err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            "Failed to schedule appointment.";
       showSnackbar(msg, "error");
     } finally {
       setFormSaving(false);
@@ -882,8 +1229,9 @@ const OperatorySchedulePage = () => {
     setCreateDialogOpen(false);
   };
 
-  const handleGridClick = (columnId, minutesFromStart) => {
-    // Grid click functionality disabled - appointments can only be created via the "Schedule Appointment" button
+  const handleGridClick = (e, columnId, minutesFromStart) => {
+    setSlotPopoverAnchorEl(e.currentTarget);
+    setSelectedSlotInfo({ columnId, minutesFromStart });
   };
 
   return (
@@ -896,6 +1244,7 @@ const OperatorySchedulePage = () => {
     >
       {/* Header */}
       <Paper
+        className="no-print"
         elevation={0}
         sx={{
           p: 1, // Compact padding
@@ -992,11 +1341,11 @@ const OperatorySchedulePage = () => {
               { icon: <FilterAlt />, label: "Filter Labs", onClick: (e) => setLabAnchorEl(e.currentTarget) },
               { icon: showConsult ? <Visibility /> : <VisibilityOff />, label: "Consult Column", onClick: () => setShowConsult(!showConsult) },
               { icon: <SpeakerNotesOff />, label: "No Notes" },
-              { icon: <Print />, label: "Print" },
+              { icon: <Print />, label: "Print", onClick: (e) => setPrintMenuAnchorEl(e.currentTarget) },
               // { icon: <History />, label: "History" },
               { icon: privacyMode ? <PersonOff /> : <Person />, label: "Privacy Mode", onClick: () => setPrivacyMode(!privacyMode) },
               { icon: <AttachMoney />, label: "Billing" },
-              { icon: <MoreVert />, label: "More" },
+              { icon: <MoreVert />, label: "More", onClick: (e) => setMoreMenuAnchorEl(e.currentTarget) },
               // { icon: <CalendarMonth />, label: "Calendar" }
             ].map((item, idx) => (
               <Tooltip key={idx} title={item.label} arrow>
@@ -1061,11 +1410,16 @@ const OperatorySchedulePage = () => {
           onPurchaseProductsClick={handlePurchaseProductsClick}
           getStatusColor={getStatusColor}
           appointments={appointments}
+          pendingItems={pendingItems}
+          onDropOnPending={handleDropOnPending}
+          onRemovePending={handleRemovePending}
         />
 
         <OperatoryScheduleGrid
           OPERATORY_COLUMNS={OPERATORY_COLUMNS}
-          dayAppointments={dayAppointments}
+          dayAppointments={dayAppointments.filter(
+            (appt) => !pendingItems.some((item) => item.id === appt.id)
+          )}
           viewMode={viewMode}
           START_HOUR={START_HOUR}
           END_HOUR={END_HOUR}
@@ -1076,8 +1430,12 @@ const OperatorySchedulePage = () => {
           getStatusColor={getStatusColor}
           selectedDate={selectedDate}
           newlyCreatedAppointmentId={newlyCreatedAppointmentId}
-          onSlotClick={(columnId, minutesFromStart) =>
-            handleGridClick(columnId, minutesFromStart)
+          scheduleBlocks={scheduleBlocks.filter(
+            (b) => !pendingItems.some((item) => item.id === b._id)
+          )}
+          onDeleteBlock={handleDeleteBlock}
+          onSlotClick={(e, columnId, minutesFromStart) =>
+            handleGridClick(e, columnId, minutesFromStart)
           }
           onScheduleAppointmentClick={handleScheduleAppointmentClick}
           onAppointmentClick={(appt) => {
@@ -1085,6 +1443,11 @@ const OperatorySchedulePage = () => {
             setDetailsDialogOpen(true);
           }}
           privacyMode={privacyMode}
+          onDropProcedure={handleDropProcedure}
+          onDropReschedule={handleDropReschedule}
+          isCloseOpenDayMode={isCloseOpenDayMode}
+          closedOperatories={closedOperatories}
+          onToggleOperatoryStatus={handleToggleOperatoryStatus}
         />
       </Box>
 
@@ -1112,6 +1475,27 @@ const OperatorySchedulePage = () => {
             await refreshAppointments();
           } catch (err) {
             const msg = typeof err === 'string' ? err : err?.response?.data?.error?.message || err?.message || "Failed to update status";
+            showSnackbar(msg, "error");
+          }
+        }}
+        onReschedule={async (appointmentId, updates) => {
+          const { date, time } = updates;
+          const start = dayjs(`${date}T${time}`);
+          const duration = selectedAppointment?.end ? dayjs(selectedAppointment.end).diff(dayjs(selectedAppointment.start), "minute") : 60;
+          const end = start.add(duration, "minute");
+
+          try {
+            await updateAppointment(appointmentId, {
+              appointmentDate: date,
+              startTime: time,
+              endTime: end.format("HH:mm"),
+            }).unwrap();
+
+            showSnackbar("Appointment rescheduled successfully", "success");
+            setDetailsDialogOpen(false);
+            await refreshAppointments();
+          } catch (err) {
+            const msg = typeof err === 'string' ? err : err?.response?.data?.error?.message || err?.message || "Failed to reschedule appointment";
             showSnackbar(msg, "error");
           }
         }}
@@ -1163,6 +1547,86 @@ const OperatorySchedulePage = () => {
         onClose={() => setProgressNotesOpen(false)}
         providers={providers || []}
       />
+
+      <BlockSlotDialog
+        open={blockSlotDialogOpen}
+        onClose={() => setBlockSlotDialogOpen(false)}
+        initialData={blockSlotDialogData}
+        onSave={handleSaveBlock}
+      />
+
+      <Popover
+        open={Boolean(slotPopoverAnchorEl)}
+        anchorEl={slotPopoverAnchorEl}
+        onClose={() => setSlotPopoverAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8',
+            borderRadius: 1.5,
+          }
+        }}
+      >
+        <List size="small" disablePadding sx={{ py: 0.5 }}>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSlotPopoverAnchorEl(null);
+              if (selectedSlotInfo) {
+                const start = selectedDate
+                  .clone()
+                  .startOf("day")
+                  .add(selectedSlotInfo.minutesFromStart, "minute");
+                setCustomFormDateTime(start);
+                // Also set the sidebar patient query if needed, otherwise just open form
+                setAddAppointmentFormOpen(true);
+              }
+            }}
+            sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+          >
+            <ListItemText 
+              primary="Schedule Appointment" 
+              primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }} 
+            />
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSlotPopoverAnchorEl(null);
+              if (selectedSlotInfo) {
+                const start = selectedDate
+                  .clone()
+                  .startOf("day")
+                  .add(selectedSlotInfo.minutesFromStart, "minute");
+                const end = start.clone().add(30, "minute"); // default 30 min block
+                
+                setBlockSlotDialogData({
+                  roomId: selectedSlotInfo.columnId.replace("op", ""),
+                  date: selectedDate.format("YYYY-MM-DD"),
+                  startTime: start.format("HH:mm"),
+                  endTime: end.format("HH:mm")
+                });
+                setBlockSlotDialogOpen(true);
+              }
+            }}
+            sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+          >
+            <ListItemText 
+              primary="Block Slot" 
+              primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }} 
+            />
+          </ListItem>
+        </List>
+      </Popover>
 
       {/* Lab Filters Popover (Matching Screenshot) */}
       <Popover
@@ -1294,6 +1758,74 @@ const OperatorySchedulePage = () => {
         open={labCasesDialogOpen}
         onClose={() => setLabCasesDialogOpen(false)}
       />
+
+      {/* More Options Menu */}
+      <Menu
+        anchorEl={moreMenuAnchorEl}
+        open={Boolean(moreMenuAnchorEl)}
+        onClose={() => setMoreMenuAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8',
+            borderRadius: 1.5,
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setShowConsult(true);
+            setMoreMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          Show all columns
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setIsCloseOpenDayMode(prev => !prev);
+            setMoreMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          {isCloseOpenDayMode ? "Exit Close/Open a day" : "Close/Open a day"}
+        </MenuItem>
+      </Menu>
+
+      {/* Print Options Menu */}
+      <Menu
+        anchorEl={printMenuAnchorEl}
+        open={Boolean(printMenuAnchorEl)}
+        onClose={() => setPrintMenuAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8',
+            borderRadius: 1.5,
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handlePrint("portrait");
+            setPrintMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          Portrait
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handlePrint("landscape");
+            setPrintMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          Landscape
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

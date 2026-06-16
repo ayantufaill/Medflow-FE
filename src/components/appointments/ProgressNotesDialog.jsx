@@ -39,6 +39,7 @@ import EditNoteIcon from "@mui/icons-material/EditNote";
 import PersonIcon from "@mui/icons-material/Person";
 import dayjs from "dayjs";
 import { exportToCSV } from "../../utils/exportUtils";
+import { clinicalNoteService } from "../../services/clinical-note.service";
 
 // Redux imports
 import { 
@@ -236,9 +237,16 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
     dispatch(fetchCheckoutAppointments({ page: 1, limit: 200, ...filters }));
   }, [dispatch, startDate, endDate, providerId, kind]);
 
-  // Derived state combining API + Mock data
-  const signedNotes = useMemo(() => [...(signedData || []), ...MOCK_SIGNED_NOTES], [signedData]);
-  const unsignedNotes = useMemo(() => [...(unsignedData || []), ...MOCK_UNSIGNED_NOTES], [unsignedData]);
+  const [signedNotes, setSignedNotes] = useState([]);
+  const [unsignedNotes, setUnsignedNotes] = useState([]);
+
+  useEffect(() => {
+    setSignedNotes([...(signedData || []), ...MOCK_SIGNED_NOTES]);
+  }, [signedData]);
+
+  useEffect(() => {
+    setUnsignedNotes([...(unsignedData || []), ...MOCK_UNSIGNED_NOTES]);
+  }, [unsignedData]);
 
   // Derived state to find Missing Notes
   const missingNotes = useMemo(() => {
@@ -299,22 +307,47 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
     setEditingContent("");
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editingNoteId) return;
 
-    const updater = (prev) => prev.map(n => 
-      (n._id === editingNoteId || n.id === editingNoteId) 
-        ? { ...n, content: editingContent } 
-        : n
-    );
-
-    setUnsignedNotes(updater);
-    setSignedNotes(updater);
-    
-    // In future: clinicalNoteService.updateClinicalNote(editingNoteId, { content: editingContent })
+    try {
+      const isRealNote = !String(editingNoteId).startsWith("u") && !String(editingNoteId).startsWith("s") && !String(editingNoteId).startsWith("m");
+      if (isRealNote) {
+        await clinicalNoteService.updateClinicalNote(editingNoteId, { content: editingContent });
+        fetchData();
+      } else {
+        const updater = (prev) => prev.map(n => 
+          (n._id === editingNoteId || n.id === editingNoteId) 
+            ? { ...n, content: editingContent } 
+            : n
+        );
+        setUnsignedNotes(updater);
+        setSignedNotes(updater);
+      }
+    } catch (err) {
+      console.error("Failed to save note:", err);
+    }
     
     setEditingNoteId(null);
     setEditingContent("");
+  };
+
+  const handleSignNote = async (noteId) => {
+    try {
+      const isRealNote = !String(noteId).startsWith("u") && !String(noteId).startsWith("s") && !String(noteId).startsWith("m");
+      if (isRealNote) {
+        await clinicalNoteService.signClinicalNote(noteId);
+        fetchData();
+      } else {
+        const noteToSign = unsignedNotes.find(n => (n._id === noteId || n.id === noteId));
+        if (noteToSign) {
+          setUnsignedNotes(prev => prev.filter(n => n._id !== noteId && n.id !== noteId));
+          setSignedNotes(prev => [...prev, { ...noteToSign, isSigned: true, signedAt: new Date().toISOString() }]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to sign note:", err);
+    }
   };
 
   const getProviderName = useCallback((pOrId) => {
@@ -515,7 +548,12 @@ const ProgressNotesDialog = ({ open, onClose, providers = [] }) => {
                                       <Button variant="contained" size="small" onClick={() => handleEditStart(n)} sx={{ bgcolor: "#d8b16b", "&:hover": { bgcolor: "#c49c56" }, textTransform: "none", fontSize: "0.7rem", height: 24, px: 2 }}>Edit Note</Button>
                                     )}
                                   </Box>
-                                  <Typography sx={{ color: "#5c7cbc", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Sign Progress Note</Typography>
+                                  <Typography 
+                                    onClick={() => handleSignNote(n._id || n.id)}
+                                    sx={{ color: "#5c7cbc", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+                                  >
+                                    Sign Progress Note
+                                  </Typography>
                                 </Box>
                                 
                                 {editingNoteId === (n._id || n.id) ? (

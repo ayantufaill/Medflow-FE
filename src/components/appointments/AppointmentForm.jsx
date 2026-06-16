@@ -53,6 +53,29 @@ import { useDispatch } from 'react-redux';
 import { fetchAppointments, fetchAvailableSlots } from '../../store/slices/appointmentSlice';
 import { fetchPatientInsurances } from '../../store/slices/patientSlice';
 
+const APPOINTMENT_STATUS_OPTIONS = [
+  { value: "unconfirmed", label: "Unconfirmed" },
+  { value: "preconfirmed", label: "Preconfirmed" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "arrived", label: "Arrived" },
+  { value: "ready_to_be_seated", label: "Ready To Be Seated" },
+  { value: "seated", label: "Seated" },
+  { value: "ready_for_doctor", label: "Ready For Doctor" },
+  { value: "in_treatment", label: "In Treatment" },
+  { value: "ready_for_checkout", label: "Ready For Checkout" },
+  { value: "checked_out_incomplete", label: "Checked out incomplete" },
+  { value: "checked_out_complete", label: "Checked out complete" },
+  { value: "completed", label: "Completed" },
+  { value: "no_show", label: "No Show" },
+  { value: "call", label: "Call" },
+  { value: "left_message", label: "Left message" },
+  { value: "running_late", label: "Running Late" },
+  { value: "sent_email_or_text", label: "Sent Email Or Text" },
+  { value: "late", label: "Late" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "rescheduled", label: "Rescheduled" },
+];
+
 const AppointmentForm = ({
   onSubmit,
   initialData = null,
@@ -115,7 +138,7 @@ const AppointmentForm = ({
       copayCollected: '',
       reminderSent: false,
       customFields: {},
-      status: 'scheduled',
+      status: 'unconfirmed',
     },
     mode: 'onChange',
   });
@@ -530,7 +553,7 @@ const AppointmentForm = ({
         copayCollected: '',
         reminderSent: false,
         customFields: {},
-        status: 'scheduled',
+        status: 'unconfirmed',
       });
     } catch (err) {
       showSnackbar(
@@ -1450,12 +1473,11 @@ const AppointmentForm = ({
                     onChange={(e) => field.onChange(e.target.value)}
                     label="Status"
                   >
-                    <MenuItem value="scheduled">Scheduled</MenuItem>
-                    <MenuItem value="confirmed">Confirmed</MenuItem>
-                    <MenuItem value="checked_in">Checked In</MenuItem>
-                    <MenuItem value="completed">Completed</MenuItem>
-                    <MenuItem value="cancelled">Cancelled</MenuItem>
-                    <MenuItem value="no_show">No Show</MenuItem>
+                    {APPOINTMENT_STATUS_OPTIONS.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 )}
               />

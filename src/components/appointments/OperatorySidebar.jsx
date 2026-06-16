@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { updateAppointmentThunk, fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../store/slices/appointmentSlice";
+import { fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import dayjs from "dayjs";
 import {
   Autocomplete,
@@ -40,6 +43,7 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import GroupIcon from "@mui/icons-material/Group";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -226,8 +230,18 @@ const OperatorySidebar = ({
   onPurchaseProductsClick,
   getStatusColor,
   appointments = [],
+  pendingItems = [],
+  onDropOnPending,
+  onRemovePending,
 }) => {
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const dispatch = useDispatch();
+  const practiceData = useSelector((state) => state.practiceInfo.data);
+
+  useEffect(() => {
+    dispatch(fetchCurrentPracticeInfo(true));
+  }, [dispatch]);
+
   const [appointmentStatus, setAppointmentStatus] = useState("confirmed");
   const [viewMode, setViewMode] = useState("schedule");
   // Derived patient details from Redux hook
@@ -239,6 +253,51 @@ const OperatorySidebar = ({
   const [familyExpanded, setFamilyExpanded] = useState(true);
   const [proceduresExpanded, setProceduresExpanded] = useState(true);
   const [recareExpanded, setRecareExpanded] = useState(true);
+
+  const patientHistory = useSelector(selectPatientHistoryList);
+  const patientHistoryLoading = useSelector(selectPatientHistoryLoading);
+
+  const recareProcedures = useMemo(() => {
+    if (!patientHistory || patientHistory.length === 0) return [];
+    const pastAppointments = patientHistory.filter(appt => 
+      dayjs(appt.appointmentDate || appt.start).isBefore(dayjs(), 'day') || 
+      appt.status === 'checked_out_complete' || 
+      appt.status === 'completed'
+    );
+    const map = new Map();
+    pastAppointments.forEach(appt => {
+      if (appt.customFields?.procedures && Array.isArray(appt.customFields.procedures)) {
+        appt.customFields.procedures.forEach(p => {
+          if (p.code) {
+            map.set(p.code, { code: p.code, treatment: p.treatment || p.name || "Treatment", duration: appt.durationMinutes || appt.duration || 60 });
+          }
+        });
+      }
+      if (appt.procedures) {
+        const codes = appt.procedures.split(',').map(s => s.trim()).filter(Boolean);
+        codes.forEach(code => {
+          if (!map.has(code)) {
+            map.set(code, { code, treatment: appt.appointmentType?.name || "Treatment", duration: appt.durationMinutes || appt.duration || 60 });
+          }
+        });
+      }
+      if (appt.appointmentType?.name) {
+        const name = appt.appointmentType.name;
+        if (!map.has(name)) {
+          map.set(name, { code: "RECARE", treatment: name, duration: appt.durationMinutes || appt.duration || 60 });
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [patientHistory]);
+
+  const defaultRecareProcedures = [
+    { code: "D0120", treatment: "Periodic Oral Evaluation", duration: 50 },
+    { code: "D1110", treatment: "Prophy", duration: 60 },
+    { code: "D0274", treatment: "Bitewings - Four Xrays", duration: 50 },
+  ];
+
+  const displayProcedures = recareProcedures.length > 0 ? recareProcedures : defaultRecareProcedures;
   
   // --- Search Form State ---
   const [searchProvider, setSearchProvider] = useState(null);
@@ -252,6 +311,98 @@ const OperatorySidebar = ({
   const [searchDoubleBooking, setSearchDoubleBooking] = useState(false);
   const [searchRange, setSearchRange] = useState("1 month");
   const [productivityProvider, setProductivityProvider] = useState("all");
+
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchMode, setSearchMode] = useState("input"); // "input" or "results"
+
+  const handlePerformSearch = () => {
+    let start = searchStartDate ? dayjs(searchStartDate) : dayjs();
+    let end = searchEndDate ? dayjs(searchEndDate) : null;
+    
+    if (!end) {
+      const months = parseInt(searchRange) || 1;
+      end = start.add(months, "month");
+    }
+    
+    const results = [];
+    const roomsToSearch = searchOperatory ? [searchOperatory] : rooms;
+    const searchProviderId = searchProvider?._id || searchProvider?.id;
+    
+    let current = start.clone();
+    let dayCount = 0;
+    // Cap at 90 days to avoid massive arrays or rendering lag
+    while ((current.isBefore(end) || current.isSame(end, "day")) && dayCount < 90) {
+      const dayOfWeek = current.day();
+      // Skip weekends
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        const dateStr = current.format("YYYY-MM-DD");
+        
+        const dayAppts = appointments.filter(a => {
+          const apptDate = dayjs(a.date || a.appointmentDate).format("YYYY-MM-DD");
+          return apptDate === dateStr;
+        });
+        
+        roomsToSearch.forEach(room => {
+          const roomId = room._id || room.id;
+          const colId = `op${roomId}`;
+          
+          // 1-hour candidate slots
+          const candidateSlots = [
+            { label: "9:00 AM to 10:00 AM", startHour: 9, endHour: 10, amPm: "AM" },
+            { label: "10:00 AM to 11:00 AM", startHour: 10, endHour: 11, amPm: "AM" },
+            { label: "11:00 AM to 12:00 PM", startHour: 11, endHour: 12, amPm: "AM" },
+            { label: "1:00 PM to 2:00 PM", startHour: 13, endHour: 14, amPm: "PM" },
+            { label: "2:00 PM to 3:00 PM", startHour: 14, endHour: 15, amPm: "PM" },
+            { label: "3:00 PM to 4:00 PM", startHour: 15, endHour: 16, amPm: "PM" },
+            { label: "4:00 PM to 5:00 PM", startHour: 16, endHour: 17, amPm: "PM" },
+          ];
+          
+          candidateSlots.forEach(slot => {
+            if (slot.amPm === "AM" && !searchAm) return;
+            if (slot.amPm === "PM" && !searchPm) return;
+            
+            const slotStart = current.hour(slot.startHour).minute(0);
+            const slotEnd = current.hour(slot.endHour).minute(0);
+            
+            const hasConflict = dayAppts.some(appt => {
+              const apptStart = dayjs(appt.start);
+              const apptEnd = dayjs(appt.end);
+              const isOverlap = apptStart.isBefore(slotEnd) && apptEnd.isAfter(slotStart);
+              if (!isOverlap) return false;
+              
+              // Overlaps room/operatory
+              if (!searchDoubleBooking && (String(appt.columnId) === colId || String(appt.roomId) === String(roomId))) {
+                return true;
+              }
+              
+              // Overlaps selected provider
+              if (searchProviderId && String(appt.providerId) === String(searchProviderId)) {
+                return true;
+              }
+              
+              return false;
+            });
+            
+            if (!hasConflict) {
+              results.push({
+                date: current.clone(),
+                dateStr: dateStr,
+                dateFormatted: current.format("ddd MM/DD/YY"),
+                roomName: room.name || `Op ${roomId}`,
+                columnId: colId,
+                timeLabel: slot.label,
+              });
+            }
+          });
+        });
+      }
+      current = current.add(1, "day");
+      dayCount++;
+    }
+    
+    setSearchResults(results);
+    setSearchMode("results");
+  };
 
   const [checkInChecklist, setCheckInChecklist] = useState({
     patientArrived: null,
@@ -309,8 +460,9 @@ const OperatorySidebar = ({
       const pid = selectedPatient.id || selectedPatient._id;
       fetchById(pid);
       fetchBalance(pid);
+      dispatch(fetchPatientHistory(pid));
     }
-  }, [selectedPatient, fetchById, fetchBalance]);
+  }, [selectedPatient, fetchById, fetchBalance, dispatch]);
 
   useEffect(() => {
     if (isCreatingPatient) return;
@@ -472,16 +624,26 @@ const OperatorySidebar = ({
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a3353' }}>
-                        {selectedPatient?.firstName} {selectedPatient?.lastName} (#{selectedPatient?.patientCode || selectedPatient?._id?.slice(-4) || '---'})
+                        {patientDetails?.firstName || selectedPatient?.firstName || ""} {patientDetails?.lastName || selectedPatient?.lastName || ""}
+                        {!patientDetails?.firstName && !selectedPatient?.firstName && (patientDetails?.name || selectedPatient?.name || "---")}
+                        {" "}(#{patientDetails?.patientCode || selectedPatient?.patientCode || patientDetails?._id?.slice(-4) || selectedPatient?._id?.slice(-4) || '---'})
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
                         <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>
-                          Birthday: {selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '---'} (35)
+                          Birthday: {(() => {
+                            const dob = patientDetails?.dateOfBirth || selectedPatient?.dateOfBirth;
+                            if (!dob) return '---';
+                            const age = dayjs().diff(dayjs(dob), 'year');
+                            return `${dayjs(dob).format('MM/DD/YYYY')} (${isNaN(age) ? '---' : age})`;
+                          })()}
                         </Typography>
                         <IconButton 
                           size="small" 
                           sx={{ p: 0.2, color: '#999', '&:hover': { color: '#666' } }}
-                          onClick={() => copyToClipboard(selectedPatient?.dateOfBirth ? dayjs(selectedPatient.dateOfBirth).format('MM/DD/YYYY') : '')}
+                          onClick={() => {
+                            const dob = patientDetails?.dateOfBirth || selectedPatient?.dateOfBirth;
+                            if (dob) copyToClipboard(dayjs(dob).format('MM/DD/YYYY'));
+                          }}
                         >
                           <ContentCopy sx={{ fontSize: 12 }} />
                         </IconButton>
@@ -504,9 +666,70 @@ const OperatorySidebar = ({
                 </Paper>
 
                 {/* Section: Procedure List Example */}
-                <Box>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
                   <HeaderAccordion title="P 1 #15 crown /bu" value="____ min" icon={KeyboardArrowRightIcon} expanded={proceduresExpanded} setExpanded={setProceduresExpanded} />
-                  <HeaderAccordion title="Recare" value="____ min" icon={EventNoteIcon} expanded={recareExpanded} setExpanded={setRecareExpanded} />
+                  
+                  <DetailAccordion title="Recare" expanded={recareExpanded} setExpanded={setRecareExpanded}>
+                    <Box 
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", JSON.stringify({
+                          isRecareGroup: true,
+                          procedures: displayProcedures,
+                          duration: Math.max(...displayProcedures.map(p => p.duration || 60), 60),
+                          patientId: selectedPatient?.id || selectedPatient?._id,
+                          patientName: `${selectedPatient?.firstName} ${selectedPatient?.lastName}`,
+                        }));
+                      }}
+                      sx={{ 
+                        p: 1, 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        gap: 0.75,
+                        cursor: "grab",
+                        border: "2px dashed #1976d2",
+                        borderRadius: "8px",
+                        bgcolor: "#f0f7ff",
+                        "&:hover": {
+                          bgcolor: "#e3f2fd",
+                          borderColor: "#1565c0",
+                        },
+                        "&:active": {
+                          cursor: "grabbing"
+                        }
+                      }}
+                    >
+                      {displayProcedures.map((proc, index) => (
+                        <Box
+                          key={index}
+                          sx={{
+                            p: 1,
+                            bgcolor: "#ffffff",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <Box sx={{ display: "flex", flexDirection: "column" }}>
+                            <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: "#1e293b" }}>
+                              {proc.code}
+                            </Typography>
+                            <Typography sx={{ fontSize: "0.7rem", color: "#475569", fontWeight: 500 }}>
+                              {proc.treatment}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ bgcolor: "#e2e8f0", px: 0.75, py: 0.25, borderRadius: "4px", flexShrink: 0 }}>
+                            <Typography sx={{ fontSize: "0.65rem", color: "#475569", fontWeight: 700 }}>
+                              {proc.duration} min
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </DetailAccordion>
                 </Box>
 
                 {/* List of Scheduled Appointments (Integrated from Dialog design) */}
@@ -560,22 +783,28 @@ const OperatorySidebar = ({
 
                     <Box>
                       <Typography className="detail-label">Patient Forms</Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, pl: 1 }}>
-                        {(patientDetails?.forms || ['B', 'R', 'P', 'Q']).map(form => {
-                          const char = typeof form === 'string' ? form : form.type?.[0] || '?';
-                          const isCompleted = typeof form === 'object' ? form.status === 'completed' : false;
-                          return (
-                            <Tooltip key={char} title={typeof form === 'object' ? form.name : char}>
-                              <Box sx={{ 
-                                width: 18, height: 18, 
-                                bgcolor: isCompleted ? '#10b981' : (char === 'B' ? '#ef4444' : '#f5f5f5'), 
-                                color: (isCompleted || char === 'B') ? 'white' : '#999', 
-                                fontSize: '10px', fontWeight: 800, 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' 
-                              }}>{char}</Box>
-                            </Tooltip>
-                          );
-                        })}
+                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, pl: 1, flexWrap: 'wrap' }}>
+                        {patientDetails?.forms && patientDetails.forms.length > 0 ? (
+                          patientDetails.forms.map(form => {
+                            const char = typeof form === 'string' ? form : form.type?.[0] || '?';
+                            const isCompleted = typeof form === 'object' ? form.status === 'completed' : false;
+                            return (
+                              <Tooltip key={char} title={typeof form === 'object' ? form.name : char}>
+                                <Box sx={{ 
+                                  width: 18, height: 18, 
+                                  bgcolor: isCompleted ? '#10b981' : (char === 'B' ? '#ef4444' : '#f5f5f5'), 
+                                  color: (isCompleted || char === 'B') ? 'white' : '#999', 
+                                  fontSize: '10px', fontWeight: 800, 
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' 
+                                }}>{char}</Box>
+                              </Tooltip>
+                            );
+                          })
+                        ) : (
+                          <Typography sx={{ fontSize: '0.72rem', color: '#999', fontStyle: 'italic' }}>
+                            No forms submitted
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
 
@@ -585,14 +814,21 @@ const OperatorySidebar = ({
                         <Typography className="detail-label" sx={{ color: '#777', mb: 0 }}>Medical Alerts</Typography>
                       </Box>
                       <Box sx={{ pl: 2.5, mt: 0.5 }}>
-                        <Typography sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
-                          Diabetes Type I
-                        </Typography>
-                        {(patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts || []).map((alert, idx) => (
-                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
-                            {typeof alert === 'string' ? alert : alert.description || alert.name}
-                          </Typography>
-                        ))}
+                        {(() => {
+                          const alerts = patientDetails?.medicalAlerts || patientDetails?.medicalHistory?.alerts || [];
+                          if (alerts.length === 0) {
+                            return (
+                              <Typography sx={{ fontSize: '0.72rem', color: '#999', fontStyle: 'italic' }}>
+                                No medical alerts
+                              </Typography>
+                            );
+                          }
+                          return alerts.map((alert, idx) => (
+                            <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
+                              {typeof alert === 'string' ? alert : alert.description || alert.name}
+                            </Typography>
+                          ));
+                        })()}
                       </Box>
                     </Box>
 
@@ -655,73 +891,280 @@ const OperatorySidebar = ({
         )}
 
         {/* TAB 1: Pending */}
-        {activeTab === 1 && <Box p={2}><Typography variant="body2" color="text.secondary">Pending Appointments View</Typography></Box>}
+        {activeTab === 1 && (
+          <Box
+            onDragOver={(e) => {
+              e.preventDefault();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              try {
+                const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
+                if (dragData && onDropOnPending) {
+                  onDropOnPending(dragData);
+                }
+              } catch (err) {
+                console.error("Error parsing drop data:", err);
+              }
+            }}
+            sx={{
+              p: 2,
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              minHeight: "250px",
+              bgcolor: "#f8fafc",
+              border: "2px dashed #cbd5e1",
+              borderRadius: "8px",
+              m: 2,
+              transition: "all 0.2s ease",
+              "&:hover": {
+                borderColor: "#3b82f6",
+                bgcolor: "#eff6ff",
+              }
+            }}
+          >
+            <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: "#334155", textAlign: "center" }}>
+              Pending Reschedules ({pendingItems.length})
+            </Typography>
+
+            {pendingItems.length === 0 ? (
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, py: 4, gap: 1 }}>
+                <Typography sx={{ fontSize: 28 }}>🔄</Typography>
+                <Typography sx={{ fontSize: "0.75rem", color: "#64748b", textAlign: "center", fontWeight: 500 }}>
+                  Drag any appointment or blocked slot from the calendar and drop here
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, maxHeight: "400px", overflowY: "auto", pr: 0.5 }}>
+                {pendingItems.map((item) => {
+                  const isAppt = item.type === "appointment";
+                  const title = isAppt ? item.data.patientName : (item.data.notes || "Blocked Slot");
+                  const subtitle = isAppt ? (item.data.title || "Appointment") : "Calendar Block";
+                  const duration = isAppt ? (item.data.durationMinutes || 60) : 30;
+                  
+                  return (
+                    <Paper
+                      key={item.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", JSON.stringify({
+                          isPendingItem: true,
+                          id: item.id,
+                          type: item.type,
+                          originalData: item.data
+                        }));
+                      }}
+                      sx={{
+                        p: 1.25,
+                        borderRadius: "8px",
+                        border: "1px solid #e2e8f0",
+                        bgcolor: "#ffffff",
+                        cursor: "grab",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          boxShadow: "0 4px 8px rgba(0,0,0,0.08)",
+                          transform: "translateY(-1px)",
+                          borderColor: "#93c5fd"
+                        },
+                        "&:active": {
+                          cursor: "grabbing"
+                        },
+                        position: "relative"
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.75 }}>
+                        {isAppt ? (
+                          <Box sx={{ 
+                            width: 24, 
+                            height: 24, 
+                            borderRadius: "50%", 
+                            bgcolor: "#e0f2fe", 
+                            color: "#0284c7", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center",
+                            fontSize: "0.7rem",
+                            fontWeight: 700
+                          }}>
+                            {item.data.patientInitials || "PT"}
+                          </Box>
+                        ) : (
+                          <Box sx={{ 
+                            width: 24, 
+                            height: 24, 
+                            borderRadius: "50%", 
+                            bgcolor: "#fef3c7", 
+                            color: "#d97706", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center",
+                            fontSize: "0.7rem",
+                            fontWeight: 700
+                          }}>
+                            🚫
+                          </Box>
+                        )}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {title}
+                          </Typography>
+                          <Typography sx={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 500 }}>
+                            {subtitle}
+                          </Typography>
+                        </Box>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onRemovePending) onRemovePending(item);
+                          }}
+                          sx={{ p: 0.2, color: "#94a3b8", "&:hover": { color: "#ef4444" } }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Box>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                        <Box sx={{ bgcolor: isAppt ? "#f0fdf4" : "#fff7ed", px: 1, py: 0.25, borderRadius: "4px" }}>
+                          <Typography sx={{ fontSize: "0.65rem", color: isAppt ? "#15803d" : "#c2410c", fontWeight: 700 }}>
+                            {isAppt ? "APPOINTMENT" : "BLOCK"}
+                          </Typography>
+                        </Box>
+                        <Typography sx={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>
+                          ⏱️ {duration} min
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            )}
+          </Box>
+        )}
 
         {/* TAB 2: Search */}
         {activeTab === 2 && (
           <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', mb: 1 }}>Search for Empty Slots By:</Typography>
-            <Box>
-              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>PROVIDER:</Typography>
-              <Autocomplete
-                size="small"
-                options={providers}
-                getOptionLabel={(o) => {
-                  if (!o) return "";
-                  if (o.name) return o.name;
-                  const fullName = `${o.firstName || ""} ${o.lastName || ""}`.trim();
-                  if (fullName) return fullName;
-                  const userFullName = `${o.userId?.firstName || ""} ${o.userId?.lastName || ""}`.trim();
-                  if (userFullName) return userFullName;
-                  return o.providerCode || `Provider #${o._id || o.id}` || "";
-                }}
-                value={searchProvider}
-                onChange={(_, v) => setSearchProvider(v)}
-                renderInput={(params) => <TextField {...params} placeholder="Search and select providers" variant="outlined" />}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>DURATION:</Typography>
-              <TextField size="small" variant="standard" value={searchDuration} onChange={(e) => setSearchDuration(e.target.value)} sx={{ width: 40, "& .MuiInputBase-input": { textAlign: 'center', fontWeight: 600, fontSize: '0.75rem' }}} />
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>mins</Typography>
-            </Box>
-            <Box>
-              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>OPERATORY:</Typography>
-              <Autocomplete size="small" options={rooms} getOptionLabel={(o) => o.name || ""} value={searchOperatory} onChange={(_, v) => setSearchOperatory(v)} renderInput={(params) => <TextField {...params} placeholder="Search Operatory" variant="outlined" />} />
-            </Box>
-            <Box>
-              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>DATE RANGE:</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField size="small" type="date" value={searchStartDate} onChange={(e) => setSearchStartDate(e.target.value)} sx={{ "& .MuiInputBase-input": { fontSize: '0.7rem' } }} />
-                <TextField size="small" type="date" value={searchEndDate} onChange={(e) => setSearchEndDate(e.target.value)} sx={{ "& .MuiInputBase-input": { fontSize: '0.7rem' } }} />
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>TIME:</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchAm} onChange={(e) => setSearchAm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>AM</Typography></Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchPm} onChange={(e) => setSearchPm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>PM</Typography></Box>
-            </Box>
+            {searchMode === "input" ? (
+              <>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', mb: 1 }}>Search for Empty Slots By:</Typography>
+                <Box>
+                  <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>PROVIDER:</Typography>
+                  <Autocomplete
+                    size="small"
+                    options={providers}
+                    getOptionLabel={(o) => {
+                      if (!o) return "";
+                      if (o.name) return o.name;
+                      const fullName = `${o.firstName || ""} ${o.lastName || ""}`.trim();
+                      if (fullName) return fullName;
+                      const userFullName = `${o.userId?.firstName || ""} ${o.userId?.lastName || ""}`.trim();
+                      if (userFullName) return userFullName;
+                      return o.providerCode || `Provider #${o._id || o.id}` || "";
+                    }}
+                    value={searchProvider}
+                    onChange={(_, v) => setSearchProvider(v)}
+                    renderInput={(params) => <TextField {...params} placeholder="Search and select providers" variant="outlined" />}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>DURATION:</Typography>
+                  <TextField size="small" variant="standard" value={searchDuration} onChange={(e) => setSearchDuration(e.target.value)} sx={{ width: 40, "& .MuiInputBase-input": { textAlign: 'center', fontWeight: 600, fontSize: '0.75rem' }}} />
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>mins</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>OPERATORY:</Typography>
+                  <Autocomplete size="small" options={rooms} getOptionLabel={(o) => o.name || ""} value={searchOperatory} onChange={(_, v) => setSearchOperatory(v)} renderInput={(params) => <TextField {...params} placeholder="Search Operatory" variant="outlined" />} />
+                </Box>
+                <Box>
+                  <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>DATE RANGE:</Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField size="small" type="date" value={searchStartDate} onChange={(e) => setSearchStartDate(e.target.value)} sx={{ "& .MuiInputBase-input": { fontSize: '0.7rem' } }} />
+                    <TextField size="small" type="date" value={searchEndDate} onChange={(e) => setSearchEndDate(e.target.value)} sx={{ "& .MuiInputBase-input": { fontSize: '0.7rem' } }} />
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>TIME:</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchAm} onChange={(e) => setSearchAm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>AM</Typography></Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchPm} onChange={(e) => setSearchPm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>PM</Typography></Box>
+                </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: -1 }}>
-              <Checkbox size="small" checked={searchDoubleBooking} onChange={(e) => setSearchDoubleBooking(e.target.checked)} sx={{ p: 0.5 }} />
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a678d' }}>ALLOW DOUBLE BOOKING</Typography>
-            </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: -1 }}>
+                  <Checkbox size="small" checked={searchDoubleBooking} onChange={(e) => setSearchDoubleBooking(e.target.checked)} sx={{ p: 0.5 }} />
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a678d' }}>ALLOW DOUBLE BOOKING</Typography>
+                </Box>
 
-            <Box>
-              <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>SEARCH AVAILABILITY FOR:</Typography>
-              <Select
-                fullWidth size="small"
-                value={searchRange}
-                onChange={(e) => setSearchRange(e.target.value)}
-                sx={{ bgcolor: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
-              >
-                <MenuItem value="1 month">1 month</MenuItem>
-                <MenuItem value="2 months">2 months</MenuItem>
-                <MenuItem value="3 months">3 months</MenuItem>
-                <MenuItem value="6 months">6 months</MenuItem>
-              </Select>
-            </Box>
-            <Button variant="contained" fullWidth sx={{ mt: 1, bgcolor: '#5c7cbc', textTransform: 'none', fontWeight: 700, boxShadow: 'none', "&:hover": { bgcolor: '#4a6496' } }}>Search</Button>
+                <Box>
+                  <Typography variant="overline" sx={{ display: 'block', mb: 0.5, lineHeight: 1, color: '#64748b', fontWeight: 700 }}>SEARCH AVAILABILITY FOR:</Typography>
+                  <Select
+                    fullWidth size="small"
+                    value={searchRange}
+                    onChange={(e) => setSearchRange(e.target.value)}
+                    sx={{ bgcolor: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
+                  >
+                    <MenuItem value="1 month">1 month</MenuItem>
+                    <MenuItem value="2 months">2 months</MenuItem>
+                    <MenuItem value="3 months">3 months</MenuItem>
+                    <MenuItem value="6 months">6 months</MenuItem>
+                    <MenuItem value="8 months">8 months</MenuItem>
+                  </Select>
+                </Box>
+                <Button onClick={handlePerformSearch} variant="contained" fullWidth sx={{ mt: 1, bgcolor: '#5c7cbc', textTransform: 'none', fontWeight: 700, boxShadow: 'none', "&:hover": { bgcolor: '#4a6496' } }}>Search</Button>
+              </>
+            ) : (
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, borderBottom: '1px solid #cbd5e1', pb: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
+                    Results for: {searchDuration} mins, {searchAm ? 'AM ' : ''}{searchPm ? 'PM' : ''}, {searchRange}
+                  </Typography>
+                  <IconButton size="small" onClick={() => setSearchMode("input")} sx={{ p: 0.5 }}>
+                    <EditIcon sx={{ fontSize: 16, color: '#1976d2' }} />
+                  </IconButton>
+                </Box>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1, maxHeight: "400px", overflowY: "auto", pr: 0.5 }}>
+                  {searchResults.length === 0 ? (
+                    <Typography sx={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', py: 4 }}>
+                      No empty slots found for the selected criteria.
+                    </Typography>
+                  ) : (
+                    searchResults.map((slot, idx) => (
+                      <Paper
+                        key={idx}
+                        onClick={() => {
+                          if (onDateChange) onDateChange(slot.date);
+                        }}
+                        sx={{
+                          p: 1.25,
+                          borderRadius: "6px",
+                          border: "1px solid #e2e8f0",
+                          bgcolor: "#ffffff",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            borderColor: "#1976d2",
+                            bgcolor: "#f0f7ff",
+                            boxShadow: "0 2px 8px rgba(25, 118, 210, 0.08)"
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                          <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: "#1e293b" }}>
+                            {slot.dateFormatted}
+                          </Typography>
+                          <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            {slot.roomName}
+                          </Typography>
+                        </Box>
+                        <Typography sx={{ fontSize: "0.75rem", color: "#1976d2", fontWeight: 700 }}>
+                          {slot.timeLabel}
+                        </Typography>
+                      </Paper>
+                    ))
+                  )}
+                </Box>
+              </>
+            )}
           </Box>
         )}
 
@@ -850,10 +1293,14 @@ const OperatorySidebar = ({
         )}
       </Box>
 
-      <Divider />
-      <Box sx={{ p: 2, bgcolor: "#fafcff", flexShrink: 0 }}>
-        <StyledDateCalendar value={selectedDate} onChange={(v) => v && onDateChange && onDateChange(v)} />
-      </Box>
+      {activeTab !== 2 && (
+        <>
+          <Divider />
+          <Box sx={{ p: 2, bgcolor: "#fafcff", flexShrink: 0 }}>
+            <StyledDateCalendar value={selectedDate} onChange={(v) => v && onDateChange && onDateChange(v)} />
+          </Box>
+        </>
+      )}
 
       <PatientChat open={chatOpen} onClose={handleCloseChat} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
       <AppointmentPage open={appointmentPageOpen} onClose={handleCloseAppointmentPage} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
@@ -963,18 +1410,125 @@ const DetailAccordion = ({ title, children, expanded, setExpanded }) => (
   </Box>
 );
 
-const ChecklistItem = ({ label, checked = false }) => (
-  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 0.3, px: 1, borderBottom: "1px solid #eee", "&:last-child": { borderBottom: "none" } }}>
-    <Typography sx={{ fontSize: "0.7rem", color: "#666", fontWeight: 500 }}>{label}</Typography>
-    {checked && <CheckIcon sx={{ fontSize: 12, color: "#999" }} />}
-  </Box>
-);
+const CollapsibleChecklist = ({ title, items, selections, onToggleItem, open, onToggleOpen }) => {
+  const doneCount = items.filter(item => selections[item]).length;
+  const totalCount = items.length;
+
+  return (
+    <Box sx={{ borderBottom: "1px solid #eee" }}>
+      <Box 
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleOpen();
+        }}
+        sx={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          py: 0.5, 
+          px: 1.5, 
+          cursor: "pointer",
+          bgcolor: "#fdfdfd",
+          "&:hover": { bgcolor: "#f1f5f9" }
+        }}
+      >
+        <Typography sx={{ fontSize: "0.75rem", color: "#334155", fontWeight: 600 }}>
+          {title} ({doneCount}/{totalCount})
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {doneCount === totalCount && totalCount > 0 ? (
+            <CheckIcon sx={{ fontSize: 14, color: "#10b981", fontWeight: 'bold' }} />
+          ) : null}
+          <KeyboardArrowDownIcon sx={{ fontSize: 16, color: "#64748b", transform: open ? "rotate(180deg)" : "none", transition: "0.2s" }} />
+        </Box>
+      </Box>
+      <Collapse in={open}>
+        <Box sx={{ pl: 3.5, pr: 1.5, py: 0.5, bgcolor: "#fff", display: "flex", flexDirection: "column", gap: 0.25 }}>
+          {items.map(item => (
+            <Box key={item} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.1 }} onClick={(e) => e.stopPropagation()}>
+              <Typography sx={{ fontSize: "0.7rem", color: "#475569" }}>{item}</Typography>
+              <Checkbox 
+                size="small" 
+                checked={!!selections[item]} 
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onToggleItem(item);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                sx={{ p: 0.25 }}
+              />
+            </Box>
+          ))}
+          {items.length === 0 && (
+            <Typography sx={{ fontSize: "0.65rem", color: "#94a3b8", fontStyle: "italic", py: 0.5 }}>
+              No items configured
+            </Typography>
+          )}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
+
+const APPOINTMENT_STATUS_OPTIONS = [
+  { value: "unconfirmed", label: "Unconfirmed" },
+  { value: "preconfirmed", label: "Preconfirmed" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "arrived", label: "Arrived" },
+  { value: "ready_to_be_seated", label: "Ready To Be Seated" },
+  { value: "seated", label: "Seated" },
+  { value: "ready_for_doctor", label: "Ready For Doctor" },
+  { value: "in_treatment", label: "In Treatment" },
+  { value: "ready_for_checkout", label: "Ready For Checkout" },
+  { value: "checked_out_incomplete", label: "Checked out incomplete" },
+  { value: "checked_out_complete", label: "Checked out complete" },
+  { value: "no_show", label: "No Show" },
+  { value: "call", label: "Call" },
+  { value: "left_message", label: "Left message" },
+  { value: "running_late", label: "Running Late" },
+  { value: "sent_email_or_text", label: "Sent Email Or Text" },
+  { value: "late", label: "Late" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "rescheduled", label: "Rescheduled" },
+];
 
 const SidebarAppointmentCard = ({ appointment, onClick }) => {
-  const headerDate = dayjs(appointment.start).format("MM/DD/YYYY");
-  const headerTime = dayjs(appointment.start).format("hh:mm A");
+  const dispatch = useDispatch();
+  const practiceData = useSelector((state) => state.practiceInfo.data);
+
+  const preApptItems = practiceData?.scheduleConfig?.preApptChecklist || ["Import History", "Import Record", "Appt Reminder", "Verify Insurance Eligibility", "Share Consent Forms", "Deposit for treatment"];
+  const checkInItems = practiceData?.scheduleConfig?.checkInChecklist || ["Review Records", "Review & sign Visit Plan", "Sign Consent Forms", "Verify Premed Taken"];
+  const checkOutItems = practiceData?.scheduleConfig?.checkOutChecklist || ["Complete & Bill Procedures", "Purchase Products", "Share Clinical Reports", "Prescription", "Schedule Next Appt", "Send Lab Case"];
+
+  const [preApptOpen, setPreApptOpen] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkOutOpen, setCheckOutOpen] = useState(false);
+
+  const headerDate = dayjs(appointment.start || appointment.appointmentDate).format("MM/DD/YYYY");
+  const headerTime = dayjs(appointment.start || appointment.appointmentDate).format("hh:mm A");
   const type = appointment.title || "RECARE";
   const isRecare = type.toLowerCase().includes("recare");
+
+  const checklistsState = appointment.checklists || { preAppt: {}, checkIn: {}, checkOut: {} };
+
+  const currentStatus = appointment.status || "unconfirmed";
+  const showAllChecklists = !["unconfirmed", "preconfirmed", "confirmed", "scheduled"].includes(currentStatus);
+
+  const handleToggleItem = (category, item) => {
+    const currentCategorySelections = checklistsState[category] || {};
+    const updatedChecklists = {
+      ...checklistsState,
+      [category]: {
+        ...currentCategorySelections,
+        [item]: !currentCategorySelections[item]
+      }
+    };
+
+    dispatch(updateAppointmentThunk({
+      appointmentId: appointment._id || appointment.id,
+      payload: { checklists: updatedChecklists }
+    }));
+  };
 
   return (
     <Paper
@@ -989,9 +1543,32 @@ const SidebarAppointmentCard = ({ appointment, onClick }) => {
       </Box>
       <Box sx={{ p: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#333' }}>
-            {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : "Scheduled"}
-          </Typography>
+          <Select
+            value={currentStatus}
+            onChange={(e) => {
+              const newStatus = e.target.value;
+              dispatch(updateAppointmentThunk({
+                appointmentId: appointment._id || appointment.id,
+                payload: { status: newStatus }
+              }));
+            }}
+            onClick={(e) => e.stopPropagation()}
+            size="small"
+            sx={{
+              height: 28,
+              fontSize: "0.75rem",
+              "& .MuiSelect-select": { py: 0.25, pl: 1 },
+              width: "145px",
+              borderRadius: "4px",
+              bgcolor: "#fff"
+            }}
+          >
+            {APPOINTMENT_STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.75rem" }}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </Select>
           <Typography sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 700 }}>P1 V{appointment.id?.toString().slice(-1) || '1'}</Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
@@ -1006,9 +1583,34 @@ const SidebarAppointmentCard = ({ appointment, onClick }) => {
         </Box>
       </Box>
       <Box sx={{ borderTop: "1px solid #ddd", bgcolor: "#f9f9f9" }}>
-        <ChecklistItem label="Pre-appt Checklist" checked />
-        <ChecklistItem label="Check-in Checklist" checked />
-        <ChecklistItem label="Check-out Checklist" checked />
+        <CollapsibleChecklist 
+          title="Pre-appt Checklist" 
+          items={preApptItems} 
+          selections={checklistsState.preAppt || {}} 
+          onToggleItem={(item) => handleToggleItem('preAppt', item)}
+          open={preApptOpen}
+          onToggleOpen={() => setPreApptOpen(!preApptOpen)}
+        />
+        {showAllChecklists && (
+          <>
+            <CollapsibleChecklist 
+              title="Check-in Checklist" 
+              items={checkInItems} 
+              selections={checklistsState.checkIn || {}} 
+              onToggleItem={(item) => handleToggleItem('checkIn', item)}
+              open={checkInOpen}
+              onToggleOpen={() => setCheckInOpen(!checkInOpen)}
+            />
+            <CollapsibleChecklist 
+              title="Check-out Checklist" 
+              items={checkOutItems} 
+              selections={checklistsState.checkOut || {}} 
+              onToggleItem={(item) => handleToggleItem('checkOut', item)}
+              open={checkOutOpen}
+              onToggleOpen={() => setCheckOutOpen(!checkOutOpen)}
+            />
+          </>
+        )}
       </Box>
     </Paper>
   );

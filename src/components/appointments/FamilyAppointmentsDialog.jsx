@@ -21,6 +21,8 @@ import {
   Select,
   MenuItem,
   Stack,
+  Checkbox,
+  Collapse,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -32,39 +34,109 @@ import {
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchFamilyAppointments, selectFamilyAppointmentsList, selectFamilyAppointmentsLoading } from "../../store/slices/appointmentSlice";
+import { fetchFamilyAppointments, selectFamilyAppointmentsList, selectFamilyAppointmentsLoading, updateAppointmentThunk } from "../../store/slices/appointmentSlice";
+import { fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
 
 /**
  * ChecklistItem Component
  */
-const ChecklistItem = ({ label, checked = false }) => (
-  <Box
-    sx={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      py: 0.5,
-      px: 1,
-      borderBottom: "1px solid #eee",
-      "&:last-child": { borderBottom: "none" },
-    }}
-  >
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <KeyboardArrowDownIcon sx={{ fontSize: 14, color: "#999" }} />
-      <Typography sx={{ fontSize: "0.75rem", color: "#666", fontWeight: 500 }}>
-        {label}
-      </Typography>
+const CollapsibleChecklist = ({ title, items, selections, onToggleItem, open, onToggleOpen }) => {
+  const doneCount = items.filter(item => selections[item]).length;
+  const totalCount = items.length;
+
+  return (
+    <Box sx={{ borderBottom: "1px solid #eee" }}>
+      <Box 
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleOpen();
+        }}
+        sx={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          py: 0.5, 
+          px: 1.5, 
+          cursor: "pointer",
+          bgcolor: "#fdfdfd",
+          "&:hover": { bgcolor: "#f1f5f9" }
+        }}
+      >
+        <Typography sx={{ fontSize: "0.75rem", color: "#334155", fontWeight: 600 }}>
+          {title} ({doneCount}/{totalCount})
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {doneCount === totalCount && totalCount > 0 ? (
+            <CheckIcon sx={{ fontSize: 14, color: "#10b981", fontWeight: 'bold' }} />
+          ) : null}
+          <KeyboardArrowDownIcon sx={{ fontSize: 16, color: "#64748b", transform: open ? "rotate(180deg)" : "none", transition: "0.2s" }} />
+        </Box>
+      </Box>
+      <Collapse in={open}>
+        <Box sx={{ pl: 3.5, pr: 1.5, py: 0.5, bgcolor: "#fff", display: "flex", flexDirection: "column", gap: 0.25 }}>
+          {items.map(item => (
+            <Box key={item} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.1 }} onClick={(e) => e.stopPropagation()}>
+              <Typography sx={{ fontSize: "0.7rem", color: "#475569" }}>{item}</Typography>
+              <Checkbox 
+                size="small" 
+                checked={!!selections[item]} 
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onToggleItem(item);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                sx={{ p: 0.25 }}
+              />
+            </Box>
+          ))}
+          {items.length === 0 && (
+            <Typography sx={{ fontSize: "0.65rem", color: "#94a3b8", fontStyle: "italic", py: 0.5 }}>
+              No items configured
+            </Typography>
+          )}
+        </Box>
+      </Collapse>
     </Box>
-    {checked && <CheckIcon sx={{ fontSize: 14, color: "#b0b0b0" }} />}
-  </Box>
-);
+  );
+};
+
+const APPOINTMENT_STATUS_OPTIONS = [
+  { value: "unconfirmed", label: "Unconfirmed" },
+  { value: "preconfirmed", label: "Preconfirmed" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "arrived", label: "Arrived" },
+  { value: "ready_to_be_seated", label: "Ready To Be Seated" },
+  { value: "seated", label: "Seated" },
+  { value: "ready_for_doctor", label: "Ready For Doctor" },
+  { value: "in_treatment", label: "In Treatment" },
+  { value: "ready_for_checkout", label: "Ready For Checkout" },
+  { value: "checked_out_incomplete", label: "Checked out incomplete" },
+  { value: "checked_out_complete", label: "Checked out complete" },
+  { value: "no_show", label: "No Show" },
+  { value: "call", label: "Call" },
+  { value: "left_message", label: "Left message" },
+  { value: "running_late", label: "Running Late" },
+  { value: "sent_email_or_text", label: "Sent Email Or Text" },
+  { value: "late", label: "Late" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "rescheduled", label: "Rescheduled" },
+];
 
 /**
  * ScheduledAppointmentCard Component
  * Replicates the purple-header card with checklists.
  */
 const ScheduledAppointmentCard = ({ appointment }) => {
-  const [status, setStatus] = useState(appointment.status || "scheduled");
+  const dispatch = useDispatch();
+  const practiceData = useSelector((state) => state.practiceInfo.data);
+
+  const preApptItems = practiceData?.scheduleConfig?.preApptChecklist || ["Import History", "Import Record", "Appt Reminder", "Verify Insurance Eligibility", "Share Consent Forms", "Deposit for treatment"];
+  const checkInItems = practiceData?.scheduleConfig?.checkInChecklist || ["Review Records", "Review & sign Visit Plan", "Sign Consent Forms", "Verify Premed Taken"];
+  const checkOutItems = practiceData?.scheduleConfig?.checkOutChecklist || ["Complete & Bill Procedures", "Purchase Products", "Share Clinical Reports", "Prescription", "Schedule Next Appt", "Send Lab Case"];
+
+  const [preApptOpen, setPreApptOpen] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkOutOpen, setCheckOutOpen] = useState(false);
 
   const headerDate = dayjs(appointment.appointmentDate).isValid() 
     ? dayjs(appointment.appointmentDate).format("MM/DD/YYYY") 
@@ -75,6 +147,26 @@ const ScheduledAppointmentCard = ({ appointment }) => {
     : "---";
     
   const type = appointment.appointmentType?.name || appointment.noteType || "RECARE";
+
+  const checklistsState = appointment.checklists || { preAppt: {}, checkIn: {}, checkOut: {} };
+  const currentStatus = appointment.status || "unconfirmed";
+  const showAllChecklists = !["unconfirmed", "preconfirmed", "confirmed", "scheduled"].includes(currentStatus);
+
+  const handleToggleItem = (category, item) => {
+    const currentCategorySelections = checklistsState[category] || {};
+    const updatedChecklists = {
+      ...checklistsState,
+      [category]: {
+        ...currentCategorySelections,
+        [item]: !currentCategorySelections[item]
+      }
+    };
+
+    dispatch(updateAppointmentThunk({
+      appointmentId: appointment._id || appointment.id,
+      payload: { checklists: updatedChecklists }
+    }));
+  };
 
   return (
     <Paper
@@ -106,22 +198,28 @@ const ScheduledAppointmentCard = ({ appointment }) => {
           {/* Status and Provider */}
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              value={currentStatus}
+              onChange={(e) => {
+                const newStatus = e.target.value;
+                dispatch(updateAppointmentThunk({
+                  appointmentId: appointment._id || appointment.id,
+                  payload: { status: newStatus }
+                }));
+              }}
               size="small"
               sx={{
                 height: 32,
                 fontSize: "0.8rem",
                 "& .MuiSelect-select": { py: 0.5, pl: 1 },
-                width: "130px",
+                width: "150px",
                 borderRadius: "4px",
               }}
             >
-              <MenuItem value="scheduled">Scheduled</MenuItem>
-              <MenuItem value="unconfirmed">Unconfirmed</MenuItem>
-              <MenuItem value="confirmed">Confirmed</MenuItem>
-              <MenuItem value="rescheduled">Rescheduled</MenuItem>
-              <MenuItem value="cancelled">Cancelled</MenuItem>
+              {APPOINTMENT_STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8rem" }}>
+                  {opt.label}
+                </MenuItem>
+              ))}
             </Select>
             <Typography sx={{ fontSize: "0.85rem", color: "#666", fontWeight: 600 }}>P1</Typography>
           </Box>
@@ -155,10 +253,35 @@ const ScheduledAppointmentCard = ({ appointment }) => {
       </Box>
 
       {/* CHECKLISTS SECTION */}
-      <Box sx={{ borderTop: "1px solid #eee" }}>
-        <ChecklistItem label="Pre-appt Checklist" checked />
-        <ChecklistItem label="Check-in Checklist" checked />
-        <ChecklistItem label="Check-out Checklist" checked />
+      <Box sx={{ borderTop: "1px solid #eee", bgcolor: "#f9f9f9" }}>
+        <CollapsibleChecklist 
+          title="Pre-appt Checklist" 
+          items={preApptItems} 
+          selections={checklistsState.preAppt || {}} 
+          onToggleItem={(item) => handleToggleItem('preAppt', item)}
+          open={preApptOpen}
+          onToggleOpen={() => setPreApptOpen(!preApptOpen)}
+        />
+        {showAllChecklists && (
+          <>
+            <CollapsibleChecklist 
+              title="Check-in Checklist" 
+              items={checkInItems} 
+              selections={checklistsState.checkIn || {}} 
+              onToggleItem={(item) => handleToggleItem('checkIn', item)}
+              open={checkInOpen}
+              onToggleOpen={() => setCheckInOpen(!checkInOpen)}
+            />
+            <CollapsibleChecklist 
+              title="Check-out Checklist" 
+              items={checkOutItems} 
+              selections={checklistsState.checkOut || {}} 
+              onToggleItem={(item) => handleToggleItem('checkOut', item)}
+              open={checkOutOpen}
+              onToggleOpen={() => setCheckOutOpen(!checkOutOpen)}
+            />
+          </>
+        )}
       </Box>
     </Paper>
   );
@@ -186,8 +309,9 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
   useEffect(() => {
     if (open) {
       fetchFamilyAppointmentsData();
+      dispatch(fetchCurrentPracticeInfo(true));
     }
-  }, [open, fetchFamilyAppointmentsData]);
+  }, [open, fetchFamilyAppointmentsData, dispatch]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);

@@ -212,11 +212,26 @@ export const appointmentValidations = {
       }
       const validStatuses = [
         'scheduled',
+        'unconfirmed',
+        'preconfirmed',
         'confirmed',
-        'checked_in',
+        'arrived',
+        'ready_to_be_seated',
+        'seated',
+        'ready_for_doctor',
+        'in_treatment',
+        'ready_for_checkout',
+        'checked_out_incomplete',
+        'checked_out_complete',
         'completed',
-        'cancelled',
         'no_show',
+        'call',
+        'left_message',
+        'running_late',
+        'sent_email_or_text',
+        'late',
+        'cancelled',
+        'rescheduled'
       ];
       if (!validStatuses.includes(value)) {
         return 'Invalid status selected';
