@@ -5,6 +5,7 @@ export { default as ToothNumber } from './common/ToothNumber';
 export { default as RestorationToothIcon } from './common/RestorationToothIcon';
 export { default as RadiolucencyIcon } from './common/RadiolucencyIcon';
 export { default as SurveyRow } from './common/SurveyRow';
+export { default as SelectToothDialog } from './common/SelectToothDialog';
 
 // Section Components
 export { default as GeneralToothSurvey } from './sections/GeneralToothSurvey';
