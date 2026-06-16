@@ -236,7 +236,7 @@ const COVERAGE_DATA = {
   ]
 };
 
-const CoverageSmallTable = ({ title, rows = [], onDeleteItem }) => (
+const CoverageSmallTable = ({ title, rows = [], onDeleteItem, onChangeItem }) => (
   <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: '2px' }}>
     <Table size="small">
       <TableHead>
@@ -255,10 +255,55 @@ const CoverageSmallTable = ({ title, rows = [], onDeleteItem }) => (
         {rows && rows.length > 0 ? rows.map((row, index) => (
           <TableRow key={row.id || index} sx={{ height: '32px' }}>
             <TableCell sx={{ ...cellStyle, fontSize: '0.7rem', color: '#555' }}>{row.label}</TableCell>
-            <TableCell sx={{ ...cellStyle, ...blueText, fontSize: '0.7rem', textAlign: 'center' }}>{row.coverage}%</TableCell>
-            <TableCell sx={{ ...cellStyle, fontSize: '0.7rem', color: '#4A90E2', textAlign: 'center' }}>
+            <TableCell sx={{ fontSize: '0.65rem', color: '#1976d2', py: 0.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <TextField 
+                  variant="standard"
+                  size="small" 
+                  type="number"
+                  value={row.coverage}
+                  InputProps={{ inputProps: { min: 0, max: 100 } }}
+                  onChange={(e) => {
+                    let val = parseInt(e.target.value, 10) || 0;
+                    if (val < 0) val = 0;
+                    if (val > 100) val = 100;
+                    if (onChangeItem) onChangeItem(row.id, 'coverage', val);
+                  }}
+                  sx={{ 
+                    '& input': { py: 0.1, px: 0.5, fontSize: '0.65rem', color: '#1976d2', width: '35px', textAlign: 'center' },
+                    '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button': { 
+                      WebkitAppearance: 'none', 
+                      margin: 0 
+                    },
+                    '& input[type=number]': { MozAppearance: 'textfield' },
+                    '&::before, &::after': { display: 'none' }
+                  }} 
+                />%
+              </Box>
+            </TableCell>
+            <TableCell sx={{ fontSize: '0.65rem', color: '#1976d2', textAlign: 'center', py: 0.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-                <span>{row.waiting}</span>
+                <TextField 
+                  variant="standard"
+                  size="small" 
+                  type="number"
+                  value={row.waiting}
+                  InputProps={{ inputProps: { min: 0 } }}
+                  onChange={(e) => {
+                    let val = parseInt(e.target.value, 10) || 0;
+                    if (val < 0) val = 0;
+                    if (onChangeItem) onChangeItem(row.id, 'waiting', val);
+                  }}
+                  sx={{ 
+                    '& input': { py: 0.1, px: 0.5, fontSize: '0.65rem', color: '#1976d2', width: '30px', textAlign: 'center' },
+                    '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button': { 
+                      WebkitAppearance: 'none', 
+                      margin: 0 
+                    },
+                    '& input[type=number]': { MozAppearance: 'textfield' },
+                    '&::before, &::after': { display: 'none' }
+                  }} 
+                />
                 {row.hasArrow && (
                    <Typography sx={{ color: '#4A90E2', fontSize: '0.8rem', fontWeight: 'bold', ml: 0.5 }}>→</Typography>
                 )}
@@ -300,6 +345,23 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
     setCoverageData(updatedData);
   };
 
+  // Handler to edit coverage item
+  const handleChangeCoverageItem = (itemId, field, value) => {
+    if (!setCoverageData) {
+      console.log('Change clicked for item:', itemId, field, value);
+      return;
+    }
+
+    const updatedData = { ...data };
+    Object.keys(updatedData).forEach(key => {
+      updatedData[key] = updatedData[key].map(item => 
+        item.id === itemId ? { ...item, [field]: value } : item
+      );
+    });
+    
+    setCoverageData(updatedData);
+  };
+
   return (
     <Grid container spacing={3} sx={{ mt: 1, bgcolor: '#fff' }}>
       <Grid size={{ xs: 12 }}>
@@ -317,16 +379,19 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
           title="Diagnostic" 
           rows={data.diagnostic}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
         <CoverageSmallTable 
           title="Preventative" 
           rows={data.preventative}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
         <CoverageSmallTable 
           title="Restorative" 
           rows={data.restorative}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
       </Grid>
 
@@ -336,21 +401,25 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
           title="Implant Services" 
           rows={data.implantServices}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
         <CoverageSmallTable 
           title="Prosthodontics, Fixed" 
           rows={[{ id: 100, label: 'Prosthodontics, Fixed', coverage: 50, waiting: 0 }]}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
         <CoverageSmallTable 
           title="Oral Surgery" 
           rows={data.oralSurgery}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
         <CoverageSmallTable 
           title="Adjunctive General Services" 
           rows={data.adjunctiveGeneral}
           onDeleteItem={handleDeleteCoverageItem}
+          onChangeItem={handleChangeCoverageItem}
         />
       </Grid>
 

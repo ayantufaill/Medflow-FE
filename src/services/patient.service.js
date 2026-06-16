@@ -193,8 +193,8 @@ export const patientService = {
    * @param {boolean} isActive - Optional active filter
    * @returns {Promise<Array>} Array of patient insurances
    */
-  async getPatientInsurances(patientId, isActive) {
-    const query = isActive !== undefined ? `isActive=${isActive}` : '';
+  async getPatientInsurances(patientId, activeOnly) {
+    const query = activeOnly ? 'isActive=true' : '';
     const url = query
       ? `/patients/${patientId}/insurance?${query}`
       : `/patients/${patientId}/insurance`;
