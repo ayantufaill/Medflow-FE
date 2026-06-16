@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
-  Divider, Button, Grid, Chip, IconButton, Container, TextField, Stack
+  Divider, Button, Grid, Chip, IconButton, Container, TextField, Stack,
+  CircularProgress, Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -10,6 +12,15 @@ import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
+import {
+  useClinicalExamQuery,
+  useUpsertClinicalExam,
+  useSignClinicalExam
+} from '../../hooks/queries/useClinicalExam';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+
 
 // Custom Ring Radio to match the "Acceptable/Warning/Issue" style
 const StatusRadio = ({ color, ...props }) => (
@@ -76,6 +87,17 @@ const MMInput = ({ value, onChange }) => (
 );
 
 const DentalTmdExamPage = () => {
+  const { showSnackbar } = useSnackbar();
+  const patientId = useSelector(selectSelectedPatientId);
+  const appointmentId = useSelector(selectSelectedAppointmentId);
+  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('tmj', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('tmj', appointmentId);
+  const signMutation = useSignClinicalExam('tmj', appointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
+
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
     rangeOfMotion: true,
@@ -131,6 +153,48 @@ const DentalTmdExamPage = () => {
     selectedMuscles: [],
     selectedJoints: []
   });
+
+  // Sync data from database to form state when loaded
+  useEffect(() => {
+    if (examRecord?.examData) {
+      setFormData(prev => ({
+        ...prev,
+        ...examRecord.examData
+      }));
+    }
+  }, [examRecord]);
+
+  const handleSaveExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: formData
+      });
+      showSnackbar('TMJ exam saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
+    }
+  };
+
+  const handleSignExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
+      try {
+        await signMutation.mutateAsync();
+        showSnackbar('TMJ exam signed and locked', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
+      }
+    }
+  };
 
   const toggleSection = (sectionName) => {
     setExpandedSections(prev => ({
@@ -196,6 +260,26 @@ const DentalTmdExamPage = () => {
     setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
+  if (examLoading) {
+    return (
+      <Box>
+        <ClinicalNavbar />
+        <Box sx={{ mb: 3, px: 4, mt: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+            Exam
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+            Patient examination records and clinical findings
+          </Typography>
+        </Box>
+        <ExamNavbar />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <ClinicalNavbar />
@@ -225,13 +309,20 @@ const DentalTmdExamPage = () => {
           </Button>
         </Box>
 
-        {/* MH/DH Badges */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-          <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
-          <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
-        </Box>
+        {isSigned && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This exam has been signed and locked. It is now read-only.
+          </Alert>
+        )}
 
-        {/* Accordion 1: Range of Motion */}
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+          {/* MH/DH Badges */}
+          <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+            <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
+            <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
+          </Box>
+
+          {/* Accordion 1: Range of Motion */}
         <Box sx={{ border: '1px solid #cfd8dc', borderRadius: 1, mb: 3 }}>
           <Box sx={{ p: 3 }}>
             <Box 
@@ -950,10 +1041,34 @@ const DentalTmdExamPage = () => {
           <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '13px', color: '#888' }}>CBCT</Typography>}/>
         </Box>
 
-        <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '13px', color: '#888' }}>Further analysis necessary</Typography>} sx={{ mb: 2, ml: 1 }}/>
+        </fieldset>
 
-        <Box sx={{ ml: 1 }}>
-          <Button variant="contained" sx={{ bgcolor: '#e74c3c', textTransform: 'none', px: 2, '&:hover': { bgcolor: '#c0392b' } }}>Delete Exam</Button>
+        <Box sx={{ ml: 1, mt: 3, display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Save Exam
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleSignExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Sign & Finalize
+          </Button>
+          <Button 
+            variant="contained" 
+            disabled={isSigned}
+            sx={{ bgcolor: '#e74c3c', textTransform: 'none', px: 2, '&:hover': { bgcolor: '#c0392b' } }}
+          >
+            Delete Exam
+          </Button>
         </Box>
       </Container>
     </Box>

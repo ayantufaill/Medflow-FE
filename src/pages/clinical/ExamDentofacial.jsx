@@ -1,5 +1,9 @@
-import React, { useState } from "react";
-import { Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, IconButton, Paper, Divider, Button, Grid, Chip } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { useSelector } from 'react-redux';
+import {
+  Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, IconButton, Paper, Divider, Button, Grid, Chip,
+  CircularProgress, Alert
+} from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
@@ -9,6 +13,14 @@ import {
   CalendarToday as CalendarIcon
 } from "@mui/icons-material";
 import { fontSize, fontWeight } from "../../constants/styles";
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
+import {
+  useClinicalExamQuery,
+  useUpsertClinicalExam,
+  useSignClinicalExam
+} from '../../hooks/queries/useClinicalExam';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // --- THEME & STYLES ---
 const COLORS = {
@@ -103,113 +115,129 @@ const DENTAL_EXAM_DATA = {
 };
 
 // Dental Exam Form Component
-const DentalExamForm = () => {
+const DentalExamForm = ({ formData, onChange, isSigned }) => {
   return (
-    <Box sx={{ maxWidth: '100%' }}>
-      {/* Top Header Row */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>
-          DH
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {DENTAL_EXAM_DATA.checkboxes.map((checkbox) => (
-            <FormControlLabel
-              key={checkbox.id}
-              control={<Checkbox size="small" sx={{ p: 0 }} />}
-              label={<Typography variant="caption">{checkbox.label}</Typography>}
-              sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
-            />
-          ))}
+    <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+      <Box sx={{ maxWidth: '100%' }}>
+        {/* Top Header Row */}
+        <Box sx={{ display: 'flex', gap: 2, mb: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>
+            DH
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {DENTAL_EXAM_DATA.checkboxes.map((checkbox) => (
+              <FormControlLabel
+                key={checkbox.id}
+                control={
+                  <Checkbox 
+                    size="small" 
+                    sx={{ p: 0 }} 
+                    checked={!!formData[checkbox.id]}
+                    onChange={(e) => onChange(checkbox.id, e.target.checked)}
+                  />
+                }
+                label={<Typography variant="caption">{checkbox.label}</Typography>}
+                sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
+              />
+            ))}
+          </Box>
         </Box>
+
+        <Paper variant="outlined" sx={{ borderRadius: 0 }}>
+          {/* Render each section dynamically */}
+          {DENTAL_EXAM_DATA.sections.map((section, index) => (
+            <React.Fragment key={section.id}>
+              {index > 0 && <Divider />}
+              
+              {section.type === 'gum_display_group' ? (
+                // Special handling for gum display group
+                <Box sx={{ p: 1 }}>
+                  {section.subsections.map((subsec, subIndex) => {
+                    const isMax = subsec.label.includes('Maxillary');
+                    const displayKey = isMax ? 'maxillary_gum_display' : 'mandibular_gum_display';
+                    const acceptableKey = isMax ? 'maxillary_gum_acceptable' : 'mandibular_gum_acceptable';
+
+                    return (
+                      <React.Fragment key={subIndex}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.sm }}>{subsec.label}</Typography>
+                          {subsec.expandable && (
+                            <IconButton size="small" sx={{ p: 0.2 }}><ExpandMoreIcon sx={{ fontSize: 14 }} /></IconButton>
+                          )}
+                        </Box>
+                        <RadioGroup 
+                          row 
+                          sx={{ gap: 0.5, mb: subsec.hasAcceptableCheckbox ? 1 : 0 }}
+                          value={formData[displayKey] || ''}
+                          onChange={(e) => onChange(displayKey, e.target.value)}
+                        >
+                          {subsec.options.map((option) => (
+                            <FormControlLabel
+                              key={option.value}
+                              value={option.value}
+                              control={<Radio size="small" sx={getRadioStyle(option.color)} />}
+                              label={<Typography variant="caption">{option.label}</Typography>}
+                              sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
+                            />
+                          ))}
+                          {subsec.hasAcceptableCheckbox && (
+                            <FormControlLabel
+                              control={
+                                <Checkbox 
+                                  size="small" 
+                                  sx={{ p: 0 }} 
+                                  checked={!!formData[acceptableKey]}
+                                  onChange={(e) => onChange(acceptableKey, e.target.checked)}
+                                />
+                              }
+                              label={<Typography variant="caption">Acceptable</Typography>}
+                              sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
+                            />
+                          )}
+                        </RadioGroup>
+                      </React.Fragment>
+                    );
+                  })}
+                </Box>
+              ) : (
+                // Standard radio button sections
+                <Box sx={{ p: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, mb: 0.5, fontSize: fontSize.sm }}>{section.label}</Typography>
+                  <RadioGroup 
+                    row 
+                    sx={{ gap: 1 }}
+                    value={formData[section.id] || ''}
+                    onChange={(e) => onChange(section.id, e.target.value)}
+                  >
+                    {section.options.map((option) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<Radio size="small" sx={getRadioStyle(option.color)} />}
+                        label={<Typography variant="caption">{option.label}</Typography>}
+                        sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
+                      />
+                    ))}
+                  </RadioGroup>
+                  {section.additionalNote && (
+                    <Typography variant="caption" sx={{ mt: 0.5, color: 'text.secondary', fontSize: fontSize.xs }}>
+                      {section.additionalNote}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              
+              {/* Add expandable icon for sections that need it */}
+              {section.expandable && section.type !== 'gum_display_group' && (
+                <Box sx={{ position: 'absolute', right: 8, top: 8 }}>
+                  <IconButton size="small" sx={{ p: 0.2 }}><ExpandMoreIcon sx={{ fontSize: 14 }} /></IconButton>
+                </Box>
+              )}
+            </React.Fragment>
+          ))}
+        </Paper>
       </Box>
-
-      <Paper variant="outlined" sx={{ borderRadius: 0 }}>
-        {/* Render each section dynamically */}
-        {DENTAL_EXAM_DATA.sections.map((section, index) => (
-          <React.Fragment key={section.id}>
-            {index > 0 && <Divider />}
-            
-            {section.type === 'gum_display_group' ? (
-              // Special handling for gum display group
-              <Box sx={{ p: 1 }}>
-                {section.subsections.map((subsec, subIndex) => (
-                  <React.Fragment key={subIndex}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.sm }}>{subsec.label}</Typography>
-                      {subsec.expandable && (
-                        <IconButton size="small" sx={{ p: 0.2 }}><ExpandMoreIcon sx={{ fontSize: 14 }} /></IconButton>
-                      )}
-                    </Box>
-                    <RadioGroup row sx={{ gap: 0.5, mb: subsec.hasAcceptableCheckbox ? 1 : 0 }}>
-                      {subsec.options.map((option) => (
-                        <FormControlLabel
-                          key={option.value}
-                          value={option.value}
-                          control={<Radio size="small" sx={getRadioStyle(option.color)} />}
-                          label={<Typography variant="caption">{option.label}</Typography>}
-                          sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
-                        />
-                      ))}
-                      {subsec.hasAcceptableCheckbox && (
-                        <FormControlLabel
-                          control={<Checkbox size="small" sx={{ p: 0 }} />}
-                          label={<Typography variant="caption">Acceptable</Typography>}
-                          sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
-                        />
-                      )}
-                    </RadioGroup>
-                  </React.Fragment>
-                ))}
-              </Box>
-            ) : (
-              // Standard radio button sections
-              <Box sx={{ p: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, mb: 0.5, fontSize: fontSize.sm }}>{section.label}</Typography>
-                <RadioGroup row sx={{ gap: 1 }}>
-                  {section.options.map((option) => (
-                    <FormControlLabel
-                      key={option.value}
-                      value={option.value}
-                      control={<Radio size="small" sx={getRadioStyle(option.color)} />}
-                      label={<Typography variant="caption">{option.label}</Typography>}
-                      sx={{ '& .MuiFormControlLabel-label': { fontSize: fontSize.xs } }}
-                    />
-                  ))}
-                </RadioGroup>
-                {section.additionalNote && (
-                  <Typography variant="caption" sx={{ mt: 0.5, color: 'text.secondary', fontSize: fontSize.xs }}>
-                    {section.additionalNote}
-                  </Typography>
-                )}
-              </Box>
-            )}
-            
-            {/* Add expandable icon for sections that need it */}
-            {section.expandable && section.type !== 'gum_display_group' && (
-              <Box sx={{ position: 'absolute', right: 8, top: 8 }}>
-                <IconButton size="small" sx={{ p: 0.2 }}><ExpandMoreIcon sx={{ fontSize: 14 }} /></IconButton>
-              </Box>
-            )}
-          </React.Fragment>
-        ))}
-      </Paper>
-
-      {/* Delete Button */}
-      <Button 
-        variant="contained" 
-        sx={{ 
-          mt: 2, 
-          bgcolor: '#e74c3c', 
-          '&:hover': { bgcolor: '#c0392b' }, 
-          textTransform: 'none', 
-          px: 3,
-          fontWeight: fontWeight.semibold,
-          fontSize: fontSize.sm
-        }} 
-      >
-        Delete Exam
-      </Button>
-    </Box>
+    </fieldset>
   );
 };
 
@@ -261,9 +289,83 @@ const examFields = {
 };
 
 const ExamDentofacial = () => {
+  const { showSnackbar } = useSnackbar();
+  const patientId = useSelector(selectSelectedPatientId);
+  const appointmentId = useSelector(selectSelectedAppointmentId);
+  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('dentofacial', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('dentofacial', appointmentId);
+  const signMutation = useSignClinicalExam('dentofacial', appointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
+
   const [visitDates, setVisitDates] = useState([
     'Mar 26, 2026'
   ]);
+
+  const [formData, setFormData] = useState({
+    analysis_not_required: false,
+    analysis_required: false,
+    data_collected: false,
+    further_data_required: false,
+    tooth_color: '',
+    tooth_position: '',
+    tooth_alignment: '',
+    maxillary_gum_display: '',
+    maxillary_gum_acceptable: false,
+    mandibular_gum_display: '',
+    mandibular_gum_acceptable: false
+  });
+
+  // Sync data from database to form state when loaded
+  useEffect(() => {
+    if (examRecord?.examData) {
+      setFormData(prev => ({
+        ...prev,
+        ...examRecord.examData
+      }));
+    }
+  }, [examRecord]);
+
+  const handleSaveExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: formData
+      });
+      showSnackbar('Dentofacial exam saved successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
+    }
+  };
+
+  const handleSignExam = async () => {
+    if (!appointmentId) {
+      showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
+      try {
+        await signMutation.mutateAsync();
+        showSnackbar('Dentofacial exam signed and locked', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
+      }
+    }
+  };
+
+  const handleDeleteExam = () => {
+    if (window.confirm('Are you sure you want to delete this exam?')) {
+      console.log('Delete exam');
+      // TODO: API call to delete exam
+    }
+  };
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
@@ -273,6 +375,26 @@ const ExamDentofacial = () => {
   const handleRemoveDate = (indexToRemove) => {
     setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
+
+  if (examLoading) {
+    return (
+      <Box>
+        <ClinicalNavbar />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
+            Exam
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+            Patient examination records and clinical findings
+          </Typography>
+        </Box>
+        <ExamNavbar />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -288,6 +410,11 @@ const ExamDentofacial = () => {
       <ExamNavbar />
       
       <Box sx={{ p: 2, bgcolor: "#fff", maxWidth: "100%", fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
+        {isSigned && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This exam has been signed and locked. It is now read-only.
+          </Alert>
+        )}
         
         {/* 1. TOP UTILITY BAR */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
@@ -310,7 +437,11 @@ const ExamDentofacial = () => {
           {/* LEFT COLUMN - DENTAL EXAM FORM */}
           <Grid item xs={12} md={6} sx={{ flex: '0 0 50%', maxWidth: '60%' }}>
             
-            <DentalExamForm />
+            <DentalExamForm 
+              formData={formData} 
+              onChange={(field, val) => setFormData(prev => ({ ...prev, [field]: val }))}
+              isSigned={isSigned}
+            />
           </Grid>
 
           {/* RIGHT COLUMN - VISUAL IMAGES */}
@@ -368,6 +499,35 @@ const ExamDentofacial = () => {
             </Box>
           </Grid>
         </Grid>
+
+        <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Save Exam
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleSignExam}
+            disabled={isSigned}
+            sx={{ textTransform: 'none', px: 3 }}
+          >
+            Sign & Finalize
+          </Button>
+          <Button 
+            variant="contained" 
+            disabled={isSigned}
+            sx={{ bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
+            onClick={handleDeleteExam}
+          >
+            Delete Exam
+          </Button>
+        </Box>
       </Box>
     </Box>
   );

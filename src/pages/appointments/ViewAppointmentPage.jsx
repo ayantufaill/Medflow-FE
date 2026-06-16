@@ -41,6 +41,9 @@ import { portalService } from "../../services/portal.service";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { useAuth } from "../../contexts/AuthContext";
 import dayjs from "dayjs";
+import { useDispatch } from "react-redux";
+import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
+import { setSelectedPatientId } from "../../store/slices/patientSlice";
 
 const isPlainObject = (value) =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -177,6 +180,7 @@ const FormDataViewer = ({ data, depth = 0 }) => {
 
 const ViewAppointmentPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { appointmentId } = useParams();
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
@@ -214,6 +218,11 @@ const ViewAppointmentPage = () => {
 
         const data = await appointmentService.getAppointmentById(appointmentId);
         setAppointment(data);
+        dispatch(setSelectedAppointmentId(data._id || data.id));
+        const pId = typeof data.patientId === "string" ? data.patientId : data.patientId?._id || data.patientId?.id;
+        if (pId) {
+          dispatch(setSelectedPatientId(pId));
+        }
       } catch (err) {
         setError(
           err.response?.data?.error?.message ||
