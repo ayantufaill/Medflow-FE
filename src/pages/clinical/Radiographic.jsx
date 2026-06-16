@@ -447,7 +447,56 @@ const Radiographic = () => {
               {/* Badges for selected additional teeth */}
               <Stack direction="row" spacing={0.5}>
                 {additionalTeeth.map(tooth => (
-                  <ToothNumber key={tooth} label={tooth} active />
+                  <Box
+                    key={tooth}
+                    sx={{
+                      position: 'relative',
+                      '&:hover .delete-btn': {
+                        display: 'flex'
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      px: 0.6, py: 0.1, border: '1px solid',
+                      borderColor: '#4a69bd',
+                      bgcolor: '#f8fafc',
+                      color: '#4a69bd',
+                      fontSize: '0.75rem', fontWeight: 'bold',
+                      borderRadius: '2px', minWidth: '20px', textAlign: 'center',
+                      userSelect: 'none'
+                    }}>
+                      {tooth}
+                    </Box>
+                    
+                    <Box
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAdditionalTeeth(prev => prev.filter(t => t !== tooth));
+                      }}
+                      sx={{
+                        display: 'none',
+                        position: 'absolute',
+                        top: -9,
+                        right: -6,
+                        width: 14,
+                        height: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        color: '#e74c3c',
+                        fontWeight: 'bold',
+                        lineHeight: 1,
+                        zIndex: 10,
+                        '&:hover': {
+                          color: '#c0392b'
+                        }
+                      }}
+                    >
+                      ×
+                    </Box>
+                  </Box>
                 ))}
               </Stack>
             </Stack>
