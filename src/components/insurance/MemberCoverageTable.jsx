@@ -302,7 +302,7 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
 
   return (
     <Grid container spacing={3} sx={{ mt: 1, bgcolor: '#fff' }}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#333', mr: 1 }}>Coverage Table</Typography>
           <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
@@ -312,7 +312,7 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
       </Grid>
       
       {/* COLUMN 1: Diagnostic, Preventative, Restorative */}
-      <Grid item xs={12} md={3.8}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <CoverageSmallTable 
           title="Diagnostic" 
           rows={data.diagnostic}
@@ -331,7 +331,7 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
       </Grid>
 
       {/* COLUMN 2: Implant, Prosthodontics, Oral Surgery, Adjunctive */}
-      <Grid item xs={12} md={3.8}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <CoverageSmallTable 
           title="Implant Services" 
           rows={data.implantServices}
@@ -355,7 +355,7 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
       </Grid>
 
       {/* COLUMN 3: Shortcuts, Frequency, Limitations */}
-      <Grid item xs={12} md={4.4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <Box sx={{ mb: 3 }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 1.5 }}>Coverage Book Shortcuts</Typography>
           

@@ -356,7 +356,7 @@ const MemberPage = () => {
       <Grid container spacing={1} sx={{ p: 2 }}>
         
         {/* LEFT COLUMN: Membership & Subscriber Info */}
-        <Grid item xs={12} lg={4} sx={{ borderRight: { md: '1px solid #eee' }, pr: { md: 1.5 }, mb: { xs: 1.5, md: 0 } }}>
+        <Grid size={{ xs: 12, md: 4, lg: 4 }} sx={{ borderRight: { md: '1px solid #eee' }, pr: { md: 1.5 }, mb: { xs: 1.5, md: 0 } }}>
           <MembershipInformation 
             formData={formData}
             handleInputChange={handleInputChange}
@@ -364,15 +364,6 @@ const MemberPage = () => {
             tinyText={tinyText}
             blueHeader={blueHeader}
             inputBg={inputBg}
-          />
-          
-          <DeductiblesTable 
-            formData={formData}
-            handleDeductibleChange={handleDeductibleChange}
-            handleAddDeductibleRow={handleAddDeductibleRow}
-            handleRemoveDeductibleRow={handleRemoveDeductibleRow}
-            tableHeaderStyle={tableHeaderStyle}
-            blueHeader={blueHeader}
           />
           
           <Renewal
@@ -395,9 +386,9 @@ const MemberPage = () => {
         </Grid>
 
         {/* RIGHT COLUMN: Fee Guides & Tables */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, md: 8, lg: 8 }}>
           <Grid container spacing={1.5}>
-            <Grid item xs={12} md={6.5}>
+            <Grid size={{ xs: 12, md: 6.5 }}>
               <Typography sx={sectionTitle}>Plan Fee Guide</Typography>
               <Box sx={{ display: 'flex', gap: 0.3, alignItems: 'center' }}>
                 <TextField
@@ -444,7 +435,11 @@ const MemberPage = () => {
                     value={guide.feeGuide}
                     onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
                     sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
+                    SelectProps={{ displayEmpty: true }}
                   >
+                    <MenuItem value="" disabled sx={{ fontSize: '0.65rem', color: '#aaa' }}>
+                      <em>Select Fee Guide</em>
+                    </MenuItem>
                     {PLAN_FEE_GUIDE_OPTIONS.map(option => (
                       <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.65rem' }}>{option.label}</MenuItem>
                     ))}
@@ -462,7 +457,7 @@ const MemberPage = () => {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={5.5}>
+            <Grid size={{ xs: 12, md: 5.5 }}>
               <Typography sx={sectionTitle}>
                 Coverage Type <InfoIcon sx={{ fontSize: 11, verticalAlign: 'middle', ml: 0.5, color: '#999' }} />
               </Typography>

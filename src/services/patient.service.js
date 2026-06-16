@@ -196,8 +196,8 @@ export const patientService = {
   async getPatientInsurances(patientId, isActive) {
     const query = isActive !== undefined ? `isActive=${isActive}` : '';
     const url = query
-      ? `/patients/${patientId}/coverages?${query}`
-      : `/patients/${patientId}/coverages`;
+      ? `/patients/${patientId}/insurance?${query}`
+      : `/patients/${patientId}/insurance`;
       
     const response = await apiClient.get(url);
     console.log('📨 RAW GET COVERAGES RESPONSE:', response.data);
@@ -225,7 +225,7 @@ export const patientService = {
    * @returns {Promise<Object>} Created insurance data
    */
   async createPatientInsurance(patientId, payload) {
-    const response = await apiClient.post(`/patients/${patientId}/coverages`, payload);
+    const response = await apiClient.post(`/patients/${patientId}/insurance`, payload);
     return response.data.data.insurance;
   },
 

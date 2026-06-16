@@ -55,7 +55,7 @@ const AddCoveragePage = () => {
     healthPlan: false,
     assignmentOfBenefits: 1,
     saveAsTemplate: false,
-    planFeeGuide: '',
+    planFeeGuide: 'careington',
     coverageType: 'ppo',
     providersPlanFeeGuides: [],
     deductibles: [
@@ -223,6 +223,14 @@ const AddCoveragePage = () => {
           },
           deductibles: editTarget.deductiblesGrid?.length ? editTarget.deductiblesGrid : prev.deductibles,
           coverage: editTarget.coverageLimits || prev.coverage,
+          
+          // newly supported fields mapping
+          providersPlanFeeGuides: editTarget.providersPlanFeeGuides || [],
+          policyNotes: editTarget.policyNotes || '',
+          eligibilityPolicyNotes: editTarget.eligibilityPolicyNotes || '',
+          insurancePlanNotes: editTarget.insurancePlanNotes || '',
+          healthPlan: editTarget.healthPlan || false,
+          paymentPlan: editTarget.paymentPlan || ''
         }));
 
         if (editTarget.coverageBookData) {
@@ -276,6 +284,11 @@ const AddCoveragePage = () => {
 
   const handleSave = async () => {
     try {
+      if (!patientId) {
+        showSnackbar('Cannot save coverage: No patient selected. Please navigate to a specific patient\'s dashboard to add coverage.', 'error');
+        return;
+      }
+
       if (!formData.insuranceCompanyId && !formData.insurancePlan) {
         showSnackbar('Please select an insurance carrier', 'error');
         return;
@@ -325,7 +338,15 @@ const AddCoveragePage = () => {
         subscriberSsn: formData.subscriber.ssn || undefined,
         renewalMonth: renewalMonthNum,
         assignmentOfBenefits: formData.assignmentOfBenefits.toString(),
-        honorWriteOff: formData.honorWriteOff
+        honorWriteOff: formData.honorWriteOff,
+        
+        // newly supported fields
+        providersPlanFeeGuides: formData.providersPlanFeeGuides,
+        policyNotes: formData.policyNotes,
+        eligibilityPolicyNotes: formData.eligibilityPolicyNotes,
+        insurancePlanNotes: formData.insurancePlanNotes,
+        healthPlan: formData.healthPlan,
+        paymentPlan: formData.paymentPlan
       };
 
       if (insuranceId) {
@@ -606,7 +627,7 @@ const AddCoveragePage = () => {
             </Grid>
           </Grid>
           
-          <PolicyNotes />
+          <PolicyNotes formData={formData} handleInputChange={handleInputChange} />
         </Grid>
 
         {/* RIGHT COLUMN: Fee Guides & Tables */}
@@ -660,7 +681,11 @@ const AddCoveragePage = () => {
                     value={guide.feeGuide}
                     onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
                     sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
+                    SelectProps={{ displayEmpty: true }}
                   >
+                    <MenuItem value="" disabled sx={{ fontSize: '0.65rem', color: '#aaa' }}>
+                      <em>Select Fee Guide</em>
+                    </MenuItem>
                     {PLAN_FEE_GUIDE_OPTIONS.map(option => (
                       <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.65rem' }}>{option.label}</MenuItem>
                     ))}

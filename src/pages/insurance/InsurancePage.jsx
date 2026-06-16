@@ -20,6 +20,8 @@ import {
   deletePatientInsuranceThunk 
 } from '../../store/slices/patientSlice';
 
+const EMPTY_ARRAY = [];
+
 const InsurancePage = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -43,29 +45,36 @@ const InsurancePage = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const dispatch = useDispatch();
-  const insurancesData = useSelector(state => state.patient.insurancesCache[patientId]?.data || []);
+  const insurancesData = useSelector(state => state.patient.insurancesCache[patientId]?.data || EMPTY_ARRAY);
   const isFetching = useSelector(state => state.patient.patientInsurancesLoading);
 
   const mappedData = React.useMemo(() => {
-    return insurancesData.map(item => ({
-      ...item,
-      id: item._id || item.id,
-      payer: item.insuranceCompany?.name || item.payer || 'Unknown Payer',
-      plan: item.planType || item.plan || 'No Plan',
-      subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
-      status: (item.isActive === true || item.status === 'active') ? 'active' : 'inactive',
-      eligibilityChecked: item.lastEligibilityCheckDate || 'Not checked',
-      dentist: item.provider?.name || 'Default Dentist'
-    }));
+    return insurancesData.map(item => {
+      return {
+        ...item,
+        id: item._id || item.id,
+        payer: item.insuranceCompany?.name || item.insuranceCompanyId?.name || item.payer || 'Unknown Payer',
+        plan: item.planType || item.insuranceType || item.plan || 'No Plan',
+        subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
+        status: item.isActive ? 'Active' : 'Archived',
+        type: item.isFamilyPlan ? 'Family' : 'Individual',
+        isFamily: item.isFamilyPlan || false,
+        isArchived: !item.isActive,
+        eligibilityChecked: item.lastEligibilityCheckDate || item.verificationDate || 'Not checked',
+        dentist: item.provider?.name || 'Default Dentist'
+      };
+    });
   }, [insurancesData]);
 
-  const activeCoverages = mappedData.filter(i => i.status === 'active');
-  const archivedCoverages = mappedData.filter(i => i.status === 'inactive');
+  const activeCoverages = mappedData.filter(i => !i.isArchived && !i.isFamily);
+  const familyCoverages = mappedData.filter(i => !i.isArchived && i.isFamily);
+  const archivedCoverages = mappedData.filter(i => i.isArchived && !i.isFamily);
+  const archivedFamilyCoverages = mappedData.filter(i => i.isArchived && i.isFamily);
 
   useEffect(() => {
     if (patientId) {
       setLoading(true);
-      dispatch(fetchPatientInsurances({ patientId }))
+      dispatch(fetchPatientInsurances({ patientId, force: true }))
         .unwrap()
         .catch((error) => {
           console.error('Error fetching insurances:', error);
@@ -77,17 +86,7 @@ const InsurancePage = () => {
     }
   }, [patientId, dispatch]);
 
-  const [familyCoverages] = useState([
-    {
-      id: 4,
-      payer: 'United Healthcare',
-      plan: 'FAMILY PLAN',
-      subscriber: 'John Doe',
-      members: ['John Doe', 'Jane Doe', 'Jimmy Doe'],
-      eligibilityChecked: '03/05/2026',
-      status: 'active'
-    }
-  ]);
+
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -197,7 +196,7 @@ const InsurancePage = () => {
       case 0: return activeCoverages;
       case 1: return familyCoverages;
       case 2: return archivedCoverages;
-      case 3: return [];
+      case 3: return archivedFamilyCoverages;
       default: return activeCoverages;
     }
   };
