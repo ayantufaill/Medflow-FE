@@ -264,6 +264,26 @@ const appointmentSlice = createSlice({
             state.list[idx] = action.payload;
           }
         }
+      })
+      .addCase(fetchFamilyAppointments.pending, (state) => {
+        state.familyAppointmentsLoading = true;
+      })
+      .addCase(fetchFamilyAppointments.fulfilled, (state, action) => {
+        state.familyAppointmentsLoading = false;
+        state.familyAppointmentsList = action.payload || [];
+      })
+      .addCase(fetchFamilyAppointments.rejected, (state) => {
+        state.familyAppointmentsLoading = false;
+      })
+      .addCase(fetchPatientHistory.pending, (state) => {
+        state.patientHistoryLoading = true;
+      })
+      .addCase(fetchPatientHistory.fulfilled, (state, action) => {
+        state.patientHistoryLoading = false;
+        state.patientHistoryList = action.payload || [];
+      })
+      .addCase(fetchPatientHistory.rejected, (state) => {
+        state.patientHistoryLoading = false;
       });
   },
 });

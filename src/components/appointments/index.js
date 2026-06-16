@@ -13,3 +13,4 @@ export { default as PatientRouteSlipDialog } from './PatientRouteSlipDialog';
 export { default as ProgressNotesDialog } from './ProgressNotesDialog';
 export { default as SelectProductsDialog } from './SelectProductsDialog';
 export { default as SendBulkTextDialog } from './SendBulkTextDialog';
+export { default as BlockSlotDialog } from './BlockSlotDialog';

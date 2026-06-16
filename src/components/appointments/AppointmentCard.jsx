@@ -88,6 +88,14 @@ const AppointmentCard = ({
   if (isConsult) {
     return (
       <Paper
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/plain", JSON.stringify({
+            isAppointment: true,
+            appointmentId: appointment.id || appointment._id,
+            appointment: appointment
+          }));
+        }}
         elevation={2}
         onClick={(e) => {
           e.stopPropagation();
@@ -103,13 +111,16 @@ const AppointmentCard = ({
           bgcolor: "#6b6b6b", // Dark grey sticky note
           color: "#ffffff",
           p: 1,
-          cursor: "pointer",
+          cursor: "grab",
           overflow: "hidden",
           transition: "transform 0.1s, box-shadow 0.1s",
           "&:hover": {
             transform: "scale(1.02)",
             boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
             bgcolor: "#5a5a5a",
+          },
+          "&:active": {
+            cursor: "grabbing",
           },
           display: "flex",
           flexDirection: "column",
@@ -139,6 +150,14 @@ const AppointmentCard = ({
   return (
     <>
       <Paper
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/plain", JSON.stringify({
+            isAppointment: true,
+            appointmentId: appointment.id || appointment._id,
+            appointment: appointment
+          }));
+        }}
         elevation={2}
         onClick={(e) => {
           e.stopPropagation();
@@ -157,7 +176,7 @@ const AppointmentCard = ({
           bgcolor: "#ffffff",
           color: "#000000",
           p: 0,
-          cursor: "pointer",
+          cursor: "grab",
           transition: isNewAppointment 
             ? "transform 0.1s, box-shadow 0.1s, border 0.3s ease-out"
             : "transform 0.1s, box-shadow 0.1s",
@@ -165,6 +184,9 @@ const AppointmentCard = ({
           "&:hover": {
             transform: "scale(1.02)",
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          },
+          "&:active": {
+            cursor: "grabbing",
           },
           ...(isNewAppointment && {
             border: "3px solid #4CAF50",
@@ -744,6 +766,7 @@ const AppointmentActions = ({
 }) => {
   return (
     <Box
+      className="no-print"
       sx={{
         display: "flex",
         flexDirection: "column",

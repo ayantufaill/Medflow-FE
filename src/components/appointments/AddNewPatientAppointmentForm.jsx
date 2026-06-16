@@ -34,18 +34,26 @@ import dayjs from "dayjs";
 import Autocomplete from "@mui/material/Autocomplete";
 import { FONT_SM, FONT_XS } from "../../constants/styles";
 
-// Status options matching OperatorySidebar appointment card
 const STATUS_OPTIONS = [
   { value: "unconfirmed", label: "Unconfirmed" },
-  { value: "preconfirmed", label: "Pre-Confirmed" },
+  { value: "preconfirmed", label: "Preconfirmed" },
   { value: "confirmed", label: "Confirmed" },
+  { value: "arrived", label: "Arrived" },
+  { value: "ready_to_be_seated", label: "Ready To Be Seated" },
   { value: "seated", label: "Seated" },
+  { value: "ready_for_doctor", label: "Ready For Doctor" },
+  { value: "in_treatment", label: "In Treatment" },
+  { value: "ready_for_checkout", label: "Ready For Checkout" },
+  { value: "checked_out_incomplete", label: "Checked out incomplete" },
+  { value: "checked_out_complete", label: "Checked out complete" },
+  { value: "no_show", label: "No Show" },
   { value: "call", label: "Call" },
-  { value: "checkout incomplete", label: "Checkout Incomplete" },
-  { value: "checkout complete", label: "Checkout Complete" },
-  { value: "no show", label: "No Show" },
-  { value: "rescheduled", label: "Rescheduled" },
+  { value: "left_message", label: "Left message" },
+  { value: "running_late", label: "Running Late" },
+  { value: "sent_email_or_text", label: "Sent Email Or Text" },
+  { value: "late", label: "Late" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "rescheduled", label: "Rescheduled" },
 ];
 
 // Default procedure tags shown in the tag bar
@@ -272,9 +280,16 @@ const AddNewPatientAppointmentForm = ({
       providerId:   selectedProviderId || undefined,
       roomId:       selectedRoomId || undefined,   // API field name is roomId, not operatoryId
       ...(selectedAppointmentTypeId && { appointmentTypeId: selectedAppointmentTypeId }),
-      // Pack selected tags and assistant into customFields (no dedicated API field)
+      // Pack selected tags, procedures, and assistant into customFields (no dedicated API field)
       customFields: {
         selectedProcedureTags: [...selectedTagLabels],
+        procedures: procedures
+          .filter((p) => p.checked)
+          .map((p) => ({
+            code: p.code,
+            treatment: p.treatment,
+            charge: p.charge,
+          })),
         ...(selectedAssistantId && { assistantId: selectedAssistantId }),
         visitType,
       },

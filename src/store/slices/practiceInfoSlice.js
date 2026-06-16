@@ -29,9 +29,9 @@ export const fetchCurrentPracticeInfo = createAsyncThunk(
     }
   },
   {
-    condition: (_, { getState }) => {
+    condition: (force, { getState }) => {
       const { practiceInfo } = getState();
-      if (practiceInfo.loading || practiceInfo.data) {
+      if (!force && (practiceInfo.loading || practiceInfo.data)) {
         return false;
       }
     }

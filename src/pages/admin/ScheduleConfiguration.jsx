@@ -48,13 +48,35 @@ const ScheduleConfiguration = () => {
     dispatch(fetchCurrentPracticeInfo());
   }, [dispatch]);
 
-  // Sync route slip settings from Redux
+  const [routeSlipOpen, setRouteSlipOpen] = useState(true);
+  const [enableRouteSlip, setEnableRouteSlip] = useState(true);
+  const [defaultColorsOpen, setDefaultColorsOpen] = useState(true);
+  const [checklistsOpen, setChecklistsOpen] = useState(true);
+
+  const DEFAULT_PRE_APPT_CHECKLIST = ["Import History", "Import Record", "Appt Reminder", "Verify Insurance Eligibility", "Share Consent Forms", "Deposit for treatment"];
+  const DEFAULT_CHECK_IN_CHECKLIST = ["Review Records", "Review & sign Visit Plan", "Sign Consent Forms", "Verify Premed Taken"];
+  const DEFAULT_CHECK_OUT_CHECKLIST = ["Complete & Bill Procedures", "Purchase Products", "Share Clinical Reports", "Prescription", "Schedule Next Appt", "Send Lab Case"];
+
+  const [preApptChecklist, setPreApptChecklist] = useState(DEFAULT_PRE_APPT_CHECKLIST);
+  const [checkInChecklist, setCheckInChecklist] = useState(DEFAULT_CHECK_IN_CHECKLIST);
+  const [checkOutChecklist, setCheckOutChecklist] = useState(DEFAULT_CHECK_OUT_CHECKLIST);
+
+  // Sync route slip and checklist settings from Redux
   useEffect(() => {
     if (practiceData?.scheduleConfig?.routeSlipSettings) {
       setRouteSlipSettings(prev => ({...prev, ...practiceData.scheduleConfig.routeSlipSettings}));
     }
     if (practiceData?.scheduleConfig?.enableRouteSlip !== undefined) {
       setEnableRouteSlip(practiceData.scheduleConfig.enableRouteSlip);
+    }
+    if (practiceData?.scheduleConfig?.preApptChecklist) {
+      setPreApptChecklist(practiceData.scheduleConfig.preApptChecklist);
+    }
+    if (practiceData?.scheduleConfig?.checkInChecklist) {
+      setCheckInChecklist(practiceData.scheduleConfig.checkInChecklist);
+    }
+    if (practiceData?.scheduleConfig?.checkOutChecklist) {
+      setCheckOutChecklist(practiceData.scheduleConfig.checkOutChecklist);
     }
   }, [practiceData]);
 
@@ -67,6 +89,9 @@ const ScheduleConfiguration = () => {
       const payload = {
         enableRouteSlip,
         routeSlipSettings,
+        preApptChecklist,
+        checkInChecklist,
+        checkOutChecklist,
       };
       await dispatch(updateScheduleConfig({ practiceInfoId: practiceData._id || practiceData.id, scheduleConfigData: payload })).unwrap();
       showSnackbar('Schedule Configuration saved successfully', 'success');
@@ -75,10 +100,20 @@ const ScheduleConfiguration = () => {
     }
   };
 
-  const [routeSlipOpen, setRouteSlipOpen] = useState(true);
-  const [enableRouteSlip, setEnableRouteSlip] = useState(true);
-  const [defaultColorsOpen, setDefaultColorsOpen] = useState(true);
-  const [checklistsOpen, setChecklistsOpen] = useState(true);
+  const handleAddItem = (category) => {
+    const item = window.prompt(`Add item to ${category === 'preAppt' ? 'Pre-appointment' : category === 'checkIn' ? 'Check-in' : 'Check-out'} checklist:`);
+    if (item && item.trim()) {
+      if (category === 'preAppt') setPreApptChecklist(prev => [...prev, item.trim()]);
+      else if (category === 'checkIn') setCheckInChecklist(prev => [...prev, item.trim()]);
+      else if (category === 'checkOut') setCheckOutChecklist(prev => [...prev, item.trim()]);
+    }
+  };
+
+  const handleDeleteItem = (category, index) => {
+    if (category === 'preAppt') setPreApptChecklist(prev => prev.filter((_, i) => i !== index));
+    else if (category === 'checkIn') setCheckInChecklist(prev => prev.filter((_, i) => i !== index));
+    else if (category === 'checkOut') setCheckOutChecklist(prev => prev.filter((_, i) => i !== index));
+  };
   
   const [expandedSections, setExpandedSections] = useState({
     patientDetails: false,
@@ -704,35 +739,35 @@ const ScheduleConfiguration = () => {
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle1" gutterBottom>Pre-appointment Checklist</Typography>
-              {["Import History", "Import Record", "Appt Reminder", "Verify Insurance Eligibility", "Share Consent Forms", "Deposit for treatment"].map((item) => (
-                <Box key={item} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee' }}>
+              {preApptChecklist.map((item, index) => (
+                <Box key={`${item}-${index}`} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee', alignItems: 'center' }}>
                   <Typography>{item}</Typography>
-                  <IconButton color="error" size="small"><DeleteIcon /></IconButton>
+                  <IconButton color="error" size="small" onClick={() => handleDeleteItem('preAppt', index)}><DeleteIcon /></IconButton>
                 </Box>
               ))}
-              <Button sx={{ mt: 2 }}>+ Add</Button>
+              <Button sx={{ mt: 2 }} onClick={() => handleAddItem('preAppt')}>+ Add</Button>
             </Grid>
 
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle1" gutterBottom>Check-in Checklist</Typography>
-              {["Review Records", "Review & sign Visit Plan", "Sign Consent Forms", "Verify Premed Taken"].map((item) => (
-                <Box key={item} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee' }}>
+              {checkInChecklist.map((item, index) => (
+                <Box key={`${item}-${index}`} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee', alignItems: 'center' }}>
                   <Typography>{item}</Typography>
-                  <IconButton color="error" size="small"><DeleteIcon /></IconButton>
+                  <IconButton color="error" size="small" onClick={() => handleDeleteItem('checkIn', index)}><DeleteIcon /></IconButton>
                 </Box>
               ))}
-              <Button sx={{ mt: 2 }}>+ Add</Button>
+              <Button sx={{ mt: 2 }} onClick={() => handleAddItem('checkIn')}>+ Add</Button>
             </Grid>
 
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle1" gutterBottom>Check-out Checklist</Typography>
-              {["Complete & Bill Procedures", "Purchase Products", "Share Clinical Reports", "Prescription", "Schedule Next Appt", "Send Lab Case"].map((item) => (
-                <Box key={item} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee' }}>
+              {checkOutChecklist.map((item, index) => (
+                <Box key={`${item}-${index}`} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee', alignItems: 'center' }}>
                   <Typography>{item}</Typography>
-                  <IconButton color="error" size="small"><DeleteIcon /></IconButton>
+                  <IconButton color="error" size="small" onClick={() => handleDeleteItem('checkOut', index)}><DeleteIcon /></IconButton>
                 </Box>
               ))}
-              <Button sx={{ mt: 2 }}>+ Add</Button>
+              <Button sx={{ mt: 2 }} onClick={() => handleAddItem('checkOut')}>+ Add</Button>
             </Grid>
           </Grid>
         </Collapse>
