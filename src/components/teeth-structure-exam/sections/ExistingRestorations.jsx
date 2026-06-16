@@ -1,9 +1,15 @@
-import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider } from "@mui/material";
+import React, { useState } from "react";
+import { 
+  Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider,
+  Button, Popover, IconButton, RadioGroup, Radio, TextField
+} from "@mui/material";
 import KeyboardDoubleArrowUp from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AddIcon from '@mui/icons-material/Add';
 import { fontSize, fontWeight } from "../../../constants/styles";
 import RestorationToothIcon from "../common/RestorationToothIcon";
-import ToothNumber from "../common/ToothNumber";
 
 const DentalSection = ({ title, children, badge }) => (
   <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
@@ -48,13 +54,182 @@ const Row = ({ label, children, hasChat = false, isGray = false }) => (
   </Box>
 );
 
-const HeaderLabel = ({ children }) => (
-  <Typography variant="caption" sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>
-    {children}
-  </Typography>
-);
+const ExistingRestorations = ({ 
+  expanded, 
+  onToggle,
+  toothFindings = {},
+  setToothFindings,
+  selectedTeeth = [],
+  setSelectedTeeth,
+  activeToothNum = null,
+  setActiveToothNum
+}) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [showPopoverNoteInput, setShowPopoverNoteInput] = useState(false);
+  const [popoverNoteValue, setPopoverNoteValue] = useState('');
 
-const ExistingRestorations = ({ expanded, onToggle }) => {
+  const handleApplyDirectRestoration = (type) => {
+    if (!selectedTeeth || selectedTeeth.length === 0) return;
+
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      selectedTeeth.forEach(num => {
+        if (!updated[num]) {
+          updated[num] = {
+            findings: ['Existing Restoration (Direct)'],
+            restorationType: type,
+            surfaces: ['O/I'], // default surface
+            isthmus: '< 1/3',
+            concerns: [],
+            notes: []
+          };
+        } else if (!updated[num].findings.includes('Existing Restoration (Direct)')) {
+          updated[num] = {
+            ...updated[num],
+            findings: [...updated[num].findings, 'Existing Restoration (Direct)'],
+            restorationType: type,
+            surfaces: updated[num].surfaces || ['O/I'],
+            isthmus: updated[num].isthmus || '< 1/3',
+            concerns: updated[num].concerns || []
+          };
+        } else {
+          updated[num] = {
+            ...updated[num],
+            restorationType: type
+          };
+        }
+      });
+      return updated;
+    });
+
+    setActiveToothNum(selectedTeeth[0]);
+  };
+
+  const handleBadgeClick = (event, toothNum) => {
+    setAnchorEl(event.currentTarget);
+    setActiveToothNum(toothNum);
+    
+    const data = toothFindings[toothNum];
+    if (data && data.notes && data.notes.length > 0) {
+      setPopoverNoteValue(data.notes[data.notes.length - 1].text || '');
+      setShowPopoverNoteInput(true);
+    } else {
+      setPopoverNoteValue('');
+      setShowPopoverNoteInput(false);
+    }
+  };
+
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+    setShowPopoverNoteInput(false);
+  };
+
+  const handleToggleSurface = (toothNum, surface) => {
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      if (!updated[toothNum]) return prev;
+      const curSurfaces = updated[toothNum].surfaces || [];
+      if (curSurfaces.includes(surface)) {
+        updated[toothNum] = {
+          ...updated[toothNum],
+          surfaces: curSurfaces.filter(s => s !== surface)
+        };
+      } else {
+        updated[toothNum] = {
+          ...updated[toothNum],
+          surfaces: [...curSurfaces, surface]
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleUpdateRestorationType = (toothNum, type) => {
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      if (updated[toothNum]) {
+        updated[toothNum] = {
+          ...updated[toothNum],
+          restorationType: type
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleUpdateIsthmus = (toothNum, isthmus) => {
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      if (updated[toothNum]) {
+        updated[toothNum] = {
+          ...updated[toothNum],
+          isthmus: isthmus
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleToggleConcern = (toothNum, concern) => {
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      if (!updated[toothNum]) return prev;
+      const curConcerns = updated[toothNum].concerns || [];
+      if (curConcerns.includes(concern)) {
+        updated[toothNum] = {
+          ...updated[toothNum],
+          concerns: curConcerns.filter(c => c !== concern)
+        };
+      } else {
+        updated[toothNum] = {
+          ...updated[toothNum],
+          concerns: [...curConcerns, concern]
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveNote = (toothNum, text) => {
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      if (!updated[toothNum]) return prev;
+      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const existingNotes = updated[toothNum].notes || [];
+      const updatedNotes = [...existingNotes];
+      
+      if (updatedNotes.length > 0) {
+        if (!text.trim()) {
+          updatedNotes.pop();
+        } else {
+          updatedNotes[updatedNotes.length - 1] = { date: today, text };
+        }
+      } else if (text.trim()) {
+        updatedNotes.push({ date: today, text });
+      }
+      
+      updated[toothNum] = {
+        ...updated[toothNum],
+        notes: updatedNotes
+      };
+      return updated;
+    });
+  };
+
+  const handleDeleteFinding = (toothNum) => {
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      delete updated[toothNum];
+      return updated;
+    });
+    if (activeToothNum === toothNum) {
+      setActiveToothNum(null);
+    }
+    handlePopoverClose();
+  };
+
+  const activeToothData = activeToothNum ? toothFindings[activeToothNum] : null;
+
   return (
     <DentalSection title="Existing Restorations" badge="DH">
       {expanded && (
@@ -62,21 +237,51 @@ const ExistingRestorations = ({ expanded, onToggle }) => {
           {/* Direct Section */}
           <Row label="Direct">
             <Stack direction="row" spacing={0.2}>
-              <RestorationToothIcon fill="#fff" />
-              <RestorationToothIcon fill="#666" />
-              <RestorationToothIcon fill="#eee" />
-              <RestorationToothIcon fill="#ffd700" />
-              <RestorationToothIcon fill="#add8e6" />
+              <Box onClick={() => handleApplyDirectRestoration('Composite')} sx={{ cursor: 'pointer' }}><RestorationToothIcon fill="#fff" /></Box>
+              <Box onClick={() => handleApplyDirectRestoration('Amalgam')} sx={{ cursor: 'pointer' }}><RestorationToothIcon fill="#666" /></Box>
+              <Box onClick={() => handleApplyDirectRestoration('Temporary')} sx={{ cursor: 'pointer' }}><RestorationToothIcon fill="#eee" /></Box>
+              <Box onClick={() => handleApplyDirectRestoration('Gold')} sx={{ cursor: 'pointer' }}><RestorationToothIcon fill="#ffd700" /></Box>
+              <Box onClick={() => handleApplyDirectRestoration('Sealant')} sx={{ cursor: 'pointer' }}><RestorationToothIcon fill="#add8e6" /></Box>
             </Stack>
           </Row>
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
-            <ToothNumber label="4 OM" disabled />
-            <ToothNumber label="5 DO" disabled />
-            <ToothNumber label="10 MFLD" />
-            <ToothNumber label="31 O" active />
-            <ToothNumber label="31" />
-            <ToothNumber label="32 O" active />
-            <ToothNumber label="32" />
+          
+          {/* Badges for active direct restorations */}
+          <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap" useFlexGap mb={1}>
+            {Object.entries(toothFindings)
+              .filter(([, data]) => data && data.findings && data.findings.includes('Existing Restoration (Direct)'))
+              .map(([toothNum, data]) => {
+                const surfacesAbbr = (data.surfaces || []).map(s => s === 'O/I' ? 'O' : s).join('');
+                const label = `${toothNum} ${surfacesAbbr}`;
+                const isActive = activeToothNum === toothNum;
+
+                return (
+                  <Button
+                    key={toothNum}
+                    size="small"
+                    variant={isActive ? "contained" : "outlined"}
+                    onClick={(e) => handleBadgeClick(e, toothNum)}
+                    sx={{
+                      fontSize: '0.7rem',
+                      py: 0.1,
+                      px: 0.8,
+                      minWidth: 'auto',
+                      lineHeight: 1.2,
+                      textTransform: 'none',
+                      borderColor: '#1976d2',
+                      color: isActive ? '#fff' : '#1976d2',
+                      bgcolor: isActive ? '#1976d2' : 'transparent',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      '&:hover': {
+                        bgcolor: isActive ? '#1565c0' : 'rgba(25, 118, 210, 0.04)',
+                        borderColor: '#1565c0',
+                      }
+                    }}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
           </Stack>
 
           <Divider />
@@ -94,12 +299,6 @@ const ExistingRestorations = ({ expanded, onToggle }) => {
               <RestorationToothIcon fill="#b39ddb" />
             </Stack>
           </Row>
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
-            <ToothNumber label="14" />
-            <ToothNumber label="19" active />
-            <ToothNumber label="20" />
-            <ToothNumber label="20" active />
-          </Stack>
 
           <Divider />
 
@@ -124,7 +323,6 @@ const ExistingRestorations = ({ expanded, onToggle }) => {
               <RestorationToothIcon fill="#ffd700" />
               <RestorationToothIcon type="incisor" fill="#fff" />
               <RestorationToothIcon fill="#fff" />
-              {/* Row 2 of icons */}
               <Box /> <Box /> <Box />
               <RestorationToothIcon fill="#ffd700" />
               <RestorationToothIcon status="forbidden" fill="#999" />
@@ -153,11 +351,6 @@ const ExistingRestorations = ({ expanded, onToggle }) => {
               ))}
             </Stack>
           </Row>
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
-            <ToothNumber label="11 13" />
-            <ToothNumber label="11 13" />
-            <ToothNumber label="12" />
-          </Stack>
 
           <Divider />
 
@@ -196,6 +389,213 @@ const ExistingRestorations = ({ expanded, onToggle }) => {
           />
         </Box>
       )}
+
+      {/* Popover for Detailed Direct Restorations Form */}
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={handlePopoverClose}
+        anchorOrigin={{
+          vertical: 'center',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'center',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            p: 3,
+            width: 380,
+            maxHeight: 500,
+            overflowY: 'auto',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.15)',
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            position: 'relative'
+          }
+        }}
+      >
+        <IconButton 
+          size="small" 
+          onClick={handlePopoverClose} 
+          sx={{ position: 'absolute', right: 4, top: 4, color: '#aaa' }}
+        >
+          <CloseIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+
+        {activeToothData && (
+          <Box>
+            {/* Restoration Type Direct Selection */}
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', mb: 0.5 }}>Restoration Type:</Typography>
+            <Box sx={{ pl: 1, mb: 1.5 }}>
+              <Typography sx={{ fontSize: '0.78rem', color: '#64748b' }}>Direct:</Typography>
+              <RadioGroup
+                row
+                value={activeToothData.restorationType || 'Composite'}
+                onChange={(e) => handleUpdateRestorationType(activeToothNum, e.target.value)}
+              >
+                {['Composite', 'Amalgam', 'Temporary', 'Gold', 'Sealant'].map(type => (
+                  <FormControlLabel
+                    key={type}
+                    value={type}
+                    control={<Radio size="small" />}
+                    label={<Typography sx={{ fontSize: '0.75rem' }}>{type}</Typography>}
+                    sx={{ mr: 1 }}
+                  />
+                ))}
+              </RadioGroup>
+            </Box>
+
+            {/* Surface Selection */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Surface:</Typography>
+              <Stack direction="row" spacing={0.5}>
+                {['D', 'O/I', 'M', 'L', 'B/F', 'C'].map(surf => {
+                  const isSel = (activeToothData.surfaces || []).includes(surf);
+                  return (
+                    <Button
+                      key={surf}
+                      size="small"
+                      variant={isSel ? "contained" : "outlined"}
+                      onClick={() => handleToggleSurface(activeToothNum, surf)}
+                      sx={{
+                        fontSize: '0.7rem',
+                        p: '2px 6px',
+                        minWidth: 26,
+                        lineHeight: 1.1,
+                        bgcolor: isSel ? '#1976d2' : '#fff',
+                        color: isSel ? '#fff' : '#555',
+                        borderColor: isSel ? '#1976d2' : '#ccc',
+                        fontWeight: 'bold',
+                        '&:hover': {
+                          bgcolor: isSel ? '#1565c0' : '#f5f5f5',
+                          borderColor: isSel ? '#1565c0' : '#bbb',
+                        }
+                      }}
+                    >
+                      {surf}
+                    </Button>
+                  );
+                })}
+              </Stack>
+            </Box>
+
+            {/* Isthmus Radio Selection */}
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', mb: 0.5 }}>Isthmus:</Typography>
+            <RadioGroup
+              row
+              value={activeToothData.isthmus || '< 1/3'}
+              onChange={(e) => handleUpdateIsthmus(activeToothNum, e.target.value)}
+              sx={{ pl: 1, mb: 2 }}
+            >
+              {['< 1/3', '1/3 - 1/2', '> 1/2'].map(opt => (
+                <FormControlLabel
+                  key={opt}
+                  value={opt}
+                  control={<Radio size="small" />}
+                  label={<Typography sx={{ fontSize: '0.75rem' }}>{opt}</Typography>}
+                  sx={{ mr: 2 }}
+                />
+              ))}
+            </RadioGroup>
+
+            {/* Concerns Checkboxes */}
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', mb: 0.5 }}>Concerns:</Typography>
+            <Box sx={{ pl: 1, mb: 2 }}>
+              <Typography sx={{ fontSize: '0.78rem', color: '#64748b', mb: 0.5 }}>Marginal Integrity:</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2, mb: 1 }}>
+                {['Caries', 'Open Margin', 'Margin Overhang', 'Margin Leakage', 'Deep margin (Violation of biologic width)'].map(concern => {
+                  const isChecked = (activeToothData.concerns || []).includes(concern);
+                  return (
+                    <FormControlLabel
+                      key={concern}
+                      control={
+                        <Checkbox 
+                          size="small" 
+                          checked={isChecked}
+                          onChange={() => handleToggleConcern(activeToothNum, concern)}
+                          sx={{ py: 0.2 }}
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: '0.75rem' }}>{concern}</Typography>}
+                      sx={{ my: -0.1 }}
+                    />
+                  );
+                })}
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+                {['Chipped Restoration', 'Compromised Occlusal Surface', 'Inappropriate Contour', 'Alloy Sensitivity', 'Fracture'].map(concern => {
+                  const isChecked = (activeToothData.concerns || []).includes(concern);
+                  return (
+                    <FormControlLabel
+                      key={concern}
+                      control={
+                        <Checkbox 
+                          size="small" 
+                          checked={isChecked}
+                          onChange={() => handleToggleConcern(activeToothNum, concern)}
+                          sx={{ py: 0.2 }}
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: '0.75rem' }}>{concern}</Typography>}
+                      sx={{ my: -0.1 }}
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
+
+            {/* Notes Section */}
+            {showPopoverNoteInput ? (
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  size="small"
+                  placeholder="Add note..."
+                  value={popoverNoteValue}
+                  onChange={(e) => setPopoverNoteValue(e.target.value)}
+                  onBlur={() => handleSaveNote(activeToothNum, popoverNoteValue)}
+                  sx={{ '& .MuiInputBase-root': { fontSize: '0.75rem', p: 1 } }}
+                />
+              </Box>
+            ) : (
+              <Button
+                size="small"
+                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                onClick={() => setShowPopoverNoteInput(true)}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  color: '#1976d2',
+                  p: 0,
+                  mb: 2,
+                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+                }}
+              >
+                + Add note
+              </Button>
+            )}
+
+            <Divider sx={{ my: 1.5 }} />
+
+            {/* Delete button */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <IconButton 
+                size="small" 
+                color="error" 
+                onClick={() => handleDeleteFinding(activeToothNum)}
+                sx={{ p: 0.5 }}
+              >
+                <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          </Box>
+        )}
+      </Popover>
     </DentalSection>
   );
 };
