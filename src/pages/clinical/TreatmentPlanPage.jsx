@@ -302,7 +302,8 @@ const GlobalActionBar = ({
   handleMoveProceduresToVisit,
   onStateClick,
   onDeleteClick,
-  onReferClick
+  onReferClick,
+  onDbiClick
 }) => {
   const [reEstimateAnchor, setReEstimateAnchor] = useState(null);
   const [visitAnchorEl, setVisitAnchorEl] = useState(null);
@@ -580,7 +581,18 @@ const GlobalActionBar = ({
           label="DBI" 
           variant="outlined" 
           size="small" 
-          sx={{ borderRadius: 1, height: 24, bgcolor: '#a3b1d6', border: 'none' }} 
+          onClick={onDbiClick}
+          sx={{ 
+            borderRadius: 1, 
+            height: 24, 
+            bgcolor: selectedProcedureIds.length > 0 ? '#2d4571' : '#a3b1d6', 
+            color: selectedProcedureIds.length > 0 ? '#fff' : 'inherit',
+            border: 'none',
+            cursor: selectedProcedureIds.length > 0 ? 'pointer' : 'default',
+            '&:hover': {
+              bgcolor: selectedProcedureIds.length > 0 ? '#1e3050' : '#a3b1d6'
+            }
+          }} 
         />
         
         <IconButton size="small"><PrintIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
@@ -714,6 +726,11 @@ export default function TreatmentPlanPage() {
   const [referMenuAnchorEl, setReferMenuAnchorEl] = useState(null);
   const [showReferConfirm, setShowReferConfirm] = useState(false);
   const [selectedDentist, setSelectedDentist] = useState('');
+  const [showDbiConfirm, setShowDbiConfirm] = useState(false);
+  const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpReason, setFollowUpReason] = useState('');
+  const [followUpTargetOptions, setFollowUpTargetOptions] = useState({});
 
   const parseAmount = (val) => {
     if (typeof val === 'number') return val;
@@ -1006,6 +1023,20 @@ export default function TreatmentPlanPage() {
   };
 
   const handleApplyStatus = (newStatus, options = {}) => {
+    if (newStatus === '!') {
+      setFollowUpTargetOptions(options);
+      setFollowUpReason('');
+      const today = new Date();
+      const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+      setFollowUpDate(todayStr);
+      setShowFollowUpDialog(true);
+      setStatusMenuAnchorEl(null);
+      setStatusMenuVisitId(null);
+      setStatusMenuProcId(null);
+      setStateMenuAnchorEl(null);
+      return;
+    }
+
     setVisits(prev => 
       prev.map(v => {
         let proceduresChanged = false;
@@ -1048,6 +1079,73 @@ export default function TreatmentPlanPage() {
     setStatusMenuVisitId(null);
     setStatusMenuProcId(null);
     setStateMenuAnchorEl(null);
+  };
+
+  const handleSaveFollowUp = () => {
+    const options = followUpTargetOptions;
+    setVisits(prev => 
+      prev.map(v => {
+        let proceduresChanged = false;
+        const updatedProcs = v.procedures.map(p => {
+          const matches = 
+            (options.procId && p.id === options.procId) ||
+            (options.visitId && v.id === options.visitId) ||
+            (options.batch && selectedProcedureIds.includes(p.id));
+          
+          if (matches) {
+            proceduresChanged = true;
+            return { 
+              ...p, 
+              status: '!', 
+              followUpDate: followUpDate, 
+              followUpReason: followUpReason 
+            };
+          }
+          return p;
+        });
+
+        let nextVisitStatus = v.status;
+        if (options.visitId && v.id === options.visitId) {
+          nextVisitStatus = '!';
+        } else if (proceduresChanged) {
+          const firstStatus = updatedProcs[0]?.status || 'D';
+          const allSame = updatedProcs.every(p => p.status === firstStatus);
+          if (allSame) {
+            nextVisitStatus = firstStatus;
+          }
+        }
+
+        return {
+          ...v,
+          status: nextVisitStatus,
+          procedures: updatedProcs
+        };
+      })
+    );
+
+    setSelectedProcedureIds([]);
+    setSelectedVisitIds([]);
+    setShowFollowUpDialog(false);
+  };
+
+  const handleConfirmDbi = () => {
+    setVisits(prev => 
+      prev.map(v => ({
+        ...v,
+        procedures: v.procedures.map(p => {
+          if (selectedProcedureIds.includes(p.id)) {
+            return {
+              ...p,
+              dbi: true
+            };
+          }
+          return p;
+        })
+      }))
+    );
+    setSelectedProcedureIds([]);
+    setSelectedVisitIds([]);
+    setShowDbiConfirm(false);
   };
 
   const handleStatusBadgeClick = (event, visitId) => {
@@ -2067,6 +2165,11 @@ export default function TreatmentPlanPage() {
             onStateClick={(e) => setStateMenuAnchorEl(e.currentTarget)}
             onDeleteClick={() => setShowDeleteConfirm(true)}
             onReferClick={(e) => setReferMenuAnchorEl(e.currentTarget)}
+            onDbiClick={() => {
+              if (selectedProcedureIds.length > 0) {
+                setShowDbiConfirm(true);
+              }
+            }}
           />
         </Box>
 
@@ -2410,6 +2513,166 @@ export default function TreatmentPlanPage() {
           </Stack>
         </Dialog>
 
+        {/* DBI Confirmation Dialog */}
+        <Dialog 
+          open={showDbiConfirm} 
+          onClose={() => setShowDbiConfirm(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: '8px',
+              p: 3,
+              maxWidth: '450px',
+              width: '100%',
+              border: '1.5px solid #f59e0b'
+            }
+          }}
+        >
+          <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#334155', textAlign: 'center', mb: 2 }}>
+            Are you sure you want to NOT bill all the selected procedures
+          </Typography>
+          <Stack spacing={0.5} sx={{ mb: 3, px: 2 }}>
+            {selectedProcedureIds.map(pId => {
+              let foundProc = null;
+              visits.forEach(v => {
+                const p = v.procedures.find(proc => proc.id === pId);
+                if (p) foundProc = p;
+              });
+              if (foundProc) {
+                const suffix = foundProc.toothNumber || foundProc.surface 
+                  ? `(${foundProc.toothNumber ?? ''}${foundProc.surface ? ' ' + foundProc.surface : ''})`
+                  : '';
+                return (
+                  <Typography key={pId} sx={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
+                    -{foundProc.treatmentName}{suffix}
+                  </Typography>
+                );
+              }
+              return null;
+            })}
+          </Stack>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <Button 
+              variant="contained" 
+              onClick={handleConfirmDbi}
+              sx={{ 
+                bgcolor: '#f59e0b', 
+                color: '#fff', 
+                textTransform: 'none',
+                px: 3,
+                '&:hover': { bgcolor: '#d97706' }
+              }}
+            >
+              Update
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={() => setShowDbiConfirm(false)}
+              sx={{ 
+                bgcolor: '#78909c', 
+                color: '#fff', 
+                textTransform: 'none',
+                px: 3,
+                '&:hover': { bgcolor: '#546e7a' }
+              }}
+            >
+              Cancel
+            </Button>
+          </Stack>
+        </Dialog>
+
+        {/* Follow-up Procedure Dialog */}
+        <Dialog 
+          open={showFollowUpDialog} 
+          onClose={() => setShowFollowUpDialog(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: '8px',
+              p: 0,
+              maxWidth: '450px',
+              width: '100%',
+              overflow: 'hidden'
+            }
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ bgcolor: '#2d4571', px: 2, py: 1.5 }}>
+            <Typography sx={{ color: '#fff', fontSize: '0.95rem', fontWeight: 'bold' }}>
+              Follow Up Procedure:
+            </Typography>
+          </Box>
+          {/* Content */}
+          <Box sx={{ p: 3 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 'medium', color: '#334155' }}>
+                Follow-up Date:
+              </Typography>
+              <Box 
+                component="input"
+                type="text"
+                value={followUpDate}
+                onChange={(e) => setFollowUpDate(e.target.value)}
+                sx={{
+                  border: 'none',
+                  borderBottom: '1px solid #ccc',
+                  outline: 'none',
+                  fontSize: '0.875rem',
+                  color: '#334155',
+                  width: '120px',
+                  pb: 0.2
+                }}
+              />
+            </Stack>
+
+            <Box 
+              component="textarea"
+              placeholder="Reason"
+              value={followUpReason}
+              onChange={(e) => setFollowUpReason(e.target.value)}
+              rows={4}
+              sx={{
+                width: '100%',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                p: 1,
+                fontSize: '0.875rem',
+                fontFamily: 'inherit',
+                outline: 'none',
+                resize: 'none',
+                mb: 3
+              }}
+            />
+
+            <Stack direction="row" spacing={2} justifyContent="flex-end">
+              <Button 
+                variant="contained" 
+                onClick={handleSaveFollowUp}
+                sx={{ 
+                  bgcolor: '#bca67a', 
+                  color: '#fff', 
+                  textTransform: 'none',
+                  px: 3,
+                  '&:hover': { bgcolor: '#aa956b' }
+                }}
+              >
+                Save
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={() => setShowFollowUpDialog(false)}
+                sx={{ 
+                  bgcolor: '#94a3b8', 
+                  color: '#fff', 
+                  textTransform: 'none',
+                  px: 3,
+                  '&:hover': { bgcolor: '#64748b' }
+                }}
+              >
+                Cancel
+              </Button>
+            </Stack>
+          </Box>
+        </Dialog>
+
         {/* Dental Treatment Plan - Outside the columns, full width */}
         <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>
           <DentalTreatmentPlan />
@@ -2716,9 +2979,16 @@ export default function TreatmentPlanPage() {
                       </Box>
 
                       {/* Date */}
-                      <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        {p.date || '07/15/2022'}
-                      </Typography>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {p.date || '07/15/2022'}
+                        </Typography>
+                        {p.dbi && (
+                          <Typography sx={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 'bold' }}>
+                            DBI
+                          </Typography>
+                        )}
+                      </Stack>
 
                       {/* Referral badge and checkmark */}
                       <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
@@ -2750,10 +3020,10 @@ export default function TreatmentPlanPage() {
                     </Box>
                   );
 
-                  const activeProcs = visit.procedures.filter(p => !p.referredTo);
-                  const referredProcs = visit.procedures.filter(p => p.referredTo);
+                  const activeProcs = visit.procedures.filter(p => !p.referredTo && !['!', 'EO', 'EX'].includes(p.status));
+                  const referredProcs = visit.procedures.filter(p => p.referredTo && !['!', 'EO', 'EX'].includes(p.status));
 
-                  if (visit.procedures.length === 0) {
+                  if (activeProcs.length === 0 && referredProcs.length === 0) {
                     return (
                       <Box sx={{ px: 2, py: 2 }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#64748b' }}>
@@ -2829,12 +3099,46 @@ export default function TreatmentPlanPage() {
            Add Visit Here
           </Button>
 
-          {/* End Table (Completed / Out of Office) */}
-          <TreatmentPlanEndTable
-            completedRows={[]}
-            outOfOfficeRows={[]}
-            onReEstimateCompleted={() => setShowReEstimateDialog(true)}
-          />
+          {/* End Table (Completed / Out of Office / Follow-up) */}
+          {(() => {
+            const allProcedures = visits.flatMap(v => 
+              v.procedures.map(p => ({
+                ...p,
+                visitLabel: v.label,
+                phaseNumber: p.phaseNumber || 1
+              }))
+            );
+            const completedProcs = allProcedures.filter(p => p.status === 'EO');
+            const followUpProcs = allProcedures.filter(p => p.status === '!');
+            const outOfOfficeProcs = allProcedures.filter(p => p.status === 'EX');
+
+            const handleApplyStatusForEndTable = (newStatus, selectedIds) => {
+              setVisits(prev => 
+                prev.map(v => ({
+                  ...v,
+                  procedures: v.procedures.map(p => {
+                    if (selectedIds.includes(p.id)) {
+                      const extra = !['!', 'EO', 'EX'].includes(newStatus)
+                        ? { followUpDate: undefined, followUpReason: undefined }
+                        : {};
+                      return { ...p, status: newStatus, ...extra };
+                    }
+                    return p;
+                  })
+                }))
+              );
+            };
+
+            return (
+              <TreatmentPlanEndTable
+                completedRows={completedProcs}
+                outOfOfficeRows={outOfOfficeProcs}
+                followUpRows={followUpProcs}
+                onApplyStatus={handleApplyStatusForEndTable}
+                onReEstimateCompleted={() => setShowReEstimateDialog(true)}
+              />
+            );
+          })()}
         </Box>
         </Box>
       </Box>
