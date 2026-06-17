@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { selectSelectedPatientId } from '../../store/slices/patientSlice';
-import { useTreatmentPlansQuery, useCreateTreatmentPlan, useUpdateTreatmentPlan } from '../../hooks/queries';
+import { useTreatmentPlansQuery, useCreateTreatmentPlan, useUpdateTreatmentPlan, useDeleteTreatmentPlan } from '../../hooks/queries';
 import { 
   Box, Typography, Grid, Paper, IconButton, 
   Button, Stack, Accordion, AccordionSummary, AccordionDetails, Chip, Divider,
-  Dialog, DialogContent, Popover, Checkbox, Menu, MenuItem, Tooltip
+  Dialog, DialogContent, DialogTitle, DialogActions, TextField, Popover, Checkbox, Menu, MenuItem, Tooltip
 } from '@mui/material';
 import { Tooth as RadiographicTooth, SelectToothDialog } from '../../components/radiographic';
 
@@ -303,7 +303,8 @@ const GlobalActionBar = ({
   onStateClick,
   onDeleteClick,
   onReferClick,
-  onDbiClick
+  onDbiClick,
+  onPrintClick
 }) => {
   const [reEstimateAnchor, setReEstimateAnchor] = useState(null);
   const [visitAnchorEl, setVisitAnchorEl] = useState(null);
@@ -595,7 +596,7 @@ const GlobalActionBar = ({
           }} 
         />
         
-        <IconButton size="small"><PrintIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
+        <IconButton size="small" onClick={onPrintClick}><PrintIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
         <IconButton size="small"><CreditCardIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
         <IconButton size="small" onClick={onSettingsClick}><SettingsIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
         <IconButton size="small" onClick={onPredetermineClick}><SecurityIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
@@ -731,6 +732,20 @@ export default function TreatmentPlanPage() {
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpReason, setFollowUpReason] = useState('');
   const [followUpTargetOptions, setFollowUpTargetOptions] = useState({});
+  const [activePlanId, setActivePlanId] = useState(null);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [showDeletePlanConfirm, setShowDeletePlanConfirm] = useState(false);
+  const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
+  const [showPrintPreviewDialog, setShowPrintPreviewDialog] = useState(false);
+  const [showPrintNotes, setShowPrintNotes] = useState(false);
+  const [printNotesText, setPrintNotesText] = useState('');
+  const [paymentOptionSelections, setPaymentOptionSelections] = useState({
+    payInAdvance: false,
+    payAsYouGo: false,
+    paymentPlan: false,
+    financing: false
+  });
 
   const parseAmount = (val) => {
     if (typeof val === 'number') return val;
@@ -1198,9 +1213,17 @@ export default function TreatmentPlanPage() {
   const { data: tpData, isLoading } = useTreatmentPlansQuery(patientId);
   const createMutation = useCreateTreatmentPlan(patientId);
   const updateMutation = useUpdateTreatmentPlan(patientId);
+  const deleteMutation = useDeleteTreatmentPlan(patientId);
 
   const plans = tpData?.data?.treatmentPlans || [];
-  const activePlan = plans[0];
+  const activePlan = (activePlanId ? plans.find(p => p._id === activePlanId) : plans[0]) || plans[0];
+
+  // Auto-select the first plan when plans load, or after deletion
+  useEffect(() => {
+    if (plans.length > 0 && (!activePlanId || !plans.find(p => p._id === activePlanId))) {
+      setActivePlanId(plans[0]._id);
+    }
+  }, [plans, activePlanId]);
 
   const [visits, rawSetVisits] = useState(() => [
     {
@@ -1358,6 +1381,64 @@ export default function TreatmentPlanPage() {
       ];
     });
   };
+
+  const handleCreatePlan = () => {
+    const nextNum = plans.length + 1;
+    createMutation.mutate({
+      patientId: patientId.toString(),
+      title: `TP ${nextNum}`,
+      status: 'active',
+      totalAmount: 0,
+      items: [
+        {
+          id: 'v-1',
+          label: 'Visit 1',
+          procedures: []
+        }
+      ]
+    }, {
+      onSuccess: (response) => {
+        const newId = response?.data?._id || response?._id;
+        if (newId) {
+          setActivePlanId(newId);
+        }
+      }
+    });
+  };
+
+  const handleRenamePlan = () => {
+    if (!activePlan?._id || !renameValue.trim()) return;
+    updateMutation.mutate({
+      id: activePlan._id,
+      data: { title: renameValue.trim() }
+    });
+    setShowRenameDialog(false);
+  };
+
+  const handleDeletePlan = () => {
+    if (!activePlan?._id) return;
+    const deletingId = activePlan._id;
+    const remaining = plans.filter(p => p._id !== deletingId);
+    if (remaining.length > 0) {
+      setActivePlanId(remaining[0]._id);
+    } else {
+      setActivePlanId(null);
+    }
+    deleteMutation.mutate(deletingId);
+    setShowDeletePlanConfirm(false);
+  };
+
+  const handleSwitchPlan = (planId) => {
+    if (planId === activePlanId) return;
+    setActivePlanId(planId);
+    const targetPlan = plans.find(p => p._id === planId);
+    if (targetPlan?.items && Array.isArray(targetPlan.items) && targetPlan.items.length > 0) {
+      rawSetVisits(targetPlan.items);
+    } else {
+      rawSetVisits([{ id: 'v-1', label: 'Visit 1', procedures: [] }]);
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <ClinicalNavbar />
@@ -1375,11 +1456,92 @@ export default function TreatmentPlanPage() {
         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto' }}>
           {/* Top Toolbar */}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2, mb: 1, px: 2 }}>
-            <Chip label="TP 1" color="primary" size="small" icon={<EditIcon />} sx={{ bgcolor: '#5c6bc0' }} />
-            <Chip label="+ TP" variant="outlined" size="small" sx={{ borderStyle: 'dashed', color: '#fbc02d' }} />
-            <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
-            <IconButton size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
-            <IconButton size="small"><PrintIcon fontSize="small" /></IconButton>
+            {/* Dynamic Plan Tabs */}
+            {plans.map((plan, idx) => {
+              const isActive = plan._id === activePlan?._id;
+              return (
+                <Chip
+                  key={plan._id}
+                  label={plan.title || `TP ${idx + 1}`}
+                  size="small"
+                  icon={isActive ? <EditIcon sx={{ fontSize: '0.85rem !important', color: '#fff !important' }} /> : undefined}
+                  onClick={() => handleSwitchPlan(plan._id)}
+                  sx={{
+                    bgcolor: isActive ? '#5c6bc0' : '#e8eaf6',
+                    color: isActive ? '#fff' : '#3f51b5',
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: isActive ? '#4a5ab5' : '#c5cae9'
+                    }
+                  }}
+                />
+              );
+            })}
+            {/* + TP Button */}
+            <Chip
+              label="+ TP"
+              variant="outlined"
+              size="small"
+              onClick={handleCreatePlan}
+              disabled={createMutation.isPending}
+              sx={{
+                borderStyle: 'dashed',
+                color: '#fbc02d',
+                borderColor: '#fbc02d',
+                cursor: 'pointer',
+                fontWeight: 600,
+                '&:hover': {
+                  bgcolor: '#fff8e1',
+                  borderColor: '#f9a825'
+                }
+              }}
+            />
+            {/* Edit (Rename) */}
+            <IconButton
+              size="small"
+              onClick={() => {
+                setRenameValue(activePlan?.title || '');
+                setShowRenameDialog(true);
+              }}
+              disabled={!activePlan}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            {/* Delete */}
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => setShowDeletePlanConfirm(true)}
+              disabled={!activePlan}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={(e) => setPrintMenuAnchorEl(e.currentTarget)}>
+              <PrintIcon fontSize="small" />
+            </IconButton>
+            <Menu
+              anchorEl={printMenuAnchorEl}
+              open={Boolean(printMenuAnchorEl)}
+              onClose={() => setPrintMenuAnchorEl(null)}
+              PaperProps={{
+                sx: {
+                  minWidth: 150,
+                  boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+                  borderRadius: '6px'
+                }
+              }}
+            >
+              <MenuItem onClick={() => {
+                setPrintMenuAnchorEl(null);
+                setShowPrintPreviewDialog(true);
+              }}>
+                <Typography sx={{ fontSize: '0.85rem' }}>Print Treatment Plan</Typography>
+              </MenuItem>
+              <MenuItem onClick={() => setPrintMenuAnchorEl(null)}>
+                <Typography sx={{ fontSize: '0.85rem' }}>Email Treatment Plan</Typography>
+              </MenuItem>
+            </Menu>
             <IconButton size="small"><VisibilityIcon fontSize="small" /></IconButton>
             <Box sx={{ flexGrow: 1 }} />
             <Button
@@ -2170,6 +2332,7 @@ export default function TreatmentPlanPage() {
                 setShowDbiConfirm(true);
               }
             }}
+            onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)}
           />
         </Box>
 
@@ -3142,6 +3305,286 @@ export default function TreatmentPlanPage() {
         </Box>
         </Box>
       </Box>
+
+      {/* Rename Treatment Plan Dialog */}
+      <Dialog
+        open={showRenameDialog}
+        onClose={() => setShowRenameDialog(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            maxWidth: '420px',
+            width: '100%'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontSize: '1rem', fontWeight: 600, color: '#334155', pb: 1 }}>
+          Rename Treatment Plan
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleRenamePlan(); }}
+            placeholder="Enter plan name"
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleRenamePlan}
+            disabled={!renameValue.trim()}
+            sx={{
+              bgcolor: '#5c6bc0',
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#4a5ab5' }
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setShowRenameDialog(false)}
+            sx={{ textTransform: 'none', color: '#64748b', borderColor: '#cbd5e1' }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Treatment Plan Confirmation Dialog */}
+      <Dialog
+        open={showDeletePlanConfirm}
+        onClose={() => setShowDeletePlanConfirm(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            p: 3,
+            maxWidth: '420px',
+            width: '100%',
+            border: '1.5px solid #ef4444'
+          }
+        }}
+      >
+        <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#334155', textAlign: 'center', mb: 1 }}>
+          Delete Treatment Plan
+        </Typography>
+        <Typography sx={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', mb: 3 }}>
+          Are you sure you want to delete "{activePlan?.title || 'this plan'}"? This action cannot be undone.
+        </Typography>
+        <Stack direction="row" spacing={2} justifyContent="center">
+          <Button
+            variant="contained"
+            onClick={handleDeletePlan}
+            sx={{
+              bgcolor: '#ef4444',
+              color: '#fff',
+              textTransform: 'none',
+              px: 3,
+              '&:hover': { bgcolor: '#dc2626' }
+            }}
+          >
+            Delete
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setShowDeletePlanConfirm(false)}
+            sx={{
+              bgcolor: '#78909c',
+              color: '#fff',
+              textTransform: 'none',
+              px: 3,
+              '&:hover': { bgcolor: '#546e7a' }
+            }}
+          >
+            Cancel
+          </Button>
+        </Stack>
+      </Dialog>
+
+      {/* Print Preview Dialog */}
+      <Dialog
+        open={showPrintPreviewDialog}
+        onClose={() => setShowPrintPreviewDialog(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#f8fafc',
+            minHeight: '80vh',
+            '@media print': {
+              bgcolor: '#fff',
+              boxShadow: 'none',
+              margin: 0,
+              padding: 0,
+            }
+          }
+        }}
+      >
+        <Box sx={{ p: 4, '@media print': { p: 0 } }} id="printable-area">
+          {/* Action Bar (Hidden when printing) */}
+          <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mb: 3, '@media print': { display: 'none' } }}>
+            <Button variant="outlined" onClick={() => setShowPrintPreviewDialog(false)}>Cancel</Button>
+            <Button variant="contained" onClick={() => window.print()} sx={{ bgcolor: '#1a237e' }}>Print</Button>
+          </Stack>
+
+          {/* Header */}
+          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a237e' }}>Medflow</Typography>
+              <Typography sx={{ fontSize: '0.9rem', color: '#64748b' }}>Dental Clinic Management</Typography>
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>Treatment Plan Estimate</Typography>
+              <Typography sx={{ fontSize: '0.9rem' }}>Date: {new Date().toLocaleDateString()}</Typography>
+            </Box>
+          </Box>
+
+          {/* Visits Tables */}
+          {visits.map((visit, vIdx) => (
+            <Box key={visit.id || vIdx} sx={{ mb: 4 }}>
+              <Typography sx={{ fontWeight: 600, bgcolor: '#e2e8f0', p: 1, borderRadius: '4px 4px 0 0', border: '1px solid #cbd5e1' }}>
+                {visit.label || `Visit ${vIdx + 1}`}
+              </Typography>
+              <Box sx={{ border: '1px solid #cbd5e1', borderTop: 'none', borderRadius: '0 0 4px 4px', overflow: 'hidden' }}>
+                <Grid container sx={{ bgcolor: '#f1f5f9', p: 1, borderBottom: '1px solid #cbd5e1' }}>
+                  <Grid item xs={2}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Code</Typography></Grid>
+                  <Grid item xs={4}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Description</Typography></Grid>
+                  <Grid item xs={1}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Tooth</Typography></Grid>
+                  <Grid item xs={1}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Surf</Typography></Grid>
+                  <Grid item xs={1}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Fee</Typography></Grid>
+                  <Grid item xs={1.5}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Ins</Typography></Grid>
+                  <Grid item xs={1.5}><Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Pt</Typography></Grid>
+                </Grid>
+                {visit.procedures && visit.procedures.map((p, pIdx) => (
+                  <Grid container key={p.id || pIdx} sx={{ p: 1, borderBottom: pIdx < visit.procedures.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                    <Grid item xs={2}><Typography sx={{ fontSize: '0.8rem' }}>{p.code}</Typography></Grid>
+                    <Grid item xs={4}><Typography sx={{ fontSize: '0.8rem' }}>{p.treatmentName}</Typography></Grid>
+                    <Grid item xs={1}><Typography sx={{ fontSize: '0.8rem' }}>{p.toothNumber}</Typography></Grid>
+                    <Grid item xs={1}><Typography sx={{ fontSize: '0.8rem' }}>{p.surface}</Typography></Grid>
+                    <Grid item xs={1}><Typography sx={{ fontSize: '0.8rem' }}>{p.fee || '$0.00'}</Typography></Grid>
+                    <Grid item xs={1.5}><Typography sx={{ fontSize: '0.8rem' }}>{p.insuranceAmount || '$0.00'}</Typography></Grid>
+                    <Grid item xs={1.5}><Typography sx={{ fontSize: '0.8rem' }}>{p.patientAmount || '$0.00'}</Typography></Grid>
+                  </Grid>
+                ))}
+              </Box>
+            </Box>
+          ))}
+
+          {/* Payment Options */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5, '@media print': { display: 'none' } }}>
+               <Typography sx={{ fontSize: '0.8rem', color: '#7a8fb8', cursor: 'pointer' }}>↻ Refresh Payment Options</Typography>
+            </Box>
+            <Box sx={{ border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+              <Box sx={{ bgcolor: '#7a8fb8', p: 1, display: 'flex', justifyContent: 'center' }}>
+                 <Typography sx={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}>Payment Options</Typography>
+              </Box>
+              <Box sx={{ p: 2 }}>
+                <Stack spacing={1}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Checkbox size="small" sx={{ p: 0.5 }} checked={paymentOptionSelections.payInAdvance} onChange={(e) => setPaymentOptionSelections({...paymentOptionSelections, payInAdvance: e.target.checked})} />
+                    <Typography sx={{ fontSize: '0.85rem', mt: 0.5, ml: 1 }}><strong>Pay In Advance:</strong> Receive a 5 % courtesy discount by paying your treatment in full today</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Checkbox size="small" sx={{ p: 0.5 }} checked={paymentOptionSelections.payAsYouGo} onChange={(e) => setPaymentOptionSelections({...paymentOptionSelections, payAsYouGo: e.target.checked})} />
+                    <Typography sx={{ fontSize: '0.85rem', mt: 0.5, ml: 1 }}><strong>Pay As You Go:</strong> Payment at each appointment as treatment progresses. Payment: As showing above in treatment presentation.</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Checkbox size="small" sx={{ p: 0.5 }} checked={paymentOptionSelections.paymentPlan} onChange={(e) => setPaymentOptionSelections({...paymentOptionSelections, paymentPlan: e.target.checked})} />
+                    <Typography sx={{ fontSize: '0.85rem', mt: 0.5, ml: 1 }}><strong>Payment Plan:</strong> For 12 months, paying 5 % Mgmt fee. <br/>Down payment: $ 263.34 <br/>Monthly payment: $ 87.78</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Checkbox size="small" sx={{ p: 0.5 }} checked={paymentOptionSelections.financing} onChange={(e) => setPaymentOptionSelections({...paymentOptionSelections, financing: e.target.checked})} />
+                    <Typography sx={{ fontSize: '0.85rem', mt: 0.5, ml: 1 }}><strong>Financing - Care Credit:</strong> No interest rate financing through care credit.</Typography>
+                  </Box>
+                </Stack>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Treatment Plan Notes */}
+          {!showPrintNotes && (
+             <Box sx={{ mb: 2, '@media print': { display: 'none' } }}>
+                <Button size="small" onClick={() => setShowPrintNotes(true)} sx={{ textTransform: 'none' }}>+ Add Notes</Button>
+             </Box>
+          )}
+          {showPrintNotes && (
+            <Box sx={{ mb: 4, border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+              <Box sx={{ bgcolor: '#7a8fb8', p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <Typography sx={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}>Treatment Plan Notes:</Typography>
+                 <Box sx={{ '@media print': { display: 'none' } }}>
+                   <Typography sx={{ color: '#fff', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }} onClick={() => setShowPrintNotes(false)}>×</Typography>
+                 </Box>
+              </Box>
+              <Box sx={{ p: 2 }}>
+                 <Box
+                   component="textarea"
+                   placeholder="Write notes"
+                   value={printNotesText}
+                   onChange={(e) => setPrintNotesText(e.target.value)}
+                   sx={{
+                     width: '100%',
+                     minHeight: '100px',
+                     border: '1px solid #e2e8f0',
+                     borderRadius: '4px',
+                     p: 1,
+                     fontFamily: 'inherit',
+                     fontSize: '0.85rem',
+                     resize: 'vertical',
+                     '@media print': {
+                        border: 'none',
+                        resize: 'none',
+                     }
+                   }}
+                 />
+                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, '@media print': { display: 'none' } }}>
+                    <Button variant="contained" size="small" onClick={() => setShowPrintNotes(false)} sx={{ bgcolor: '#1e293b', textTransform: 'none' }}>Done</Button>
+                 </Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* Acknowledgments & Signatures */}
+          <Box sx={{ mb: 4 }}>
+             <Typography sx={{ fontSize: '0.85rem', mb: 1 }}>Acknowledgment:</Typography>
+             <Typography sx={{ fontSize: '0.8rem', color: '#334155', mb: 1, lineHeight: 1.5 }}>
+               This treatment plan and alternatives have been described to me. I fully understand the risks, benefits, and alternatives of the recommended treatment. My questions have been answered.
+             </Typography>
+             <Typography sx={{ fontSize: '0.8rem', color: '#334155', mb: 1, lineHeight: 1.5 }}>
+               I understand that as the treatment progresses, modifications may be necessary and these may affect the fee. Should this occur, I further understand that the modification of treatment and the change in fee will be discussed with me at the earliest possible time.
+             </Typography>
+             <Typography sx={{ fontSize: '0.8rem', color: '#334155', mb: 1, lineHeight: 1.5 }}>
+               I understand that I am responsible to pay up front for all my treatment. The treatment will be submitted to my dental insurance company on my behalf, but our office will not accept assignment payments from my dental insurance company on my behalf.
+             </Typography>
+             <Typography sx={{ fontSize: '0.8rem', color: '#334155', mb: 1, lineHeight: 1.5, fontWeight: 'bold' }}>
+               This estimate is valid for 90 days from the date of this letter.
+             </Typography>
+             <Typography sx={{ fontSize: '0.8rem', color: '#334155', mb: 4, lineHeight: 1.5 }}>
+               If treatment commences, but the entire treatment plan is not completed, I acknowledge that the expected outcome for whatever procedures are completed may be compromised.
+             </Typography>
+             
+             <Stack direction="row" spacing={4} sx={{ mt: 6 }}>
+                <Box sx={{ flex: 1 }}>
+                   <Box sx={{ borderBottom: '1px solid #000', pb: 0.5, mb: 0.5 }}>
+                      <Typography sx={{ fontSize: '0.85rem' }}>{new Date().toLocaleDateString()}</Typography>
+                   </Box>
+                   <Typography sx={{ fontSize: '0.8rem', color: '#64748b' }}>Date</Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                   <Box sx={{ borderBottom: '1px solid #000', pb: 0.5, mb: 0.5, minHeight: '20px' }}>
+                   </Box>
+                   <Typography sx={{ fontSize: '0.8rem', color: '#64748b' }}>Signature</Typography>
+                </Box>
+             </Stack>
+          </Box>
+        </Box>
+      </Dialog>
+
     </Box>
   );
 }
