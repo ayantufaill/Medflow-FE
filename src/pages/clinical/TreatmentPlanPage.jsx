@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { useTreatmentPlansQuery, useCreateTreatmentPlan, useUpdateTreatmentPlan } from '../../hooks/queries';
 import { 
   Box, Typography, Grid, Paper, IconButton, 
   Button, Stack, Accordion, AccordionSummary, AccordionDetails, Chip, Divider,
@@ -1093,7 +1096,15 @@ export default function TreatmentPlanPage() {
     setSelectedVisitIds([]);
     setShowReferConfirm(false);
   };
-  const [visits, setVisits] = useState(() => [
+  const patientId = useSelector(selectSelectedPatientId) || "1";
+  const { data: tpData, isLoading } = useTreatmentPlansQuery(patientId);
+  const createMutation = useCreateTreatmentPlan(patientId);
+  const updateMutation = useUpdateTreatmentPlan(patientId);
+
+  const plans = tpData?.data?.treatmentPlans || [];
+  const activePlan = plans[0];
+
+  const [visits, rawSetVisits] = useState(() => [
     {
       id: 'v-1',
       label: 'Visit 1',
@@ -1120,6 +1131,78 @@ export default function TreatmentPlanPage() {
       ]
     }
   ]);
+
+  const setVisits = (updater) => {
+    rawSetVisits((prev) => {
+      const nextVal = typeof updater === 'function' ? updater(prev) : updater;
+      if (activePlan?._id) {
+        updateMutation.mutate({
+          id: activePlan._id,
+          data: {
+            items: nextVal
+          }
+        });
+      }
+      return nextVal;
+    });
+  };
+
+  useEffect(() => {
+    if (activePlan?.items && Array.isArray(activePlan.items) && activePlan.items.length > 0) {
+      rawSetVisits(activePlan.items);
+    }
+  }, [activePlan]);
+
+  useEffect(() => {
+    if (tpData && plans.length === 0) {
+      createMutation.mutate({
+        patientId: patientId.toString(),
+        title: 'Phase 1 Restorative Plan',
+        status: 'active',
+        totalAmount: 0,
+        items: [
+          {
+            id: 'v-1',
+            label: 'Visit 1',
+            procedures: [
+              {
+                id: 'p-1',
+                visitId: 'v-1',
+                name: 'crown /bu',
+                toothNumber: 15,
+                surface: '',
+                code: 'D0120',
+                treatmentName: 'Periodic Evaluation',
+                options: '',
+                patientAmount: '$0.00',
+                insuranceAmount: '$0.00',
+                adjustmentPercent: '0%',
+                adjustmentAmount: '$0.00',
+                fee: '$0.00',
+                billedAmount: '$0.00',
+                providerInitials: 'SAB',
+                status: 'A',
+                date: '10/14/2025'
+              }
+            ]
+          }
+        ]
+      });
+    }
+  }, [tpData, plans.length, patientId]);
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <ClinicalNavbar />
+        <Box sx={{ display: 'flex', flex: 1, justifyContent: 'center', alignItems: 'center', bgcolor: '#fff' }}>
+          <Typography sx={{ fontSize: '1.2rem', color: '#6b7cb4', fontWeight: 'bold' }}>
+            Loading Treatment Plan...
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   const totalProcedures = visits.reduce((sum, v) => sum + (v.procedures?.length || 0), 0);
 
