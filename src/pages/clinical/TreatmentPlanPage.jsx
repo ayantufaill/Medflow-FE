@@ -1272,6 +1272,7 @@ export default function TreatmentPlanPage() {
     if (activePlan?.items && Array.isArray(activePlan.items) && activePlan.items.length > 0) {
       rawSetVisits(activePlan.items);
     }
+    setPrintNotesText(activePlan?.notes || '');
   }, [activePlan]);
 
   useEffect(() => {
@@ -3543,7 +3544,15 @@ export default function TreatmentPlanPage() {
                    }}
                  />
                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, '@media print': { display: 'none' } }}>
-                    <Button variant="contained" size="small" onClick={() => setShowPrintNotes(false)} sx={{ bgcolor: '#1e293b', textTransform: 'none' }}>Done</Button>
+                    <Button variant="contained" size="small" onClick={() => {
+                      if (activePlan?._id) {
+                        updateMutation.mutate({
+                          id: activePlan._id,
+                          data: { notes: printNotesText }
+                        });
+                      }
+                      setShowPrintNotes(false);
+                    }} sx={{ bgcolor: '#1e293b', textTransform: 'none' }}>Done</Button>
                  </Box>
               </Box>
             </Box>
