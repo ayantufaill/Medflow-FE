@@ -35,6 +35,7 @@ import {
   useSignClinicalExam
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
 const TeethStructureExam = () => {
   const { showSnackbar } = useSnackbar();
@@ -42,9 +43,9 @@ const TeethStructureExam = () => {
   const appointmentId = useSelector(selectSelectedAppointmentId);
   const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
 
-  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('teeth-structure', appointmentId);
-  const upsertMutation = useUpsertClinicalExam('teeth-structure', appointmentId);
-  const signMutation = useSignClinicalExam('teeth-structure', appointmentId);
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('tooth-structure', appointmentId);
+  const upsertMutation = useUpsertClinicalExam('tooth-structure', appointmentId);
+  const signMutation = useSignClinicalExam('tooth-structure', appointmentId);
 
   const isSigned = !!examRecord?.isSigned;
 
@@ -61,6 +62,8 @@ const TeethStructureExam = () => {
   
   const [detailModalTooth, setDetailModalTooth] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Additional Teeth selection states
   const [additionalTeeth, setAdditionalTeeth] = useState([]);
@@ -97,18 +100,21 @@ const TeethStructureExam = () => {
     }
   };
 
-  const handleSignExam = async () => {
+  const handleSignExam = () => {
     if (!appointmentId) {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
-    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
-      try {
-        await signMutation.mutateAsync();
-        showSnackbar('Teeth structure exam signed and locked', 'success');
-      } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
-      }
+    setSignDialogOpen(true);
+  };
+
+  const handleConfirmSign = async () => {
+    setSignDialogOpen(false);
+    try {
+      await signMutation.mutateAsync();
+      showSnackbar('Teeth structure exam signed and locked', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
     }
   };
   const [additionalTeethAnchorEl, setAdditionalTeethAnchorEl] = useState(null);
@@ -158,9 +164,13 @@ const TeethStructureExam = () => {
 
   // Handle delete exam
   const handleDeleteExam = () => {
-    if (window.confirm('Are you sure you want to delete this exam?')) {
-      console.log('Delete exam');
-    }
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogOpen(false);
+    console.log('Delete exam');
+    showSnackbar('Teeth structure exam deleted', 'info');
   };
 
   // Handle remove date from timeline
@@ -868,6 +878,27 @@ const TeethStructureExam = () => {
             </Grid>
           )}
         </Dialog>
+
+        <ConfirmationDialog
+          open={signDialogOpen}
+          onClose={() => setSignDialogOpen(false)}
+          onConfirm={handleConfirmSign}
+          title="Sign & Lock Exam"
+          message="Are you sure you want to sign and lock this exam? This action cannot be undone."
+          confirmText="Sign & Lock"
+          confirmColor="#0f766e"
+          loading={signMutation.isPending}
+        />
+
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Exam Record"
+          message="Are you sure you want to delete this exam? This action cannot be undone."
+          confirmText="Delete"
+          confirmColor="error"
+        />
       </Box>
     </Box>
   );

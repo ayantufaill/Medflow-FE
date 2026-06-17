@@ -60,10 +60,17 @@ const ConfirmationDialog = ({
         </Button>
         <Button
           onClick={onConfirm}
-          color={confirmColor}
+          color={typeof confirmColor === 'string' && confirmColor.startsWith('#') ? undefined : confirmColor}
           variant="contained"
           autoFocus
           disabled={loading}
+          sx={typeof confirmColor === 'string' && confirmColor.startsWith('#') ? {
+            bgcolor: confirmColor,
+            color: '#fff',
+            '&:hover': {
+              bgcolor: confirmColor === '#0f766e' ? '#0d5e58' : confirmColor,
+            }
+          } : undefined}
           startIcon={
             loading ? <CircularProgress size={16} color="inherit" /> : null
           }

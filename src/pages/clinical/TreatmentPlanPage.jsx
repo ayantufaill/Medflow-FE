@@ -2,8 +2,51 @@ import React, { useState } from 'react';
 import { 
   Box, Typography, Grid, Paper, IconButton, 
   Button, Stack, Accordion, AccordionSummary, AccordionDetails, Chip, Divider,
-  Dialog, DialogContent
+  Dialog, DialogContent, Popover, Checkbox, Menu, MenuItem, Tooltip
 } from '@mui/material';
+import { Tooth as RadiographicTooth, SelectToothDialog } from '../../components/radiographic';
+
+const RESTORATIVE_CODES_INFO = {
+  'D2140': { name: 'amalgam - one surface, primary or permanent', fee: '$85.00', treatmentName: 'Amalgam' },
+  'D2150': { name: 'amalgam - two surfaces, primary or permanent', fee: '$115.00', treatmentName: 'Amalgam' },
+  'D2160': { name: 'amalgam - three surfaces, primary or permanent', fee: '$145.00', treatmentName: 'Amalgam' },
+  'D2161': { name: 'amalgam - four or more surfaces, primary or permanent', fee: '$180.00', treatmentName: 'Amalgam' },
+  'D2330': { name: 'resin-based composite - one surface, anterior', fee: '$120.00', treatmentName: 'Resin composite' },
+  'D2331': { name: 'resin-based composite - two surfaces, anterior', fee: '$150.00', treatmentName: 'Resin composite' },
+  'D2332': { name: 'resin-based composite - three surfaces, anterior', fee: '$180.00', treatmentName: 'Resin composite' },
+  'D2335': { name: 'resin-based composite - four or more surfaces or involving incisal angle (anterior)', fee: '$220.00', treatmentName: 'Resin composite' },
+  'D2390': { name: 'resin-based composite crown, anterior', fee: '$290.00', treatmentName: 'Resin composite crown' },
+  'D2391': { name: 'resin-based composite - one surface, posterior', fee: '$130.00', treatmentName: 'Resin composite' },
+  'D2392': { name: 'resin-based composite - two surfaces, posterior', fee: '$164.00', treatmentName: 'Resin composite' },
+  'D2393': { name: 'resin-based composite - three surfaces, posterior', fee: '$195.00', treatmentName: 'Resin composite' },
+  'D2394': { name: 'resin-based composite - four or more surfaces, posterior', fee: '$240.00', treatmentName: 'Resin composite' },
+  'D2410': { name: 'gold foil - one surface', fee: '$310.00', treatmentName: 'Gold foil' },
+  'D2420': { name: 'gold foil - two surfaces', fee: '$420.00', treatmentName: 'Gold foil' },
+  'D2430': { name: 'gold foil - three surfaces', fee: '$530.00', treatmentName: 'Gold foil' },
+  'D2960': { name: 'labial veneer (resin laminate) - direct', fee: '$650.00', treatmentName: 'Labial veneer' },
+  'D2928': { name: 'prefabricated porcelain/ceramic crown - permanent tooth', fee: '$220.00', treatmentName: 'Prefabricated crown' },
+  'Cinsert': { name: '0000', fee: '$0.00', treatmentName: 'Cinsert' }
+};
+
+const STATUS_OPTIONS = [
+  { key: 'D', label: 'Diagnosed', color: '#94a3b8', bgColor: '#f1f5f9', textColor: '#475569' },
+  { key: 'P', label: 'Presented', color: '#3b82f6', bgColor: '#eff6ff', textColor: '#1d4ed8' },
+  { key: 'A', label: 'Accepted', color: '#0f766e', bgColor: '#ccfbf1', textColor: '#115e59' },
+  { key: 'X', label: 'Rejected', color: '#ef4444', bgColor: '#fef2f2', textColor: '#991b1b' },
+  { key: 'F', label: 'Future', color: '#f59e0b', bgColor: '#fef3c7', textColor: '#92400e' },
+  { key: '!', label: 'Follow-up', color: '#eab308', bgColor: '#fef9c3', textColor: '#854d0e' },
+  { key: 'EO', label: 'Existing In Office', color: '#64748b', bgColor: '#f1f5f9', textColor: '#334155' },
+  { key: 'EX', label: 'Existing Out Office', color: '#475569', bgColor: '#f8fafc', textColor: '#1e293b' }
+];
+
+const DENTISTS = [
+  'Joe Dentist',
+  'test test',
+  'Michael Cuellar (Endo)',
+  'Patient Preference',
+  'training1'
+];
+
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PrintIcon from '@mui/icons-material/Print';
@@ -15,9 +58,12 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import BrushIcon from '@mui/icons-material/Brush';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
+import SendIcon from '@mui/icons-material/Send';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SecurityIcon from '@mui/icons-material/Security';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DentalTreatmentPlan from '../../components/clinical/DentalTreatmentPlan';
@@ -242,9 +288,22 @@ const OrthoSectionHeader = ({ label, isExpanded = false }) => (
   </Stack>
 );
 
-// --- Global Action Bar Component ---
-const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredetermineClick, onViewFeeGuideClick }) => {
+const GlobalActionBar = ({ 
+  onReEstimateOptionClick, 
+  onSettingsClick, 
+  onPredetermineClick, 
+  onViewFeeGuideClick,
+  visits = [],
+  handleAddVisit,
+  selectedProcedureIds = [],
+  handleMoveProceduresToVisit,
+  onStateClick,
+  onDeleteClick,
+  onReferClick
+}) => {
   const [reEstimateAnchor, setReEstimateAnchor] = useState(null);
+  const [visitAnchorEl, setVisitAnchorEl] = useState(null);
+  const [phaseAnchorEl, setPhaseAnchorEl] = useState(null);
 
   const handleReEstimateClick = (event) => {
     setReEstimateAnchor(event.currentTarget);
@@ -252,6 +311,19 @@ const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredeterm
 
   const handleReEstimateClose = () => {
     setReEstimateAnchor(null);
+  };
+
+  const handleVisitClick = (event) => {
+    setVisitAnchorEl(event.currentTarget);
+  };
+
+  const handleVisitClose = () => {
+    setVisitAnchorEl(null);
+    setPhaseAnchorEl(null);
+  };
+
+  const handlePhaseMouseEnter = (event) => {
+    setPhaseAnchorEl(event.currentTarget);
   };
 
   return (
@@ -267,19 +339,171 @@ const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredeterm
           variant="contained" 
           size="small" 
           endIcon={<KeyboardArrowDownIcon />}
-          sx={{ bgcolor: '#a3b1d6', textTransform: 'none', borderRadius: 1 }}
+          onClick={handleVisitClick}
+          sx={{ 
+            bgcolor: '#2d4571', 
+            color: '#fff', 
+            textTransform: 'none', 
+            borderRadius: 1,
+            '&:hover': {
+              bgcolor: '#1e3050'
+            }
+          }}
         >
           Visit
         </Button>
+
+        {/* Primary Visit Dropdown Menu */}
+        <Menu
+          anchorEl={visitAnchorEl}
+          open={Boolean(visitAnchorEl)}
+          onClose={handleVisitClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: {
+              minWidth: 160,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              py: 0.5,
+              mt: 0.5
+            }
+          }}
+        >
+          <MenuItem 
+            onMouseEnter={handlePhaseMouseEnter}
+            onClick={handlePhaseMouseEnter}
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              fontSize: '0.8rem',
+              py: 1,
+              px: 2,
+              color: '#334155',
+              '&:hover': {
+                bgcolor: '#f1f5f9'
+              }
+            }}
+          >
+            <Typography sx={{ fontSize: '0.8rem' }}>Phase 1</Typography>
+            <ChevronRightIcon sx={{ fontSize: 16, color: '#64748b' }} />
+          </MenuItem>
+          <MenuItem 
+            onClick={handleVisitClose}
+            sx={{ 
+              fontSize: '0.8rem', 
+              py: 1,
+              px: 2,
+              color: '#1976d2',
+              fontWeight: 'medium',
+              '&:hover': {
+                bgcolor: '#f0f7ff'
+              }
+            }}
+          >
+            +Add New Phase
+          </MenuItem>
+        </Menu>
+
+        {/* Secondary Phase Dropdown Menu */}
+        <Menu
+          anchorEl={phaseAnchorEl}
+          open={Boolean(phaseAnchorEl)}
+          onClose={() => setPhaseAnchorEl(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: {
+              minWidth: 160,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              py: 0.5,
+              ml: 0.5
+            }
+          }}
+        >
+          <MenuItem 
+            onClick={handleVisitClose}
+            sx={{ 
+              fontSize: '0.8rem', 
+              py: 1, 
+              px: 2, 
+              color: '#334155',
+              '&:hover': { bgcolor: '#f1f5f9' } 
+            }}
+          >
+            Recare
+          </MenuItem>
+          {visits.map((v) => (
+            <MenuItem 
+              key={v.id}
+              onClick={() => {
+                if (selectedProcedureIds.length > 0) {
+                  handleMoveProceduresToVisit(v.id);
+                } else {
+                  const element = document.getElementById(v.id);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }
+                handleVisitClose();
+              }}
+              sx={{ 
+                fontSize: '0.8rem', 
+                py: 1, 
+                px: 2, 
+                color: '#334155',
+                '&:hover': { bgcolor: '#f1f5f9' } 
+              }}
+            >
+              {v.label}
+            </MenuItem>
+          ))}
+          <MenuItem 
+            onClick={() => {
+              if (handleAddVisit) {
+                handleAddVisit();
+              }
+              handleVisitClose();
+            }}
+            sx={{ 
+              fontSize: '0.8rem', 
+              py: 1, 
+              px: 2, 
+              color: '#1976d2', 
+              fontWeight: 'medium',
+              '&:hover': { bgcolor: '#f0f7ff' } 
+            }}
+          >
+            +Add New Visit
+          </MenuItem>
+        </Menu>
+
         <Button 
           variant="contained" 
           size="small" 
           endIcon={<KeyboardArrowDownIcon />}
-          sx={{ bgcolor: '#a3b1d6', textTransform: 'none', borderRadius: 1 }}
+          onClick={onStateClick}
+          sx={{ 
+            bgcolor: '#2d4571', 
+            color: '#fff', 
+            textTransform: 'none', 
+            borderRadius: 1,
+            '&:hover': {
+              bgcolor: '#1e3050'
+            }
+          }}
         >
           State
         </Button>
-        <IconButton size="small" sx={{ bgcolor: '#f4c7c3', mx: 1 }}>
+        <IconButton 
+          size="small" 
+          onClick={onDeleteClick}
+          sx={{ bgcolor: '#f4c7c3', mx: 1 }}
+        >
           <DeleteIcon fontSize="small" sx={{ color: '#d93025' }} />
         </IconButton>
         <Button 
@@ -291,9 +515,31 @@ const GlobalActionBar = ({ onReEstimateOptionClick, onSettingsClick, onPredeterm
           Complete
         </Button>
         <Button 
-          variant="outlined" 
+          variant={selectedProcedureIds.length > 0 ? "contained" : "outlined"}
           size="small" 
-          sx={{ borderRadius: 20, textTransform: 'none', px: 2, color: '#9e9e9e', borderColor: '#e0e0e0' }}
+          onClick={(e) => {
+            if (selectedProcedureIds.length > 0) {
+              onReferClick(e);
+            }
+          }}
+          sx={{ 
+            borderRadius: 20, 
+            textTransform: 'none', 
+            px: 2, 
+            ...(selectedProcedureIds.length > 0 ? {
+              bgcolor: '#e0e0e0',
+              color: '#424242',
+              boxShadow: 'none',
+              '&:hover': {
+                bgcolor: '#cbd5e1',
+                boxShadow: 'none'
+              }
+            } : {
+              color: '#9e9e9e', 
+              borderColor: '#e0e0e0',
+              cursor: 'default'
+            })
+          }}
         >
           Refer To
         </Button>
@@ -437,47 +683,7 @@ const DiagnosticItem = ({ label }) => (
   </Stack>
 );
 
-// --- Central Chart Tooth Component ---
-const Tooth = ({ num, isActive = false }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        p: 0.5,
-        cursor: 'pointer',
-        transition: 'transform 0.2s ease-in-out',
-        transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-        zIndex: isHovered ? 1 : 'auto'
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <Typography sx={{ fontSize: fontSize.xs, color: isActive || isHovered ? '#1976d2' : '#666', fontWeight: (isActive || isHovered) ? fontWeight.bold : fontWeight.regular }}>
-        {num}
-      </Typography>
-      <Box 
-        component="img" 
-        src={`/teeth${num}.png`} // Uses actual tooth images from public folder
-        alt={`Tooth ${num}`}
-        sx={{ 
-          width: 35, 
-          height: 70, 
-          mt: 0.5, 
-          opacity: isHovered ? 1 : 0.9,
-          filter: isActive || isHovered 
-            ? 'drop-shadow(0 0 4px #1976d2) brightness(1.15)' 
-            : 'none',
-          objectFit: 'contain',
-          transition: 'all 0.2s ease-in-out'
-        }} 
-      />
-    </Box>
-  );
-};
+
 
 export default function TreatmentPlanPage() {
   const [showAdjustedFeePlan, setShowAdjustedFeePlan] = useState(false);
@@ -487,6 +693,234 @@ export default function TreatmentPlanPage() {
   const [showReEstimateDialog, setShowReEstimateDialog] = useState(false);
   const [paymentOptionType, setPaymentOptionType] = useState(null);
   const [showGroupingSection, setShowGroupingSection] = useState(false);
+
+  const [selectedTeeth, setSelectedTeeth] = useState([]);
+  const [missingTeeth, setMissingTeeth] = useState([]);
+  const [additionalTeeth, setAdditionalTeeth] = useState([]);
+  const [additionalTeethAnchorEl, setAdditionalTeethAnchorEl] = useState(null);
+  const [showSelectToothDialog, setShowSelectToothDialog] = useState(false);
+  const [toothSurfaces, setToothSurfaces] = useState({});
+  const [activeRestorativeCode, setActiveRestorativeCode] = useState(null);
+  const [selectedProcedureIds, setSelectedProcedureIds] = useState([]);
+  const [statusMenuAnchorEl, setStatusMenuAnchorEl] = useState(null);
+  const [statusMenuVisitId, setStatusMenuVisitId] = useState(null);
+  const [selectedVisitIds, setSelectedVisitIds] = useState([]);
+  const [statusMenuProcId, setStatusMenuProcId] = useState(null);
+  const [stateMenuAnchorEl, setStateMenuAnchorEl] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [referMenuAnchorEl, setReferMenuAnchorEl] = useState(null);
+  const [showReferConfirm, setShowReferConfirm] = useState(false);
+  const [selectedDentist, setSelectedDentist] = useState('');
+
+  const parseAmount = (val) => {
+    if (typeof val === 'number') return val;
+    return Number(String(val).replace(/[^0-9.]/g, '')) || 0;
+  };
+
+  const formatAmount = (val) => {
+    return '$' + Number(val).toFixed(2);
+  };
+
+  const getVisitTotals = (visit) => {
+    let ptTotal = 0;
+    let insTotal = 0;
+    let woTotal = 0;
+    let feeTotal = 0;
+
+    visit.procedures.forEach(p => {
+      ptTotal += parseAmount(p.patientAmount);
+      insTotal += parseAmount(p.insuranceAmount);
+      woTotal += parseAmount(p.adjustmentAmount);
+      feeTotal += parseAmount(p.fee);
+    });
+
+    return {
+      pt: formatAmount(ptTotal),
+      ins: formatAmount(insTotal),
+      wo: formatAmount(woTotal),
+      fee: formatAmount(feeTotal)
+    };
+  };
+
+  const UPPER_TEETH = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  const LOWER_TEETH = [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
+
+  const handleRestorativeCodeSelect = (code) => {
+    setActiveRestorativeCode(code);
+    
+    if (selectedTeeth.length > 0) {
+      selectedTeeth.forEach(toothNum => {
+        const surfaces = toothSurfaces[toothNum] || [];
+        const sortedSurfaces = [...surfaces].sort((a, b) => {
+          const order = { 'M': 1, 'O': 2, 'D': 3, 'B': 4, 'L': 5 };
+          return (order[a] || 99) - (order[b] || 99);
+        });
+        const surfaceStr = sortedSurfaces.join('');
+        handleAddOrUpdateProcedure(toothNum, surfaceStr, code, false);
+      });
+      setSelectedTeeth([]);
+    }
+  };
+
+  const handleToothClick = (num) => {
+    setSelectedTeeth(prev => 
+      prev.includes(num) ? prev.filter(t => t !== num) : [...prev, num]
+    );
+    if (activeRestorativeCode) {
+      const isNonSurfaceCode = ['D2960', 'D2928', 'D2390', 'Cinsert'].includes(activeRestorativeCode);
+      if (isNonSurfaceCode) {
+        handleAddOrUpdateProcedure(num, '', activeRestorativeCode, false);
+      }
+    }
+  };
+
+  const handleMaxToggle = () => {
+    const allUpperSelected = UPPER_TEETH.every(t => selectedTeeth.includes(t));
+    setSelectedTeeth(prev => allUpperSelected ? prev.filter(t => !UPPER_TEETH.includes(t)) : [...new Set([...prev, ...UPPER_TEETH])]);
+  };
+
+  const handleManToggle = () => {
+    const allLowerSelected = LOWER_TEETH.every(t => selectedTeeth.includes(t));
+    setSelectedTeeth(prev => allLowerSelected ? prev.filter(t => !LOWER_TEETH.includes(t)) : [...new Set([...prev, ...LOWER_TEETH])]);
+  };
+
+  const handleSurfaceClick = (toothNum, surfaceCode) => {
+    if (!activeRestorativeCode) return;
+    
+    setToothSurfaces(prev => {
+      const current = prev[toothNum] || [];
+      const updated = current.includes(surfaceCode)
+        ? current.filter(s => s !== surfaceCode)
+        : [...current, surfaceCode];
+      
+      const sortedSurfaces = [...updated].sort((a, b) => {
+        const order = { 'M': 1, 'O': 2, 'D': 3, 'B': 4, 'L': 5 };
+        return (order[a] || 99) - (order[b] || 99);
+      });
+      const surfaceStr = sortedSurfaces.join('');
+      
+      handleAddOrUpdateProcedure(toothNum, surfaceStr, activeRestorativeCode, true);
+      
+      return {
+        ...prev,
+        [toothNum]: updated
+      };
+    });
+  };
+
+  const handleAddOrUpdateProcedure = (toothNum, surfaceStr, code, allowDelete = false) => {
+    const codeInfo = RESTORATIVE_CODES_INFO[code] || { name: 'Procedure', fee: '$0.00', treatmentName: 'Procedure' };
+    
+    setVisits((prev) => {
+      let currentVisits = [...prev];
+      if (currentVisits.length === 0) {
+        currentVisits = [
+          {
+            id: 'v-1',
+            label: 'Visit 1',
+            procedures: []
+          }
+        ];
+      }
+      
+      const targetVisit = currentVisits[currentVisits.length - 1];
+      
+      // Look for exact code match on the tooth
+      let existingProcIdx = targetVisit.procedures.findIndex(
+        (p) => p.toothNumber === toothNum && p.code === code
+      );
+      
+      // Look for a placeholder row in the visit (e.g. D0120 / D0000 with a $0.00 fee)
+      let isPlaceholderUpdate = false;
+      if (existingProcIdx === -1) {
+        existingProcIdx = targetVisit.procedures.findIndex(
+          (p) => (p.code === 'D0120' || p.code === 'D0000') && 
+                 (p.fee === '$0.00' || p.fee === '0.00' || !p.fee)
+        );
+        if (existingProcIdx >= 0) {
+          isPlaceholderUpdate = true;
+        }
+      }
+      
+      const todayStr = '07/15/2022';
+      
+      if (allowDelete && surfaceStr === '' && toothNum !== '' && !isPlaceholderUpdate) {
+        const updatedProcs = targetVisit.procedures.filter(
+          (p) => !(p.toothNumber === toothNum && p.code === code)
+        );
+        return currentVisits.map((v) => {
+          if (v.id === targetVisit.id) {
+            return { ...v, procedures: updatedProcs };
+          }
+          return v;
+        });
+      }
+      
+      if (existingProcIdx >= 0) {
+        const updatedProcs = [...targetVisit.procedures];
+        if (isPlaceholderUpdate) {
+          // Overwrite the placeholder row details in-place
+          updatedProcs[existingProcIdx] = {
+            ...updatedProcs[existingProcIdx],
+            name: codeInfo.treatmentName.toLowerCase(),
+            code: code,
+            treatmentName: codeInfo.treatmentName,
+            toothNumber: toothNum || updatedProcs[existingProcIdx].toothNumber,
+            surface: surfaceStr,
+            patientAmount: codeInfo.fee,
+            fee: codeInfo.fee,
+            billedAmount: codeInfo.fee,
+            status: 'D'
+          };
+        } else {
+          // Standard surface update
+          updatedProcs[existingProcIdx] = {
+            ...updatedProcs[existingProcIdx],
+            surface: surfaceStr
+          };
+        }
+        
+        return currentVisits.map((v) => {
+          if (v.id === targetVisit.id) {
+            return { ...v, procedures: updatedProcs };
+          }
+          return v;
+        });
+      } else {
+        // Append a brand new row
+        const newId = `${targetVisit.id}-p-${targetVisit.procedures.length + 1}`;
+        const newProc = {
+          id: newId,
+          visitId: targetVisit.id,
+          name: codeInfo.treatmentName.toLowerCase(),
+          toothNumber: toothNum,
+          surface: surfaceStr,
+          code: code,
+          treatmentName: codeInfo.treatmentName,
+          options: code === 'D2740-d' ? 'Porcelain' : '',
+          patientAmount: codeInfo.fee,
+          insuranceAmount: '$0.00',
+          adjustmentPercent: '0%',
+          adjustmentAmount: '$0.00',
+          fee: codeInfo.fee,
+          billedAmount: codeInfo.fee,
+          providerInitials: 'BAL',
+          status: 'D',
+          date: todayStr
+        };
+        
+        return currentVisits.map((v) => {
+          if (v.id === targetVisit.id) {
+            return {
+              ...v,
+              procedures: [...v.procedures, newProc]
+            };
+          }
+          return v;
+        });
+      }
+    });
+  };
 
   const handleReEstimateOptionClick = (option) => {
     if (option === 'Adjusted Fee Treatment Plan') {
@@ -522,6 +956,142 @@ export default function TreatmentPlanPage() {
       setShowGroupingSection(false);
       setShowAdjustedFeePlan(true);
     }
+  };
+
+  const handleMoveProceduresToVisit = (targetVisitId) => {
+    if (selectedProcedureIds.length === 0) return;
+    
+    setVisits(prev => {
+      const proceduresToMove = [];
+      const updatedVisits = prev.map(visit => {
+        const remainingProcedures = visit.procedures.filter(p => {
+          if (selectedProcedureIds.includes(p.id)) {
+            proceduresToMove.push({
+              ...p,
+              visitId: targetVisitId
+            });
+            return false;
+          }
+          return true;
+        });
+        return {
+          ...visit,
+          procedures: remainingProcedures
+        };
+      });
+
+      return updatedVisits.map(visit => {
+        if (visit.id === targetVisitId) {
+          const updatedProcs = [...visit.procedures];
+          proceduresToMove.forEach(p => {
+            const newId = `${targetVisitId}-p-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            updatedProcs.push({
+              ...p,
+              id: newId
+            });
+          });
+          return {
+            ...visit,
+            procedures: updatedProcs
+          };
+        }
+        return visit;
+      });
+    });
+
+    setSelectedProcedureIds([]);
+  };
+
+  const handleApplyStatus = (newStatus, options = {}) => {
+    setVisits(prev => 
+      prev.map(v => {
+        let proceduresChanged = false;
+        const updatedProcs = v.procedures.map(p => {
+          if (options.procId && p.id === options.procId) {
+            proceduresChanged = true;
+            return { ...p, status: newStatus };
+          }
+          if (options.visitId && v.id === options.visitId) {
+            proceduresChanged = true;
+            return { ...p, status: newStatus };
+          }
+          if (options.batch && selectedProcedureIds.includes(p.id)) {
+            proceduresChanged = true;
+            return { ...p, status: newStatus };
+          }
+          return p;
+        });
+
+        let nextVisitStatus = v.status;
+        if (options.visitId && v.id === options.visitId) {
+          nextVisitStatus = newStatus;
+        } else if (proceduresChanged) {
+          const firstStatus = updatedProcs[0]?.status || 'D';
+          const allSame = updatedProcs.every(p => p.status === firstStatus);
+          if (allSame) {
+            nextVisitStatus = firstStatus;
+          }
+        }
+
+        return {
+          ...v,
+          status: nextVisitStatus,
+          procedures: updatedProcs
+        };
+      })
+    );
+
+    setStatusMenuAnchorEl(null);
+    setStatusMenuVisitId(null);
+    setStatusMenuProcId(null);
+    setStateMenuAnchorEl(null);
+  };
+
+  const handleStatusBadgeClick = (event, visitId) => {
+    setStatusMenuAnchorEl(event.currentTarget);
+    setStatusMenuVisitId(visitId);
+    setStatusMenuProcId(null);
+  };
+
+  const handleProcStatusBadgeClick = (event, procId) => {
+    setStatusMenuAnchorEl(event.currentTarget);
+    setStatusMenuProcId(procId);
+    setStatusMenuVisitId(null);
+  };
+
+  const handleDeleteSelected = () => {
+    setVisits(prev => {
+      const filteredVisits = prev.filter(v => !selectedVisitIds.includes(v.id));
+      return filteredVisits.map(v => ({
+        ...v,
+        procedures: v.procedures.filter(p => !selectedProcedureIds.includes(p.id))
+      }));
+    });
+
+    setSelectedProcedureIds([]);
+    setSelectedVisitIds([]);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleConfirmRefer = () => {
+    setVisits(prev => 
+      prev.map(v => ({
+        ...v,
+        procedures: v.procedures.map(p => {
+          if (selectedProcedureIds.includes(p.id)) {
+            return {
+              ...p,
+              referredTo: selectedDentist,
+              status: 'P'
+            };
+          }
+          return p;
+        })
+      }))
+    );
+    setSelectedProcedureIds([]);
+    setSelectedVisitIds([]);
+    setShowReferConfirm(false);
   };
   const [visits, setVisits] = useState(() => [
     {
@@ -747,8 +1317,89 @@ export default function TreatmentPlanPage() {
           </SidebarSection>
 
           {/* 4. Restorative */}
-          <SidebarSection title="Restorative" expanded>
-            <SidebarItem label="Direct" />
+          <SidebarSection 
+            title="Restorative" 
+            expanded
+            icons={[
+              <Box key="d23" sx={{ bgcolor: '#0020dd', color: '#fff', px: 0.8, py: 0.2, fontSize: '0.65rem', fontWeight: 'bold', borderRadius: '2px', mr: 0.5 }}>D23</Box>
+            ]}
+          >
+            {/* Top row of design icons */}
+            <Box sx={{ py: 1, borderBottom: '1px solid #f0f0f0', mb: 1 }}>
+              <Stack direction="row" spacing={0.6} sx={{ mb: 0.6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Box sx={{ bgcolor: '#0020dd', color: 'white', px: 0.6, py: 0.2, fontSize: '10px', fontWeight: 'bold', borderRadius: '2px', display: 'flex', alignItems: 'center', height: 22 }}>D23</Box>
+                <RestorationToothIcon fill="#fff" />
+                <RestorationToothIcon fill="#777" />
+                <RestorationToothIcon fill="#ffd700" />
+                <RestorationToothIcon fill="#eee" />
+                <RestorationToothIcon fill="#fff" />
+                <RestorationToothIcon fill="#ffd700" />
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #777', borderRadius: '2px', px: 0.3, py: 0.1, fontSize: '8px', fontWeight: 'bold', height: 22, bgcolor: '#fff' }}>CAD</Box>
+              </Stack>
+              <Stack direction="row" spacing={0.6} sx={{ pl: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                <RestorationToothIcon type="incisor" fill="#fff" />
+                <RestorationToothIcon fill="#fff" />
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #777', borderRadius: '2px', px: 0.3, py: 0.1, fontSize: '8px', fontWeight: 'bold', height: 22, bgcolor: '#fff' }}>CAD</Box>
+                <RestorationToothIcon fill="#ddd" />
+                <RestorationToothIcon status="occlusal" fill="#add8e6" />
+                <Box sx={{ width: 28, height: 28, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M6 4C4 4 3 6 3 9C3 13 5 20 8 20C10 20 11 18 12 18C13 18 14 20 16 20C19 20 21 13 21 9C21 6 20 4 18 4H6Z" fill="#fff" stroke="#555" strokeWidth="1"/>
+                    <line x1="12" y1="2" x2="12" y2="10" stroke="#777" strokeWidth="2" />
+                    <line x1="10" y1="10" x2="14" y2="10" stroke="#777" strokeWidth="1" />
+                  </svg>
+                </Box>
+              </Stack>
+            </Box>
+
+            {/* Direct Accordion */}
+            <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 'none', '&:before': { display: 'none' } }}>
+              <AccordionSummary 
+                expandIcon={<ExpandMoreIcon sx={{ fontSize: 16 }} />}
+                sx={{ 
+                  minHeight: 28, 
+                  py: 0, 
+                  px: 0,
+                  '& .MuiAccordionSummary-content': { my: 0, alignItems: 'center' } 
+                }}
+              >
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#333' }}>
+                  Direct
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails sx={{ p: 0, pt: 0.5 }}>
+                <Stack spacing={0.3}>
+                  {Object.entries(RESTORATIVE_CODES_INFO).map(([code, info]) => {
+                    const isSel = activeRestorativeCode === code;
+                    return (
+                      <Box
+                        key={code}
+                        onClick={() => handleRestorativeCodeSelect(code)}
+                        sx={{
+                          py: 0.4,
+                          px: 1,
+                          fontSize: '0.78rem',
+                          cursor: 'pointer',
+                          borderRadius: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          bgcolor: isSel ? '#0020dd' : 'transparent',
+                          color: isSel ? '#fff' : '#333',
+                          transition: 'all 0.15s',
+                          '&:hover': {
+                            bgcolor: isSel ? '#0020dd' : '#f0f4f9',
+                            color: isSel ? '#fff' : '#0020dd'
+                          }
+                        }}
+                      >
+                        <strong>{code}:</strong> &nbsp; {info.name}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
             <SidebarItem label="Indirect Adhesive" />
             <SidebarItem label="Indirect" />
             <SidebarItem label="Indirect Cohesive" />
@@ -993,29 +1644,328 @@ export default function TreatmentPlanPage() {
             {/* Tooth Chart Grid */}
             <Box sx={{ ml: 6, mt: 4 }}>
               <ErrorBoundary>
-                {/* Maxillary (Upper) */}
-                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 4 }}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map(n => (
-                    <Tooth key={n} num={n} isActive={n === 3} />
-                  ))}
-                </Stack>
+                <Box sx={{ display: 'flex', position: 'relative', width: '100%', alignItems: 'stretch' }}>
+                  
+                  {/* Column 1: Q1 / Q4 */}
+                  <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    {/* Upper Row */}
+                    <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <RadiographicTooth 
+                          key={n} 
+                          num={n} 
+                          isActive={selectedTeeth.includes(n)} 
+                          isMissing={missingTeeth.includes(n)}
+                          surfaces={toothSurfaces[n] || []}
+                          onClick={() => handleToothClick(n)} 
+                          onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
+                        />
+                      ))}
+                    </Stack>
+                    
+                    {/* Upper Label */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q1</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>UR</Typography>
+                    </Box>
+                    
+                    {/* Lower Label */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q4</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>LR</Typography>
+                    </Box>
+                    
+                    {/* Lower Row */}
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      {[32, 31, 30, 29, 28].map(n => (
+                        <RadiographicTooth 
+                          key={n} 
+                          num={n} 
+                          isActive={selectedTeeth.includes(n)} 
+                          isMissing={missingTeeth.includes(n)}
+                          surfaces={toothSurfaces[n] || []}
+                          onClick={() => handleToothClick(n)} 
+                          onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
 
-                <Divider sx={{ my: 4, borderStyle: 'dashed' }} />
+                  {/* Vertical Divider 1 */}
+                  <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
 
-                {/* Mandibular (Lower) */}
-                <Stack direction="row" spacing={1} justifyContent="center">
-                  {[32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17].map(n => (
-                    <Tooth key={n} num={n} />
-                  ))}
-                </Stack>
+                  {/* Column 2: UA / LA */}
+                  <Box sx={{ flex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    {/* Upper Row */}
+                    <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                      {[6, 7, 8, 9, 10, 11].map(n => (
+                        <RadiographicTooth 
+                          key={n} 
+                          num={n} 
+                          isActive={selectedTeeth.includes(n)} 
+                          isMissing={missingTeeth.includes(n)}
+                          surfaces={toothSurfaces[n] || []}
+                          onClick={() => handleToothClick(n)} 
+                          onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
+                        />
+                      ))}
+                    </Stack>
+                    
+                    {/* Upper Label */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>UA</Typography>
+                    </Box>
+                    
+                    {/* Lower Label */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>LA</Typography>
+                    </Box>
+                    
+                    {/* Lower Row */}
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      {[27, 26, 25, 24, 23, 22].map(n => (
+                        <RadiographicTooth 
+                          key={n} 
+                          num={n} 
+                          isActive={selectedTeeth.includes(n)} 
+                          isMissing={missingTeeth.includes(n)}
+                          surfaces={toothSurfaces[n] || []}
+                          onClick={() => handleToothClick(n)} 
+                          onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+
+                  {/* Vertical Divider 2 */}
+                  <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
+
+                  {/* Column 3: Q2 / Q3 */}
+                  <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pr: 4, position: 'relative' }}>
+                    {/* Upper Row */}
+                    <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                      {[12, 13, 14, 15, 16].map(n => (
+                        <RadiographicTooth 
+                          key={n} 
+                          num={n} 
+                          isActive={selectedTeeth.includes(n)} 
+                          isMissing={missingTeeth.includes(n)}
+                          surfaces={toothSurfaces[n] || []}
+                          onClick={() => handleToothClick(n)} 
+                          onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
+                        />
+                      ))}
+                    </Stack>
+                    
+                    {/* Upper Label */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>UL</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q2</Typography>
+                      <Typography 
+                        onClick={handleMaxToggle}
+                        sx={{ 
+                          position: 'absolute', 
+                          right: -32, 
+                          top: 0, 
+                          fontSize: '0.75rem', 
+                          color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#6b7cb4' : '#666', 
+                          fontWeight: 'bold', 
+                          cursor: 'pointer',
+                          transition: 'color 0.2s',
+                          '&:hover': { color: '#6b7cb4' }
+                        }}
+                      >
+                        Max
+                      </Typography>
+                    </Box>
+                    
+                    {/* Lower Label */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>LL</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q3</Typography>
+                      <Typography 
+                        onClick={handleManToggle}
+                        sx={{ 
+                          position: 'absolute', 
+                          right: -32, 
+                          top: 0, 
+                          fontSize: '0.75rem', 
+                          color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#6b7cb4' : '#666', 
+                          fontWeight: 'bold', 
+                          cursor: 'pointer',
+                          transition: 'color 0.2s',
+                          '&:hover': { color: '#6b7cb4' }
+                        }}
+                      >
+                        Man
+                      </Typography>
+                    </Box>
+                    
+                    {/* Lower Row */}
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      {[21, 20, 19, 18, 17].map(n => (
+                        <RadiographicTooth 
+                          key={n} 
+                          num={n} 
+                          isActive={selectedTeeth.includes(n)} 
+                          isMissing={missingTeeth.includes(n)}
+                          surfaces={toothSurfaces[n] || []}
+                          onClick={() => handleToothClick(n)} 
+                          onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+
+                  {/* Horizontal Divider Line */}
+                  <Box sx={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    borderBottom: '1px dotted #ccc',
+                    zIndex: 0,
+                    pointerEvents: 'none',
+                    opacity: 0.8
+                  }} />
+                </Box>
               </ErrorBoundary>
 
               {/* Additional Footer Controls */}
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 6, ml: 2, color: '#6b7cb4' }}>
-                <AddCircleIcon fontSize="small" />
-                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Additional teeth</Typography>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 6, ml: 2 }}>
+                <Stack 
+                  direction="row" 
+                  spacing={1} 
+                  alignItems="center" 
+                  onClick={(e) => setAdditionalTeethAnchorEl(e.currentTarget)}
+                  sx={{ cursor: 'pointer', color: '#6b7cb4', '&:hover': { opacity: 0.8 } }}
+                >
+                  <AddCircleIcon fontSize="small" />
+                  <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Additional teeth</Typography>
+                </Stack>
+                
+                {/* Badges for selected additional teeth */}
+                <Stack direction="row" spacing={0.5}>
+                  {additionalTeeth.map(tooth => (
+                    <Box
+                      key={tooth}
+                      sx={{
+                        position: 'relative',
+                        '&:hover .delete-btn': {
+                          display: 'flex'
+                        }
+                      }}
+                    >
+                      <Box sx={{ 
+                        px: 0.6, py: 0.1, border: '1px solid',
+                        borderColor: '#4a69bd',
+                        bgcolor: '#f8fafc',
+                        color: '#4a69bd',
+                        fontSize: '0.75rem', fontWeight: 'bold',
+                        borderRadius: '2px', minWidth: '20px', textAlign: 'center',
+                        userSelect: 'none'
+                      }}>
+                        {tooth}
+                      </Box>
+                      
+                      <Box
+                        className="delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAdditionalTeeth(prev => prev.filter(t => t !== tooth));
+                        }}
+                        sx={{
+                          display: 'none',
+                          position: 'absolute',
+                          top: -9,
+                          right: -6,
+                          width: 14,
+                          height: 14,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: '16px',
+                          color: '#e74c3c',
+                          fontWeight: 'bold',
+                          lineHeight: 1,
+                          zIndex: 10,
+                          '&:hover': {
+                            color: '#c0392b'
+                          }
+                        }}
+                      >
+                        ×
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
               </Stack>
             </Box>
+
+            {/* Popover Menu for Additional Teeth Options */}
+            <Popover
+              open={Boolean(additionalTeethAnchorEl)}
+              anchorEl={additionalTeethAnchorEl}
+              onClose={() => setAdditionalTeethAnchorEl(null)}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              PaperProps={{
+                sx: {
+                  width: 220,
+                  boxShadow: '0px 2px 10px rgba(0,0,0,0.1)',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  mt: 0.5
+                }
+              }}
+            >
+              <Stack spacing={0.5} sx={{ p: 0.5 }}>
+                {[
+                  'Supernumerary adult teeth',
+                  'Retained Primary teeth',
+                  'Supernumerary primary teeth'
+                ].map(opt => (
+                  <Box
+                    key={opt}
+                    onClick={() => {
+                      setAdditionalTeethAnchorEl(null);
+                      setShowSelectToothDialog(true);
+                    }}
+                    sx={{
+                      px: 1.5,
+                      py: 1,
+                      fontSize: '0.8rem',
+                      color: '#334155',
+                      cursor: 'pointer',
+                      borderRadius: '2px',
+                      transition: 'background-color 0.15s',
+                      '&:hover': {
+                        bgcolor: '#f1f5f9',
+                        color: '#1976d2'
+                      }
+                    }}
+                  >
+                    {opt}
+                  </Box>
+                ))}
+              </Stack>
+            </Popover>
+
+            {/* Dialog for selecting additional teeth */}
+            <SelectToothDialog
+              open={showSelectToothDialog}
+              onClose={() => setShowSelectToothDialog(false)}
+              selectedTeeth={additionalTeeth}
+              onSelect={(tooth) => {
+                setAdditionalTeeth(prev => 
+                  prev.includes(tooth) ? prev.filter(t => t !== tooth) : [...prev, tooth]
+                );
+                setShowSelectToothDialog(false);
+              }}
+            />
           </Box>
         </Box>
         </Box>
@@ -1027,6 +1977,13 @@ export default function TreatmentPlanPage() {
             onSettingsClick={() => setShowEditFeesModal(true)}
             onPredetermineClick={() => setShowPredetermineModal(true)}
             onViewFeeGuideClick={() => setShowUsedFeeGuideModal(true)}
+            visits={visits}
+            handleAddVisit={handleAddVisit}
+            selectedProcedureIds={selectedProcedureIds}
+            handleMoveProceduresToVisit={handleMoveProceduresToVisit}
+            onStateClick={(e) => setStateMenuAnchorEl(e.currentTarget)}
+            onDeleteClick={() => setShowDeleteConfirm(true)}
+            onReferClick={(e) => setReferMenuAnchorEl(e.currentTarget)}
           />
         </Box>
 
@@ -1080,62 +2037,697 @@ export default function TreatmentPlanPage() {
           onClose={() => setShowReEstimateDialog(false)}
         />
 
-        {/* Dental Treatment Plan - Outside the columns, full width */}
-        <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>
-          <DentalTreatmentPlan />
-          {visits.map((visit, visitIdx) => (
-            <Box
-              key={visit.id}
-              sx={{
-                mt: 2,
-                border: '1px solid #d1d9e6',
-                borderRadius: 1,
-                bgcolor: '#fff',
-                overflow: 'hidden'
+        {/* Custom Status Selection Menu */}
+        <Menu
+          anchorEl={statusMenuAnchorEl}
+          open={Boolean(statusMenuAnchorEl)}
+          onClose={() => setStatusMenuAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              minWidth: 220,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              py: 0.5
+            }
+          }}
+        >
+          {STATUS_OPTIONS.map(opt => (
+            <MenuItem 
+              key={opt.key}
+              onClick={() => handleApplyStatus(opt.key, { visitId: statusMenuVisitId, procId: statusMenuProcId })}
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                fontSize: '0.8rem', 
+                py: 1, 
+                px: 2,
+                color: '#334155',
+                '&:hover': {
+                  bgcolor: '#f1f5f9'
+                }
               }}
             >
               <Box
                 sx={{
-                  px: 1.5,
-                  py: 1,
-                  bgcolor: '#f4f7fa',
-                  borderBottom: '1px solid #e8ecf1',
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  bgcolor: opt.color,
+                  color: '#fff',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'center',
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold'
                 }}
               >
-                <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a2735' }}>
-                  {visit.label}
-                </Typography>
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={() => handleAddProcedure({ visitId: visit.id })}
-                  sx={{ textTransform: 'none', fontWeight: 700 }}
-                >
-                  + Add Procedure
-                </Button>
+                {opt.key === 'EO' ? 'E' : opt.key === 'EX' ? 'O' : opt.key}
               </Box>
+              <Typography sx={{ fontSize: '0.8rem', color: '#334155' }}>
+                {opt.label}
+              </Typography>
+            </MenuItem>
+          ))}
+        </Menu>
 
-              {visit.procedures.length === 0 ? (
-                <Box sx={{ px: 1.5, py: 2 }}>
-                  <Typography sx={{ fontSize: '0.85rem', color: '#7a8796' }}>
-                    No procedures in this visit yet.
+        {/* Batch Status Selection Menu */}
+        <Menu
+          anchorEl={stateMenuAnchorEl}
+          open={Boolean(stateMenuAnchorEl)}
+          onClose={() => setStateMenuAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              minWidth: 220,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              py: 0.5
+            }
+          }}
+        >
+          {STATUS_OPTIONS.map(opt => (
+            <MenuItem 
+              key={opt.key}
+              onClick={() => handleApplyStatus(opt.key, { batch: true })}
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                fontSize: '0.8rem', 
+                py: 1, 
+                px: 2,
+                color: '#334155',
+                '&:hover': {
+                  bgcolor: '#f1f5f9'
+                }
+              }}
+            >
+              <Box
+                sx={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  bgcolor: opt.color,
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                {opt.key === 'EO' ? 'E' : opt.key === 'EX' ? 'O' : opt.key}
+              </Box>
+              <Typography sx={{ fontSize: '0.8rem', color: '#334155' }}>
+                {opt.label}
+              </Typography>
+            </MenuItem>
+          ))}
+        </Menu>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog 
+          open={showDeleteConfirm} 
+          onClose={() => setShowDeleteConfirm(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: '8px',
+              p: 3,
+              maxWidth: '450px',
+              width: '100%',
+              border: '1.5px solid #ef4444'
+            }
+          }}
+        >
+          <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#334155', textAlign: 'center', mb: 2 }}>
+            Are you sure you want to delete the selected procedure?
+          </Typography>
+          <Stack spacing={0.5} sx={{ mb: 3, px: 2 }}>
+            {selectedVisitIds.map(vId => {
+              const v = visits.find(visit => visit.id === vId);
+              return v ? (
+                <Typography key={vId} sx={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>
+                  - {v.label} (Entire Visit)
+                </Typography>
+              ) : null;
+            })}
+            {selectedProcedureIds.map(pId => {
+              let foundProc = null;
+              let isVisitSelected = false;
+              visits.forEach(v => {
+                const p = v.procedures.find(proc => proc.id === pId);
+                if (p) {
+                  foundProc = p;
+                  if (selectedVisitIds.includes(v.id)) {
+                    isVisitSelected = true;
+                  }
+                }
+              });
+              if (foundProc && !isVisitSelected) {
+                return (
+                  <Typography key={pId} sx={{ fontSize: '0.85rem', color: '#64748b' }}>
+                    - {foundProc.treatmentName}
+                  </Typography>
+                );
+              }
+              return null;
+            })}
+          </Stack>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <Button 
+              variant="contained" 
+              onClick={handleDeleteSelected}
+              sx={{ 
+                bgcolor: '#e53935', 
+                color: '#fff', 
+                textTransform: 'none',
+                px: 3,
+                '&:hover': { bgcolor: '#c62828' }
+              }}
+            >
+              Delete
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={() => setShowDeleteConfirm(false)}
+              sx={{ 
+                bgcolor: '#78909c', 
+                color: '#fff', 
+                textTransform: 'none',
+                px: 3,
+                '&:hover': { bgcolor: '#546e7a' }
+              }}
+            >
+              Cancel
+            </Button>
+          </Stack>
+        </Dialog>
+
+        {/* Refer Dentist Dropdown Menu */}
+        <Menu
+          anchorEl={referMenuAnchorEl}
+          open={Boolean(referMenuAnchorEl)}
+          onClose={() => setReferMenuAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              minWidth: 220,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              py: 0.5
+            }
+          }}
+        >
+          {DENTISTS.map(dentist => (
+            <MenuItem 
+              key={dentist}
+              onClick={() => {
+                setSelectedDentist(dentist);
+                setShowReferConfirm(true);
+                setReferMenuAnchorEl(null);
+              }}
+              sx={{ 
+                fontSize: '0.8rem', 
+                py: 1, 
+                px: 2,
+                color: '#334155',
+                '&:hover': {
+                  bgcolor: '#f1f5f9'
+                }
+              }}
+            >
+              {dentist}
+            </MenuItem>
+          ))}
+        </Menu>
+
+        {/* Refer Confirmation Dialog */}
+        <Dialog 
+          open={showReferConfirm} 
+          onClose={() => setShowReferConfirm(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: '8px',
+              p: 3,
+              maxWidth: '450px',
+              width: '100%',
+              border: '1.5px solid #f59e0b'
+            }
+          }}
+        >
+          <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#334155', textAlign: 'center', mb: 2 }}>
+            Are you sure you want to REFER the following procedures to '{selectedDentist}':
+          </Typography>
+          <Stack spacing={0.5} sx={{ mb: 3, px: 2 }}>
+            {selectedProcedureIds.map(pId => {
+              let foundProc = null;
+              visits.forEach(v => {
+                const p = v.procedures.find(proc => proc.id === pId);
+                if (p) foundProc = p;
+              });
+              if (foundProc) {
+                return (
+                  <Typography key={pId} sx={{ fontSize: '0.85rem', color: '#64748b' }}>
+                    - {foundProc.treatmentName}{foundProc.toothNumber ? `(${foundProc.toothNumber})` : ''}
+                  </Typography>
+                );
+              }
+              return null;
+            })}
+          </Stack>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <Button 
+              variant="contained" 
+              onClick={handleConfirmRefer}
+              sx={{ 
+                bgcolor: '#f59e0b', 
+                color: '#fff', 
+                textTransform: 'none',
+                px: 3,
+                '&:hover': { bgcolor: '#d97706' }
+              }}
+            >
+              Refer
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={() => setShowReferConfirm(false)}
+              sx={{ 
+                bgcolor: '#78909c', 
+                color: '#fff', 
+                textTransform: 'none',
+                px: 3,
+                '&:hover': { bgcolor: '#546e7a' }
+              }}
+            >
+              Cancel
+            </Button>
+          </Stack>
+        </Dialog>
+
+        {/* Dental Treatment Plan - Outside the columns, full width */}
+        <Box sx={{ mt: 2, borderTop: '1px solid #e0e0e0', px: 2, pb: 2 }}>
+          <DentalTreatmentPlan />
+          {visits.map((visit, visitIdx) => {
+            const totals = getVisitTotals(visit);
+            return (
+              <Box
+                key={visit.id}
+                id={visit.id}
+                sx={{
+                  mt: 2,
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  bgcolor: '#fff',
+                  overflow: 'hidden',
+                  fontFamily: "'Manrope', 'Segoe UI', sans-serif"
+                }}
+              >
+                {/* Visit Header */}
+                <Stack 
+                  direction="row" 
+                  alignItems="center" 
+                  justifyContent="space-between"
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    bgcolor: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0'
+                  }}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Checkbox 
+                      size="small" 
+                      checked={selectedVisitIds.includes(visit.id)}
+                      indeterminate={!selectedVisitIds.includes(visit.id) && visit.procedures.length > 0 && visit.procedures.some(p => selectedProcedureIds.includes(p.id))}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const procIds = visit.procedures.map(p => p.id);
+                        setSelectedVisitIds(prev => 
+                          isChecked ? [...new Set([...prev, visit.id])] : prev.filter(id => id !== visit.id)
+                        );
+                        setSelectedProcedureIds(prev => {
+                          if (isChecked) {
+                            return [...new Set([...prev, ...procIds])];
+                          } else {
+                            return prev.filter(id => !procIds.includes(id));
+                          }
+                        });
+                      }}
+                    />
+                    <IconButton size="small">
+                      <EditIcon sx={{ fontSize: '0.9rem', color: '#64748b' }} />
+                    </IconButton>
+                    <Typography sx={{ fontSize: '0.825rem', fontWeight: 700, color: '#1e293b' }}>
+                      {visit.label}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#1976d2', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                      set duration min
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#1976d2', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                      +add note
+                    </Typography>
+                    {(() => {
+                      const currentStatus = visit.status || 'A';
+                      const statusOpt = STATUS_OPTIONS.find(opt => opt.key === currentStatus) || STATUS_OPTIONS.find(opt => opt.key === 'A');
+                      const displayLabel = currentStatus === 'EO' ? 'E' : currentStatus === 'EX' ? 'O' : currentStatus;
+                      return (
+                        <Chip 
+                          label={displayLabel} 
+                          size="small" 
+                          onClick={(e) => handleStatusBadgeClick(e, visit.id)}
+                          sx={{ 
+                            bgcolor: statusOpt.bgColor, 
+                            color: statusOpt.textColor, 
+                            height: 18, 
+                            width: 18, 
+                            minWidth: 18, 
+                            fontSize: '0.65rem', 
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            },
+                            '& .MuiChip-label': { px: 0, display: 'flex', justifyContent: 'center' }
+                          }} 
+                        />
+                      );
+                    })()}
+                  </Stack>
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small">
+                      <PrintIcon sx={{ fontSize: '1rem', color: '#64748b' }} />
+                    </IconButton>
+                    <IconButton size="small">
+                      <SendIcon sx={{ fontSize: '0.9rem', color: '#64748b', transform: 'rotate(-45deg)' }} />
+                    </IconButton>
+                  </Stack>
+                </Stack>
+
+                {/* Table Header Row */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '40px 60px 60px 80px 1.5fr 1fr 1fr 1fr 1fr 100px 90px 60px 100px 70px',
+                    gap: 1,
+                    px: 2,
+                    py: 1,
+                    bgcolor: '#fff',
+                    borderBottom: '1px solid #e2e8f0',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Box></Box>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Tooth#</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Surf</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Code</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Treatment</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Options</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700 }}>Pt: {totals.pt}</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700 }}>Ins: {totals.ins}</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700 }}>WO: {totals.wo}</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#1e293b', fontWeight: 800 }}>Fee: {totals.fee}</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Provider</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Status</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>Date</Typography>
+                  <Box></Box>
+                </Box>
+
+                {/* Table Data Rows */}
+                {(() => {
+                  const renderProcedureRow = (p, idx, isLast) => (
+                    <Box
+                      key={p.id}
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: '40px 60px 60px 80px 1.5fr 1fr 1fr 1fr 1fr 100px 90px 60px 100px 70px',
+                        gap: 1,
+                        px: 2,
+                        py: 0.8,
+                        alignItems: 'center',
+                        borderBottom: isLast ? 'none' : '1px solid #e2e8f0',
+                        '&:hover': { bgcolor: '#f8fafc' }
+                      }}
+                    >
+                      <Checkbox 
+                        size="small" 
+                        checked={selectedProcedureIds.includes(p.id)}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setSelectedProcedureIds(prev => 
+                            isChecked ? [...prev, p.id] : prev.filter(id => id !== p.id)
+                          );
+                        }}
+                      />
+                      
+                      {/* Tooth# Box */}
+                      <Box sx={{ display: 'flex' }}>
+                        {p.toothNumber ? (
+                          <Box sx={{ 
+                            px: 0.8, 
+                            py: 0.2, 
+                            border: '1px solid #cbd5e1', 
+                            borderRadius: '4px', 
+                            fontSize: '0.7rem', 
+                            fontWeight: 'bold',
+                            color: '#475569',
+                            bgcolor: '#f8fafc',
+                            minWidth: '22px',
+                            textAlign: 'center'
+                          }}>
+                            {p.toothNumber}
+                          </Box>
+                        ) : (
+                          <Box sx={{ minHeight: '20px' }}></Box>
+                        )}
+                      </Box>
+
+                      {/* Surf Box */}
+                      <Box sx={{ display: 'flex' }}>
+                        {p.surface ? (
+                          <Box sx={{ 
+                            px: 0.8, 
+                            py: 0.2, 
+                            border: '1px solid #cbd5e1', 
+                            borderRadius: '4px', 
+                            fontSize: '0.7rem', 
+                            fontWeight: 'bold',
+                            color: '#475569',
+                            bgcolor: '#f8fafc',
+                            minWidth: '30px',
+                            textAlign: 'center'
+                          }}>
+                            {p.surface}
+                          </Box>
+                        ) : (
+                          <Box sx={{ minHeight: '20px' }}></Box>
+                        )}
+                      </Box>
+
+                      {/* Code */}
+                      <Typography sx={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
+                        {p.code}
+                      </Typography>
+
+                      {/* Treatment (with chevron) */}
+                      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ cursor: 'pointer' }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#1e293b', fontWeight: 600 }}>
+                          {p.treatmentName}
+                        </Typography>
+                        <KeyboardArrowDownIcon sx={{ fontSize: '0.8rem', color: '#94a3b8' }} />
+                      </Stack>
+
+                      {/* Options */}
+                      <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {p.options || ''}
+                      </Typography>
+
+                      {/* Pt */}
+                      <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                        {p.patientAmount || '$0.00'}
+                      </Typography>
+
+                      {/* Ins */}
+                      <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                        {p.insuranceAmount || '$0.00'}
+                      </Typography>
+
+                      {/* WO */}
+                      <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                        {p.adjustmentAmount || '$0.00'}
+                      </Typography>
+
+                      {/* Fee Input Box */}
+                      <Box
+                        component="input"
+                        type="text"
+                        value={p.fee || '$0.00'}
+                        readOnly
+                        sx={{
+                          width: '75px',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '4px',
+                          px: 1,
+                          py: 0.2,
+                          fontSize: '0.75rem',
+                          textAlign: 'left',
+                          fontFamily: 'inherit',
+                          color: '#334155',
+                          outline: 'none',
+                          bgcolor: '#fff'
+                        }}
+                      />
+
+                      {/* Provider Chip */}
+                      <Box sx={{ display: 'flex' }}>
+                        <Chip
+                          label={p.providerInitials || 'BAL'}
+                          size="small"
+                          onDelete={() => {}}
+                          deleteIcon={<KeyboardArrowDownIcon style={{ color: '#b91c1c', fontSize: '0.8rem' }} />}
+                          sx={{
+                            bgcolor: '#fee2e2',
+                            color: '#b91c1c',
+                            height: 20,
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            border: 'none',
+                            '& .MuiChip-label': { px: 0.8 },
+                            '& .MuiChip-deleteIcon': { margin: '0 4px 0 -2px' }
+                          }}
+                        />
+                      </Box>
+
+                      {/* Status badge */}
+                      <Box sx={{ display: 'flex' }}>
+                        {(() => {
+                          const currentStatus = p.status || 'D';
+                          const statusOpt = STATUS_OPTIONS.find(opt => opt.key === currentStatus) || STATUS_OPTIONS[0];
+                          const displayChar = currentStatus === 'EO' ? 'E' : currentStatus === 'EX' ? 'O' : currentStatus;
+                          return (
+                            <Box
+                              onClick={(e) => handleProcStatusBadgeClick(e, p.id)}
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                bgcolor: statusOpt.color,
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.7rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  opacity: 0.85
+                                }
+                              }}
+                            >
+                              {displayChar}
+                            </Box>
+                          );
+                        })()}
+                      </Box>
+
+                      {/* Date */}
+                      <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {p.date || '07/15/2022'}
+                      </Typography>
+
+                      {/* Referral badge and checkmark */}
+                      <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+                        {p.referredTo && (
+                          <Tooltip title={`Referred to ${p.referredTo}`} arrow>
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                bgcolor: '#7c4dff',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.7rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              R
+                            </Box>
+                          </Tooltip>
+                        )}
+                        <IconButton size="small">
+                          <CheckCircleIcon sx={{ fontSize: '1.1rem', color: '#cbd5e1' }} />
+                        </IconButton>
+                      </Stack>
+                    </Box>
+                  );
+
+                  const activeProcs = visit.procedures.filter(p => !p.referredTo);
+                  const referredProcs = visit.procedures.filter(p => p.referredTo);
+
+                  if (visit.procedures.length === 0) {
+                    return (
+                      <Box sx={{ px: 2, py: 2 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          No procedures in this visit yet.
+                        </Typography>
+                      </Box>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {activeProcs.map((p, idx) => 
+                        renderProcedureRow(p, idx, idx === activeProcs.length - 1 && referredProcs.length === 0)
+                      )}
+
+                      {referredProcs.length > 0 && (
+                        <Box 
+                          sx={{ 
+                            px: 2, 
+                            py: 1, 
+                            bgcolor: '#f8fafc', 
+                            borderBottom: '1px solid #e2e8f0',
+                            borderTop: activeProcs.length > 0 ? '1px solid #cbd5e1' : 'none'
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569' }}>
+                            Referred Procedures:
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {referredProcs.map((p, idx) => 
+                        renderProcedureRow(p, idx, idx === referredProcs.length - 1)
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Bottom Add Procedure link */}
+                <Box sx={{ px: 2, py: 1.2, borderTop: '1px solid #e2e8f0' }}>
+                  <Typography 
+                    onClick={() => handleAddProcedure({ visitId: visit.id })}
+                    sx={{ 
+                      fontSize: '0.75rem', 
+                      color: '#1976d2', 
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      display: 'inline-block',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                  >
+                    +Add Procedure
                   </Typography>
                 </Box>
-              ) : (
-                visit.procedures.map((p, idx) => (
-                  <ProcedureRow
-                    key={p.id}
-                    procedure={p}
-                    defaultExpanded={visitIdx === 0 && idx === 0}
-                    onAddProcedure={handleAddProcedure}
-                  />
-                ))
-              )}
-            </Box>
-          ))}
+              </Box>
+            );
+          })}
           
           {/* Add Visit Button */}
           <Button

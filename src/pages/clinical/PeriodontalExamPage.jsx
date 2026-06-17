@@ -26,6 +26,7 @@ import {
   useSignClinicalExam
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
 const SummaryData = [
   { label: '# of sites', bleeding: '50', p4: '150', p5: '0', p6: '0', recession: '43' },
@@ -181,6 +182,7 @@ const PeriodontalExamPage = () => {
   const patientId = useSelector(selectSelectedPatientId);
   const appointmentId = useSelector(selectSelectedAppointmentId);
   const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
 
   const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('periodontal', appointmentId);
   const upsertMutation = useUpsertClinicalExam('periodontal', appointmentId);
@@ -241,18 +243,21 @@ const PeriodontalExamPage = () => {
     }
   };
 
-  const handleSignExam = async () => {
+  const handleSignExam = () => {
     if (!appointmentId) {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
-    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
-      try {
-        await signMutation.mutateAsync();
-        showSnackbar('Periodontal exam signed and locked', 'success');
-      } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
-      }
+    setSignDialogOpen(true);
+  };
+
+  const handleConfirmSign = async () => {
+    setSignDialogOpen(false);
+    try {
+      await signMutation.mutateAsync();
+      showSnackbar('Periodontal exam signed and locked', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
     }
   };
 
@@ -798,6 +803,17 @@ const PeriodontalExamPage = () => {
           </Box>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationDialog
+        open={signDialogOpen}
+        onClose={() => setSignDialogOpen(false)}
+        onConfirm={handleConfirmSign}
+        title="Sign & Lock Exam"
+        message="Are you sure you want to sign and lock this exam? This action cannot be undone."
+        confirmText="Sign & Lock"
+        confirmColor="#0f766e"
+        loading={signMutation.isPending}
+      />
     </Box>
   );
 };
