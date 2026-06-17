@@ -23,6 +23,7 @@ import {
   useSignClinicalExam
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
 // Custom sidebar header component
 const BlueHeader = ({ text }) => (
@@ -70,6 +71,8 @@ const DentalAnatomyExamPage = () => {
   const signMutation = useSignClinicalExam('head-neck', appointmentId);
 
   const isSigned = !!examRecord?.isSigned;
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [visitDates, setVisitDates] = useState(['Sep 29, 2023', 'Jul 15, 2022']);
   const [activeTool, setActiveTool] = useState(null); // 'lesion' | 'tori' | 'exostosis' | null
@@ -101,18 +104,21 @@ const DentalAnatomyExamPage = () => {
     }
   };
 
-  const handleSignExam = async () => {
+  const handleSignExam = () => {
     if (!appointmentId) {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
-    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
-      try {
-        await signMutation.mutateAsync();
-        showSnackbar('Head and Neck exam signed and locked', 'success');
-      } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
-      }
+    setSignDialogOpen(true);
+  };
+
+  const handleConfirmSign = async () => {
+    setSignDialogOpen(false);
+    try {
+      await signMutation.mutateAsync();
+      showSnackbar('Head and Neck exam signed and locked', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
     }
   };
 
@@ -254,7 +260,13 @@ const DentalAnatomyExamPage = () => {
   };
 
   const handleClearExam = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogOpen(false);
     setFindings([]);
+    showSnackbar('Head and Neck exam findings cleared', 'info');
   };
 
   if (examLoading) {
@@ -932,6 +944,27 @@ const DentalAnatomyExamPage = () => {
         </Dialog>
 
       </Container>
+
+      <ConfirmationDialog
+        open={signDialogOpen}
+        onClose={() => setSignDialogOpen(false)}
+        onConfirm={handleConfirmSign}
+        title="Sign & Lock Exam"
+        message="Are you sure you want to sign and lock this exam? This action cannot be undone."
+        confirmText="Sign & Lock"
+        confirmColor="#0f766e"
+        loading={signMutation.isPending}
+      />
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Exam Record"
+        message="Are you sure you want to delete this exam? This action cannot be undone."
+        confirmText="Delete"
+        confirmColor="error"
+      />
     </Box>
   );
 };

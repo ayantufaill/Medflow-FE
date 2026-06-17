@@ -35,6 +35,7 @@ import {
   useSignClinicalExam
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
 const Radiographic = () => {
   const { showSnackbar } = useSnackbar();
@@ -54,6 +55,8 @@ const Radiographic = () => {
   const [activeToothNum, setActiveToothNum] = React.useState(null);
   const [detailModalTooth, setDetailModalTooth] = React.useState(null);
   const [newNoteText, setNewNoteText] = React.useState('');
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Sync data from database to form state when loaded
   useEffect(() => {
@@ -87,18 +90,21 @@ const Radiographic = () => {
     }
   };
 
-  const handleSignExam = async () => {
+  const handleSignExam = () => {
     if (!appointmentId) {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
-    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
-      try {
-        await signMutation.mutateAsync();
-        showSnackbar('Radiographic exam signed and locked', 'success');
-      } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
-      }
+    setSignDialogOpen(true);
+  };
+
+  const handleConfirmSign = async () => {
+    setSignDialogOpen(false);
+    try {
+      await signMutation.mutateAsync();
+      showSnackbar('Radiographic exam signed and locked', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
     }
   };
 
@@ -195,9 +201,13 @@ const Radiographic = () => {
 
   // Handle delete exam
   const handleDeleteExam = () => {
-    if (window.confirm('Are you sure you want to delete this exam?')) {
-      console.log('Delete exam');
-    }
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogOpen(false);
+    console.log('Delete exam');
+    showSnackbar('Radiographic exam deleted', 'info');
   };
 
   // Handle remove date from timeline
@@ -830,6 +840,27 @@ const Radiographic = () => {
         </Grid>
       )}
     </Dialog>
+
+    <ConfirmationDialog
+      open={signDialogOpen}
+      onClose={() => setSignDialogOpen(false)}
+      onConfirm={handleConfirmSign}
+      title="Sign & Lock Exam"
+      message="Are you sure you want to sign and lock this exam? This action cannot be undone."
+      confirmText="Sign & Lock"
+      confirmColor="#0f766e"
+      loading={signMutation.isPending}
+    />
+
+    <ConfirmationDialog
+      open={deleteDialogOpen}
+      onClose={() => setDeleteDialogOpen(false)}
+      onConfirm={handleConfirmDelete}
+      title="Delete Exam Record"
+      message="Are you sure you want to delete this exam? This action cannot be undone."
+      confirmText="Delete"
+      confirmColor="error"
+    />
     </Box>
   );
 };
