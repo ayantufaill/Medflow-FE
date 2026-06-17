@@ -14,9 +14,9 @@ export const usePatientInsurance = (patientId) => {
   const cache = useSelector(selectPatientInsurancesCache);
   const insurances = cache[patientId]?.data || [];
 
-  const fetch = useCallback((activeOnly = false) => {
+  const fetch = useCallback((activeOnly = false, force = true) => {
     if (!patientId) return;
-    return dispatch(fetchPatientInsurances({ patientId, activeOnly }));
+    return dispatch(fetchPatientInsurances({ patientId, activeOnly, force }));
   }, [dispatch, patientId]);
 
   const create = useCallback((payload) => {

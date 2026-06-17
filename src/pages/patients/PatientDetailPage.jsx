@@ -42,8 +42,13 @@ const PatientDetailPage = () => {
   useEffect(() => {
     if (!patientId) return;
     fetchById(patientId);
-    dispatch(fetchAllProvidersForDropdown());
-  }, [patientId, fetchById, dispatch]);
+  }, [patientId, fetchById]);
+
+  useEffect(() => {
+    if (tabParam === 'details') {
+      dispatch(fetchAllProvidersForDropdown());
+    }
+  }, [tabParam, dispatch]);
 
   useEffect(() => {
     if (location.state?.openFamilyDialog) {

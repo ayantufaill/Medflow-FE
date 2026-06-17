@@ -37,7 +37,7 @@ const InsuranceInformation = ({
     { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TEXAS HEALTH RESOURCES', groupNumber: '087639801300001', planName: 'Aetna(TEXAS HEALTH RESOURCES)', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
   ];
 
-  const handleSearch = (val) => {
+  const handleSearch = (val, shouldShowDropdown = true) => {
     handleInputChange('carrierSearch', val);
 
     const searchPool = companies.length > 0 ? companies : DUMMY_INSURANCE;
@@ -61,7 +61,9 @@ const InsuranceInformation = ({
     }
 
     setSearchResults(filtered);
-    setShowDropdown(true);
+    if (shouldShowDropdown) {
+      setShowDropdown(true);
+    }
   };
 
   const handleSelectResult = (item) => {
@@ -157,7 +159,7 @@ const InsuranceInformation = ({
             onChange={(e) => {
               handleInputChange('excludeSystemCarriers', e.target.checked);
               // Trigger a re-search so the dropdown updates immediately
-              setTimeout(() => handleSearch(formData.carrierSearch || ''), 0);
+              setTimeout(() => handleSearch(formData.carrierSearch || '', false), 0);
             }} 
           />
         } 

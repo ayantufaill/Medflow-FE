@@ -35,16 +35,27 @@ import ImportedCoverageModal from '../insurance/ImportedCoverageModal';
 import EditCoverageModal from '../insurance/EditCoverageModal';
 import ViewCoverage from '../insurance/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
+import CarrierInfoModal from '../insurance/CarrierInfoModal';
 
 const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate }) => {
   const [expanded, setExpanded] = useState(false);
+  const [carrierInfoModalOpen, setCarrierInfoModalOpen] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
   const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
   const maxAmount = ins.individualAnnualMax ?? ins.deductibleAmount ?? 1500;
 
   const getCompany = (insuranceCompanyId) => {
+    // Determine the ID string whether it was populated as an object or just passed as a string
+    const idStr = insuranceCompanyId?._id || insuranceCompanyId?.id || (typeof insuranceCompanyId === 'string' ? insuranceCompanyId : null);
+    
+    // Always prefer the full company object from the Redux store
+    if (idStr) {
+      const fullCompany = (companies || []).find((c) => (c._id || c.id) === idStr);
+      if (fullCompany) return fullCompany;
+    }
+    
+    // Fallback to the provided object (which might be sparsely populated)
     if (insuranceCompanyId && typeof insuranceCompanyId === 'object') return insuranceCompanyId;
-    if (typeof insuranceCompanyId === 'string') return (companies || []).find((c) => (c._id || c.id) === insuranceCompanyId);
     return null;
   };
   const company = getCompany(ins.insuranceCompanyId);
@@ -140,7 +151,10 @@ const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, 
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Contact Info:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 500, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}>
+                <Typography 
+                  sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 500, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}
+                  onClick={() => setCarrierInfoModalOpen(true)}
+                >
                   {ins.payerContactInfo || 'View Contact Info'}
                 </Typography>
               </Box>
@@ -148,6 +162,12 @@ const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, 
           </Box>
         </Box>
       </Collapse>
+      
+      <CarrierInfoModal 
+        open={carrierInfoModalOpen} 
+        onClose={() => setCarrierInfoModalOpen(false)} 
+        carrier={company} 
+      />
     </Paper>
   );
 };
@@ -167,7 +187,9 @@ export default function PatientInsuranceTabContent({ patientId }) {
     companies,
     plans: planCatalog,
     templates: coverageTemplates,
-    fetchAllCatalog,
+    fetchCompanies,
+    fetchPlans,
+    fetchTemplates,
   } = useInsuranceCatalog();
 
   const [insuranceDialog, setInsuranceDialog] = useState({ open: false, mode: 'add', insurance: null });
@@ -185,7 +207,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
     try {
       await Promise.all([
         fetchInsurances(),
-        fetchAllCatalog(),
+        fetchCompanies(),
       ]);
     } catch (err) {
       console.error('Failed to load insurance data', err);
@@ -343,7 +365,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => setImportedCoverageModalOpen(true)}
+                  onClick={() => {
+                    setImportedCoverageModalOpen(true);
+                    fetchPlans();
+                    fetchTemplates();
+                  }}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
@@ -379,7 +405,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => setImportedCoverageModalOpen(true)}
+                  onClick={() => {
+                    setImportedCoverageModalOpen(true);
+                    fetchPlans();
+                    fetchTemplates();
+                  }}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',

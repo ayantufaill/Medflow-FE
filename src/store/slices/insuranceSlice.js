@@ -17,7 +17,7 @@ export const fetchAllInsuranceCompaniesThunk = createAsyncThunk(
   {
     condition: (_, { getState }) => {
       const { insurance } = getState();
-      if (insurance.companiesLoading || insurance.companies.length > 0) {
+      if (insurance.companiesLoading || insurance.companiesFetched) {
         return false;
       }
       return true;
@@ -38,7 +38,7 @@ export const fetchInsurancePlansThunk = createAsyncThunk(
   {
     condition: (_, { getState }) => {
       const { insurance } = getState();
-      if (insurance.plansLoading || insurance.plans.length > 0) {
+      if (insurance.plansLoading || insurance.plansFetched) {
         return false;
       }
       return true;
@@ -59,7 +59,7 @@ export const fetchCoverageTemplatesThunk = createAsyncThunk(
   {
     condition: (_, { getState }) => {
       const { insurance } = getState();
-      if (insurance.templatesLoading || insurance.templates.length > 0) {
+      if (insurance.templatesLoading || insurance.templatesFetched) {
         return false;
       }
       return true;
@@ -280,14 +280,17 @@ const initialState = {
   companies: [],
   companiesLoading: false,
   companiesError: null,
+  companiesFetched: false,
 
   plans: [],
   plansLoading: false,
   plansError: null,
+  plansFetched: false,
 
   templates: [],
   templatesLoading: false,
   templatesError: null,
+  templatesFetched: false,
 
   // Admin Management Lists
   carriersList: [],
@@ -342,6 +345,7 @@ const insuranceSlice = createSlice({
       .addCase(fetchAllInsuranceCompaniesThunk.fulfilled, (state, action) => {
         state.companies = action.payload;
         state.companiesLoading = false;
+        state.companiesFetched = true;
       })
       .addCase(fetchAllInsuranceCompaniesThunk.rejected, (state, action) => {
         state.companiesLoading = false;
@@ -355,6 +359,7 @@ const insuranceSlice = createSlice({
       .addCase(fetchInsurancePlansThunk.fulfilled, (state, action) => {
         state.plans = action.payload;
         state.plansLoading = false;
+        state.plansFetched = true;
       })
       .addCase(fetchInsurancePlansThunk.rejected, (state, action) => {
         state.plansLoading = false;
@@ -368,6 +373,7 @@ const insuranceSlice = createSlice({
       .addCase(fetchCoverageTemplatesThunk.fulfilled, (state, action) => {
         state.templates = action.payload;
         state.templatesLoading = false;
+        state.templatesFetched = true;
       })
       .addCase(fetchCoverageTemplatesThunk.rejected, (state, action) => {
         state.templatesLoading = false;
