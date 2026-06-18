@@ -158,11 +158,20 @@ const ClinicalNavbar = () => {
       ? formatApptTime(currentAppointment) 
       : 'Loading Appointment...';
 
-    const providerName = currentAppointment?.providerId 
-      ? (typeof currentAppointment.providerId === 'object' 
-        ? `${currentAppointment.providerId.firstName || ''} ${currentAppointment.providerId.lastName || ''}`.trim() 
-        : currentAppointment.providerId)
-      : '';
+    const providerName = (() => {
+      const prov = currentAppointment?.providerId;
+      if (!prov) return '';
+      if (typeof prov !== 'object') return prov;
+      // Backend: { _id, providerCode, userId: { firstName, lastName } }
+      const user = prov.userId;
+      if (user && typeof user === 'object') {
+        const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        if (name) return name;
+      }
+      const directName = `${prov.firstName || ''} ${prov.lastName || ''}`.trim();
+      if (directName) return directName;
+      return prov.providerCode || '';
+    })();
 
     const roomLabel = currentAppointment?.roomId ? `Op ${currentAppointment.roomId}` : '';
 

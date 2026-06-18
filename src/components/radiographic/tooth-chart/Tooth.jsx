@@ -159,12 +159,12 @@ const Tooth = ({
         src={`/teeth${num}.png`} 
         alt={`Tooth ${num}`}
         sx={{ 
-          width: 30, 
-          height: 60, 
+          width: isActive ? 40 : 30, 
+          height: isActive ? 75 : 60, 
           mt: 0.5, 
           opacity: isHovered ? 1 : 0.9,
           filter: isActive || isHovered || hasRadiolucency
-            ? 'drop-shadow(0 0 4px #1976d2) brightness(1.15)' 
+            ? 'drop-shadow(0 0 6px #1976d2) brightness(1.15)' 
             : 'none',
           objectFit: 'contain',
           transition: 'all 0.2s ease-in-out'
@@ -189,10 +189,12 @@ const Tooth = ({
         p: 0.5,
         cursor: 'pointer',
         transition: 'transform 0.2s ease-in-out, z-index 0.2s',
-        transform: hasRadiolucency 
-          ? 'scale(1.25)' 
-          : (isHovered ? 'scale(1.1)' : 'scale(1)'),
-        zIndex: hasRadiolucency ? 10 : (isHovered ? 5 : 'auto'),
+        transform: isActive
+          ? 'scale(1.2)'
+          : hasRadiolucency 
+            ? 'scale(1.25)' 
+            : (isHovered ? 'scale(1.1)' : 'scale(1)'),
+        zIndex: isActive ? 10 : (hasRadiolucency ? 10 : (isHovered ? 5 : 'auto')),
         position: 'relative'
       }}
       onMouseEnter={() => setIsHovered(true)}
