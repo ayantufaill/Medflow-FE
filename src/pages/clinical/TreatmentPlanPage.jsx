@@ -634,17 +634,23 @@ const ActionBadge = ({ label, color, textColor = "black" }) => (
   </Box>
 );
 
-const SidebarSection = ({ title, children, expanded: defaultExpanded = false, icons = [], titleSx = {} }) => {
+const SidebarSection = ({ title, children, expanded: defaultExpanded = false, icons = [], titleSx = {}, disabled = false }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  useEffect(() => {
+    setIsExpanded(defaultExpanded);
+  }, [defaultExpanded]);
 
   return (
     <Accordion 
       expanded={isExpanded} 
-      onChange={(e, expanded) => setIsExpanded(expanded)}
+      onChange={(e, expanded) => !disabled && setIsExpanded(expanded)}
       disableGutters 
       elevation={0} 
       sx={{ 
         borderBottom: '1px solid #b4bedb',
+        opacity: disabled ? 0.5 : 1,
+        pointerEvents: disabled ? 'none' : 'auto',
         '&:before': { display: 'none' } 
       }}
     >
@@ -669,8 +675,8 @@ const SidebarSection = ({ title, children, expanded: defaultExpanded = false, ic
 };
 
 // --- Reusable Sidebar Item ---
-const SidebarItem = ({ label }) => (
-  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ py: 0.3, cursor: 'pointer' }}>
+const SidebarItem = ({ label, disabled = false }) => (
+  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ py: 0.3, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
     <Typography sx={{ 
       fontSize: fontSize.sm,
     }}>
@@ -681,15 +687,15 @@ const SidebarItem = ({ label }) => (
 );
 
 // --- Sub-menu Item Component ---
-const SidebarSubItem = ({ label }) => (
-  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ py: 0.4, cursor: 'pointer', '&:hover': { opacity: 0.7 } }}>
+const SidebarSubItem = ({ label, disabled = false }) => (
+  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ py: 0.4, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto', '&:hover': { opacity: disabled ? 0.5 : 0.7 } }}>
     <Typography sx={{ fontSize: fontSize.sm, color: '#333' }}>{label}</Typography>
     <KeyboardArrowDownIcon sx={{ fontSize: 14, color: '#999' }} />
   </Stack>
 );
 
-const DiagnosticItem = ({ label }) => (
-  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ py: 0.4, cursor: 'pointer' }}>
+const DiagnosticItem = ({ label, disabled = false }) => (
+  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ py: 0.4, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
     <Typography sx={{ 
       fontSize: fontSize.sm, 
     }}>
@@ -1602,6 +1608,7 @@ export default function TreatmentPlanPage() {
 
               <SidebarSection 
                 title="No Charge" 
+                disabled
                 icons={[
                   <Box key="1" sx={{ position: 'relative', width: 22, height: 22, borderRadius: '50%', border: '2px solid #f44336', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fff' }}>
                     <Typography sx={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>$</Typography>
@@ -1634,7 +1641,7 @@ export default function TreatmentPlanPage() {
               </SidebarSection>
            
           {/* 1. Power Codes */}
-          <SidebarSection title="Power Codes">
+          <SidebarSection title="Power Codes" disabled>
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
               <ActionBadge label="New" color="#40e0d0" />
               <ActionBadge label="Kid" color="#ccff00" />
@@ -1646,7 +1653,7 @@ export default function TreatmentPlanPage() {
           </SidebarSection>
 
           {/* 2. Diagnostic (Expanded with Yellow Highlights) */}
-          <SidebarSection title="Diagnostic" expanded>
+          <SidebarSection title="Diagnostic" disabled>
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
               <ActionBadge label="Scr" color="#f08080" />
               <ActionBadge label="FULL" color="#e6e6fa" />
@@ -1680,7 +1687,7 @@ export default function TreatmentPlanPage() {
           {/* 3. Preventative */}
           <SidebarSection 
             title="Preventative" 
-            expanded 
+            disabled
             icons={[
               <Box key="1" sx={{ bgcolor: '#008080', color: 'white', px: 0.5, py: 0.2, fontSize: fontSize.xs, fontWeight: fontWeight.bold, borderRadius: '3px' }}>PRV</Box>
             ]}
@@ -1776,22 +1783,22 @@ export default function TreatmentPlanPage() {
               </AccordionDetails>
             </Accordion>
 
-            <SidebarItem label="Indirect Adhesive" />
-            <SidebarItem label="Indirect" />
-            <SidebarItem label="Indirect Cohesive" />
-            <SidebarItem label="Recement/Repair" />
-            <SidebarItem label="Pediatric" />
-            <SidebarItem label="Additional restorative" />
-            <SidebarItem label="BU/P&C" />
-            <SidebarItem label="Restorative" />
-            <SidebarItem label="Per arch" />
-            <SidebarItem label="Clip - stationary" />
+            <SidebarItem label="Indirect Adhesive" disabled />
+            <SidebarItem label="Indirect" disabled />
+            <SidebarItem label="Indirect Cohesive" disabled />
+            <SidebarItem label="Recement/Repair" disabled />
+            <SidebarItem label="Pediatric" disabled />
+            <SidebarItem label="Additional restorative" disabled />
+            <SidebarItem label="BU/P&C" disabled />
+            <SidebarItem label="Restorative" disabled />
+            <SidebarItem label="Per arch" disabled />
+            <SidebarItem label="Clip - stationary" disabled />
           </SidebarSection>
 
           {/* 5. Endodontics */}
           <SidebarSection 
             title="Endodontics" 
-            expanded 
+            disabled
             icons={[
               <EndoToothIcon key="1" filled />,
               <EndoToothIcon key="2" />
@@ -1810,7 +1817,7 @@ export default function TreatmentPlanPage() {
           {/* 6. Periodontics */}
           <SidebarSection 
             title="Periodontics" 
-            expanded 
+            disabled
             icons={[
               <Box key="1" sx={{ bgcolor: '#f08080', color: 'white', px: 0.6, py: 0.2, fontSize: fontSize.xs, fontWeight: fontWeight.bold, borderRadius: '3px' }}>LBR</Box>
             ]}
@@ -1831,7 +1838,7 @@ export default function TreatmentPlanPage() {
           {/* 7. Prosthodontics, Removable */}
           <SidebarSection 
             title="Prosthodontics, Removable" 
-            expanded 
+            disabled
             icons={[
               <DentureIcon key="1" color="#9c27b0" />,
               <DentureIcon key="2" color="#ef9a9a" />
@@ -1853,7 +1860,7 @@ export default function TreatmentPlanPage() {
           {/* 8. Implant Services */}
           <SidebarSection 
             title="Implant Services" 
-            expanded 
+            disabled
             icons={[<ImplantIcon key="1" />]}
           >
             <SidebarSubItem label="Surgical Placement" />
@@ -1871,7 +1878,7 @@ export default function TreatmentPlanPage() {
           {/* 9. Prosthodontics, Fixed */}
           <SidebarSection 
             title="Prosthodontics, Fixed" 
-            expanded 
+            disabled
             icons={[
               <RestorationToothIcon key="1" fill="#fff" />,
               <RestorationToothIcon key="2" fill="#ffd700" />,
@@ -1887,7 +1894,7 @@ export default function TreatmentPlanPage() {
           {/* 10. Oral Surgery */}
           <SidebarSection 
             title="Oral Surgery" 
-            expanded 
+            disabled
             icons={[
               <ScalpelIcon key="1" />,
               <HemostatIcon key="2" />
@@ -1910,7 +1917,7 @@ export default function TreatmentPlanPage() {
           </SidebarSection>
 
           {/* 11. Orthodontics */}
-          <Accordion defaultExpanded disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb' }}>
+          <Accordion expanded={false} disableGutters elevation={0} sx={{ borderBottom: '1px solid #b4bedb', opacity: 0.5, pointerEvents: 'none' }}>
             <AccordionSummary 
               expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
               sx={{ '& .MuiAccordionSummary-content': { justifyContent: 'space-between', alignItems: 'center' } }}

@@ -6,6 +6,7 @@ import {
   Select, FormControl, InputLabel, Collapse, IconButton, Popover
 } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
+import InteractiveToothChart from '../../components/clinical/InteractiveToothChart';
 import PrintIcon from '@mui/icons-material/Print';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -35,10 +36,21 @@ const ProgressNotesPage = () => {
   const [editorContent, setEditorContent] = useState('');
   const [panoImages, setPanoImages] = useState({});
   const [activeMount, setActiveMount] = useState(null);
+  const [progressSelectedTeeth, setProgressSelectedTeeth] = useState([]);
   const panoInputRef = React.useRef(null);
   const [textColorAnchor, setTextColorAnchor] = useState(null);
   const [formatState, setFormatState] = useState({ bold: false, italic: false, align: 'left' });
   const editorRef = React.useRef(null);
+  
+  const [confirmNewNote, setConfirmNewNote] = useState(null);
+  const [activeChecklistPopup, setActiveChecklistPopup] = useState(null);
+  const [checklistFindings, setChecklistFindings] = useState({
+    generatedNotes: true, identifiedFindings: true, bleedingPoints: false,
+    questionableRestorations: false, bruxism: false, analysisRequired: true,
+    analysisYes: false, analysisNo: false, nv: true, recare: false, txPlanned: false,
+    provider: true, dentistJohnSmith: false, assistantJolene: false
+  });
+
   const [completedProcedures, setCompletedProcedures] = useState([
     { id: 1, code: 'D0120', procedure: 'Periodic Oral Evaluation', tooth: '', type: 'Diagnostic', selected: false },
     { id: 2, code: 'D1110', procedure: 'Prophylaxis - Adult', tooth: '', type: 'Preventative', selected: false },
@@ -51,35 +63,7 @@ const ProgressNotesPage = () => {
     '#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff',
   ];
 
-  // --- Local Tooth Component for Chart ---
-  const Tooth = ({ num, isActive = false }) => {
-    const [isHovered, setIsHovered] = useState(false);
-    return (
-      <Box 
-        sx={{ 
-          display: 'flex', flexDirection: 'column', alignItems: 'center', p: 0.2,
-          cursor: 'pointer', transition: 'transform 0.1s',
-          transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-        }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <Typography sx={{ fontSize: '0.8rem', color: isActive || isHovered ? '#1976d2' : '#666', fontWeight: 'bold' }}>
-          {num}
-        </Typography>
-        <Box 
-          component="img" 
-          src={`/teeth${num}.png`}
-          alt={`Tooth ${num}`}
-          sx={{ 
-            width: 35, height: 70, mt: 0.5, 
-            filter: isActive || isHovered ? 'drop-shadow(0 0 8px #1976d2) brightness(1.2)' : 'none',
-            objectFit: 'contain'
-          }} 
-        />
-      </Box>
-    );
-  };
+  // Local Tooth component removed — now using shared InteractiveToothChart
   
   
   // --- High-fidelity Checklist Icons (Synced from TreatmentPlan) ---
@@ -166,6 +150,23 @@ const ProgressNotesPage = () => {
     };
     setNotes([note, ...notes]);
     setOpenNoteDialog(false);
+  };
+
+  const handleConfirmNewNote = () => {
+    const note = {
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      procedures: [],
+      description: '',
+      provider: 'Christina Sabour',
+      signedBy: 'C. Sabour',
+      signedDate: new Date().toLocaleString(),
+      category: confirmNewNote,
+      isExpanded: true
+    };
+    setNotes([note, ...notes]);
+    setConfirmNewNote(null);
+    setIsAmending(note.id); // Open in edit mode automatically
   };
 
   const handleOpenProc = (id) => {
@@ -282,9 +283,19 @@ const ProgressNotesPage = () => {
         </Box>
 
         <Stack className="no-print" direction="row" spacing={1} sx={{ mb: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Chip label="All" onClick={() => setSelectedCategory('All')} variant={selectedCategory === 'All' ? 'filled' : 'outlined'} />
           {noteCategories.map((cat) => (
-            <Chip key={cat.label} label={cat.label} onClick={() => setSelectedCategory(cat.label)} sx={{ backgroundColor: cat.color, color: cat.textColor }} />
+            <Button 
+              key={cat.label} 
+              onClick={() => setConfirmNewNote(cat.label)} 
+              sx={{ 
+                backgroundColor: cat.color, color: cat.textColor, 
+                textTransform: 'none', fontWeight: 600, fontSize: '0.8rem',
+                border: '1px solid #e0e0e0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                '&:hover': { backgroundColor: cat.color, filter: 'brightness(0.95)' }
+              }}
+            >
+              {cat.label}
+            </Button>
           ))}
         </Stack>
 
@@ -347,7 +358,21 @@ const ProgressNotesPage = () => {
                          </Box>
                        </Stack>
                      </TableCell>
-                     <TableCell sx={{ fontSize: '0.8rem' }}>{note.description}</TableCell>
+                     <TableCell sx={{ fontSize: '0.8rem' }}>
+                        <Box 
+                          sx={{ 
+                            maxHeight: 100, 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 4,
+                            WebkitBoxOrient: 'vertical',
+                            '& p': { margin: 0, fontSize: '0.75rem' },
+                            '& ul': { margin: 0, paddingLeft: '20px', fontSize: '0.75rem' }
+                          }} 
+                          dangerouslySetInnerHTML={{ __html: note.description }} 
+                        />
+                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#1D8348', fontWeight: 600 }}>
@@ -378,95 +403,129 @@ const ProgressNotesPage = () => {
                     <TableRow>
                       <TableCell colSpan={4} sx={{ p: 0, borderBottom: 'none' }}>
                         <Box sx={{ backgroundColor: 'white', p: 3, borderTop: '1px solid #e0e0e0' }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1.5, fontSize: '0.9rem' }}>
-                            Notes:
-                          </Typography>
-                          <Box sx={{ pl: 4, mb: 4 }}>
-                            <Typography variant="body2" sx={{ color: '#333', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                              {note.description}
-                            </Typography>
+                          {/* --- Always Visible Medical Details Header --- */}
+                          <Box sx={{ borderBottom: '1px solid #ccc', pb: 2, mb: 2 }}>
+                            <Grid container spacing={2} sx={{ fontSize: '0.75rem' }}>
+                              <Grid item xs={12} md={6}>
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Medical History:</Typography>
+                                  <label><input type="checkbox" /> Reviewed</label>
+                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
+                                </Stack>
+                                <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Dental History:</Typography>
+                                  <label><input type="checkbox" /> Reviewed</label>
+                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
+                                </Stack>
+                                <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Blood Pressure:</Typography>
+                                  <Typography>Systolic: <span style={{borderBottom: '1px solid #ccc', display: 'inline-block', width: 40}}></span></Typography>
+                                  <Typography>Diastolic: <span style={{borderBottom: '1px solid #ccc', display: 'inline-block', width: 40}}></span></Typography>
+                                  <Typography>Heart rate: <span style={{borderBottom: '1px solid #ccc', display: 'inline-block', width: 40}}></span></Typography>
+                                </Stack>
+                                <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
+                                {!isAmending && (
+                                  <Button onClick={() => setIsAmending(note.id)} variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', mt: 1, color: 'white', '&:hover': { bgcolor: '#b79a6d' }, boxShadow: 'none' }}>Edit note</Button>
+                                )}
+                              </Grid>
+                              <Grid item xs={12} md={6}>
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Radiographs:</Typography>
+                                  <label><input type="checkbox" /> Taken</label>
+                                  <label><input type="checkbox" /> Reviewed</label>
+                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
+                                </Stack>
+                                <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Diagnostic Opinion:</Typography>
+                                  <label><input type="checkbox" /> Reviewed</label>
+                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
+                                </Stack>
+                                <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                  <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Risk assessment:</Typography>
+                                  <label><input type="checkbox" /> Reviewed</label>
+                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
+                                </Stack>
+                                <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
+                              </Grid>
+                            </Grid>
+
+                            {isAmending === note.id && (
+                              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 3, mb: 1 }}>
+                                <Button 
+                                  onClick={() => {
+                                    const mockData = `
+                                      <p style="margin:0 0 4px 0"><strong>Comprehensive exam</strong><br>
+                                      - Generated Exam notes<br>
+                                      - Identified findings bleeding points, questionable restorations<br>
+                                      - Further analysis required yes<br>
+                                      <span style="background-color: yellow">- NV: Recare</span><br>
+                                      - Assistant Rachel type notes</p>
+                                      <p style="margin:8px 0 4px 0"><strong>Teeth Findings:</strong><br>
+                                      #1 Missing tooth caused by: Functional<br>
+                                      #3 Caries Active Limited To Enamel: MO, Pulpal Concern, Facial recession (-1, 1, -1), Lingual recession (-1, 1, -1)<br>
+                                      #8 Root Canal Treatment: Questionable, Facial recession (-1, -1), Lingual recession (-1, 1, -1), Lingual Attachment Loss (3, 3, 11)<br>
+                                      #16 Missing tooth caused by: Functional<br>
+                                      #17 Missing tooth caused by: Functional<br>
+                                      #24 Incipient Lesion(), Facial recession (-1, 1, -1), Lingual recession (-1, 1, -1)<br>
+                                      #29 Amalgam MOD, Isthmus: &gt; 1/2, Concerns(Caries, Chipped Restoration, Compromised Occlusal Surface), Facial recession (-1, 1, -1), Lingual recession (-1, 1, -1)<br>
+                                      #32 Missing tooth caused by: Functional<br>
+                                      #P</p>
+                                      <p style="margin:8px 0 4px 0"><strong>TMJ</strong><br>
+                                      Muscle Evaluation: Temporalis/Masseter: Asymptomatic</p>
+                                      <p style="margin:8px 0 4px 0"><strong>Periodontal</strong><br>
+                                      Summary: Grade: B<br>
+                                      Bleeding: #2 #3 #4 #5 #6 #7 #8 #9 #10 #11 #12 #13 #14 #15 #18 #19 #20 #21 #22 #23 #24 #25 #26 #27 #28 #29 #30 #31<br>
+                                      Facial Recession: #2 #3 #4 #5 #6 #7 #8 #9 #10 #11 #12 #13 #14 #18 #19 #20 #21 #22 #23 #24 #25 #26 #27 #28 #29 #30 #31<br>
+                                      Lingual Recession: #2 #3 #4 #5 #6 #7 #8 #9 #10 #11 #12 #13 #14 #15 #18 #19 #20 #21 #22 #23 #24 #25 #26 #27 #28 #29 #30 #31</p>
+                                      <p style="margin:8px 0 4px 0"><strong>Head & Neck:</strong><br>
+                                      Lesion Left Upper Gingiva:<br>
+                                      Mallampati Score:</p>
+                                      <p style="margin:8px 0 4px 0"><strong>Airway</strong><br>
+                                      Facial Pattern:<br>
+                                      Facial Profile:<br>
+                                      Dental Profile:<br>
+                                      Tongue Range of Motion Ratio (TRMR):<br>
+                                      Kotlow Tongue Tie:<br>
+                                      Mentalis Strain:<br>
+                                      Mallampati:<br>
+                                      Tonsil size (Brodsky scale):<br>
+                                      Maxillary Intercanine Distance:<br>
+                                      Maxillary Intermolar Distance (Mesiobuccalcusp):<br>
+                                      Incisor Display at Rest:<br>
+                                      Bruxism:<br>
+                                      Swallowing Tongue Thrust Compensation Test:<br>
+                                      Nasal Breathing Test:</p>
+                                    `;
+                                    if (editorRef.current) {
+                                      editorRef.current.innerHTML = mockData;
+                                      setEditorContent(mockData);
+                                    }
+                                  }}
+                                  variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}
+                                >
+                                  Generate Exam Notes
+                                </Button>
+                                <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Hide Checklist</Button>
+                                <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Used Adj Products</Button>
+                                <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Recommended Adj Products</Button>
+                              </Stack>
+                            )}
                           </Box>
-                          
+
                           {!isAmending && (
-                            <Stack direction="row" spacing={2}>
-                              <Button 
-                                variant="contained" 
-                                size="small"
-                                onClick={() => setIsAmending(note.id)}
-                                sx={{ 
-                                  backgroundColor: '#ccae81', 
-                                  color: 'white',
-                                  textTransform: 'none',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 600,
-                                  px: 2,
-                                  boxShadow: 'none',
-                                  '&:hover': { backgroundColor: '#b79a6d', boxShadow: 'none' }
-                                }}
-                              >
-                                Amend Progress Note
-                              </Button>
-                              <Button 
-                                variant="contained" 
-                                size="small"
-                                disabled
-                                sx={{ 
-                                  backgroundColor: '#e4a5a2', 
-                                  color: 'white',
-                                  textTransform: 'none',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 600,
-                                  px: 2,
-                                  boxShadow: 'none',
-                                  '&:hover': { backgroundColor: '#d18f8c', boxShadow: 'none' }
-                                }}
-                              >
-                                Archive Progress Note
-                              </Button>
-                            </Stack>
+                            <Box sx={{ mb: 4, pl: 0 }}>
+                              <Box sx={{ color: '#333', fontSize: '0.85rem', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: note.description || 'No notes generated yet.' }} />
+                            </Box>
                           )}
 
                           {/* --- Amendment Section (Image View) --- */}
                           {isAmending === note.id && (
                             <Box sx={{ mt: 1 }}>
-                              {/* Archive Button moved below notes text but above amendment box */}
                               <Box sx={{ borderTop: '1px solid #eee', pt: 3 }}>
-                                {/* Amended Note Box */}
-                                <Box sx={{ border: '1px solid #ccc', p: 2, mb: 3, position: 'relative' }}>
-                                  <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Amended note:</Typography>
-                                    <Typography sx={{ fontSize: '0.85rem', color: '#5b84c1', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                                      Sign Amended Note
-                                    </Typography>
-                                  </Stack>
-                                  <Button 
-                                    variant="contained" size="small"
-                                    sx={{ 
-                                      mt: 1, backgroundColor: '#ccae81', textTransform: 'none', 
-                                      fontSize: '0.7rem', fontWeight: 600, boxShadow: 'none' 
-                                    }}
-                                  >
-                                    Edit note
-                                  </Button>
-                                </Box>
-
-                                <Button 
-                                  variant="contained" 
-                                  size="small"
-                                  sx={{ 
-                                    backgroundColor: '#e4a5a2', 
-                                    color: 'white',
-                                    textTransform: 'none',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 600,
-                                    px: 2,
-                                    mb: 3,
-                                    boxShadow: 'none',
-                                    '&:hover': { backgroundColor: '#d18f8c', boxShadow: 'none' }
-                                  }}
-                                >
-                                  Archive Progress Note
-                                </Button>
 
                                  <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
                                    {/* Left side: Checklists */}
@@ -499,7 +558,7 @@ const ProgressNotesPage = () => {
                                              { name: 'Restorative', chips: ['Cla', 'OC', 'Cro', 'KOR', 'IMP', 'Imp', 'BvC', 'Tre', 'BPO', 'Whi', 'Exa'], icons: [<EndoIcon key="1" filled />, <ImplantIconSmall key="2" />] },
                                              { name: 'Restorative-Cohesive', chips: [], icons: [<Box key="1" sx={{ color: '#1976d2' }}>🏗️</Box>, <Box key="2" sx={{ color: '#f44336' }}>🔩</Box>] },
                                              { name: 'Endodontics', chips: [], icons: [<EndoIcon key="1" />, <EndoIcon key="2" filled />] },
-                                             { name: 'Diagnostic', chips: [], icons: [<DentureIconSmall key="1" color="#ef9a9a" />] },
+                                             { name: 'Diagnostic', chips: [], icons: [<Box key="1" onClick={() => setActiveChecklistPopup('Comprehensive exam')} sx={{ cursor: 'pointer' }}><DentureIconSmall color="#ef9a9a" /></Box>] },
                                              { name: 'Orthodontic', chips: ['IPR', 'Ort', 'Deb', 'Inv'], icons: [<BracesIconSmall key="1" />] },
                                              { name: 'Periodontics', chips: ['Ext', 'Res', 'TSP'], icons: [<Box key="1" sx={{ width: 4, height: 14, bgcolor: '#f44336' }} />, <Box key="2" sx={{ width: 4, height: 14, bgcolor: '#4caf50' }} />] },
                                              { name: 'Occlusion', chips: ['Bot'], icons: [<Box key="1" sx={{ px: 0.5, bgcolor: '#e8f5e9', fontSize: '0.6rem', border: '1px solid #4caf50', color: '#2e7d32' }}>DEP</Box>] },
@@ -512,17 +571,26 @@ const ProgressNotesPage = () => {
                                                alignItems: 'center', 
                                                p: 0.8, 
                                                borderBottom: idx === 12 ? 'none' : '1px solid #b4c7e7',
-                                               '&:hover': { bgcolor: '#f8f9fa' }
+                                               opacity: row.name === 'Diagnostic' ? 1 : 0.4,
+                                               pointerEvents: row.name === 'Diagnostic' ? 'auto' : 'none',
+                                               '&:hover': { bgcolor: row.name === 'Diagnostic' ? '#f8f9fa' : 'transparent' }
                                              }}>
-                                               <Typography sx={{ 
-                                                 fontSize: '0.72rem', 
-                                                 color: '#000', 
-                                                 textDecoration: 'underline', 
-                                                 width: '115px', 
-                                                 flexShrink: 0,
-                                                 cursor: 'pointer',
-                                                 fontWeight: 500
-                                               }}>
+                                               <Typography 
+                                                 onClick={() => {
+                                                   if (row.name === 'Diagnostic') {
+                                                     setActiveChecklistPopup('Comprehensive exam');
+                                                   }
+                                                 }}
+                                                 sx={{ 
+                                                   fontSize: '0.72rem', 
+                                                   color: '#000', 
+                                                   textDecoration: 'underline', 
+                                                   width: '115px', 
+                                                   flexShrink: 0,
+                                                   cursor: row.name === 'Diagnostic' ? 'pointer' : 'default',
+                                                   fontWeight: 500
+                                                 }}
+                                               >
                                                  {row.name}
                                                </Typography>
                                                <Stack direction="row" spacing={0.6} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
@@ -626,17 +694,6 @@ const ProgressNotesPage = () => {
                                    {/* Right side: Generate Button & Chart */}
                                    <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                                      <Box sx={{ textAlign: 'center', mb: 2, width: '100%' }}>
-                                        <Button 
-                                          variant="contained" size="small"
-                                          sx={{ 
-                                            backgroundColor: '#ccae81', textTransform: 'none', 
-                                            fontSize: '0.8rem', fontWeight: 600, boxShadow: 'none', px: 3
-                                          }}
-                                        >
-                                          Generate Exam Notes
-                                        </Button>
-                                      </Box>
 
                                       {/* View Selectors */}
                                       <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3, width: '100%' }}>
@@ -667,19 +724,15 @@ const ProgressNotesPage = () => {
                                           onChange={handlePanoFileChange}
                                         />
                                         {examView === 'Chart View' ? (
-                                          <Box sx={{ bgcolor: '#fff', p: 2, border: '1px solid #eee', borderRadius: 1, width: '100%' }}>
-                                            {/* Maxillary */}
-                                            <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3 }}>
-                                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map(n => (
-                                                <Tooth key={n} num={n} />
-                                              ))}
-                                            </Stack>
-                                            {/* Mandibular */}
-                                            <Stack direction="row" spacing={1} justifyContent="center">
-                                              {[32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17].map(n => (
-                                                <Tooth key={n} num={n} />
-                                              ))}
-                                            </Stack>
+                                          <Box sx={{ bgcolor: '#fff', p: 2, border: '1px solid #eee', borderRadius: 1, width: '100%', position: 'relative' }}>
+                                            <InteractiveToothChart
+                                              selectedTeeth={progressSelectedTeeth}
+                                              onToothClick={(num) => {
+                                                setProgressSelectedTeeth(prev =>
+                                                  prev.includes(num) ? prev.filter(t => t !== num) : [...prev, num]
+                                                );
+                                              }}
+                                            />
                                           </Box>
                                         ) : examView === 'Pano/FMX' ? (
                                           <Box sx={{ width: '100%', p: 2, bgcolor: '#fff', border: '1px solid #eee', borderRadius: 1 }}>
@@ -871,7 +924,14 @@ const ProgressNotesPage = () => {
                                           </Button>
                                           <Button 
                                             variant="contained" size="small"
-                                            onClick={() => alert('Note Saved: ' + editorContent)}
+                                            onClick={() => {
+                                              setNotes(notes.map(n => n.id === note.id ? { ...n, description: editorContent } : n));
+                                              setIsAmending(null);
+                                              if (editorRef.current) {
+                                                editorRef.current.innerHTML = '';
+                                                setEditorContent('');
+                                              }
+                                            }}
                                             sx={{ 
                                               bgcolor: '#ccae81', textTransform: 'none', fontSize: '0.75rem', fontWeight: 600,
                                               '&:hover': { bgcolor: '#b79a6d' }, boxShadow: 'none'
@@ -990,6 +1050,144 @@ const ProgressNotesPage = () => {
             }}
           >
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!confirmNewNote} onClose={() => setConfirmNewNote(null)} maxWidth="xs" fullWidth>
+        <DialogContent sx={{ textAlign: 'center', p: 4 }}>
+          <Typography sx={{ fontSize: '1rem', mb: 3 }}>
+            Are you sure you want to continue and create a new one?
+          </Typography>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <Button variant="contained" onClick={handleConfirmNewNote} sx={{ bgcolor: '#5b84c1', '&:hover': { bgcolor: '#4a6fa5' } }}>Yes</Button>
+            <Button variant="contained" onClick={() => setConfirmNewNote(null)} sx={{ bgcolor: '#a0a0a0', '&:hover': { bgcolor: '#8e8e8e' } }}>No</Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!activeChecklistPopup} onClose={() => setActiveChecklistPopup(null)} maxWidth="sm" fullWidth>
+        <Box sx={{ bgcolor: '#5b84c1', p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '1rem', flex: 1, textAlign: 'center' }}>
+            Generate note from checklist
+          </Typography>
+        </Box>
+        <DialogContent sx={{ p: 2 }}>
+          <Box sx={{ border: '1px solid #ccc', p: 2, borderRadius: 1 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography sx={{ fontWeight: 'bold' }}>{activeChecklistPopup}</Typography>
+              <Typography 
+                onClick={() => {
+                  const allChecked = Object.values(checklistFindings).every(v => v);
+                  const newState = {};
+                  Object.keys(checklistFindings).forEach(k => newState[k] = !allChecked);
+                  setChecklistFindings(newState);
+                }}
+                sx={{ color: '#1976d2', cursor: 'pointer', fontSize: '0.85rem' }}
+              >
+                Select/Deselect All
+              </Typography>
+            </Stack>
+            
+            <Stack spacing={1}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <input type="checkbox" checked={checklistFindings.generatedNotes} onChange={e => setChecklistFindings({...checklistFindings, generatedNotes: e.target.checked})} />
+                <Typography sx={{ fontSize: '0.9rem' }}>1 - Generated Exam notes</Typography>
+              </Stack>
+
+              <Stack direction="row" spacing={1} alignItems="center">
+                <input type="checkbox" checked={checklistFindings.identifiedFindings} onChange={e => setChecklistFindings({...checklistFindings, identifiedFindings: e.target.checked})} />
+                <Typography sx={{ fontSize: '0.9rem' }}>2 - Identified findings</Typography>
+              </Stack>
+              <Stack direction="row" spacing={3} sx={{ pl: 4 }}>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.bleedingPoints} onChange={e => setChecklistFindings({...checklistFindings, bleedingPoints: e.target.checked})} /> bleeding points</label>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.questionableRestorations} onChange={e => setChecklistFindings({...checklistFindings, questionableRestorations: e.target.checked})} /> questionable restorations</label>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.bruxism} onChange={e => setChecklistFindings({...checklistFindings, bruxism: e.target.checked})} /> bruxism</label>
+              </Stack>
+
+              <Stack direction="row" spacing={1} alignItems="center">
+                <input type="checkbox" checked={checklistFindings.analysisRequired} onChange={e => setChecklistFindings({...checklistFindings, analysisRequired: e.target.checked})} />
+                <Typography sx={{ fontSize: '0.9rem' }}>3 - Further analysis required</Typography>
+              </Stack>
+              <Stack direction="row" spacing={3} sx={{ pl: 4 }}>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.analysisYes} onChange={e => setChecklistFindings({...checklistFindings, analysisYes: e.target.checked})} /> yes</label>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.analysisNo} onChange={e => setChecklistFindings({...checklistFindings, analysisNo: e.target.checked})} /> no</label>
+              </Stack>
+
+              <Stack direction="row" spacing={1} alignItems="center">
+                <input type="checkbox" checked={checklistFindings.nv} onChange={e => setChecklistFindings({...checklistFindings, nv: e.target.checked})} />
+                <Typography sx={{ fontSize: '0.9rem' }}>4 - NV:</Typography>
+              </Stack>
+              <Stack direction="row" spacing={3} sx={{ pl: 4 }}>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.recare} onChange={e => setChecklistFindings({...checklistFindings, recare: e.target.checked})} /> Recare</label>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.txPlanned} onChange={e => setChecklistFindings({...checklistFindings, txPlanned: e.target.checked})} /> Tx planned</label>
+              </Stack>
+
+              <Stack direction="row" spacing={1} alignItems="center">
+                <input type="checkbox" checked={checklistFindings.provider} onChange={e => setChecklistFindings({...checklistFindings, provider: e.target.checked})} />
+                <Typography sx={{ fontSize: '0.9rem' }}>5 - -</Typography>
+              </Stack>
+              <Stack direction="row" spacing={3} sx={{ pl: 4 }}>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.dentistJohnSmith} onChange={e => setChecklistFindings({...checklistFindings, dentistJohnSmith: e.target.checked})} /> Dentist John Smith</label>
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={checklistFindings.assistantJolene} onChange={e => setChecklistFindings({...checklistFindings, assistantJolene: e.target.checked})} /> Assistant Jolene</label>
+              </Stack>
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button 
+            onClick={() => {
+              // Generate text and insert into editor
+              let generatedText = "<p><strong>Comprehensive Exam:</strong></p><ul>";
+              if (checklistFindings.generatedNotes) {
+                generatedText += "<li>Generated Exam notes</li>";
+              }
+              if (checklistFindings.identifiedFindings) {
+                let sub = [];
+                if (checklistFindings.bleedingPoints) sub.push("bleeding points");
+                if (checklistFindings.questionableRestorations) sub.push("questionable restorations");
+                if (checklistFindings.bruxism) sub.push("bruxism");
+                generatedText += "<li>Identified findings" + (sub.length ? ": " + sub.join(", ") : "") + "</li>";
+              }
+              if (checklistFindings.analysisRequired) {
+                let sub = [];
+                if (checklistFindings.analysisYes) sub.push("yes");
+                if (checklistFindings.analysisNo) sub.push("no");
+                generatedText += "<li>Further analysis required" + (sub.length ? ": " + sub.join(", ") : "") + "</li>";
+              }
+              if (checklistFindings.nv) {
+                let sub = [];
+                if (checklistFindings.recare) sub.push("Recare");
+                if (checklistFindings.txPlanned) sub.push("Tx planned");
+                generatedText += "<li>NV" + (sub.length ? ": " + sub.join(", ") : "") + "</li>";
+              }
+              if (checklistFindings.provider) {
+                let sub = [];
+                if (checklistFindings.dentistJohnSmith) sub.push("Dentist John Smith");
+                if (checklistFindings.assistantJolene) sub.push("Assistant Jolene");
+                if (sub.length) {
+                  generatedText += "<li>Providers: " + sub.join(", ") + "</li>";
+                }
+              }
+              generatedText += "</ul>";
+              
+              if (editorRef.current) {
+                editorRef.current.innerHTML += generatedText;
+                setEditorContent(editorRef.current.innerHTML);
+              }
+              setActiveChecklistPopup(null);
+            }} 
+            variant="contained"
+            sx={{ bgcolor: '#ccae81', textTransform: 'none', px: 3, fontWeight: 600, '&:hover': { bgcolor: '#b79a6d' }, boxShadow: 'none' }}
+          >
+            Generate
+          </Button>
+          <Button 
+            onClick={() => setActiveChecklistPopup(null)} 
+            variant="contained"
+            sx={{ bgcolor: '#a0a0a0', textTransform: 'none', px: 3, fontWeight: 600, '&:hover': { bgcolor: '#8e8e8e' }, boxShadow: 'none' }}
+          >
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>
