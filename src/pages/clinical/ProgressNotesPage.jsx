@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Tabs, Tab, Button, Chip, Stack, Grid,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
@@ -7,6 +7,18 @@ import {
 } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import InteractiveToothChart from '../../components/clinical/InteractiveToothChart';
+import { useSelector } from 'react-redux';
+import { selectSelectedPatientId } from '../../store/slices/patientSlice';
+import { selectCurrentAppointment } from '../../store/slices/appointmentSlice';
+import {
+  useProgressNotesQuery,
+  useCreateProgressNote,
+  useUpdateProgressNote,
+  useAddProcedureToNote,
+  useArchiveProgressNote,
+  useSignProgressNote
+} from '../../hooks/queries';
+import { clinicalExamService } from '../../services/clinical-exam.service';
 import PrintIcon from '@mui/icons-material/Print';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -23,6 +35,31 @@ import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 
 const ProgressNotesPage = () => {
+  const selectedPatientId = useSelector(selectSelectedPatientId);
+  const currentAppointment = useSelector(selectCurrentAppointment);
+  const authProviderId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+
+  // Derive provider from the active appointment (priority) or fallback to logged-in user
+  const appointmentProvider = currentAppointment?.providerId;
+  const providerName = (() => {
+    if (!appointmentProvider || typeof appointmentProvider !== 'object') return '';
+    // Backend maps provider as: { _id, providerCode, userId: { _id, firstName, lastName } }
+    const user = appointmentProvider.userId;
+    if (user && typeof user === 'object') {
+      const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      if (name) return name;
+    }
+    // Fallback: check if firstName/lastName are directly on provider (some endpoints)
+    const directName = `${appointmentProvider.firstName || ''} ${appointmentProvider.lastName || ''}`.trim();
+    if (directName) return directName;
+    // Last resort: use providerCode (e.g. "DDS")
+    return appointmentProvider.providerCode || '';
+  })();
+  const providerId = appointmentProvider
+    ? (typeof appointmentProvider === 'object'
+      ? (appointmentProvider._id || appointmentProvider.id || authProviderId)
+      : appointmentProvider)
+    : authProviderId;
   const [tabValue, setTabValue] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [openNoteDialog, setOpenNoteDialog] = useState(false);
@@ -97,21 +134,52 @@ const ProgressNotesPage = () => {
     </Box>
   );
   
-  const [notes, setNotes] = useState([
-    {
-      id: 1,
-      date: '02/14/2023 1:16 PM',
-      procedures: ['D0120 - Periodic Oral Evaluation', 'D1110 - Prophylaxis - Adult'],
-      description: 'Patient presented for routine cleaning. Gingiva appears healthy.',
-      provider: 'Christina Sabour',
-      signedBy: 'C. Sabour',
-      signedDate: '02/21/2023 12:17 PM',
-      category: 'Recare Notes',
-      isExpanded: true
-    }
-  ]);
+  const [notes, setNotes] = useState([]);
 
-  const [newNote, setNewNote] = useState({ description: '', category: 'Exam Notes', provider: 'Christina Sabour' });
+  // --- React Query Hooks ---
+  const progressNotesQuery = useProgressNotesQuery({
+    patientId: selectedPatientId,
+    category: selectedCategory !== 'All' ? selectedCategory : undefined,
+    tab: tabValue === 1 ? 'Archived' : undefined
+  });
+  const createNoteMutation = useCreateProgressNote();
+  const updateNoteMutation = useUpdateProgressNote();
+  const addProcedureMutation = useAddProcedureToNote();
+  const archiveNoteMutation = useArchiveProgressNote();
+  const signNoteMutation = useSignProgressNote();
+
+  // --- Date formatting helper ---
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) + ' ' +
+             d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // --- Sync API data into local state ---
+  useEffect(() => {
+    if (progressNotesQuery.data?.data?.notes) {
+      setNotes(progressNotesQuery.data.data.notes.map(n => ({
+        ...n,
+        date: formatDate(n.date),
+        signedDate: formatDate(n.signedDate),
+        isExpanded: true
+      })));
+    }
+  }, [progressNotesQuery.data]);
+
+  // Keep newNote provider in sync with the appointment's provider
+  useEffect(() => {
+    if (providerName) {
+      setNewNote(prev => ({ ...prev, provider: providerName }));
+    }
+  }, [providerName]);
+
+  const [newNote, setNewNote] = useState({ description: '', category: 'Exam Notes', provider: providerName || 'Unknown Provider' });
   const [newProc, setNewProc] = useState('');
 
   const noteCategories = [
@@ -139,34 +207,66 @@ const ProgressNotesPage = () => {
   const handlePrint = () => window.print();
 
   const handleAddNote = () => {
-    const note = {
-      id: Date.now(),
-      date: new Date().toLocaleString(),
-      procedures: [],
-      ...newNote,
-      signedBy: newNote.provider,
-      signedDate: new Date().toLocaleString(),
-      isExpanded: true
-    };
-    setNotes([note, ...notes]);
-    setOpenNoteDialog(false);
+    if (selectedPatientId) {
+      createNoteMutation.mutate({
+        patientId: selectedPatientId,
+        category: newNote.category,
+        description: newNote.description || 'New progress note',
+        providerId: providerId ? String(providerId) : '1'
+      }, {
+        onSuccess: () => {
+          setOpenNoteDialog(false);
+          setNewNote({ description: '', category: 'Exam Notes', provider: 'Christina Sabour' });
+        }
+      });
+    } else {
+      // Fallback to local state if no patient selected
+      const note = {
+        id: Date.now().toString(),
+        date: formatDate(new Date().toISOString()),
+        procedures: [],
+        ...newNote,
+        signedBy: newNote.provider,
+        signedDate: formatDate(new Date().toISOString()),
+        isExpanded: true
+      };
+      setNotes([note, ...notes]);
+      setOpenNoteDialog(false);
+    }
   };
 
   const handleConfirmNewNote = () => {
-    const note = {
-      id: Date.now(),
-      date: new Date().toLocaleString(),
-      procedures: [],
-      description: '',
-      provider: 'Christina Sabour',
-      signedBy: 'C. Sabour',
-      signedDate: new Date().toLocaleString(),
-      category: confirmNewNote,
-      isExpanded: true
-    };
-    setNotes([note, ...notes]);
-    setConfirmNewNote(null);
-    setIsAmending(note.id); // Open in edit mode automatically
+    if (selectedPatientId) {
+      createNoteMutation.mutate({
+        patientId: selectedPatientId,
+        category: confirmNewNote,
+        description: 'New note',
+        providerId: providerId ? String(providerId) : '1'
+      }, {
+        onSuccess: (res) => {
+          setConfirmNewNote(null);
+          const created = res?.data?.progressNote;
+          if (created) {
+            setIsAmending(created.id);
+          }
+        }
+      });
+    } else {
+      const note = {
+        id: Date.now().toString(),
+        date: formatDate(new Date().toISOString()),
+        procedures: [],
+        description: '',
+        provider: providerName || 'Unknown Provider',
+        signedBy: providerName || 'Unknown Provider',
+        signedDate: formatDate(new Date().toISOString()),
+        category: confirmNewNote,
+        isExpanded: true
+      };
+      setNotes([note, ...notes]);
+      setConfirmNewNote(null);
+      setIsAmending(note.id);
+    }
   };
 
   const handleOpenProc = (id) => {
@@ -175,11 +275,29 @@ const ProgressNotesPage = () => {
   };
 
   const handleAddProcedure = () => {
-    setNotes(notes.map(n => 
-      n.id === activeNoteId ? { ...n, procedures: [...n.procedures, newProc] } : n
-    ));
-    setNewProc('');
-    setOpenProcDialog(false);
+    if (activeNoteId && newProc) {
+      addProcedureMutation.mutate(
+        { noteId: activeNoteId, procedureCode: newProc },
+        {
+          onSuccess: () => {
+            // Also update local state for immediate feedback
+            setNotes(notes.map(n => 
+              n.id === activeNoteId ? { ...n, procedures: [...n.procedures, newProc] } : n
+            ));
+            setNewProc('');
+            setOpenProcDialog(false);
+          },
+          onError: () => {
+            // Fallback: update local state anyway
+            setNotes(notes.map(n => 
+              n.id === activeNoteId ? { ...n, procedures: [...n.procedures, newProc] } : n
+            ));
+            setNewProc('');
+            setOpenProcDialog(false);
+          }
+        }
+      );
+    }
   };
 
   const handleFormat = (format, value) => {
@@ -456,59 +574,48 @@ const ProgressNotesPage = () => {
                             {isAmending === note.id && (
                               <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 3, mb: 1 }}>
                                 <Button 
-                                  onClick={() => {
-                                    const mockData = `
-                                      <p style="margin:0 0 4px 0"><strong>Comprehensive exam</strong><br>
-                                      - Generated Exam notes<br>
-                                      - Identified findings bleeding points, questionable restorations<br>
-                                      - Further analysis required yes<br>
-                                      <span style="background-color: yellow">- NV: Recare</span><br>
-                                      - Assistant Rachel type notes</p>
-                                      <p style="margin:8px 0 4px 0"><strong>Teeth Findings:</strong><br>
-                                      #1 Missing tooth caused by: Functional<br>
-                                      #3 Caries Active Limited To Enamel: MO, Pulpal Concern, Facial recession (-1, 1, -1), Lingual recession (-1, 1, -1)<br>
-                                      #8 Root Canal Treatment: Questionable, Facial recession (-1, -1), Lingual recession (-1, 1, -1), Lingual Attachment Loss (3, 3, 11)<br>
-                                      #16 Missing tooth caused by: Functional<br>
-                                      #17 Missing tooth caused by: Functional<br>
-                                      #24 Incipient Lesion(), Facial recession (-1, 1, -1), Lingual recession (-1, 1, -1)<br>
-                                      #29 Amalgam MOD, Isthmus: &gt; 1/2, Concerns(Caries, Chipped Restoration, Compromised Occlusal Surface), Facial recession (-1, 1, -1), Lingual recession (-1, 1, -1)<br>
-                                      #32 Missing tooth caused by: Functional<br>
-                                      #P</p>
-                                      <p style="margin:8px 0 4px 0"><strong>TMJ</strong><br>
-                                      Muscle Evaluation: Temporalis/Masseter: Asymptomatic</p>
-                                      <p style="margin:8px 0 4px 0"><strong>Periodontal</strong><br>
-                                      Summary: Grade: B<br>
-                                      Bleeding: #2 #3 #4 #5 #6 #7 #8 #9 #10 #11 #12 #13 #14 #15 #18 #19 #20 #21 #22 #23 #24 #25 #26 #27 #28 #29 #30 #31<br>
-                                      Facial Recession: #2 #3 #4 #5 #6 #7 #8 #9 #10 #11 #12 #13 #14 #18 #19 #20 #21 #22 #23 #24 #25 #26 #27 #28 #29 #30 #31<br>
-                                      Lingual Recession: #2 #3 #4 #5 #6 #7 #8 #9 #10 #11 #12 #13 #14 #15 #18 #19 #20 #21 #22 #23 #24 #25 #26 #27 #28 #29 #30 #31</p>
-                                      <p style="margin:8px 0 4px 0"><strong>Head & Neck:</strong><br>
-                                      Lesion Left Upper Gingiva:<br>
-                                      Mallampati Score:</p>
-                                      <p style="margin:8px 0 4px 0"><strong>Airway</strong><br>
-                                      Facial Pattern:<br>
-                                      Facial Profile:<br>
-                                      Dental Profile:<br>
-                                      Tongue Range of Motion Ratio (TRMR):<br>
-                                      Kotlow Tongue Tie:<br>
-                                      Mentalis Strain:<br>
-                                      Mallampati:<br>
-                                      Tonsil size (Brodsky scale):<br>
-                                      Maxillary Intercanine Distance:<br>
-                                      Maxillary Intermolar Distance (Mesiobuccalcusp):<br>
-                                      Incisor Display at Rest:<br>
-                                      Bruxism:<br>
-                                      Swallowing Tongue Thrust Compensation Test:<br>
-                                      Nasal Breathing Test:</p>
-                                    `;
-                                    if (editorRef.current) {
-                                      editorRef.current.innerHTML = mockData;
-                                      setEditorContent(mockData);
+                                  onClick={async () => {
+                                    if (!selectedPatientId) {
+                                      if (editorRef.current) { editorRef.current.innerHTML = '<p><em>No patient selected.</em></p>'; setEditorContent(editorRef.current.innerHTML); }
+                                      return;
+                                    }
+                                    try {
+                                      const examTypes = ['radiographic', 'teeth-structure', 'head-neck', 'tmj', 'periodontal', 'airway', 'morphological', 'dentofacial'];
+                                      const results = await Promise.allSettled(examTypes.map(type => clinicalExamService.getExam(type, selectedPatientId)));
+                                      let generatedHtml = '';
+                                      const titleMap = { 'radiographic': 'Radiographic Findings', 'teeth-structure': 'Teeth Findings', 'head-neck': 'Head & Neck', 'tmj': 'TMJ', 'periodontal': 'Periodontal', 'airway': 'Airway', 'morphological': 'Morphological', 'dentofacial': 'Dentofacial' };
+                                      examTypes.forEach((type, idx) => {
+                                        const result = results[idx];
+                                        if (result.status === 'fulfilled' && result.value?.exam?.examData) {
+                                          const examData = result.value.exam.examData;
+                                          const title = titleMap[type] || type;
+                                          generatedHtml += `<p style="margin:8px 0 4px 0"><strong>${title}</strong><br>`;
+                                          Object.entries(examData).forEach(([key, value]) => {
+                                            if (value != null && value !== '' && key !== '_id') {
+                                              const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+                                              if (Array.isArray(value) && value.length > 0) { generatedHtml += `${label}: ${value.join(', ')}<br>`; }
+                                              else if (typeof value === 'object' && !Array.isArray(value)) { const sub = Object.entries(value).filter(([,v]) => v != null && v !== '').map(([k,v]) => `${k}: ${v}`).join(', '); if (sub) generatedHtml += `${label}: ${sub}<br>`; }
+                                              else if (typeof value !== 'object') { generatedHtml += `${label}: ${value}<br>`; }
+                                            }
+                                          });
+                                          generatedHtml += '</p>';
+                                        }
+                                      });
+                                      if (!generatedHtml) {
+                                        generatedHtml = '<p><strong>Comprehensive Exam</strong><br>- No clinical exam data found for this patient.<br>- Please complete the clinical exam tabs first.<br>- Once saved, this button will auto-generate notes.</p>';
+                                      } else {
+                                        generatedHtml = `<p><strong>Comprehensive Exam - Generated Notes</strong><br>- Auto-generated from clinical exam data<br>- Date: ${new Date().toLocaleDateString('en-US')}</p>` + generatedHtml;
+                                      }
+                                      if (editorRef.current) { editorRef.current.innerHTML = generatedHtml; setEditorContent(generatedHtml); }
+                                    } catch (error) {
+                                      console.error('Failed to generate exam notes:', error);
+                                      if (editorRef.current) { editorRef.current.innerHTML = '<p><em>Failed to fetch exam data.</em></p>'; setEditorContent(editorRef.current.innerHTML); }
                                     }
                                   }}
-                                  variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}
-                                >
-                                  Generate Exam Notes
-                                </Button>
+                                   variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}
+                                 >
+                                   Generate Exam Notes
+                                 </Button>
                                 <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Hide Checklist</Button>
                                 <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Used Adj Products</Button>
                                 <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Recommended Adj Products</Button>
@@ -925,11 +1032,18 @@ const ProgressNotesPage = () => {
                                           <Button 
                                             variant="contained" size="small"
                                             onClick={() => {
+                                              // Save locally first for immediate feedback
                                               setNotes(notes.map(n => n.id === note.id ? { ...n, description: editorContent } : n));
                                               setIsAmending(null);
                                               if (editorRef.current) {
                                                 editorRef.current.innerHTML = '';
                                                 setEditorContent('');
+                                              }
+                                              // Then attempt API save in background
+                                              if (note.id && selectedPatientId) {
+                                                updateNoteMutation.mutate(
+                                                  { id: note.id, data: { description: editorContent } }
+                                                );
                                               }
                                             }}
                                             sx={{ 
