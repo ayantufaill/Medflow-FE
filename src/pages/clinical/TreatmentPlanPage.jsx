@@ -843,6 +843,38 @@ export default function TreatmentPlanPage() {
     });
   };
 
+  const handleSidebarSurfaceClick = (surfaceLabel) => {
+    if (selectedTeeth.length === 0 || !activeRestorativeCode) return;
+
+    let mappedSurfaces = [];
+    if (surfaceLabel === 'MO') mappedSurfaces = ['M', 'O'];
+    else if (surfaceLabel === 'DO') mappedSurfaces = ['D', 'O'];
+    else if (surfaceLabel === 'MOD') mappedSurfaces = ['M', 'O', 'D'];
+    else if (surfaceLabel === 'O/I') mappedSurfaces = ['O'];
+    else if (surfaceLabel === 'B/F') mappedSurfaces = ['B'];
+    else mappedSurfaces = [surfaceLabel];
+    
+    selectedTeeth.forEach(toothNum => {
+      setToothSurfaces(prev => {
+        const current = prev[toothNum] || [];
+        const updated = [...new Set([...current, ...mappedSurfaces])];
+        
+        const sortedSurfaces = [...updated].sort((a, b) => {
+          const order = { 'M': 1, 'O': 2, 'D': 3, 'B': 4, 'L': 5 };
+          return (order[a] || 99) - (order[b] || 99);
+        });
+        const surfaceStr = sortedSurfaces.join('');
+        
+        handleAddOrUpdateProcedure(toothNum, surfaceStr, activeRestorativeCode, true);
+        
+        return {
+          ...prev,
+          [toothNum]: updated
+        };
+      });
+    });
+  };
+
   const handleAddOrUpdateProcedure = (toothNum, surfaceStr, code, allowDelete = false) => {
     const codeInfo = RESTORATIVE_CODES_INFO[code] || { name: 'Procedure', fee: '$0.00', treatmentName: 'Procedure' };
     
@@ -1977,11 +2009,19 @@ export default function TreatmentPlanPage() {
             {/* Surface Selection Sidebar (V, C, B/F, etc) */}
             <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
-                <Box key={lbl} sx={{ 
-                  width: 32, height: 28, border: '1px solid #ddd', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: fontSize.xs, color: '#666', borderRadius: '2px'
-                }}>{lbl}</Box>
+                <Box 
+                  key={lbl} 
+                  onClick={() => handleSidebarSurfaceClick(lbl)}
+                  sx={{ 
+                    width: 32, height: 28, border: '1px solid #ddd', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: fontSize.xs, color: '#666', borderRadius: '2px',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    '&:hover': { bgcolor: '#f0f4f8', borderColor: '#3b82f6', color: '#3b82f6' }
+                  }}
+                >
+                  {lbl}
+                </Box>
               ))}
             </Box>
 

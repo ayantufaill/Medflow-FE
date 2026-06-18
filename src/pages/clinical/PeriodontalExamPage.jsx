@@ -275,6 +275,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].probe = [...settings.probing];
           updated[i][side].attachment = settings.probing.map((p, idx) => {
@@ -293,6 +294,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].probe = ['', '', ''];
           updated[i][side].attachment = ['', '', ''];
@@ -307,6 +309,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].recession = [...settings.recession];
           updated[i][side].attachment = updated[i][side].probe.map((p, idx) => {
@@ -325,6 +328,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].recession = ['', '', ''];
           updated[i][side].attachment = updated[i][side].probe.map((p, idx) => {
@@ -342,6 +346,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].bleeding = [...settings.bleeding];
         }
@@ -355,6 +360,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].bleeding = [];
         }
@@ -368,6 +374,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].pcs = [...settings.pcs];
         }
@@ -381,6 +388,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].pcs = [];
         }
@@ -394,6 +402,7 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].mobility = settings.mobility;
         }
@@ -407,8 +416,38 @@ const PeriodontalExamPage = () => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
         if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
           updated[i][side].mobility = 'none';
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleSetAttachedGingiva = () => {
+    setChartData(prev => {
+      const updated = { ...prev };
+      for (let i = 1; i <= 32; i++) {
+        if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
+        for (const side of ['facial', 'lingual']) {
+          // Setting 'attachment' field in the chart based on attachedGingiva defaults
+          updated[i][side].attachment = [...settings.attachedGingiva];
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleClearAttachedGingiva = () => {
+    setChartData(prev => {
+      const updated = { ...prev };
+      for (let i = 1; i <= 32; i++) {
+        if (MISSING_TEETH.includes(i)) continue;
+        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
+        for (const side of ['facial', 'lingual']) {
+          updated[i][side].attachment = ['', '', ''];
         }
       }
       return updated;
@@ -667,8 +706,8 @@ const PeriodontalExamPage = () => {
                 ))}
               </Stack>
               <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
+                <Typography onClick={handleSetAttachedGingiva} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
+                <Typography onClick={handleClearAttachedGingiva} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
               </Stack>
             </Stack>
 

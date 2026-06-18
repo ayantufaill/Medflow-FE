@@ -331,74 +331,80 @@ const CoronalToothStructure = ({
           
           <Divider />
           
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mt={1}>
-            <Stack direction="row" spacing={0.5}>
-              <Typography variant="caption" sx={{ fontWeight: 'bold', fontSize: fontSize.xs }}>Watch</Typography>
-              <ChatBubbleOutlineIcon sx={{ fontSize: 14, color: '#bbb' }} />
+          <Box sx={{ opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mt={1}>
+              <Stack direction="row" spacing={0.5}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', fontSize: fontSize.xs }}>Watch</Typography>
+                <ChatBubbleOutlineIcon sx={{ fontSize: 14, color: '#bbb' }} />
+              </Stack>
+              <Stack direction="row" spacing={0.5}>
+                <RestorationToothIcon fill="#fff" />
+                <RestorationToothIcon fill="#b39ddb" />
+              </Stack>
             </Stack>
-            <Stack direction="row" spacing={0.5}>
-              <RestorationToothIcon fill="#fff" />
-              <RestorationToothIcon fill="#b39ddb" />
-            </Stack>
-          </Stack>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-            <ToothNumber label="9" />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
+              <ToothNumber label="9" />
+            </Box>
           </Box>
 
           <Divider sx={{ my: 1.5 }} />
 
           {/* Direct Row */}
-          <Box sx={{ py: 1 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Direct</Typography>
-              <Stack direction="row" spacing={0.2}>
-                <RestorationToothIcon fill="#fff" />
-                <RestorationToothIcon fill="#666" />
-                <RestorationToothIcon fill="#eee" />
-                <RestorationToothIcon fill="#ffd700" />
-                <RestorationToothIcon fill="#add8e6" />
+          <Box sx={{ opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+            <Box sx={{ py: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Direct</Typography>
+                <Stack direction="row" spacing={0.2}>
+                  <RestorationToothIcon fill="#fff" />
+                  <RestorationToothIcon fill="#666" />
+                  <RestorationToothIcon fill="#eee" />
+                  <RestorationToothIcon fill="#ffd700" />
+                  <RestorationToothIcon fill="#add8e6" />
+                </Stack>
               </Stack>
+            </Box>
+            <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
+              <ToothNumber label="4 OM" disabled />
+              <ToothNumber label="5 DO" disabled />
+              <ToothNumber label="10 MFLD" />
+              <ToothNumber label="31 O" active />
+              <ToothNumber label="31" />
+              <ToothNumber label="32 O" active />
+              <ToothNumber label="32" />
             </Stack>
           </Box>
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
-            <ToothNumber label="4 OM" disabled />
-            <ToothNumber label="5 DO" disabled />
-            <ToothNumber label="10 MFLD" />
-            <ToothNumber label="31 O" active />
-            <ToothNumber label="31" />
-            <ToothNumber label="32 O" active />
-            <ToothNumber label="32" />
-          </Stack>
 
           <Divider />
 
           {/* Indirect Row */}
-          <Box sx={{ py: 1 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-              <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Indirect</Typography>
-              <Stack direction="row" spacing={0.2}>
-                <RestorationToothIcon fill="#ffd700" />
-                <RestorationToothIcon fill="#fff" />
-                <RestorationToothIcon fill="#444" />
-                <RestorationToothIcon fill="#eee" />
-                <RestorationToothIcon fill="#fff" />
-                <RestorationToothIcon fill="#fff" />
-                <RestorationToothIcon type="incisor" fill="#eee" />
-                <RestorationToothIcon fill="#b39ddb" />
+          <Box sx={{ opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+            <Box sx={{ py: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Indirect</Typography>
+                <Stack direction="row" spacing={0.2}>
+                  <RestorationToothIcon fill="#ffd700" />
+                  <RestorationToothIcon fill="#fff" />
+                  <RestorationToothIcon fill="#444" />
+                  <RestorationToothIcon fill="#eee" />
+                  <RestorationToothIcon fill="#fff" />
+                  <RestorationToothIcon fill="#fff" />
+                  <RestorationToothIcon type="incisor" fill="#eee" />
+                  <RestorationToothIcon fill="#b39ddb" />
+                </Stack>
               </Stack>
+            </Box>
+            <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
+              <ToothNumber label="14" />
+              <ToothNumber label="19" active />
+              <ToothNumber label="20" />
+              <ToothNumber label="20" active />
             </Stack>
           </Box>
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end" mb={1}>
-            <ToothNumber label="14" />
-            <ToothNumber label="19" active />
-            <ToothNumber label="20" />
-            <ToothNumber label="20" active />
-          </Stack>
 
           <Divider />
 
           {/* Restoration Concerns Row */}
-          <Box sx={{ py: 1 }}>
+          <Box sx={{ py: 1, opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
               <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Restoration Concerns</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.2 }}>

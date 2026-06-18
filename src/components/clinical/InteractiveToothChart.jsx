@@ -13,6 +13,7 @@ const InteractiveToothChart = ({
   toothSurfaces = {},
   onToothClick,
   onSurfaceClick,
+  onSidebarSurfaceClick,
   onMaxToggle,
   onManToggle,
   isTreatmentPlan = false
@@ -54,11 +55,19 @@ const InteractiveToothChart = ({
       {/* Surface Selection Sidebar */}
       <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
-          <Box key={lbl} sx={{ 
-            width: 32, height: 28, border: '1px solid #ddd', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: fontSize.xs, color: '#666', borderRadius: '2px'
-          }}>{lbl}</Box>
+          <Box 
+            key={lbl} 
+            onClick={() => onSidebarSurfaceClick && onSidebarSurfaceClick(lbl)}
+            sx={{ 
+              width: 32, height: 28, border: '1px solid #ddd', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: fontSize.xs, color: '#666', borderRadius: '2px',
+              cursor: 'pointer', transition: 'all 0.2s',
+              '&:hover': { bgcolor: '#f0f4f8', borderColor: '#3b82f6', color: '#3b82f6' }
+            }}
+          >
+            {lbl}
+          </Box>
         ))}
       </Box>
 

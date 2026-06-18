@@ -211,6 +211,37 @@ const TeethStructureExam = () => {
     setNewNoteText('');
   };
 
+  const handleSidebarSurfaceClick = (surfaceLabel) => {
+    const activeTeeth = selectedTeeth.length > 0 ? selectedTeeth : (activeToothNum ? [activeToothNum] : []);
+    if (activeTeeth.length === 0) return;
+
+    let mappedSurfaces = [];
+    if (surfaceLabel === 'MO') mappedSurfaces = ['M', 'O/I'];
+    else if (surfaceLabel === 'DO') mappedSurfaces = ['D', 'O/I'];
+    else if (surfaceLabel === 'MOD') mappedSurfaces = ['M', 'O/I', 'D'];
+    else mappedSurfaces = [surfaceLabel];
+
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      activeTeeth.forEach(num => {
+        if (!updated[num]) {
+          updated[num] = {
+            findings: ['Coronal radiolucency'],
+            surfaces: mappedSurfaces,
+            depth: 'Limited to enamel',
+            notes: []
+          };
+        } else {
+          updated[num] = {
+            ...updated[num],
+            surfaces: mappedSurfaces
+          };
+        }
+      });
+      return updated;
+    });
+  };
+
   // Toggle missing status for selected teeth
   const handleMarkMissing = () => {
     if (selectedTeeth.length === 0) return;
@@ -319,32 +350,34 @@ const TeethStructureExam = () => {
                 setActiveToothNum={setActiveToothNum}
               />
               
-              <Watch 
-                expanded={expandedSections.watch}
-                onToggle={() => toggleSection('watch')}
-                toothFindings={toothFindings}
-                setToothFindings={setToothFindings}
-                selectedTeeth={selectedTeeth}
-                setSelectedTeeth={setSelectedTeeth}
-                activeToothNum={activeToothNum}
-                setActiveToothNum={setActiveToothNum}
-                setDetailModalTooth={setDetailModalTooth}
-              />
-              
-              <ExistingRestorations 
-                expanded={expandedSections.existingRestorations}
-                onToggle={() => toggleSection('existingRestorations')}
-                toothFindings={toothFindings}
-                setToothFindings={setToothFindings}
-                selectedTeeth={selectedTeeth}
-                setSelectedTeeth={setSelectedTeeth}
-                activeToothNum={activeToothNum}
-                setActiveToothNum={setActiveToothNum}
-              />
-              
-              <Wear />
-              <Concerns />
-              <Appliances />
+              <Box sx={{ opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+                <Watch 
+                  expanded={expandedSections.watch}
+                  onToggle={() => toggleSection('watch')}
+                  toothFindings={toothFindings}
+                  setToothFindings={setToothFindings}
+                  selectedTeeth={selectedTeeth}
+                  setSelectedTeeth={setSelectedTeeth}
+                  activeToothNum={activeToothNum}
+                  setActiveToothNum={setActiveToothNum}
+                  setDetailModalTooth={setDetailModalTooth}
+                />
+                
+                <ExistingRestorations 
+                  expanded={expandedSections.existingRestorations}
+                  onToggle={() => toggleSection('existingRestorations')}
+                  toothFindings={toothFindings}
+                  setToothFindings={setToothFindings}
+                  selectedTeeth={selectedTeeth}
+                  setSelectedTeeth={setSelectedTeeth}
+                  activeToothNum={activeToothNum}
+                  setActiveToothNum={setActiveToothNum}
+                />
+                
+                <Wear />
+                <Concerns />
+                <Appliances />
+              </Box>
             </Box>
           </Box>
 
@@ -356,6 +389,7 @@ const TeethStructureExam = () => {
               missingTeeth={missingTeeth}
               toothFindings={toothFindings}
               onToothClick={handleToothClick}
+              onSidebarSurfaceClick={handleSidebarSurfaceClick}
               onMaxToggle={handleMaxToggle}
               onManToggle={handleManToggle}
               isTreatmentPlan={false}

@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { 
   Box, Typography, Grid, Select, MenuItem, Chip, Button 
 } from '@mui/material';
@@ -6,10 +7,11 @@ import { fontSize, fontWeight } from "../../constants/styles";
 const CELL_WIDTH = 25;
 const LABEL_WIDTH = 150;
 
-const SmallSelect = ({ value = 'none' }) => (
+const SmallSelect = ({ value = 'none', onChange }) => (
   <Select
     size="small"
     value={value}
+    onChange={(e) => onChange(e.target.value)}
     sx={{
       height: 20,
       fontSize: '10px',
@@ -27,23 +29,50 @@ const SmallSelect = ({ value = 'none' }) => (
   </Select>
 );
 
-const MeasurementCell = ({ value, color, bgcolor }) => (
-  <Box sx={{ 
-    width: CELL_WIDTH, 
-    height: 22, 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    fontSize: '11px',
-    color: color || '#333',
-    bgcolor: bgcolor || 'transparent',
-    border: '0.5px solid #eee'
-  }}>
-    {value}
-  </Box>
-);
+const MeasurementCell = ({ value, color, bgcolor, isEditing, onDoubleClick, onChange, onBlur }) => {
+  const inputRef = useRef(null);
+  
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
-const SiteMeasurement = ({ values = ['', '', ''], type }) => (
+  return (
+    <Box 
+      onDoubleClick={onDoubleClick}
+      sx={{ 
+        width: CELL_WIDTH, 
+        height: 22, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        fontSize: '11px',
+        color: color || '#333',
+        bgcolor: bgcolor || 'transparent',
+        border: '0.5px solid #eee',
+        cursor: 'text'
+      }}
+    >
+      {isEditing ? (
+        <input 
+          ref={inputRef}
+          defaultValue={value}
+          onBlur={(e) => onBlur(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              onBlur(e.target.value);
+            }
+          }}
+          style={{ width: '100%', height: '100%', border: 'none', textAlign: 'center', fontSize: '11px', outline: 'none', background: 'transparent' }}
+        />
+      ) : value}
+    </Box>
+  );
+};
+
+const SiteMeasurement = ({ values = ['', '', ''], type, editingCell, onEditStart, onEditSave, tooth, side }) => (
   <Box sx={{ display: 'flex' }}>
     {values.map((v, i) => {
       let color = '#333';
@@ -67,43 +96,65 @@ const SiteMeasurement = ({ values = ['', '', ''], type }) => (
         bgcolor = '#e9f7ef';
       }
 
-      return <MeasurementCell key={i} value={v} color={color} bgcolor={bgcolor} />;
+      const isEditing = editingCell?.tooth === tooth && editingCell?.side === side && editingCell?.type === type && editingCell?.index === i;
+
+      return (
+        <MeasurementCell 
+          key={i} 
+          value={v} 
+          color={color} 
+          bgcolor={bgcolor} 
+          isEditing={isEditing}
+          onDoubleClick={() => onEditStart(tooth, side, type, i)}
+          onBlur={(newValue) => onEditSave(tooth, side, type, i, newValue)}
+        />
+      );
     })}
   </Box>
 );
 
-const PCSCell = ({ active = [] }) => (
+const PCSCell = ({ active = [], onToggle }) => (
   <Box sx={{ display: 'flex' }}>
     {['P', 'C', 'S'].map(label => (
-      <Box key={label} sx={{ 
-        width: CELL_WIDTH, 
-        height: 22, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        fontSize: '10px',
-        color: active.includes(label) ? '#fff' : '#ccc',
-        bgcolor: active.includes(label) ? '#f39c12' : 'transparent',
-        border: '0.5px solid #eee',
-        fontWeight: active.includes(label) ? 'bold' : 'normal'
-      }}>
+      <Box 
+        key={label} 
+        onDoubleClick={() => onToggle(label)}
+        sx={{ 
+          width: CELL_WIDTH, 
+          height: 22, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          fontSize: '10px',
+          color: active.includes(label) ? '#fff' : '#ccc',
+          bgcolor: active.includes(label) ? '#f39c12' : 'transparent',
+          border: '0.5px solid #eee',
+          fontWeight: active.includes(label) ? 'bold' : 'normal',
+          cursor: 'pointer'
+        }}
+      >
         {label}
       </Box>
     ))}
   </Box>
 );
 
-const BleedingCell = ({ active = [] }) => (
+const BleedingCell = ({ active = [], onToggle }) => (
   <Box sx={{ display: 'flex' }}>
     {[0, 1, 2].map(i => (
-      <Box key={i} sx={{ 
-        width: CELL_WIDTH, 
-        height: 22, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        border: '0.5px solid #eee'
-      }}>
+      <Box 
+        key={i} 
+        onDoubleClick={() => onToggle(i)}
+        sx={{ 
+          width: CELL_WIDTH, 
+          height: 22, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          border: '0.5px solid #eee',
+          cursor: 'pointer'
+        }}
+      >
         <Box sx={{ 
           width: 12, 
           height: 12, 
@@ -116,14 +167,25 @@ const BleedingCell = ({ active = [] }) => (
   </Box>
 );
 
-const ToothColumn = ({ number, data, isBottom = false, isMissing = false }) => {
+const ToothColumn = ({ 
+  number, 
+  data, 
+  isBottom = false, 
+  isMissing = false,
+  editingCell,
+  onEditStart,
+  onEditSave,
+  onToggleArrayItem,
+  onSelectChange,
+  side
+}) => {
   const commonRows = (
     <>
-      <BleedingCell active={data?.bleeding} />
-      <PCSCell active={data?.pcs} />
-      <SiteMeasurement values={data?.attachment} type="attachment" />
-      <SiteMeasurement values={data?.recession} type="recession" />
-      <SiteMeasurement values={data?.probe} type="probe" />
+      <BleedingCell active={data?.bleeding} onToggle={(val) => onToggleArrayItem(number, side, 'bleeding', val)} />
+      <PCSCell active={data?.pcs} onToggle={(val) => onToggleArrayItem(number, side, 'pcs', val)} />
+      <SiteMeasurement values={data?.attachment || ['', '', '']} type="attachment" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+      <SiteMeasurement values={data?.recession || ['', '', '']} type="recession" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+      <SiteMeasurement values={data?.probe || ['', '', '']} type="probe" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
     </>
   );
 
@@ -137,8 +199,8 @@ const ToothColumn = ({ number, data, isBottom = false, isMissing = false }) => {
     }}>
       {!isBottom ? (
         <>
-          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.mobility} /></Box>
-          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.furcation} /></Box>
+          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.mobility} onChange={(val) => onSelectChange(number, side, 'mobility', val)} /></Box>
+          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.furcation} onChange={(val) => onSelectChange(number, side, 'furcation', val)} /></Box>
           {commonRows}
           <Box sx={{ height: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', borderTop: '1px solid #ddd' }}>
             {number}
@@ -149,13 +211,13 @@ const ToothColumn = ({ number, data, isBottom = false, isMissing = false }) => {
           <Box sx={{ height: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>
             {number}
           </Box>
-          <SiteMeasurement values={data?.probe} type="probe" />
-          <SiteMeasurement values={data?.recession} type="recession" />
-          <SiteMeasurement values={data?.attachment} type="attachment" />
-          <PCSCell active={data?.pcs} />
-          <BleedingCell active={data?.bleeding} />
-          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.furcation} /></Box>
-          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.mobility} /></Box>
+          <SiteMeasurement values={data?.probe || ['', '', '']} type="probe" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          <SiteMeasurement values={data?.recession || ['', '', '']} type="recession" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          <SiteMeasurement values={data?.attachment || ['', '', '']} type="attachment" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          <PCSCell active={data?.pcs} onToggle={(val) => onToggleArrayItem(number, side, 'pcs', val)} />
+          <BleedingCell active={data?.bleeding} onToggle={(val) => onToggleArrayItem(number, side, 'bleeding', val)} />
+          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.furcation} onChange={(val) => onSelectChange(number, side, 'furcation', val)} /></Box>
+          <Box sx={{ p: 0.5, textAlign: 'center' }}><SmallSelect value={data?.mobility} onChange={(val) => onSelectChange(number, side, 'mobility', val)} /></Box>
         </>
       )}
     </Box>
@@ -181,8 +243,56 @@ const RowLabels = ({ labels, isBottom = false }) => (
 );
 
 const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => {
+  const [editingCell, setEditingCell] = useState(null);
+
   const topLabels = ['Mobility', 'Furcation', 'Bleeding', 'Plq/calc/sup', 'Attachment Loss', 'Recession (FGM/CEJ)', 'Probe'];
   const bottomLabels = ['Probe', 'Recession (FGM/CEJ)', 'Attachment Loss', 'Plq/calc/sup', 'Bleeding', 'Furcation', 'Mobility'];
+
+  const handleEditStart = (tooth, side, type, index) => {
+    setEditingCell({ tooth, side, type, index });
+  };
+
+  const handleEditSave = (tooth, side, type, index, newValue) => {
+    setChartData(prev => {
+      const updated = { ...prev };
+      if (!updated[tooth]) updated[tooth] = { facial: {}, lingual: {} };
+      if (!updated[tooth][side]) updated[tooth][side] = {};
+      
+      const arr = [...(updated[tooth][side][type] || ['', '', ''])];
+      arr[index] = newValue;
+      updated[tooth][side][type] = arr;
+      
+      return updated;
+    });
+    setEditingCell(null);
+  };
+
+  const handleToggleArrayItem = (tooth, side, type, val) => {
+    setChartData(prev => {
+      const updated = { ...prev };
+      if (!updated[tooth]) updated[tooth] = { facial: {}, lingual: {} };
+      if (!updated[tooth][side]) updated[tooth][side] = {};
+      
+      const current = updated[tooth][side][type] || [];
+      const newArr = current.includes(val) 
+        ? current.filter(item => item !== val)
+        : [...current, val];
+        
+      updated[tooth][side][type] = newArr;
+      return updated;
+    });
+  };
+
+  const handleSelectChange = (tooth, side, type, val) => {
+    setChartData(prev => {
+      const updated = { ...prev };
+      if (!updated[tooth]) updated[tooth] = { facial: {}, lingual: {} };
+      if (!updated[tooth][side]) updated[tooth][side] = {};
+      
+      updated[tooth][side][type] = val;
+      return updated;
+    });
+  };
 
   const renderQuadrant = (teeth, side = 'facial', isBottom = false) => (
     <Box sx={{ display: 'flex', mb: 2, border: '1px solid #ddd' }}>
@@ -190,9 +300,15 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
         <ToothColumn 
           key={n} 
           number={n} 
+          side={side}
           data={chartData[n]?.[side]} 
           isBottom={isBottom} 
           isMissing={missingTeeth.includes(n)} 
+          editingCell={editingCell}
+          onEditStart={handleEditStart}
+          onEditSave={handleEditSave}
+          onToggleArrayItem={handleToggleArrayItem}
+          onSelectChange={handleSelectChange}
         />
       ))}
     </Box>

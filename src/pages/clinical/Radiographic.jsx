@@ -171,6 +171,37 @@ const Radiographic = () => {
     setNewNoteText('');
   };
 
+  const handleSidebarSurfaceClick = (surfaceLabel) => {
+    const activeTeeth = selectedTeeth.length > 0 ? selectedTeeth : (activeToothNum ? [activeToothNum] : []);
+    if (activeTeeth.length === 0) return;
+
+    let mappedSurfaces = [];
+    if (surfaceLabel === 'MO') mappedSurfaces = ['M', 'O/I'];
+    else if (surfaceLabel === 'DO') mappedSurfaces = ['D', 'O/I'];
+    else if (surfaceLabel === 'MOD') mappedSurfaces = ['M', 'O/I', 'D'];
+    else mappedSurfaces = [surfaceLabel];
+
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      activeTeeth.forEach(num => {
+        if (!updated[num]) {
+          updated[num] = {
+            findings: ['Coronal radiolucency'],
+            surfaces: mappedSurfaces,
+            depth: 'Limited to enamel',
+            notes: []
+          };
+        } else {
+          updated[num] = {
+            ...updated[num],
+            surfaces: mappedSurfaces
+          };
+        }
+      });
+      return updated;
+    });
+  };
+
   // State for managing section collapse/expand
   const [expandedSections, setExpandedSections] = React.useState({
     generalToothSurvey: true,
@@ -334,6 +365,7 @@ const Radiographic = () => {
             missingTeeth={missingTeeth}
             toothFindings={toothFindings}
             onToothClick={handleToothClick}
+            onSidebarSurfaceClick={handleSidebarSurfaceClick}
             onMaxToggle={handleMaxToggle}
             onManToggle={handleManToggle}
             isTreatmentPlan={false}
