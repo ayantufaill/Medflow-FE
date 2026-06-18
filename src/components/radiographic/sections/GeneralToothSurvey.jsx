@@ -42,7 +42,7 @@ const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTe
           <Divider />
 
           {/* Eruption Section */}
-          <SurveyRow label="Eruption">
+          <SurveyRow label="Eruption" disabled>
             <Stack direction="row" spacing={1}>
               <SurveyButton label="U" />
               <SurveyButton label="PRI" width={40} />
@@ -56,15 +56,15 @@ const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTe
           <Divider />
 
           {/* Empty Rows */}
-          <SurveyRow label="Implants" hasChat />
+          <SurveyRow label="Implants" hasChat disabled />
           <Divider />
-          <SurveyRow label="Impaction" hasChat />
+          <SurveyRow label="Impaction" hasChat disabled />
           <Divider />
-          <SurveyRow label="Root Tips" />
+          <SurveyRow label="Root Tips" disabled />
           <Divider />
 
           {/* Bridge Section */}
-          <SurveyRow label="Bridge">
+          <SurveyRow label="Bridge" disabled>
             <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
               <NumberBox label="11 13" />
               <NumberBox label="11 13" />

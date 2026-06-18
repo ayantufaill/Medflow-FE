@@ -17,6 +17,10 @@ import ExamNavbar from "../../components/clinical/ExamNavbar";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import {
   Tooth,
+  SelectToothDialog
+} from "../../components/radiographic";
+import InteractiveToothChart from '../../components/clinical/InteractiveToothChart';
+import {
   GeneralToothSurvey,
   Lesions,
   Watch,
@@ -25,7 +29,6 @@ import {
   Concerns,
   Appliances
 } from "../../components/teeth-structure-exam";
-import { SelectToothDialog } from "../../components/radiographic";
 import { fontSize, fontWeight } from "../../constants/styles";
 import { selectSelectedPatientId } from '../../store/slices/patientSlice';
 import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
@@ -208,6 +211,37 @@ const TeethStructureExam = () => {
     setNewNoteText('');
   };
 
+  const handleSidebarSurfaceClick = (surfaceLabel) => {
+    const activeTeeth = selectedTeeth.length > 0 ? selectedTeeth : (activeToothNum ? [activeToothNum] : []);
+    if (activeTeeth.length === 0) return;
+
+    let mappedSurfaces = [];
+    if (surfaceLabel === 'MO') mappedSurfaces = ['M', 'O/I'];
+    else if (surfaceLabel === 'DO') mappedSurfaces = ['D', 'O/I'];
+    else if (surfaceLabel === 'MOD') mappedSurfaces = ['M', 'O/I', 'D'];
+    else mappedSurfaces = [surfaceLabel];
+
+    setToothFindings(prev => {
+      const updated = { ...prev };
+      activeTeeth.forEach(num => {
+        if (!updated[num]) {
+          updated[num] = {
+            findings: ['Coronal radiolucency'],
+            surfaces: mappedSurfaces,
+            depth: 'Limited to enamel',
+            notes: []
+          };
+        } else {
+          updated[num] = {
+            ...updated[num],
+            surfaces: mappedSurfaces
+          };
+        }
+      });
+      return updated;
+    });
+  };
+
   // Toggle missing status for selected teeth
   const handleMarkMissing = () => {
     if (selectedTeeth.length === 0) return;
@@ -316,249 +350,50 @@ const TeethStructureExam = () => {
                 setActiveToothNum={setActiveToothNum}
               />
               
-              <Watch 
-                expanded={expandedSections.watch}
-                onToggle={() => toggleSection('watch')}
-                toothFindings={toothFindings}
-                setToothFindings={setToothFindings}
-                selectedTeeth={selectedTeeth}
-                setSelectedTeeth={setSelectedTeeth}
-                activeToothNum={activeToothNum}
-                setActiveToothNum={setActiveToothNum}
-                setDetailModalTooth={setDetailModalTooth}
-              />
-              
-              <ExistingRestorations 
-                expanded={expandedSections.existingRestorations}
-                onToggle={() => toggleSection('existingRestorations')}
-                toothFindings={toothFindings}
-                setToothFindings={setToothFindings}
-                selectedTeeth={selectedTeeth}
-                setSelectedTeeth={setSelectedTeeth}
-                activeToothNum={activeToothNum}
-                setActiveToothNum={setActiveToothNum}
-              />
-              
-              <Wear />
-              <Concerns />
-              <Appliances />
+              <Box sx={{ opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+                <Watch 
+                  expanded={expandedSections.watch}
+                  onToggle={() => toggleSection('watch')}
+                  toothFindings={toothFindings}
+                  setToothFindings={setToothFindings}
+                  selectedTeeth={selectedTeeth}
+                  setSelectedTeeth={setSelectedTeeth}
+                  activeToothNum={activeToothNum}
+                  setActiveToothNum={setActiveToothNum}
+                  setDetailModalTooth={setDetailModalTooth}
+                />
+                
+                <ExistingRestorations 
+                  expanded={expandedSections.existingRestorations}
+                  onToggle={() => toggleSection('existingRestorations')}
+                  toothFindings={toothFindings}
+                  setToothFindings={setToothFindings}
+                  selectedTeeth={selectedTeeth}
+                  setSelectedTeeth={setSelectedTeeth}
+                  activeToothNum={activeToothNum}
+                  setActiveToothNum={setActiveToothNum}
+                />
+                
+                <Wear />
+                <Concerns />
+                <Appliances />
+              </Box>
             </Box>
           </Box>
 
           {/* Right Column - Tooth Chart (70% Width) */}
           <Grid item xs={8.5} sx={{ position: 'relative', bgcolor: '#fff', ml: 2, flexGrow: 1 }}>
             
-            {/* Surface Selection Sidebar */}
-            <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
-                <Box key={lbl} sx={{ 
-                  width: 32, height: 28, border: '1px solid #ddd', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: fontSize.xs, color: '#666', borderRadius: '2px'
-                }}>{lbl}</Box>
-              ))}
-            </Box>
-
-            {/* Tooth Chart Grid */}
-            <Box sx={{ ml: 6, mt: 4 }}>
-              <Box sx={{ display: 'flex', position: 'relative', width: '100%', alignItems: 'stretch' }}>
-                
-                {/* Column 1: Q1 / Q4 */}
-                <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  {/* Upper Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-                    {[1, 2, 3, 4, 5].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal cavitation (Caries)'))}
-                        hasWatch={Boolean(toothFindings[n]?.findings?.includes('Watch'))}
-                        surfaces={toothFindings[n]?.surfaces || []}
-                        depth={toothFindings[n]?.depth || 'Limited to enamel'}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                  
-                  {/* Upper Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
-                  </Box>
-                  
-                  {/* Lower Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
-                  </Box>
-                  
-                  {/* Lower Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    {[32, 31, 30, 29, 28].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal cavitation (Caries)'))}
-                        hasWatch={Boolean(toothFindings[n]?.findings?.includes('Watch'))}
-                        surfaces={toothFindings[n]?.surfaces || []}
-                        depth={toothFindings[n]?.depth || 'Limited to enamel'}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                </Box>
-
-                {/* Vertical Divider 1 */}
-                <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
-
-                {/* Column 2: UA / LA */}
-                <Box sx={{ flex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  {/* Upper Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-                    {[6, 7, 8, 9, 10, 11].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal cavitation (Caries)'))}
-                        hasWatch={Boolean(toothFindings[n]?.findings?.includes('Watch'))}
-                        surfaces={toothFindings[n]?.surfaces || []}
-                        depth={toothFindings[n]?.depth || 'Limited to enamel'}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                  
-                  {/* Upper Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
-                  </Box>
-                  
-                  {/* Lower Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
-                  </Box>
-                  
-                  {/* Lower Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    {[27, 26, 25, 24, 23, 22].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal cavitation (Caries)'))}
-                        hasWatch={Boolean(toothFindings[n]?.findings?.includes('Watch'))}
-                        surfaces={toothFindings[n]?.surfaces || []}
-                        depth={toothFindings[n]?.depth || 'Limited to enamel'}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                </Box>
-
-                {/* Vertical Divider 2 */}
-                <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
-
-                {/* Column 3: Q2 / Q3 */}
-                <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pr: 4, position: 'relative' }}>
-                  {/* Upper Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-                    {[12, 13, 14, 15, 16].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal cavitation (Caries)'))}
-                        hasWatch={Boolean(toothFindings[n]?.findings?.includes('Watch'))}
-                        surfaces={toothFindings[n]?.surfaces || []}
-                        depth={toothFindings[n]?.depth || 'Limited to enamel'}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                  
-                  {/* Upper Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
-                    <Typography 
-                      onClick={handleMaxToggle}
-                      sx={{ 
-                        position: 'absolute', 
-                        right: -32, 
-                        top: 0, 
-                        fontSize: '0.75rem', 
-                        color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                        fontWeight: 'bold', 
-                        cursor: 'pointer',
-                        transition: 'color 0.2s',
-                        '&:hover': { color: '#3b82f6' }
-                      }}
-                    >
-                      Max
-                    </Typography>
-                  </Box>
-                  
-                  {/* Lower Label */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
-                    <Typography 
-                      onClick={handleManToggle}
-                      sx={{ 
-                        position: 'absolute', 
-                        right: -32, 
-                        top: 0, 
-                        fontSize: '0.75rem', 
-                        color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                        fontWeight: 'bold', 
-                        cursor: 'pointer',
-                        transition: 'color 0.2s',
-                        '&:hover': { color: '#3b82f6' }
-                      }}
-                    >
-                      Man
-                    </Typography>
-                  </Box>
-                  
-                  {/* Lower Row */}
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    {[21, 20, 19, 18, 17].map(n => (
-                      <Tooth 
-                        key={n} 
-                        num={n} 
-                        isActive={selectedTeeth.includes(n)} 
-                        isMissing={missingTeeth.includes(n)}
-                        hasRadiolucency={Boolean(toothFindings[n]?.findings?.includes('Coronal cavitation (Caries)'))}
-                        hasWatch={Boolean(toothFindings[n]?.findings?.includes('Watch'))}
-                        surfaces={toothFindings[n]?.surfaces || []}
-                        depth={toothFindings[n]?.depth || 'Limited to enamel'}
-                        onClick={() => handleToothClick(n)} 
-                      />
-                    ))}
-                  </Stack>
-                </Box>
-
-                {/* Horizontal Divider Line */}
-                <Box sx={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  borderBottom: '1px dotted #ccc',
-                  zIndex: 0,
-                  pointerEvents: 'none',
-                  opacity: 0.8
-                }} />
-              </Box>
+            <InteractiveToothChart
+              selectedTeeth={selectedTeeth}
+              missingTeeth={missingTeeth}
+              toothFindings={toothFindings}
+              onToothClick={handleToothClick}
+              onSidebarSurfaceClick={handleSidebarSurfaceClick}
+              onMaxToggle={handleMaxToggle}
+              onManToggle={handleManToggle}
+              isTreatmentPlan={false}
+            />
 
               {/* Additional Footer Controls */}
               <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 10, ml: 2 }}>
@@ -693,7 +528,6 @@ const TeethStructureExam = () => {
                   setShowSelectToothDialog(false);
                 }}
               />
-            </Box>
           </Grid>
         </Box>
 
