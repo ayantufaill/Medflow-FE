@@ -19,6 +19,7 @@ import {
   useSignProgressNote
 } from '../../hooks/queries';
 import { clinicalExamService } from '../../services/clinical-exam.service';
+import { treatmentPlanService } from '../../services/treatment-plan.service';
 import PrintIcon from '@mui/icons-material/Print';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -401,20 +402,29 @@ const ProgressNotesPage = () => {
         </Box>
 
         <Stack className="no-print" direction="row" spacing={1} sx={{ mb: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {noteCategories.map((cat) => (
-            <Button 
-              key={cat.label} 
-              onClick={() => setConfirmNewNote(cat.label)} 
-              sx={{ 
-                backgroundColor: cat.color, color: cat.textColor, 
-                textTransform: 'none', fontWeight: 600, fontSize: '0.8rem',
-                border: '1px solid #e0e0e0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                '&:hover': { backgroundColor: cat.color, filter: 'brightness(0.95)' }
-              }}
-            >
-              {cat.label}
-            </Button>
-          ))}
+          {noteCategories.map((cat) => {
+            const isDisabled = cat.label !== 'Exam Notes';
+            return (
+              <Button 
+                key={cat.label} 
+                onClick={() => setConfirmNewNote(cat.label)} 
+                disabled={isDisabled}
+                sx={{ 
+                  backgroundColor: cat.color, color: cat.textColor, 
+                  textTransform: 'none', fontWeight: 600, fontSize: '0.8rem',
+                  border: '1px solid #e0e0e0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  '&:hover': { backgroundColor: cat.color, filter: 'brightness(0.95)' },
+                  '&.Mui-disabled': {
+                    backgroundColor: cat.color,
+                    color: cat.textColor,
+                    opacity: 0.5
+                  }
+                }}
+              >
+                {cat.label}
+              </Button>
+            );
+          })}
         </Stack>
 
         <Box className="no-print" sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 1, alignItems: 'center' }}>
@@ -507,7 +517,7 @@ const ProgressNotesPage = () => {
                             </Typography>
                           </Box>
                           {note.isExpanded && (
-                            <IconButton size="small">
+                            <IconButton size="small" onClick={handlePrint}>
                               <PrintIcon sx={{ fontSize: '1.2rem', color: '#666' }} />
                             </IconButton>
                           )}
@@ -528,13 +538,11 @@ const ProgressNotesPage = () => {
                                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                                   <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Medical History:</Typography>
                                   <label><input type="checkbox" /> Reviewed</label>
-                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
                                 </Stack>
                                 <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
                                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                                   <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Dental History:</Typography>
                                   <label><input type="checkbox" /> Reviewed</label>
-                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
                                 </Stack>
                                 <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
                                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
@@ -553,19 +561,16 @@ const ProgressNotesPage = () => {
                                   <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Radiographs:</Typography>
                                   <label><input type="checkbox" /> Taken</label>
                                   <label><input type="checkbox" /> Reviewed</label>
-                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
                                 </Stack>
                                 <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
                                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                                   <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Diagnostic Opinion:</Typography>
                                   <label><input type="checkbox" /> Reviewed</label>
-                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
                                 </Stack>
                                 <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
                                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                                   <Typography sx={{ minWidth: 100, fontSize: '0.8rem', fontWeight: 'bold' }}>Risk assessment:</Typography>
                                   <label><input type="checkbox" /> Reviewed</label>
-                                  <Typography sx={{ color: '#999', ml: 2, cursor: 'pointer' }}>Add notes</Typography>
                                 </Stack>
                                 <Box sx={{ borderBottom: '1px solid #ccc', mb: 1 }} />
                               </Grid>
@@ -579,10 +584,45 @@ const ProgressNotesPage = () => {
                                       if (editorRef.current) { editorRef.current.innerHTML = '<p><em>No patient selected.</em></p>'; setEditorContent(editorRef.current.innerHTML); }
                                       return;
                                     }
+                                    
+                                    const appointmentId = currentAppointment?.id || currentAppointment?.AptNum || currentAppointment?._id;
+                                    if (!appointmentId) {
+                                      if (editorRef.current) { editorRef.current.innerHTML = '<p><em>No active appointment selected to fetch exam data for.</em></p>'; setEditorContent(editorRef.current.innerHTML); }
+                                      return;
+                                    }
+                                    
                                     try {
                                       const examTypes = ['radiographic', 'teeth-structure', 'head-neck', 'tmj', 'periodontal', 'airway', 'morphological', 'dentofacial'];
-                                      const results = await Promise.allSettled(examTypes.map(type => clinicalExamService.getExam(type, selectedPatientId)));
+                                      const results = await Promise.allSettled(examTypes.map(type => clinicalExamService.getExam(type, appointmentId)));
+                                      
+                                      // Fetch treatment plans
+                                      let tpData = null;
+                                      try {
+                                        const tpRes = await treatmentPlanService.getAll({ patientId: selectedPatientId });
+                                        tpData = tpRes?.data?.treatmentPlans || [];
+                                      } catch (e) {
+                                        console.error('Failed to fetch treatment plans', e);
+                                      }
+                                      
                                       let generatedHtml = '';
+                                      const formatValue = (val) => {
+                                        if (Array.isArray(val)) return val.join(', ');
+                                        if (typeof val === 'object' && val !== null) {
+                                          const parts = [];
+                                          Object.entries(val).forEach(([k, v]) => {
+                                            if (v != null && v !== '') {
+                                              if (typeof v === 'object') {
+                                                parts.push(`${k}: [${formatValue(v)}]`);
+                                              } else {
+                                                parts.push(`${k}: ${v}`);
+                                              }
+                                            }
+                                          });
+                                          return parts.join(', ');
+                                        }
+                                        return String(val);
+                                      };
+
                                       const titleMap = { 'radiographic': 'Radiographic Findings', 'teeth-structure': 'Teeth Findings', 'head-neck': 'Head & Neck', 'tmj': 'TMJ', 'periodontal': 'Periodontal', 'airway': 'Airway', 'morphological': 'Morphological', 'dentofacial': 'Dentofacial' };
                                       examTypes.forEach((type, idx) => {
                                         const result = results[idx];
@@ -594,17 +634,37 @@ const ProgressNotesPage = () => {
                                             if (value != null && value !== '' && key !== '_id') {
                                               const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
                                               if (Array.isArray(value) && value.length > 0) { generatedHtml += `${label}: ${value.join(', ')}<br>`; }
-                                              else if (typeof value === 'object' && !Array.isArray(value)) { const sub = Object.entries(value).filter(([,v]) => v != null && v !== '').map(([k,v]) => `${k}: ${v}`).join(', '); if (sub) generatedHtml += `${label}: ${sub}<br>`; }
+                                              else if (typeof value === 'object' && !Array.isArray(value)) { 
+                                                const sub = formatValue(value); 
+                                                if (sub) generatedHtml += `${label}: ${sub}<br>`; 
+                                              }
                                               else if (typeof value !== 'object') { generatedHtml += `${label}: ${value}<br>`; }
                                             }
                                           });
                                           generatedHtml += '</p>';
                                         }
                                       });
+
+                                      if (tpData && tpData.length > 0) {
+                                        const activePlan = tpData.find(p => p.status === 'active') || tpData[0];
+                                        generatedHtml += `<p style="margin:8px 0 4px 0"><strong>Active Treatment Plan (${activePlan.title || 'Untitled'})</strong><br>`;
+                                        if (activePlan.items && Array.isArray(activePlan.items)) {
+                                          activePlan.items.forEach(visit => {
+                                            generatedHtml += `<strong>${visit.label || 'Visit'}:</strong><br>`;
+                                            if (visit.procedures && Array.isArray(visit.procedures)) {
+                                              visit.procedures.forEach(proc => {
+                                                generatedHtml += `- [${proc.code}] Tooth ${proc.toothNum || proc.tooth || 'N/A'}: ${proc.description || 'Procedure'} ($${proc.fee || 0})<br>`;
+                                              });
+                                            }
+                                          });
+                                        }
+                                        generatedHtml += `Total Estimated Cost: $${(activePlan.totalAmount || 0).toFixed(2)}</p>`;
+                                      }
+
                                       if (!generatedHtml) {
-                                        generatedHtml = '<p><strong>Comprehensive Exam</strong><br>- No clinical exam data found for this patient.<br>- Please complete the clinical exam tabs first.<br>- Once saved, this button will auto-generate notes.</p>';
+                                        generatedHtml = '<p><strong>Comprehensive Exam</strong><br>- No clinical exam data or active treatment plans found for this patient.<br>- Please complete the clinical exam tabs first.<br>- Once saved, this button will auto-generate notes.</p>';
                                       } else {
-                                        generatedHtml = `<p><strong>Comprehensive Exam - Generated Notes</strong><br>- Auto-generated from clinical exam data<br>- Date: ${new Date().toLocaleDateString('en-US')}</p>` + generatedHtml;
+                                        generatedHtml = `<p><strong>Comprehensive Exam - Generated Notes</strong><br>- Auto-generated from clinical exam data and treatment plan<br>- Date: ${new Date().toLocaleDateString('en-US')}</p>` + generatedHtml;
                                       }
                                       if (editorRef.current) { editorRef.current.innerHTML = generatedHtml; setEditorContent(generatedHtml); }
                                     } catch (error) {
@@ -616,9 +676,9 @@ const ProgressNotesPage = () => {
                                  >
                                    Generate Exam Notes
                                  </Button>
-                                <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Hide Checklist</Button>
-                                <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Used Adj Products</Button>
-                                <Button variant="contained" size="small" sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' } }}>Recommended Adj Products</Button>
+                                <Button variant="contained" size="small" disabled sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' }, '&.Mui-disabled': { bgcolor: '#ccae81', color: 'white', opacity: 0.5 } }}>Hide Checklist</Button>
+                                <Button variant="contained" size="small" disabled sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' }, '&.Mui-disabled': { bgcolor: '#ccae81', color: 'white', opacity: 0.5 } }}>Used Adj Products</Button>
+                                <Button variant="contained" size="small" disabled sx={{ bgcolor: '#ccae81', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#b79a6d' }, '&.Mui-disabled': { bgcolor: '#ccae81', color: 'white', opacity: 0.5 } }}>Recommended Adj Products</Button>
                               </Stack>
                             )}
                           </Box>
@@ -804,21 +864,30 @@ const ProgressNotesPage = () => {
 
                                       {/* View Selectors */}
                                       <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3, width: '100%' }}>
-                                        {['Chart View', 'Pano/FMX', 'Repose/Smile', 'Occlusals', 'Perio view', 'Other'].map((lbl) => (
+                                        {['Chart View', 'Pano/FMX', 'Repose/Smile', 'Occlusals', 'Perio view', 'Other'].map((lbl) => {
+                                          const isDisabled = lbl !== 'Chart View';
+                                          return (
                                           <Button 
                                             key={lbl} variant="outlined" size="small"
                                             onClick={() => setExamView(lbl)}
+                                            disabled={isDisabled}
                                             sx={{ 
                                               textTransform: 'none', fontSize: '0.7rem', 
                                               borderColor: examView === lbl ? '#ccae81' : '#ccc',
                                               bgcolor: examView === lbl ? '#ccae81' : 'transparent',
                                               color: examView === lbl ? 'white' : '#666',
-                                              '&:hover': { bgcolor: examView === lbl ? '#b79a6d' : '#f5f5f5' }
+                                              '&:hover': { bgcolor: examView === lbl ? '#b79a6d' : '#f5f5f5' },
+                                              '&.Mui-disabled': {
+                                                opacity: 0.5,
+                                                borderColor: '#ccc',
+                                                color: '#666'
+                                              }
                                             }}
                                           >
                                             {lbl}
                                           </Button>
-                                        ))}
+                                          );
+                                        })}
                                       </Stack>
 
                                       {/* Exam View Content Container with stable height to prevent jumping */}

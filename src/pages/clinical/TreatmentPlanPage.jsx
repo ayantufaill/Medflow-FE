@@ -304,7 +304,8 @@ const GlobalActionBar = ({
   onDeleteClick,
   onReferClick,
   onDbiClick,
-  onPrintClick
+  onPrintClick,
+  onCompleteClick
 }) => {
   const [reEstimateAnchor, setReEstimateAnchor] = useState(null);
   const [visitAnchorEl, setVisitAnchorEl] = useState(null);
@@ -514,7 +515,8 @@ const GlobalActionBar = ({
         <Button 
           variant="contained" 
           color="success" 
-          size="small" 
+          size="small"
+          onClick={onCompleteClick} 
           sx={{ borderRadius: 20, textTransform: 'none', px: 2, bgcolor: '#b7e1cd', color: '#137333' }}
         >
           Complete
@@ -1247,6 +1249,34 @@ export default function TreatmentPlanPage() {
     setSelectedVisitIds([]);
     setShowReferConfirm(false);
   };
+
+  const handleCompleteSelected = () => {
+    setVisits(prev => {
+      const proceduresToComplete = new Set(selectedProcedureIds);
+      if (selectedVisitIds.length > 0) {
+        prev.forEach(v => {
+          if (selectedVisitIds.includes(v.id)) {
+            v.procedures.forEach(p => proceduresToComplete.add(p.id));
+          }
+        });
+      }
+      
+      if (proceduresToComplete.size === 0) return prev;
+
+      return prev.map(v => ({
+        ...v,
+        procedures: v.procedures.map(p => {
+          if (proceduresToComplete.has(p.id)) {
+            return { ...p, status: 'EO' };
+          }
+          return p;
+        })
+      }));
+    });
+
+    setSelectedProcedureIds([]);
+    setSelectedVisitIds([]);
+  };
   const patientId = useSelector(selectSelectedPatientId) || "1";
   const { data: tpData, isLoading } = useTreatmentPlansQuery(patientId);
   const createMutation = useCreateTreatmentPlan(patientId);
@@ -1267,48 +1297,37 @@ export default function TreatmentPlanPage() {
     {
       id: 'v-1',
       label: 'Visit 1',
-      procedures: [
-        {
-          id: 'p-1',
-          visitId: 'v-1',
-          name: 'crown /bu',
-          toothNumber: 15,
-          surface: '',
-          code: 'D0120',
-          treatmentName: 'Periodic Evaluation',
-          options: '',
-          patientAmount: '$0.00',
-          insuranceAmount: '$0.00',
-          adjustmentPercent: '0%',
-          adjustmentAmount: '$0.00',
-          fee: '$0.00',
-          billedAmount: '$0.00',
-          providerInitials: 'SAB',
-          status: 'A',
-          date: '10/14/2025'
-        }
-      ]
+      procedures: []
     }
   ]);
 
   const setVisits = (updater) => {
-    rawSetVisits((prev) => {
-      const nextVal = typeof updater === 'function' ? updater(prev) : updater;
-      if (activePlan?._id) {
-        updateMutation.mutate({
-          id: activePlan._id,
-          data: {
-            items: nextVal
-          }
-        });
-      }
-      return nextVal;
-    });
+    rawSetVisits(updater);
   };
+
+  const isServerUpdate = React.useRef(false);
+
+  useEffect(() => {
+    if (!isServerUpdate.current && activePlan?._id) {
+      // Avoid firing on initial empty load if it hasn't been set by server yet
+      updateMutation.mutate({
+        id: activePlan._id,
+        data: {
+          items: visits
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visits]);
 
   useEffect(() => {
     if (activePlan?.items && Array.isArray(activePlan.items) && activePlan.items.length > 0) {
+      isServerUpdate.current = true;
       rawSetVisits(activePlan.items);
+      // Reset after a short delay to allow the state update to propagate
+      setTimeout(() => {
+        isServerUpdate.current = false;
+      }, 50);
     }
     setPrintNotesText(activePlan?.notes || '');
   }, [activePlan]);
@@ -1324,27 +1343,7 @@ export default function TreatmentPlanPage() {
           {
             id: 'v-1',
             label: 'Visit 1',
-            procedures: [
-              {
-                id: 'p-1',
-                visitId: 'v-1',
-                name: 'crown /bu',
-                toothNumber: 15,
-                surface: '',
-                code: 'D0120',
-                treatmentName: 'Periodic Evaluation',
-                options: '',
-                patientAmount: '$0.00',
-                insuranceAmount: '$0.00',
-                adjustmentPercent: '0%',
-                adjustmentAmount: '$0.00',
-                fee: '$0.00',
-                billedAmount: '$0.00',
-                providerInitials: 'SAB',
-                status: 'A',
-                date: '10/14/2025'
-              }
-            ]
+            procedures: []
           }
         ]
       });
@@ -2381,6 +2380,7 @@ export default function TreatmentPlanPage() {
               }
             }}
             onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)}
+            onCompleteClick={handleCompleteSelected}
           />
         </Box>
 
