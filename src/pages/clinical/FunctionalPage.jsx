@@ -1,13 +1,36 @@
 import React, { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { Box, Typography, Checkbox, Divider, TextField } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DiagnosticNavbar from '../../components/clinical/DiagnosticNavbar';
 
 const FunctionalAssessmentPage = () => {
-  const [findings, setFindings] = useState({});
-  const [risks, setRisks] = useState({});
-  const [otherText, setOtherText] = useState('');
-  const [radioValue, setRadioValue] = useState(null); // 'found' or 'not-found'
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.functional);
+  const dispatch = useDispatch();
+
+  const findings = sessionState?.findings || {};
+  const setFindings = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(findings) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'functional', data: { findings: newVal } } });
+  };
+
+  const risks = sessionState?.risks || {};
+  const setRisks = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(risks) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'functional', data: { risks: newVal } } });
+  };
+
+  const otherText = sessionState?.otherText || '';
+  const setOtherText = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(otherText) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'functional', data: { otherText: newVal } } });
+  };
+
+  const radioValue = sessionState?.radioValue || null;
+  const setRadioValue = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(radioValue) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'functional', data: { radioValue: newVal } } });
+  };
 
   // Section definitions for dynamic rendering
   const sectionGroups = [

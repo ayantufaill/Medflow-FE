@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Button, Stack, Divider, Grid, Card, Checkbox, FormControlLabel,
   Dialog, IconButton, TextField, Popover, CircularProgress, Alert
@@ -52,34 +52,48 @@ const TeethStructureExam = () => {
 
   const isSigned = !!examRecord?.isSigned;
 
-  // State for selected teeth
-  const [selectedTeeth, setSelectedTeeth] = useState([]);
-  
-  // State for missing teeth, starting empty
-  const [missingTeeth, setMissingTeeth] = useState([]);
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.toothStructure);
+  const dispatch = useDispatch();
 
-  // State for tooth findings
-  const [toothFindings, setToothFindings] = useState({});
-  // State for active tooth in selection / badge click
+  const selectedTeeth = sessionState?.selectedTeeth || [];
+  const setSelectedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(selectedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'toothStructure', data: { selectedTeeth: newVal } } });
+  };
+
+  const missingTeeth = sessionState?.missingTeeth || [];
+  const setMissingTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(missingTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'toothStructure', data: { missingTeeth: newVal } } });
+  };
+
+  const toothFindings = sessionState?.toothFindings || {};
+  const setToothFindings = (val) => {
+    const newVal = typeof val === 'function' ? val(toothFindings) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'toothStructure', data: { toothFindings: newVal } } });
+  };
+
+  const additionalTeeth = sessionState?.additionalTeeth || [];
+  const setAdditionalTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(additionalTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'toothStructure', data: { additionalTeeth: newVal } } });
+  };
+
   const [activeToothNum, setActiveToothNum] = useState(null);
-  
   const [detailModalTooth, setDetailModalTooth] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Additional Teeth selection states
-  const [additionalTeeth, setAdditionalTeeth] = useState([]);
-
   // Sync data from database to form state when loaded
   useEffect(() => {
     if (examRecord?.examData) {
-      setSelectedTeeth(examRecord.examData.selectedTeeth || []);
-      setMissingTeeth(examRecord.examData.missingTeeth || []);
-      setToothFindings(examRecord.examData.toothFindings || {});
-      setAdditionalTeeth(examRecord.examData.additionalTeeth || []);
+      if (examRecord.examData.selectedTeeth !== undefined) setSelectedTeeth(examRecord.examData.selectedTeeth);
+      if (examRecord.examData.missingTeeth !== undefined) setMissingTeeth(examRecord.examData.missingTeeth);
+      if (examRecord.examData.toothFindings !== undefined) setToothFindings(examRecord.examData.toothFindings);
+      if (examRecord.examData.additionalTeeth !== undefined) setAdditionalTeeth(examRecord.examData.additionalTeeth);
     }
-  }, [examRecord]);
+  }, [examRecord?.examData]);
 
   const handleSaveExam = async () => {
     if (!appointmentId) {

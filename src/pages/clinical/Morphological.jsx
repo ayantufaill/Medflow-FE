@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
   Select, MenuItem, Button, Grid, IconButton, Divider, Chip, TextField, InputAdornment,
@@ -135,8 +135,10 @@ const Morphological = () => {
     'Jul 03, 2024'
   ]);
 
-  // Form state for API submission
-  const [formData, setFormData] = useState({
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.morphological);
+  const dispatch = useDispatch();
+
+  const formData = sessionState?.formData || {
     // Canine Classification
     canineRight: '',
     canineLeft: '',
@@ -180,7 +182,12 @@ const Morphological = () => {
     analysisRequired: false,
     analysisReferred: false,
     noFindings: false
-  });
+  };
+
+  const setFormData = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(formData) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'morphological', data: { formData: newVal } } });
+  };
 
   // Sync data from database to form state when loaded
   useEffect(() => {
@@ -190,7 +197,7 @@ const Morphological = () => {
         ...examRecord.examData
       }));
     }
-  }, [examRecord]);
+  }, [examRecord?.examData]);
 
   const handleSaveExam = async () => {
     if (!appointmentId) {

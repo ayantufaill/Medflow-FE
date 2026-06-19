@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Chip, Button, Stack, Divider, Grid,
   Dialog, IconButton, TextField, CircularProgress, Alert
@@ -50,9 +50,33 @@ const Radiographic = () => {
 
   const isSigned = !!examRecord?.isSigned;
 
-  const [selectedTeeth, setSelectedTeeth] = React.useState([]);
-  const [missingTeeth, setMissingTeeth] = React.useState([]);
-  const [toothFindings, setToothFindings] = React.useState({});
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.radiographic);
+  const dispatch = useDispatch();
+
+  const selectedTeeth = sessionState?.selectedTeeth || [];
+  const setSelectedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(selectedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { selectedTeeth: newVal } } });
+  };
+
+  const missingTeeth = sessionState?.missingTeeth || [];
+  const setMissingTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(missingTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { missingTeeth: newVal } } });
+  };
+
+  const toothFindings = sessionState?.toothFindings || {};
+  const setToothFindings = (val) => {
+    const newVal = typeof val === 'function' ? val(toothFindings) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { toothFindings: newVal } } });
+  };
+
+  const additionalTeeth = sessionState?.additionalTeeth || [];
+  const setAdditionalTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(additionalTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { additionalTeeth: newVal } } });
+  };
+
   const [activeToothNum, setActiveToothNum] = React.useState(null);
   const [detailModalTooth, setDetailModalTooth] = React.useState(null);
   const [newNoteText, setNewNoteText] = React.useState('');
@@ -110,7 +134,6 @@ const Radiographic = () => {
   };
 
   // Additional Teeth selection states
-  const [additionalTeeth, setAdditionalTeeth] = React.useState([]);
   const [additionalTeethAnchorEl, setAdditionalTeethAnchorEl] = React.useState(null);
   const [showSelectToothDialog, setShowSelectToothDialog] = React.useState(false);
 

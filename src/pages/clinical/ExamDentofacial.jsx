@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, IconButton, Paper, Divider, Button, Grid, Chip,
   CircularProgress, Alert
@@ -307,7 +307,10 @@ const ExamDentofacial = () => {
     'Mar 26, 2026'
   ]);
 
-  const [formData, setFormData] = useState({
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.dentofacial);
+  const dispatch = useDispatch();
+
+  const formData = sessionState?.formData || {
     analysis_not_required: false,
     analysis_required: false,
     data_collected: false,
@@ -319,7 +322,12 @@ const ExamDentofacial = () => {
     maxillary_gum_acceptable: false,
     mandibular_gum_display: '',
     mandibular_gum_acceptable: false
-  });
+  };
+
+  const setFormData = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(formData) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'dentofacial', data: { formData: newVal } } });
+  };
 
   // Sync data from database to form state when loaded
   useEffect(() => {
@@ -329,7 +337,7 @@ const ExamDentofacial = () => {
         ...examRecord.examData
       }));
     }
-  }, [examRecord]);
+  }, [examRecord?.examData]);
 
   const handleSaveExam = async () => {
     if (!appointmentId) {

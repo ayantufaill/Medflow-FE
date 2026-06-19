@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Box, Typography } from "@mui/material";
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
@@ -284,11 +284,19 @@ const AirwayPage = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const [risk, setRisk] = useState("High");
   const [visitDates, setVisitDates] = useState([
     'May 22, 2025'
   ]);
-  const [formData, setFormData] = useState({
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.airway);
+  const dispatch = useDispatch();
+
+  const risk = sessionState?.risk || "High";
+  const setRisk = (val) => {
+    const newVal = typeof val === 'function' ? val(risk) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'airway', data: { risk: newVal } } });
+  };
+
+  const formData = sessionState?.formData || {
     // Left Column
     facialPattern: "Mesofacial",
     facialProfile: "Normal",
@@ -315,7 +323,12 @@ const AirwayPage = () => {
     
     // Notes
     notes: ""
-  });
+  };
+
+  const setFormData = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(formData) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'airway', data: { formData: newVal } } });
+  };
 
   // Sync data from database to form state when loaded
   useEffect(() => {

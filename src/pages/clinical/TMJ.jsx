@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
   Divider, Button, Grid, Chip, IconButton, Container, TextField, Stack,
@@ -101,15 +101,22 @@ const DentalTmdExamPage = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.tmj);
+  const dispatch = useDispatch();
+
   // Collapsible sections state
-  const [expandedSections, setExpandedSections] = useState({
+  const expandedSections = sessionState?.expandedSections || {
     rangeOfMotion: true,
     muscleEvaluation: false,
     jointEvaluation: false
-  });
+  };
+  const setExpandedSections = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(expandedSections) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'tmj', data: { expandedSections: newVal } } });
+  };
 
   // Form state for TMJ exam
-  const [formData, setFormData] = useState({
+  const formData = sessionState?.formData || {
     // Range of Motion
     maxOpening: '60',
     deviationOnOpening: 'yes',
@@ -155,7 +162,12 @@ const DentalTmdExamPage = () => {
     reproducibleRight: false,
     selectedMuscles: [],
     selectedJoints: []
-  });
+  };
+
+  const setFormData = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(formData) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'tmj', data: { formData: newVal } } });
+  };
 
   // Sync data from database to form state when loaded
   useEffect(() => {
@@ -165,7 +177,7 @@ const DentalTmdExamPage = () => {
         ...examRecord.examData
       }));
     }
-  }, [examRecord]);
+  }, [examRecord?.examData]);
 
   const handleSaveExam = async () => {
     if (!appointmentId) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
   Button, Chip, Divider, List, ListItem, ListItemText, Grid, Container,
@@ -78,14 +78,21 @@ const DentalAnatomyExamPage = () => {
   const [activeTool, setActiveTool] = useState(null); // 'lesion' | 'tori' | 'exostosis' | null
   
   // Clinical findings state
-  const [findings, setFindings] = useState([]);
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.headAndNeck);
+  const dispatch = useDispatch();
+
+  const findings = sessionState?.findings || [];
+  const setFindings = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(findings) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'headAndNeck', data: { findings: newVal } } });
+  };
 
   // Sync data from database to form state when loaded
   useEffect(() => {
     if (examRecord?.examData) {
       setFindings(examRecord.examData.findings || []);
     }
-  }, [examRecord]);
+  }, [examRecord?.examData]);
 
   const handleSaveExam = async () => {
     if (!appointmentId) {
