@@ -27,19 +27,19 @@ const StyledRadio = (props) => (
   <Radio
     {...props}
     size="small"
-    sx={{ 
-      color: '#999', 
+    sx={{
+      color: '#999',
       '&.Mui-checked': { color: '#555' },
-      '& .MuiSvgIcon-root': { fontSize: 20 } 
+      '& .MuiSvgIcon-root': { fontSize: 20 }
     }}
   />
 );
 
 const SectionTitle = ({ children, underlined }) => (
-  <Typography variant="body1" sx={{ 
-    fontWeight: fontWeight.medium, 
-    color: '#455a64', 
-    mb: 1, 
+  <Typography variant="body1" sx={{
+    fontWeight: fontWeight.medium,
+    color: '#455a64',
+    mb: 1,
     borderBottom: underlined ? '1px solid #cfd8dc' : 'none',
     width: underlined ? 'fit-content' : 'auto',
     pr: underlined ? 4 : 0,
@@ -142,33 +142,33 @@ const Morphological = () => {
     // Canine Classification
     canineRight: '',
     canineLeft: '',
-    
+
     // Posterior Crossbite
     posteriorCrossbite: [],
-    
+
     // Orthodontic Classification
     overbite: 2,
     overbitePercent: '',
     overjet: 1,
-    
+
     // Molar Classification
     molarRight: '',
     molarLeft: '',
-    
+
     // Primary Molar Relationship
     primaryMolarRight: '',
     primaryMolarLeft: '',
-    
+
     // Anterior Tooth Shape
     anteriorToothShape: '',
-    
+
     // Midline
     midline: '',
     midlineMm: '',
-    
+
     // Axial Inclination
     axialInclination: '',
-    
+
     // Tooth Position (right column)
     toothPosition: {
       crossBite: { value: '', selectedTeeth: [] },
@@ -177,7 +177,7 @@ const Morphological = () => {
       diastema: { value: '', selectedTeeth: [] },
       rotation: { value: '', selectedTeeth: [] }
     },
-    
+
     // Status flags
     analysisRequired: false,
     analysisReferred: false,
@@ -343,22 +343,22 @@ const Morphological = () => {
         </Typography>
       </Box>
       <ExamNavbar />
-      
+
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
         {isSigned && (
           <Alert severity="info" sx={{ mb: 3 }}>
             This exam has been signed and locked. It is now read-only.
           </Alert>
         )}
-        
+
         {/* 1. Top Navigation / Timeline */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
           <VisitDatesTimeline
             visitDates={visitDates}
             onRemoveDate={handleRemoveDate}
           />
-          <Button 
-            startIcon={<AddIcon />} 
+          <Button
+            startIcon={<AddIcon />}
             sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
             onClick={handleNewExam}
           >
@@ -368,160 +368,47 @@ const Morphological = () => {
 
         <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
 
-        {/* 2. Status Row */}
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
-          <FormControlLabel 
-            control={
-              <Checkbox 
-                size="small" 
-                checked={formData.analysisRequired}
-                onChange={(e) => handleFieldChange('analysisRequired', e.target.checked)}
-              />
-            } 
-            label={<Typography variant="body2" sx={{ fontSize: fontSize.xs }}>Analysis required</Typography>} 
-          />
-          <FormControlLabel 
-            control={
-              <Checkbox 
-                size="small" 
-                checked={formData.analysisReferred}
-                onChange={(e) => handleFieldChange('analysisReferred', e.target.checked)}
-              />
-            } 
-            label={<Typography variant="body2" sx={{ fontSize: fontSize.xs }}>Analysis referred</Typography>} 
-          />
-        </Box>
-
-        <SectionTitle underlined>Short morphological analysis</SectionTitle>
-
-        <Grid container spacing={8} sx={{ mt: 1 }}>
-          {/* LEFT COLUMN */}
-          <Grid item xs={12} md={7}>
-            
-            {/* Canine Classification */}
-            <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, mt: 2, fontSize: fontSize.xs }}>Canine Classification</Typography>
-            {['Right:', 'Left:'].map((side, index) => (
-              <Box key={side} sx={{ display: 'flex', alignItems: 'center', ml: 4, mt: 0.5 }}>
-                <Typography sx={{ width: 60, fontSize: fontSize.xs }}>{side}</Typography>
-                <RadioGroup row 
-                  value={formData[index === 0 ? 'canineRight' : 'canineLeft'] || ''}
-                  onChange={(e) => handleFieldChange(index === 0 ? 'canineRight' : 'canineLeft', e.target.value)}
-                >
-                  {MORPHOLOGICAL_DATA.canineClassification.map((option) => (
-                    <FormControlLabel
-                      key={option.value}
-                      value={option.value}
-                      control={<StyledRadio />}
-                      label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>}
-                    />
-                  ))}
-                </RadioGroup>
-              </Box>
-            ))}
-
-            {/* Posterior Crossbite */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-              <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xs, mr: 2 }}>Posterior Crossbite:</Typography>
-              {MORPHOLOGICAL_DATA.posteriorCrossbite.map((option) => (
-                <FormControlLabel
-                  key={option.value}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={formData.posteriorCrossbite.includes(option.value)}
-                      onChange={(e) => {
-                        const current = formData.posteriorCrossbite;
-                        if (e.target.checked) {
-                          handleFieldChange('posteriorCrossbite', [...current, option.value]);
-                        } else {
-                          handleFieldChange('posteriorCrossbite', current.filter(v => v !== option.value));
-                        }
-                      }}
-                    />
-                  }
-                  label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>}
+          {/* 2. Status Row */}
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={formData.analysisRequired}
+                  onChange={(e) => handleFieldChange('analysisRequired', e.target.checked)}
                 />
-              ))}
-            </Box>
-
-            <Box sx={{ mt: 4 }}>
-              <SectionTitle underlined>Orthodontic Classification</SectionTitle>
-              
-              {/* Overbite/Overjet Selects */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
-                <Typography sx={{ width: 80, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>Overbite</Typography>
-                <Select 
-                  size="small" 
-                  value={formData.overbite}
-                  onChange={(e) => handleFieldChange('overbite', e.target.value)}
-                  sx={{ 
-                    height: 30, 
-                    width: 80,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '& .MuiInput-underline': { '&:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23)' }, '&:after': { borderBottom: '1px solid #1976d2' } },
-                    '& fieldset': { border: 'none' },
-                    '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000' }
-                  }} 
-                  variant="standard"
-                >
-                  <MenuItem value={1}>1</MenuItem>
-                  <MenuItem value={2}>2</MenuItem>
-                  <MenuItem value={3}>3</MenuItem>
-                  <MenuItem value={4}>4</MenuItem>
-                  <MenuItem value={5}>5</MenuItem>
-                </Select>
-                <TextField 
-                  variant="standard" 
-                  value={formData.overbitePercent}
-                  onChange={(e) => handleFieldChange('overbitePercent', e.target.value)}
-                  sx={{ 
-                    width: 60, 
-                    '& input': { textAlign: 'center', fontSize: fontSize.xs, padding: '4px 0' },
-                    '& .MuiInput-root:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23) !important' },
-                    '& .MuiInput-root:after': { borderBottom: '1px solid #1976d2 !important' },
-                    '& .MuiInput-root:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000 !important' }
-                  }}
-                  InputProps={{ 
-                    endAdornment: <InputAdornment position="end"><Typography variant="caption">%</Typography></InputAdornment> 
-                  }}
+              }
+              label={<Typography variant="body2" sx={{ fontSize: fontSize.xs }}>Analysis required</Typography>}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={formData.analysisReferred}
+                  onChange={(e) => handleFieldChange('analysisReferred', e.target.checked)}
                 />
-              </Box>
+              }
+              label={<Typography variant="body2" sx={{ fontSize: fontSize.xs }}>Analysis referred</Typography>}
+            />
+          </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
-                <Typography sx={{ width: 80, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>Overjet</Typography>
-                <Select 
-                  size="small" 
-                  value={formData.overjet}
-                  onChange={(e) => handleFieldChange('overjet', e.target.value)}
-                  sx={{ 
-                    height: 30, 
-                    width: 80,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '& .MuiInput-underline': { '&:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23)' }, '&:after': { borderBottom: '1px solid #1976d2' } },
-                    '& fieldset': { border: 'none' },
-                    '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000' }
-                  }} 
-                  variant="standard"
-                >
-                  <MenuItem value={1}>1</MenuItem>
-                  <MenuItem value={2}>2</MenuItem>
-                  <MenuItem value={3}>3</MenuItem>
-                  <MenuItem value={4}>4</MenuItem>
-                  <MenuItem value={5}>5</MenuItem>
-                </Select>
-              </Box>
+          <SectionTitle underlined>Short morphological analysis</SectionTitle>
 
-              {/* Molar Classification */}
-              <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, mt: 3, fontSize: fontSize.xs }}>Molar Classification</Typography>
+          <Grid container spacing={8} sx={{ mt: 1 }}>
+            {/* LEFT COLUMN */}
+            <Grid item xs={12} md={7}>
+
+              {/* Canine Classification */}
+              <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, mt: 2, fontSize: fontSize.xs }}>Canine Classification</Typography>
               {['Right:', 'Left:'].map((side, index) => (
                 <Box key={side} sx={{ display: 'flex', alignItems: 'center', ml: 4, mt: 0.5 }}>
                   <Typography sx={{ width: 60, fontSize: fontSize.xs }}>{side}</Typography>
-                  <RadioGroup row 
-                    value={formData[index === 0 ? 'molarRight' : 'molarLeft'] || ''}
-                    onChange={(e) => handleFieldChange(index === 0 ? 'molarRight' : 'molarLeft', e.target.value)}
+                  <RadioGroup row
+                    value={formData[index === 0 ? 'canineRight' : 'canineLeft'] || ''}
+                    onChange={(e) => handleFieldChange(index === 0 ? 'canineRight' : 'canineLeft', e.target.value)}
                   >
-                    {MORPHOLOGICAL_DATA.molarClassification.map((option) => (
+                    {MORPHOLOGICAL_DATA.canineClassification.map((option) => (
                       <FormControlLabel
                         key={option.value}
                         value={option.value}
@@ -533,165 +420,293 @@ const Morphological = () => {
                 </Box>
               ))}
 
-              {/* Primary Molar Relationship */}
-              <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, mt: 3, mb: 1, fontSize: fontSize.xs }}>
-                Primary Molar Relationship
-              </Typography>
-              <SideRow 
-                label="Right:" 
-                options={MORPHOLOGICAL_DATA.primaryMolarRelationship}
-                value={formData.primaryMolarRight}
-                onChange={(value) => handleFieldChange('primaryMolarRight', value)}
-              />
-              <SideRow 
-                label="Left:" 
-                options={MORPHOLOGICAL_DATA.primaryMolarRelationship}
-                value={formData.primaryMolarLeft}
-                onChange={(value) => handleFieldChange('primaryMolarLeft', value)}
-              />
-
-              {/* Anterior Tooth Shape */}
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 3 }}>
-                <Typography sx={{ width: 150, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
-                  Anterior Tooth Shape
-                </Typography>
-                <RadioGroup row 
-                  value={formData.anteriorToothShape || ''}
-                  onChange={(e) => handleFieldChange('anteriorToothShape', e.target.value)}
-                >
-                  {MORPHOLOGICAL_DATA.anteriorToothShape.map((option) => (
-                    <FormControlLabel
-                      key={option.value}
-                      value={option.value}
-                      control={<StyledRadio />}
-                      label={<Typography variant="caption" sx={{ fontSize: '0.8rem' }}>{option.label}</Typography>}
-                      sx={{ mr: 6 }}
-                    />
-                  ))}
-                </RadioGroup>
-              </Box>
-
-              {/* Midline */}
+              {/* Posterior Crossbite */}
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                <Typography sx={{ width: 150, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
-                  Midline
-                </Typography>
-                <RadioGroup row sx={{ alignItems: 'center' }}
-                  value={formData.midline || ''}
-                  onChange={(e) => handleFieldChange('midline', e.target.value)}
-                >
-                  {MORPHOLOGICAL_DATA.midline.map((option, index) => (
-                    <FormControlLabel 
-                      key={option.value}
-                      value={option.value}
-                      control={<StyledRadio />} 
-                      label={
-                        option.value === 'left' ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography variant="caption">Left</Typography>
-                            <TextField 
-                              variant="standard" 
-                              value={formData.midlineMm}
-                              onChange={(e) => handleFieldChange('midlineMm', e.target.value)}
-                              sx={{ 
-                                width: 50, 
-                                '& input': { textAlign: 'center', fontSize: fontSize.xs, padding: '4px 0' },
-                                '& .MuiInput-root:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23) !important' },
-                                '& .MuiInput-root:after': { borderBottom: '1px solid #1976d2 !important' },
-                                '& .MuiInput-root:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000 !important' }
-                              }}
-                              InputProps={{ 
-                                endAdornment: <InputAdornment position="end"><Typography variant="caption">mm</Typography></InputAdornment> 
-                              }}
-                            />
-                          </Box>
-                        ) : (
-                          <Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>
-                        )
-                      } 
-                      sx={index < 2 ? { mr: 6 } : {}}
-                    />
-                  ))}
-                </RadioGroup>
+                <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xs, mr: 2 }}>Posterior Crossbite:</Typography>
+                {MORPHOLOGICAL_DATA.posteriorCrossbite.map((option) => (
+                  <FormControlLabel
+                    key={option.value}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={formData.posteriorCrossbite.includes(option.value)}
+                        onChange={(e) => {
+                          const current = formData.posteriorCrossbite;
+                          if (e.target.checked) {
+                            handleFieldChange('posteriorCrossbite', [...current, option.value]);
+                          } else {
+                            handleFieldChange('posteriorCrossbite', current.filter(v => v !== option.value));
+                          }
+                        }}
+                      />
+                    }
+                    label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>}
+                  />
+                ))}
               </Box>
 
-              {/* Axial Inclination */}
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                <Typography sx={{ width: 150, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
-                  Axial Inclination
-                </Typography>
-                <RadioGroup row
-                  value={formData.axialInclination || ''}
-                  onChange={(e) => handleFieldChange('axialInclination', e.target.value)}
-                >
-                  {MORPHOLOGICAL_DATA.axialInclination.map((option) => (
-                    <FormControlLabel
-                      key={option.value}
-                      value={option.value}
-                      control={<StyledRadio />}
-                      label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>}
-                      sx={{ mr: option.value === 'vertical' ? 4 : 6 }}
-                    />
-                  ))}
-                </RadioGroup>
-              </Box>
-            </Box>
-          </Grid>
+              <Box sx={{ mt: 4 }}>
+                <SectionTitle underlined>Orthodontic Classification</SectionTitle>
 
-          {/* RIGHT COLUMN */}
-          <Grid item xs={12} md={5} sx={{ borderLeft: '1px solid #eee', pl: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cfd8dc', mb: 2 }}>
-              <Typography sx={{ fontWeight: fontWeight.medium, color: '#455a64', fontSize: fontSize.xs }}>Tooth Position</Typography>
-              <FormControlLabel 
-                control={
-                  <Checkbox 
-                    size="small" 
-                    checked={formData.noFindings}
-                    onChange={(e) => handleFieldChange('noFindings', e.target.checked)}
-                  />
-                } 
-                label={<Typography variant="caption" sx={{ fontStyle: 'italic', fontSize: fontSize.sm }}>no findings</Typography>} 
-              />
-            </Box>
-
-            {MORPHOLOGICAL_DATA.toothPosition.map((item) => (
-              <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2 }}>
-                <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, minWidth: '120px' }}>{item.label}</Typography>
-                <RadioGroup row sx={{ flex: 1, justifyContent: 'flex-end' }}
-                  value={formData.toothPosition[item.id].value || ''}
-                  onChange={(e) => handleToothPositionChange(item.id, 'value', e.target.value)}
-                >
-                  <FormControlLabel 
-                    value="none" 
-                    control={<StyledRadio />} 
-                    label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>none</Typography>} 
-                  />
-                  <FormControlLabel 
-                    value="select" 
-                    control={<StyledRadio />} 
-                    label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>select teeth</Typography>} 
-                  />
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleAddTeeth(item.id)}
-                    disabled={!formData.toothPosition[item.id].value}
+                {/* Overbite/Overjet Selects */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                  <Typography sx={{ width: 80, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>Overbite</Typography>
+                  <Select
+                    size="small"
+                    value={formData.overbite}
+                    onChange={(e) => handleFieldChange('overbite', e.target.value)}
+                    sx={{
+                      height: 30,
+                      width: 80,
+                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                      '& .MuiInput-underline': { '&:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23)' }, '&:after': { borderBottom: '1px solid #1976d2' } },
+                      '& fieldset': { border: 'none' },
+                      '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000' }
+                    }}
+                    variant="standard"
                   >
-                    <AddIcon sx={{ fontSize: 16, color: '#1976d2' }} />
-                  </IconButton>
-                </RadioGroup>
-              </Box>
-            ))}
+                    <MenuItem value={1}>1</MenuItem>
+                    <MenuItem value={2}>2</MenuItem>
+                    <MenuItem value={3}>3</MenuItem>
+                    <MenuItem value={4}>4</MenuItem>
+                    <MenuItem value={5}>5</MenuItem>
+                  </Select>
+                  <TextField
+                    variant="standard"
+                    value={formData.overbitePercent}
+                    onChange={(e) => handleFieldChange('overbitePercent', e.target.value)}
+                    sx={{
+                      width: 60,
+                      '& input': { textAlign: 'center', fontSize: fontSize.xs, padding: '4px 0' },
+                      '& .MuiInput-root:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23) !important' },
+                      '& .MuiInput-root:after': { borderBottom: '1px solid #1976d2 !important' },
+                      '& .MuiInput-root:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000 !important' }
+                    }}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end"><Typography variant="caption">%</Typography></InputAdornment>
+                    }}
+                  />
+                </Box>
 
-            <Button 
-              variant="outlined" 
-              startIcon={<PhotoCameraIcon sx={{ bgcolor: '#0d47a1', color: 'white', p: 0.5, borderRadius: 1 }} />}
-              sx={{ mt: 4, textTransform: 'none', color: '#999', borderColor: '#eee' }}
-              onClick={handleShowPhotos}
-            >
-              Show Patient Photos
-            </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                  <Typography sx={{ width: 80, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>Overjet</Typography>
+                  <Select
+                    size="small"
+                    value={formData.overjet}
+                    onChange={(e) => handleFieldChange('overjet', e.target.value)}
+                    sx={{
+                      height: 30,
+                      width: 80,
+                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                      '& .MuiInput-underline': { '&:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23)' }, '&:after': { borderBottom: '1px solid #1976d2' } },
+                      '& fieldset': { border: 'none' },
+                      '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000' }
+                    }}
+                    variant="standard"
+                  >
+                    <MenuItem value={1}>1</MenuItem>
+                    <MenuItem value={2}>2</MenuItem>
+                    <MenuItem value={3}>3</MenuItem>
+                    <MenuItem value={4}>4</MenuItem>
+                    <MenuItem value={5}>5</MenuItem>
+                  </Select>
+                </Box>
+
+                {/* Molar Classification */}
+                <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, mt: 3, fontSize: fontSize.xs }}>Molar Classification</Typography>
+                {['Right:', 'Left:'].map((side, index) => (
+                  <Box key={side} sx={{ display: 'flex', alignItems: 'center', ml: 4, mt: 0.5 }}>
+                    <Typography sx={{ width: 60, fontSize: fontSize.xs }}>{side}</Typography>
+                    <RadioGroup row
+                      value={formData[index === 0 ? 'molarRight' : 'molarLeft'] || ''}
+                      onChange={(e) => handleFieldChange(index === 0 ? 'molarRight' : 'molarLeft', e.target.value)}
+                    >
+                      {MORPHOLOGICAL_DATA.molarClassification.map((option) => (
+                        <FormControlLabel
+                          key={option.value}
+                          value={option.value}
+                          control={<StyledRadio />}
+                          label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>}
+                        />
+                      ))}
+                    </RadioGroup>
+                  </Box>
+                ))}
+
+                {/* Primary Molar Relationship */}
+                <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, mt: 3, mb: 1, fontSize: fontSize.xs }}>
+                  Primary Molar Relationship
+                </Typography>
+                <SideRow
+                  label="Right:"
+                  options={MORPHOLOGICAL_DATA.primaryMolarRelationship}
+                  value={formData.primaryMolarRight}
+                  onChange={(value) => handleFieldChange('primaryMolarRight', value)}
+                />
+                <SideRow
+                  label="Left:"
+                  options={MORPHOLOGICAL_DATA.primaryMolarRelationship}
+                  value={formData.primaryMolarLeft}
+                  onChange={(value) => handleFieldChange('primaryMolarLeft', value)}
+                />
+
+                {/* Anterior Tooth Shape */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 3 }}>
+                  <Typography sx={{ width: 150, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
+                    Anterior Tooth Shape
+                  </Typography>
+                  <RadioGroup row
+                    value={formData.anteriorToothShape || ''}
+                    onChange={(e) => handleFieldChange('anteriorToothShape', e.target.value)}
+                  >
+                    {MORPHOLOGICAL_DATA.anteriorToothShape.map((option) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<StyledRadio />}
+                        label={<Typography variant="caption" sx={{ fontSize: '0.8rem' }}>{option.label}</Typography>}
+                        sx={{ mr: 6 }}
+                      />
+                    ))}
+                  </RadioGroup>
+                </Box>
+
+                {/* Midline */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                  <Typography sx={{ width: 150, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
+                    Midline
+                  </Typography>
+                  <RadioGroup row sx={{ alignItems: 'center' }}
+                    value={formData.midline || ''}
+                    onChange={(e) => handleFieldChange('midline', e.target.value)}
+                  >
+                    {MORPHOLOGICAL_DATA.midline.map((option, index) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<StyledRadio />}
+                        label={
+                          option.value === 'left' ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography variant="caption">Left</Typography>
+                              <TextField
+                                variant="standard"
+                                value={formData.midlineMm}
+                                onChange={(e) => handleFieldChange('midlineMm', e.target.value)}
+                                sx={{
+                                  width: 50,
+                                  '& input': { textAlign: 'center', fontSize: fontSize.xs, padding: '4px 0' },
+                                  '& .MuiInput-root:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.23) !important' },
+                                  '& .MuiInput-root:after': { borderBottom: '1px solid #1976d2 !important' },
+                                  '& .MuiInput-root:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #000 !important' }
+                                }}
+                                InputProps={{
+                                  endAdornment: <InputAdornment position="end"><Typography variant="caption">mm</Typography></InputAdornment>
+                                }}
+                              />
+                            </Box>
+                          ) : (
+                            <Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>
+                          )
+                        }
+                        sx={index < 2 ? { mr: 6 } : {}}
+                      />
+                    ))}
+                  </RadioGroup>
+                </Box>
+
+                {/* Axial Inclination */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                  <Typography sx={{ width: 150, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
+                    Axial Inclination
+                  </Typography>
+                  <RadioGroup row
+                    value={formData.axialInclination || ''}
+                    onChange={(e) => handleFieldChange('axialInclination', e.target.value)}
+                  >
+                    {MORPHOLOGICAL_DATA.axialInclination.map((option) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<StyledRadio />}
+                        label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>{option.label}</Typography>}
+                        sx={{ mr: option.value === 'vertical' ? 4 : 6 }}
+                      />
+                    ))}
+                  </RadioGroup>
+                </Box>
+              </Box>
+            </Grid>
+
+            {/* RIGHT COLUMN */}
+            <Grid item xs={12} md={5} sx={{ borderLeft: '1px solid #eee', pl: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cfd8dc', mb: 2 }}>
+                <Typography sx={{ fontWeight: fontWeight.medium, color: '#455a64', fontSize: fontSize.xs }}>Tooth Position</Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={formData.noFindings}
+                      onChange={(e) => handleFieldChange('noFindings', e.target.checked)}
+                    />
+                  }
+                  label={<Typography variant="caption" sx={{ fontStyle: 'italic', fontSize: fontSize.sm }}>no findings</Typography>}
+                />
+              </Box>
+
+              <Box 
+                sx={{ 
+                  borderRadius: 1,
+                  p: 1.5,
+                  pointerEvents: 'none',
+                  opacity: 0.5,
+                  filter: 'grayscale(100%)',
+                  bgcolor: '#f9f9f9',
+                  border: '1px dashed #ccc'
+                }}
+              >
+              {MORPHOLOGICAL_DATA.toothPosition.map((item) => (
+                <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2 }}>
+                  <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, minWidth: '120px', color: '#aaa' }}>{item.label}</Typography>
+                  <RadioGroup row sx={{ flex: 1, justifyContent: 'flex-end' }}
+                    value={formData.toothPosition[item.id].value || ''}
+                    onChange={(e) => handleToothPositionChange(item.id, 'value', e.target.value)}
+                  >
+                    <FormControlLabel
+                      value="none"
+                      disabled
+                      control={<StyledRadio />}
+                      label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>none</Typography>}
+                    />
+                    <FormControlLabel
+                      value="select"
+                      disabled
+                      control={<StyledRadio />}
+                      label={<Typography variant="caption" sx={{ fontSize: fontSize.sm }}>select teeth</Typography>}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => handleAddTeeth(item.id)}
+                      disabled
+                    >
+                      <AddIcon sx={{ fontSize: 16, color: '#ccc' }} />
+                    </IconButton>
+                  </RadioGroup>
+                </Box>
+              ))}
+
+              <Button
+                variant="outlined"
+                disabled
+                startIcon={<PhotoCameraIcon sx={{ bgcolor: '#999', color: 'white', p: 0.5, borderRadius: 1 }} />}
+                sx={{ mt: 4, textTransform: 'none', color: '#999', borderColor: '#eee' }}
+                onClick={handleShowPhotos}
+              >
+                Show Patient Photos
+              </Button>
+              </Box>
+            </Grid>
           </Grid>
-        </Grid>
 
         </fieldset>
 
@@ -714,8 +729,8 @@ const Morphological = () => {
           >
             Sign & Finalize
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             disabled={isSigned}
             sx={{ bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' }, textTransform: 'none' }}
             onClick={handleDeleteExam}

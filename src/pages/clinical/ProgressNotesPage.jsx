@@ -20,6 +20,7 @@ import {
 } from '../../hooks/queries';
 import { clinicalExamService } from '../../services/clinical-exam.service';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
+import { formatPeriodontalNotes } from '../../utils/formatPeriodontalNotes';
 import PrintIcon from '@mui/icons-material/Print';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -664,6 +665,13 @@ const ProgressNotesPage = () => {
                                         if (result.status === 'fulfilled' && result.value?.exam?.examData) {
                                           const examData = result.value.exam.examData;
                                           const title = titleMap[type] || type;
+
+                                          // Use dedicated formatter for periodontal data
+                                          if (type === 'periodontal') {
+                                            generatedHtml += formatPeriodontalNotes(examData);
+                                            return;
+                                          }
+
                                           generatedHtml += `<p style="margin:8px 0 4px 0"><strong>${title}</strong><br>`;
                                           Object.entries(examData).forEach(([key, value]) => {
                                             if (value != null && value !== '' && key !== '_id') {
