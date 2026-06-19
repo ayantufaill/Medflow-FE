@@ -207,7 +207,7 @@ export default function ViewCoverage({ open, onClose, insurance, getInsuranceCom
           <Grid item xs={12} md={8}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderLeft: '1px solid #ddd', pl: 2, height: '32px' }}>
               <Typography sx={{ fontSize: '0.85rem', color: '#333', mr: 2 }}>Coverage table</Typography>
-              <Typography sx={{ fontSize: '0.85rem', color: '#4a73b8', cursor: 'pointer' }}>+ Add Coverage</Typography>
+              <Typography sx={{ fontSize: '0.85rem', color: '#bdbdbd', cursor: 'not-allowed' }}>+ Add Coverage</Typography>
             </Box>
             
             <Grid container spacing={0} sx={{ borderLeft: '1px solid #ddd' }}>

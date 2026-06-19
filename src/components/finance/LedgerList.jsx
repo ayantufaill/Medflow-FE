@@ -1,9 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent, DialogTitle, DialogActions, Button, Menu, MenuItem } from '@mui/material';
-import { 
-  CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh, Reply, 
-  CheckCircle, Refresh, Tune
+import React, { useState, useEffect, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent,
+  Button, Menu, MenuItem,
+} from '@mui/material';
+import {
+  CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh,
+  CheckCircle, Refresh, Tune, MoreHoriz,
 } from '@mui/icons-material';
+
+// Redux
+import {
+  createInvoice,
+  fetchLedgerItems,
+  fetchInvoiceDetails,
+  backdateTransaction,
+  voidTransaction,
+  applyCourtesyCredit,
+  undoCourtesyCredit,
+  selectLedgerItemsForPatient,
+  selectLedgerLoading,
+  selectAdjustmentTypeMap,
+  setAdjustmentTypeForItem,
+} from '../../store/slices/billingSlice';
+
+// Sub-components
 import BackdateTransactionPopup from './BackdateTransactionPopup';
 import PrintOptionsDropdown from './PrintOptionsDropdown';
 import AdjustmentOptionsDropdown from './AdjustmentOptionsDropdown';
@@ -20,12 +41,10 @@ import EditDeposit from './EditDeposit';
 import InvoiceModal from './InvoiceModal';
 import TransferCreditConfirmationDialog from './TransferCreditConfirmationDialog';
 import EditInvoiceDetailsDialog from './EditInvoiceDetailsDialog';
-import { invoiceService } from '../../services/invoice.service';
-import apiClient from '../../config/api';
 import dayjs from 'dayjs';
 
 // --- COMPONENT HELPERS ---
- 
+
 const IconCashMinus = ({ size = 18 }) => (
   <Box sx={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
     <svg width={size} height={size} viewBox="0 0 24 24">
@@ -37,98 +56,6 @@ const IconCashMinus = ({ size = 18 }) => (
   </Box>
 );
 
-// --- CUSTOM PIXEL ART ICONS FOR LEDGER ---
-
-const PixelIconWrapper = ({ children, size = 18, color = 'inherit' }) => (
-  <Box sx={{ 
-    width: size, 
-    height: size, 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    color: color,
-    cursor: 'pointer'
-  }}>
-    {children}
-  </Box>
-);
-
-const PixelCalendar = () => (
-  <PixelIconWrapper size={16}>
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="3" width="12" height="11" rx="1" stroke="#90a4ae" strokeWidth="1" fill="#fff" />
-      <path d="M2 6H14" stroke="#90a4ae" strokeWidth="1" />
-      <path d="M5 2V4M11 2V4" stroke="#90a4ae" strokeWidth="1" />
-      <rect x="4" y="8" width="2" height="2" fill="#90a4ae" />
-      <rect x="7" y="8" width="2" height="2" fill="#90a4ae" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelPrint = ({ color = '#90a4ae' }) => (
-  <PixelIconWrapper size={18}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M4 5V2H12V5" stroke={color} strokeWidth="1" />
-      <path d="M3 5H13V11H3V5Z" fill={color === '#90a4ae' ? '#eee' : color} stroke={color} strokeWidth="1" />
-      <rect x="5" y="9" width="6" height="5" fill="#fff" stroke={color} strokeWidth="1" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelEdit = () => (
-  <PixelIconWrapper size={18}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M12 2L14 4L6 12L3 13L4 10L12 2Z" fill="#81c784" stroke="#2e7d32" strokeWidth="1" />
-      <path d="M11 3L13 5" stroke="#2e7d32" strokeWidth="1" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelBlock = () => (
-  <PixelIconWrapper size={18}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="6" stroke="#d32f2f" strokeWidth="1.5" />
-      <path d="M4 4L12 12" stroke="#d32f2f" strokeWidth="1.5" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelSettings = () => (
-  <PixelIconWrapper size={16}>
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="3" stroke="#555" strokeWidth="1.5" />
-      <path d="M8 2V4M8 12V14M2 8H4M12 8H14M4 4L5.5 5.5M10.5 10.5L12 12M4 12L5.5 10.5M10.5 5.5L12 4" stroke="#555" strokeWidth="1.5" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelReply = ({ color = '#5c6bc0', flip = false }) => (
-  <PixelIconWrapper size={18}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transform: flip ? 'scaleX(-1)' : 'none' }}>
-      <path d="M13 12V8C13 6.3 11.7 5 10 5H3" stroke={color} strokeWidth="1.5" />
-      <path d="M6 2L3 5L6 8" stroke={color} strokeWidth="1.5" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelRefresh = ({ color = '#4fc3f7' }) => (
-  <PixelIconWrapper size={18}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M13 8C13 10.76 10.76 13 8 13C5.24 13 3 10.76 3 8C3 5.24 5.24 3 8 3C9.38 3 10.63 3.56 11.53 4.46" stroke={color} strokeWidth="1.5" />
-      <path d="M12 2V5H9" stroke={color} strokeWidth="1.5" />
-    </svg>
-  </PixelIconWrapper>
-);
-
-const PixelAutoFix = () => (
-  <PixelIconWrapper size={18}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M3 13L13 3M10 2L14 6" stroke="#444" strokeWidth="1.5" />
-      <path d="M3 3L4 4M2 6L3 7M6 2L7 3" stroke="#ffd54f" strokeWidth="1" />
-    </svg>
-  </PixelIconWrapper>
-);
-
 const SummaryLabel = ({ label, value, isRed }) => (
   <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 0.5 }}>
     <Typography variant="caption" sx={{ color: '#777', fontSize: '10px', whiteSpace: 'nowrap' }}>{label}:</Typography>
@@ -136,52 +63,37 @@ const SummaryLabel = ({ label, value, isRed }) => (
   </Box>
 );
 
-const LedgerSubRow = ({ 
-  id, 
-  date, 
-  title, 
-  amount, 
-  initials, 
-  isAdjustment, 
-  showExtendedTools, 
-  onVoidClick, 
-  voidData, 
-  onEditClick, 
-  editData, 
-  adjustmentType, 
-  onRefreshClick, 
-  refreshData,
-  onMagicStickClick,
-  onSettingsClick,
-  onAdjustmentSelect,
-  onPrintClick 
+const LedgerSubRow = ({
+  id, date, title, amount, initials, isAdjustment, isPayment, isClaim,
+  showExtendedTools, onVoidClick, voidData, onEditClick, editData,
+  adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
+  onSettingsClick, onAdjustmentSelect, onPrintClick,
 }) => (
-  <Box sx={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    p: '2px 12px', 
-    '&:hover': { bgcolor: '#f0f4ff' } 
-  }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', p: '2px 12px', '&:hover': { bgcolor: '#f0f4ff' } }}>
     <Typography variant="caption" sx={{ color: '#555', width: 80, fontSize: '11px' }}>{date}</Typography>
     <CalendarMonth sx={{ fontSize: 16, color: '#90a4ae', mr: 1 }} />
-    <Typography variant="caption" sx={{ 
-      flexGrow: 1, 
-      color: isAdjustment ? '#7e57c2' : '#444', 
-      fontSize: '11px',
-      fontWeight: isAdjustment ? 500 : 400,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 1
+    <Typography variant="caption" sx={{
+      flexGrow: 1, color: isAdjustment ? '#7e57c2' : '#444', fontSize: '11px',
+      fontWeight: isAdjustment ? 500 : 400, display: 'flex', alignItems: 'center', gap: 1,
     }}>
       {title.includes('(uncollected)') ? (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
-            {title.replace('(uncollected)', '').trim()} #{id || '14040'}: 
+            {title.replace('(uncollected)', '').trim()} #{id || '14040'}:{' '}
             <Box component="span" sx={{ color: '#999', fontWeight: 'bold', ml: 0.5 }}>
               {adjustmentType || 'Un-Collected'} {amount}
             </Box>
           </Typography>
         </Box>
+      ) : isPayment ? (
+        <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>{title}</Typography>
+      ) : isClaim ? (
+        <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
+          {title.split(' : ')[0]} :{' '}
+          <Box component="span" sx={{ color: '#ffa726', fontWeight: 'bold', ml: 0.5 }}>
+            {title.split(' : ')[1] || ''}
+          </Box>
+        </Typography>
       ) : (
         <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
           {isAdjustment ? 'Adjustment' : 'Invoice'} #{id || '24636'} ({date}): [ {title} ]
@@ -189,938 +101,468 @@ const LedgerSubRow = ({
       )}
     </Typography>
     <Typography variant="caption" sx={{ width: 80, fontWeight: 'bold', color: isAdjustment ? '#7e57c2' : '#444', fontSize: '11px', textAlign: 'left' }}>
-      {title.includes('(uncollected)') ? '$0.00' : amount}
+      {isClaim ? '' : (title.includes('(uncollected)') ? '$0.00' : amount)}
     </Typography>
     <Typography variant="caption" sx={{ width: 40, color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
       {initials}
     </Typography>
     <Stack direction="row" spacing={1} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
-      {showExtendedTools ? (
+      {isPayment ? (
         <>
-           <Settings 
-             sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
-             onClick={() => onSettingsClick && onSettingsClick({ id, date, title, amount })}
-           />
-           <Print 
-             sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
-             onClick={(e) => onPrintClick && onPrintClick(e)}
-           />
-           <AutoFixHigh 
-             sx={{ fontSize: 18, color: '#444', cursor: 'pointer' }} 
-             onClick={(e) => onMagicStickClick && onMagicStickClick(e)}
-           />
-           <Tune 
-             sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} 
-             onClick={(e) => onAdjustmentSelect && onAdjustmentSelect(e)}
-           />
-           <NotInterested 
-             sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} 
-             onClick={() => onVoidClick && onVoidClick(voidData)}
-           />
+          <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer', transform: 'scaleX(-1)' }} />
+          <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} />
+          <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} onClick={() => onVoidClick?.(voidData)} />
+          <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} onClick={() => onEditClick?.(editData)} />
+          <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+        </>
+      ) : isClaim ? (
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#e8f5e9', color: '#2e7d32', borderRadius: '2px', px: '3px', py: '1px', fontSize: '9px', fontWeight: 'bold', border: '1px solid #c8e6c9' }}>
+            EDI
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#e8eaf6', color: '#3f51b5', borderRadius: '2px', px: '3px', py: '1px', fontSize: '9px', fontWeight: 'bold', border: '1px solid #c5cae9' }}>
+            EOB
+          </Box>
+          <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} />
+          <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} />
+          <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+        </>
+      ) : showExtendedTools ? (
+        <>
+          <Settings sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} onClick={() => onSettingsClick?.({ id, date, title, amount })} />
+          <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} onClick={(e) => onPrintClick?.(e)} />
+          <AutoFixHigh sx={{ fontSize: 18, color: '#444', cursor: 'pointer' }} onClick={(e) => onMagicStickClick?.(e)} />
+          <Tune sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} onClick={(e) => onAdjustmentSelect?.(e)} />
+          <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} onClick={() => onVoidClick?.(voidData)} />
         </>
       ) : (
         <>
-          <Edit 
-            sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} 
-            onClick={() => onEditClick && onEditClick(editData)}
-          />
-          <Refresh 
-            sx={{ fontSize: 18, color: '#4fc3f7', cursor: 'pointer' }} 
-            onClick={() => onRefreshClick && onRefreshClick(refreshData)}
-          />
-          <NotInterested 
-            sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} 
-            onClick={() => onVoidClick && onVoidClick(voidData)}
-          />
+          <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} onClick={() => onEditClick?.(editData)} />
+          <Refresh sx={{ fontSize: 18, color: '#4fc3f7', cursor: 'pointer' }} onClick={() => onRefreshClick?.(refreshData)} />
+          <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} onClick={() => onVoidClick?.(voidData)} />
         </>
       )}
     </Stack>
   </Box>
 );
 
-const LedgerList = ({ patient, expanded, items = [] }) => {
-  const [ledgerItems, setLedgerItems] = useState(
-    items.length > 0 ? items : []
-  );
-
+const LedgerList = ({ patient, expanded }) => {
+  const dispatch = useDispatch();
   const patientId = patient?._id || patient?.id;
 
-  const fetchPatientData = async () => {
-    if (!patientId) return;
-    try {
-      // Fetch invoices and adjustments in parallel
-      const [invoicesResult, adjustmentsResult] = await Promise.all([
-        invoiceService.getAllInvoices({ patientId, limit: 1000 }),
-        apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`)
-      ]);
+  // ── Redux state ──────────────────────────────────────────────────────────
+  const ledgerItems    = useSelector(selectLedgerItemsForPatient(patientId));
+  const ledgerLoading  = useSelector(selectLedgerLoading);
+  const adjustmentTypeMap = useSelector(selectAdjustmentTypeMap);
 
-      const invoices = invoicesResult.invoices || [];
-      const adjustments = adjustmentsResult.data?.data?.adjustments || [];
-      
-      const mappedInvoices = invoices.map(invoice => ({
-        id: invoice._id || invoice.id,
-        invoiceNumber: invoice.invoiceNumber || invoice._id || invoice.id,
-        date: invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MM/DD/YYYY') : 'N/A',
-        rawDate: invoice.invoiceDate || '',
-        method: 'Invoice',
-        amount: `$${Number(invoice.totalAmount || 0).toFixed(2)}`,
-        color: '#5c6bc0',
-        isAdjustment: false,
-        initials: 'STAFF',
-        success: invoice.status !== 'voided',
-        summary: {
-          insWo: '$0.00',
-          ptBal: `$${Number(invoice.patientPortion || 0).toFixed(2)}`,
-          insBal: `$${Number(invoice.insurancePortion || 0).toFixed(2)}`,
-          invBal: `$${Number(invoice.balanceDue || 0).toFixed(2)}`,
-          appliedWo: '$0.00',
-          ptPaid: `$${Number(invoice.paidAmount || 0).toFixed(2)}`,
-          insPaid: '$0.00',
-        },
-        details: []
-      }));
-
-      const mappedAdjustments = adjustments.map(adj => {
-        const amt = Number(adj.amount || 0);
-        return {
-          id: adj._id || adj.id,
-          invoiceNumber: `Adj #${adj._id || adj.id}`,
-          date: adj.date ? dayjs(adj.date).format('MM/DD/YYYY') : 'N/A',
-          rawDate: adj.date || '',
-          method: 'Adjustment',
-          amount: `$${Math.abs(amt).toFixed(2)}`,
-          color: '#7e57c2',
-          isAdjustment: true,
-          useCheckmark: false,
-          initials: 'STAFF',
-          success: true,
-          summary: {
-            insWo: '$0.00',
-            ptBal: `$${amt.toFixed(2)}`,
-            insBal: '$0.00',
-            invBal: `$${amt.toFixed(2)}`,
-            appliedWo: '$0.00',
-            ptPaid: '$0.00',
-            insPaid: '$0.00',
-          },
-          details: [
-            {
-              id: adj._id || adj.id,
-              title: adj.notes || 'Patient Account Adjustment',
-              amount: `$${amt.toFixed(2)}`,
-            }
-          ]
-        };
-      });
-
-      const combined = [...mappedInvoices, ...mappedAdjustments];
-      combined.sort((a, b) => {
-        const dateA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
-        const dateB = b.rawDate ? new Date(b.rawDate).getTime() : 0;
-        return dateB - dateA; // Sort descending (newest first)
-      });
-      
-      setLedgerItems(combined);
-    } catch (err) {
-      console.error('Error fetching dynamic ledger list:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchPatientData();
-  }, [patientId]);
-  const [expandedItems, setExpandedItems] = useState({});
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [calendarTarget, setCalendarTarget] = useState(null);
-  const [adjItem, setAdjItem] = useState(null);
-  const [printItem, setPrintItem] = useState(null);
-  const [printAnchorEl, setPrintAnchorEl] = useState(null);
-  const [adjAnchorEl, setAdjAnchorEl] = useState(null);
-  const [showAdjustDialog, setShowAdjustDialog] = useState(false);
-  const [showDebitDialog, setShowDebitDialog] = useState(false);
-  const [showMembershipDialog, setShowMembershipDialog] = useState(false);
-  const [showWriteOffDialog, setShowWriteOffDialog] = useState(false);
-  const [showVoidDialog, setShowVoidDialog] = useState(false);
-  const [voidTarget, setVoidTarget] = useState(null);
-  const [voidedItems, setVoidedItems] = useState({});
-  const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
-  const [editTarget, setEditTarget] = useState(null);
-  const [adjustmentTypes, setAdjustmentTypes] = useState({});
-  const [refreshedItems, setRefreshedItems] = useState({});
-  const [showUndoDialog, setShowUndoDialog] = useState(false);
-  const [undoTarget, setUndoTarget] = useState(null);
-  const [showSimpleStatement, setShowSimpleStatement] = useState(false);
-  const [showDetailedStatement, setShowDetailedStatement] = useState(false);
-  const [showEditDeposit, setShowEditDeposit] = useState(false);
-  const [editDepositTarget, setEditDepositTarget] = useState(null);
+  // ── Local UI state (dialogs / menus — no data) ───────────────────────────
+  const [expandedItems,          setExpandedItems]          = useState({});
+  const [anchorEl,               setAnchorEl]               = useState(null);
+  const [calendarTarget,         setCalendarTarget]         = useState(null);
+  const [adjItem,                setAdjItem]                = useState(null);
+  const [printItem,              setPrintItem]              = useState(null);
+  const [printAnchorEl,          setPrintAnchorEl]          = useState(null);
+  const [adjAnchorEl,            setAdjAnchorEl]            = useState(null);
+  const [showAdjustDialog,       setShowAdjustDialog]       = useState(false);
+  const [showDebitDialog,        setShowDebitDialog]        = useState(false);
+  const [showMembershipDialog,   setShowMembershipDialog]   = useState(false);
+  const [showWriteOffDialog,     setShowWriteOffDialog]     = useState(false);
+  const [showVoidDialog,         setShowVoidDialog]         = useState(false);
+  const [voidTarget,             setVoidTarget]             = useState(null);
+  const [showCourtesyCredit,     setShowCourtesyCredit]     = useState(false);
+  const [editTarget,             setEditTarget]             = useState(null);
+  const [showUndoDialog,         setShowUndoDialog]         = useState(false);
+  const [undoTarget,             setUndoTarget]             = useState(null);
+  const [showSimpleStatement,    setShowSimpleStatement]    = useState(false);
+  const [showDetailedStatement,  setShowDetailedStatement]  = useState(false);
+  const [showEditDeposit,        setShowEditDeposit]        = useState(false);
+  const [editDepositTarget,      setEditDepositTarget]      = useState(null);
   const [showTransferConfirmation, setShowTransferConfirmation] = useState(false);
-  const [showEditInvoice, setShowEditInvoice] = useState(false);
-  const [editInvoiceTarget, setEditInvoiceTarget] = useState(null);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [invoiceModalData, setInvoiceModalData] = useState(null);
-  const [magicStickAnchorEl, setMagicStickAnchorEl] = useState(null);
+  const [showEditInvoice,        setShowEditInvoice]        = useState(false);
+  const [editInvoiceTarget,      setEditInvoiceTarget]      = useState(null);
+  const [showInvoiceModal,       setShowInvoiceModal]       = useState(false);
+  const [invoiceModalData,       setInvoiceModalData]       = useState(null);
+  const [magicStickAnchorEl,     setMagicStickAnchorEl]     = useState(null);
+  // Local deposit edits (not server-persisted in the original code either)
+  const [depositOverrides,       setDepositOverrides]       = useState({});
 
-  const handleMagicStickClick = (event) => {
-    setMagicStickAnchorEl(event.currentTarget);
-  };
-
-  const handleMagicStickClose = () => {
-    setMagicStickAnchorEl(null);
-  };
+  // ── Fetch on mount / patientId change ────────────────────────────────────
+  const refreshLedger = useCallback(() => {
+    if (patientId) dispatch(fetchLedgerItems(patientId));
+  }, [dispatch, patientId]);
 
   useEffect(() => {
-    const handleAddLedgerItem = (event) => {
-      fetchPatientData();
+    refreshLedger();
+    window.addEventListener('refresh-ledger', refreshLedger);
+    window.addEventListener('add-ledger-item', refreshLedger);
+    return () => {
+      window.removeEventListener('refresh-ledger', refreshLedger);
+      window.removeEventListener('add-ledger-item', refreshLedger);
     };
+  }, [refreshLedger]);
 
-    window.addEventListener('add-ledger-item', handleAddLedgerItem);
-    return () => window.removeEventListener('add-ledger-item', handleAddLedgerItem);
-  }, [patientId]);
-
-
-  // Sync individual states with global expanded prop
+  // Sync expanded state with the global `expanded` prop
   useEffect(() => {
     if (expanded !== undefined) {
-      const allExpanded = {};
-      ledgerItems.forEach((_, idx) => {
-        allExpanded[idx] = expanded;
-      });
-      setExpandedItems(allExpanded);
+      const all = {};
+      ledgerItems.forEach((_, idx) => { all[idx] = expanded; });
+      setExpandedItems(all);
     }
-  }, [expanded]);
+  }, [expanded, ledgerItems]);
 
-  const handleItemClick = async (idx, event) => {
-    console.log('Click on invoice:', idx);
-    setExpandedItems(prev => {
-      const newState = {
-        ...prev,
-        [idx]: !prev[idx]
-      };
-      console.log('New expanded state:', newState);
-      return newState;
-    });
-
-    const targetItem = ledgerItems[idx];
-    if (targetItem && targetItem.method === 'Invoice' && (!targetItem.details || targetItem.details.length === 0)) {
-      try {
-        const invoiceId = targetItem.id;
-        const fullInvoice = await invoiceService.getInvoiceById(invoiceId);
-        
-        const detailsMapped = fullInvoice.lineItems?.map(line => ({
-          id: line._id || line.id,
-          title: line.description || 'Procedure',
-          amount: `$${Number(line.total || line.totalPrice || 0).toFixed(2)}`
-        })) || [];
-        
-        setLedgerItems(prevItems => 
-          prevItems.map((item, i) => 
-            i === idx 
-              ? { ...item, details: detailsMapped }
-              : item
-          )
-        );
-      } catch (err) {
-        console.error('Error loading dynamic invoice details:', err);
+  // Automatically fetch details for any expanded items when ledger items list changes
+  useEffect(() => {
+    if (!patientId || ledgerItems.length === 0) return;
+    ledgerItems.forEach((item, idx) => {
+      if (expandedItems[idx] && item.method === 'Invoice' && !item.details) {
+        dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
       }
+    });
+  }, [dispatch, patientId, ledgerItems, expandedItems]);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const handleItemClick = (idx) => {
+    setExpandedItems((prev) => ({ ...prev, [idx]: !prev[idx] }));
+    const targetItem = ledgerItems[idx];
+    // condition() in the thunk guards against duplicate/in-flight fetches
+    if (targetItem?.method === 'Invoice') {
+      dispatch(fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }));
     }
   };
-  
+
   const handleCalendarClick = (item, event) => {
     setAnchorEl(event.currentTarget);
     setCalendarTarget(item);
   };
 
-  const handlePrintClick = (event) => {
-    setPrintAnchorEl(event.currentTarget);
-  };
-
-  const handleAdjClick = (event) => {
-    setAdjAnchorEl(event.currentTarget);
-  };
-
-  const handleAdjustmentSelect = (option) => {
-    if (option === 'Credit (subtraction)') {
-      setShowAdjustDialog(true);
-    } else if (option === 'Debit (addition)') {
-      setShowDebitDialog(true);
-    } else if (option === 'Membership Adjustment') {
-      setShowMembershipDialog(true);
-    } else if (option === 'Insurance Write-Off') {
-      setShowWriteOffDialog(true);
+  const handleBackdateDone = async (date) => {
+    if (calendarTarget && date) {
+      dispatch(backdateTransaction({
+        patientId,
+        itemId: calendarTarget.id,
+        date,
+        isAdjustment: calendarTarget.isAdjustment,
+      }));
     }
-  };
-
-  const handleClose = () => {
+    setCalendarTarget(null);
     setAnchorEl(null);
   };
 
-  const handlePrintClose = () => {
-    setPrintAnchorEl(null);
-  };
-
-  const handleAdjClose = () => {
-    setAdjAnchorEl(null);
-  };
-
-  const handlePrintSelect = (option) => {
-    if (option === 'Simple Statements') {
-      setShowSimpleStatement(true);
-    } else if (option === 'Detailed Statement') {
-      setShowDetailedStatement(true);
-    }
-  };
-
-  const handleBackdateDone = async (date) => {
-    console.log('Backdated to:', date);
-    if (calendarTarget && date) {
-      try {
-        if (calendarTarget.isAdjustment) {
-          // Adjustments: Update Date via PATCH /api/adjustments/:id
-          await apiClient.patch(`/adjustments/${calendarTarget.id}`, {
-            date: new Date(date)
-          });
-        } else {
-          // Invoices: Update Due Date via PATCH /api/invoices/:id
-          await invoiceService.updateInvoice(calendarTarget.id, {
-            dueDate: new Date(date)
-          });
-        }
-        fetchPatientData();
-      } catch (err) {
-        console.error('Error backdating transaction:', err);
-      }
-    }
-    setCalendarTarget(null);
-  };
-
-  const handleVoidClick = (item) => {
-    setVoidTarget(item);
-    setShowVoidDialog(true);
-  };
-
+  const handleVoidClick  = (item) => { setVoidTarget(item); setShowVoidDialog(true); };
+  const handleVoidCancel = () => { setShowVoidDialog(false); setVoidTarget(null); };
   const handleVoidConfirm = async () => {
     if (voidTarget) {
-      try {
-        const isParentAdjustment = voidTarget.isAdjustment;
-
-        if (isParentAdjustment) {
-          // Parent is a database adjustment: delete it completely
-          await apiClient.delete(`/adjustments/${voidTarget.invoiceId}`);
-        } else {
-          // Parent is an invoice: delete the corresponding procedure line item
-          await invoiceService.deleteInvoiceItem(voidTarget.invoiceId, voidTarget.id);
-        }
-
-        // Instantly reload ledger items from database
-        fetchPatientData();
-      } catch (err) {
-        console.error('Error deleting/voiding transaction:', err);
-      }
+      dispatch(voidTransaction({
+        patientId,
+        invoiceId: voidTarget.invoiceId,
+        itemId:    voidTarget.id,
+        isAdjustment: voidTarget.isAdjustment,
+        isGrouped:    voidTarget.isGrouped,
+      }));
     }
     setShowVoidDialog(false);
     setVoidTarget(null);
   };
 
-  const handleVoidCancel = () => {
-    setShowVoidDialog(false);
-    setVoidTarget(null);
-  };
-
-  const handleEditClick = (item) => {
-    setEditTarget(item);
-    setShowCourtesyCredit(true);
-  };
+  const handleEditClick = (item) => { setEditTarget(item); setShowCourtesyCredit(true); };
 
   const handleCourtesyCreditSave = async (data) => {
-    console.log('Saving courtesy credit:', data);
-    try {
-      // Formulate courtesy credit as a database adjustment deduction (negative amount)
-      const amountVal = -Math.abs(data.creditAmount);
-      const notesText = `${data.adjustmentType} applied to Procedure #${data.id}`;
-      
-      // Persist the adjustment in the database
-      await apiClient.post('/adjustments', {
-        patientId: patientId,
-        amount: amountVal,
-        date: new Date(),
-        notes: notesText
-      });
-
-      // Update local visual adjustment types state
-      const key = `${data.invoiceId}-${data.id}`;
-      setAdjustmentTypes(prev => ({
-        ...prev,
-        [key]: data.adjustmentType
-      }));
-
-      // Trigger backend invoice recalculation if the procedure is associated with an invoice
-      if (data.invoiceId) {
-        await apiClient.post(`/invoices/${data.invoiceId}/recalculate`);
-      }
-
-      // Re-fetch all dynamic data to update totals in real-time
-      fetchPatientData();
-    } catch (err) {
-      console.error('Error applying courtesy credit adjustment:', err);
-    }
+    await dispatch(applyCourtesyCredit({
+      patientId,
+      procedureId:    data.id,
+      invoiceId:      data.invoiceId,
+      adjustmentType: data.adjustmentType,
+      creditAmount:   data.creditAmount,
+    }));
+    // Optimistically update the local adjustmentTypeMap via dispatch (slice handles it too)
+    dispatch(setAdjustmentTypeForItem({ key: `${data.invoiceId}-${data.id}`, adjustmentType: data.adjustmentType }));
     setShowCourtesyCredit(false);
     setEditTarget(null);
   };
 
-  const handleCourtesyCreditCancel = () => {
-    setShowCourtesyCredit(false);
-    setEditTarget(null);
-  };
+  const handleCourtesyCreditCancel = () => { setShowCourtesyCredit(false); setEditTarget(null); };
 
-  const handleRefreshClick = (data) => {
-    setUndoTarget(data);
-    setShowUndoDialog(true);
-  };
-
-  const handleUndoConfirm = async () => {
+  const handleRefreshClick = (data) => { setUndoTarget(data); setShowUndoDialog(true); };
+  const handleUndoCancel   = () => { setShowUndoDialog(false); setUndoTarget(null); };
+  const handleUndoConfirm  = async () => {
     if (undoTarget) {
-      try {
-        // Query database adjustments to locate the courtesy credit applied to this procedure log
-        const response = await apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`);
-        const adjustments = response.data?.data?.adjustments || [];
-        
-        // Find the adjustment that references this procedure ID in its notes description
-        const targetAdjustment = adjustments.find(adj => 
-          adj.notes && adj.notes.includes(`Procedure #${undoTarget.id}`)
-        );
-
-        if (targetAdjustment) {
-          // Permanently delete/reverse the adjustment
-          await apiClient.delete(`/adjustments/${targetAdjustment._id || targetAdjustment.id}`);
-        }
-
-        // Re-calculate the invoice totals
-        if (undoTarget.invoiceId) {
-          await apiClient.post(`/invoices/${undoTarget.invoiceId}/recalculate`);
-        }
-
-        // Re-fetch patient data to update the UI
-        fetchPatientData();
-      } catch (err) {
-        console.error('Error undoing courtesy credit:', err);
-      }
+      dispatch(undoCourtesyCredit({ patientId, procedureId: undoTarget.id, invoiceId: undoTarget.invoiceId }));
     }
     setShowUndoDialog(false);
     setUndoTarget(null);
   };
 
-  const handleUndoCancel = () => {
-    setShowUndoDialog(false);
-    setUndoTarget(null);
-  };
-
-  const handleCollapsedEditClick = (item) => {
-    setEditDepositTarget(item);
-    setShowEditDeposit(true);
-  };
-
-  const handleEditDepositSave = (data) => {
+  const handleCollapsedEditClick = (item) => { setEditDepositTarget(item); setShowEditDeposit(true); };
+  const handleEditDepositSave    = (data) => {
     if (editDepositTarget) {
-      // Update the ledger item with the new payment type and provider
-      setLedgerItems(prevItems => 
-        prevItems.map(item => 
-          item.id === editDepositTarget.id 
-            ? { ...item, method: data.paymentType, provider: data.provider }
-            : item
-        )
-      );
+      setDepositOverrides((prev) => ({ ...prev, [editDepositTarget.id]: data }));
     }
     setShowEditDeposit(false);
     setEditDepositTarget(null);
   };
+  const handleEditDepositCancel = () => { setShowEditDeposit(false); setEditDepositTarget(null); };
 
-  const handleEditDepositCancel = () => {
-    setShowEditDeposit(false);
-    setEditDepositTarget(null);
+  const handlePrintSelect = (option) => {
+    if (option === 'Simple Statements') setShowSimpleStatement(true);
+    else if (option === 'Detailed Statement') setShowDetailedStatement(true);
   };
 
-  const handleAddProcedureClick = (item) => {
-    console.log('Add procedure for:', item);
-    setInvoiceModalData(item);
-    setShowInvoiceModal(true);
+  const handleAdjustmentSelect = (option) => {
+    if (option === 'Credit (subtraction)')     setShowAdjustDialog(true);
+    else if (option === 'Debit (addition)')    setShowDebitDialog(true);
+    else if (option === 'Membership Adjustment') setShowMembershipDialog(true);
+    else if (option === 'Insurance Write-Off') setShowWriteOffDialog(true);
   };
 
-  const handleInvoiceModalSave = (data) => {
-    console.log('Saving invoice modal:', data);
-    setShowInvoiceModal(false);
-    setInvoiceModalData(null);
+  const handleAddProcedureClick = (item) => { setInvoiceModalData(item); setShowInvoiceModal(true); };
+  const handleInvoiceModalCancel = () => { setShowInvoiceModal(false); setInvoiceModalData(null); };
+
+  const handleInvoiceModalSave = async (data) => {
+    const payload = {
+      patientId: parseInt(patientId, 10) || 1,
+      items: data.map((row) => {
+        let parsedDate = new Date().toISOString();
+        if (row.date) { const d = new Date(row.date); if (!isNaN(d.getTime())) parsedDate = d.toISOString(); }
+        return {
+          code: row.code, description: row.treatment, date: parsedDate, site: row.site,
+          provider: row.provider,
+          writeoff:   parseFloat((String(row.writeoff   || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          ptPortion:  parseFloat((String(row.ptPortion  || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          charge:     parseFloat((String(row.charge     || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          balance:    parseFloat((String(row.balance    || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          dbi:       Boolean(row.dbi), completed: Boolean(row.completed),
+        };
+      }),
+    };
+    if (payload.items.length === 0) { alert('Please add at least one procedure before saving.'); return; }
+    try {
+      await dispatch(createInvoice(payload)).unwrap();
+      setShowInvoiceModal(false);
+      setInvoiceModalData(null);
+      refreshLedger();
+    } catch (err) {
+      alert('Failed to create invoice: ' + (err.message || err));
+    }
   };
 
-  const handleInvoiceModalCancel = () => {
-    setShowInvoiceModal(false);
-    setInvoiceModalData(null);
-  };
-
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <Box sx={{ p: 1, bgcolor: '#f4f7f9' }}>
       {ledgerItems.map((item, idx) => {
         const isExpanded = expandedItems[idx] || false;
-        const isRefreshed = item.details?.some(detail => refreshedItems[`${item.id}-${detail.id}`]);
-        
+        // Apply any local deposit overrides (method/provider edits)
+        const displayItem = depositOverrides[item.id]
+          ? { ...item, method: depositOverrides[item.id].paymentType || item.method }
+          : item;
+
         return (
-        <Box key={idx} sx={{ mb: 1.5 }}>
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              p: '4px 12px', 
-              border: '1px solid #a5b4fc', 
-              borderRadius: isExpanded && item.details ? '4px 4px 0 0' : '4px',
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              bgcolor: '#fff',
-              cursor: 'pointer',
-              '&:hover': { bgcolor: '#f5f5f5' }
-            }}
-            onClick={(e) => handleItemClick(idx, e)}
-          >
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ flexGrow: 1 }}>
-              {isExpanded ? (
-                (() => {
-                  if (isRefreshed) return (
-                    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f44336', mr: 2.5, ml: 0.5 }} />
-                  );
-                  if (item.isAdjustment && !item.useCheckmark) return (
-                    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f44336', mr: 2.5, ml: 0.5 }} />
-                  );
-                  return <CheckCircle sx={{ color: '#4caf50', fontSize: 20, width: 40 }} />;
-                })()
-              ) : (
-                <Checkbox size="small" sx={{ p: 0, width: 40 }} />
-              )}
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+          <Box key={idx} sx={{ mb: 1.5 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: '4px 12px', border: '1px solid #a5b4fc',
+                borderRadius: isExpanded && displayItem.details ? '4px 4px 0 0' : '4px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                bgcolor: '#fff', cursor: 'pointer', '&:hover': { bgcolor: '#f5f5f5' },
+              }}
+              onClick={() => handleItemClick(idx)}
+            >
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ flexGrow: 1 }}>
                 {isExpanded ? (
-                  <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', fontSize: '11px', textTransform: 'none' }}>
-                    {item.method === 'Invoice' ? 'Invoice' : 'Adjustment'} #{item.invoiceNumber || item.id} ({item.date}): {item.method === 'Invoice' ? '[ Patient Deposit ]' : ''}{item.amount}
-                  </Typography>
+                  (() => {
+                    if (displayItem.isAdjustment && !displayItem.useCheckmark)
+                      return <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f44336', mr: 2.5, ml: 0.5 }} />;
+                    if (!displayItem.isAdjustment && !displayItem.success)
+                      return <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f44336', mr: 2.5, ml: 0.5 }} />;
+                    return <CheckCircle sx={{ color: '#4caf50', fontSize: 20, width: 40 }} />;
+                  })()
                 ) : (
-                  <>
-                    <Typography variant="caption" sx={{ color: item.color, fontWeight: 500, fontSize: '11px' }}>
-                      {item.method === 'Invoice' ? `Invoice #${item.invoiceNumber || item.id}` : item.method === 'Adjustment' ? `Adjustment #${item.invoiceNumber || item.id}` : `Patient Deposit#${item.id}`} ({item.date} <CalendarMonth sx={{ fontSize: 13, verticalAlign: 'middle', mb: 0.5 }} />) with {item.method}
-                    </Typography>
+                  <Checkbox size="small" sx={{ p: 0, width: 40 }} />
+                )}
 
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: item.color, fontSize: '11px' }}>
-                      {item.amount}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+                  {isExpanded ? (
+                    <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', fontSize: '11px' }}>
+                      {displayItem.method === 'Invoice' ? 'Invoice' : 'Adjustment'} #{displayItem.invoiceNumber || displayItem.id} ({displayItem.date}): {displayItem.amount}
                     </Typography>
-
-                    {item.success && !item.isAdjustment && !item.details?.some(d => d.title.includes('(uncollected)')) && (
-                      <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
-                        SuccessfulTransaction
+                  ) : (
+                    <>
+                      <Typography variant="caption" sx={{ color: displayItem.color, fontWeight: 500, fontSize: '11px' }}>
+                        {displayItem.method === 'Invoice'
+                          ? `Invoice #${displayItem.invoiceNumber || displayItem.id}`
+                          : displayItem.method === 'Adjustment'
+                          ? `Adjustment #${displayItem.invoiceNumber || displayItem.id}`
+                          : `Patient Deposit#${displayItem.id}`}{' '}
+                        ({displayItem.date} <CalendarMonth sx={{ fontSize: 13, verticalAlign: 'middle', mb: 0.5 }} />) with {displayItem.method}
                       </Typography>
-                    )}
-                  </>
-                )}
-              </Box>
-              
-              {!isExpanded && (
-                <Typography variant="caption" sx={{ width: 40, color: '#cfd8dc', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
-                  {item.initials}
-                </Typography>
-              )}
-            </Stack>
+                      <Typography variant="caption" sx={{ fontWeight: 'bold', color: displayItem.color, fontSize: '11px' }}>
+                        {displayItem.amount}
+                      </Typography>
+                      {displayItem.success && !displayItem.isAdjustment && !displayItem.details?.some((d) => d.title.includes('(uncollected)')) && (
+                        <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                          SuccessfulTransaction
+                        </Typography>
+                      )}
+                    </>
+                  )}
+                </Box>
 
-            {!isExpanded && (
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
-                {!item.success && (
-                  <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />
-                )}
-                <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
-                <Edit 
-                  sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCollapsedEditClick(item);
-                  }} 
-                />
-              </Stack>
-            )}
-          </Paper>
-
-          {/* Expanded Details Section */}
-          {isExpanded && item.details && (
-            <Box sx={{ 
-              border: '1px solid #a5b4fc', 
-              borderTop: 'none', 
-              borderRadius: '0 0 4px 4px',
-              bgcolor: '#f8faff',
-              p: '4px 0'
-            }}>
-              <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />
-              
-              {/* Financial Summary Row from the "modern" view */}
-              <Box sx={{ px: '12px', mb: 0.5 }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center', mb: 0.5 }}>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
-                    <SummaryLabel label="Ins WO" value={item.summary?.insWo || '$0.00'} />
-                    <SummaryLabel label="Pt Balance" value={item.summary?.ptBal || '$0.00'} isRed={item.isAdjustment && item.summary?.ptBal !== '$0.00'} />
-                    <SummaryLabel label="Ins Balance" value={item.summary?.insBal || '$0.00'} />
-                    <SummaryLabel label="Invoice Balance" value={item.summary?.invBal || '$0.00'} isRed={item.isAdjustment && item.summary?.invBal !== '$0.00'} />
-                  </Box>
-                  <Typography variant="caption" sx={{ color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
-                    {item.initials}
+                {!isExpanded && (
+                  <Typography variant="caption" sx={{ width: 40, color: '#cfd8dc', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
+                    {displayItem.initials}
                   </Typography>
-                  <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="flex-end">
-                    <CalendarMonth 
-                      sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
-                      onClick={(e) => handleCalendarClick(item, e)}
-                    />
-                    <Tune 
-                      sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} 
-                      onClick={handleAdjClick}
-                    />
-                    <Print 
-                      sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} 
-                      onClick={handlePrintClick}
-                    />
-                    <IconCashMinus size={18} />
-                  </Stack>
-                </Box>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center' }}>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
-                    <SummaryLabel label="Applied WO" value={item.summary?.appliedWo || '$0.00'} />
-                    <SummaryLabel label="Pt Paid" value={item.summary?.ptPaid || '$0.00'} />
-                    <SummaryLabel label="Ins Paid" value={item.summary?.insPaid || '$0.00'} />
-                    <Box />
-                  </Box>
-                  <Box />
-                  <Box />
-                </Box>
-              </Box>
+                )}
+              </Stack>
 
-              <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />
-
-              {item.details.map((detail, dIdx) => {
-                const voidKey = `${item.id}-${detail.id}`;
-                const isVoided = voidedItems[voidKey];
-                const adjustmentKey = `${item.id}-${detail.id}`;
-                const currentAdjustmentType = adjustmentTypes[adjustmentKey];
-                
-                // Skip rendering if the item is voided
-                if (isVoided) return null;
-                
-                return (
-                <LedgerSubRow 
-                  key={dIdx}
-                  date={item.date}
-                  title={detail.title}
-                  amount={detail.amount}
-                  id={detail.id}
-                  initials={item.initials}
-                  showExtendedTools={!detail.title.includes('(uncollected)')}
-                  onVoidClick={handleVoidClick}
-                  onEditClick={handleEditClick}
-                  onRefreshClick={handleRefreshClick}
-                  adjustmentType={currentAdjustmentType}
-                  voidData={{
-                    id: detail.id,
-                    title: detail.title,
-                    amount: detail.amount,
-                    date: item.date,
-                    invoiceId: item.id,
-                    isAdjustment: item.isAdjustment
-                  }}
-                  editData={{
-                    id: detail.id,
-                    title: detail.title,
-                    amount: detail.amount,
-                    date: item.date,
-                    invoiceId: item.id,
-                    isAdjustment: item.isAdjustment
-                  }}
-                  refreshData={{
-                    idx: idx,
-                    id: detail.id,
-                    invoiceId: item.id,
-                    isAdjustment: item.isAdjustment
-                  }}
-                  isAdjustment={item.isAdjustment}
-                  onMagicStickClick={handleMagicStickClick}
-                  onSettingsClick={(data) => {
-                    setEditInvoiceTarget(data);
-                    setShowEditInvoice(true);
-                  }}
-                  onAdjustmentSelect={(e) => {
-                    setAdjAnchorEl(e.currentTarget);
-                    setAdjItem(item);
-                  }}
-                  onPrintClick={(e) => {
-                    setPrintAnchorEl(e.currentTarget);
-                    setPrintItem(item);
-                  }}
-                />
-                );
-              })}
-              
-              {/* Show "Add Procedure" button below all procedures if any item is voided */}
-              {item.details?.some(detail => voidedItems[`${item.id}-${detail.id}`]) && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  p: '2px 12px',
-                }}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => handleAddProcedureClick({ invoiceId: item.id, date: item.date })}
-                    sx={{
-                      padding: '4px 16px',
-                      borderRadius: '4px',
-                      backgroundColor: '#7788bb',
-                      fontSize: '11px',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: '#6677aa',
-                      },
-                    }}
-                  >
-                    Add Procedure
-                  </Button>
-                </Box>
+              {!isExpanded && (
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: 120, justifyContent: 'flex-end' }}>
+                  {!displayItem.success && <NotInterested sx={{ fontSize: 18, color: '#d32f2f', cursor: 'pointer' }} />}
+                  <Print sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+                  <Edit
+                    sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }}
+                    onClick={(e) => { e.stopPropagation(); handleCollapsedEditClick(displayItem); }}
+                  />
+                </Stack>
               )}
-            </Box>
-          )}
-        </Box>
+            </Paper>
+
+            {/* Expanded Details */}
+            {isExpanded && displayItem.details && (
+              <Box sx={{ border: '1px solid #a5b4fc', borderTop: 'none', borderRadius: '0 0 4px 4px', bgcolor: '#f8faff', p: '4px 0' }}>
+                <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />
+
+                <Box sx={{ px: '12px', mb: 0.5 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center', mb: 0.5 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
+                      <SummaryLabel label="Ins WO"          value={displayItem.summary?.insWo   || '$0.00'} />
+                      <SummaryLabel label="Pt Balance"      value={displayItem.summary?.ptBal   || '$0.00'} isRed={displayItem.isAdjustment && displayItem.summary?.ptBal !== '$0.00'} />
+                      <SummaryLabel label="Ins Balance"     value={displayItem.summary?.insBal  || '$0.00'} />
+                      <SummaryLabel label="Invoice Balance" value={displayItem.summary?.invBal  || '$0.00'} isRed={displayItem.isAdjustment && displayItem.summary?.invBal !== '$0.00'} />
+                    </Box>
+                    <Typography variant="caption" sx={{ color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
+                      {displayItem.initials}
+                    </Typography>
+                    <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="flex-end">
+                      <CalendarMonth sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleCalendarClick(displayItem, e); }} />
+                      <Tune sx={{ fontSize: 18, color: '#7e57c2', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }} />
+                      <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }} />
+                      <IconCashMinus size={18} />
+                    </Stack>
+                  </Box>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 40px 120px', alignItems: 'center' }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, ml: '40px' }}>
+                      <SummaryLabel label="Applied WO" value={displayItem.summary?.appliedWo || '$0.00'} />
+                      <SummaryLabel label="Pt Paid"    value={displayItem.summary?.ptPaid    || '$0.00'} />
+                      <SummaryLabel label="Ins Paid"   value={displayItem.summary?.insPaid   || '$0.00'} />
+                      <Box />
+                    </Box>
+                    <Box /><Box />
+                  </Box>
+                </Box>
+
+                <Divider sx={{ borderColor: '#eef2ff', mb: 0.5 }} />
+
+                {displayItem.details.map((detail, dIdx) => (
+                  <LedgerSubRow
+                    key={dIdx}
+                    date={displayItem.date}
+                    title={detail.title}
+                    amount={detail.amount}
+                    id={detail.id}
+                    initials={displayItem.initials}
+                    isPayment={detail.isPayment}
+                    isClaim={detail.isClaim}
+                    showExtendedTools={!detail.isClaim && !detail.title.includes('(uncollected)')}
+                    adjustmentType={adjustmentTypeMap[`${displayItem.id}-${detail.id}`]}
+                    onVoidClick={handleVoidClick}
+                    onEditClick={handleEditClick}
+                    onRefreshClick={handleRefreshClick}
+                    voidData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment, isGrouped: detail.isGrouped }}
+                    editData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
+                    refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
+                    isAdjustment={displayItem.isAdjustment}
+                    onMagicStickClick={(e) => setMagicStickAnchorEl(e.currentTarget)}
+                    onSettingsClick={(data) => { setEditInvoiceTarget(data); setShowEditInvoice(true); }}
+                    onAdjustmentSelect={(e) => { setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }}
+                    onPrintClick={(e) => { setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }}
+                  />
+                ))}
+
+                {displayItem.details?.length > 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', p: '2px 12px' }}>
+                    <Button
+                      variant="contained" size="small"
+                      onClick={() => handleAddProcedureClick({ invoiceId: displayItem.id, date: displayItem.date })}
+                      sx={{ padding: '4px 16px', borderRadius: '4px', backgroundColor: '#7788bb', fontSize: '11px', color: 'white', '&:hover': { backgroundColor: '#6677aa' } }}
+                    >
+                      Add Procedure
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </Box>
         );
       })}
-      <BackdateTransactionPopup 
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        onDone={handleBackdateDone}
-      />
-      <PrintOptionsDropdown 
-        anchorEl={printAnchorEl}
-        open={Boolean(printAnchorEl)}
-        onClose={handlePrintClose}
-        onSelect={handlePrintSelect}
-      />
-      <AdjustmentOptionsDropdown 
-        anchorEl={adjAnchorEl}
-        open={Boolean(adjAnchorEl)}
-        onClose={handleAdjClose}
-        onSelect={handleAdjustmentSelect}
-      />
 
-      <Dialog 
-        open={showAdjustDialog} 
-        onClose={() => setShowAdjustDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
-      >
+      {/* ── Popovers / Dropdowns ── */}
+      <BackdateTransactionPopup open={Boolean(anchorEl)} anchorEl={anchorEl} onClose={() => setAnchorEl(null)} onDone={handleBackdateDone} />
+      <PrintOptionsDropdown anchorEl={printAnchorEl} open={Boolean(printAnchorEl)} onClose={() => setPrintAnchorEl(null)} onSelect={handlePrintSelect} />
+      <AdjustmentOptionsDropdown anchorEl={adjAnchorEl} open={Boolean(adjAnchorEl)} onClose={() => setAdjAnchorEl(null)} onSelect={handleAdjustmentSelect} />
+
+      {/* Adjustment sub-dialogs */}
+      {[
+        { open: showAdjustDialog,     onClose: () => setShowAdjustDialog(false),     Component: CreditSubtractionDialog },
+        { open: showDebitDialog,      onClose: () => setShowDebitDialog(false),      Component: DebitAdjustmentDialog },
+        { open: showMembershipDialog, onClose: () => setShowMembershipDialog(false), Component: MembershipAdjustmentDialog },
+        { open: showWriteOffDialog,   onClose: () => setShowWriteOffDialog(false),   Component: InsuranceWriteOffDialog },
+      ].map(({ open, onClose, Component }, i) => (
+        <Dialog key={i} open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}>
+          <DialogContent sx={{ p: 0 }}><Component onClose={onClose} /></DialogContent>
+        </Dialog>
+      ))}
+
+      <VoidConfirmationDialog open={showVoidDialog} onClose={handleVoidCancel} onConfirm={handleVoidConfirm} voidTarget={voidTarget} />
+
+      <Dialog open={showCourtesyCredit} onClose={handleCourtesyCreditCancel} maxWidth="md" fullWidth
+        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden', bgcolor: 'transparent', boxShadow: 'none' } }}>
         <DialogContent sx={{ p: 0 }}>
-          <CreditSubtractionDialog onClose={() => setShowAdjustDialog(false)} />
+          <CourtesyCreditComponent adjustmentData={editTarget} onSave={handleCourtesyCreditSave} onCancel={handleCourtesyCreditCancel} showAmountSection={false} />
         </DialogContent>
       </Dialog>
-      <Dialog 
-        open={showDebitDialog} 
-        onClose={() => setShowDebitDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
-      >
+
+      <UndoConfirmationDialog open={showUndoDialog} onClose={handleUndoCancel} onConfirm={handleUndoConfirm} />
+
+      {/* Statement dialogs */}
+      {[
+        { open: showSimpleStatement,   onClose: () => setShowSimpleStatement(false),   Component: SimpleStatement },
+        { open: showDetailedStatement, onClose: () => setShowDetailedStatement(false), Component: DetailedStatement },
+      ].map(({ open, onClose, Component }, i) => (
+        <Dialog key={i} open={open} onClose={onClose} maxWidth={false} fullWidth
+          PaperProps={{ sx: { borderRadius: 0, overflow: 'hidden', maxHeight: '90vh', margin: 0, bgcolor: '#f5f5f5', width: '880px', maxWidth: '90vw' } }}
+          sx={{ '& .MuiDialog-paper': { margin: 0, maxWidth: '100%' } }}>
+          <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}><Component onClose={onClose} /></DialogContent>
+        </Dialog>
+      ))}
+
+      <Dialog open={showEditDeposit} onClose={handleEditDepositCancel} maxWidth={false}
+        PaperProps={{ sx: { minWidth: 220, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', bgcolor: '#fff', borderRadius: '4px', overflow: 'hidden' } }}>
         <DialogContent sx={{ p: 0 }}>
-          <DebitAdjustmentDialog onClose={() => setShowDebitDialog(false)} />
+          <EditDeposit depositData={editDepositTarget} onSave={handleEditDepositSave} onCancel={handleEditDepositCancel} />
         </DialogContent>
       </Dialog>
-      <Dialog 
-        open={showMembershipDialog} 
-        onClose={() => setShowMembershipDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
-      >
+
+      <Dialog open={showInvoiceModal} onClose={handleInvoiceModalCancel} maxWidth={false} fullWidth
+        PaperProps={{ sx: { borderRadius: '2px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', border: '1px solid #ccc' } }}>
         <DialogContent sx={{ p: 0 }}>
-          <MembershipAdjustmentDialog onClose={() => setShowMembershipDialog(false)} />
-        </DialogContent>
-      </Dialog>
-      <Dialog 
-        open={showWriteOffDialog} 
-        onClose={() => setShowWriteOffDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}
-      >
-        <DialogContent sx={{ p: 0 }}>
-          <InsuranceWriteOffDialog onClose={() => setShowWriteOffDialog(false)} />
+          <InvoiceModal invoiceData={invoiceModalData} onSave={handleInvoiceModalSave} onCancel={handleInvoiceModalCancel} />
         </DialogContent>
       </Dialog>
 
-      {/* Void Confirmation Dialog */}
-      <VoidConfirmationDialog
-        open={showVoidDialog}
-        onClose={handleVoidCancel}
-        onConfirm={handleVoidConfirm}
-        voidTarget={voidTarget}
-      />
-
-      {/* Courtesy Credit Dialog */}
-      <Dialog
-        open={showCourtesyCredit}
-        onClose={handleCourtesyCreditCancel}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: '4px',
-            overflow: 'hidden',
-            bgcolor: 'transparent',
-            boxShadow: 'none'
-          }
-        }}
-      >
-        <DialogContent sx={{ p: 0 }}>
-          <CourtesyCreditComponent
-            adjustmentData={editTarget}
-            onSave={handleCourtesyCreditSave}
-            onCancel={handleCourtesyCreditCancel}
-            showAmountSection={false}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Undo Confirmation Dialog */}
-      <UndoConfirmationDialog
-        open={showUndoDialog}
-        onClose={handleUndoCancel}
-        onConfirm={handleUndoConfirm}
-      />
-
-      {/* Simple Statement Dialog */}
-      <Dialog
-        open={showSimpleStatement}
-        onClose={() => setShowSimpleStatement(false)}
-        maxWidth={false}
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            overflow: 'hidden',
-            maxHeight: '90vh',
-            margin: 0,
-            bgcolor: '#f5f5f5',
-            width: '880px',
-            maxWidth: '90vw'
-          }
-        }}
-        sx={{
-          '& .MuiDialog-paper': {
-            margin: 0,
-            maxWidth: '100%'
-          }
-        }}
-      >
-        <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
-          <SimpleStatement onClose={() => setShowSimpleStatement(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Detailed Statement Dialog */}
-      <Dialog
-        open={showDetailedStatement}
-        onClose={() => setShowDetailedStatement(false)}
-        maxWidth={false}
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            overflow: 'hidden',
-            maxHeight: '90vh',
-            margin: 0,
-            bgcolor: '#f5f5f5',
-            width: '880px',
-            maxWidth: '90vw'
-          }
-        }}
-        sx={{
-          '& .MuiDialog-paper': {
-            margin: 0,
-            maxWidth: '100%'
-          }
-        }}
-      >
-        <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}>
-          <DetailedStatement onClose={() => setShowDetailedStatement(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Deposit Dialog */}
-      <Dialog
-        open={showEditDeposit}
-        onClose={handleEditDepositCancel}
-        maxWidth={false}
-        PaperProps={{
-          sx: {
-            minWidth: 220,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            bgcolor: '#fff',
-            borderRadius: '4px',
-            overflow: 'hidden'
-          }
-        }}
-      >
-        <DialogContent sx={{ p: 0 }}>
-          <EditDeposit
-            depositData={editDepositTarget}
-            onSave={handleEditDepositSave}
-            onCancel={handleEditDepositCancel}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Invoice Modal Dialog */}
-      <Dialog
-        open={showInvoiceModal}
-        onClose={handleInvoiceModalCancel}
-        maxWidth={false}
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: '2px',
-            overflow: 'hidden',
-            bgcolor: '#fff',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            border: '1px solid #ccc'
-          }
-        }}
-      >
-        <DialogContent sx={{ p: 0 }}>
-          <InvoiceModal
-            invoiceData={invoiceModalData}
-            onSave={handleInvoiceModalSave}
-            onCancel={handleInvoiceModalCancel}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Magic Stick (AutoFix) Menu */}
-      <Menu
-        anchorEl={magicStickAnchorEl}
-        open={Boolean(magicStickAnchorEl)}
-        onClose={handleMagicStickClose}
-        PaperProps={{
-          sx: {
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            border: '1px solid #eef2ff',
-            '& .MuiMenuItem-root': {
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#444',
-              py: 1
-            }
-          }
-        }}
-      >
-        <MenuItem onClick={() => {
-          handleMagicStickClose();
-          setShowTransferConfirmation(true);
-        }}>
+      <Menu anchorEl={magicStickAnchorEl} open={Boolean(magicStickAnchorEl)} onClose={() => setMagicStickAnchorEl(null)}
+        PaperProps={{ sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: '1px solid #eef2ff', '& .MuiMenuItem-root': { fontSize: '12px', fontWeight: 500, color: '#444', py: 1 } } }}>
+        <MenuItem onClick={() => { setMagicStickAnchorEl(null); setShowTransferConfirmation(true); }}>
           Transfer Outstanding To Patient
         </MenuItem>
       </Menu>
@@ -1128,34 +570,16 @@ const LedgerList = ({ patient, expanded, items = [] }) => {
       <TransferCreditConfirmationDialog
         open={showTransferConfirmation}
         onClose={() => setShowTransferConfirmation(false)}
-        onConfirm={() => {
-          console.log('Transfer confirmed');
-          setShowTransferConfirmation(false);
-        }}
+        onConfirm={() => setShowTransferConfirmation(false)}
       />
 
-      {/* Edit Invoice Details Dialog */}
       {showEditInvoice && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
+        <Box
+          sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}
           onClick={() => setShowEditInvoice(false)}
         >
           <Box onClick={(e) => e.stopPropagation()}>
-            <EditInvoiceDetailsDialog 
-              onClose={() => setShowEditInvoice(false)} 
-              invoiceId={editInvoiceTarget?.id}
-            />
+            <EditInvoiceDetailsDialog onClose={() => setShowEditInvoice(false)} invoiceId={editInvoiceTarget?.id} />
           </Box>
         </Box>
       )}

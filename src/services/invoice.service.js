@@ -10,7 +10,7 @@ export const invoiceService = {
    * Get all invoices with pagination and filters
    */
   async getAllInvoices(options = {}) {
-    const { page = 1, limit = 10, search = '', status = '', patientId = '', startDate = '', endDate = '' } = options;
+    const { page = 1, limit = 10, search = '', status = '', patientId = '', startDate = '', endDate = '', includeItems = false } = options;
     const params = new URLSearchParams();
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
@@ -19,6 +19,7 @@ export const invoiceService = {
     if (patientId) params.append('patientId', patientId);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (includeItems) params.append('includeItems', 'true');
     const response = await apiClient.get(`/invoices?${params.toString()}`);
     const data = response.data.data;
     // Normalize invoices: map backend fields to frontend expected fields
@@ -26,6 +27,12 @@ export const invoiceService = {
       data.invoices = data.invoices.map(invoice => ({
         ...invoice,
         id: invoice._id || invoice.id,
+        // If backend returned items inline, map them to lineItems
+        lineItems: invoice.lineItems || invoice.items?.map(item => ({
+          ...item,
+          id: item._id || item.id,
+          total: item.totalPrice,
+        })) || undefined,
         // Prefer populated nested objects from backend; fallback only when id field itself is an object.
         patient:
           invoice.patient ||
@@ -73,7 +80,18 @@ export const invoiceService = {
   async createInvoiceFromAppointment(appointmentId, invoiceData) {
     const response = await apiClient.post(`/invoices/from-appointment/${appointmentId}`, invoiceData);
     const invoice = response.data.data.invoice;
-    // Normalize to ensure 'id' field exists
+    return {
+      ...invoice,
+      id: invoice._id || invoice.id,
+    };
+  },
+
+  /**
+   * Create standalone invoice directly with items
+   */
+  async createStandaloneInvoice(invoiceData) {
+    const response = await apiClient.post('/invoices', invoiceData);
+    const invoice = response.data.data;
     return {
       ...invoice,
       id: invoice._id || invoice.id,
@@ -110,6 +128,14 @@ export const invoiceService = {
   async updateInvoiceItem(invoiceId, itemId, updates) {
     const response = await apiClient.patch(`/invoices/${invoiceId}/items/${itemId}`, updates);
     return response.data.data;
+  },
+
+  /**
+   * Mark a line item as (partially) paid — stores paidAmount in BillingNote
+   */
+  async markItemPaid(invoiceId, itemId, amount) {
+    const response = await apiClient.patch(`/invoices/${invoiceId}/items/${itemId}/paid`, { amount });
+    return response.data;
   },
 
   /**

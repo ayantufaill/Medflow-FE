@@ -105,6 +105,16 @@ export const claimService = {
   },
 
   /**
+   * Create a manual claim from selected line items
+   * @param {Object} claimData - Manual claim payload
+   * @returns {Promise<Object>} Created claim
+   */
+  async createManualClaim(claimData) {
+    const response = await apiClient.post(`/claims/manual`, claimData);
+    return response.data.data.claim;
+  },
+
+  /**
    * Update claim
    * @param {string} claimId - Claim ID
    * @param {Object} updates - Claim updates

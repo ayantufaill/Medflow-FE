@@ -19,6 +19,7 @@ import dashboardGoalsReducer from './slices/dashboardGoalsSlice';
 import statementFormsReducer from './slices/statementFormsSlice';
 import coverageShortcutsReducer from './slices/coverageShortcutsSlice';
 import clinicalExamSessionReducer from './slices/clinicalExamSessionSlice';
+import claimReducer from './slices/claimSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -41,6 +42,7 @@ const appReducer = combineReducers({
   dashboardGoals: dashboardGoalsReducer,
   statementForms: statementFormsReducer,
   coverageShortcuts: coverageShortcutsReducer,
+  claims: claimReducer,
 });
 
 const rootReducer = (state, action) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -23,15 +23,53 @@ import {
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import AccountNotesDialog from '../../../../components/finance/AccountNotesDialog';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchArAgingReport, selectArAging, selectArAgingLoading } from '../../../../store/slices/billingSlice';
+import { reportingService } from '../../../../services/reporting.service';
 
 const AgingReport = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [showAccountNotes, setShowAccountNotes] = useState(false);
+  const [hidePatientNames, setHidePatientNames] = useState(false);
+  
+  const dispatch = useDispatch();
+  const arAging = useSelector(selectArAging);
+  const loading = useSelector(selectArAgingLoading);
+  const reportData = arAging || [];
+
+  const [archivedDate, setArchivedDate] = useState('');
+  const [archivedData, setArchivedData] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchArAgingReport());
+  }, [dispatch]);
+
+  const handleDateSelect = async (e) => {
+    const date = e.target.value;
+    setArchivedDate(date);
+    if (!date) {
+      setArchivedData([]);
+      return;
+    }
+    
+    setArchivedLoading(true);
+    try {
+      const data = await reportingService.getFinancialReport('aging', { date });
+      setArchivedData(data);
+    } catch (error) {
+      console.error('Failed to fetch archived report', error);
+    } finally {
+      setArchivedLoading(false);
+    }
+  };
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
 
-  const agingBuckets = [
+  const agingBuckets = useMemo(() => [
     '0 - 30 days',
     '31 - 60 days',
     '61 - 90 days',
@@ -39,46 +77,30 @@ const AgingReport = () => {
     '121 - 150 days',
     '151 - 180 days',
     '> 180 day',
-  ];
+  ], []);
 
-  const dummyData = [
-    {
-      flags: [],
-      name: 'John Doe',
-      buckets: {
-        '0 - 30 days': { pt: 1904.33, ins: 2000.00 },
-        '31 - 60 days': { pt: 0, ins: 0 },
-        '61 - 90 days': { pt: 0, ins: 0 },
-        '91 - 120 days': { pt: 0, ins: 0 },
-        '121 - 150 days': { pt: 0, ins: 0 },
-        '151 - 180 days': { pt: 0, ins: 0 },
-        '> 180 day': { pt: 0, ins: 0 },
-      },
-      total: 1904.33,
-      totalOwings: 3904.33,
-      paymentPlan: 0,
-      credit: 0,
-      lastBilled: '',
-    },
-    {
-      flags: [],
-      name: 'Jane Smith',
-      buckets: {
-        '0 - 30 days': { pt: 1724.00, ins: 2000.00 },
-        '31 - 60 days': { pt: 0, ins: 0 },
-        '61 - 90 days': { pt: 0, ins: 0 },
-        '91 - 120 days': { pt: 0, ins: 0 },
-        '121 - 150 days': { pt: 0, ins: 0 },
-        '151 - 180 days': { pt: 0, ins: 0 },
-        '> 180 day': { pt: 0, ins: 0 },
-      },
-      total: 1724.00,
-      totalOwings: 3724.00,
-      paymentPlan: 0,
-      credit: 0,
-      lastBilled: '',
-    }
-  ];
+  const totals = useMemo(() => {
+    const sums = {
+      buckets: {},
+      totalOwings: 0,
+      totalCredit: 0
+    };
+    agingBuckets.forEach(b => sums.buckets[b] = 0);
+
+    reportData.forEach(row => {
+      agingBuckets.forEach(b => {
+        const bData = row.buckets?.[b];
+        if (bData) {
+          sums.buckets[b] += (bData.pt || 0) + (bData.ins || 0);
+        }
+      });
+      sums.totalOwings += (row.totalOwings || 0);
+      sums.totalCredit += (row.credit || 0);
+    });
+    return sums;
+  }, [reportData, agingBuckets]);
+
+  // dummyData is replaced by reportData from API
 
   const renderFilterSelect = (label, options, defaultValue) => (
     <Select
@@ -132,7 +154,11 @@ const AgingReport = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
               <Select size="small" defaultValue="high-low" sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                <MenuItem value="high-low">High to Low Owings</MenuItem>
+                <MenuItem value="high-low">High to low owings</MenuItem>
+                <MenuItem value="carriers">Carriers</MenuItem>
+                <MenuItem value="flags">Flags</MenuItem>
+                <MenuItem value="last-billed">Last Billed</MenuItem>
+                <MenuItem value="patient-name">By Patient Name</MenuItem>
               </Select>
               <FormControlLabel 
                 control={<Checkbox size="small" defaultChecked />} 
@@ -171,7 +197,7 @@ const AgingReport = () => {
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <FormControlLabel 
-                control={<Checkbox size="small" />} 
+                control={<Checkbox size="small" checked={hidePatientNames} onChange={(e) => setHidePatientNames(e.target.checked)} />} 
                 label={<Typography variant="caption">Hide Patient Names</Typography>} 
               />
               <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
@@ -186,7 +212,7 @@ const AgingReport = () => {
                 <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1 } }}>
                   <TableCell padding="checkbox"><Checkbox size="small" /></TableCell>
                   <TableCell>Flags</TableCell>
-                  <TableCell>Patient Name</TableCell>
+                  {!hidePatientNames && <TableCell>Patient Name</TableCell>}
                   {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
                   <TableCell align="right">Total</TableCell>
                   <TableCell align="right">Total owings</TableCell>
@@ -197,19 +223,27 @@ const AgingReport = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dummyData.map((row, idx) => (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                      <Typography variant="body2" color="text.secondary">Loading...</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : reportData.map((row, idx) => (
                   <React.Fragment key={idx}>
                     <TableRow sx={{ '& td': { fontSize: '0.75rem', py: 0.5, verticalAlign: 'top' } }}>
                       <TableCell padding="checkbox"><Checkbox size="small" /></TableCell>
                       <TableCell></TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
+                      {!hidePatientNames && (
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
+                            </Box>
+                            <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
                           </Box>
-                          <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
-                        </Box>
-                      </TableCell>
+                        </TableCell>
+                      )}
                       {agingBuckets.map(bucket => (
                         <TableCell key={bucket} align="right">
                           <Box>
@@ -227,7 +261,10 @@ const AgingReport = () => {
                       <TableCell align="right">${row.credit.toFixed(2)}</TableCell>
                       <TableCell>{row.lastBilled}</TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main', cursor: 'pointer' }}>
+                        <Box 
+                          sx={{ display: 'flex', alignItems: 'center', color: 'success.main', cursor: 'pointer' }}
+                          onClick={() => setShowAccountNotes(true)}
+                        >
                           <NoteAddIcon sx={{ fontSize: 14, mr: 0.5 }} />
                           <Typography variant="caption">add account note</Typography>
                         </Box>
@@ -245,19 +282,19 @@ const AgingReport = () => {
               <TableBody>
                 <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
                   <TableCell sx={{ width: '25%', fontWeight: 600 }}>Total Patients Balances</TableCell>
-                  {agingBuckets.map((bucket, i) => (
-                    <TableCell key={i} align="right" sx={{ width: '8%', fontWeight: 600 }}>
-                      ${i === 0 ? '7,452.05' : i === 1 ? '1,074.18' : i === 2 ? '935.56' : i === 3 ? '764.50' : i === 4 ? '83.00' : i === 5 ? '2,482.12' : '3,951.58'}
+                  {agingBuckets.map((bucket) => (
+                    <TableCell key={bucket} align="right" sx={{ width: '8%', fontWeight: 600 }}>
+                      ${totals.buckets[bucket].toFixed(2)}
                     </TableCell>
                   ))}
-                  <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>$16,742.99</TableCell>
+                  <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>${totals.totalOwings.toFixed(2)}</TableCell>
                   <TableCell sx={{ width: '15%' }}></TableCell>
                 </TableRow>
                 <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
                   <TableCell sx={{ fontWeight: 600 }}>Total Account Credit</TableCell>
                   {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
                   <TableCell></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>$10,546.81</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>${totals.totalCredit.toFixed(2)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -268,36 +305,88 @@ const AgingReport = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
             <Typography variant="caption" sx={{ fontWeight: 600 }}>Select report by date:</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e0e0e0', pb: 0.5, width: 200 }}>
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', flexGrow: 1 }}>Enter date</Typography>
-              <Typography sx={{ fontSize: '1rem', color: 'text.secondary' }}>📅</Typography>
+              <input 
+                type="date" 
+                value={archivedDate} 
+                onChange={handleDateSelect} 
+                style={{ border: 'none', outline: 'none', width: '100%', color: '#666', fontSize: '0.875rem' }} 
+              />
             </Box>
           </Box>
 
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                  <TableCell sx={{ fontSize: '0.875rem', fontWeight: 700, py: 1 }}>Name</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {[
-                  '05/07/2026', '05/06/2026', '05/05/2026', '05/04/2026', '05/03/2026',
-                  '05/02/2026', '05/01/2026', '04/30/2026', '04/29/2026', '04/28/2026',
-                  '04/27/2026', '04/26/2026', '04/25/2026', '04/24/2026', '04/23/2026',
-                  '04/22/2026'
-                ].map((date) => (
-                  <TableRow key={date} sx={{ '&:hover': { backgroundColor: '#f1f5f9' } }}>
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Typography variant="caption" color="primary" sx={{ fontWeight: 500, cursor: 'pointer' }}>
-                        Report - {date}
-                      </Typography>
-                    </TableCell>
+          {archivedDate && (
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1 } }}>
+                    <TableCell>Patient Name</TableCell>
+                    <TableCell align="right">Total Owings</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {archivedLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">Loading...</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : archivedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">No report data found for this date.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : archivedData.map((row, idx) => (
+                    <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5 } }}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
+                          </Box>
+                          <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>${row.totalOwings?.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      )}
+
+      {showAccountNotes && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowAccountNotes(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '800px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '8px',
+              overflow: 'visible',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AccountNotesDialog 
+              onClose={() => setShowAccountNotes(false)}
+            />
+          </Box>
         </Box>
       )}
     </Box>

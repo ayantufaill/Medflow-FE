@@ -62,10 +62,12 @@ const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
     }
   };
 
-  const filteredFees = fees.filter(fee => 
-    fee.procCode?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    fee.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFees = fees.filter(fee => {
+    const code = fee.code || fee.procCode || '';
+    const desc = fee.name || fee.description || '';
+    return code.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           desc.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -113,15 +115,19 @@ const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredFees.map((fee, index) => (
+                {filteredFees.map((fee, index) => {
+                  const procCode = fee.code || fee.procCode;
+                  const description = fee.name || fee.description;
+                  const amount = fee.fee !== undefined && fee.fee !== null ? fee.fee : fee.amount;
+                  return (
                   <TableRow key={index} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{fee.procCode}</TableCell>
-                    <TableCell>{fee.description}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{procCode}</TableCell>
+                    <TableCell>{description}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600, color: '#2e7d32' }}>
-                      {typeof fee.amount === 'number' ? `$${fee.amount.toFixed(2)}` : fee.amount}
+                      {typeof amount === 'number' ? `$${amount.toFixed(2)}` : amount || '-'}
                     </TableCell>
                   </TableRow>
-                ))}
+                )})}
                 {filteredFees.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#666' }}>

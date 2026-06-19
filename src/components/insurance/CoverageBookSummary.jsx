@@ -1,6 +1,7 @@
+import React, { useState } from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Typography, Box, Button, Checkbox, Select, MenuItem
+  Paper, Typography, Box, Button, Checkbox, Select, MenuItem, Dialog, IconButton
 } from "@mui/material";
 import { AutoFixNormal as ToothIcon } from "@mui/icons-material";
 
@@ -58,9 +59,23 @@ const CoverageBookSummary = ({
     }
   };
 
-  const handleTeethClick = (index) => {
-    console.log('Teeth clicked for row:', index);
-    // TODO: Implement teeth selection logic
+  const [activeToothSelection, setActiveToothSelection] = useState(null);
+
+  const handleToothToggle = (tooth) => {
+    if (activeToothSelection === null) return;
+    
+    let updatedData = coverageData.length > 0 ? [...coverageData] : rowData.map(row => ({ ...row }));
+    const proc = updatedData[activeToothSelection];
+    if (!proc) return;
+    
+    let currentTeeth = proc.teethLimit ? proc.teethLimit.split(',').map(t => t.trim()).filter(Boolean) : [];
+    if (currentTeeth.includes(tooth)) {
+      currentTeeth = currentTeeth.filter(t => t !== tooth);
+    } else {
+      currentTeeth.push(tooth);
+    }
+    
+    handleFieldChange(activeToothSelection, 'teethLimit', currentTeeth.join(', '));
   };
 
   return (
@@ -201,7 +216,14 @@ const CoverageBookSummary = ({
                 </TableCell>
                 {/* Teeth Limit */}
                 <TableCell align="center" sx={localBodyCellStyle}>
-                  <ToothIcon sx={{ fontSize: 14, color: "#1976d2", cursor: 'pointer' }} onClick={() => handleTeethClick(index)} />
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5, cursor: 'pointer' }} onClick={() => setActiveToothSelection(index)}>
+                    <ToothIcon sx={{ fontSize: 14, color: "#1976d2" }} />
+                    {row.teethLimit && (
+                      <Typography sx={{ fontSize: '0.6rem', color: '#1976d2' }}>
+                        {row.teethLimit.length > 5 ? row.teethLimit.substring(0, 5) + '...' : row.teethLimit}
+                      </Typography>
+                    )}
+                  </Box>
                 </TableCell>
                 {/* Down-grade */}
                 <TableCell sx={localBodyCellStyle}>
@@ -357,7 +379,14 @@ const CoverageBookSummary = ({
                 </TableCell>
                 {/* Teeth Limit */}
                 <TableCell align="center" sx={localBodyCellStyle}>
-                  <ToothIcon sx={{ fontSize: 14, color: "#1976d2", cursor: 'pointer' }} onClick={() => handleTeethClick(index)} />
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5, cursor: 'pointer' }} onClick={() => setActiveToothSelection(index)}>
+                    <ToothIcon sx={{ fontSize: 14, color: "#1976d2" }} />
+                    {row.teethLimit && (
+                      <Typography sx={{ fontSize: '0.6rem', color: '#1976d2' }}>
+                        {row.teethLimit.length > 5 ? row.teethLimit.substring(0, 5) + '...' : row.teethLimit}
+                      </Typography>
+                    )}
+                  </Box>
                 </TableCell>
                 {/* Down-grade */}
                 <TableCell sx={localBodyCellStyle}>
@@ -417,6 +446,73 @@ const CoverageBookSummary = ({
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Tooth Selection Dialog */}
+      <Dialog open={activeToothSelection !== null} onClose={() => setActiveToothSelection(null)} maxWidth="sm">
+        <Box sx={{ position: 'relative', p: 2, minWidth: '400px' }}>
+          <Typography variant="subtitle1" align="center" sx={{ mb: 2, fontWeight: 500, color: '#444' }}>
+            Select Tooth
+          </Typography>
+          <IconButton onClick={() => setActiveToothSelection(null)} sx={{ position: 'absolute', top: 4, right: 4, p: 0.5 }}>
+            <Typography sx={{ fontSize: '1rem', color: '#888' }}>x</Typography>
+          </IconButton>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+              {['1', '2', '3', '4', '5', '6', '7', '8', 'Q1', 'Q2', '9', '10', '11', '12', '13', '14', '15', '16'].map(t => {
+                const dataArray = coverageData.length > 0 ? coverageData : rowData;
+                const isSelected = activeToothSelection !== null && dataArray[activeToothSelection]?.teethLimit?.includes(t);
+                const isQ = t.startsWith('Q');
+                return (
+                  <Typography
+                    key={t}
+                    onClick={() => handleToothToggle(t)}
+                    sx={{ 
+                      fontSize: '0.75rem', 
+                      width: '24px', 
+                      textAlign: 'center', 
+                      cursor: 'pointer',
+                      color: isSelected ? '#1976d2' : '#555',
+                      fontWeight: isSelected ? 800 : (isQ ? 700 : 400),
+                      userSelect: 'none',
+                      ml: (t === 'Q1' || t === '9') ? 3 : 0,
+                      mr: (t === 'Q2') ? 3 : 0
+                    }}
+                  >
+                    {t}
+                  </Typography>
+                );
+              })}
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+              {['32', '31', '30', '29', '28', '27', '26', '25', 'Q4', 'Q3', '24', '23', '22', '21', '20', '19', '18', '17'].map(t => {
+                const dataArray = coverageData.length > 0 ? coverageData : rowData;
+                const isSelected = activeToothSelection !== null && dataArray[activeToothSelection]?.teethLimit?.includes(t);
+                const isQ = t.startsWith('Q');
+                return (
+                  <Typography
+                    key={t}
+                    onClick={() => handleToothToggle(t)}
+                    sx={{ 
+                      fontSize: '0.75rem', 
+                      width: '24px', 
+                      textAlign: 'center', 
+                      cursor: 'pointer',
+                      color: isSelected ? '#1976d2' : '#555',
+                      fontWeight: isSelected ? 800 : (isQ ? 700 : 400),
+                      userSelect: 'none',
+                      ml: (t === 'Q4' || t === '24') ? 3 : 0,
+                      mr: (t === 'Q3') ? 3 : 0
+                    }}
+                  >
+                    {t}
+                  </Typography>
+                );
+              })}
+            </Box>
+          </Box>
+        </Box>
+      </Dialog>
     </Box>
   );
 };
