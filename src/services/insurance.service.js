@@ -74,7 +74,13 @@ export const insuranceCompanyService = {
     const response = await apiClient.delete(`/insurance-companies/${insuranceCompanyId}`);
     return response.data.data;
   },
+  
+  async addMember(patientId, payload) {
+    const response = await apiClient.post(`/patients/${patientId}/memberships`, payload);
+    return response.data.data;
+  },
 };
+
 
 export const insurancePlanService = {
   async getInsurancePlans(page = 1, limit = 100, search = '') {

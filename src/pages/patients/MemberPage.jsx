@@ -212,9 +212,7 @@ const MemberPage = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // await insuranceService.addMember(patientId, formData);
-      console.log('Saving member data:', formData);
+      await insuranceCompanyService.addMember(patientId, formData);
       showSnackbar('Member saved successfully', 'success');
       navigate(`/patients/details/${patientId}?tab=insurance`);
     } catch (err) {
@@ -224,6 +222,7 @@ const MemberPage = () => {
       setLoading(false);
     }
   };
+
 
   const handleCancel = () => {
     navigate(`/patients/details/${patientId}?tab=insurance`);
