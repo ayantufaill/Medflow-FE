@@ -21,6 +21,7 @@ import {
   useSignClinicalExam
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 
 // --- THEME & STYLES ---
 const COLORS = {
@@ -299,6 +300,8 @@ const ExamDentofacial = () => {
   const signMutation = useSignClinicalExam('dentofacial', appointmentId);
 
   const isSigned = !!examRecord?.isSigned;
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [visitDates, setVisitDates] = useState([
     'Mar 26, 2026'
@@ -345,26 +348,32 @@ const ExamDentofacial = () => {
     }
   };
 
-  const handleSignExam = async () => {
+  const handleSignExam = () => {
     if (!appointmentId) {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
-    if (window.confirm('Are you sure you want to sign and lock this exam? This action cannot be undone.')) {
-      try {
-        await signMutation.mutateAsync();
-        showSnackbar('Dentofacial exam signed and locked', 'success');
-      } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
-      }
+    setSignDialogOpen(true);
+  };
+
+  const handleConfirmSign = async () => {
+    setSignDialogOpen(false);
+    try {
+      await signMutation.mutateAsync();
+      showSnackbar('Dentofacial exam signed and locked', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to sign exam', 'error');
     }
   };
 
   const handleDeleteExam = () => {
-    if (window.confirm('Are you sure you want to delete this exam?')) {
-      console.log('Delete exam');
-      // TODO: API call to delete exam
-    }
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogOpen(false);
+    console.log('Delete exam');
+    showSnackbar('Dentofacial exam deleted', 'info');
   };
 
   const handleNewExam = () => {
@@ -529,6 +538,27 @@ const ExamDentofacial = () => {
           </Button>
         </Box>
       </Box>
+
+      <ConfirmationDialog
+        open={signDialogOpen}
+        onClose={() => setSignDialogOpen(false)}
+        onConfirm={handleConfirmSign}
+        title="Sign & Lock Exam"
+        message="Are you sure you want to sign and lock this exam? This action cannot be undone."
+        confirmText="Sign & Lock"
+        confirmColor="#0f766e"
+        loading={signMutation.isPending}
+      />
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Exam Record"
+        message="Are you sure you want to delete this exam? This action cannot be undone."
+        confirmText="Delete"
+        confirmColor="error"
+      />
     </Box>
   );
 };

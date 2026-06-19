@@ -287,24 +287,26 @@ const RadicularToothStructure = ({
           <Divider />
 
           {/* Posts Row */}
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mt={1.5}>
-            <Stack direction="row" spacing={0.5}>
-              <Typography sx={{ fontSize: fontSize.sm }}>Posts</Typography>
-              <ChatBubbleOutlineIcon sx={{ fontSize: 13, color: '#bbb', mt: 0.3 }} />
+          <Box sx={{ opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mt={1.5}>
+              <Stack direction="row" spacing={0.5}>
+                <Typography sx={{ fontSize: fontSize.sm }}>Posts</Typography>
+                <ChatBubbleOutlineIcon sx={{ fontSize: 13, color: '#bbb', mt: 0.3 }} />
+              </Stack>
+              <Stack direction="row" spacing={1}>
+                <RestorationToothIcon fill="#ffd700" />
+                <RestorationToothIcon fill="#90a4ae" />
+                <RestorationToothIcon fill="#bcaaa4" />
+              </Stack>
             </Stack>
-            <Stack direction="row" spacing={1}>
-              <RestorationToothIcon fill="#ffd700" />
-              <RestorationToothIcon fill="#90a4ae" />
-              <RestorationToothIcon fill="#bcaaa4" />
-            </Stack>
-          </Stack>
 
-          <Divider sx={{ mt: 2 }} />
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1 }}>
-            <Typography sx={{ fontSize: fontSize.xs, color: '#bca67a', fontWeight: fontWeight.bold, fontStyle: 'italic' }}>
-              Resorption, Canal Calcification, Root Fracture
-            </Typography>
-          </Stack>
+            <Divider sx={{ mt: 2 }} />
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1 }}>
+              <Typography sx={{ fontSize: fontSize.xs, color: '#bca67a', fontWeight: fontWeight.bold, fontStyle: 'italic' }}>
+                Resorption, Canal Calcification, Root Fracture
+              </Typography>
+            </Stack>
+          </Box>
           
           {/* Footer Expand Icon */}
           <Box 

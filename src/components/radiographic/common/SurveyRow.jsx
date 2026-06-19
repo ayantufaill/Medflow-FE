@@ -2,8 +2,8 @@ import { Box, Typography, Stack } from "@mui/material";
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { fontSize } from "../../../constants/styles";
 
-const SurveyRow = ({ label, hasChat = false, onLabelClick, children }) => (
-  <Box sx={{ py: 1 }}>
+const SurveyRow = ({ label, hasChat = false, onLabelClick, children, disabled = false }) => (
+  <Box sx={{ py: 1, ...(disabled ? { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' } : {}) }}>
     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
       <Stack 
         direction="row" 

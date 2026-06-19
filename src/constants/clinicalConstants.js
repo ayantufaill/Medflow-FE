@@ -1,0 +1,21 @@
+export const RESTORATIVE_CODES_INFO = {
+  'D2140': { name: 'amalgam - one surface, primary or permanent', fee: '$85.00', treatmentName: 'Amalgam' },
+  'D2150': { name: 'amalgam - two surfaces, primary or permanent', fee: '$115.00', treatmentName: 'Amalgam' },
+  'D2160': { name: 'amalgam - three surfaces, primary or permanent', fee: '$145.00', treatmentName: 'Amalgam' },
+  'D2161': { name: 'amalgam - four or more surfaces, primary or permanent', fee: '$180.00', treatmentName: 'Amalgam' },
+  'D2330': { name: 'resin-based composite - one surface, anterior', fee: '$120.00', treatmentName: 'Resin composite' },
+  'D2331': { name: 'resin-based composite - two surfaces, anterior', fee: '$150.00', treatmentName: 'Resin composite' },
+  'D2332': { name: 'resin-based composite - three surfaces, anterior', fee: '$180.00', treatmentName: 'Resin composite' },
+  'D2335': { name: 'resin-based composite - four or more surfaces or involving incisal angle (anterior)', fee: '$220.00', treatmentName: 'Resin composite' },
+  'D2390': { name: 'resin-based composite crown, anterior', fee: '$290.00', treatmentName: 'Resin composite crown' },
+  'D2391': { name: 'resin-based composite - one surface, posterior', fee: '$130.00', treatmentName: 'Resin composite' },
+  'D2392': { name: 'resin-based composite - two surfaces, posterior', fee: '$164.00', treatmentName: 'Resin composite' },
+  'D2393': { name: 'resin-based composite - three surfaces, posterior', fee: '$195.00', treatmentName: 'Resin composite' },
+  'D2394': { name: 'resin-based composite - four or more surfaces, posterior', fee: '$240.00', treatmentName: 'Resin composite' },
+  'D2410': { name: 'gold foil - one surface', fee: '$310.00', treatmentName: 'Gold foil' },
+  'D2420': { name: 'gold foil - two surfaces', fee: '$420.00', treatmentName: 'Gold foil' },
+  'D2430': { name: 'gold foil - three surfaces', fee: '$530.00', treatmentName: 'Gold foil' },
+  'D2960': { name: 'labial veneer (resin laminate) - direct', fee: '$650.00', treatmentName: 'Labial veneer' },
+  'D2928': { name: 'prefabricated porcelain/ceramic crown - permanent tooth', fee: '$220.00', treatmentName: 'Prefabricated crown' },
+  'Cinsert': { name: '0000', fee: '$0.00', treatmentName: 'Cinsert' }
+};

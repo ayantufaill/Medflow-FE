@@ -75,14 +75,14 @@ const ClinicalNavbar = () => {
   // Navigation sections for the clinical page
   const clinicalSections = [
     { id: 'exam', label: 'EXAM', path: '/clinical/exam/radiographic' },
-    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion/biomechanical' },
+    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion/biomechanical', disabled: true },
     { id: 'treatment', label: 'TREATMENT PLAN', path: '/clinical/treatment-plan' },
-    { id: 'adjunctive', label: 'ADJUNCTIVE THERAPY', path: '/clinical/adjunctive-therapy' },
-    { id: 'rx', label: 'RX', path: '/clinical/rx' },
-    { id: 'referral', label: 'REFERRAL', path: '/clinical/referral' },
+    { id: 'adjunctive', label: 'ADJUNCTIVE THERAPY', path: '/clinical/adjunctive-therapy', disabled: true },
+    { id: 'rx', label: 'RX', path: '/clinical/rx', disabled: true },
+    { id: 'referral', label: 'REFERRAL', path: '/clinical/referral', disabled: true },
     { id: 'progress', label: 'PROGRESS NOTES', path: '/clinical/progress-notes' },
-    { id: 'lab', label: 'LAB CASE', path: '/clinical/lab-case' },
-    { id: 'ai', label: 'AI CONVERSATION', path: '/clinical/ai-conversation' },
+    { id: 'lab', label: 'LAB CASE', path: '/clinical/lab-case', disabled: true },
+    { id: 'ai', label: 'AI CONVERSATION', path: '/clinical/ai-conversation', disabled: true },
   ];
 
   const getInitials = (patient) => {
@@ -158,11 +158,20 @@ const ClinicalNavbar = () => {
       ? formatApptTime(currentAppointment) 
       : 'Loading Appointment...';
 
-    const providerName = currentAppointment?.providerId 
-      ? (typeof currentAppointment.providerId === 'object' 
-        ? `${currentAppointment.providerId.firstName || ''} ${currentAppointment.providerId.lastName || ''}`.trim() 
-        : currentAppointment.providerId)
-      : '';
+    const providerName = (() => {
+      const prov = currentAppointment?.providerId;
+      if (!prov) return '';
+      if (typeof prov !== 'object') return prov;
+      // Backend: { _id, providerCode, userId: { firstName, lastName } }
+      const user = prov.userId;
+      if (user && typeof user === 'object') {
+        const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        if (name) return name;
+      }
+      const directName = `${prov.firstName || ''} ${prov.lastName || ''}`.trim();
+      if (directName) return directName;
+      return prov.providerCode || '';
+    })();
 
     const roomLabel = currentAppointment?.roomId ? `Op ${currentAppointment.roomId}` : '';
 
@@ -273,7 +282,8 @@ const ClinicalNavbar = () => {
             key={section.id}
             variant="text"
             size="small"
-            onClick={() => navigate(section.path)}
+            disabled={section.disabled}
+            onClick={() => !section.disabled && navigate(section.path)}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -288,6 +298,11 @@ const ClinicalNavbar = () => {
               '&:hover': {
                 bgcolor: activeSection === section.id ? 'primary.dark' : 'grey.200',
               },
+              '&.Mui-disabled': {
+                bgcolor: 'grey.100',
+                color: 'grey.400',
+                opacity: 0.7
+              }
             }}
           >
             {section.label}
