@@ -2,11 +2,29 @@ import { Box, Typography, Checkbox, Divider, TextField } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import DiagnosticNavbar from '../../components/clinical/DiagnosticNavbar';
 import React, { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 
 const BiomechanicalPage = () => {
-  const [selected, setSelected] = useState({ 'Structural Compromises': true });
-  const [otherText, setOtherText] = useState('');
-  const [radioValue, setRadioValue] = useState(null); // 'found' or 'not-found'
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.biomechanical);
+  const dispatch = useDispatch();
+
+  const selected = sessionState?.selected || { 'Structural Compromises': true };
+  const setSelected = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(selected) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'biomechanical', data: { selected: newVal } } });
+  };
+
+  const otherText = sessionState?.otherText || '';
+  const setOtherText = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(otherText) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'biomechanical', data: { otherText: newVal } } });
+  };
+
+  const radioValue = sessionState?.radioValue || null;
+  const setRadioValue = (updater) => {
+    const newVal = typeof updater === 'function' ? updater(radioValue) : updater;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'biomechanical', data: { radioValue: newVal } } });
+  };
 
   // Dynamic data structure for assessments
   const assessmentGroups = [

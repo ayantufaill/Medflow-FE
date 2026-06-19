@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
   Button, Select, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
@@ -190,6 +190,9 @@ const PeriodontalExamPage = () => {
 
   const isSigned = !!examRecord?.isSigned;
 
+  const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
+  const dispatch = useDispatch();
+
   const [visitDates, setVisitDates] = useState([
     'Dec 22, 2023',
     'Mar 29, 2024',
@@ -201,7 +204,8 @@ const PeriodontalExamPage = () => {
   ]);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({
+  
+  const defaultSettings = {
     probing: ['3', '2', '3'],
     recession: ['', '1', ''],
     recessionPresent: false,
@@ -210,21 +214,32 @@ const PeriodontalExamPage = () => {
     bleeding: [0, 2], // indices of bleeding sites
     bleedingPresent: false,
     pcs: ['P', 'C', 'S']
-  });
+  };
+  
+  const settings = sessionState?.settings || defaultSettings;
+  const setSettings = (val) => {
+    const newVal = typeof val === 'function' ? val(settings) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { settings: newVal } } });
+  };
 
-  const [chartData, setChartData] = useState(initialToothData());
+  const defaultChartData = initialToothData();
+  const chartData = sessionState?.chartData || defaultChartData;
+  const setChartData = (val) => {
+    const newVal = typeof val === 'function' ? val(chartData) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { chartData: newVal } } });
+  };
 
   // Sync data from database to form state when loaded
   useEffect(() => {
-    if (examRecord?.examData) {
-      if (examRecord.examData.chartData) {
-        setChartData(examRecord.examData.chartData);
-      }
-      if (examRecord.examData.settings) {
-        setSettings(examRecord.examData.settings);
-      }
+    // Only load from DB if we haven't already populated Redux (or if we want DB to take precedence on initial load)
+    // For now, we update Redux with DB data if it arrives
+    if (examRecord?.examData && examRecord.examData.chartData) {
+      setChartData(examRecord.examData.chartData);
     }
-  }, [examRecord]);
+    if (examRecord?.examData && examRecord.examData.settings) {
+      setSettings(examRecord.examData.settings);
+    }
+  }, [examRecord?.examData]);
 
   const handleSaveExam = async () => {
     if (!appointmentId) {

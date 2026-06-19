@@ -18,6 +18,7 @@ import feeGuideReducer from './slices/feeGuideSlice';
 import dashboardGoalsReducer from './slices/dashboardGoalsSlice';
 import statementFormsReducer from './slices/statementFormsSlice';
 import coverageShortcutsReducer from './slices/coverageShortcutsSlice';
+import clinicalExamSessionReducer from './slices/clinicalExamSessionSlice';
 import claimReducer from './slices/claimSlice';
 
 const appReducer = combineReducers({
@@ -28,6 +29,7 @@ const appReducer = combineReducers({
   appointmentType: appointmentTypeReducer,
   billing: billingReducer,
   clinical: clinicalReducer,
+  clinicalExamSession: clinicalExamSessionReducer,
   clinicalManagement: clinicalManagementReducer,
   ui: uiReducer,
   auth: authReducer,

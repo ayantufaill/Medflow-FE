@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectSelectedPatientId } from '../../store/slices/patientSlice';
 import { useTreatmentPlansQuery, useCreateTreatmentPlan, useUpdateTreatmentPlan, useDeleteTreatmentPlan } from '../../hooks/queries';
 import { 
@@ -710,6 +710,9 @@ const DiagnosticItem = ({ label, disabled = false }) => (
 
 
 export default function TreatmentPlanPage() {
+  const sessionState = useSelector(state => state.clinicalExamSession.treatmentPlan);
+  const dispatch = useDispatch();
+
   const [showAdjustedFeePlan, setShowAdjustedFeePlan] = useState(false);
   const [showEditFeesModal, setShowEditFeesModal] = useState(false);
   const [showPredetermineModal, setShowPredetermineModal] = useState(false);
@@ -718,17 +721,51 @@ export default function TreatmentPlanPage() {
   const [paymentOptionType, setPaymentOptionType] = useState(null);
   const [showGroupingSection, setShowGroupingSection] = useState(false);
 
-  const [selectedTeeth, setSelectedTeeth] = useState([]);
-  const [missingTeeth, setMissingTeeth] = useState([]);
-  const [additionalTeeth, setAdditionalTeeth] = useState([]);
+  const selectedTeeth = sessionState.selectedTeeth;
+  const setSelectedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(selectedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { selectedTeeth: newVal } });
+  };
+  
+  const missingTeeth = sessionState.missingTeeth;
+  const setMissingTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(missingTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { missingTeeth: newVal } });
+  };
+  
+  const additionalTeeth = sessionState.additionalTeeth;
+  const setAdditionalTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(additionalTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { additionalTeeth: newVal } });
+  };
+  
   const [additionalTeethAnchorEl, setAdditionalTeethAnchorEl] = useState(null);
   const [showSelectToothDialog, setShowSelectToothDialog] = useState(false);
-  const [toothSurfaces, setToothSurfaces] = useState({});
-  const [activeRestorativeCode, setActiveRestorativeCode] = useState(null);
-  const [selectedProcedureIds, setSelectedProcedureIds] = useState([]);
+  
+  const toothSurfaces = sessionState.toothSurfaces;
+  const setToothSurfaces = (val) => {
+    const newVal = typeof val === 'function' ? val(toothSurfaces) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { toothSurfaces: newVal } });
+  };
+  
+  const activeRestorativeCode = sessionState.activeRestorativeCode;
+  const setActiveRestorativeCode = (val) => dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { activeRestorativeCode: val } });
+  
+  const selectedProcedureIds = sessionState.selectedProcedureIds;
+  const setSelectedProcedureIds = (val) => {
+    const newVal = typeof val === 'function' ? val(selectedProcedureIds) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { selectedProcedureIds: newVal } });
+  };
+  
   const [statusMenuAnchorEl, setStatusMenuAnchorEl] = useState(null);
   const [statusMenuVisitId, setStatusMenuVisitId] = useState(null);
-  const [selectedVisitIds, setSelectedVisitIds] = useState([]);
+  
+  const selectedVisitIds = sessionState.selectedVisitIds;
+  const setSelectedVisitIds = (val) => {
+    const newVal = typeof val === 'function' ? val(selectedVisitIds) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { selectedVisitIds: newVal } });
+  };
+  
   const [statusMenuProcId, setStatusMenuProcId] = useState(null);
   const [stateMenuAnchorEl, setStateMenuAnchorEl] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -740,7 +777,7 @@ export default function TreatmentPlanPage() {
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpReason, setFollowUpReason] = useState('');
   const [followUpTargetOptions, setFollowUpTargetOptions] = useState({});
-  const [activePlanId, setActivePlanId] = useState(null);
+
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [showDeletePlanConfirm, setShowDeletePlanConfirm] = useState(false);
@@ -1277,6 +1314,9 @@ export default function TreatmentPlanPage() {
     setSelectedProcedureIds([]);
     setSelectedVisitIds([]);
   };
+  const activePlanId = sessionState.activePlanId;
+  const setActivePlanId = (val) => dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { activePlanId: val } });
+
   const patientId = useSelector(selectSelectedPatientId) || "1";
   const { data: tpData, isLoading } = useTreatmentPlansQuery(patientId);
   const createMutation = useCreateTreatmentPlan(patientId);
@@ -1306,9 +1346,25 @@ export default function TreatmentPlanPage() {
   };
 
   const isServerUpdate = React.useRef(false);
+  const hasInitialized = React.useRef(false);
 
   useEffect(() => {
-    if (!isServerUpdate.current && activePlan?._id) {
+    if (activePlan?.items && Array.isArray(activePlan.items) && activePlan.items.length > 0) {
+      isServerUpdate.current = true;
+      rawSetVisits(activePlan.items);
+      hasInitialized.current = true;
+      // Reset after a short delay to allow the state update to propagate
+      setTimeout(() => {
+        isServerUpdate.current = false;
+      }, 50);
+    } else if (activePlan) {
+        hasInitialized.current = true;
+    }
+    setPrintNotesText(activePlan?.notes || '');
+  }, [activePlan]);
+
+  useEffect(() => {
+    if (!isServerUpdate.current && hasInitialized.current && activePlan?._id) {
       // Avoid firing on initial empty load if it hasn't been set by server yet
       updateMutation.mutate({
         id: activePlan._id,
@@ -1319,18 +1375,6 @@ export default function TreatmentPlanPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visits]);
-
-  useEffect(() => {
-    if (activePlan?.items && Array.isArray(activePlan.items) && activePlan.items.length > 0) {
-      isServerUpdate.current = true;
-      rawSetVisits(activePlan.items);
-      // Reset after a short delay to allow the state update to propagate
-      setTimeout(() => {
-        isServerUpdate.current = false;
-      }, 50);
-    }
-    setPrintNotesText(activePlan?.notes || '');
-  }, [activePlan]);
 
   useEffect(() => {
     if (tpData && plans.length === 0) {

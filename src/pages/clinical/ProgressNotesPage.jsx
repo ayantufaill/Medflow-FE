@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import InteractiveToothChart from '../../components/clinical/InteractiveToothChart';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectSelectedPatientId } from '../../store/slices/patientSlice';
 import { selectCurrentAppointment } from '../../store/slices/appointmentSlice';
 import {
@@ -61,6 +61,9 @@ const ProgressNotesPage = () => {
       ? (appointmentProvider._id || appointmentProvider.id || authProviderId)
       : appointmentProvider)
     : authProviderId;
+  const sessionState = useSelector(state => state.clinicalExamSession.progressNotes);
+  const dispatch = useDispatch();
+
   const [tabValue, setTabValue] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [openNoteDialog, setOpenNoteDialog] = useState(false);
@@ -71,30 +74,62 @@ const ProgressNotesPage = () => {
   const [examView, setExamView] = useState('Chart View');
   const [selectedChecklist, setSelectedChecklist] = useState('Treatment Checklist');
   const [isChecklistExpanded, setIsChecklistExpanded] = useState(false);
-  const [editorContent, setEditorContent] = useState('');
-  const [panoImages, setPanoImages] = useState({});
+  
+  // Persisted state via Redux
+  const editorContent = sessionState.editorContent;
+  const setEditorContent = (val) => dispatch({ type: 'clinicalExamSession/setProgressNotesSession', payload: { editorContent: val } });
+  
+  const panoImages = sessionState.panoImages;
+  const setPanoImages = (val) => {
+    const newVal = typeof val === 'function' ? val(panoImages) : val;
+    dispatch({ type: 'clinicalExamSession/setProgressNotesSession', payload: { panoImages: newVal } });
+  };
+  
   const [activeMount, setActiveMount] = useState(null);
-  const [progressSelectedTeeth, setProgressSelectedTeeth] = useState([]);
+  
+  const progressSelectedTeeth = sessionState.progressSelectedTeeth;
+  const setProgressSelectedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(progressSelectedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setProgressNotesSession', payload: { progressSelectedTeeth: newVal } });
+  };
+
   const panoInputRef = React.useRef(null);
   const [textColorAnchor, setTextColorAnchor] = useState(null);
-  const [formatState, setFormatState] = useState({ bold: false, italic: false, align: 'left' });
+  
+  const formatState = sessionState.formatState;
+  const setFormatState = (val) => {
+    const newVal = typeof val === 'function' ? val(formatState) : val;
+    dispatch({ type: 'clinicalExamSession/setProgressNotesSession', payload: { formatState: newVal } });
+  };
+  
   const editorRef = React.useRef(null);
   
   const [confirmNewNote, setConfirmNewNote] = useState(null);
   const [activeChecklistPopup, setActiveChecklistPopup] = useState(null);
-  const [checklistFindings, setChecklistFindings] = useState({
+  
+  const defaultChecklistFindings = {
     generatedNotes: true, identifiedFindings: true, bleedingPoints: false,
     questionableRestorations: false, bruxism: false, analysisRequired: true,
     analysisYes: false, analysisNo: false, nv: true, recare: false, txPlanned: false,
     provider: true, dentistJohnSmith: false, assistantJolene: false
-  });
+  };
+  const checklistFindings = sessionState.checklistFindings || defaultChecklistFindings;
+  const setChecklistFindings = (val) => {
+    const newVal = typeof val === 'function' ? val(checklistFindings) : val;
+    dispatch({ type: 'clinicalExamSession/setProgressNotesSession', payload: { checklistFindings: newVal } });
+  };
 
-  const [completedProcedures, setCompletedProcedures] = useState([
+  const defaultCompletedProcedures = [
     { id: 1, code: 'D0120', procedure: 'Periodic Oral Evaluation', tooth: '', type: 'Diagnostic', selected: false },
     { id: 2, code: 'D1110', procedure: 'Prophylaxis - Adult', tooth: '', type: 'Preventative', selected: false },
     { id: 3, code: 'D0274', procedure: 'Bitewings - Four Radiographic Images', tooth: '', type: 'Diagnostic', selected: false },
     { id: 4, code: 'D1206', procedure: 'Topical Application of Fluoride Varnish', tooth: '', type: 'Preventative', selected: false },
-  ]);
+  ];
+  const completedProcedures = sessionState.completedProcedures || defaultCompletedProcedures;
+  const setCompletedProcedures = (val) => {
+    const newVal = typeof val === 'function' ? val(completedProcedures) : val;
+    dispatch({ type: 'clinicalExamSession/setProgressNotesSession', payload: { completedProcedures: newVal } });
+  };
 
   const standardColors = [
     '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
