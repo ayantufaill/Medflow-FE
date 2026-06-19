@@ -185,4 +185,41 @@ export const invoiceService = {
     const response = await apiClient.get(`/invoices/patient/${patientId}/balance`);
     return response.data.data;
   },
+
+  /**
+   * Get patient composite ledger (invoices, adjustments, payments, claims)
+   */
+  async getPatientCompositeLedger(patientId) {
+    const [invoicesResult, adjustmentsResult, paymentsResult, claimsResult] = await Promise.all([
+      this.getAllInvoices({ patientId, limit: 1000 }),
+      apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`),
+      apiClient.get(`/payments/patient/${patientId}?limit=1000`),
+      apiClient.get(`/claims?patientId=${patientId}&limit=1000`),
+    ]);
+
+    const invoices = invoicesResult.invoices || [];
+    // Pre-fetch details (line items) for all invoices in parallel
+    const enrichedInvoices = await Promise.all(
+      invoices.map(async (inv) => {
+        try {
+          const detail = await this.getInvoiceById(inv._id || inv.id);
+          return {
+            ...inv,
+            ...detail,
+            lineItems: detail.lineItems,
+          };
+        } catch (e) {
+          return inv;
+        }
+      })
+    );
+
+    return {
+      invoices: enrichedInvoices,
+      adjustments: adjustmentsResult.data?.data?.adjustments || [],
+      payments: paymentsResult.data?.data?.payments || [],
+      claims: claimsResult.data?.data?.claims || [],
+    };
+  },
 };
+

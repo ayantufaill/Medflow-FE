@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Box,
   Button,
@@ -33,6 +33,7 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import dayjs from "dayjs";
 import Autocomplete from "@mui/material/Autocomplete";
 import { FONT_SM, FONT_XS } from "../../constants/styles";
+import { appointmentService } from "../../services/appointment.service";
 
 const STATUS_OPTIONS = [
   { value: "unconfirmed", label: "Unconfirmed" },
@@ -126,6 +127,7 @@ const AddNewPatientAppointmentForm = ({
   initialPatient = null,
   initialDateTime = null,
   open = true,
+  appointments: initialAppointments = [],
 }) => {
   // Initialize patient from initialPatient prop, reset when it changes
   const [patient, setPatient] = useState(initialPatient || null);
@@ -164,6 +166,80 @@ const AddNewPatientAppointmentForm = ({
   const [selectedAssistantId, setSelectedAssistantId] = useState("");
   const [selectedAppointmentTypeId, setSelectedAppointmentTypeId] = useState("");
   const [notes, setNotes] = useState("");
+
+  const [existingAppointments, setExistingAppointments] = useState([]);
+
+  const isTimeSlotOverlap = (newStart, duration, a) => {
+    if (["cancelled", "no_show"].includes(a.status?.toLowerCase())) return false;
+
+    const dateVal = a.appointmentDate || a.date;
+    if (!dateVal || (!a.startTime && !a.start)) return false;
+    
+    const dateStr = typeof dateVal === "string" ? dateVal : String(dateVal);
+    const dateOnly = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.slice(0, 10);
+    
+    const aStart = a.startTime 
+      ? dayjs(`${dateOnly}T${a.startTime}`) 
+      : dayjs(a.start);
+      
+    const aEnd = a.endTime 
+      ? dayjs(`${dateOnly}T${a.endTime}`) 
+      : (a.end ? dayjs(a.end) : aStart.add(a.durationMinutes || 30, "minute"));
+
+    const newEnd = newStart.add(Number(duration) || 30, "minute");
+
+    return newStart.isBefore(aEnd) && newEnd.isAfter(aStart);
+  };
+
+  useEffect(() => {
+    if (dateTime) {
+      const dateStr = dateTime.format("YYYY-MM-DD");
+      const nextDateStr = dateTime.add(1, "day").format("YYYY-MM-DD");
+      appointmentService
+        .getAllAppointments(1, 100, "", "", "", dateStr, nextDateStr)
+        .then((res) => {
+          const appts = Array.isArray(res) ? res : (res.appointments || []);
+          setExistingAppointments(appts);
+        })
+        .catch((err) => console.error("Error fetching appointments for room filtering:", err));
+    }
+  }, [dateTime ? dateTime.format("YYYY-MM-DD") : "", initialAppointments]);
+
+  const availableRooms = useMemo(() => {
+    if (!dateTime || !durationMins) return rooms;
+
+    return rooms.filter((r) => {
+      const roomIdStr = String(r._id || r.id);
+      // Check if there is any overlapping appointment for this room
+      const hasOverlap = existingAppointments.some((a) => {
+        const apptRoomId = String(a.roomId?._id || a.roomId?.id || a.roomId || "").replace("op", "") || 
+                           String(a.columnId || "").replace("op", "");
+        if (apptRoomId !== roomIdStr) return false;
+
+        return isTimeSlotOverlap(dateTime, durationMins, a);
+      });
+
+      return !hasOverlap;
+    });
+  }, [rooms, dateTime, durationMins, existingAppointments]);
+
+  useEffect(() => {
+    if (selectedRoomId && !availableRooms.some(r => String(r._id || r.id) === selectedRoomId)) {
+      setSelectedRoomId("");
+    }
+  }, [availableRooms, selectedRoomId]);
+
+  const shouldDisableTime = (value, view) => {
+    if (!selectedRoomId) return false;
+
+    return existingAppointments.some((a) => {
+      const apptRoomId = String(a.roomId?._id || a.roomId?.id || a.roomId || "").replace("op", "") || 
+                         String(a.columnId || "").replace("op", "");
+      if (apptRoomId !== selectedRoomId) return false;
+
+      return isTimeSlotOverlap(value, durationMins, a);
+    });
+  };
 
   // Debounce ref for patient search
   const searchDebounceRef = useRef(null);
@@ -753,7 +829,7 @@ const AddNewPatientAppointmentForm = ({
                 sx={FONT_XS}
               >
                 <MenuItem value="" sx={FONT_XS}>— Select —</MenuItem>
-                {rooms.map((r) => (
+                {availableRooms.map((r) => (
                   <MenuItem key={r._id || r.id} value={String(r._id || r.id)} sx={FONT_XS}>
                     {r.name}
                   </MenuItem>
@@ -841,6 +917,7 @@ const AddNewPatientAppointmentForm = ({
                 <DateTimePicker
                   value={dateTime}
                   onChange={(val) => val && setDateTime(val)}
+                  shouldDisableTime={shouldDisableTime}
                   slotProps={{
                     textField: {
                       size: "small",

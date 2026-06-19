@@ -527,16 +527,28 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
       {/* Custom Pixel Icon Toolbar - Hidden in Family and Individual View */}
       {view !== 'family' && view !== 'individual' && (
         <Stack direction="row" spacing={0.2} sx={{ mb: 2, flexWrap: 'wrap', '& button': { p: 0.25 } }}>
-          {pixelIcons.map((item, i) => (
-            <IconButton 
-              key={i} 
-              size="small" 
-              onClick={item.onClick}
-              sx={{ '&:hover': { bgcolor: 'transparent' } }}
-            >
-              <item.Icon onShareSelect={item.onShareSelect} onClaimSelect={item.onClaimSelect} onClick={item.onClick} />
-            </IconButton>
-          ))}
+          {pixelIcons.map((item, i) => {
+            const isDisabled = i >= 4; // Courtesy Refund (4) → Create Payment Plan (10)
+            return (
+              <IconButton
+                key={i}
+                size="small"
+                onClick={isDisabled ? undefined : item.onClick}
+                disabled={isDisabled}
+                sx={{
+                  '&:hover': { bgcolor: 'transparent' },
+                  ...(isDisabled && {
+                    opacity: 0.35,
+                    filter: 'grayscale(100%)',
+                    cursor: 'not-allowed',
+                    pointerEvents: 'auto', // keep visible but non-interactive feel
+                  }),
+                }}
+              >
+                <item.Icon onShareSelect={isDisabled ? undefined : item.onShareSelect} onClaimSelect={isDisabled ? undefined : item.onClaimSelect} onClick={isDisabled ? undefined : item.onClick} />
+              </IconButton>
+            );
+          })}
         </Stack>
       )}
 

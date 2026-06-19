@@ -817,6 +817,9 @@ const OperatorySchedulePage = () => {
         date: dateOnly,
         patientId: (a.patientId && (a.patientId._id || a.patientId.id)) || "",
         columnId,
+        roomId: a.roomId || "",
+        startTime: a.startTime || "",
+        endTime: a.endTime || "",
         title: a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "Appointment",
         patientName: fullName || "Patient",
         patientInitials: initials,
@@ -1554,6 +1557,7 @@ const OperatorySchedulePage = () => {
         providers={providers || []}
         rooms={rooms || []}
         appointmentTypes={appointmentTypes || []}
+        appointments={appointments || []}
       />
 
       <SendBulkTextDialog

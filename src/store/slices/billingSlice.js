@@ -77,39 +77,97 @@ export const fetchLedgerItems = createAsyncThunk(
   'billing/fetchLedgerItems',
   async (patientId, { rejectWithValue }) => {
     try {
-      const [invoicesResult, adjustmentsResult] = await Promise.all([
-        invoiceService.getAllInvoices({ patientId, limit: 1000 }),
-        apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`),
-      ]);
+      const composite = await invoiceService.getPatientCompositeLedger(patientId);
+      const { invoices = [], adjustments = [], payments = [], claims = [] } = composite;
 
-      const invoices     = invoicesResult.invoices || [];
-      const adjustments  = adjustmentsResult.data?.data?.adjustments || [];
+      const mappedInvoices = invoices.map((invoice) => {
+        // Reconstruct the original total charge. The backend may update totalAmount to
+        // reflect the remaining balance (not the original charge) after a payment is recorded.
+        // The only reliable source is: paidAmount + balanceDue when a payment exists.
+        const rawTotal = Number(invoice.totalAmount || 0);
+        const rawPaid  = Number(invoice.paidAmount   || 0);
+        const rawBal   = Number(invoice.balanceDue   || 0);
+        const rawPt    = Number(invoice.patientPortion   || 0);
+        const rawIns   = Number(invoice.insurancePortion || 0);
+        const originalTotal = rawPaid > 0
+          ? rawPaid + rawBal          // payment exists → paidAmount + remaining = original charge
+          : rawTotal > 0 ? rawTotal   // no payment yet, backend still has original totalAmount
+          : rawPt + rawIns;           // last resort: sum of portions
 
-      const mappedInvoices = invoices.map((invoice) => ({
-        id: invoice._id || invoice.id,
-        invoiceNumber: invoice.invoiceNumber || invoice._id || invoice.id,
-        date: invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MM/DD/YYYY') : 'N/A',
-        rawDate: invoice.invoiceDate || '',
-        method: 'Invoice',
-        amount: `$${Number(invoice.totalAmount || 0).toFixed(2)}`,
-        color: '#5c6bc0',
-        isAdjustment: false,
-        initials: 'STAFF',
-        success:
-          String(invoice.status || '').toLowerCase() !== 'draft' &&
-          String(invoice.status || '').toLowerCase() !== 'voided' &&
-          String(invoice.status || '').toLowerCase() !== 'void',
-        summary: {
-          insWo:    '$0.00',
-          ptBal:    `$${Number(invoice.patientPortion  || 0).toFixed(2)}`,
-          insBal:   `$${Number(invoice.insurancePortion|| 0).toFixed(2)}`,
-          invBal:   `$${Number(invoice.balanceDue      || 0).toFixed(2)}`,
-          appliedWo:'$0.00',
-          ptPaid:   `$${Number(invoice.paidAmount      || 0).toFixed(2)}`,
-          insPaid:  '$0.00',
-        },
-        details: [],
-      }));
+        // Map payments and claims associated with this invoice
+        const invoicePms = payments.filter((p) => String(p.invoiceId) === String(invoice._id || invoice.id));
+        const invoiceClaims = claims.filter((c) => 
+          String(c.invoiceRefId) === String(invoice._id || invoice.id) || 
+          String(c.invoice?._id || c.invoice?.id || '') === String(invoice._id || invoice.id)
+        );
+
+        let totalPaidAmt = 0;
+        let runningBalance = originalTotal;
+        const paymentsMapped = invoicePms.map((payment) => {
+          const paymentAmt = Number(payment.amount || 0);
+          totalPaidAmt += paymentAmt;
+          runningBalance -= paymentAmt;
+          return {
+            id: payment._id || payment.id,
+            title: `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || 'Patient Check'} : $${paymentAmt.toFixed(2)} / $${paymentAmt.toFixed(2)}`,
+            amount: `$${Math.max(0, runningBalance).toFixed(2)}`,
+            isPayment: true,
+          };
+        });
+
+        const claimsMapped = invoiceClaims.map((claim) => ({
+          id: claim.id || claim._id,
+          title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status}) with: ${claim.insuranceCompany?.name || 'Insurance'}`,
+          amount: `$${Number(claim.totalAmount || 0).toFixed(2)}`,
+          isClaim: true,
+          isPayment: false,
+        }));
+
+        let detailsMapped = [];
+        if (invoice.lineItems?.length > 0) {
+          const combinedTitle = invoice.lineItems
+            .map((l) => l.description || 'Procedure')
+            .join(', ');
+          const totalAmount = invoice.lineItems.reduce(
+            (sum, line) => sum + Number(line.total || line.totalPrice || 0),
+            0
+          );
+          detailsMapped = [{
+            id: invoice.invoiceNumber || invoice._id || invoice.id,
+            title: combinedTitle,
+            amount: `$${totalAmount.toFixed(2)}`,
+            isGrouped: true,
+            isPayment: false,
+          }];
+        }
+
+        return {
+          id: invoice._id || invoice.id,
+          invoiceNumber: invoice.invoiceNumber || invoice._id || invoice.id,
+          date: invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MM/DD/YYYY') : 'N/A',
+          rawDate: invoice.invoiceDate || '',
+          method: 'Invoice',
+          amount: `$${originalTotal.toFixed(2)}`,
+          totalAmount: `$${originalTotal.toFixed(2)}`,
+          color: '#5c6bc0',
+          isAdjustment: false,
+          initials: 'STAFF',
+          success:
+            String(invoice.status || '').toLowerCase() !== 'draft' &&
+            String(invoice.status || '').toLowerCase() !== 'voided' &&
+            String(invoice.status || '').toLowerCase() !== 'void',
+          summary: {
+            insWo:    '$0.00',
+            ptBal:    `$${rawPt.toFixed(2)}`,
+            insBal:   `$${rawIns.toFixed(2)}`,
+            invBal:   `$${rawBal.toFixed(2)}`,
+            appliedWo:'$0.00',
+            ptPaid:   `$${(totalPaidAmt || rawPaid).toFixed(2)}`,
+            insPaid:  '$0.00',
+          },
+          details: [...paymentsMapped, ...claimsMapped, ...detailsMapped],
+        };
+      });
 
       const mappedAdjustments = adjustments.map((adj) => {
         const amt = Number(adj.amount || 0);
@@ -174,9 +232,16 @@ export const fetchInvoiceDetails = createAsyncThunk(
       try {
         const paymentsResponse = await paymentService.getPaymentsByInvoice(invoiceId);
         const payments = paymentsResponse?.payments || paymentsResponse || [];
-        let runningBalance = Number(
-          fullInvoice.balanceDue || fullInvoice.patientPortion || fullInvoice.totalAmount || 0
-        );
+        const invTotal  = Number(fullInvoice.totalAmount || 0);
+        const invPaid   = Number(fullInvoice.paidAmount  || 0);
+        const invBal    = Number(fullInvoice.balanceDue  || 0);
+        const invPt     = Number(fullInvoice.patientPortion || 0);
+        const trueTotal = invPaid > 0
+          ? invPaid + invBal
+          : invTotal > 0 ? invTotal
+          : invPt > 0 ? invPt
+          : invBal;
+        let runningBalance = trueTotal;
         paymentsMapped = (Array.isArray(payments) ? payments : []).map((payment) => {
           const paymentAmt = Number(payment.amount || 0);
           totalPaidAmt += paymentAmt;
@@ -196,18 +261,13 @@ export const fetchInvoiceDetails = createAsyncThunk(
       try {
         const claimsResponse = await claimService.getAllClaims({ invoiceId });
         const claims = claimsResponse?.claims || claimsResponse || [];
-        claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => {
-          const carrierName = claim.insuranceCompany?.name || 'Insurance';
-          const payerIdStr = claim.insuranceCompany?.payerId ? `(${claim.insuranceCompany.payerId})` : '';
-          const typeStr = claim.claimType === 'Manual' ? 'Manual Claim' : (claim.claimType === 'Electronic' ? 'Electronic Claim' : (claim.claimType || 'Claim'));
-          return {
-            id: claim.id || claim._id,
-            title: `Claim #${claim.claimNumber || claim.id} to ${carrierName}${payerIdStr} : ${typeStr}`,
-            amount: `$${Number(claim.totalAmount || 0).toFixed(2)}`,
-            isClaim: true,
-            isPayment: false,
-          };
-        });
+        claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => ({
+          id: claim.id || claim._id,
+          title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status}) with: ${claim.insuranceCompany?.name || 'Insurance'}`,
+          amount: `$${Number(claim.totalAmount || 0).toFixed(2)}`,
+          isClaim: true,
+          isPayment: false,
+        }));
       } catch (e) {
         console.error('Failed to fetch claims for invoice', e);
       }
@@ -241,21 +301,12 @@ export const fetchInvoiceDetails = createAsyncThunk(
     }
   },
   {
-    /**
-     * Skip the fetch if:
-     * 1. This invoice ID is already in-flight (duplicate click / event bubble)
-     * 2. Details were already loaded successfully (non-empty array in the cache)
-     */
     condition: ({ patientId, invoiceId }, { getState }) => {
       const { billing } = getState();
-      // Already fetching this invoice
       if (billing.detailsFetchingSet.includes(invoiceId)) return false;
-      // Already have details cached
-      const items = billing.ledgerCache[patientId];
-      if (items) {
-        const item = items.find((i) => i.id === invoiceId);
-        if (item?.details?.length > 0) return false;
-      }
+      const items = billing.ledgerCache[patientId] || [];
+      const cachedItem = items.find((i) => i.id === invoiceId);
+      if (cachedItem && cachedItem.details && cachedItem.details.length > 0) return false;
       return true;
     },
   }
@@ -383,29 +434,52 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           ...fullInv,
           checked: false,
           lineItems: (fullInv.lineItems || []).map((item) => {
-            const writeoff = Number(item.writeoff || 0);
-            const ins      = Number(item.insPortion || item.insurance || 0);
-            const pt       = Number(item.ptPortion || 0);
-            const total    = Number(item.total || item.totalPrice || 0);
+            const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
+            // Try all possible field names the backend might use for insurance/patient portions
+            const ins = Number(
+              item.insPortion      ||
+              item.insurancePortion ||
+              item.insAmt          ||
+              item.insurance       ||
+              0
+            );
+            const pt = Number(
+              item.ptPortion    ||
+              item.patientPortion ||
+              item.ptAmt        ||
+              0
+            );
+            const total = Number(item.total || item.totalPrice || item.amount || 0);
+            const owed  = Math.max(0, total - writeoff);
 
             let patientBal, insBal;
             if (item.dbi === true) {
-              patientBal = Math.max(0, total - writeoff); insBal = 0;
+              // Direct Bill Insurance override: patient owes everything remaining
+              patientBal = owed; insBal = 0;
             } else if (item.dbi === false) {
-              patientBal = pt; insBal = Math.max(0, total - writeoff - pt);
+              // Explicitly not DBI: patient pays their ptPortion, insurance pays the rest
+              patientBal = pt; insBal = Math.max(0, owed - pt);
+            } else if (ins > 0 && pt > 0) {
+              // Both portions set: use them directly
+              patientBal = pt; insBal = ins;
+            } else if (ins > 0 && pt === 0) {
+              // Insurance-only procedure: patient owes nothing, insurance owes the balance
+              patientBal = 0; insBal = owed;
             } else if (pt > 0 && ins === 0) {
+              // Patient-only procedure
               patientBal = pt; insBal = 0;
-            } else if (ins > 0) {
-              patientBal = 0; insBal = Math.max(0, total - writeoff);
             } else {
-              patientBal = Math.max(0, total - writeoff); insBal = 0;
+              // No portions set: full remaining goes to patient
+              patientBal = owed; insBal = 0;
             }
 
-            const remainingBal = Math.max(0, total - writeoff - Number(item.paidAmount || 0));
+            const alreadyPaid  = Number(item.paidAmount || 0);
+            const remainingBal = Math.max(0, owed - alreadyPaid);
             return {
               ...item,
               checked: false,
-              payAmount:       Math.max(0, patientBal - Number(item.paidAmount || 0)).toFixed(2),
+              // payAmount = what the patient still owes on their share, capped at total remaining
+              payAmount:       Math.min(Math.max(0, patientBal - alreadyPaid), remainingBal).toFixed(2),
               patientBalance:  patientBal,
               writeoffAmount:  writeoff,
               insuranceAmount: insBal,
@@ -434,8 +508,8 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
      */
     condition: (patientId, { getState }) => {
       const { billing } = getState();
+      // Only block if a fetch is already in-flight for this patient
       if (billing.paymentInvoicesFetchingSet?.includes(patientId)) return false;
-      if (billing.paymentInvoicesCache?.[patientId]) return false;
       return true;
     },
   }

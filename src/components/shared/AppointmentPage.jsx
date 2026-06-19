@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Box, Typography, Button, IconButton, Paper, RadioGroup, 
   FormControlLabel, FormControl, InputLabel, Radio, TextField, Select, MenuItem, 
@@ -11,11 +11,14 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import LabOrder from './LabOrder';
+import { roomService } from '../../services/room.service';
+import { appointmentService } from '../../services/appointment.service';
+import dayjs from 'dayjs';
 
 const FONT_SM = { fontSize: "11px" };
 const FONT_XS = { fontSize: "10px" };
 
-const AppointmentPage = ({ patient, open, onClose, onSave }) => {
+const AppointmentPage = ({ patient, open, onClose, onSave, appointments: initialAppointments = [] }) => {
   // Mock data for the procedure icons shown in your screenshot
   const procedureIcons = [
     { label: "New", color: "#81ecec" }, { label: "Scr", color: "#ff7675" },
@@ -52,6 +55,83 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
   const [notes, setNotes] = useState('- Cash pay, no insurance.');
   const [sendReminders, setSendReminders] = useState(false);
   const [operatory, setOperatory] = useState('Operatory 2');
+  const [rooms, setRooms] = useState([]);
+  const [existingAppointments, setExistingAppointments] = useState([]);
+
+  useEffect(() => {
+    roomService.getAllRooms(1, 100).then((res) => {
+      setRooms(res.rooms || res || []);
+    }).catch(err => console.error("Error fetching rooms in AppointmentPage:", err));
+
+    if (initialAppointments && initialAppointments.length > 0) {
+      setExistingAppointments(initialAppointments);
+    } else {
+      appointmentService.getAllAppointments(1, 100, "", "", "", "2026-03-04", "2026-03-05")
+        .then((res) => {
+          const appts = Array.isArray(res) ? res : (res.appointments || []);
+          setExistingAppointments(appts);
+        }).catch(err => console.error("Error fetching appointments in AppointmentPage:", err));
+    }
+  }, [initialAppointments]);
+
+  const dateTime = useMemo(() => dayjs("2026-03-04T08:15:00"), []);
+
+  const availableRooms = useMemo(() => {
+    if (rooms.length === 0) {
+      return [
+        { id: "1", _id: "1", name: "Operatory 1" },
+        { id: "2", _id: "2", name: "Operatory 2" },
+        { id: "3", _id: "3", name: "Operatory 3" },
+        { id: "4", _id: "4", name: "Hyg 1" },
+      ];
+    }
+    const newStart = dateTime;
+    const newEnd = dateTime.add(Number(durationMins) || 60, "minute");
+
+    return rooms.filter((r) => {
+      const roomIdStr = String(r._id || r.id);
+      const roomNameStr = String(r.name);
+
+      // Check if there is any overlapping appointment for this room
+      const hasOverlap = existingAppointments.some((a) => {
+        if (["cancelled", "no_show"].includes(a.status?.toLowerCase())) return false;
+        
+        const apptRoomId = String(a.roomId?._id || a.roomId?.id || a.roomId || "").replace("op", "") || 
+                           String(a.columnId || "").replace("op", "");
+        const apptRoomName = String(a.roomId?.name || (typeof a.roomId === 'string' ? a.roomId : ''));
+
+        if (apptRoomId !== roomIdStr && apptRoomName !== roomNameStr && apptRoomId !== roomNameStr) return false;
+
+        const dateVal = a.appointmentDate || a.date;
+        if (!dateVal || (!a.startTime && !a.start)) return false;
+        
+        const dateStr = typeof dateVal === "string" ? dateVal : String(dateVal);
+        const dateOnly = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.slice(0, 10);
+        
+        const aStart = a.startTime 
+          ? dayjs(`${dateOnly}T${a.startTime}`) 
+          : dayjs(a.start);
+          
+        const aEnd = a.endTime 
+          ? dayjs(`${dateOnly}T${a.endTime}`) 
+          : (a.end ? dayjs(a.end) : aStart.add(a.durationMinutes || 30, "minute"));
+
+        return newStart.isBefore(aEnd) && newEnd.isAfter(aStart);
+      });
+
+      return !hasOverlap;
+    });
+  }, [rooms, dateTime, durationMins, existingAppointments]);
+
+  useEffect(() => {
+    if (operatory && !availableRooms.some(r => r.name === operatory)) {
+      if (availableRooms.length > 0) {
+        setOperatory(availableRooms[0].name);
+      } else {
+        setOperatory("");
+      }
+    }
+  }, [availableRooms, operatory]);
   const [labOrderOpen, setLabOrderOpen] = useState(false);
   const [tagsAnchorEl, setTagsAnchorEl] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -229,10 +309,11 @@ const AppointmentPage = ({ patient, open, onClose, onSave }) => {
           </Box>
           <Select size="small" value={operatory} onChange={(e) => setOperatory(e.target.value)}
             sx={{ bgcolor: 'white', height: 24, fontSize: '12px', borderRadius: 1, '& .MuiSelect-select': { py: 0, px: 1 } }}>
-            <MenuItem value="Operatory 1">Operatory 1</MenuItem>
-            <MenuItem value="Operatory 2">Operatory 2</MenuItem>
-            <MenuItem value="Operatory 3">Operatory 3</MenuItem>
-            <MenuItem value="Hyg 1">Hyg 1</MenuItem>
+            {availableRooms.map((room) => (
+              <MenuItem key={room._id || room.id} value={room.name}>
+                {room.name}
+              </MenuItem>
+            ))}
           </Select>
         </Box>
 

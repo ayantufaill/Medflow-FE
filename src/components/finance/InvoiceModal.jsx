@@ -203,7 +203,9 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
           <em>Select Provider</em>
         </MenuItem>
         {providersList.map((p) => {
-          const name = [p.firstName, p.lastName].filter(Boolean).join(' ').trim() || p.name || `Provider ${p._id || p.id}`;
+          const firstName = p.userId?.firstName || p.firstName || '';
+          const lastName  = p.userId?.lastName  || p.lastName  || '';
+          const name = `${firstName} ${lastName}`.trim() || p.name || `Provider ${p._id || p.id}`;
           return (
             <MenuItem key={p._id || p.id} value={name} sx={{ fontSize: '12px' }}>
               {name}

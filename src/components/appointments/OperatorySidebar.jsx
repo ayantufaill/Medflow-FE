@@ -1303,7 +1303,7 @@ const OperatorySidebar = ({
       )}
 
       <PatientChat open={chatOpen} onClose={handleCloseChat} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
-      <AppointmentPage open={appointmentPageOpen} onClose={handleCloseAppointmentPage} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} />
+      <AppointmentPage open={appointmentPageOpen} onClose={handleCloseAppointmentPage} patientName={selectedPatient ? (selectedPatient.firstName + " " + selectedPatient.lastName) : ""} appointments={appointments || []} />
       <PatientRouteSlipDialog 
         open={routeSlipOpen} 
         onClose={handleCloseRouteSlip} 

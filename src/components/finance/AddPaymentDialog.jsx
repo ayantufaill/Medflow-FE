@@ -12,6 +12,7 @@ import {
   togglePaymentLineItemChecked,
   selectPaymentInvoicesForPatient,
   selectPaymentInvoicesLoading,
+  invalidatePaymentInvoices,
 } from '../../store/slices/billingSlice';
 
 const MENU_PROPS = {
@@ -43,9 +44,12 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [patientAmountChecked, setPatientAmountChecked] = useState(false);
   const [manualAmount,         setManualAmount]         = useState('');
 
-  // ── Fetch draft invoices for this patient ────────────────────────────────
+  // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
-    if (patientId) dispatch(fetchPaymentDraftInvoices(patientId));
+    if (patientId) {
+      dispatch(invalidatePaymentInvoices(patientId));
+      dispatch(fetchPaymentDraftInvoices(patientId));
+    }
   }, [dispatch, patientId]);
 
   // ── Derived totals ───────────────────────────────────────────────────────

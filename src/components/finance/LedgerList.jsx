@@ -88,12 +88,7 @@ const LedgerSubRow = ({
       ) : isPayment ? (
         <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>{title}</Typography>
       ) : isClaim ? (
-        <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
-          {title.split(' : ')[0]} :{' '}
-          <Box component="span" sx={{ color: '#ffa726', fontWeight: 'bold', ml: 0.5 }}>
-            {title.split(' : ')[1] || ''}
-          </Box>
-        </Typography>
+        <Typography variant="caption" sx={{ color: '#0288d1', fontSize: '11px', fontWeight: 500 }}>{title}</Typography>
       ) : (
         <Typography variant="caption" sx={{ color: '#444', fontSize: '11px', fontWeight: 500 }}>
           {isAdjustment ? 'Adjustment' : 'Invoice'} #{id || '24636'} ({date}): [ {title} ]
@@ -101,7 +96,7 @@ const LedgerSubRow = ({
       )}
     </Typography>
     <Typography variant="caption" sx={{ width: 80, fontWeight: 'bold', color: isAdjustment ? '#7e57c2' : '#444', fontSize: '11px', textAlign: 'left' }}>
-      {isClaim ? '' : (title.includes('(uncollected)') ? '$0.00' : amount)}
+      {title.includes('(uncollected)') ? '$0.00' : amount}
     </Typography>
     <Typography variant="caption" sx={{ width: 40, color: '#cfd8dc', fontWeight: 'bold', fontSize: '10px', textAlign: 'center' }}>
       {initials}
@@ -116,17 +111,7 @@ const LedgerSubRow = ({
           <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
         </>
       ) : isClaim ? (
-        <>
-          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#e8f5e9', color: '#2e7d32', borderRadius: '2px', px: '3px', py: '1px', fontSize: '9px', fontWeight: 'bold', border: '1px solid #c8e6c9' }}>
-            EDI
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#e8eaf6', color: '#3f51b5', borderRadius: '2px', px: '3px', py: '1px', fontSize: '9px', fontWeight: 'bold', border: '1px solid #c5cae9' }}>
-            EOB
-          </Box>
-          <Print sx={{ fontSize: 18, color: '#5c6bc0', cursor: 'pointer' }} />
-          <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} />
-          <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
-        </>
+        null
       ) : showExtendedTools ? (
         <>
           <Settings sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} onClick={() => onSettingsClick?.({ id, date, title, amount })} />
@@ -201,24 +186,16 @@ const LedgerList = ({ patient, expanded }) => {
     };
   }, [refreshLedger]);
 
-  // Sync expanded state with the global `expanded` prop
+  const prevExpandedRef = React.useRef(expanded);
   useEffect(() => {
-    if (expanded !== undefined) {
+    // Only reset if the `expanded` prop itself changed (e.g. parent toggled expand-all)
+    if (expanded !== undefined && expanded !== prevExpandedRef.current) {
+      prevExpandedRef.current = expanded;
       const all = {};
       ledgerItems.forEach((_, idx) => { all[idx] = expanded; });
       setExpandedItems(all);
     }
-  }, [expanded, ledgerItems]);
-
-  // Automatically fetch details for any expanded items when ledger items list changes
-  useEffect(() => {
-    if (!patientId || ledgerItems.length === 0) return;
-    ledgerItems.forEach((item, idx) => {
-      if (expandedItems[idx] && item.method === 'Invoice' && !item.details) {
-        dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
-      }
-    });
-  }, [dispatch, patientId, ledgerItems, expandedItems]);
+  }, [expanded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleItemClick = (idx) => {
@@ -384,7 +361,7 @@ const LedgerList = ({ patient, expanded }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
                   {isExpanded ? (
                     <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold', fontSize: '11px' }}>
-                      {displayItem.method === 'Invoice' ? 'Invoice' : 'Adjustment'} #{displayItem.invoiceNumber || displayItem.id} ({displayItem.date}): {displayItem.amount}
+                      {displayItem.method === 'Invoice' ? 'Invoice' : 'Adjustment'} #{displayItem.invoiceNumber || displayItem.id} ({displayItem.date}): {displayItem.totalAmount || displayItem.amount}
                     </Typography>
                   ) : (
                     <>
