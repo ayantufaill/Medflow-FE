@@ -31,10 +31,11 @@ export const fetchPatientById = createAsyncThunk(
   {
     condition: (patientId, { getState }) => {
       const { patient } = getState();
-      // Block the request if we are already currently fetching a patient detail
-      // This prevents React StrictMode from double-fetching in development
-      if (patient.detailLoading) {
-        return false;
+      // prevent double dispatch if it was fetched in the last second
+      if (patient.cache && patient.cache[patientId]) {
+        if (Date.now() - patient.cache[patientId].timestamp < 1000) {
+          return false;
+        }
       }
       return true;
     }

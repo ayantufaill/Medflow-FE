@@ -21,8 +21,18 @@ import { paymentService } from '../../services/payment.service';
 
 const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
-  const [paymentMethod, setPaymentMethod] = useState('insurance');
+  const [paymentMethod, setPaymentMethod] = useState('EFT');
   const [paymentAmount, setPaymentAmount] = useState('0.00');
+  const [procedures, setProcedures] = useState([
+    { code: 'D0120 - periodic ex', submitted: '$42.00', bal: '$42.00', ded: '0.00', allowed: '42.00', wo: '0.00', pay: '42.00' },
+    { code: 'D1110 - hygiene', submitted: '$100.00', bal: '$100.00', ded: '0.00', allowed: '100.00', wo: '0.00', pay: '100.00' }
+  ]);
+
+  const handleProcedureChange = (index, field, value) => {
+    const newProcedures = [...procedures];
+    newProcedures[index][field] = value;
+    setProcedures(newProcedures);
+  };
   const [showSimpleBillingAlert, setShowSimpleBillingAlert] = useState(false);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [selectedPaymentOption, setSelectedPaymentOption] = useState('swipe');
@@ -130,30 +140,26 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   return (
     <Box sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header Bar */}
-      <Box sx={{ bgcolor: headerBackground, py: 1, textAlign: 'center' }}>
-        <Typography sx={{ color: '#fff', fontWeight: 500 }}>Add Payment</Typography>
+      <Box sx={{ bgcolor: headerBackground, py: 1.5, textAlign: 'center' }}>
+        <Typography sx={{ color: '#fff', fontSize: '1rem', fontWeight: 600 }}>Add Payment</Typography>
       </Box>
 
       <Box sx={{ p: 2 }}>
-        {/* First Row: Date and Claim Selection */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 2, mb: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CalendarMonthIcon sx={{ fontSize: '1.2rem', color: '#888' }} />
-            <Typography sx={{ color: '#7788bb', fontSize: '0.9rem', fontWeight: 500 }}>
-              {new Date().toLocaleDateString()}
-            </Typography>
-          </Box>
-
-          <Typography sx={{ color: '#2c3e50', fontSize: '0.9rem' }}>
-            <span style={{ color: '#7788bb', fontWeight: 500 }}>Payment</span> claim:
+        {/* Top Info Row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, borderBottom: '1px solid #eee', pb: 1.5, flexWrap: 'wrap' }}>
+          <Typography sx={{ color: '#8fb884', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            07/15/2022
+          </Typography>
+          <Typography sx={{ color: '#8fb884', fontSize: '0.75rem', fontWeight: 500, ml: 1, whiteSpace: 'nowrap' }}>
+            Payment claim:
           </Typography>
 
-          <Select
-            variant="standard"
+          <Select 
+            variant="standard" 
             value={selectedClaim}
             onChange={(e) => setSelectedClaim(e.target.value)}
-            sx={{ fontSize: '0.85rem', minWidth: 120 }}
-            MenuProps={{ disablePortal: true }}
+            sx={{ fontSize: '0.75rem', minWidth: 250, '& .MuiSelect-select': { pb: 0.5, pt: 0.5 } }}
+            MenuProps={{ disablePortal: true, PaperProps: { sx: { bgcolor: '#fff', '& .MuiMenuItem-root': { fontSize: '12px', py: 0.5 }, '& .Mui-selected': { bgcolor: '#5c6bc0 !important', color: '#fff' } } } }}
           >
             {claims.length === 0 ? (
               <MenuItem value="select a claim">select a claim</MenuItem>
@@ -164,138 +170,159 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
                 </MenuItem>
               ))
             )}
+            <MenuItem value="select a claim">Claim #3127, Billing Training Oryx by Delta Dental of Washington</MenuItem>
           </Select>
 
-          <Typography sx={{ fontSize: '0.85rem' }}>with</Typography>
-
-          <Select
-            variant="standard"
+          <Typography sx={{ fontSize: '0.75rem' }}>with</Typography>
+          <Select 
+            variant="standard" 
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
-            sx={{ fontSize: '0.85rem', minWidth: 120 }}
-            MenuProps={{ disablePortal: true }}
+            sx={{ fontSize: '0.75rem', minWidth: 100, '& .MuiSelect-select': { pb: 0.5, pt: 0.5 } }}
+            MenuProps={{ disablePortal: true, PaperProps: { sx: { bgcolor: '#fff', '& .MuiMenuItem-root': { fontSize: '12px', py: 0.5 }, '& .Mui-selected': { bgcolor: '#5c6bc0 !important', color: '#fff' } } } }}
           >
-            <MenuItem value="insurance">Insurance</MenuItem>
-            <MenuItem value="check">Check</MenuItem>
-            <MenuItem value="card">Credit Card</MenuItem>
-            <MenuItem value="cash">Cash</MenuItem>
+            <MenuItem value="EFT">EFT</MenuItem>
+            <MenuItem value="Debit Card (debit)">Debit Card (debit)</MenuItem>
+            <MenuItem value="Visa Card">Visa Card</MenuItem>
+            <MenuItem value="Master Card">Master Card</MenuItem>
+            <MenuItem value="Amex">Amex</MenuItem>
+            <MenuItem value="Patient Check">Patient Check</MenuItem>
+            <MenuItem value="Insurance Check">Insurance Check</MenuItem>
+            <MenuItem value="Cash">Cash</MenuItem>
+            <MenuItem value="Account Credit">Account Credit</MenuItem>
+            <MenuItem value="Account Correction">Account Correction</MenuItem>
+            <MenuItem value="Courtesy Credit">Courtesy Credit</MenuItem>
+            <MenuItem value="INP Special">INP Special</MenuItem>
+            <MenuItem value="Insurance Refund/Back to Office">Insurance Refund/Back to Office</MenuItem>
+            <MenuItem value="Test Jen">Test Jen</MenuItem>
+            <MenuItem value="HSA">HSA</MenuItem>
+            <MenuItem value="Testing Credit">Testing Credit</MenuItem>
+            <MenuItem value="Collection Agency Payment">Collection Agency Payment</MenuItem>
           </Select>
-
-          {/* Checkbox Group */}
-          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
             {checkboxOptions.map((item) => (
-              <FormControlLabel
-                key={item.label}
-                control={<Checkbox size="small" defaultChecked sx={{ p: 0.5 }} />}
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.8rem' }}>{item.label}</Typography>
-                    {item.icon && <HelpOutlineIcon sx={{ fontSize: '0.9rem', ml: 0.5, color: '#333' }} />}
-                  </Box>
-                }
-                sx={{ m: 0 }}
-              />
+              <Box key={item.label} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Checkbox size="small" sx={{ p: 0.2 }} />
+                <Typography sx={{ fontSize: '0.75rem' }}>{item.label}</Typography>
+                {item.icon && <HelpOutlineIcon sx={{ fontSize: '0.8rem', ml: 0.5, color: '#666' }} />}
+              </Box>
             ))}
           </Box>
         </Box>
 
-        {/* Payment Amount Section */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
-          <Typography 
-            sx={{ 
-              fontSize: '0.85rem', 
-              color: '#2c3e50', 
-              fontWeight: 500 
-            }}
-          >
-            Payment Amount:
+        {/* Invoice Summary Row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+            Invoice #3125 : 07/15/2022 for Melina Cuellar
           </Typography>
-          
-          <Box 
-            sx={{ 
-              border: '1.5px dashed #666',
-              borderRadius: '2px',
-              px: 1,
-              py: 0.5,
-              minWidth: '60px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              bgcolor: 'transparent'
-            }}
-          >
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1a237e', mr: 0.5 }}>$</Typography>
-            <input
-              type="text"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              style={{
-                border: 'none',
-                outline: 'none',
-                background: 'transparent',
-                fontSize: '0.85rem',
-                fontWeight: 'bold',
-                color: '#1a237e',
-                textAlign: 'center',
-                width: '60px',
-                fontFamily: 'inherit'
-              }}
-            />
-          </Box>
         </Box>
 
-        {/* Warning Section */}
-        {!loadingClaims && claims.length === 0 && (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 2, 
-            py: 1.5, 
-            px: 2, 
-            borderTop: '1px solid #8fb884', 
-            borderBottom: '1px solid #8fb884',
-            mb: 2 
-          }}>
-            <WarningIcon sx={{ color: '#d35400', fontSize: '1.5rem' }} />
-            <Typography sx={{ color: '#c0392b', fontSize: '0.85rem', fontWeight: 400 }}>
-              There are no claims on the patient's account. Please create one before applying insurance payment.
+        {/* Table Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+          <Box sx={{ width: '150px' }}></Box>
+          <Box sx={{ width: '40px' }}></Box>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'left', color: '#555' }}>Submitted</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'left', color: '#555' }}>Balance</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'left', color: '#555' }}>Deductible</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'left', color: '#555' }}>Allowed</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'left', color: '#555' }}>Ins WO</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '110px', textAlign: 'left', color: '#555' }}>Ins pay</Typography>
+          <Box sx={{ flex: 1 }}></Box>
+        </Box>
+
+        {/* Procedure Rows */}
+        {procedures.map((proc, i) => (
+          <Box key={i} sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f5f5f5', py: 1 }}>
+            <Typography sx={{ fontSize: '0.75rem', width: '150px', color: '#333', pl: 2 }}>{proc.code}</Typography>
+            <Typography sx={{ fontSize: '0.75rem', width: '40px', color: '#666' }}>RSL</Typography>
+            <Typography sx={{ fontSize: '0.75rem', width: '100px', color: '#666' }}>{proc.submitted}</Typography>
+            <Typography sx={{ fontSize: '0.75rem', width: '100px', color: '#666' }}>{proc.bal}</Typography>
+            <Box sx={{ width: '100px' }}>
+              <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
+                <input type="text" value={proc.ded} onChange={(e) => handleProcedureChange(i, 'ded', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+              </Box>
+            </Box>
+            <Box sx={{ width: '100px' }}>
+              <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
+                <input type="text" value={proc.allowed} onChange={(e) => handleProcedureChange(i, 'allowed', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+              </Box>
+            </Box>
+            <Box sx={{ width: '100px' }}>
+              <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
+                <input type="text" value={proc.wo} onChange={(e) => handleProcedureChange(i, 'wo', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+              </Box>
+            </Box>
+            <Box sx={{ width: '110px' }}>
+              <Box sx={{ bgcolor: '#8eb378', border: '1px dashed #7ea368', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', width: '70px' }}>
+                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff', mr: 0.25 }}>$</Typography>
+                <input type="text" value={proc.pay} onChange={(e) => handleProcedureChange(i, 'pay', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', padding: 0 }} />
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Checkbox size="small" sx={{ p: 0.2 }} />
+                <Typography sx={{ fontSize: '0.75rem' }}>Update allowed fee</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Checkbox size="small" sx={{ p: 0.2 }} />
+                <Typography sx={{ fontSize: '0.75rem' }}>Update Ins. Flat Portion</Typography>
+              </Box>
+            </Box>
+          </Box>
+        ))}
+
+        {/* Total Row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #eee', mb: 3 }}>
+          <Box sx={{ width: '150px', textAlign: 'right', pr: 2 }}>
+            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Total</Typography>
+          </Box>
+          <Box sx={{ width: '40px' }}></Box>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', color: '#555' }}>$142.00</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', color: '#555' }}>$142.00</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', color: '#555' }}>$0.00</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', color: '#555' }}>$142.00</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', color: '#555' }}>$0.00</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '110px', color: '#555' }}>$142.00</Typography>
+        </Box>
+
+        {/* Footer Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button 
+              variant="contained" 
+              onClick={handleSwitchToSimpleBilling}
+              sx={{ bgcolor: tanButton, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', '&:hover': { bgcolor: '#c3b086' } }}
+            >
+              Switch to simple billing
+            </Button>
+            <Typography sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer' }}>
+              + Add description
             </Typography>
           </Box>
-        )}
-
-        {/* Footer Section */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <Typography sx={{ fontStyle: 'italic', fontSize: '0.85rem', color: '#333' }}>
-            Before applying payment, please make sure the deductibles and total insurance payment match your EOB
-          </Typography>
           
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button 
-                variant="contained" 
-                onClick={handleSwitchToSimpleBilling}
-                sx={{ bgcolor: tanButton, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2 }}
-              >
-                Switch to simple billing
-              </Button>
-              <Typography sx={{ color: linkBlue, fontSize: '0.85rem', cursor: 'pointer' }}>
-                + Add description
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+            <Typography sx={{ fontStyle: 'italic', fontSize: '0.75rem', color: '#555' }}>
+              Before applying payment, please make sure the deductibles and total insurance payment match your EOB
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#d32f2f' }}>Ins Writeoff: $0.00</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8eb378' }}>Ins Payment: $142.00</Typography>
+              
               <Button 
                 variant="contained" 
                 onClick={handleApplyAndPay}
-                disabled={claims.length === 0 || parseFloat(paymentAmount) <= 0}
-                sx={{ bgcolor: greenButton, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
+                sx={{ bgcolor: '#8eb378', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', '&:hover': { bgcolor: '#7ea368' } }}
               >
-                Apply and Pay
+                Apply
               </Button>
               <Button 
                 variant="contained" 
                 onClick={onClose}
-                sx={{ bgcolor: '#b3b3b3', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
+                sx={{ bgcolor: '#a9a9a9', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem' }}
               >
                 Cancel
               </Button>

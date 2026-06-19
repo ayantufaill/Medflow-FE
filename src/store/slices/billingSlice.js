@@ -20,6 +20,426 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../../config/api';
+import { invoiceService } from '../../services/invoice.service';
+import { claimService } from '../../services/claim.service';
+import { paymentService } from '../../services/payment.service';
+import { reportingService } from '../../services/reporting.service';
+import dayjs from 'dayjs';
+
+/**
+ * Inline concurrency limiter — runs at most `concurrency` promises at a time.
+ * Prevents N+1 waterfall of individual invoice detail requests.
+ */
+function withConcurrency(concurrency, tasks) {
+  return new Promise((resolve) => {
+    const results = new Array(tasks.length);
+    let started = 0;
+    let finished = 0;
+    function runNext() {
+      if (started === tasks.length) return;
+      const idx = started++;
+      Promise.resolve()
+        .then(() => tasks[idx]())
+        .then((r) => { results[idx] = r; })
+        .catch(() => { results[idx] = null; })
+        .finally(() => {
+          finished++;
+          if (finished === tasks.length) resolve(results);
+          else runNext();
+        });
+    }
+    for (let i = 0; i < Math.min(concurrency, tasks.length); i++) runNext();
+    if (tasks.length === 0) resolve(results);
+  });
+}
+
+export const createInvoice = createAsyncThunk(
+  'billing/createInvoice',
+  async (invoiceData, { rejectWithValue }) => {
+    try {
+      const result = await invoiceService.createStandaloneInvoice(invoiceData);
+      return result;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create invoice');
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Ledger thunks
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch invoices + adjustments for a patient and merge them into a sorted
+ * ledger list. Result is cached by patientId.
+ */
+export const fetchLedgerItems = createAsyncThunk(
+  'billing/fetchLedgerItems',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const [invoicesResult, adjustmentsResult] = await Promise.all([
+        invoiceService.getAllInvoices({ patientId, limit: 1000 }),
+        apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`),
+      ]);
+
+      const invoices     = invoicesResult.invoices || [];
+      const adjustments  = adjustmentsResult.data?.data?.adjustments || [];
+
+      const mappedInvoices = invoices.map((invoice) => ({
+        id: invoice._id || invoice.id,
+        invoiceNumber: invoice.invoiceNumber || invoice._id || invoice.id,
+        date: invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MM/DD/YYYY') : 'N/A',
+        rawDate: invoice.invoiceDate || '',
+        method: 'Invoice',
+        amount: `$${Number(invoice.totalAmount || 0).toFixed(2)}`,
+        color: '#5c6bc0',
+        isAdjustment: false,
+        initials: 'STAFF',
+        success:
+          String(invoice.status || '').toLowerCase() !== 'draft' &&
+          String(invoice.status || '').toLowerCase() !== 'voided' &&
+          String(invoice.status || '').toLowerCase() !== 'void',
+        summary: {
+          insWo:    '$0.00',
+          ptBal:    `$${Number(invoice.patientPortion  || 0).toFixed(2)}`,
+          insBal:   `$${Number(invoice.insurancePortion|| 0).toFixed(2)}`,
+          invBal:   `$${Number(invoice.balanceDue      || 0).toFixed(2)}`,
+          appliedWo:'$0.00',
+          ptPaid:   `$${Number(invoice.paidAmount      || 0).toFixed(2)}`,
+          insPaid:  '$0.00',
+        },
+        details: [],
+      }));
+
+      const mappedAdjustments = adjustments.map((adj) => {
+        const amt = Number(adj.amount || 0);
+        return {
+          id: adj._id || adj.id,
+          invoiceNumber: `Adj #${adj._id || adj.id}`,
+          date: adj.date ? dayjs(adj.date).format('MM/DD/YYYY') : 'N/A',
+          rawDate: adj.date || '',
+          method: 'Adjustment',
+          amount: `$${Math.abs(amt).toFixed(2)}`,
+          color: '#7e57c2',
+          isAdjustment: true,
+          useCheckmark: false,
+          initials: 'STAFF',
+          success: true,
+          summary: {
+            insWo:     '$0.00',
+            ptBal:     `$${amt.toFixed(2)}`,
+            insBal:    '$0.00',
+            invBal:    `$${amt.toFixed(2)}`,
+            appliedWo: '$0.00',
+            ptPaid:    '$0.00',
+            insPaid:   '$0.00',
+          },
+          details: [
+            {
+              id: adj._id || adj.id,
+              title: adj.notes || 'Patient Account Adjustment',
+              amount: `$${amt.toFixed(2)}`,
+            },
+          ],
+        };
+      });
+
+      const combined = [...mappedInvoices, ...mappedAdjustments];
+      combined.sort((a, b) => {
+        const dateA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
+        const dateB = b.rawDate ? new Date(b.rawDate).getTime() : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        return String(b.id).localeCompare(String(a.id));
+      });
+
+      return { patientId, items: combined };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch ledger');
+    }
+  }
+);
+
+/**
+ * Load full line-item details + payments for a single invoice row and merge
+ * them back into the cached ledger list for a patient.
+ */
+export const fetchInvoiceDetails = createAsyncThunk(
+  'billing/fetchInvoiceDetails',
+  async ({ patientId, invoiceId }, { rejectWithValue }) => {
+    try {
+      const fullInvoice = await invoiceService.getInvoiceById(invoiceId);
+
+      let totalPaidAmt  = 0;
+      let paymentsMapped = [];
+      try {
+        const paymentsResponse = await paymentService.getPaymentsByInvoice(invoiceId);
+        const payments = paymentsResponse?.payments || paymentsResponse || [];
+        let runningBalance = Number(
+          fullInvoice.balanceDue || fullInvoice.patientPortion || fullInvoice.totalAmount || 0
+        );
+        paymentsMapped = (Array.isArray(payments) ? payments : []).map((payment) => {
+          const paymentAmt = Number(payment.amount || 0);
+          totalPaidAmt += paymentAmt;
+          runningBalance -= paymentAmt;
+          return {
+            id: payment._id || payment.id,
+            title: `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || 'Patient Check'} : $${paymentAmt.toFixed(2)} / $${paymentAmt.toFixed(2)}`,
+            amount: `$${Math.max(0, runningBalance).toFixed(2)}`,
+            isPayment: true,
+          };
+        });
+      } catch (e) {
+        console.error('Failed to fetch payments for invoice', e);
+      }
+
+      let claimsMapped = [];
+      try {
+        const claimsResponse = await claimService.getAllClaims({ invoiceId });
+        const claims = claimsResponse?.claims || claimsResponse || [];
+        claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => {
+          const carrierName = claim.insuranceCompany?.name || 'Insurance';
+          const payerIdStr = claim.insuranceCompany?.payerId ? `(${claim.insuranceCompany.payerId})` : '';
+          const typeStr = claim.claimType === 'Manual' ? 'Manual Claim' : (claim.claimType === 'Electronic' ? 'Electronic Claim' : (claim.claimType || 'Claim'));
+          return {
+            id: claim.id || claim._id,
+            title: `Claim #${claim.claimNumber || claim.id} to ${carrierName}${payerIdStr} : ${typeStr}`,
+            amount: `$${Number(claim.totalAmount || 0).toFixed(2)}`,
+            isClaim: true,
+            isPayment: false,
+          };
+        });
+      } catch (e) {
+        console.error('Failed to fetch claims for invoice', e);
+      }
+
+      let detailsMapped = [];
+      if (fullInvoice.lineItems?.length > 0) {
+        const combinedTitle = fullInvoice.lineItems
+          .map((l) => l.description || 'Procedure')
+          .join(', ');
+        const totalAmount = fullInvoice.lineItems.reduce(
+          (sum, line) => sum + Number(line.total || line.totalPrice || 0),
+          0
+        );
+        detailsMapped = [{
+          id: fullInvoice.invoiceNumber || fullInvoice._id || fullInvoice.id,
+          title: combinedTitle,
+          amount: `$${totalAmount.toFixed(2)}`,
+          isGrouped: true,
+          isPayment: false,
+        }];
+      }
+
+      return {
+        patientId,
+        invoiceId,
+        details: [...paymentsMapped, ...claimsMapped, ...detailsMapped],
+        totalPaidAmt,
+      };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch invoice details');
+    }
+  },
+  {
+    /**
+     * Skip the fetch if:
+     * 1. This invoice ID is already in-flight (duplicate click / event bubble)
+     * 2. Details were already loaded successfully (non-empty array in the cache)
+     */
+    condition: ({ patientId, invoiceId }, { getState }) => {
+      const { billing } = getState();
+      // Already fetching this invoice
+      if (billing.detailsFetchingSet.includes(invoiceId)) return false;
+      // Already have details cached
+      const items = billing.ledgerCache[patientId];
+      if (items) {
+        const item = items.find((i) => i.id === invoiceId);
+        if (item?.details?.length > 0) return false;
+      }
+      return true;
+    },
+  }
+);
+
+/**
+ * Backdate an invoice or adjustment, then re-fetch the ledger.
+ */
+export const backdateTransaction = createAsyncThunk(
+  'billing/backdateTransaction',
+  async ({ patientId, itemId, date, isAdjustment }, { dispatch, rejectWithValue }) => {
+    try {
+      if (isAdjustment) {
+        await apiClient.patch(`/adjustments/${itemId}`, { date: new Date(date) });
+      } else {
+        await invoiceService.updateInvoice(itemId, { dueDate: new Date(date) });
+      }
+      await dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to backdate transaction');
+    }
+  }
+);
+
+/**
+ * Void (delete) an invoice item, a full invoice, or an adjustment.
+ */
+export const voidTransaction = createAsyncThunk(
+  'billing/voidTransaction',
+  async ({ patientId, invoiceId, itemId, isAdjustment, isGrouped }, { dispatch, rejectWithValue }) => {
+    try {
+      if (isAdjustment) {
+        await apiClient.delete(`/adjustments/${invoiceId}`);
+      } else if (isGrouped) {
+        await apiClient.delete(`/admin-finance/invoices/${invoiceId}`);
+      } else {
+        await invoiceService.deleteInvoiceItem(invoiceId, itemId);
+      }
+      await dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to void transaction');
+    }
+  }
+);
+
+/**
+ * Apply a courtesy credit adjustment for a procedure.
+ */
+export const applyCourtesyCredit = createAsyncThunk(
+  'billing/applyCourtesyCredit',
+  async ({ patientId, procedureId, invoiceId, adjustmentType, creditAmount }, { dispatch, rejectWithValue }) => {
+    try {
+      await apiClient.post('/adjustments', {
+        patientId,
+        amount: -Math.abs(creditAmount),
+        date: new Date(),
+        notes: `${adjustmentType} applied to Procedure #${procedureId}`,
+      });
+      if (invoiceId) {
+        await apiClient.post(`/invoices/${invoiceId}/recalculate`);
+      }
+      await dispatch(fetchLedgerItems(patientId));
+      return { procedureId, invoiceId, adjustmentType };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to apply courtesy credit');
+    }
+  }
+);
+
+/**
+ * Undo a courtesy credit by finding and deleting the matching adjustment.
+ */
+export const undoCourtesyCredit = createAsyncThunk(
+  'billing/undoCourtesyCredit',
+  async ({ patientId, procedureId, invoiceId }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`);
+      const adjustments = response.data?.data?.adjustments || [];
+      const target = adjustments.find(
+        (adj) => adj.notes && adj.notes.includes(`Procedure #${procedureId}`)
+      );
+      if (target) {
+        await apiClient.delete(`/adjustments/${target._id || target.id}`);
+      }
+      if (invoiceId) {
+        await apiClient.post(`/invoices/${invoiceId}/recalculate`);
+      }
+      await dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to undo courtesy credit');
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// AddPaymentDialog — draft invoices with per-item remaining balances
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch draft invoices for payment allocation. Enriches each line item with
+ * patient/insurance balance breakdowns and filters out fully-paid items.
+ * Cached by patientId in `paymentInvoicesCache`.
+ */
+export const fetchPaymentDraftInvoices = createAsyncThunk(
+  'billing/fetchPaymentDraftInvoices',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const res = await invoiceService.getAllInvoices({ patientId, status: 'draft', limit: 1000, includeItems: true });
+      const fetchedInvoices = res.invoices || [];
+
+      // Skip individual detail fetches if backend returned items inline
+      const needsDetailFetch = fetchedInvoices.some((inv) => !inv.lineItems);
+
+      const rawInvoices = needsDetailFetch
+        ? await withConcurrency(3, fetchedInvoices.map((inv) => async () => {
+            if (inv.lineItems) return inv;
+            try { return await invoiceService.getInvoiceById(inv._id || inv.id); }
+            catch { return null; }
+          }))
+        : fetchedInvoices;
+
+      const enrichedInvoices = rawInvoices
+        .filter(Boolean)
+        .map((fullInv) => ({
+          ...fullInv,
+          checked: false,
+          lineItems: (fullInv.lineItems || []).map((item) => {
+            const writeoff = Number(item.writeoff || 0);
+            const ins      = Number(item.insPortion || item.insurance || 0);
+            const pt       = Number(item.ptPortion || 0);
+            const total    = Number(item.total || item.totalPrice || 0);
+
+            let patientBal, insBal;
+            if (item.dbi === true) {
+              patientBal = Math.max(0, total - writeoff); insBal = 0;
+            } else if (item.dbi === false) {
+              patientBal = pt; insBal = Math.max(0, total - writeoff - pt);
+            } else if (pt > 0 && ins === 0) {
+              patientBal = pt; insBal = 0;
+            } else if (ins > 0) {
+              patientBal = 0; insBal = Math.max(0, total - writeoff);
+            } else {
+              patientBal = Math.max(0, total - writeoff); insBal = 0;
+            }
+
+            const remainingBal = Math.max(0, total - writeoff - Number(item.paidAmount || 0));
+            return {
+              ...item,
+              checked: false,
+              payAmount:       Math.max(0, patientBal - Number(item.paidAmount || 0)).toFixed(2),
+              patientBalance:  patientBal,
+              writeoffAmount:  writeoff,
+              insuranceAmount: insBal,
+              totalAmount:     total,
+              remainingBal,
+            };
+          }),
+        }));
+
+      // Keep only invoices that still have items with remaining balances
+      const result = enrichedInvoices
+        .filter((inv) => (inv.lineItems || []).some((item) => Number(item.remainingBal) > 0))
+        .map((inv) => ({
+          ...inv,
+          lineItems: (inv.lineItems || []).filter((item) => Number(item.remainingBal) > 0),
+        }));
+
+      return { patientId, invoices: result };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch payment invoices');
+    }
+  },
+  {
+    /**
+     * Skip if already fetching or already cached for this patient.
+     */
+    condition: (patientId, { getState }) => {
+      const { billing } = getState();
+      if (billing.paymentInvoicesFetchingSet?.includes(patientId)) return false;
+      if (billing.paymentInvoicesCache?.[patientId]) return false;
+      return true;
+    },
+  }
+);
 
 export const fetchBillingConfiguration = createAsyncThunk(
   'billing/fetchConfiguration',
@@ -253,6 +673,25 @@ export const savePaymentTerminals = createAsyncThunk(
   }
 );
 
+export const fetchArAgingReport = createAsyncThunk(
+  'billing/fetchArAgingReport',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getFinancialReport('aging');
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.arAgingLoading || billing.arAging) return false;
+      return true;
+    }
+  }
+);
+
 const initialState = {
   // Current invoice being viewed/edited
   currentInvoice: null,
@@ -268,6 +707,7 @@ const initialState = {
 
   // A/R aging data
   arAging: null,
+  arAgingLoading: false,
   
   // Billing Configuration
   billingConfiguration: null,
@@ -293,6 +733,21 @@ const initialState = {
   // UI state
   loading: false,
   error: null,
+
+  // Ledger state — per-patient ledger items
+  ledgerCache: {},       // { [patientId]: LedgerItem[] }
+  ledgerLoading: false,
+  ledgerError: null,
+  detailsFetchingSet: [], // invoice IDs currently being fetched — prevents duplicate requests
+
+  // AddPaymentDialog — draft invoices for payment allocation
+  paymentInvoicesCache: {},   // { [patientId]: Invoice[] }
+  paymentInvoicesLoading: false,
+  paymentInvoicesError: null,
+  paymentInvoicesFetchingSet: [], // patientIds currently being fetched
+
+  // Per-invoice adjustmentTypes map { [invoiceId-itemId]: string }
+  adjustmentTypeMap: {},
 };
 
 const billingSlice = createSlice({
@@ -375,6 +830,59 @@ const billingSlice = createSlice({
       state.error = action.payload;
       state.loading = false;
     },
+
+    // ── AddPaymentDialog checkbox reducers ──────────────────────────────────
+
+    /** Toggle an entire payment invoice's checked state (and all its line items). */
+    togglePaymentInvoiceChecked: (state, action) => {
+      const { patientId, invoiceId } = action.payload;
+      const invoices = state.paymentInvoicesCache[patientId];
+      if (!invoices) return;
+      const inv = invoices.find((i) => i.id === invoiceId);
+      if (!inv) return;
+      inv.checked = !inv.checked;
+      inv.lineItems.forEach((item) => { item.checked = inv.checked; });
+    },
+
+    /** Toggle a single payment line-item's checked state. */
+    togglePaymentLineItemChecked: (state, action) => {
+      const { patientId, invoiceId, itemId } = action.payload;
+      const invoices = state.paymentInvoicesCache[patientId];
+      if (!invoices) return;
+      const inv = invoices.find((i) => i.id === invoiceId);
+      if (!inv) return;
+      const item = inv.lineItems.find((li) => li.id === itemId);
+      if (item) item.checked = !item.checked;
+      inv.checked = inv.lineItems.length > 0 && inv.lineItems.every((li) => li.checked);
+    },
+
+    /** Evict cached payment invoices for a patient. */
+    invalidatePaymentInvoices: (state, action) => {
+      const patientId = action.payload;
+      if (patientId) {
+        delete state.paymentInvoicesCache[patientId];
+        state.paymentInvoicesFetchingSet = state.paymentInvoicesFetchingSet.filter((id) => id !== patientId);
+      } else {
+        state.paymentInvoicesCache = {};
+        state.paymentInvoicesFetchingSet = [];
+      }
+    },
+
+    /** Record the adjustment type applied to a procedure key (invoiceId-itemId). */
+    setAdjustmentTypeForItem: (state, action) => {
+      const { key, adjustmentType } = action.payload;
+      state.adjustmentTypeMap[key] = adjustmentType;
+    },
+
+    /** Invalidate (clear) cached ledger for a patient to force re-fetch. */
+    invalidateLedger: (state, action) => {
+      const patientId = action.payload;
+      if (patientId) {
+        delete state.ledgerCache[patientId];
+      } else {
+        state.ledgerCache = {};
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -435,6 +943,17 @@ const billingSlice = createSlice({
       .addCase(fetchAdjustmentTypes.rejected, (state, action) => {
         state.adjustmentTypesLoading = false;
         if (action.meta.aborted) return;
+        state.error = action.payload;
+      })
+      .addCase(createInvoice.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(createInvoice.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentInvoice = action.payload;
+      })
+      .addCase(createInvoice.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload;
       })
       .addCase(createAdjustmentType.fulfilled, (state, action) => {
@@ -525,6 +1044,93 @@ const billingSlice = createSlice({
           prosperipay: action.payload?.prosperipay || [],
           payrix: action.payload?.payrix || []
         };
+      })
+      .addCase(fetchArAgingReport.pending, (state) => {
+        state.arAgingLoading = true;
+      })
+      .addCase(fetchArAgingReport.fulfilled, (state, action) => {
+        state.arAgingLoading = false;
+        state.arAging = action.payload;
+      })
+      .addCase(fetchArAgingReport.rejected, (state, action) => {
+        state.arAgingLoading = false;
+        state.error = action.payload;
+      })
+      // ── Ledger thunks ──────────────────────────────────────────────────────
+      .addCase(fetchLedgerItems.pending, (state) => {
+        state.ledgerLoading = true;
+        state.ledgerError = null;
+      })
+      .addCase(fetchLedgerItems.fulfilled, (state, action) => {
+        state.ledgerLoading = false;
+        state.ledgerCache[action.payload.patientId] = action.payload.items;
+      })
+      .addCase(fetchLedgerItems.rejected, (state, action) => {
+        state.ledgerLoading = false;
+        state.ledgerError = action.payload;
+      })
+      .addCase(fetchInvoiceDetails.pending, (state, action) => {
+        // Mark this invoice as in-flight so concurrent clicks are ignored
+        const invoiceId = action.meta.arg.invoiceId;
+        if (!state.detailsFetchingSet.includes(invoiceId)) {
+          state.detailsFetchingSet.push(invoiceId);
+        }
+      })
+      .addCase(fetchInvoiceDetails.fulfilled, (state, action) => {
+        const { patientId, invoiceId, details, totalPaidAmt } = action.payload;
+        // Remove from in-flight set
+        state.detailsFetchingSet = state.detailsFetchingSet.filter((id) => id !== invoiceId);
+        const items = state.ledgerCache[patientId];
+        if (!items) return;
+        const idx = items.findIndex((i) => i.id === invoiceId);
+        if (idx === -1) return;
+        items[idx].details = details;
+        if (totalPaidAmt > 0) {
+          items[idx].summary.ptPaid = `$${totalPaidAmt.toFixed(2)}`;
+        }
+      })
+      .addCase(fetchInvoiceDetails.rejected, (state, action) => {
+        // Always clear the in-flight marker so a retry is possible
+        const invoiceId = action.meta.arg.invoiceId;
+        state.detailsFetchingSet = state.detailsFetchingSet.filter((id) => id !== invoiceId);
+      })
+      // Ledger mutations re-fetch automatically via their thunks — just clear loading
+      .addCase(backdateTransaction.rejected, (state, action) => {
+        state.ledgerError = action.payload;
+      })
+      .addCase(voidTransaction.rejected, (state, action) => {
+        state.ledgerError = action.payload;
+      })
+      .addCase(applyCourtesyCredit.fulfilled, (state, action) => {
+        const { procedureId, invoiceId, adjustmentType } = action.payload;
+        state.adjustmentTypeMap[`${invoiceId}-${procedureId}`] = adjustmentType;
+      })
+      .addCase(applyCourtesyCredit.rejected, (state, action) => {
+        state.ledgerError = action.payload;
+      })
+      .addCase(undoCourtesyCredit.rejected, (state, action) => {
+        state.ledgerError = action.payload;
+      })
+      // ── Payment draft invoices ─────────────────────────────────────────────
+      .addCase(fetchPaymentDraftInvoices.pending, (state, action) => {
+        state.paymentInvoicesLoading = true;
+        state.paymentInvoicesError = null;
+        const patientId = action.meta.arg;
+        if (!state.paymentInvoicesFetchingSet.includes(patientId)) {
+          state.paymentInvoicesFetchingSet.push(patientId);
+        }
+      })
+      .addCase(fetchPaymentDraftInvoices.fulfilled, (state, action) => {
+        state.paymentInvoicesLoading = false;
+        const patientId = action.payload.patientId;
+        state.paymentInvoicesFetchingSet = state.paymentInvoicesFetchingSet.filter((id) => id !== patientId);
+        state.paymentInvoicesCache[patientId] = action.payload.invoices;
+      })
+      .addCase(fetchPaymentDraftInvoices.rejected, (state, action) => {
+        state.paymentInvoicesLoading = false;
+        const patientId = action.meta.arg;
+        state.paymentInvoicesFetchingSet = state.paymentInvoicesFetchingSet.filter((id) => id !== patientId);
+        state.paymentInvoicesError = action.payload;
       });
   },
 });
@@ -540,6 +1146,11 @@ export const {
   clearCurrentInvoice,
   setLoading,
   setError,
+  togglePaymentInvoiceChecked,
+  togglePaymentLineItemChecked,
+  invalidatePaymentInvoices,
+  setAdjustmentTypeForItem,
+  invalidateLedger,
 } = billingSlice.actions;
 
 // Selectors
@@ -560,7 +1171,23 @@ export const selectPaymentTypesLoading = (state) => state.billing.paymentTypesLo
 export const selectPaymentTypeDefaults = (state) => state.billing.paymentTypeDefaults;
 export const selectPaymentTerminals = (state) => state.billing.paymentTerminals;
 export const selectPaymentTerminalsLoading = (state) => state.billing.paymentTerminalsLoading;
+export const selectArAgingLoading = (state) => state.billing.arAgingLoading;
 export const selectBillingLoading = (state) => state.billing.loading;
-export const selectBillingError = (state) => state.billing.error;
+export const selectBillingError   = (state) => state.billing.error;
+
+// Ledger selectors
+export const selectLedgerLoading  = (state) => state.billing.ledgerLoading;
+export const selectLedgerError    = (state) => state.billing.ledgerError;
+export const selectAdjustmentTypeMap = (state) => state.billing.adjustmentTypeMap;
+/** Returns cached ledger items for the given patient (or empty array). */
+export const selectLedgerItemsForPatient = (patientId) => (state) =>
+  state.billing.ledgerCache?.[patientId] || [];
+
+// Payment invoice selectors
+export const selectPaymentInvoicesLoading = (state) => state.billing.paymentInvoicesLoading;
+export const selectPaymentInvoicesError   = (state) => state.billing.paymentInvoicesError;
+/** Returns cached payment draft invoices for the given patient (or empty array). */
+export const selectPaymentInvoicesForPatient = (patientId) => (state) =>
+  state.billing.paymentInvoicesCache?.[patientId] || [];
 
 export default billingSlice.reducer;

@@ -233,6 +233,16 @@ const COVERAGE_DATA = {
     { id: 10, label: 'Basic', coverage: 80, waiting: 0 },
     { id: 11, label: 'D9310', coverage: 50, waiting: 0, deletable: true, hasArrow: true },
     { id: 12, label: 'D9230', coverage: 0, waiting: 0, deletable: true, hasArrow: true }
+  ],
+  frequencies: [
+    { id: 'f1', label: 'Prophy', unit: 2, freqNum: 1, freqType: 'Year' },
+    { id: 'f2', label: 'Bitewings', unit: 1, freqNum: 1, freqType: 'Year' },
+    { id: 'f3', label: 'FMX/pano', unit: 1, freqNum: 36, freqType: 'Month' },
+    { id: 'f4', label: 'Exam', unit: 2, freqNum: 1, freqType: 'Year' },
+    { id: 'f5', label: 'Fluoride', unit: 2, freqNum: 1, freqType: 'Year' }
+  ],
+  limitations: [
+    { id: 'l1', label: 'Fluoride', ageLimit: '18', lifeLimit: '----' }
   ]
 };
 
@@ -297,6 +307,44 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
       updatedData[key] = updatedData[key].filter(item => item.id !== itemId);
     });
     
+    setCoverageData(updatedData);
+  };
+
+  // Handler to edit coverage item
+  const handleChangeCoverageItem = (itemId, field, value) => {
+    if (!setCoverageData) {
+      console.log('Change clicked for item:', itemId, field, value);
+      return;
+    }
+
+    const updatedData = { ...data };
+    Object.keys(updatedData).forEach(key => {
+      if (key === 'frequencies' || key === 'limitations') return;
+      updatedData[key] = updatedData[key].map(item => 
+        item.id === itemId ? { ...item, [field]: value } : item
+      );
+    });
+    
+    setCoverageData(updatedData);
+  };
+
+  const handleChangeFrequency = (itemId, field, value) => {
+    if (!setCoverageData) return;
+    const updatedData = { ...data };
+    if (!updatedData.frequencies) return;
+    updatedData.frequencies = updatedData.frequencies.map(item =>
+      item.id === itemId ? { ...item, [field]: value } : item
+    );
+    setCoverageData(updatedData);
+  };
+
+  const handleChangeLimitation = (itemId, field, value) => {
+    if (!setCoverageData) return;
+    const updatedData = { ...data };
+    if (!updatedData.limitations) return;
+    updatedData.limitations = updatedData.limitations.map(item =>
+      item.id === itemId ? { ...item, [field]: value } : item
+    );
     setCoverageData(updatedData);
   };
 
@@ -390,27 +438,64 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {[
-                { label: 'Prophy', unit: 2, freq: '1 Year' },
-                { label: 'Bitewings', unit: 1, freq: '1 Year' },
-                { label: 'FMX/pano', unit: 1, freq: '36 Month' },
-                { label: 'Exam', unit: 2, freq: '1 Year' },
-                { label: 'Fluoride', unit: 2, freq: '1 Year' }
-              ].map((row, idx) => (
-                <TableRow key={idx} sx={{ height: '32px' }}>
+              {(data.frequencies || []).map((row) => (
+                <TableRow key={row.id} sx={{ height: '32px' }}>
                   <TableCell sx={{ ...cellStyle, color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{row.label}</TableCell>
-                  <TableCell sx={{ ...cellStyle, fontSize: '0.75rem', textAlign: 'center', textDecoration: 'underline' }}>{row.unit}</TableCell>
+                  <TableCell sx={{ ...cellStyle, fontSize: '0.75rem', textAlign: 'center' }}>
+                    <TextField 
+                      variant="standard"
+                      size="small" 
+                      type="number"
+                      value={row.unit}
+                      InputProps={{ inputProps: { min: 0 } }}
+                      onChange={(e) => {
+                        let val = parseInt(e.target.value, 10) || 0;
+                        if (val < 0) val = 0;
+                        handleChangeFrequency(row.id, 'unit', val);
+                      }}
+                      sx={{ 
+                        '& input': { py: 0.1, px: 0.5, fontSize: '0.75rem', color: '#1976d2', width: '30px', textAlign: 'center' },
+                        '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button': { 
+                          WebkitAppearance: 'none', 
+                          margin: 0 
+                        },
+                        '& input[type=number]': { MozAppearance: 'textfield' },
+                        '&::before, &::after': { display: 'none' }
+                      }} 
+                    />
+                  </TableCell>
                   <TableCell sx={{ ...cellStyle, fontSize: '0.75rem' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography sx={{ fontSize: '0.75rem', mr: 0.5, textDecoration: 'underline' }}>{row.freq.split(' ')[0]}</Typography>
+                      <TextField 
+                        variant="standard"
+                        size="small" 
+                        type="number"
+                        value={row.freqNum}
+                        InputProps={{ inputProps: { min: 0 } }}
+                        onChange={(e) => {
+                          let val = parseInt(e.target.value, 10) || 0;
+                          if (val < 0) val = 0;
+                          handleChangeFrequency(row.id, 'freqNum', val);
+                        }}
+                        sx={{ 
+                          '& input': { py: 0.1, px: 0.5, fontSize: '0.75rem', color: '#1976d2', width: '30px', textAlign: 'center', mr: 0.5 },
+                          '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button': { 
+                            WebkitAppearance: 'none', 
+                            margin: 0 
+                          },
+                          '& input[type=number]': { MozAppearance: 'textfield' },
+                          '&::before, &::after': { display: 'none' }
+                        }} 
+                      />
                       <Select 
                         size="small" 
                         variant="standard" 
-                        defaultValue={row.freq.split(' ')[1]} 
+                        value={row.freqType}
+                        onChange={(e) => handleChangeFrequency(row.id, 'freqType', e.target.value)}
                         sx={{ fontSize: '0.75rem', '&:before, &:after': { display: 'none' } }}
                       >
-                        <MenuItem value="Year">Year</MenuItem>
-                        <MenuItem value="Month">Month</MenuItem>
+                        <MenuItem value="Year" sx={{ fontSize: '0.75rem' }}>Year</MenuItem>
+                        <MenuItem value="Month" sx={{ fontSize: '0.75rem' }}>Month</MenuItem>
                       </Select>
                     </Box>
                   </TableCell>
@@ -422,19 +507,41 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
 
         {/* Limitations Section */}
         <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', mb: 1.5 }}>Limitations</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, px: 1 }}>
-          <Typography sx={{ color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>
-            Fluoride
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>Age Limit:</Typography>
-            <Typography sx={{ fontSize: '0.75rem', textDecoration: 'underline' }}>18</Typography>
+        {(data.limitations || []).map((row) => (
+          <Box key={row.id} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 1, mb: 1 }}>
+            <Typography sx={{ color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500, minWidth: '50px' }}>
+              {row.label}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>Age Limit:</Typography>
+              <TextField 
+                variant="standard"
+                size="small"
+                value={row.ageLimit}
+                onChange={(e) => handleChangeLimitation(row.id, 'ageLimit', e.target.value)}
+                sx={{ 
+                  '& input': { py: 0.1, px: 0.5, fontSize: '0.75rem', color: '#1976d2', width: '40px', textAlign: 'center' },
+                  '&::before, &::after': { display: 'none' },
+                  borderBottom: '1px solid #1976d2'
+                }} 
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>Life Limit:</Typography>
+              <TextField 
+                variant="standard"
+                size="small"
+                value={row.lifeLimit}
+                onChange={(e) => handleChangeLimitation(row.id, 'lifeLimit', e.target.value)}
+                sx={{ 
+                  '& input': { py: 0.1, px: 0.5, fontSize: '0.75rem', color: '#1976d2', width: '40px', textAlign: 'center' },
+                  '&::before, &::after': { display: 'none' },
+                  borderBottom: '1px solid #1976d2'
+                }} 
+              />
+            </Box>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>Life Limit:</Typography>
-            <Typography sx={{ fontSize: '0.75rem', textDecoration: 'underline' }}>----</Typography>
-          </Box>
-        </Box>
+        ))}
       </Grid>
     </Grid>
   );

@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Typography, Stack, IconButton, styled, Tooltip } from '@mui/material';
+import { useDispatch } from 'react-redux';
+import { appointmentService } from '../../services/appointment.service';
+import { paymentService } from '../../services/payment.service';
+import { invoiceService } from '../../services/invoice.service';
+import { createInvoice, invalidatePaymentInvoices } from '../../store/slices/billingSlice';
+import { Box, Typography, Stack, IconButton, styled, Tooltip, Menu, MenuItem } from '@mui/material';
 import {
   CurrencyExchangeOutlined,
   SavingsOutlined,
@@ -13,13 +18,14 @@ import InsurancePaymentDialog from './InsurancePaymentDialog';
 import CashPlusMenu from './CashPlusMenu';
 import AddPaymentDialog from './AddPaymentDialog';
 import AccountNotesDialog from './AccountNotesDialog';
-import NewInvoiceDialog from './NewInvoiceDialog';
+import InvoiceModal from './InvoiceModal';
 import PatientPrintOptions from './PatientPrintOptions';
 import PrintReceiptDialog from './PrintReceiptDialog';
 import ItemizedReceiptPreview from './ItemizedReceiptPreview';
 import SimpleStatementDialog from './SimpleStatementDialog';
 import DetailedStatementDialog from './DetailedStatementDialog';
 import LateFeeDialog from './LateFeeDialog';
+import ManualClaimDialog from './ManualClaimDialog';
 import apiClient from '../../config/api';
 
 // --- STYLED COMPONENTS ---
@@ -65,16 +71,51 @@ const IconUserWallet = ({ onClick }) => (
 
 
 // 3. Insurance Shield Icon - Add Claim
-const IconInsurance = () => (
-  <Tooltip title="Add Claim" placement="bottom">
-    <IconContainer>
-      <svg width="28" height="28" viewBox="0 0 24 24">
-        <path d="M12 2L4 5V11C4 16.1 7.4 20.8 12 22C16.6 20.8 20 16.1 20 11V5L12 2Z" fill="#cfd8dc" stroke="#000" strokeWidth="1" />
-        <path d="M12 7V17M7 12H17" stroke="#1976d2" strokeWidth="2" />
-      </svg>
-    </IconContainer>
-  </Tooltip>
-);
+const IconInsuranceWithDropdown = ({ onClaimSelect }) => {
+  const [anchorEl, React_useState] = React.useState(null);
+
+  const handleClick = (event) => {
+    React_useState(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    React_useState(null);
+  };
+
+  const handleSelect = (option) => {
+    if (onClaimSelect) {
+      onClaimSelect(option);
+    }
+    handleClose();
+  };
+
+  return (
+    <>
+      <Tooltip title="Add Claim" placement="bottom">
+        <IconContainer onClick={handleClick} sx={{ cursor: 'pointer' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24">
+            <path d="M12 2L4 5V11C4 16.1 7.4 20.8 12 22C16.6 20.8 20 16.1 20 11V5L12 2Z" fill="#cfd8dc" stroke="#000" strokeWidth="1" />
+            <path d="M12 7V17M7 12H17" stroke="#1976d2" strokeWidth="2" />
+          </svg>
+        </IconContainer>
+      </Tooltip>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+        PaperProps={{
+          sx: {
+            boxShadow: '0px 2px 8px rgba(0,0,0,0.1)',
+            minWidth: 150,
+          }
+        }}
+      >
+        <MenuItem onClick={() => handleSelect('manual')} sx={{ fontSize: '0.875rem' }}>Manual Claims</MenuItem>
+        <MenuItem onClick={() => handleSelect('electronic')} sx={{ fontSize: '0.875rem' }}>Electronic Claims</MenuItem>
+      </Menu>
+    </>
+  );
+};
 
 
 // 4. Insurance Wallet Icon - Insurance Payment
@@ -204,26 +245,82 @@ const flagColorMap = {
   'Botox/Filler': '#eef681',
   'Bioclear Patient': '#cf5dbd',
   'Ortho Patient': '#4d39c0',
-  'Balance Owed': '#d3562f',
+'Balance Owed': '#d3562f',
   'appointment_reminder': '#94bc74'
 };
 
 const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick, onCashMinusClick, onRefreshCoinClick, onAddFlagsClick, onOpenDepositMenu }) => {
+  const dispatch = useDispatch();
+  const [showShare, setShowShare] = useState(false);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const [showQuickPayment, setShowQuickPayment] = useState(false);
   const [showInsurancePayment, setShowInsurancePayment] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showAccountNotes, setShowAccountNotes] = useState(false);
   const [showNewInvoice, setShowNewInvoice] = useState(false);
   const [cashPlusAnchorEl, setCashPlusAnchorEl] = useState(null);
+
+  const handleInvoiceModalSave = async (data) => {
+    const patientId = patient?._id || patient?.id;
+    try {
+      const payload = {
+        patientId: parseInt(patientId, 10) || 1,
+        items: data.map(row => {
+          let parsedDate = new Date().toISOString();
+          if (row.date) {
+            const d = new Date(row.date);
+            if (!isNaN(d.getTime())) {
+              parsedDate = d.toISOString();
+            }
+          }
+          return {
+            code: row.code,
+            description: row.treatment,
+            date: parsedDate,
+            site: row.site,
+            provider: row.provider,
+            writeoff: parseFloat((String(row.writeoff) || '').replace(/[^0-9.-]+/g, '')) || 0,
+            ptPortion: parseFloat((String(row.ptPortion) || '').replace(/[^0-9.-]+/g, '')) || 0,
+            insPortion: parseFloat((String(row.insPortion) || '').replace(/[^0-9.-]+/g, '')) || 0,
+            charge: parseFloat((String(row.charge) || '').replace(/[^0-9.-]+/g, '')) || 0,
+            balance: parseFloat((String(row.balance) || '').replace(/[^0-9.-]+/g, '')) || 0,
+            dbi: Boolean(row.dbi),
+            completed: Boolean(row.completed),
+          };
+        })
+      };
+
+      if (payload.items.length === 0) {
+        alert('Please add at least one procedure before saving.');
+        return;
+      }
+      
+      await dispatch(createInvoice(payload)).unwrap();
+      setShowNewInvoice(false);
+      
+      // Dispatch custom event so LedgerList can refresh
+      window.dispatchEvent(new CustomEvent('refresh-ledger'));
+    } catch (err) {
+      console.error('Failed to create invoice:', err);
+      alert('Failed to create invoice: ' + (err.message || err));
+    }
+  };
   const [printAnchorEl, setPrintAnchorEl] = useState(null);
   const [showPrintReceipt, setShowPrintReceipt] = useState(false);
   const [showItemizedReceipt, setShowItemizedReceipt] = useState(false);
   const [showSimpleStatement, setShowSimpleStatement] = useState(false);
   const [showDetailedStatement, setShowDetailedStatement] = useState(false);
   const [showLateFee, setShowLateFee] = useState(false);
+  const [showManualClaim, setShowManualClaim] = useState(false);
   const [selectedAdjustment, setSelectedAdjustment] = useState(null);
   const [isFamilyReceipt, setIsFamilyReceipt] = useState(false);
   
+  const handleClaimSelect = (option) => {
+    if (option === 'manual') {
+      setShowManualClaim(true);
+    }
+  };
+
   const handleShareSelect = (optionId) => {
     if (optionId === 'request-payment') {
       setShowQuickPayment(true);
@@ -240,10 +337,57 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
     setShowAddPayment(true);
   };
 
-  const handlePaymentApply = (paymentData) => {
+  const handlePaymentApply = async (paymentData) => {
     console.log('Payment applied:', paymentData);
-    // Add logic to handle payment data here
-    // This could include API calls, state updates, etc.
+    try {
+      const patientId = patient?._id || patient?.id;
+      if (!patientId) return;
+
+      const totalAmount = parseFloat(paymentData.amount) || 0;
+      if (totalAmount <= 0) return;
+
+      // Group by invoice
+      for (const invoice of (paymentData.selectedInvoices || [])) {
+        const invoiceItems = (paymentData.selectedItems || []).filter(item => item.invoiceId === invoice.id);
+        const invoicePaymentAmount = invoiceItems.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+        
+        if (invoicePaymentAmount > 0) {
+          let methodStr = (paymentData.paymentMethod || 'cash').toLowerCase();
+          let backendMethod = 'cash';
+          if (methodStr.includes('card')) backendMethod = 'card';
+          else if (methodStr.includes('check')) backendMethod = 'check';
+          else if (methodStr.includes('insurance')) backendMethod = 'insurance';
+          else if (methodStr.includes('ach')) backendMethod = 'ach';
+          else if (methodStr.includes('plan')) backendMethod = 'payment_plan';
+
+          const payload = {
+            patientId: parseInt(patientId) || patientId,
+            invoiceId: invoice.id,
+            amount: invoicePaymentAmount,
+            paymentMethod: backendMethod,
+            paymentDate: new Date().toISOString(),
+            status: 'completed',
+            notes: paymentData.description || 'Patient payment'
+          };
+          await paymentService.recordPayment(payload);
+
+          // Mark each individual line item as paid in BillingNote for precise tracking
+          await Promise.all(
+            invoiceItems.map(item =>
+              invoiceService.markItemPaid(invoice.id, item.itemId, parseFloat(item.amount))
+                .catch(err => console.warn('markItemPaid failed for item', item.itemId, err))
+            )
+          );
+        }
+      }
+      
+      dispatch(invalidatePaymentInvoices(patientId));
+      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+      setShowAddPayment(false);
+      if (typeof fetchPatientData === 'function') fetchPatientData();
+    } catch (err) {
+      console.error('Failed to apply payment', err);
+    }
   };
 
   const handleInsurancePaymentSave = (paymentData) => {
@@ -332,7 +476,7 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
   const pixelIcons = [
     { Icon: IconBill, onClick: () => setShowNewInvoice(true) },
     { Icon: IconUserWallet, onClick: handleUserWalletClick },
-    { Icon: IconInsurance },
+    { Icon: IconInsuranceWithDropdown, onClaimSelect: handleClaimSelect },
     { Icon: IconInsuranceWallet, onClick: handleInsuranceWalletClick },
     { Icon: IconRefreshCoin, onClick: onRefreshCoinClick },
     { Icon: IconPiggyBank, onClick: onOpenDepositMenu },
@@ -390,7 +534,7 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
               onClick={item.onClick}
               sx={{ '&:hover': { bgcolor: 'transparent' } }}
             >
-              <item.Icon onShareSelect={item.onShareSelect} onClick={item.onClick} />
+              <item.Icon onShareSelect={item.onShareSelect} onClaimSelect={item.onClaimSelect} onClick={item.onClick} />
             </IconButton>
           ))}
         </Stack>
@@ -511,6 +655,39 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
         onSelect={handleCashPlusSelect}
       />
 
+      {/* Manual Claim Dialog */}
+      {showManualClaim && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            bgcolor: 'rgba(0,0,0,0.5)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setShowManualClaim(false)}
+        >
+          <Box 
+            sx={{ 
+              maxWidth: '1200px', 
+              width: '90%',
+              bgcolor: '#fff',
+              borderRadius: '4px',
+              overflow: 'visible',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ManualClaimDialog patient={patient} onClose={() => setShowManualClaim(false)} />
+          </Box>
+        </Box>
+      )}
+
       {/* Late Fee Dialog */}
       {showLateFee && (
         <Box 
@@ -623,9 +800,10 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <NewInvoiceDialog 
-              patient={patient}
-              onClose={() => setShowNewInvoice(false)}
+            <InvoiceModal 
+              invoiceData={{ invoiceId: '3125' }}
+              onSave={handleInvoiceModalSave}
+              onCancel={() => setShowNewInvoice(false)}
             />
           </Box>
         </Box>

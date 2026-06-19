@@ -38,5 +38,15 @@ export const reportingService = {
   async runReport(options) {
     const response = await apiClient.post('/reports/run', options);
     return response.data.data;
+  },
+
+  /**
+   * Get financial report data by name
+   * @param {string} reportName 
+   * @param {Object} params - Query params like date, range
+   */
+  async getFinancialReport(reportName, params = {}) {
+    const response = await apiClient.get(`/reports/financial/${reportName}`, { params });
+    return response.data.data;
   }
 };

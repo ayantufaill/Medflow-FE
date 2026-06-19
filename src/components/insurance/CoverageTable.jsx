@@ -304,10 +304,11 @@ const CoverageGroup = ({ title, rows, onDeleteItem, onChangeItem }) => (
                 variant="standard"
                 size="small" 
                 type="number"
-                defaultValue={row.coverage}
+                value={row.coverage !== undefined ? row.coverage : ''}
                 InputProps={{ inputProps: { min: 0, max: 100 } }}
                 onChange={(e) => {
-                  let val = parseInt(e.target.value, 10) || 0;
+                  let val = parseInt(e.target.value, 10);
+                  if (isNaN(val)) val = 0;
                   if (val < 0) val = 0;
                   if (val > 100) val = 100;
                   if (onChangeItem) onChangeItem(row.id, 'coverage', val);
@@ -327,10 +328,11 @@ const CoverageGroup = ({ title, rows, onDeleteItem, onChangeItem }) => (
                 variant="standard"
                 size="small" 
                 type="number"
-                defaultValue={row.waiting}
+                value={row.waiting !== undefined ? row.waiting : ''}
                 InputProps={{ inputProps: { min: 0 } }}
                 onChange={(e) => {
-                  let val = parseInt(e.target.value, 10) || 0;
+                  let val = parseInt(e.target.value, 10);
+                  if (isNaN(val)) val = 0;
                   if (val < 0) val = 0;
                   if (onChangeItem) onChangeItem(row.id, 'waiting', val);
                 }}
@@ -443,7 +445,7 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
       <Grid item xs={12}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.7rem' }}>Coverage Table</Typography>
-          <Typography sx={{ color: '#1976d2', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <Typography sx={{ color: '#bdbdbd', fontSize: '0.6rem', cursor: 'not-allowed', display: 'flex', alignItems: 'center' }}>
             <AddIconNew sx={{ fontSize: 10 }} /> Add Coverage
           </Typography>
         </Box>
@@ -495,7 +497,7 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
             <MenuItem value="standard_ppo" sx={{ fontSize: '0.65rem' }}>Standard PPO</MenuItem>
             <MenuItem value="custom" sx={{ fontSize: '0.65rem' }}>Custom Template</MenuItem>
           </Select>
-          <Typography sx={{ color: '#1976d2', fontSize: '0.6rem', whiteSpace: 'nowrap', cursor: 'pointer', fontWeight: 600 }}>
+          <Typography sx={{ color: '#bdbdbd', fontSize: '0.6rem', whiteSpace: 'nowrap', cursor: 'not-allowed', fontWeight: 600 }}>
             + Add Coverage Group
           </Typography>
         </Box>
