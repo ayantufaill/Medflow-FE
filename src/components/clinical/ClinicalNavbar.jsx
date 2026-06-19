@@ -33,13 +33,13 @@ const ClinicalNavbar = () => {
 
   // Fetch missing detail context if IDs are present but data is empty
   useEffect(() => {
-    if (selectedPatientId && (!currentPatient || (currentPatient._id !== selectedPatientId && currentPatient.id !== selectedPatientId))) {
+    if (selectedPatientId && (!currentPatient || (String(currentPatient._id) !== String(selectedPatientId) && String(currentPatient.id) !== String(selectedPatientId)))) {
       dispatch(fetchPatientById(selectedPatientId));
     }
   }, [selectedPatientId, currentPatient, dispatch]);
 
   useEffect(() => {
-    if (selectedAppointmentId && (!currentAppointment || (currentAppointment._id !== selectedAppointmentId && currentAppointment.id !== selectedAppointmentId))) {
+    if (selectedAppointmentId && (!currentAppointment || (String(currentAppointment._id) !== String(selectedAppointmentId) && String(currentAppointment.id) !== String(selectedAppointmentId)))) {
       dispatch(fetchAppointmentById(selectedAppointmentId));
     }
   }, [selectedAppointmentId, currentAppointment, dispatch]);
