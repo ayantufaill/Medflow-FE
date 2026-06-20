@@ -50,6 +50,7 @@ import {
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { useNavigate } from 'react-router-dom';
+import AddressSelectFields from '../common/AddressSelectFields';
 
 const PatientForm = ({
   onSubmit,
@@ -92,6 +93,7 @@ const PatientForm = ({
     control,
     reset,
     watch,
+    setValue,
   } = useForm({
     defaultValues: initialData || {
       title: '',
@@ -1274,27 +1276,16 @@ const PatientForm = ({
               helperText={errors.address?.line2?.message}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="City *"
-              {...register('address.city', patientValidations['address.city'])}
-              error={!!errors.address?.city}
-              helperText={errors.address?.city?.message}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="State *"
-              {...register(
-                'address.state',
-                patientValidations['address.state']
-              )}
-              error={!!errors.address?.state}
-              helperText={errors.address?.state?.message}
-            />
-          </Grid>
+          <AddressSelectFields
+            control={control}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+            prefix="address."
+            stateLabel="State"
+            cityLabel="City"
+            gridSize={{ xs: 12, sm: 4 }}
+          />
           <Grid size={{ xs: 12, sm: 4 }}>
             <Controller
               name="address.postalCode"
@@ -1338,12 +1329,16 @@ const PatientForm = ({
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField fullWidth label="Work Address Line 2" {...register('workAddress.line2')} />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField fullWidth label="Work City" {...register('workAddress.city')} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField fullWidth label="Work State" {...register('workAddress.state')} />
-          </Grid>
+          <AddressSelectFields
+            control={control}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+            prefix="workAddress."
+            stateLabel="Work State"
+            cityLabel="Work City"
+            gridSize={{ xs: 12, sm: 4 }}
+          />
           <Grid size={{ xs: 12, sm: 4 }}>
             <TextField fullWidth label="Work Postal Code" {...register('workAddress.postalCode')} />
           </Grid>
