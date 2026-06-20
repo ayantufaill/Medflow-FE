@@ -24,7 +24,8 @@ import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice
 import {
   useClinicalExamQuery,
   useUpsertClinicalExam,
-  useSignClinicalExam
+  useSignClinicalExam,
+  useExamHistoryDates
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
@@ -287,29 +288,28 @@ const AirwayPage = () => {
 
   const { currentAppointment } = useAppointment();
 
-  const [visitDates, setVisitDates] = useState(() => {
-    const historicalDates = ['Sep 29, 2023', 'Apr 26, 2024', 'Jul 03, 2024'];
-    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(d)) {
-        return [...historicalDates, d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })];
-      }
-    }
-    return [...historicalDates, 'May 22, 2025'];
-  });
+  const { data: historicalDates } = useExamHistoryDates('airway', patientId);
+  const [visitDates, setVisitDates] = useState([]);
 
   useEffect(() => {
+    const historyArray = historicalDates || [];
+    const formattedHistory = historyArray.map(dateStr => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    });
+
     if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(d)) {
-        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        setVisitDates(prev => {
-          if (prev[prev.length - 1] === formatted) return prev;
-          return [...prev, formatted];
-        });
+      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(currentD)) {
+        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        if (!formattedHistory.includes(formattedCurrent)) {
+          formattedHistory.push(formattedCurrent);
+        }
       }
     }
-  }, [currentAppointment]);
+
+    setVisitDates(prev => JSON.stringify(prev) === JSON.stringify(formattedHistory) ? prev : formattedHistory);
+  }, [historicalDates, currentAppointment]);
   const sessionState = useSelector(state => state.clinicalExamSession.exam.airway);
   const dispatch = useDispatch();
 

@@ -23,7 +23,8 @@ import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice
 import {
   useClinicalExamQuery,
   useUpsertClinicalExam,
-  useSignClinicalExam
+  useSignClinicalExam,
+  useExamHistoryDates
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
@@ -196,37 +197,28 @@ const PeriodontalExamPage = () => {
 
   const { currentAppointment } = useAppointment();
 
-  const [visitDates, setVisitDates] = useState(() => {
-    const historicalDates = [
-      'Dec 22, 2023',
-      'Mar 29, 2024',
-      'Jun 28, 2024',
-      'Oct 18, 2024',
-      'Feb 13, 2025',
-      'May 22, 2025',
-      'Dec 16, 2025'
-    ];
-    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(d)) {
-        return [...historicalDates, d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })];
-      }
-    }
-    return historicalDates;
-  });
+  const { data: historicalDates } = useExamHistoryDates('periodontal', patientId);
+  const [visitDates, setVisitDates] = useState([]);
 
   useEffect(() => {
+    const historyArray = historicalDates || [];
+    const formattedHistory = historyArray.map(dateStr => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    });
+
     if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(d)) {
-        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        setVisitDates(prev => {
-          if (prev[prev.length - 1] === formatted) return prev;
-          return [...prev, formatted];
-        });
+      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(currentD)) {
+        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        if (!formattedHistory.includes(formattedCurrent)) {
+          formattedHistory.push(formattedCurrent);
+        }
       }
     }
-  }, [currentAppointment]);
+
+    setVisitDates(prev => JSON.stringify(prev) === JSON.stringify(formattedHistory) ? prev : formattedHistory);
+  }, [historicalDates, currentAppointment]);
 
   const [showSettings, setShowSettings] = useState(false);
   
