@@ -22,6 +22,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 // --- THEME & STYLES ---
 const COLORS = {
@@ -303,9 +304,31 @@ const ExamDentofacial = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const [visitDates, setVisitDates] = useState([
-    'Mar 26, 2026'
-  ]);
+  const { currentAppointment } = useAppointment();
+
+  const [visitDates, setVisitDates] = useState(() => {
+    const historicalDates = ['Sep 29, 2023', 'Apr 26, 2024', 'Jul 03, 2024'];
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        return [...historicalDates, d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })];
+      }
+    }
+    return [...historicalDates, 'Mar 26, 2026'];
+  });
+
+  useEffect(() => {
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        setVisitDates(prev => {
+          if (prev[prev.length - 1] === formatted) return prev;
+          return [...prev, formatted];
+        });
+      }
+    }
+  }, [currentAppointment]);
 
   const sessionState = useSelector(state => state.clinicalExamSession.exam.dentofacial);
   const dispatch = useDispatch();

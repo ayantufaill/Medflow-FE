@@ -24,6 +24,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 // Custom sidebar header component
 const BlueHeader = ({ text }) => (
@@ -74,7 +75,31 @@ const DentalAnatomyExamPage = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const [visitDates, setVisitDates] = useState(['Sep 29, 2023', 'Jul 15, 2022']);
+  const { currentAppointment } = useAppointment();
+
+  const [visitDates, setVisitDates] = useState(() => {
+    const historicalDates = ['Sep 29, 2023', 'Jul 15, 2022'];
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        return [...historicalDates, d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })];
+      }
+    }
+    return historicalDates;
+  });
+
+  useEffect(() => {
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        setVisitDates(prev => {
+          if (prev[prev.length - 1] === formatted) return prev;
+          return [...prev, formatted];
+        });
+      }
+    }
+  }, [currentAppointment]);
   const [activeTool, setActiveTool] = useState(null); // 'lesion' | 'tori' | 'exostosis' | null
   
   // Clinical findings state

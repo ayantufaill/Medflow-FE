@@ -21,6 +21,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 
 // Custom Ring Radio to match the "Acceptable/Warning/Issue" style
@@ -273,10 +274,31 @@ const DentalTmdExamPage = () => {
     });
   };
 
-  const [visitDates, setVisitDates] = useState([
-    'Sep 29, 2023',
-    'May 22, 2025'
-  ]);
+  const { currentAppointment } = useAppointment();
+
+  const [visitDates, setVisitDates] = useState(() => {
+    const historicalDates = ['Sep 29, 2023', 'May 22, 2025'];
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        return [...historicalDates, d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })];
+      }
+    }
+    return historicalDates;
+  });
+
+  useEffect(() => {
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        setVisitDates(prev => {
+          if (prev[prev.length - 1] === formatted) return prev;
+          return [...prev, formatted];
+        });
+      }
+    }
+  }, [currentAppointment]);
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });

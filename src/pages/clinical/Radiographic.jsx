@@ -37,6 +37,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 const Radiographic = () => {
   const { showSnackbar } = useSnackbar();
@@ -234,11 +235,31 @@ const Radiographic = () => {
   });
 
   // State for visit dates timeline
-  const [visitDates, setVisitDates] = useState([
-    'Sep 29, 2023',
-    'Apr 26, 2024',
-    'Jul 03, 2024'
-  ]);
+  const { currentAppointment } = useAppointment();
+
+  const [visitDates, setVisitDates] = useState(() => {
+    const historicalDates = ['Sep 29, 2023', 'Apr 26, 2024', 'Jul 03, 2024'];
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        return [...historicalDates, d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })];
+      }
+    }
+    return historicalDates;
+  });
+
+  useEffect(() => {
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const d = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(d)) {
+        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        setVisitDates(prev => {
+          if (prev[prev.length - 1] === formatted) return prev;
+          return [...prev, formatted];
+        });
+      }
+    }
+  }, [currentAppointment]);
 
   // Toggle function for sections
   const toggleSection = (sectionName) => {
