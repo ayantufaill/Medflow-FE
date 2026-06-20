@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
@@ -134,9 +134,7 @@ const Morphological = () => {
   const { currentAppointment } = useAppointment();
 
   const { data: historicalDates } = useExamHistoryDates('morphological', patientId);
-  const [visitDates, setVisitDates] = useState([]);
-
-  useEffect(() => {
+  const visitDates = React.useMemo(() => {
     const historyArray = historicalDates || [];
     const formattedHistory = historyArray.map(dateStr => {
       const d = new Date(dateStr);
@@ -153,7 +151,7 @@ const Morphological = () => {
       }
     }
 
-    setVisitDates(prev => JSON.stringify(prev) === JSON.stringify(formattedHistory) ? prev : formattedHistory);
+    return formattedHistory;
   }, [historicalDates, currentAppointment]);
 
   const sessionState = useSelector(state => state.clinicalExamSession.exam.morphological);
@@ -257,7 +255,7 @@ const Morphological = () => {
 
   // Handle remove date from timeline
   const handleRemoveDate = (indexToRemove) => {
-    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
   // Handle field changes
@@ -321,7 +319,7 @@ const Morphological = () => {
   // Handle new exam
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    setVisitDates([...visitDates, today]);
+    // setVisitDates([...visitDates, today]);
     console.log('Create new exam');
     // TODO: Navigate to new exam form or reset form
   };
@@ -376,12 +374,10 @@ const Morphological = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
           <VisitDatesTimeline
             visitDates={visitDates}
-            onRemoveDate={handleRemoveDate}
           />
           <Button
             startIcon={<AddIcon />}
             sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
-            onClick={handleNewExam}
           >
             New Exam
           </Button>

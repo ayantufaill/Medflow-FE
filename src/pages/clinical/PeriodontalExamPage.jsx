@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
@@ -198,9 +198,7 @@ const PeriodontalExamPage = () => {
   const { currentAppointment } = useAppointment();
 
   const { data: historicalDates } = useExamHistoryDates('periodontal', patientId);
-  const [visitDates, setVisitDates] = useState([]);
-
-  useEffect(() => {
+  const visitDates = React.useMemo(() => {
     const historyArray = historicalDates || [];
     const formattedHistory = historyArray.map(dateStr => {
       const d = new Date(dateStr);
@@ -217,7 +215,7 @@ const PeriodontalExamPage = () => {
       }
     }
 
-    setVisitDates(prev => JSON.stringify(prev) === JSON.stringify(formattedHistory) ? prev : formattedHistory);
+    return formattedHistory;
   }, [historicalDates, currentAppointment]);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -294,12 +292,12 @@ const PeriodontalExamPage = () => {
   };
 
   const handleRemoveDate = (indexToRemove) => {
-    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    setVisitDates([...visitDates, today]);
+    // setVisitDates([...visitDates, today]);
   };
 
   const handleSetProbing = () => {
@@ -531,12 +529,10 @@ const PeriodontalExamPage = () => {
           <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
             <VisitDatesTimeline
               visitDates={visitDates}
-              onRemoveDate={handleRemoveDate}
             />
             <Button 
               startIcon={<AddIcon />} 
               sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
-              onClick={handleNewExam}
             >
               New Exam
             </Button>

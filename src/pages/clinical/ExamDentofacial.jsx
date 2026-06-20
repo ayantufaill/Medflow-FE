@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, IconButton, Paper, Divider, Button, Grid, Chip,
@@ -308,9 +308,7 @@ const ExamDentofacial = () => {
   const { currentAppointment } = useAppointment();
 
   const { data: historicalDates } = useExamHistoryDates('dentofacial', patientId);
-  const [visitDates, setVisitDates] = useState([]);
-
-  useEffect(() => {
+  const visitDates = React.useMemo(() => {
     const historyArray = historicalDates || [];
     const formattedHistory = historyArray.map(dateStr => {
       const d = new Date(dateStr);
@@ -327,7 +325,7 @@ const ExamDentofacial = () => {
       }
     }
 
-    setVisitDates(prev => JSON.stringify(prev) === JSON.stringify(formattedHistory) ? prev : formattedHistory);
+    return formattedHistory;
   }, [historicalDates, currentAppointment]);
 
   const sessionState = useSelector(state => state.clinicalExamSession.exam.dentofacial);
@@ -409,11 +407,11 @@ const ExamDentofacial = () => {
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    setVisitDates([...visitDates, today]);
+    // setVisitDates([...visitDates, today]);
   };
 
   const handleRemoveDate = (indexToRemove) => {
-    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
   if (examLoading) {
@@ -460,13 +458,11 @@ const ExamDentofacial = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
           <VisitDatesTimeline
             visitDates={visitDates}
-            onRemoveDate={handleRemoveDate}
           />
           <Button 
             startIcon={<AddIcon />} 
             size="small" 
             sx={{ textTransform: "none", color: COLORS.textSecondary, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }}
-            onClick={handleNewExam}
           >
             New Exam
           </Button>
