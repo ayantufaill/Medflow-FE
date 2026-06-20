@@ -5,6 +5,8 @@ export const clinicalExamKeys = {
   all: ['clinicalExams'],
   details: () => [...clinicalExamKeys.all, 'detail'],
   detail: (examType, appointmentId) => [...clinicalExamKeys.details(), examType, appointmentId],
+  histories: () => [...clinicalExamKeys.all, 'history'],
+  history: (examType, patientId) => [...clinicalExamKeys.histories(), examType, patientId],
 };
 
 /**
@@ -49,5 +51,18 @@ export const useSignClinicalExam = (examType, appointmentId) => {
         queryKey: clinicalExamKeys.detail(examType, appointmentId),
       });
     },
+  });
+};
+
+/**
+ * Hook to fetch chronological history of exam dates for a patient
+ */
+export const useExamHistoryDates = (examType, patientId) => {
+  return useQuery({
+    queryKey: clinicalExamKeys.history(examType, patientId),
+    queryFn: () => clinicalExamService.getExamHistoryDates(examType, patientId),
+    enabled: !!examType && !!patientId,
+    staleTime: 5 * 60 * 1000, // cache for 5 mins
+    refetchOnWindowFocus: false,
   });
 };

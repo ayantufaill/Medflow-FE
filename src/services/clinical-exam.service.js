@@ -24,5 +24,13 @@ export const clinicalExamService = {
   async signExam(examType, appointmentId) {
     const response = await apiClient.post(`/clinical-exams/${examType}/${appointmentId}/sign`);
     return response.data.data;
+  },
+
+  /**
+   * Fetch a chronological list of dates for previous exams
+   */
+  async getExamHistoryDates(examType, patientId) {
+    const response = await apiClient.get(`/clinical-exams/history/${examType}/patient/${patientId}`);
+    return response.data.data.dates;
   }
 };

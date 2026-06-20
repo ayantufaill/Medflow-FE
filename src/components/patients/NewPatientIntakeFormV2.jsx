@@ -32,13 +32,7 @@ import {
 } from "../../store/slices/providerSlice";
 
 const COUNTRY_OPTIONS = ["United States", "Canada", "Other"];
-const US_STATES = [
-  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", 
-  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", 
-  "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", 
-  "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", 
-  "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
-];
+import { US_STATES, STATE_CITIES } from "../../constants/usAddressData";
 const REFERRING_SOURCE_OPTIONS = ["Google", "Website", "Walk In", "Social Media", "Existing Patient", "Insurance Directory", "Provider Referral"];
 
 const DEFAULT_VALUES = {
@@ -457,17 +451,32 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                       </FormField>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="City">
-                        <OutlinedInput {...register("patientCity")} placeholder="City" />
+                      <FormField label="State">
+                        <Controller name="patientState" control={control} render={({ field }) => (
+                          <OutlinedSelect {...field} onChange={(e) => { field.onChange(e); setValue("patientCity", ""); }}>
+                            <MenuItem value="">Select state</MenuItem>
+                            {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                          </OutlinedSelect>
+                        )} />
                       </FormField>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="State">
-                        <Controller name="patientState" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field}>
-                            <MenuItem value="">Select state</MenuItem>
-                            {US_STATES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                          </OutlinedSelect>
+                      <FormField label="City">
+                        <Controller name="patientCity" control={control} render={({ field: { onChange, value } }) => (
+                          <Autocomplete
+                            options={STATE_CITIES[watch("patientState")] || []}
+                            value={value || ""}
+                            onChange={(_, newVal) => onChange(newVal || "")}
+                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                            disabled={!watch("patientState")}
+                            freeSolo
+                            renderInput={(params) => (
+                              <OutlinedInput 
+                                {...params} 
+                                placeholder={watch("patientState") ? "City" : "Select state first"} 
+                              />
+                            )}
+                          />
                         )} />
                       </FormField>
                     </Grid>
@@ -541,17 +550,32 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                       </FormField>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="City">
-                        <OutlinedInput {...register("workCity")} placeholder="City" />
+                      <FormField label="State">
+                        <Controller name="workState" control={control} render={({ field }) => (
+                          <OutlinedSelect {...field} onChange={(e) => { field.onChange(e); setValue("workCity", ""); }}>
+                            <MenuItem value="">Select state</MenuItem>
+                            {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                          </OutlinedSelect>
+                        )} />
                       </FormField>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="State">
-                        <Controller name="workState" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field}>
-                            <MenuItem value="">Select state</MenuItem>
-                            {US_STATES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                          </OutlinedSelect>
+                      <FormField label="City">
+                        <Controller name="workCity" control={control} render={({ field: { onChange, value } }) => (
+                          <Autocomplete
+                            options={STATE_CITIES[watch("workState")] || []}
+                            value={value || ""}
+                            onChange={(_, newVal) => onChange(newVal || "")}
+                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                            disabled={!watch("workState")}
+                            freeSolo
+                            renderInput={(params) => (
+                              <OutlinedInput 
+                                {...params} 
+                                placeholder={watch("workState") ? "City" : "Select state first"} 
+                              />
+                            )}
+                          />
                         )} />
                       </FormField>
                     </Grid>
@@ -627,17 +651,32 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                       </FormField>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="City">
-                        <OutlinedInput {...register("spouseCity")} disabled={isSingle} placeholder="City" />
+                      <FormField label="State">
+                        <Controller name="spouseState" control={control} render={({ field }) => (
+                          <OutlinedSelect {...field} disabled={isSingle} onChange={(e) => { field.onChange(e); setValue("spouseCity", ""); }}>
+                            <MenuItem value="">Select state</MenuItem>
+                            {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                          </OutlinedSelect>
+                        )} />
                       </FormField>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="State">
-                        <Controller name="spouseState" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field} disabled={isSingle}>
-                            <MenuItem value="">Select state</MenuItem>
-                            {US_STATES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                          </OutlinedSelect>
+                      <FormField label="City">
+                        <Controller name="spouseCity" control={control} render={({ field: { onChange, value } }) => (
+                          <Autocomplete
+                            options={STATE_CITIES[watch("spouseState")] || []}
+                            value={value || ""}
+                            onChange={(_, newVal) => onChange(newVal || "")}
+                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                            disabled={isSingle || !watch("spouseState")}
+                            freeSolo
+                            renderInput={(params) => (
+                              <OutlinedInput 
+                                {...params} 
+                                placeholder={isSingle ? "" : watch("spouseState") ? "City" : "Select state first"} 
+                              />
+                            )}
+                          />
                         )} />
                       </FormField>
                     </Grid>

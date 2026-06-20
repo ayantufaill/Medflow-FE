@@ -44,7 +44,17 @@ const ProgressNotesPage = () => {
   // Derive provider from the active appointment (priority) or fallback to logged-in user
   const appointmentProvider = currentAppointment?.providerId;
   const providerName = (() => {
-    if (!appointmentProvider || typeof appointmentProvider !== 'object') return '';
+    if (currentAppointment?.providerName) return currentAppointment.providerName;
+    if (!appointmentProvider) return '';
+    
+    if (typeof appointmentProvider !== 'object') {
+      // If it's a string that's not just numbers, it might be the name itself
+      if (typeof appointmentProvider === 'string' && isNaN(Number(appointmentProvider))) {
+        return appointmentProvider;
+      }
+      return '';
+    }
+
     // Backend maps provider as: { _id, providerCode, userId: { _id, firstName, lastName } }
     const user = appointmentProvider.userId;
     if (user && typeof user === 'object') {
@@ -57,11 +67,24 @@ const ProgressNotesPage = () => {
     // Last resort: use providerCode (e.g. "DDS")
     return appointmentProvider.providerCode || '';
   })();
-  const providerId = appointmentProvider
-    ? (typeof appointmentProvider === 'object'
-      ? (appointmentProvider._id || appointmentProvider.id || authProviderId)
-      : appointmentProvider)
-    : authProviderId;
+
+  const providerId = (() => {
+    if (currentAppointment?.providerId) {
+      const prov = currentAppointment.providerId;
+      if (typeof prov === 'object') {
+        const extractedId = prov._id || prov.id || prov.ProvNum || (prov.userId && typeof prov.userId === 'object' ? (prov.userId._id || prov.userId.id) : null);
+        if (extractedId) return extractedId;
+      } else if (!isNaN(Number(prov))) {
+        return prov;
+      }
+    }
+    if (currentAppointment?.provider) {
+      const provObj = currentAppointment.provider;
+      const extractedId = provObj._id || provObj.id || provObj.ProvNum;
+      if (extractedId) return extractedId;
+    }
+    return authProviderId;
+  })();
   const sessionState = useSelector(state => state.clinicalExamSession.progressNotes);
   const dispatch = useDispatch();
 

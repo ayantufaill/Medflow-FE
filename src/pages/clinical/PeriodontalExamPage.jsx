@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
@@ -23,10 +23,12 @@ import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice
 import {
   useClinicalExamQuery,
   useUpsertClinicalExam,
-  useSignClinicalExam
+  useSignClinicalExam,
+  useExamHistoryDates
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 const SummaryData = [
   { label: '# of sites', bleeding: '50', p4: '150', p5: '0', p6: '0', recession: '43' },
@@ -193,15 +195,28 @@ const PeriodontalExamPage = () => {
   const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
   const dispatch = useDispatch();
 
-  const [visitDates, setVisitDates] = useState([
-    'Dec 22, 2023',
-    'Mar 29, 2024',
-    'Jun 28, 2024',
-    'Oct 18, 2024',
-    'Feb 13, 2025',
-    'May 22, 2025',
-    'Dec 16, 2025'
-  ]);
+  const { currentAppointment } = useAppointment();
+
+  const { data: historicalDates } = useExamHistoryDates('periodontal', patientId);
+  const visitDates = React.useMemo(() => {
+    const historyArray = historicalDates || [];
+    const formattedHistory = historyArray.map(dateStr => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    });
+
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(currentD)) {
+        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        if (!formattedHistory.includes(formattedCurrent)) {
+          formattedHistory.push(formattedCurrent);
+        }
+      }
+    }
+
+    return formattedHistory;
+  }, [historicalDates, currentAppointment]);
 
   const [showSettings, setShowSettings] = useState(false);
   
@@ -277,12 +292,12 @@ const PeriodontalExamPage = () => {
   };
 
   const handleRemoveDate = (indexToRemove) => {
-    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    setVisitDates([...visitDates, today]);
+    // setVisitDates([...visitDates, today]);
   };
 
   const handleSetProbing = () => {
@@ -514,12 +529,10 @@ const PeriodontalExamPage = () => {
           <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
             <VisitDatesTimeline
               visitDates={visitDates}
-              onRemoveDate={handleRemoveDate}
             />
             <Button 
               startIcon={<AddIcon />} 
               sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
-              onClick={handleNewExam}
             >
               New Exam
             </Button>

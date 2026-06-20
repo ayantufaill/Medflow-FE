@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup,
@@ -17,10 +17,12 @@ import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice
 import {
   useClinicalExamQuery,
   useUpsertClinicalExam,
-  useSignClinicalExam
+  useSignClinicalExam,
+  useExamHistoryDates
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 
 // Custom Ring Radio to match the "Acceptable/Warning/Issue" style
@@ -273,18 +275,36 @@ const DentalTmdExamPage = () => {
     });
   };
 
-  const [visitDates, setVisitDates] = useState([
-    'Sep 29, 2023',
-    'May 22, 2025'
-  ]);
+  const { currentAppointment } = useAppointment();
+
+  const { data: historicalDates } = useExamHistoryDates('tmj', patientId);
+  const visitDates = React.useMemo(() => {
+    const historyArray = historicalDates || [];
+    const formattedHistory = historyArray.map(dateStr => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    });
+
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(currentD)) {
+        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        if (!formattedHistory.includes(formattedCurrent)) {
+          formattedHistory.push(formattedCurrent);
+        }
+      }
+    }
+
+    return formattedHistory;
+  }, [historicalDates, currentAppointment]);
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    setVisitDates([...visitDates, today]);
+    // setVisitDates([...visitDates, today]);
   };
 
   const handleRemoveDate = (indexToRemove) => {
-    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
   if (examLoading) {
@@ -325,12 +345,10 @@ const DentalTmdExamPage = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, overflowX: 'auto' }}>
           <VisitDatesTimeline
             visitDates={visitDates}
-            onRemoveDate={handleRemoveDate}
           />
           <Button 
             startIcon={<AddIcon />} 
-            sx={{ textTransform: 'none', color: '#777', ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }} 
-            onClick={handleNewExam}
+            sx={{ textTransform: 'none', color: '#777', ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             New Exam
           </Button>

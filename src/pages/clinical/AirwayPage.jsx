@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import { Box, Typography } from "@mui/material";
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
@@ -24,10 +24,12 @@ import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice
 import {
   useClinicalExamQuery,
   useUpsertClinicalExam,
-  useSignClinicalExam
+  useSignClinicalExam,
+  useExamHistoryDates
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
+import { useAppointment } from '../../hooks/redux/useAppointment';
 
 // Custom styles to match the UI precisely
 const labelStyle = {
@@ -284,9 +286,28 @@ const AirwayPage = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const [visitDates, setVisitDates] = useState([
-    'May 22, 2025'
-  ]);
+  const { currentAppointment } = useAppointment();
+
+  const { data: historicalDates } = useExamHistoryDates('airway', patientId);
+  const visitDates = React.useMemo(() => {
+    const historyArray = historicalDates || [];
+    const formattedHistory = historyArray.map(dateStr => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    });
+
+    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
+      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
+      if (!isNaN(currentD)) {
+        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        if (!formattedHistory.includes(formattedCurrent)) {
+          formattedHistory.push(formattedCurrent);
+        }
+      }
+    }
+
+    return formattedHistory;
+  }, [historicalDates, currentAppointment]);
   const sessionState = useSelector(state => state.clinicalExamSession.exam.airway);
   const dispatch = useDispatch();
 
@@ -392,11 +413,11 @@ const AirwayPage = () => {
 
   const handleNewExam = () => {
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    setVisitDates([...visitDates, today]);
+    // setVisitDates([...visitDates, today]);
   };
 
   const handleRemoveDate = (indexToRemove) => {
-    setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
+    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
   // Update form field handler
@@ -461,9 +482,8 @@ const AirwayPage = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, overflowX: 'auto' }}>
           <VisitDatesTimeline
             visitDates={visitDates}
-            onRemoveDate={handleRemoveDate}
           />
-          <Button startIcon={<AddIcon />} sx={{ textTransform: "none", color: "#555", minWidth: "auto", px: 1.5, py: 0.5, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleNewExam}>
+          <Button startIcon={<AddIcon />} sx={{ textTransform: "none", color: "#555", minWidth: "auto", px: 1.5, py: 0.5, fontSize: fontSize.sm, whiteSpace: 'nowrap', flexShrink: 0 }}>
             New Exam
           </Button>
         </Box>
