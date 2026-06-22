@@ -6,7 +6,7 @@ export const clinicalExamService = {
    */
   async getExam(examType, appointmentId) {
     const response = await apiClient.get(`/clinical-exams/${examType}/${appointmentId}`);
-    return response.data.data;
+    return response.data.data?.exam;
   },
 
   /**
@@ -15,7 +15,7 @@ export const clinicalExamService = {
    */
   async upsertExam(examType, appointmentId, payload) {
     const response = await apiClient.put(`/clinical-exams/${examType}/${appointmentId}`, payload);
-    return response.data.data;
+    return response.data.data?.exam;
   },
 
   /**
@@ -23,7 +23,7 @@ export const clinicalExamService = {
    */
   async signExam(examType, appointmentId) {
     const response = await apiClient.post(`/clinical-exams/${examType}/${appointmentId}/sign`);
-    return response.data.data;
+    return response.data.data?.exam;
   },
 
   /**

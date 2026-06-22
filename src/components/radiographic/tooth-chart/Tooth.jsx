@@ -105,6 +105,8 @@ const Tooth = ({
   num, 
   isActive = false, 
   isMissing = false, 
+  isUnerupted = false,
+  uneruptedIndex = -1,
   hasRadiolucency = false,
   surfaces = [],
   depth = 'Limited to enamel',
@@ -114,6 +116,8 @@ const Tooth = ({
   const [isHovered, setIsHovered] = React.useState(false);
   
   const isUpper = num >= 1 && num <= 16;
+
+  const displayNum = isUnerupted ? uneruptedIndex + 1 : num;
 
   // Render Tooth Number below the tooth (reverted back to only show the plain number)
   const renderNumber = () => {
@@ -131,7 +135,7 @@ const Tooth = ({
           lineHeight: 1.1
         }}
       >
-        {num}
+        {displayNum}
       </Typography>
     );
   };
@@ -153,14 +157,21 @@ const Tooth = ({
       );
     }
 
+    let imageSrc = `/teeth${num}.png`;
+    let sizeStyle = { width: isActive ? 40 : 30, height: isActive ? 75 : 60 };
+
+    if (isUnerupted) {
+      sizeStyle = { width: isActive ? 45 : 35, height: isActive ? 85 : 70 };
+      imageSrc = '/adult_tooth.png';
+    }
+
     return (
       <Box 
         component="img" 
-        src={`/teeth${num}.png`} 
-        alt={`Tooth ${num}`}
+        src={imageSrc} 
+        alt={`Tooth ${displayNum}`}
         sx={{ 
-          width: isActive ? 40 : 30, 
-          height: isActive ? 75 : 60, 
+          ...sizeStyle,
           mt: 0.5, 
           opacity: isHovered ? 1 : 0.9,
           filter: isActive || isHovered || hasRadiolucency

@@ -733,14 +733,33 @@ export default function TreatmentPlanPage() {
     dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { missingTeeth: newVal } });
   };
   
-  const additionalTeeth = sessionState.additionalTeeth;
+  const additionalTeeth = sessionState.additionalTeeth || [];
   const setAdditionalTeeth = (val) => {
     const newVal = typeof val === 'function' ? val(additionalTeeth) : val;
     dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { additionalTeeth: newVal } });
   };
   
+  const uneruptedTeeth = sessionState.uneruptedTeeth || [];
+  const setUneruptedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(uneruptedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setTreatmentPlanSession', payload: { uneruptedTeeth: newVal } });
+  };
+  
   const [additionalTeethAnchorEl, setAdditionalTeethAnchorEl] = useState(null);
   const [showSelectToothDialog, setShowSelectToothDialog] = useState(false);
+  
+  const handleToggleUnerupted = () => {
+    if (selectedTeeth.length === 0) return;
+    setUneruptedTeeth(prev => {
+      const allSelectedAreUnerupted = selectedTeeth.every(t => prev.includes(t));
+      if (allSelectedAreUnerupted) {
+        return prev.filter(t => !selectedTeeth.includes(t));
+      } else {
+        return [...new Set([...prev, ...selectedTeeth])];
+      }
+    });
+    setSelectedTeeth([]);
+  };
   
   const toothSurfaces = sessionState.toothSurfaces;
   const setToothSurfaces = (val) => {
@@ -2055,6 +2074,21 @@ export default function TreatmentPlanPage() {
           
           {/* Central Dental Chart Area */}
           <Box sx={{ position: 'relative', bgcolor: '#fff', flexShrink: 0 }}>
+            {/* Top Filter Bar for Tooth Chart */}
+            <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', p: 1.5, bgcolor: '#f5f7fa', borderBottom: '1px solid #e0e0e0' }}>
+              <Typography 
+                onClick={selectedTeeth.length > 0 ? handleToggleUnerupted : undefined}
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#666', 
+                  fontWeight: 500,
+                  cursor: selectedTeeth.length > 0 ? 'pointer' : 'default',
+                  '&:hover': { color: selectedTeeth.length > 0 ? '#1976d2' : '#666' }
+                }}
+              >
+                {selectedTeeth.length > 0 ? "Unerupted" : "Erupted"}
+              </Typography>
+            </Stack>
             
             {/* Surface Selection Sidebar (V, C, B/F, etc) */}
             <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -2090,6 +2124,8 @@ export default function TreatmentPlanPage() {
                           num={n} 
                           isActive={selectedTeeth.includes(n)} 
                           isMissing={missingTeeth.includes(n)}
+                          isUnerupted={uneruptedTeeth.includes(n)}
+                          uneruptedIndex={uneruptedTeeth.indexOf(n)}
                           surfaces={toothSurfaces[n] || []}
                           onClick={() => handleToothClick(n)} 
                           onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
@@ -2117,6 +2153,8 @@ export default function TreatmentPlanPage() {
                           num={n} 
                           isActive={selectedTeeth.includes(n)} 
                           isMissing={missingTeeth.includes(n)}
+                          isUnerupted={uneruptedTeeth.includes(n)}
+                          uneruptedIndex={uneruptedTeeth.indexOf(n)}
                           surfaces={toothSurfaces[n] || []}
                           onClick={() => handleToothClick(n)} 
                           onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
@@ -2138,6 +2176,8 @@ export default function TreatmentPlanPage() {
                           num={n} 
                           isActive={selectedTeeth.includes(n)} 
                           isMissing={missingTeeth.includes(n)}
+                          isUnerupted={uneruptedTeeth.includes(n)}
+                          uneruptedIndex={uneruptedTeeth.indexOf(n)}
                           surfaces={toothSurfaces[n] || []}
                           onClick={() => handleToothClick(n)} 
                           onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
@@ -2163,6 +2203,8 @@ export default function TreatmentPlanPage() {
                           num={n} 
                           isActive={selectedTeeth.includes(n)} 
                           isMissing={missingTeeth.includes(n)}
+                          isUnerupted={uneruptedTeeth.includes(n)}
+                          uneruptedIndex={uneruptedTeeth.indexOf(n)}
                           surfaces={toothSurfaces[n] || []}
                           onClick={() => handleToothClick(n)} 
                           onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
@@ -2184,6 +2226,8 @@ export default function TreatmentPlanPage() {
                           num={n} 
                           isActive={selectedTeeth.includes(n)} 
                           isMissing={missingTeeth.includes(n)}
+                          isUnerupted={uneruptedTeeth.includes(n)}
+                          uneruptedIndex={uneruptedTeeth.indexOf(n)}
                           surfaces={toothSurfaces[n] || []}
                           onClick={() => handleToothClick(n)} 
                           onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}
@@ -2243,6 +2287,8 @@ export default function TreatmentPlanPage() {
                           num={n} 
                           isActive={selectedTeeth.includes(n)} 
                           isMissing={missingTeeth.includes(n)}
+                          isUnerupted={uneruptedTeeth.includes(n)}
+                          uneruptedIndex={uneruptedTeeth.indexOf(n)}
                           surfaces={toothSurfaces[n] || []}
                           onClick={() => handleToothClick(n)} 
                           onSurfaceClick={(surf) => handleSurfaceClick(n, surf)}

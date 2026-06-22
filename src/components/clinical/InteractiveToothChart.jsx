@@ -9,6 +9,7 @@ const LOWER_TEETH = [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 const InteractiveToothChart = ({
   selectedTeeth = [],
   missingTeeth = [],
+  uneruptedTeeth = [],
   toothFindings = {},
   toothSurfaces = {},
   onToothClick,
@@ -40,6 +41,8 @@ const InteractiveToothChart = ({
         num={n} 
         isActive={selectedTeeth.includes(n)} 
         isMissing={missingTeeth.includes(n)}
+        isUnerupted={uneruptedTeeth.includes(n)}
+        uneruptedIndex={uneruptedTeeth.indexOf(n)}
         hasRadiolucency={hasRadiolucency}
         hasWatch={hasWatch}
         surfaces={surfaces}
