@@ -79,6 +79,12 @@ const Radiographic = () => {
     dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { additionalTeeth: newVal } } });
   };
 
+  const uneruptedTeeth = sessionState?.uneruptedTeeth || [];
+  const setUneruptedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(uneruptedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { uneruptedTeeth: newVal } } });
+  };
+
   const [activeToothNum, setActiveToothNum] = React.useState(null);
   const [detailModalTooth, setDetailModalTooth] = React.useState(null);
   const [newNoteText, setNewNoteText] = React.useState('');
@@ -92,6 +98,7 @@ const Radiographic = () => {
       setMissingTeeth(examRecord.examData.missingTeeth || []);
       setToothFindings(examRecord.examData.toothFindings || {});
       setAdditionalTeeth(examRecord.examData.additionalTeeth || []);
+      setUneruptedTeeth(examRecord.examData.uneruptedTeeth || []);
     }
   }, [examRecord]);
 
@@ -108,7 +115,8 @@ const Radiographic = () => {
           selectedTeeth,
           missingTeeth,
           toothFindings,
-          additionalTeeth
+          additionalTeeth,
+          uneruptedTeeth
         }
       });
       showSnackbar('Radiographic exam saved successfully', 'success');
@@ -170,6 +178,19 @@ const Radiographic = () => {
     setMissingTeeth(prev => {
       const allSelectedAreMissing = selectedTeeth.every(t => prev.includes(t));
       if (allSelectedAreMissing) {
+        return prev.filter(t => !selectedTeeth.includes(t));
+      } else {
+        return [...new Set([...prev, ...selectedTeeth])];
+      }
+    });
+    setSelectedTeeth([]);
+  };
+
+  const handleToggleUnerupted = () => {
+    if (selectedTeeth.length === 0) return;
+    setUneruptedTeeth(prev => {
+      const allSelectedAreUnerupted = selectedTeeth.every(t => prev.includes(t));
+      if (allSelectedAreUnerupted) {
         return prev.filter(t => !selectedTeeth.includes(t));
       } else {
         return [...new Set([...prev, ...selectedTeeth])];
@@ -352,7 +373,21 @@ const Radiographic = () => {
             
             {/* Top Filter Bar */}
             <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', p: 1.5, bgcolor: '#f5f7fa', borderBottom: '1px solid #e0e0e0' }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>{selectedTeeth.length > 0 ? "Unerupted" : "Erupted"} | Resolve</Typography>
+              <Typography 
+                onClick={selectedTeeth.length > 0 ? handleToggleUnerupted : undefined}
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#666', 
+                  fontWeight: 500,
+                  cursor: selectedTeeth.length > 0 ? 'pointer' : 'default',
+                  '&:hover': { color: selectedTeeth.length > 0 ? '#1976d2' : '#666' }
+                }}
+              >
+                {selectedTeeth.length > 0 ? "Unerupted" : "Erupted"}
+              </Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>
+                 | Resolve
+              </Typography>
               <VisibilityOutlined sx={{ fontSize: 16, color: '#1976d2', ml: 0.5 }} />
               <Box sx={{ flexGrow: 1 }} />
               <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>Tooth First</Typography>
@@ -403,6 +438,7 @@ const Radiographic = () => {
           <InteractiveToothChart
             selectedTeeth={selectedTeeth}
             missingTeeth={missingTeeth}
+            uneruptedTeeth={uneruptedTeeth}
             toothFindings={toothFindings}
             onToothClick={handleToothClick}
             onSidebarSurfaceClick={handleSidebarSurfaceClick}

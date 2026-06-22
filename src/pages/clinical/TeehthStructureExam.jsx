@@ -81,6 +81,12 @@ const TeethStructureExam = () => {
     dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'toothStructure', data: { additionalTeeth: newVal } } });
   };
 
+  const uneruptedTeeth = sessionState?.uneruptedTeeth || [];
+  const setUneruptedTeeth = (val) => {
+    const newVal = typeof val === 'function' ? val(uneruptedTeeth) : val;
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'toothStructure', data: { uneruptedTeeth: newVal } } });
+  };
+
   const [activeToothNum, setActiveToothNum] = useState(null);
   const [detailModalTooth, setDetailModalTooth] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
@@ -94,6 +100,7 @@ const TeethStructureExam = () => {
       if (examRecord.examData.missingTeeth !== undefined) setMissingTeeth(examRecord.examData.missingTeeth);
       if (examRecord.examData.toothFindings !== undefined) setToothFindings(examRecord.examData.toothFindings);
       if (examRecord.examData.additionalTeeth !== undefined) setAdditionalTeeth(examRecord.examData.additionalTeeth);
+      if (examRecord.examData.uneruptedTeeth !== undefined) setUneruptedTeeth(examRecord.examData.uneruptedTeeth);
     }
   }, [examRecord?.examData]);
 
@@ -110,7 +117,8 @@ const TeethStructureExam = () => {
           selectedTeeth,
           missingTeeth,
           toothFindings,
-          additionalTeeth
+          additionalTeeth,
+          uneruptedTeeth
         }
       });
       showSnackbar('Teeth structure exam saved successfully', 'success');
@@ -190,6 +198,19 @@ const TeethStructureExam = () => {
       ...prev,
       [sectionName]: !prev[sectionName]
     }));
+  };
+
+  const handleToggleUnerupted = () => {
+    if (selectedTeeth.length === 0) return;
+    setUneruptedTeeth(prev => {
+      const allSelectedAreUnerupted = selectedTeeth.every(t => prev.includes(t));
+      if (allSelectedAreUnerupted) {
+        return prev.filter(t => !selectedTeeth.includes(t));
+      } else {
+        return [...new Set([...prev, ...selectedTeeth])];
+      }
+    });
+    setSelectedTeeth([]);
   };
 
   // Handle new exam
@@ -351,8 +372,20 @@ const TeethStructureExam = () => {
             
               {/* Top Filter Bar */}
               <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center', p: 1.5, bgcolor: '#f5f7fa', borderBottom: '1px solid #e0e0e0' }}>
+                <Typography 
+                  onClick={selectedTeeth.length > 0 ? handleToggleUnerupted : undefined}
+                  sx={{ 
+                    fontSize: '0.75rem', 
+                    color: '#666', 
+                    fontWeight: 500,
+                    cursor: selectedTeeth.length > 0 ? 'pointer' : 'default',
+                    '&:hover': { color: selectedTeeth.length > 0 ? '#1976d2' : '#666' }
+                  }}
+                >
+                  {selectedTeeth.length > 0 ? "Unerupted" : "Erupted"}
+                </Typography>
                 <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>
-                  {selectedTeeth.length > 0 ? "Unerupted" : "Erupted"} | Resolve
+                   | Resolve
                 </Typography>
                 <Box sx={{ flexGrow: 1 }} />
                 <VisibilityOutlined sx={{ fontSize: 16, color: '#1976d2', mr: 0.5 }} />
@@ -418,6 +451,7 @@ const TeethStructureExam = () => {
             <InteractiveToothChart
               selectedTeeth={selectedTeeth}
               missingTeeth={missingTeeth}
+              uneruptedTeeth={uneruptedTeeth}
               toothFindings={toothFindings}
               onToothClick={handleToothClick}
               onSidebarSurfaceClick={handleSidebarSurfaceClick}
