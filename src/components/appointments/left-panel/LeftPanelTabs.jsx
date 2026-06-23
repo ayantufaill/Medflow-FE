@@ -42,7 +42,7 @@ const LeftPanelTabs = ({ activeTab, onChange }) => (
           <Typography
             sx={{
               fontFamily: 'Inter',
-              fontSize: '13px',
+              fontSize: '11px',
               fontWeight: isActive ? 600 : 400,
               color: isActive ? '#2262ef' : '#5c646f',
               whiteSpace: 'nowrap',
