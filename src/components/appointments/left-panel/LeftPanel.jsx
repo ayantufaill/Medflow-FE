@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Box } from '@mui/material';
 import LeftPanelTabs from './LeftPanelTabs';
+import PatientSearch from './PatientSearch';
+import PatientCard from './PatientCard';
+import PatientActions from './PatientActions';
 
 const LeftPanel = () => {
   const [activeTab, setActiveTab] = useState('Patient');
@@ -13,9 +16,15 @@ const LeftPanel = () => {
         <LeftPanelTabs activeTab={activeTab} onChange={setActiveTab} />
       </Box>
 
-      {/* Scrollable content area */}
-      <Box sx={{ flex: 1, overflowY: 'auto', p: '12px' }}>
-        {/* Content per tab goes here in the next phase */}
+      {/* Scrollable content */}
+      <Box sx={{ flex: 1, overflowY: 'auto', p: '12px', backgroundColor: '#ffffff' }}>
+        {activeTab === 'Patient' && (
+          <>
+            <PatientSearch />
+            <PatientCard />
+            <PatientActions />
+          </>
+        )}
       </Box>
 
     </Box>
