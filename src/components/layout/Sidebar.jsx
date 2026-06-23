@@ -584,12 +584,13 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            // Animate the paper width for a smooth slide effect
             width: open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED,
             transition: 'width 0.2s ease',
             overflowX: 'hidden',
             borderRight: '1px solid',
             borderColor: 'divider',
+            top: '65px',
+            height: 'calc(100% - 65px)',
           },
         }}
         open
