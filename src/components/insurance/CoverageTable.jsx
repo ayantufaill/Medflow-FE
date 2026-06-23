@@ -445,27 +445,27 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
       <Grid item xs={12}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.7rem' }}>Coverage Table</Typography>
-          <Typography sx={{ color: '#bdbdbd', fontSize: '0.6rem', cursor: 'not-allowed', display: 'flex', alignItems: 'center' }}>
+          <Typography sx={{ color: '#1976d2', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <AddIconNew sx={{ fontSize: 10 }} /> Add Coverage
           </Typography>
         </Box>
 
         <Grid container spacing={1}>
           <Grid item xs={6}>
-            <CoverageGroup title="Diagnostic" rows={coverageData?.diagnostic || COVERAGE_DATA.diagnostic} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Preventative" rows={coverageData?.preventative || COVERAGE_DATA.preventative} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Restorative" rows={coverageData?.restorative || COVERAGE_DATA.restorative} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Endodontics" rows={coverageData?.endodontics || COVERAGE_DATA.endodontics} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Periodontics" rows={coverageData?.periodontics || COVERAGE_DATA.periodontics} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Implant Services" rows={coverageData?.implantServices || COVERAGE_DATA.implantServices} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Diagnostic" rows={coverageData?.diagnostic || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Preventative" rows={coverageData?.preventative || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Restorative" rows={coverageData?.restorative || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Endodontics" rows={coverageData?.endodontics || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Periodontics" rows={coverageData?.periodontics || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Implant Services" rows={coverageData?.implantServices || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
           </Grid>
           <Grid item xs={6}>
-            <CoverageGroup title="Oral Surgery" rows={coverageData?.oralSurgery || COVERAGE_DATA.oralSurgery} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Prosthodontics, Fixed" rows={coverageData?.prosthodonticsFixed || COVERAGE_DATA.prosthodonticsFixed} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Prosthodontics, Removable" rows={coverageData?.prosthodonticsRemovable || COVERAGE_DATA.prosthodonticsRemovable} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Adjunct General Services" rows={coverageData?.adjunctGeneral || COVERAGE_DATA.adjunctGeneral} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Orthodontics" rows={coverageData?.orthodontics || COVERAGE_DATA.orthodontics} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
-            <CoverageGroup title="Maxillofacial Prosthetics" rows={coverageData?.maxillofacialProsthetics || COVERAGE_DATA.maxillofacialProsthetics} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Oral Surgery" rows={coverageData?.oralSurgery || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Prosthodontics, Fixed" rows={coverageData?.prosthodonticsFixed || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Prosthodontics, Removable" rows={coverageData?.prosthodonticsRemovable || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Adjunct General Services" rows={coverageData?.adjunctGeneral || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Orthodontics" rows={coverageData?.orthodontics || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
+            <CoverageGroup title="Maxillofacial Prosthetics" rows={coverageData?.maxillofacialProsthetics || []} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
           </Grid>
         </Grid>
       </Grid>
@@ -497,7 +497,7 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
             <MenuItem value="standard_ppo" sx={{ fontSize: '0.65rem' }}>Standard PPO</MenuItem>
             <MenuItem value="custom" sx={{ fontSize: '0.65rem' }}>Custom Template</MenuItem>
           </Select>
-          <Typography sx={{ color: '#bdbdbd', fontSize: '0.6rem', whiteSpace: 'nowrap', cursor: 'not-allowed', fontWeight: 600 }}>
+          <Typography sx={{ color: '#1976d2', fontSize: '0.6rem', whiteSpace: 'nowrap', cursor: 'pointer', fontWeight: 600 }}>
             + Add Coverage Group
           </Typography>
         </Box>

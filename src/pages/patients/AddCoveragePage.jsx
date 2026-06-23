@@ -109,9 +109,9 @@ const AddCoveragePage = () => {
     honorWriteOff: false
   });
 
-  // Coverage book data state
+  const [errors, setErrors] = useState({});
   const [coverageBookData, setCoverageBookData] = useState([]);
-  const [coverageCategoryData, setCoverageCategoryData] = useState(COVERAGE_DATA);
+  const [coverageCategoryData, setCoverageCategoryData] = useState(insuranceId ? {} : COVERAGE_DATA);
 
   // Static data arrays for easy API replacement
   // Static data arrays for easy API replacement
@@ -268,21 +268,23 @@ const AddCoveragePage = () => {
 
           if (editTarget.coverageCategoryTable) {
             const covDataArray = editTarget.coverageCategoryTable;
-
-            if (
-              Array.isArray(covDataArray) &&
-              covDataArray.length > 0 &&
-              typeof covDataArray[0] === 'object' &&
-              covDataArray[0].category
-            ) {
-              const covData = {};
-              covDataArray.forEach(group => {
-                covData[group.category] = group.items;
-              });
-              setCoverageCategoryData(covData);
+            if (Array.isArray(covDataArray) && covDataArray.length > 0) {
+              if (typeof covDataArray[0] === 'object' && covDataArray[0].category) {
+                const covData = {};
+                covDataArray.forEach(group => {
+                  covData[group.category] = group.items;
+                });
+                setCoverageCategoryData(covData);
+              } else if (typeof covDataArray[0] === 'object' && !covDataArray[0].category) {
+                setCoverageCategoryData(covDataArray);
+              }
             } else if (covDataArray && !Array.isArray(covDataArray)) {
               setCoverageCategoryData(covDataArray);
+            } else {
+              setCoverageCategoryData({});
             }
+          } else {
+            setCoverageCategoryData({});
           }
         }
       }
@@ -316,26 +318,83 @@ const AddCoveragePage = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.insuranceCompanyId && !formData.insurancePlan) {
-        showSnackbar('Please select an insurance carrier', 'error');
+      if (!patientId) {
+        showSnackbar('Cannot save coverage: No patient selected. Please navigate to a specific patient\'s dashboard to add coverage.', 'error');
         return;
       }
 
-      if (!formData.subscriber.subscriberId || formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
-        showSnackbar('Subscriber ID (Policy Number) must be between 5 and 30 characters', 'error');
-        return;
+      const newErrors = {};
+
+      if (!formData.insuranceCompanyId || !formData.payerId) {
+        newErrors.insuranceCompanyId = 'Please search and select a carrier';
+      }
+
+      if (!formData.insurancePlan?.trim()) {
+        newErrors.insurancePlan = 'Insurance Plan is required';
+      }
+
+      if (!formData.groupName?.trim()) {
+        newErrors.groupName = 'Group Name is required';
+      }
+
+      if (!formData.groupNumber?.trim()) {
+        newErrors.groupNumber = 'Group Number is required';
+      } else if (!/^[A-Za-z0-9]+$/.test(formData.groupNumber)) {
+        newErrors.groupNumber = 'Group Number must be alphanumeric only';
+      }
+
+      if (!formData.subscriber.name?.trim()) {
+        newErrors.subscriberName = 'Subscriber Name is required';
+      } else if (!/^[A-Za-z\s'-]+$/.test(formData.subscriber.name)) {
+        newErrors.subscriberName = 'Subscriber Name can only contain letters, spaces, hyphens, and apostrophes';
+      }
+
+      if (!formData.subscriber.subscriberId?.trim()) {
+        newErrors.subscriberId = 'Subscriber ID is required';
+      } else if (formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
+        newErrors.subscriberId = 'Subscriber ID must be between 5 and 30 characters';
+      } else if (!/^[A-Za-z0-9]+$/.test(formData.subscriber.subscriberId)) {
+        newErrors.subscriberId = 'Subscriber ID must be alphanumeric only';
       }
 
       if (!formData.subscriber.dateOfBirth) {
-        showSnackbar('Subscriber Date of Birth is required', 'error');
-        return;
+        newErrors.dateOfBirth = 'Subscriber Date of Birth is required';
+      } else {
+        const dob = new Date(formData.subscriber.dateOfBirth);
+        const today = new Date();
+        if (dob > today) {
+          newErrors.dateOfBirth = 'Date of birth must be in the past';
+        } else {
+          let age = today.getFullYear() - dob.getFullYear();
+          const monthDiff = today.getMonth() - dob.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+          }
+          if (age >= 120) {
+            newErrors.dateOfBirth = 'Subscriber age must be less than 120 years';
+          }
+        }
       }
 
       if (!formData.policyStarted) {
-        showSnackbar('Policy Started date is required (Renewal section)', 'error');
+        newErrors.policyStarted = 'Policy Started date is required';
+      }
+
+      if (formData.policyEnds && formData.policyStarted) {
+        const effectiveDate = new Date(formData.policyStarted);
+        const expirationDate = new Date(formData.policyEnds);
+        if (expirationDate <= effectiveDate) {
+          newErrors.policyEnds = 'Policy ends date must be after policy started date';
+        }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        showSnackbar('Please correct the highlighted errors', 'error');
         return;
       }
 
+      setErrors({});
       setLoading(true);
       
       // Map UI state to backend validator requirements
@@ -370,7 +429,12 @@ const AddCoveragePage = () => {
         // Notes
         policyNotes: formData.policyNotes || undefined,
         eligibilityPolicyNotes: formData.eligibilityPolicyNotes || undefined,
-        insurancePlanNotes: formData.insurancePlanNotes || undefined
+        insurancePlanNotes: formData.insurancePlanNotes || undefined,
+
+        // newly supported fields
+        providersPlanFeeGuides: formData.providersPlanFeeGuides,
+        healthPlan: formData.healthPlan,
+        paymentPlan: formData.paymentPlan
       };
 
       if (insuranceId) {
@@ -384,6 +448,40 @@ const AddCoveragePage = () => {
       navigate(`/patients/details/${patientId}?tab=insurance`);
     } catch (err) {
       console.error('Failed to save coverage', err);
+      
+      // Parse backend validation errors if any
+      const backendErrors = err?.data?.error?.errors;
+      if (backendErrors && typeof backendErrors === 'object') {
+        const mappedErrors = {};
+        if (backendErrors.policyNumber) {
+          mappedErrors.subscriberId = Array.isArray(backendErrors.policyNumber) ? backendErrors.policyNumber[0] : backendErrors.policyNumber;
+        }
+        if (backendErrors.subscriberName) {
+          mappedErrors.subscriberName = Array.isArray(backendErrors.subscriberName) ? backendErrors.subscriberName[0] : backendErrors.subscriberName;
+        }
+        if (backendErrors.subscriberDateOfBirth) {
+          mappedErrors.dateOfBirth = Array.isArray(backendErrors.subscriberDateOfBirth) ? backendErrors.subscriberDateOfBirth[0] : backendErrors.subscriberDateOfBirth;
+        }
+        if (backendErrors.effectiveDate) {
+          mappedErrors.policyStarted = Array.isArray(backendErrors.effectiveDate) ? backendErrors.effectiveDate[0] : backendErrors.effectiveDate;
+        }
+        if (backendErrors.groupNumber) {
+          mappedErrors.groupNumber = Array.isArray(backendErrors.groupNumber) ? backendErrors.groupNumber[0] : backendErrors.groupNumber;
+        }
+        if (backendErrors.groupName) {
+          mappedErrors.groupName = Array.isArray(backendErrors.groupName) ? backendErrors.groupName[0] : backendErrors.groupName;
+        }
+        if (backendErrors.insuranceCompanyId) {
+          mappedErrors.insuranceCompanyId = Array.isArray(backendErrors.insuranceCompanyId) ? backendErrors.insuranceCompanyId[0] : backendErrors.insuranceCompanyId;
+        }
+        
+        if (Object.keys(mappedErrors).length > 0) {
+          setErrors(mappedErrors);
+          showSnackbar('Please correct the highlighted errors', 'error');
+          return;
+        }
+      }
+
       const errorMessage = err?.data?.message || err?.message || (typeof err === 'string' ? err : 'Failed to save coverage');
       showSnackbar(errorMessage, 'error');
     } finally {
@@ -430,6 +528,10 @@ const AddCoveragePage = () => {
   };
 
   const handleViewFullBook = () => {
+    if (!formData.insurancePlan) {
+      showSnackbar('Please select an insurance plan or apply a template before viewing the full book.', 'warning');
+      return;
+    }
     setIsCoverageBookModalOpen(true);
   };
 
@@ -529,6 +631,12 @@ const AddCoveragePage = () => {
         subscriber: newSubscriber
       };
     });
+    
+    // Clear specific subscriber errors
+    const errKey = field === 'subscriberId' ? 'subscriberId' : (field === 'dateOfBirth' ? 'dateOfBirth' : (field === 'name' ? 'subscriberName' : null));
+    if (errKey) {
+      setErrors(prev => ({ ...prev, [errKey]: null }));
+    }
   };
 
   const handleRenewalChange = (field, value) => {
@@ -536,6 +644,9 @@ const AddCoveragePage = () => {
       ...prev,
       [field]: value
     }));
+    if (field === 'policyStarted' || field === 'policyEnds') {
+      setErrors(prev => ({ ...prev, policyStarted: null, policyEnds: null }));
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -543,6 +654,13 @@ const AddCoveragePage = () => {
       ...prev,
       [field]: value
     }));
+    if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
+      setErrors(prev => ({ ...prev, insurancePlan: null, insuranceCompanyId: null }));
+    } else if (field === 'groupName') {
+      setErrors(prev => ({ ...prev, groupName: null }));
+    } else if (field === 'groupNumber') {
+      setErrors(prev => ({ ...prev, groupNumber: null }));
+    }
   };
 
   const handleDeductibleChange = (index, field, value) => {
@@ -585,11 +703,12 @@ const AddCoveragePage = () => {
               handleApplyTemplate
             }}
             handleInputChange={handleInputChange}
-            insuranceCompanies={allCompanies.companies || []}
+            insuranceCompanies={allCompanies || []}
             ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
             tinyText={tinyText}
             blueHeader={blueHeader}
             inputBg={inputBg}
+            errors={errors}
           />
           
           <SubscriberInformation
@@ -598,12 +717,14 @@ const AddCoveragePage = () => {
             handleInputChange={handleInputChange}
             ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
             inputBg={inputBg}
+            errors={errors}
           />
           
           <RenewalSection
             formData={formData}
             handleRenewalChange={handleRenewalChange}
             inputBg={inputBg}
+            errors={errors}
           />
           
           {/* Advanced Section */}

@@ -16,3 +16,5 @@ export { default as SubscriberInformation } from './SubscriberInformation';
 export { default as FeeGuideModal } from './FeeGuideModal';
 export { default as ViewCoverage } from './ViewCoverage';
 export { default as CoverageBookModal } from './CoverageBookModal';
+export { default as SelectToothDialog } from './SelectToothDialog';
+
