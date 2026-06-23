@@ -47,8 +47,8 @@ export const claimService = {
       data.claims = data.claims.map((claim) => {
         const patientObj = (claim.patient && typeof claim.patient === 'object') ? claim.patient
           : (claim.patientId && typeof claim.patientId === 'object') ? claim.patientId
-          : (claim.invoiceId?.patientId && typeof claim.invoiceId.patientId === 'object') ? claim.invoiceId.patientId
-          : null;
+            : (claim.invoiceId?.patientId && typeof claim.invoiceId.patientId === 'object') ? claim.invoiceId.patientId
+              : null;
         return {
           ...claim,
           id: claim._id || claim.id,
@@ -72,9 +72,9 @@ export const claimService = {
     const claim = response.data.data.claim;
     const patientObj = (claim.patient && typeof claim.patient === 'object') ? claim.patient
       : (claim.patientId && typeof claim.patientId === 'object') ? claim.patientId
-      : (claim.invoiceId?.patientId && typeof claim.invoiceId.patientId === 'object') ? claim.invoiceId.patientId
-      : (claim.invoice?.patientId && typeof claim.invoice.patientId === 'object') ? claim.invoice.patientId
-      : null;
+        : (claim.invoiceId?.patientId && typeof claim.invoiceId.patientId === 'object') ? claim.invoiceId.patientId
+          : (claim.invoice?.patientId && typeof claim.invoice.patientId === 'object') ? claim.invoice.patientId
+            : null;
     return {
       ...claim,
       id: claim._id || claim.id,

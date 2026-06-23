@@ -868,7 +868,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
         </Box>
 
         {/* Bottom Action Bar */}
-        <Box sx={{ backgroundColor: "#fff", borderTop: "1px solid #E2E8F0", px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Box sx={{ position: "sticky", bottom: 0, zIndex: 100, backgroundColor: "#fff", borderTop: "1px solid #E2E8F0", px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Controller name="sendWelcome" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="Send Welcome" />

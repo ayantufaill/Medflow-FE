@@ -1707,7 +1707,7 @@ const ClaimsListPage = () => {
           <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 3, flexWrap: 'wrap' }}>
             <Box sx={{ flex: 1, minWidth: '350px', maxWidth: '650px' }}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
-                Search by report content:                      
+                Search by report content:
               </Typography>
               <TextField
                 fullWidth
@@ -3194,7 +3194,7 @@ const ClaimsListPage = () => {
                                 shortDesc = claim.description.substring(0, idx);
                                 longDesc = claim.description.substring(idx + 1);
                               }
-                              
+
                               return (
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'stretch' }}>
                                   <Typography

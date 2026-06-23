@@ -378,7 +378,7 @@ const AddCoveragePage = () => {
         showSnackbar('Coverage updated successfully', 'success');
       } else {
         await createInsurance(payload).unwrap();
-        showSnackbar('Coverage saved successfully', 'success');
+        showSnackbar('Coverage saved successfully. Any unbilled procedures have been converted to unsent claims.', 'success');
       }
       
       navigate(`/patients/details/${patientId}?tab=insurance`);
