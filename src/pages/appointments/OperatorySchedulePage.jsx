@@ -1,6 +1,7 @@
 import { Box } from '@mui/material';
 import ScheduleGridHeader from '../../components/appointments/schedule/ScheduleGridHeader';
 import ScheduleCalendar from '../../components/appointments/schedule/ScheduleCalendar';
+import LeftPanel from '../../components/appointments/left-panel/LeftPanel';
 
 const OperatorySchedulePage = () => {
   return (
@@ -8,6 +9,7 @@ const OperatorySchedulePage = () => {
 
       {/* LEFT PANEL — 20% */}
       <Box sx={{ width: '20%', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e0e5eb', flexShrink: 0, overflow: 'hidden' }}>
+        <LeftPanel />
       </Box>
 
       {/* CENTER PANEL — 60% */}
