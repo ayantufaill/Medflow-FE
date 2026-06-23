@@ -1,19 +1,28 @@
-import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const TABS = ['Schedule', 'Patients', 'Clinical', 'Billing', 'Reports'];
+const TABS = [
+  { label: 'Schedule', path: '/appointments/operatory-schedule' },
+  { label: 'Patients', path: '/patients' },
+  { label: 'Clinical', path: '/clinical' },
+  { label: 'Billing', path: '/finance' },
+  { label: 'Reports', path: '/patient-reports' },
+];
 
 const NavTabs = () => {
-  const [activeTab, setActiveTab] = useState('Schedule');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-      {TABS.map((tab) => {
-        const isActive = activeTab === tab;
+      {TABS.map(({ label, path }) => {
+        const active = isActive(path);
         return (
           <Box
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={label}
+            onClick={() => navigate(path)}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -21,10 +30,10 @@ const NavTabs = () => {
               py: '6px',
               cursor: 'pointer',
               borderRadius: '14px',
-              backgroundColor: isActive ? 'rgba(34, 98, 239, 0.08)' : 'transparent',
+              backgroundColor: active ? 'rgba(34, 98, 239, 0.08)' : 'transparent',
               transition: 'background-color 0.15s ease',
               '&:hover': {
-                backgroundColor: isActive ? 'rgba(34, 98, 239, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                backgroundColor: active ? 'rgba(34, 98, 239, 0.08)' : 'rgba(0, 0, 0, 0.04)',
               },
             }}
           >
@@ -34,12 +43,12 @@ const NavTabs = () => {
                 fontSize: '14px',
                 lineHeight: '20px',
                 letterSpacing: '0px',
-                fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#2262ef' : '#5c646f',
+                fontWeight: active ? 600 : 400,
+                color: active ? '#2262ef' : '#5c646f',
                 whiteSpace: 'nowrap',
               }}
             >
-              {tab}
+              {label}
             </Typography>
           </Box>
         );
