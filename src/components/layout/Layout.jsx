@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Toolbar } from '@mui/material';
 import Navbar from './Navbar';
+import Header from './Header';
 import Sidebar from './Sidebar';
 
 // Widths for collapsed (icons only) and expanded sidebar states
@@ -30,39 +31,39 @@ const Layout = ({ children }) => {
     : SIDEBAR_COLLAPSED_WIDTH;
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Navbar receives both toggle handlers so it can trigger the right one per breakpoint */}
-      <Navbar
+    // <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    //   {/* Header receives both toggle handlers so it can trigger the right one per breakpoint */}
+      <Header
         onMobileMenuClick={handleMobileDrawerToggle}
         onDesktopMenuClick={handleDesktopSidebarToggle}
       />
 
-      {/* Sidebar receives open state for desktop collapse/expand and mobileOpen for mobile drawer */}
-      <Sidebar
-        open={sidebarOpen}
-        onClose={handleMobileDrawerToggle}
-        mobileOpen={mobileOpen}
-      />
+    //   {/* Sidebar receives open state for desktop collapse/expand and mobileOpen for mobile drawer */}
+    //   <Sidebar
+    //     open={sidebarOpen}
+    //     onClose={handleMobileDrawerToggle}
+    //     mobileOpen={mobileOpen}
+    //   />
 
-      {/* Main content area — shifts right by the current sidebar width on desktop */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          // On desktop, account for sidebar width (animated via sidebar's own transition)
-          width: { md: `calc(100% - ${desktopSidebarWidth}px)` },
-          // Smooth transition to match sidebar animation
-          transition: 'width 0.2s ease',
-          backgroundColor: '#f5f5f5',
-          minHeight: '100vh',
-        }}
-      >
-        {/* Spacer to push content below the fixed AppBar */}
-        <Toolbar />
-        {children}
-      </Box>
-    </Box>
+    //   {/* Main content area — shifts right by the current sidebar width on desktop */}
+    //   <Box
+    //     component="main"
+    //     sx={{
+    //       flexGrow: 1,
+    //       p: 3,
+    //       // On desktop, account for sidebar width (animated via sidebar's own transition)
+    //       width: { md: `calc(100% - ${desktopSidebarWidth}px)` },
+    //       // Smooth transition to match sidebar animation
+    //       transition: 'width 0.2s ease',
+    //       backgroundColor: '#f5f5f5',
+    //       minHeight: '100vh',
+    //     }}
+    //   >
+    //     {/* Spacer to push content below the fixed AppBar */}
+    //     <Toolbar />
+    //     {children}
+    //   </Box>
+    // </Box>
   );
 };
 
