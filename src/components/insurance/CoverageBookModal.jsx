@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogActions,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -16,6 +18,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
+import SelectToothDialog from './SelectToothDialog';
 import { 
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowRight as KeyboardArrowRightIcon,
@@ -47,17 +50,29 @@ const getProcedureType = (codeStr) => {
   return 'Other';
 };
 
-const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, feeGuideId }) => {
+const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, onSave, feeGuideId }) => {
   const [loading, setLoading] = useState(false);
   const [procedures, setProcedures] = useState([]);
   const [expandedTypes, setExpandedTypes] = useState({'Diagnostic': true});
   const [expandedGroups, setExpandedGroups] = useState({'Diagnostic_Oral evaluation': true});
   const [activeToothSelection, setActiveToothSelection] = useState(null);
+  const [localCoverageData, setLocalCoverageData] = useState([]);
+
+  useEffect(() => {
+    if (open) {
+      setLocalCoverageData(coverageData || []);
+    }
+  }, [open, coverageData]);
 
   useEffect(() => {
     const fetchFees = async () => {
       if (!open || !feeGuideId) {
         if (!feeGuideId) setProcedures([]);
+        return;
+      }
+      if (!/^\d+$/.test(String(feeGuideId))) {
+        console.warn(`Non-numeric feeGuideId "${feeGuideId}" passed. Skipping API call.`);
+        setProcedures([]);
         return;
       }
       setLoading(true);
@@ -77,7 +92,7 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
 
   const mergedData = useMemo(() => {
     const overridesMap = new Map();
-    coverageData.forEach(item => {
+    localCoverageData.forEach(item => {
       if (item.code) overridesMap.set(item.code, item);
     });
 
@@ -98,7 +113,7 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
         flatPlanPortion: override?.flatPlanPortion ?? ''
       };
     });
-  }, [procedures, coverageData]);
+  }, [procedures, localCoverageData]);
 
   const treeData = useMemo(() => {
     const tree = {};
@@ -117,8 +132,7 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
   const toggleGroup = (groupKey) => setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
 
   const handleFieldChange = (code, field, value) => {
-    if (!setCoverageData) return;
-    const newData = [...coverageData];
+    const newData = [...localCoverageData];
     const index = newData.findIndex(item => item.code === code);
     if (index >= 0) {
       newData[index] = { ...newData[index], [field]: value };
@@ -126,7 +140,7 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
       const item = mergedData.find(i => i.code === code);
       if (item) newData.push({ ...item, [field]: value });
     }
-    setCoverageData(newData);
+    setLocalCoverageData(newData);
   };
 
   const handleToothToggle = (tooth) => {
@@ -272,9 +286,17 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
 
   const getGroupKey = (type, group) => `${type}_${group}`;
 
-  // Helper for the tooth dialog layout
-  const topTeeth = ['1', '2', '3', '4', '5', '6', '7', '8', 'Q1', 'Q2', '9', '10', '11', '12', '13', '14', '15', '16'];
-  const bottomTeeth = ['32', '31', '30', '29', '28', '27', '26', '25', 'Q4', 'Q3', '24', '23', '22', '21', '20', '19', '18', '17'];
+
+
+  const handleSaveClick = () => {
+    if (setCoverageData) {
+      setCoverageData(localCoverageData);
+    }
+    if (onSave) {
+      onSave(localCoverageData);
+    }
+    onClose();
+  };
 
   return (
     <>
@@ -368,72 +390,27 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
             </TableContainer>
           ))}
         </DialogContent>
+        <DialogActions sx={{ p: 2, bgcolor: '#f5f5f5', borderTop: '1px solid #e0e0e0' }}>
+          <Button onClick={onClose} variant="outlined" sx={{ textTransform: 'none', color: '#555', borderColor: '#ccc' }}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveClick}
+            variant="contained" 
+            sx={{ textTransform: 'none', bgcolor: '#4A75B4', '&:hover': { bgcolor: '#3b5f94' } }}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Tooth Selection Dialog */}
-      <Dialog open={!!activeToothSelection} onClose={() => setActiveToothSelection(null)} maxWidth="sm">
-        <Box sx={{ position: 'relative', p: 2, minWidth: '400px' }}>
-          <Typography variant="subtitle1" align="center" sx={{ mb: 2, fontWeight: 500, color: '#444' }}>
-            Select Tooth
-          </Typography>
-          <IconButton onClick={() => setActiveToothSelection(null)} sx={{ position: 'absolute', top: 4, right: 4, p: 0.5 }}>
-            <Typography sx={{ fontSize: '1rem', color: '#888' }}>x</Typography>
-          </IconButton>
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-              {topTeeth.map(t => {
-                const isSelected = activeToothSelection && mergedData.find(p => p.code === activeToothSelection)?.teethLimit?.includes(t);
-                const isQ = t.startsWith('Q');
-                return (
-                  <Typography
-                    key={t}
-                    onClick={() => handleToothToggle(t)}
-                    sx={{ 
-                      fontSize: '0.75rem', 
-                      width: '24px', 
-                      textAlign: 'center', 
-                      cursor: 'pointer',
-                      color: isSelected ? '#1976d2' : '#555',
-                      fontWeight: isSelected ? 800 : (isQ ? 700 : 400),
-                      userSelect: 'none',
-                      ml: (t === 'Q1' || t === '9') ? 3 : 0,
-                      mr: (t === 'Q2') ? 3 : 0
-                    }}
-                  >
-                    {t}
-                  </Typography>
-                );
-              })}
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-              {bottomTeeth.map(t => {
-                const isSelected = activeToothSelection && mergedData.find(p => p.code === activeToothSelection)?.teethLimit?.includes(t);
-                const isQ = t.startsWith('Q');
-                return (
-                  <Typography
-                    key={t}
-                    onClick={() => handleToothToggle(t)}
-                    sx={{ 
-                      fontSize: '0.75rem', 
-                      width: '24px', 
-                      textAlign: 'center', 
-                      cursor: 'pointer',
-                      color: isSelected ? '#1976d2' : '#555',
-                      fontWeight: isSelected ? 800 : (isQ ? 700 : 400),
-                      userSelect: 'none',
-                      ml: (t === 'Q4' || t === '24') ? 3 : 0,
-                      mr: (t === 'Q3') ? 3 : 0
-                    }}
-                  >
-                    {t}
-                  </Typography>
-                );
-              })}
-            </Box>
-          </Box>
-        </Box>
-      </Dialog>
+      <SelectToothDialog
+        open={!!activeToothSelection}
+        onClose={() => setActiveToothSelection(null)}
+        selectedTeeth={activeToothSelection ? (mergedData.find(p => p.code === activeToothSelection)?.teethLimit || []) : []}
+        onToggle={handleToothToggle}
+      />
     </>
   );
 };

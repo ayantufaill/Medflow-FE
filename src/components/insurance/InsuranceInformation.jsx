@@ -13,7 +13,8 @@ const InsuranceInformation = ({
   assignmentOptions = [],
   onSearchChange,
   tinyText,
-  blueHeader
+  blueHeader,
+  errors = {}
 }) => {
   const [searchResults, setSearchResults] = React.useState([]);
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -98,6 +99,8 @@ const InsuranceInformation = ({
         <TextField 
           fullWidth size="small" placeholder="Search by Payer Id, Carrier..." 
           InputProps={{ endAdornment: <SearchIcon color="disabled" fontSize="small" /> }}
+          error={Boolean(errors?.insurancePlan || errors?.insuranceCompanyId)}
+          helperText={errors?.insurancePlan || errors?.insuranceCompanyId}
           sx={{ mb: 0.75, '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 } }}
           value={formData.carrierSearch || ''}
           onChange={(e) => handleSearch(e.target.value)}
@@ -166,25 +169,38 @@ const InsuranceInformation = ({
       />
 
       {/* Display carrier info from API or fallback to display data */}
-      <Box sx={{ bgcolor: blueHeader, p: 0.75, borderRadius: 1, mt: 1, mb: 1.5, overflow: 'hidden' }}>
+      <Box sx={{ 
+        bgcolor: blueHeader, 
+        p: 0.75, 
+        borderRadius: 1, 
+        mt: 1, 
+        mb: 1.5, 
+        overflow: 'hidden',
+        border: errors?.insuranceCompanyId ? '1.5px solid #d32f2f' : 'none'
+      }}>
          <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier/Payer Name <span style={{ color: '#d32f2f' }}>*</span></Typography>
-              <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierName || '-'}</Typography>
+               <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier/Payer Name <span style={{ color: '#d32f2f' }}>*</span></Typography>
+               <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierName || '-'}</Typography>
             </Paper>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer ID <span style={{ color: '#d32f2f' }}>*</span></Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.payerId || '-'}</Typography>
+               <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer ID <span style={{ color: '#d32f2f' }}>*</span></Typography>
+               <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.payerId || '-'}</Typography>
             </Paper>
             <Paper elevation={0} sx={{ flex: 1, p: 0.75, textAlign: 'left', bgcolor: '#fff', borderRadius: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier Phone</Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierPhone || '-'}</Typography>
+               <Typography variant="caption" color="textSecondary" sx={tinyText}>Carrier Phone</Typography>
+               <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3 }}>{formData.carrierPhone || '-'}</Typography>
             </Paper>
          </Box>
          <Paper elevation={0} sx={{ mt: 0.5, p: 1, textAlign: 'left', bgcolor: '#fff', borderRadius: 1 }}>
             <Typography variant="caption" color="textSecondary" sx={tinyText}>Payer Address</Typography>
             <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.3, fontWeight: 500 }}>{formData.payerAddress || '-'}</Typography>
          </Paper>
+         {errors?.insuranceCompanyId && (
+           <Typography sx={{ color: '#d32f2f', fontSize: '0.65rem', mt: 0.5, ml: 1 }}>
+             {errors.insuranceCompanyId}
+           </Typography>
+         )}
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, mt: 1, px: 0.5 }}>
@@ -207,14 +223,32 @@ const InsuranceInformation = ({
                   <TableCell sx={{ border: '1px solid #e0e0e0', p: '4px 12px', height: '40px', fontSize: '0.8rem', bgcolor: '#f9fafb', width: '40%', color: '#424242' }}>
                     Insurance Plan <span style={{ color: '#d32f2f' }}>*</span>
                   </TableCell>
-                  <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
+                  <TableCell sx={{ 
+                    border: '1px solid #e0e0e0', 
+                    height: '40px', 
+                    fontSize: '0.8rem', 
+                    width: '60%', 
+                    p: '0px 8px' 
+                  }}>
                     <TextField 
                       fullWidth 
-                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
+                      error={Boolean(errors?.insurancePlan)}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          fontSize: '0.8rem', 
+                          '& fieldset': { border: errors?.insurancePlan ? '1.5px solid #d32f2f' : 'none' } 
+                        } 
+                      }} 
                       value={formData.insurancePlan || ''}
                       onChange={(e) => handleInputChange('insurancePlan', e.target.value)}
                       required 
                     />
+                    {errors?.insurancePlan && (
+                      <Typography sx={{ color: '#d32f2f', fontSize: '0.65rem', mt: 0.1, ml: 1, mb: 0.2 }}>
+                        {errors.insurancePlan}
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
 
@@ -226,11 +260,23 @@ const InsuranceInformation = ({
                   <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
                     <TextField 
                       fullWidth 
-                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
+                      error={Boolean(errors?.groupName)}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          fontSize: '0.8rem', 
+                          '& fieldset': { border: errors?.groupName ? '1.5px solid #d32f2f' : 'none' } 
+                        } 
+                      }} 
                       value={formData.groupName || ''}
                       onChange={(e) => handleInputChange('groupName', e.target.value)}
                       required 
                     />
+                    {errors?.groupName && (
+                      <Typography sx={{ color: '#d32f2f', fontSize: '0.65rem', mt: 0.1, ml: 1, mb: 0.2 }}>
+                        {errors.groupName}
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
 
@@ -245,7 +291,14 @@ const InsuranceInformation = ({
                   <TableCell sx={{ border: '1px solid #e0e0e0', height: '40px', fontSize: '0.8rem', width: '60%', p: '0px 8px' }}>
                     <TextField 
                       fullWidth 
-                      InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', '& fieldset': { border: 'none' } } }} 
+                      error={Boolean(errors?.groupNumber)}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          fontSize: '0.8rem', 
+                          '& fieldset': { border: errors?.groupNumber ? '1.5px solid #d32f2f' : 'none' } 
+                        } 
+                      }} 
                       value={formData.groupNumber || ''}
                       onChange={(e) => {
                         const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
@@ -254,6 +307,11 @@ const InsuranceInformation = ({
                       placeholder="e.g. GRP12345"
                       required 
                     />
+                    {errors?.groupNumber && (
+                      <Typography sx={{ color: '#d32f2f', fontSize: '0.65rem', mt: 0.1, ml: 1, mb: 0.2 }}>
+                        {errors.groupNumber}
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
 

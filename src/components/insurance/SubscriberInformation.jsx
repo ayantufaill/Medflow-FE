@@ -16,7 +16,8 @@ const SubscriberInformation = ({
   handleInputChange,
   relationshipOptions = ['Self', 'Spouse', 'Child', 'Parent', 'Other'],
   assignmentOptions = [],
-  inputBg
+  inputBg,
+  errors = {}
 }) => {
   const [showSsn, setShowSsn] = useState(false);
 
@@ -64,6 +65,8 @@ const SubscriberInformation = ({
             onChange={(e) => handleSubscriberChange('name', e.target.value)}
             size="small"
             disabled={formData.subscriber?.relationship === 'Self'}
+            error={Boolean(errors?.subscriberName)}
+            helperText={errors?.subscriberName}
             sx={{ 
               bgcolor: inputBg,
               '& .MuiInputBase-root': { fontSize: '0.7rem' },
@@ -88,6 +91,8 @@ const SubscriberInformation = ({
             }}
             size="small"
             placeholder="e.g. SUB123456"
+            error={Boolean(errors?.subscriberId)}
+            helperText={errors?.subscriberId}
             sx={{ 
               bgcolor: inputBg,
               '& .MuiInputBase-root': { fontSize: '0.7rem' },
@@ -136,6 +141,8 @@ const SubscriberInformation = ({
             value={formData.subscriber?.dateOfBirth || ''}
             onChange={(e) => handleSubscriberChange('dateOfBirth', e.target.value)}
             size="small"
+            error={Boolean(errors?.dateOfBirth)}
+            helperText={errors?.dateOfBirth}
             sx={{ 
               flex: 1,
               bgcolor: inputBg,

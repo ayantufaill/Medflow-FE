@@ -4,7 +4,8 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 const RenewalSection = ({ 
   formData, 
   handleRenewalChange,
-  inputBg
+  inputBg,
+  errors = {}
 }) => {
   return (
     <Box>
@@ -19,7 +20,7 @@ const RenewalSection = ({
             style={{
               padding: '8px 12px',
               fontSize: '0.7rem',
-              border: '1px solid #ccc',
+              border: errors?.policyStarted ? '1.5px solid #d32f2f' : '1px solid #ccc',
               borderRadius: '4px',
               backgroundColor: inputBg,
               width: '100%',
@@ -27,6 +28,11 @@ const RenewalSection = ({
               color: '#333'
             }}
           />
+          {errors?.policyStarted && (
+            <Typography sx={{ color: '#d32f2f', fontSize: '0.65rem', mt: 0.5 }}>
+              {errors.policyStarted}
+            </Typography>
+          )}
         </Grid>
         <Grid size={{ xs: 4 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#666', mb: 0.5 }}>Policy Ends</Typography>
@@ -37,7 +43,7 @@ const RenewalSection = ({
             style={{
               padding: '8px 12px',
               fontSize: '0.7rem',
-              border: '1px solid #ccc',
+              border: errors?.policyEnds ? '1.5px solid #d32f2f' : '1px solid #ccc',
               borderRadius: '4px',
               backgroundColor: inputBg,
               width: '100%',
@@ -45,6 +51,11 @@ const RenewalSection = ({
               color: '#333'
             }}
           />
+          {errors?.policyEnds && (
+            <Typography sx={{ color: '#d32f2f', fontSize: '0.65rem', mt: 0.5 }}>
+              {errors.policyEnds}
+            </Typography>
+          )}
         </Grid>
       </Grid>
       <Grid container spacing={2} sx={{ mt: 0.5 }}>
