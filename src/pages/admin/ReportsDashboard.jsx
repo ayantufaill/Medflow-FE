@@ -35,6 +35,7 @@ import ProductionCollectionSummary from './reports/financial/ProductionCollectio
 import ProviderCollectionPaymentType from './reports/financial/ProviderCollectionPaymentType';
 import ProductionPerCode from './reports/financial/ProductionPerCode';
 import CollectionCodeCarrier from './reports/financial/CollectionCodeCarrier';
+import ReferralProductionReport from './reports/financial/ReferralProductionReport';
 import AdjustmentReport from './reports/financial/AdjustmentReport';
 import CourtesyCreditReport from './reports/financial/CourtesyCreditReport';
 import CourtesyCreditModifications from './reports/financial/CourtesyCreditModifications';
@@ -201,6 +202,8 @@ const ReportsDashboard = () => {
           <ProductionPerCode />
         ) : location.pathname === '/admin/reports/financial/collection-code-carrier' ? (
           <CollectionCodeCarrier />
+        ) : location.pathname === '/admin/reports/financial/referral-production' ? (
+          <ReferralProductionReport />
         ) : location.pathname === '/admin/reports/financial/adjustment' ? (
           <AdjustmentReport />
         ) : location.pathname === '/admin/reports/financial/courtesy-credit' ? (

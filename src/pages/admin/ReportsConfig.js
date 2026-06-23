@@ -43,6 +43,7 @@ export const FINANCIAL_REPORT_SUB_TABS = [
   { label: 'Provider Collection Per Payment Type', path: '/admin/reports/financial/provider-collection-payment-type' },
   { label: 'Production Per Code', path: '/admin/reports/financial/production-per-code' },
   { label: 'Collection Per Code Per Carrier', path: '/admin/reports/financial/collection-code-carrier' },
+  { label: 'Referral Production Report', path: '/admin/reports/financial/referral-production' },
   { label: 'Adjustment Report', path: '/admin/reports/financial/adjustment' },
   { label: 'Courtesy Credit Report', path: '/admin/reports/financial/courtesy-credit' },
   { label: 'Courtesy Credit Modifications Report', path: '/admin/reports/financial/courtesy-credit-modifications' },
