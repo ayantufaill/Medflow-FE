@@ -1,5 +1,6 @@
 export const TIME_LABEL_WIDTH = 52;
-export const HOUR_HEIGHT = 64;
+export const COLUMN_MIN_WIDTH = 260;
+export const HOUR_HEIGHT = 120;
 export const START_HOUR = 7;
 export const HOURS = Array.from({ length: 14 }, (_, i) => i + START_HOUR); // 7AM → 8PM
 
