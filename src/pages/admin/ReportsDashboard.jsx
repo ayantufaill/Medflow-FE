@@ -86,8 +86,8 @@ const ReportsDashboard = () => {
   };
 
   return (
-    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ width: '100%' }}>
-      <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', mb: hoveredTab !== null ? 0 : 3 }}>
+    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ width: '100%', position: 'relative' }}>
+      <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', mb: hoveredTab !== null ? 0 : 3, position: 'relative' }}>
         <Tabs
           value={activeTab === -1 ? false : activeTab}
           variant="scrollable"
@@ -124,11 +124,11 @@ const ReportsDashboard = () => {
       </Box>
 
       {/* Sub-nav — visible on hover */}
-      {hoveredTab === 0 && <FinancialReportsSubNav />}
-      {hoveredTab === 1 && <ClinicalReportsSubNav />}
-      {hoveredTab === 2 && <PatientReportsSubNav />}
-      {hoveredTab === 3 && <OthersReportsSubNav />}
-      {hoveredTab === 4 && <SavingReportsSubNav />}
+      {hoveredTab === 0 && <FinancialReportsSubNav left={0} />}
+      {hoveredTab === 1 && <ClinicalReportsSubNav left={140} />}
+      {hoveredTab === 2 && <PatientReportsSubNav left={280} />}
+      {hoveredTab === 3 && <OthersReportsSubNav left={420} />}
+      {hoveredTab === 4 && <SavingReportsSubNav left={560} />}
 
       {/* Page content */}
       <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>

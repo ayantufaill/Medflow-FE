@@ -3,25 +3,29 @@ import { Box, Typography, useTheme } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import { FINANCIAL_REPORT_SUB_TABS } from '../../../pages/admin/ReportsConfig';
 
-const FinancialReportsSubNav = () => {
+const FinancialReportsSubNav = ({ left = 0 }) => {
   const theme = useTheme();
   const location = useLocation();
 
   return (
     <Box
       sx={{
-        borderBottom: 1,
+        position: 'absolute',
+        top: '48px',
+        left: left,
+        zIndex: 1100,
+        backgroundColor: '#ffffff',
+        border: '1px solid',
         borderColor: 'divider',
-        borderTop: 1,
-        mx: -3,
-        px: 3,
-        mb: 3,
-        backgroundColor: '#f0f4fa',
+        boxShadow: '0px 8px 24px rgba(0,0,0,0.12)',
+        borderRadius: '8px',
         display: 'flex',
-        gap: 0,
-        overflowX: 'auto',
-        scrollbarWidth: 'none',
-        '&::-webkit-scrollbar': { display: 'none' },
+        flexDirection: 'column',
+        py: 1,
+        minWidth: 260,
+        maxWidth: 320,
+        maxHeight: 400,
+        overflowY: 'auto',
       }}
     >
       {FINANCIAL_REPORT_SUB_TABS.map((sub) => {
@@ -33,17 +37,16 @@ const FinancialReportsSubNav = () => {
             to={sub.path}
             sx={{
               px: 2,
-              py: 1.5,
+              py: 1.2,
               fontSize: '0.8rem',
               fontWeight: 500,
               color: isActive ? theme.palette.primary.main : 'text.secondary',
               textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              borderBottom: '2px solid',
-              borderBottomColor: isActive ? theme.palette.primary.main : 'transparent',
+              display: 'block',
+              transition: 'background-color 0.15s, color 0.15s',
               '&:hover': {
                 color: theme.palette.primary.main,
-                borderBottomColor: theme.palette.primary.main,
+                backgroundColor: 'rgba(25, 118, 210, 0.08)',
               },
             }}
           >
