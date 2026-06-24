@@ -1203,6 +1203,7 @@ const ClaimsListPage = () => {
   // Modal Dialogs for Actions
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [editingClaim, setEditingClaim] = useState(null);
+  const [editFormErrors, setEditFormErrors] = useState({});
   const [openAttachDialog, setOpenAttachDialog] = useState(false);
   const [attachingClaim, setAttachingClaim] = useState(null);
   const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
@@ -1210,7 +1211,7 @@ const ClaimsListPage = () => {
 
   // Statistics & Alerts
   const validationErrorCount = useMemo(() => {
-    return claims.filter((c) => c.status === 'denied' || c.status === 'rejected').length;
+    return claims.filter((c) => ['denied', 'rejected', 'validationError', 'error'].includes(c.status)).length;
   }, [claims]);
 
   // Handle Note Popover Open
@@ -1389,11 +1390,11 @@ const ClaimsListPage = () => {
     let result = claims.filter((claim) => {
       // 1. Tab filtration mapping (status-based for tabs 0-3)
       if (activeTab === 0) {
-        // Unsent: draft claims
-        if (!['draft'].includes(claim.status)) return false;
+        // Unsent: draft claims AND errored claims
+        if (!['draft', 'error', 'validationError', 'rejected', 'denied'].includes(claim.status)) return false;
       } else if (activeTab === 1) {
-        // Errored: rejected or denied claims
-        if (!['rejected', 'denied'].includes(claim.status)) return false;
+        // Errored: rejected, denied, or validation error claims
+        if (!['rejected', 'denied', 'validationError', 'error'].includes(claim.status)) return false;
       } else if (activeTab === 2) {
         // Rejected only
         if (claim.status !== 'rejected') return false;
@@ -1659,22 +1660,60 @@ const ClaimsListPage = () => {
   // Edit dialog actions
   const handleOpenEdit = (claim) => {
     setEditingClaim(claim);
+    setEditFormErrors({});
     setOpenEditDialog(true);
   };
 
   const handleSaveEdit = async () => {
+    // 1. Validate
+    const errors = {};
+    
+    const hasSubmittedVal = editingClaim.submittedValue !== undefined && editingClaim.submittedValue !== null && editingClaim.submittedValue !== '';
+    const hasClaimAmount = editingClaim.claimAmount !== undefined && editingClaim.claimAmount !== null && editingClaim.claimAmount !== '';
+    
+    let cAmount = undefined;
+    let sAmount = undefined;
+
+    if (hasClaimAmount || hasSubmittedVal) {
+      cAmount = parseFloat(editingClaim.claimAmount || editingClaim.submittedValue || 0);
+      sAmount = parseFloat(editingClaim.submittedAmount || editingClaim.submittedValue || 0);
+      if (isNaN(cAmount) || cAmount < 0) errors.submittedAmount = 'Must be a valid positive amount';
+      if (isNaN(sAmount) || sAmount < 0) errors.submittedAmount = 'Must be a valid positive amount';
+    }
+    
+    const isErrorStatus = ['error', 'validationError'].includes(editingClaim.status);
+    const currentNotes = editingClaim.notes || editingClaim.description || editingClaim.clearingHouseMessage || '';
+    if (isErrorStatus && !currentNotes.trim()) {
+      errors.notes = 'Status message or notes are required when setting an error status';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
+
     try {
       setLoading(true);
-      await claimService.updateClaim(editingClaim.id, {
+      const payload = {
         status: editingClaim.status,
-        notes: editingClaim.notes || editingClaim.description || '',
+        notes: currentNotes,
         policyNumber: editingClaim.policyNumber,
-        claimAmount: editingClaim.claimAmount || editingClaim.submittedValue,
-        submittedAmount: editingClaim.submittedAmount || editingClaim.submittedValue,
-      });
+      };
+      
+      if (cAmount !== undefined) payload.claimAmount = cAmount;
+      if (sAmount !== undefined) payload.submittedAmount = sAmount;
+
+      await claimService.updateClaim(editingClaim.id, payload);
       setOpenEditDialog(false);
       setEditingClaim(null);
       setRefreshTrigger((prev) => prev + 1);
+      
+      if (isErrorStatus) {
+         setSnackbarMessage(`Claim successfully updated and moved to Errored status`);
+      } else {
+         setSnackbarMessage(`Claim successfully updated to ${editingClaim.status}`);
+      }
+      setSnackbarOpen(true);
     } catch (err) {
       console.error(err);
       alert('Error saving claim: ' + (err.message || err));
@@ -3052,11 +3091,11 @@ const ClaimsListPage = () => {
                 filteredClaims.map((claim) => {
                   const isSelected = !!selectedClaims[claim.id];
                   const isExpanded = !!expandedProcedures[claim.id];
-                  const isError = claim.status === 'denied' || claim.status === 'rejected';
+                  const isError = claim.status === 'denied' || claim.status === 'rejected' || claim.status === 'error' || claim.status === 'validationError';
 
                   // Determine attachment color badge background/icon styling
                   const hasAttachments = claim.attachments && claim.attachments.length > 0;
-                  const errorStatuses = ['denied', 'rejected', 'validationError'];
+                  const errorStatuses = ['denied', 'rejected', 'validationError', 'error'];
 
                   let attachBg = '#e2e8f0'; // Light slate blue default
                   let attachColor = '#5b72a9';
@@ -3609,8 +3648,9 @@ const ClaimsListPage = () => {
                 <TextField
                   fullWidth
                   size="small"
+                  disabled
                   value={editingClaim.patientName}
-                  onChange={(e) => setEditingClaim({ ...editingClaim, patientName: e.target.value })}
+                  sx={{ backgroundColor: '#f7fafc' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -3620,8 +3660,9 @@ const ClaimsListPage = () => {
                 <TextField
                   fullWidth
                   size="small"
+                  disabled
                   value={editingClaim.claimType}
-                  onChange={(e) => setEditingClaim({ ...editingClaim, claimType: e.target.value })}
+                  sx={{ backgroundColor: '#f7fafc' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -3631,8 +3672,9 @@ const ClaimsListPage = () => {
                 <TextField
                   fullWidth
                   size="small"
+                  disabled
                   value={editingClaim.carrier}
-                  onChange={(e) => setEditingClaim({ ...editingClaim, carrier: e.target.value })}
+                  sx={{ backgroundColor: '#f7fafc' }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -3689,6 +3731,8 @@ const ClaimsListPage = () => {
                       fullWidth
                       size="small"
                       type="number"
+                      error={!!editFormErrors.submittedAmount}
+                      helperText={editFormErrors.submittedAmount}
                       value={editingClaim.submittedValue || 0}
                       onChange={(e) => setEditingClaim({ ...editingClaim, submittedValue: parseFloat(e.target.value) || 0 })}
                     />
@@ -3739,8 +3783,13 @@ const ClaimsListPage = () => {
                   fullWidth
                   multiline
                   rows={2}
+                  error={!!editFormErrors.notes}
+                  helperText={editFormErrors.notes}
                   value={editingClaim.notes}
-                  onChange={(e) => setEditingClaim({ ...editingClaim, notes: e.target.value })}
+                  onChange={(e) => {
+                    setEditingClaim({ ...editingClaim, notes: e.target.value });
+                    if (editFormErrors.notes) setEditFormErrors(prev => ({ ...prev, notes: null }));
+                  }}
                 />
               </Grid>
             </Grid>
