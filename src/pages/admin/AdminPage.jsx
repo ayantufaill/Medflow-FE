@@ -229,6 +229,7 @@ const AdminPage = () => {
                     key={sub.label}
                     component={Link}
                     to={sub.path}
+                    onClick={() => setHoveredTab(null)}
                     sx={{
                       px: 2,
                       py: 1.2,

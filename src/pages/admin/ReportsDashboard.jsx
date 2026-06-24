@@ -124,11 +124,11 @@ const ReportsDashboard = () => {
       </Box>
 
       {/* Sub-nav — visible on hover */}
-      {hoveredTab === 0 && <FinancialReportsSubNav left={0} />}
-      {hoveredTab === 1 && <ClinicalReportsSubNav left={140} />}
-      {hoveredTab === 2 && <PatientReportsSubNav left={280} />}
-      {hoveredTab === 3 && <OthersReportsSubNav left={420} />}
-      {hoveredTab === 4 && <SavingReportsSubNav left={560} />}
+      {hoveredTab === 0 && <FinancialReportsSubNav left={0} onItemClick={() => setHoveredTab(null)} />}
+      {hoveredTab === 1 && <ClinicalReportsSubNav left={140} onItemClick={() => setHoveredTab(null)} />}
+      {hoveredTab === 2 && <PatientReportsSubNav left={280} onItemClick={() => setHoveredTab(null)} />}
+      {hoveredTab === 3 && <OthersReportsSubNav left={420} onItemClick={() => setHoveredTab(null)} />}
+      {hoveredTab === 4 && <SavingReportsSubNav left={560} onItemClick={() => setHoveredTab(null)} />}
 
       {/* Page content */}
       <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>

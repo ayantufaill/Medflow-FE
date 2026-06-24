@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -16,9 +17,17 @@ import {
   TableHead,
   TableRow,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import PrintIcon from '@mui/icons-material/Print';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import {
+  fetchPatientInsuranceCoverageReport,
+  selectInsuranceCoverageData,
+  selectInsuranceCoverageLoading,
+} from '../../../../store/slices/patientReportSlice';
 
 const INITIAL_DATA = [
   {
@@ -120,45 +129,118 @@ const INITIAL_DATA = [
     planRenewalDate: 'January',
     assignmentStatus: 'Assignment',
   },
+  {
+    number: '1235',
+    patient: 'Charles Green',
+    email: 'c.green@example.com',
+    planName: '',
+    payer: '',
+    lastAppointment: '03/20/2026',
+    feeSchedule: '',
+    planRenewalDate: '',
+    assignmentStatus: '',
+  },
 ];
 
 const PatientInsuranceCoverage = () => {
+  const dispatch = useDispatch();
+  const reduxData = useSelector(selectInsuranceCoverageData);
+  const loading = useSelector(selectInsuranceCoverageLoading);
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [rawReportData, setRawReportData] = useState(INITIAL_DATA);
   const [data, setData] = useState(INITIAL_DATA);
   const [grouping, setGrouping] = useState('no');
   const [assignmentFilter, setAssignmentFilter] = useState('no');
 
+  const [apptFilterType, setApptFilterType] = useState('no');
+  const [apptStartDate, setApptStartDate] = useState('');
+  const [apptEndDate, setApptEndDate] = useState('');
+  const [apptSingleDate, setApptSingleDate] = useState('');
+  const [showNoCoverage, setShowNoCoverage] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchPatientInsuranceCoverageReport());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (reduxData && reduxData.length > 0) {
+      setRawReportData(reduxData);
+      setData(reduxData);
+    } else {
+      setRawReportData(INITIAL_DATA);
+      setData(INITIAL_DATA);
+    }
+  }, [reduxData]);
+
   const handleApplyFilters = () => {
-    let filtered = INITIAL_DATA.filter((item) => {
+    const filtered = rawReportData.filter((item) => {
+      // 1. Search Query
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = (
+      const matchesSearch = !searchQuery || (
         item.patient.toLowerCase().includes(searchLower) ||
-        item.planName.toLowerCase().includes(searchLower) ||
-        item.payer.toLowerCase().includes(searchLower) ||
+        (item.planName && item.planName.toLowerCase().includes(searchLower)) ||
+        (item.payer && item.payer.toLowerCase().includes(searchLower)) ||
         item.number.includes(searchLower)
       );
 
+      // 2. Assignment Status
       const matchesAssignment = 
         assignmentFilter === 'no' || 
         (assignmentFilter === 'assignment' && item.assignmentStatus === 'Assignment') ||
         (assignmentFilter === 'non-assignment' && item.assignmentStatus !== 'Assignment');
 
-      return matchesSearch && matchesAssignment;
-    });
+      // 3. Appt Date
+      let matchesApptDate = true;
+      if (apptFilterType !== 'no') {
+        if (!item.lastAppointment) {
+          matchesApptDate = false;
+        } else {
+          const apptDate = new Date(item.lastAppointment);
+          if (apptFilterType === 'range') {
+            const start = apptStartDate ? new Date(apptStartDate) : null;
+            const end = apptEndDate ? new Date(apptEndDate) : null;
+            if (start && apptDate < start) matchesApptDate = false;
+            if (end && apptDate > end) matchesApptDate = false;
+          } else if (apptFilterType === 'before') {
+            const single = apptSingleDate ? new Date(apptSingleDate) : null;
+            if (single && apptDate >= single) matchesApptDate = false;
+          } else if (apptFilterType === 'after') {
+            const single = apptSingleDate ? new Date(apptSingleDate) : null;
+            if (single && apptDate <= single) matchesApptDate = false;
+          }
+        }
+      }
 
-    // Handle Grouping (as sorting)
-    if (grouping === 'payer') {
-      filtered = [...filtered].sort((a, b) => a.payer.localeCompare(b.payer));
-    } else if (grouping === 'plan') {
-      filtered = [...filtered].sort((a, b) => a.planName.localeCompare(b.planName));
-    } else if (grouping === 'fee') {
-      filtered = [...filtered].sort((a, b) => (a.feeSchedule || '').localeCompare(b.feeSchedule || ''));
-    }
+      // 4. Show patients with no coverage
+      const hasCoverage = item.payer || item.planName;
+      const matchesCoverage = showNoCoverage || hasCoverage;
+
+      return matchesSearch && matchesAssignment && matchesApptDate && matchesCoverage;
+    });
 
     setData(filtered);
   };
 
-  const handleExportCSV = () => {
+  const groupedData = useMemo(() => {
+    if (grouping === 'no') return null;
+    const groups = {};
+    data.forEach((row) => {
+      let key = 'Unassigned';
+      if (grouping === 'payer') {
+        key = row.payer || 'No Payer';
+      } else if (grouping === 'plan') {
+        key = row.planName || 'No Plan';
+      } else if (grouping === 'fee') {
+        key = row.feeSchedule || 'No Fee Schedule';
+      }
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(row);
+    });
+    return groups;
+  }, [data, grouping]);
+
+  const generateCSVContent = (targetData) => {
     const headers = [
       'Patient Number',
       'Patient',
@@ -171,23 +253,26 @@ const PatientInsuranceCoverage = () => {
       'Assignment Status',
     ];
 
-    const csvRows = [
+    return [
       headers.join(','),
-      ...data.map((row) =>
+      ...targetData.map((row) =>
         [
           row.number,
           `"${row.patient}"`,
           row.email,
-          `"${row.planName}"`,
-          `"${row.payer}"`,
+          `"${row.planName || ''}"`,
+          `"${row.payer || ''}"`,
           row.lastAppointment,
-          `"${row.feeSchedule}"`,
-          row.planRenewalDate,
-          row.assignmentStatus,
+          `"${row.feeSchedule || ''}"`,
+          row.planRenewalDate || '',
+          row.assignmentStatus || '',
         ].join(',')
       ),
     ].join('\n');
+  };
 
+  const handleExportCSV = () => {
+    const csvRows = generateCSVContent(data);
     const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -199,13 +284,103 @@ const PatientInsuranceCoverage = () => {
     document.body.removeChild(link);
   };
 
+  const handleExportGroupCSV = (groupName, groupData) => {
+    const csvRows = generateCSVContent(groupData);
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `patient_insurance_${groupName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handlePrintGroup = (elementId, groupName) => {
+    const tableEl = document.getElementById(elementId);
+    if (!tableEl) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Patient Insurance - ' + groupName + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('button, .no-print { display: none !important; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Patient Insurance - ' + groupName + '</h2>');
+    printWindow.document.write(tableEl.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
   const handleCreateTemplate = () => setTemplateDialogOpen(true);
+
+  const renderTable = (tableData, tableId) => (
+    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
+      <Table id={tableId} size="small" stickyHeader>
+        <TableHead>
+          <TableRow>
+            {[
+              'Patient Number', 
+              'Patient', 
+              'Email', 
+              'Plan name(plan num)', 
+              'Payer', 
+              'Last Appointment', 
+              'Fee Schedule', 
+              'Plan Renewal Date', 
+              'Assignment Status'
+            ].map((header) => (
+              <TableCell 
+                key={header} 
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '0.72rem', 
+                  py: 1,
+                  px: 1,
+                  borderBottom: '1px solid #ddd',
+                  backgroundColor: '#fff'
+                }}
+              >
+                {header}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {tableData.map((row, index) => (
+            <TableRow 
+              key={index} 
+              sx={{ 
+                backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc',
+                '& td': { borderBottom: '1px solid #eee' }
+              }}
+            >
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.number}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1, color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.email}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planName || 'N/A'}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.payer || 'N/A'}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.lastAppointment || 'N/A'}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.feeSchedule || 'N/A'}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planRenewalDate || 'N/A'}</TableCell>
+              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.assignmentStatus || 'N/A'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 
   return (
     <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
@@ -268,14 +443,51 @@ const PatientInsuranceCoverage = () => {
         </Box>
 
         {/* Filter by past appointment date */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by past appointment date:</Typography>
-          <RadioGroup row defaultValue="no">
-            <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No filter</Typography>} />
-            <FormControlLabel value="range" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Range</Typography>} />
-            <FormControlLabel value="before" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Before specific date</Typography>} />
-            <FormControlLabel value="after" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">After specific date</Typography>} />
-          </RadioGroup>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by past appointment date:</Typography>
+            <RadioGroup row value={apptFilterType} onChange={(e) => setApptFilterType(e.target.value)}>
+              <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No filter</Typography>} />
+              <FormControlLabel value="range" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Range</Typography>} />
+              <FormControlLabel value="before" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Before specific date</Typography>} />
+              <FormControlLabel value="after" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">After specific date</Typography>} />
+            </RadioGroup>
+          </Box>
+          {apptFilterType === 'range' && (
+            <Box sx={{ display: 'flex', gap: 2, pl: 21 }}>
+              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Start Date:
+                <input 
+                  type="date" 
+                  value={apptStartDate} 
+                  onChange={(e) => setApptStartDate(e.target.value)}
+                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
+                />
+              </Typography>
+              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                End Date:
+                <input 
+                  type="date" 
+                  value={apptEndDate} 
+                  onChange={(e) => setApptEndDate(e.target.value)}
+                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
+                />
+              </Typography>
+            </Box>
+          )}
+          {(apptFilterType === 'before' || apptFilterType === 'after') && (
+            <Box sx={{ display: 'flex', gap: 2, pl: 21 }}>
+              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Date:
+                <input 
+                  type="date" 
+                  value={apptSingleDate} 
+                  onChange={(e) => setApptSingleDate(e.target.value)}
+                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
+                />
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Filter by Assignment */}
@@ -294,7 +506,12 @@ const PatientInsuranceCoverage = () => {
 
         {/* Checkbox */}
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-          <Checkbox size="small" sx={{ p: 0.5 }} />
+          <Checkbox 
+            size="small" 
+            sx={{ p: 0.5 }} 
+            checked={showNoCoverage}
+            onChange={(e) => setShowNoCoverage(e.target.checked)}
+          />
           <Typography variant="caption">Show patients with no coverage</Typography>
         </Box>
       </Box>
@@ -328,32 +545,36 @@ const PatientInsuranceCoverage = () => {
         >
           Create Template
         </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handleExportCSV}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#4a89dc', 
-            fontSize: '0.75rem',
-            padding: '4px 12px'
-          }}
-        >
-          Export as CSV
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handlePrint}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#da4453', 
-            fontSize: '0.75rem',
-            padding: '4px 12px'
-          }}
-        >
-          Print
-        </Button>
+        {grouping === 'no' && (
+          <>
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={handleExportCSV}
+              sx={{ 
+                textTransform: 'none', 
+                backgroundColor: '#4a89dc', 
+                fontSize: '0.75rem',
+                padding: '4px 12px'
+              }}
+            >
+              Export as CSV
+            </Button>
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={handlePrint}
+              sx={{ 
+                textTransform: 'none', 
+                backgroundColor: '#da4453', 
+                fontSize: '0.75rem',
+                padding: '4px 12px'
+              }}
+            >
+              Print
+            </Button>
+          </>
+        )}
       </Box>
 
       {/* Summary Text */}
@@ -362,60 +583,49 @@ const PatientInsuranceCoverage = () => {
       </Typography>
 
       {/* Table Section */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
-              {[
-                'Patient Number', 
-                'Patient', 
-                'Email', 
-                'Plan name(plan num)', 
-                'Payer', 
-                'Last Appointment', 
-                'Fee Schedule', 
-                'Plan Renewal Date', 
-                'Assignment Status'
-              ].map((header) => (
-                <TableCell 
-                  key={header} 
-                  sx={{ 
-                    fontWeight: 600, 
-                    fontSize: '0.72rem', 
-                    py: 1,
-                    px: 1,
-                    borderBottom: '1px solid #ddd',
-                    backgroundColor: '#fff'
-                  }}
-                >
-                  {header}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((row, index) => (
-              <TableRow 
-                key={index} 
-                sx={{ 
-                  backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc',
-                  '& td': { borderBottom: '1px solid #eee' }
-                }}
-              >
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.number}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1, color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.email}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planName}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.payer}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.lastAppointment}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.feeSchedule}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planRenewalDate}</TableCell>
-                <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.assignmentStatus}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={40} sx={{ color: '#4a89dc' }} />
+        </Box>
+      ) : grouping === 'no' ? (
+        renderTable(data, 'patient-insurance-coverage-table')
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {Object.entries(groupedData).map(([groupName, groupData]) => {
+            const tableId = `table-${groupName.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            return (
+              <Box key={groupName} sx={{ border: '1px solid #ccc', p: 2, borderRadius: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    {grouping === 'payer' ? 'Payer' : grouping === 'plan' ? 'Plan' : 'Fee Schedule'}: {groupName} ({groupData.length} patients)
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<FileDownloadIcon />}
+                      onClick={() => handleExportGroupCSV(groupName, groupData)}
+                      sx={{ fontSize: '0.7rem', py: 0.2 }}
+                    >
+                      Export CSV
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<PrintIcon />}
+                      onClick={() => handlePrintGroup(tableId, groupName)}
+                      sx={{ fontSize: '0.7rem', py: 0.2 }}
+                    >
+                      Print
+                    </Button>
+                  </Box>
+                </Box>
+                {renderTable(groupData, tableId)}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
 
       <CreateTemplateDialog 
         open={templateDialogOpen} 
