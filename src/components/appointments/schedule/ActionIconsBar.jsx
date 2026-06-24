@@ -34,29 +34,29 @@ const ActionIconsBar = () => (
     sx={{
       display: 'flex',
       alignItems: 'center',
-      gap: '2px',
+      gap: '1px',
       border: '1px solid #e0e5eb',
       borderRadius: '10px',
-      px: '4px',
-      py: '4px',
+      px: '3px',
+      py: '3px',
       flexShrink: 0,
     }}
   >
     {ICONS.map((item, i) =>
       item.divider ? (
-        <VerticalDivider key={`divider-${i}`} height="20px" />
+        <VerticalDivider key={`divider-${i}`} height="16px" />
       ) : (
         <IconButton
           key={item.title}
-          size="small"
           title={item.title}
           sx={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '5px',
+            width: '20px',
+            height: '20px',
+            borderRadius: '4px',
+            p: 0,
             color: item.active ? '#2262ef' : '#5c646f',
             backgroundColor: item.active ? 'rgba(34, 98, 239, 0.10)' : 'transparent',
-            '& .MuiSvgIcon-root': { fontSize: '15px' },
+            '& .MuiSvgIcon-root': { fontSize: '13px' },
             '&:hover': {
               backgroundColor: item.active ? 'rgba(34, 98, 239, 0.15)' : 'rgba(0,0,0,0.05)',
             },

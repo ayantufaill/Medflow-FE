@@ -7,23 +7,16 @@ import ActionIconsBar from './ActionIconsBar';
 import NewAppointmentButton from './NewAppointmentButton';
 import VerticalDivider from '../../common/VerticalDivider';
 
-const ScheduleGridHeader = () => {
+const ScheduleGridHeader = ({ onNewAppointment }) => {
   const [view, setView] = useState('Day');
   const [currentDate, setCurrentDate] = useState(dayjs());
 
   return (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
-        alignItems: 'flex-start',
         width: '100%',
-        height: '60px',
-        padding: '0px',
         borderBottom: '1px solid #e0e5eb',
         flexShrink: 0,
-        overflow: 'visible',
       }}
     >
       <Box
@@ -32,9 +25,9 @@ const ScheduleGridHeader = () => {
           flexDirection: 'row',
           alignItems: 'center',
           width: '100%',
-          height: '72px',
-          px: '12px',
-          gap: '8px',
+          px: '10px',
+          py: '10px',
+          gap: '6px',
         }}
       >
         <ViewToggle value={view} onChange={setView} />
@@ -46,7 +39,7 @@ const ScheduleGridHeader = () => {
         <Box sx={{ flexGrow: 1 }} />
         <ActionIconsBar />
         <VerticalDivider height="36px" />
-        <NewAppointmentButton />
+        <NewAppointmentButton onClick={onNewAppointment} />
       </Box>
     </Box>
   );

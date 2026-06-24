@@ -17,7 +17,7 @@ const NewAppointmentButton = ({ onClick }) => (
       lineHeight: '16px',
       letterSpacing: '0px',
       color: '#fcfcfc',
-      px: '10px',
+      px: '8px',
       py: '5px',
       boxShadow: 'none',
       whiteSpace: 'nowrap',

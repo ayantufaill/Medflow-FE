@@ -21,7 +21,7 @@ const ViewToggle = ({ value, onChange }) => (
           key={v}
           onClick={() => onChange(v)}
           sx={{
-            px: '10px',
+            px: '8px',
             py: '3px',
             borderRadius: '8px',
             cursor: 'pointer',

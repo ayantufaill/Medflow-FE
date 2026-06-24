@@ -3,8 +3,8 @@ import { KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
 
 const DateNavigation = ({ date, onPrev, onNext }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-    <IconButton size="small" onClick={onPrev} sx={{ color: '#5c646f' }}>
-      <KeyboardArrowLeft sx={{ fontSize: '18px' }} />
+    <IconButton onClick={onPrev} sx={{ color: '#5c646f', p: '3px' }}>
+      <KeyboardArrowLeft sx={{ fontSize: '16px' }} />
     </IconButton>
     <Typography
       sx={{
@@ -13,13 +13,12 @@ const DateNavigation = ({ date, onPrev, onNext }) => (
         fontSize: '12px',
         color: '#09121f',
         whiteSpace: 'nowrap',
-        textAlign: 'left'
       }}
     >
       {date.format('dddd, MMMM D, YYYY')}
     </Typography>
-    <IconButton size="small" onClick={onNext} sx={{ color: '#5c646f' }}>
-      <KeyboardArrowRight sx={{ fontSize: '18px' }} />
+    <IconButton onClick={onNext} sx={{ color: '#5c646f', p: '3px' }}>
+      <KeyboardArrowRight sx={{ fontSize: '16px' }} />
     </IconButton>
   </Box>
 );
