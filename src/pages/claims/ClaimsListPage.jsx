@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { claimService } from '../../services/claim.service';
+import ClaimAttachmentsDialog from '../../components/claims/attachments/ClaimAttachmentsDialog';
+import ClaimPrintPreviewDialog from '../../components/claims/ClaimPrintPreviewDialog';
 import {
   Box,
   Typography,
@@ -30,6 +33,8 @@ import {
   Collapse,
   InputAdornment,
   CircularProgress,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -143,6 +148,7 @@ const INITIAL_CLAIMS = [
       { code: 'D4341', name: 'Periodontal Scaling & Root Planing - 4+ Teeth', fee: 280.00 },
       { code: 'D4910', name: 'Periodontal Maintenance', fee: 140.00 },
     ],
+    attachments: [{ id: 1, name: 'perio_chart.pdf' }],
     tab: 'unsent',
   },
   {
@@ -1048,6 +1054,8 @@ const TABS = [
 ];
 
 const ClaimsListPage = () => {
+  const navigate = useNavigate();
+
   // Tabs State
   const [activeTab, setActiveTab] = useState(0);
 
@@ -1073,6 +1081,10 @@ const ClaimsListPage = () => {
 
   // Clearing house message expansion state
   const [expandAllMessages, setExpandAllMessages] = useState(false);
+
+  // Snackbar State
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Claims Data State
   const [claims, setClaims] = useState([]);
@@ -1128,7 +1140,18 @@ const ClaimsListPage = () => {
           let fetchedClaims = [];
           if (activeTab >= 0 && activeTab <= 3) {
             // Fetch all claims for tabs 0-3; filter by status client-side
-            const data = await claimService.getAllClaims({ page: 1, limit: 500 });
+            const filterParams = { 
+              page: 1, 
+              limit: 500,
+              ...(claimType !== 'all' && { claimFormat: claimType }),
+              ...(carrier !== 'all' && { carrierName: carrier }),
+              ...(claimAttachment !== 'all' && { hasAttachment: claimAttachment === 'with_attachments' ? 'true' : 'false' }),
+              ...(claimStatus !== 'all' && { status: claimStatus }),
+              ...(searchPatient && { patientName: searchPatient }),
+              ...(searchClaimOrDate && { search: searchClaimOrDate }),
+              ...(showHidden && { showHidden: true })
+            };
+            const data = await claimService.getAllClaims(filterParams);
             fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'claims'));
           } else if (activeTab === 4) {
             const data = await claimService.getOutstandingClaims({ limit: 100, dateRange: groupDateRange, groupBy: groupByOption });
@@ -1152,7 +1175,21 @@ const ClaimsListPage = () => {
     return () => {
       active = false;
     };
-  }, [activeTab, activeEraTab, searchEraContent, groupDateRange, groupByOption, refreshTrigger]);
+  }, [
+    activeTab, 
+    activeEraTab, 
+    searchEraContent, 
+    groupDateRange, 
+    groupByOption, 
+    refreshTrigger,
+    claimType,
+    carrier,
+    claimAttachment,
+    claimStatus,
+    searchPatient,
+    searchClaimOrDate,
+    showHidden
+  ]);
 
   // Expandable Procedures State
   const [expandedProcedures, setExpandedProcedures] = useState({});
@@ -1544,12 +1581,37 @@ const ClaimsListPage = () => {
 
   // Action for Predetermination: Print Predeterminations
   const handlePrintPredeterminations = () => {
-    alert('Generating PDF ADA form and printing predeterminations...');
+    const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+    if (selectedIds.length === 0) {
+      alert('Please select a predetermination to print.');
+      return;
+    }
+    
+    const firstSelectedId = selectedIds[0];
+    const claimToPrint = claims.find(c => c.id === firstSelectedId);
+    
+    if (claimToPrint) {
+      setPreviewingClaim(claimToPrint);
+      setOpenPreviewDialog(true);
+    }
   };
 
   // Action for Unsent: Print Claims
   const handlePrintClaims = () => {
-    alert('Generating PDF and printing selected claims...');
+    const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+    if (selectedIds.length === 0) {
+      alert('Please select a claim to print.');
+      return;
+    }
+    
+    // Just grab the first selected claim to preview
+    const firstSelectedId = selectedIds[0];
+    const claimToPrint = claims.find(c => c.id === firstSelectedId);
+    
+    if (claimToPrint) {
+      setPreviewingClaim(claimToPrint);
+      setOpenPreviewDialog(true);
+    }
   };
 
   // Action for Errored / Rejected / History: Void & Recreate Claims
@@ -1627,15 +1689,69 @@ const ClaimsListPage = () => {
     setOpenAttachDialog(true);
   };
 
-  const handleSaveAttach = () => {
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === attachingClaim.id ? { ...c, redAttachment: true, attachmentColor: 'red' } : c
-      )
-    );
-    alert(`Files successfully attached to claim ${attachingClaim.claimNumber}`);
-    setOpenAttachDialog(false);
-    setAttachingClaim(null);
+  const handleSaveAttach = async ({ newFiles, retainedFiles }) => {
+    try {
+      setLoading(true);
+      
+      const originalAttachments = attachingClaim.attachments || [];
+      const removedFiles = originalAttachments.filter(
+        att => !retainedFiles.some(r => r.id === att.id)
+      );
+
+      // Process removals
+      if (removedFiles.length > 0) {
+        await Promise.allSettled(
+          removedFiles.map(file => {
+            if (file.id) {
+               return claimService.removeClaimDocument(attachingClaim.id, file.id);
+            }
+            return Promise.resolve();
+          })
+        );
+      }
+
+      // Process new uploads
+      let newAttachments = [];
+      if (newFiles && newFiles.length > 0) {
+        const response = await claimService.uploadAttachments(attachingClaim.id, newFiles);
+        newAttachments = response.data?.attachments || newFiles.map(f => ({ id: Math.random(), name: f.name }));
+      }
+      
+      setClaims((prev) =>
+        prev.map((c) => {
+          if (c.id === attachingClaim.id) {
+            const updatedAttachments = [...retainedFiles, ...newAttachments];
+            const hasAttachments = updatedAttachments.length > 0;
+            return { 
+              ...c, 
+              attachments: updatedAttachments,
+              redAttachment: hasAttachments, 
+              attachmentColor: hasAttachments ? 'red' : undefined 
+            };
+          }
+          return c;
+        })
+      );
+      
+      let msgParts = [];
+      if (newFiles?.length > 0) msgParts.push(`attached ${newFiles.length} file(s)`);
+      if (removedFiles.length > 0) msgParts.push(`removed ${removedFiles.length} file(s)`);
+      
+      if (msgParts.length > 0) {
+        setSnackbarMessage(`Successfully ${msgParts.join(' and ')} for claim ${attachingClaim.claimNumber}`);
+        setSnackbarOpen(true);
+      } else if (newFiles?.length === 0 && removedFiles.length === 0) {
+        setOpenAttachDialog(false);
+        setAttachingClaim(null);
+      }
+    } catch (error) {
+      console.error('Failed to update attachments', error);
+      alert('Failed to update attachments. Please try again.');
+    } finally {
+      setLoading(false);
+      setOpenAttachDialog(false);
+      setAttachingClaim(null);
+    }
   };
 
   // Preview dialog actions
@@ -2939,13 +3055,34 @@ const ClaimsListPage = () => {
                   const isError = claim.status === 'denied' || claim.status === 'rejected';
 
                   // Determine attachment color badge background/icon styling
-                  let attachIconColor = '#7d9cc4';
-                  if (claim.attachmentColor === 'green') {
-                    attachIconColor = '#2f855a'; // Solid Forest Green
-                  } else if (claim.attachmentColor === 'red' || claim.redAttachment) {
-                    attachIconColor = '#e53e3e'; // Muted warning red
-                  } else if (claim.attachmentColor === 'blue') {
-                    attachIconColor = '#3182ce'; // Sky blue
+                  const hasAttachments = claim.attachments && claim.attachments.length > 0;
+                  const errorStatuses = ['denied', 'rejected', 'validationError'];
+
+                  let attachBg = '#e2e8f0'; // Light slate blue default
+                  let attachColor = '#5b72a9';
+                  let attachBorder = '1px solid #94a3b8';
+                  let attachTooltip = 'Manage Attachments';
+                  let attachHoverBg = '#cbd5e1';
+
+                  if (!hasAttachments) {
+                    if (errorStatuses.includes(claim.status)) {
+                      attachBg = '#fecdd3'; // Red
+                      attachColor = '#e11d48';
+                      attachBorder = '1px solid #f43f5e';
+                      attachTooltip = 'Error';
+                      attachHoverBg = '#fda4af';
+                    } else {
+                      attachBg = '#fef08a'; // Yellow
+                      attachColor = '#a16207';
+                      attachBorder = '1px solid #eab308';
+                      attachTooltip = 'Attachments Not Sent';
+                      attachHoverBg = '#fde047';
+                    }
+                  } else {
+                    attachBg = '#dbeafe'; // Blue (Correct)
+                    attachColor = '#3b82f6';
+                    attachBorder = '1px solid #93c5fd';
+                    attachHoverBg = '#bfdbfe';
                   }
 
                   return (
@@ -2998,7 +3135,29 @@ const ClaimsListPage = () => {
 
                         {/* Claim # (+ Created Date) */}
                         <TableCell>
-                          <Typography sx={{ fontWeight: 600, color: isError && activeTab === 0 ? '#d93838' : '#4a5568', fontSize: '0.72rem' }}>
+                          <Typography 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const getSafeId = (field) => (field && typeof field === 'object' ? (field._id || field.id) : field);
+                              const targetInvoiceId = getSafeId(claim.invoiceId) || getSafeId(claim.invoice);
+                              const targetPatientId = getSafeId(claim.patientId) || getSafeId(claim.patient);
+                              if (targetInvoiceId && targetPatientId) {
+                                navigate('/finance', { state: { invoiceId: targetInvoiceId, patientId: targetPatientId } });
+                              } else {
+                                alert('Missing invoice or patient information for this claim.');
+                              }
+                            }}
+                            sx={{ 
+                              fontWeight: 600, 
+                              color: '#1976d2', 
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                textDecoration: 'underline',
+                                color: '#115293',
+                              }
+                            }}
+                          >
                             {claim.claimNumber}
                           </Typography>
                           {activeTab === 4 && claim.createdDate && (
@@ -3259,17 +3418,26 @@ const ClaimsListPage = () => {
                                     <EditIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Manage Attachments">
+                                <Tooltip title={attachTooltip}>
                                   <IconButton
                                     size="small"
                                     onClick={() => handleOpenAttach(claim)}
                                     sx={{
-                                      color: attachIconColor,
-                                      transition: 'color 0.2s',
-                                      p: 0.2,
+                                      bgcolor: attachBg,
+                                      color: attachColor,
+                                      border: attachBorder,
+                                      borderRadius: '4px',
+                                      p: '2px',
+                                      width: 24,
+                                      height: 24,
+                                      mx: 0.5,
+                                      transition: 'all 0.2s',
+                                      '&:hover': {
+                                        bgcolor: attachHoverBg,
+                                      }
                                     }}
                                   >
-                                    <AttachFileIcon sx={{ fontSize: 14 }} />
+                                    <AttachFileIcon sx={{ fontSize: 16, transform: 'rotate(-45deg)' }} />
                                   </IconButton>
                                 </Tooltip>
                                 {claim.showEye ? (
@@ -3293,17 +3461,26 @@ const ClaimsListPage = () => {
                                     <EditIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Manage Attachments">
+                                <Tooltip title={attachTooltip}>
                                   <IconButton
                                     size="small"
                                     onClick={() => handleOpenAttach(claim)}
                                     sx={{
-                                      color: claim.redAttachment ? '#d93838' : '#7d9cc4',
-                                      transition: 'color 0.2s',
-                                      p: 0.2,
+                                      bgcolor: attachBg,
+                                      color: attachColor,
+                                      border: attachBorder,
+                                      borderRadius: '4px',
+                                      p: '2px',
+                                      width: 24,
+                                      height: 24,
+                                      mx: 0.5,
+                                      transition: 'all 0.2s',
+                                      '&:hover': {
+                                        bgcolor: attachHoverBg,
+                                      }
                                     }}
                                   >
-                                    <AttachFileIcon sx={{ fontSize: 14 }} />
+                                    <AttachFileIcon sx={{ fontSize: 16, transform: 'rotate(-45deg)' }} />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Preview Claim Form">
@@ -3584,170 +3761,35 @@ const ClaimsListPage = () => {
       </Dialog>
 
       {/* Attachments Management Dialog */}
-      <Dialog open={openAttachDialog} onClose={() => setOpenAttachDialog(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '8px', minHeight: '400px' } }}>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2.5, pb: 1 }}>
-          <Typography sx={{ fontWeight: 600, color: '#333', fontSize: '1.05rem' }}>
-            Claim Attachments
-          </Typography>
-          <IconButton onClick={() => setOpenAttachDialog(false)} size="small" sx={{ color: '#999' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ px: 3, pt: 1, pb: 4 }}>
-          {attachingClaim && (
-            <>
-              <Typography sx={{ fontSize: '0.85rem', color: '#333', mb: 2 }}>
-                Claim {attachingClaim.claimNumber}
-              </Typography>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4 }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#444' }}>
-                  Payor Reference Number:
-                </Typography>
-                <Typography sx={{ fontSize: '0.85rem', color: '#333', fontWeight: 600, display: 'inline-block', borderBottom: '1px solid #333', minWidth: '20px' }}>
-                  &nbsp;
-                </Typography>
-                <IconButton size="small" sx={{ p: 0.5 }}>
-                  <EditIcon sx={{ fontSize: 16, color: '#333' }} />
-                </IconButton>
-                <ErrorIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
-              </Box>
-
-              <Typography sx={{ fontWeight: 700, color: '#333', fontSize: '0.95rem', mb: 1 }}>
-                Imported Files
-              </Typography>
-              <Typography sx={{ fontSize: '0.85rem', color: '#666', mb: 4 }}>
-                No files added yet
-              </Typography>
-
-              <Typography sx={{ fontWeight: 700, color: '#333', fontSize: '0.95rem', mb: 0.5 }}>
-                Import from:
-              </Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#999', fontStyle: 'italic', mb: 3 }}>
-                *PDF files will be submitted as images*
-              </Typography>
-
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                {/* Images */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <Box sx={{ width: 40, height: 40, borderRadius: '50%', border: '4px solid #1976d2', borderTopColor: 'transparent', transform: 'rotate(45deg)' }} />
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Images</Typography>
-                </Box>
-                {/* Upload from PC */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Upload from PC</Typography>
-                </Box>
-                {/* Perio Chart */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8 2 6 5 6 9v3c0 2-2 4-2 6 0 1 1 2 2 2h2c1-2 2-3 4-3s3 1 4 3h2c1 0 2-1 2-2 0-2-2-4-2-6V9c0-4-2-7-6-7z" /></svg>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Perio Chart</Typography>
-                </Box>
-                {/* Medical History */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" /><path d="M12 8v8M8 12h8" /></svg>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Medical History</Typography>
-                </Box>
-                {/* Dental History */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Dental History</Typography>
-                </Box>
-                {/* Progress Notes */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Progress Notes</Typography>
-                </Box>
-                {/* Upload EOBs */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer' }}>
-                  <Box sx={{ width: 36, height: 24, bgcolor: '#6b21a8', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography sx={{ color: 'white', fontSize: '0.55rem', fontWeight: 700 }}>EOB</Typography>
-                  </Box>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>Upload EOBs</Typography>
-                </Box>
-              </Box>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', gap: 1, backgroundColor: '#fafafa' }}>
-          <FormControlLabel
-            control={<Checkbox defaultChecked size="small" sx={{ color: '#1a3a6b', '&.Mui-checked': { color: '#1a3a6b' }, py: 0.5 }} />}
-            label={<Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Send both Pearl-annotated and original images</Typography>}
-            sx={{ mr: 'auto', ml: 1 }}
-          />
-          <Button onClick={() => setOpenAttachDialog(false)} sx={{ textTransform: 'none', color: '#333', bgcolor: '#e2e8f0', borderRadius: '20px', px: 3, fontWeight: 600, '&:hover': { bgcolor: '#cbd5e1' } }}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveAttach}
-            variant="contained"
-            sx={{ textTransform: 'none', backgroundColor: '#7994c6', borderRadius: '20px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#627cb3', boxShadow: 'none' } }}
-          >
-            Submit Attachments
-          </Button>
-          <Button
-            onClick={handleSaveAttach}
-            variant="contained"
-            sx={{ textTransform: 'none', backgroundColor: '#68d391', borderRadius: '20px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#48bb78', boxShadow: 'none' } }}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ClaimAttachmentsDialog
+        open={openAttachDialog}
+        attachingClaim={attachingClaim}
+        onClose={() => setOpenAttachDialog(false)}
+        onSave={handleSaveAttach}
+      />
 
       {/* Claim Form Preview Dialog */}
-      <Dialog open={openPreviewDialog} onClose={() => setOpenPreviewDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, color: '#1a3a6b', borderBottom: '1px solid #e0e6ed', pb: 2 }}>
-          ADA 2019 Claim Form Preview ({previewingClaim?.claimNumber})
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          {previewingClaim && (
-            <Box sx={{ border: '2px solid #e0e6ed', p: 3, borderRadius: '6px', backgroundColor: '#fafafa', fontFamily: 'monospace' }}>
-              <Typography sx={{ fontWeight: 700, textAlign: 'center', mb: 2 }}>
-                ADA Dental Claim Form
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6} sx={{ borderRight: '1px solid #e0e6ed' }}>
-                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>1. HEADER INFORMATION</Typography>
-                  <Typography variant="body2">Primary Insurance Claim</Typography>
-                  <Typography variant="body2">Carrier: {previewingClaim.carrier}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>2. PATIENT INFORMATION</Typography>
-                  <Typography variant="body2">Name: {previewingClaim.patientName}</Typography>
-                  <Typography variant="body2">Code: {previewingClaim.patientCode}</Typography>
-                </Grid>
-                <Grid item xs={12} sx={{ borderTop: '1px solid #e0e6ed', mt: 2, pt: 2 }}>
-                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>3. PROCEDURES SUBMITTED</Typography>
-                  {previewingClaim.procedures.map((proc, index) => (
-                    <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">{proc.code} - {proc.name}</Typography>
-                      <Typography variant="body2">${proc.fee.toFixed(2)}</Typography>
-                    </Box>
-                  ))}
-                </Grid>
-                <Grid item xs={12} sx={{ borderTop: '1px solid #e0e6ed', mt: 2, pt: 2, textAlign: 'right' }}>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    Total Claim Charge: ${previewingClaim.procedures.reduce((acc, curr) => acc + curr.fee, 0).toFixed(2)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #e0e6ed' }}>
-          <Button onClick={() => setOpenPreviewDialog(false)} sx={{ textTransform: 'none', color: '#718096' }}>
-            Close Preview
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => alert('Printing ADA form...')}
-            sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
-          >
-            Print Form
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ClaimPrintPreviewDialog 
+        open={openPreviewDialog} 
+        claim={previewingClaim} 
+        onClose={() => setOpenPreviewDialog(false)} 
+      />
+
+      {/* Success Snackbar */}
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={4000} 
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity="success" 
+          sx={{ width: '100%', borderRadius: '8px', boxShadow: 3 }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

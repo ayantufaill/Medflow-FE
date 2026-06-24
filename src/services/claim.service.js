@@ -24,6 +24,11 @@ export const claimService = {
       startDate = '',
       endDate = '',
       deniedOnly = false,
+      carrierName = '',
+      hasAttachment = '',
+      claimFormat = '',
+      showHidden = false,
+      patientName = '',
     } = options;
 
     const params = new URLSearchParams();
@@ -38,6 +43,11 @@ export const claimService = {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     if (deniedOnly) params.append('deniedOnly', 'true');
+    if (carrierName) params.append('carrierName', carrierName);
+    if (hasAttachment !== '') params.append('hasAttachment', hasAttachment);
+    if (claimFormat) params.append('claimFormat', claimFormat);
+    if (showHidden) params.append('showHidden', 'true');
+    if (patientName) params.append('patientName', patientName);
 
     const response = await apiClient.get(`/claims?${params.toString()}`);
     const data = response.data.data;
@@ -421,5 +431,37 @@ export const claimService = {
       note,
     });
     return response.data.data.claim;
+  },
+
+  /**
+   * Fetch the generated ADA claim PDF
+   * @param {string} claimId 
+   * @returns {Promise<Blob>} The PDF file blob
+   */
+  async getClaimPdf(claimId) {
+    const response = await apiClient.get(`/claims/${claimId}/pdf`, {
+      responseType: 'blob', // Critical for handling binary file data
+    });
+    return response.data;
+  },
+
+  /**
+   * Upload binary attachments to a claim
+   * @param {string} claimId - Claim ID
+   * @param {File[]} files - Array of File objects
+   * @returns {Promise<Object>} Upload response
+   */
+  async uploadAttachments(claimId, files) {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('attachments', file);
+    });
+
+    const response = await apiClient.post(`/claims/${claimId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
   },
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -27,6 +28,7 @@ import apiClient from '../../config/api';
 import { patientService } from '../../services/patient.service';
 
 const FinancePage = () => {
+  const location = useLocation();
   const { currentPatient, selectedPatientId, fetchById, setPatient } = usePatient();
   const [view, setView] = useState('invoices');
   const [expanded, setExpanded] = useState(false);
@@ -45,6 +47,17 @@ const FinancePage = () => {
 
   useEffect(() => {
     const loadPatientDetails = async () => {
+      // If we passed a patientId from routing state, fetch it
+      const targetPatientId = location.state?.patientId;
+      if (targetPatientId && targetPatientId !== (currentPatient?._id || currentPatient?.id)) {
+        try {
+          await fetchById(targetPatientId);
+        } catch (error) {
+          console.error('Error fetching target patient details:', error);
+        }
+        return;
+      }
+
       // If we already have currentPatient, no need to fetch
       if (currentPatient && (currentPatient._id || currentPatient.id)) {
         return;
