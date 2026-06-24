@@ -32,30 +32,92 @@ const ProductionCollectionSummary = () => {
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const computeDates = (mode) => {
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    switch (mode) {
+      case 'daily':
+        break;
+      case 'this_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        start = new Date(today.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'this_month': {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      }
+      case 'last_7_days': {
+        start.setDate(today.getDate() - 7);
+        break;
+      }
+      case 'last_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day - 6 + (day === 0 ? -6 : 1);
+        start = new Date(today.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'last_4_weeks': {
+        start.setDate(today.getDate() - 28);
+        break;
+      }
+      case 'last_month': {
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      }
+      case 'last_3_months': {
+        start = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+        break;
+      }
+      case 'last_12_months': {
+        start = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+        break;
+      }
+      case 'month_to_date': {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+      }
+      case 'quarter_to_date': {
+        const quarter = Math.floor(today.getMonth() / 3);
+        start = new Date(today.getFullYear(), quarter * 3, 1);
+        break;
+      }
+      case 'year_to_date': {
+        start = new Date(today.getFullYear(), 0, 1);
+        break;
+      }
+      case 'last_year': {
+        start = new Date(today.getFullYear() - 1, 0, 1);
+        end = new Date(today.getFullYear() - 1, 11, 31);
+        break;
+      }
+      default:
+        return null;
+    }
+
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0]
+    };
+  };
+
   const handleFilterModeChange = (e) => {
     const newMode = e.target.value;
     setDateRange(newMode);
-    const today = new Date();
     
-    if (newMode === 'daily') {
-      const todayStr = today.toISOString().split('T')[0];
-      setStartDate(todayStr);
-      setEndDate(todayStr);
-    } else if (newMode === 'weekly') {
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(today.setDate(diff));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
-      setStartDate(startOfWeek.toISOString().split('T')[0]);
-      setEndDate(endOfWeek.toISOString().split('T')[0]);
-    } else if (newMode === 'monthly') {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      setStartDate(startOfMonth.toISOString().split('T')[0]);
-      setEndDate(endOfMonth.toISOString().split('T')[0]);
+    const dates = computeDates(newMode);
+    if (dates) {
+      setStartDate(dates.startDate);
+      setEndDate(dates.endDate);
     }
   };
 
@@ -69,7 +131,7 @@ const ProductionCollectionSummary = () => {
     try {
       setLoading(true);
       const rangeParam = dateRange.charAt(0).toUpperCase() + dateRange.slice(1);
-      const res = await reportingService.getFinancialReport('production-collection-summary', {
+      const res = await reportingService.getFinancialReport('provider-collection-payment-type', {
         date: startDate,
         range: rangeParam,
         startDate: startDate,
@@ -78,7 +140,7 @@ const ProductionCollectionSummary = () => {
       setReportData(res || []);
     } catch (err) {
       console.error('Failed to fetch summary report:', err);
-      lastFetchedRef.current = null; // Reset ref on error to allow retry
+      lastFetchedRef.current = null;
     } finally {
       setLoading(false);
     }
@@ -123,7 +185,6 @@ const ProductionCollectionSummary = () => {
   })() : '';
 
   const filteredReportData = reportData.filter(row => {
-    // Provider Filter
     if (provider !== 'all') {
       const renderLower = (row.render || '').toLowerCase();
       const billLower = (row.bill || '').toLowerCase();
@@ -137,57 +198,116 @@ const ProductionCollectionSummary = () => {
     return true;
   });
 
-  const totalCharge = filteredReportData.reduce((sum, row) => sum + (row.production || 0), 0);
-  const totalAdj = filteredReportData.reduce((sum, row) => sum + (row.paymentType === 'Adjustment' ? (row.adj || 0) : 0), 0);
-  const totalWriteOff = filteredReportData.reduce((sum, row) => sum + (row.estWriteOff || 0), 0);
-  const totalIns = filteredReportData.reduce((sum, row) => sum + (row.ins || 0), 0);
-  const totalPt = filteredReportData.reduce((sum, row) => sum + (row.collection || 0), 0);
-  const totalActualWriteOff = filteredReportData.reduce((sum, row) => sum + (row.actual || 0), 0);
-  const totalCollAdj = filteredReportData.reduce((sum, row) => sum + (row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0), 0);
-  const totalPtRef = filteredReportData.reduce((sum, row) => sum + (row.ptRef || 0), 0);
-  const totalInsRef = filteredReportData.reduce((sum, row) => sum + (row.insRef || 0), 0);
-  const totalPayFrom = filteredReportData.reduce((sum, row) => sum + (row.payFrom || 0), 0);
-  const totalRefundTo = filteredReportData.reduce((sum, row) => sum + (row.newCredit || 0), 0);
-  const totalOverpayment = filteredReportData.reduce((sum, row) => sum + (row.overpayment || 0), 0);
+  const getProviderForRow = (row) => {
+    const renderVal = (row.render || '').trim().toLowerCase();
+    const billVal = (row.bill || '').trim().toLowerCase();
+    if (!renderVal && !billVal) return 'Unassigned';
 
-  const uniquePatients = new Set(filteredReportData.map(r => r.patient).filter(Boolean)).size;
-  const netProduction = totalCharge + totalAdj - totalWriteOff;
-  const avgProdPerPat = uniquePatients > 0 ? netProduction / uniquePatients : 0;
+    const found = dropdownProviders.find(p => {
+      const abbr = (p.abbr || p.Abbr || '').trim().toLowerCase();
+      const { firstName, lastName } = getProviderFirstAndLastName(p);
+      const f = firstName.trim();
+      const l = lastName.trim();
+      let initials = '';
+      if (f && l) {
+        initials = (f[0] + l.substring(0, 2)).toLowerCase();
+      } else {
+        initials = (f ? f.substring(0, 3) : '').toLowerCase();
+      }
 
-  const collectionPercent = netProduction !== 0 ? ((totalIns + totalPt + totalCollAdj) / netProduction) * 100 : 0;
+      return (abbr && (renderVal === abbr || billVal === abbr)) ||
+             (initials && (renderVal === initials || billVal === initials));
+    });
 
-  const productionStats = [
-    { label: 'Gross Production:', value: `$${totalCharge.toFixed(2)}` },
-    { label: 'Net est. Production:', value: `Total Charge + Adj(+/-) - Est Write Off = $${netProduction.toFixed(2)}`, isFormula: true },
-    { label: 'Number of Seen Patients:', value: String(uniquePatients) },
-    { label: 'Average Production Per Patient:', value: `$${avgProdPerPat.toFixed(2)}` },
-  ];
+    if (found) {
+      return getProviderLabel(found);
+    }
+    return row.render || row.bill || 'Unassigned';
+  };
 
-  const collectionStats = [
-    { label: 'Total Collection Incl. Pay From Credit:', value: `$${(totalIns + totalPt + totalPayFrom).toFixed(2)}` },
-    { label: 'Total Collection Excl. Pay From Credit:', value: `$${(totalIns + totalPt).toFixed(2)}` },
-    { label: 'Collection From Credit:', value: `$${totalPayFrom.toFixed(2)}` },
-    { label: 'Total Prepayments:', value: `$${totalPayFrom.toFixed(2)}` },
-    { label: 'Total Prepayments Excluding Refunds:', value: `$${(totalPayFrom - totalRefundTo).toFixed(2)}` },
-    { label: 'Actual Write-Off:', value: `$${totalActualWriteOff.toFixed(2)}` },
-    { label: 'Total Collection Adjustments:', value: `$${totalCollAdj.toFixed(2)}` },
-    { label: 'Total Production Adjustments:', value: `$${totalAdj.toFixed(2)}` },
-    { label: 'Adjusted Collection Incl. Pay From Credit:', value: `$${(totalIns + totalPt + totalPayFrom + totalCollAdj).toFixed(2)}` },
-    { label: 'Adjusted Collection Excl. Pay From Credit:', value: `$${(totalIns + totalPt + totalCollAdj).toFixed(2)}` },
-    { label: 'Total Patient Refund:', value: `$${totalPtRef.toFixed(2)}` },
-    { label: 'Total Insurance Refund:', value: `$${totalInsRef.toFixed(2)}` },
-    { label: 'Total Overpayment to Credit:', value: `$${totalOverpayment.toFixed(2)}` },
-    { label: 'Total Deposit Slip:', value: `$${(totalIns + totalPt - totalPtRef - totalInsRef).toFixed(2)}` },
-    { label: 'Total Adjustments:', value: `$${(totalAdj + totalCollAdj).toFixed(2)}` },
-  ];
+  const calculateStats = (rows) => {
+    const charge = rows.reduce((sum, row) => sum + (row.production || row.charge || (row.ins + (row.pt || row.collection || 0) + (row.actual || 0)) || 0), 0);
+    const adj = rows.reduce((sum, row) => sum + (row.paymentType === 'Adjustment' ? (row.adj || 0) : 0), 0);
+    const writeOff = rows.reduce((sum, row) => sum + (row.estWriteOff || 0), 0);
+    const ins = rows.reduce((sum, row) => sum + (row.ins || 0), 0);
+    const pt = rows.reduce((sum, row) => sum + (row.pt || row.collection || 0), 0);
+    const actualWriteOff = rows.reduce((sum, row) => sum + (row.actual || 0), 0);
+    const collAdj = rows.reduce((sum, row) => sum + (row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0), 0);
+    const ptRef = rows.reduce((sum, row) => sum + (row.ptRef || 0), 0);
+    const insRef = rows.reduce((sum, row) => sum + (row.insRef || 0), 0);
+    const payFrom = rows.reduce((sum, row) => sum + (row.payFrom || 0), 0);
+    const refundTo = rows.reduce((sum, row) => sum + (row.newCredit || 0), 0);
+    const overpayment = rows.reduce((sum, row) => sum + (row.overpayment || 0), 0);
+
+    const uniquePatients = new Set(rows.map(r => r.patient).filter(Boolean)).size;
+    const netProduction = charge + adj - writeOff;
+    const avgProdPerPat = uniquePatients > 0 ? netProduction / uniquePatients : 0;
+    const collectionPercent = netProduction !== 0 ? ((ins + pt + collAdj) / netProduction) * 100 : 0;
+
+    const prodStats = [
+      { label: 'Gross Production:', value: `$${charge.toFixed(2)}` },
+      { label: 'Net est. Production:', value: `Total Charge + Adj(+/-) - Est Write Off = $${netProduction.toFixed(2)}`, isFormula: true },
+      { label: 'Number of Seen Patients:', value: String(uniquePatients) },
+      { label: 'Average Production Per Patient:', value: `$${avgProdPerPat.toFixed(2)}` },
+    ];
+
+    const collStats = [
+      { label: 'Total Collection Incl. Pay From Credit:', value: `$${(ins + pt + payFrom).toFixed(2)}` },
+      { label: 'Total Collection Excl. Pay From Credit:', value: `$${(ins + pt).toFixed(2)}` },
+      { label: 'Collection From Credit:', value: `$${payFrom.toFixed(2)}` },
+      { label: 'Total Prepayments:', value: `$${payFrom.toFixed(2)}` },
+      { label: 'Total Prepayments Excluding Refunds:', value: `$${(payFrom - refundTo).toFixed(2)}` },
+      { label: 'Actual Write-Off:', value: `$${actualWriteOff.toFixed(2)}` },
+      { label: 'Total Collection Adjustments:', value: `$${collAdj.toFixed(2)}` },
+      { label: 'Total Production Adjustments:', value: `$${adj.toFixed(2)}` },
+      { label: 'Adjusted Collection Incl. Pay From Credit:', value: `$${(ins + pt + payFrom + collAdj).toFixed(2)}` },
+      { label: 'Adjusted Collection Excl. Pay From Credit:', value: `$${(ins + pt + collAdj).toFixed(2)}` },
+      { label: 'Total Patient Refund:', value: `$${ptRef.toFixed(2)}` },
+      { label: 'Total Insurance Refund:', value: `$${insRef.toFixed(2)}` },
+      { label: 'Total Overpayment to Credit:', value: `$${overpayment.toFixed(2)}` },
+      { label: 'Total Deposit Slip:', value: `$${(ins + pt - ptRef - insRef).toFixed(2)}` },
+      { label: 'Total Adjustments:', value: `$${(adj + collAdj).toFixed(2)}` },
+    ];
+
+    return {
+      prodStats,
+      collStats,
+      percent: collectionPercent,
+    };
+  };
+
+  const globalStats = calculateStats(filteredReportData);
+
+  const providerGroups = {};
+  if (grouping === 'group-provider') {
+    filteredReportData.forEach(row => {
+      const provName = getProviderForRow(row);
+      if (!providerGroups[provName]) {
+        providerGroups[provName] = [];
+      }
+      providerGroups[provName].push(row);
+    });
+  }
 
   const handleExportCSV = () => {
     const headers = ['Statistic / Metric', 'Value'];
-    const rows = [
-      ...productionStats.map(s => [s.label, s.value]),
-      ...collectionStats.map(s => [s.label, s.value]),
-      ['Collection Percentage', `(Total Collection + Collection Adjustment) / Net est. Production * 100 = ${collectionPercent.toFixed(1)}%`]
-    ];
+    let rows = [];
+
+    if (grouping === 'group-provider') {
+      Object.entries(providerGroups).forEach(([provName, groupRows]) => {
+        const stats = calculateStats(groupRows);
+        rows.push([`Provider: ${provName}`, '']);
+        rows.push(...stats.prodStats.map(s => [s.label, s.value]));
+        rows.push(...stats.collStats.map(s => [s.label, s.value]));
+        rows.push(['Collection Percentage', `${stats.percent.toFixed(1)}%`]);
+        rows.push(['', '']); // spacer
+      });
+      rows.push(['Grand Total', '']);
+    }
+
+    rows.push(...globalStats.prodStats.map(s => [s.label, s.value]));
+    rows.push(...globalStats.collStats.map(s => [s.label, s.value]));
+    rows.push(['Collection Percentage', `${globalStats.percent.toFixed(1)}%`]);
 
     const csvContent = [
       headers.join(','),
@@ -210,56 +330,172 @@ const ProductionCollectionSummary = () => {
     printWindow.document.write('<html><head><title>Production & Collection Summary</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('body { font-family: sans-serif; font-size: 11px; padding: 20px; }');
+    printWindow.document.write('.provider-section { margin-bottom: 30px; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }');
+    printWindow.document.write('.section-title { font-size: 14px; font-weight: bold; color: #1976d2; margin-bottom: 10px; }');
     printWindow.document.write('.stats-container { display: flex; flex-direction: row; gap: 40px; }');
     printWindow.document.write('.stats-column { flex: 1; }');
-    printWindow.document.write('.stat-row { display: flex; margin-bottom: 6px; }');
-    printWindow.document.write('.stat-label { font-weight: 500; min-width: 260px; color: #1976d2; }');
-    printWindow.document.write('.stat-value { font-weight: bold; }');
-    printWindow.document.write('.footer-calc { margin-top: 40px; font-weight: bold; border-top: 1px solid #ddd; padding-top: 10px; }');
+    printWindow.document.write('.stat-row { display: flex; margin-bottom: 4px; }');
+    printWindow.document.write('.stat-label { font-weight: 500; min-width: 240px; color: #333; }');
+    printWindow.document.write('.stat-value { font-weight: bold; color: #000; }');
+    printWindow.document.write('.formula-label { color: #1976d2; }');
+    printWindow.document.write('.percent-container { margin-top: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #1976d2; }');
     printWindow.document.write('</style></head><body>');
     printWindow.document.write('<h2>Production & Collection Summary Report</h2>');
-    
-    printWindow.document.write('<div class="stats-container">');
-    
-    // Column 1
-    printWindow.document.write('<div class="stats-column">');
-    productionStats.forEach(stat => {
-      printWindow.document.write(`
-        <div class="stat-row">
-          <div class="stat-label">${stat.label}</div>
-          <div class="stat-value">${stat.value}</div>
-        </div>
-      `);
-    });
-    printWindow.document.write('</div>');
-    
-    // Column 2
-    printWindow.document.write('<div class="stats-column">');
-    collectionStats.forEach(stat => {
-      printWindow.document.write(`
-        <div class="stat-row">
-          <div class="stat-label">${stat.label}</div>
-          <div class="stat-value">${stat.value}</div>
-        </div>
-      `);
-    });
-    printWindow.document.write('</div>');
-    
-    printWindow.document.write('</div>');
-    
-    // Footer Percentage
-    printWindow.document.write(`
-      <div class="footer-calc">
-        Collection Percentage: (Total Collection + Collection Adjustment) / Net est. Production * 100 = ${collectionPercent.toFixed(1)}%
-      </div>
-    `);
-    
+    printWindow.document.write(`<p>Date Range: ${dateRange} (${startDate} to ${endDate})</p>`);
+
+    const renderPrintSection = (prodStats, collStats, percent, heading = '') => {
+      let html = '<div class="provider-section">';
+      if (heading) {
+        html += `<div class="section-title">${heading}</div>`;
+      }
+      html += '<div class="stats-container">';
+      
+      // Production Column
+      html += '<div class="stats-column">';
+      prodStats.forEach(s => {
+        const labelClass = s.isFormula ? 'stat-label formula-label' : 'stat-label';
+        html += `<div class="stat-row"><span class="${labelClass}">${s.label}</span><span class="stat-value">${s.value}</span></div>`;
+      });
+      html += '</div>';
+
+      // Collection Column
+      html += '<div class="stats-column">';
+      collStats.forEach(s => {
+        html += `<div class="stat-row"><span class="stat-label formula-label">${s.label}</span><span class="stat-value" style="margin-left:10px;">${s.value}</span></div>`;
+      });
+      html += '</div>';
+      
+      html += '</div>';
+      html += `<div class="percent-container">Collection Percentage: ${percent.toFixed(1)}%</div>`;
+      html += '</div>';
+      return html;
+    };
+
+    if (grouping === 'group-provider') {
+      Object.entries(providerGroups).forEach(([provName, groupRows]) => {
+        const stats = calculateStats(groupRows);
+        printWindow.document.write(renderPrintSection(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`));
+      });
+      printWindow.document.write('<h3>Grand Total</h3>');
+    }
+
+    printWindow.document.write(renderPrintSection(globalStats.prodStats, globalStats.collStats, globalStats.percent));
+
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
     printWindow.close();
   };
+
+  const handleExportGroupCSV = (groupName, groupRows) => {
+    const headers = ['Statistic / Metric', 'Value'];
+    const stats = calculateStats(groupRows);
+    const rows = [];
+    rows.push([`Provider: ${groupName}`, '']);
+    rows.push(...stats.prodStats.map(s => [s.label, s.value]));
+    rows.push(...stats.collStats.map(s => [s.label, s.value]));
+    rows.push(['Collection Percentage', `${stats.percent.toFixed(1)}%`]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Production_Collection_Summary_Report_${groupName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrintGroup = (groupName, groupRows) => {
+    const stats = calculateStats(groupRows);
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Production & Collection Summary - ' + groupName + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: sans-serif; font-size: 11px; padding: 20px; }');
+    printWindow.document.write('.provider-section { margin-bottom: 30px; padding-bottom: 15px; }');
+    printWindow.document.write('.section-title { font-size: 14px; font-weight: bold; color: #1976d2; margin-bottom: 10px; }');
+    printWindow.document.write('.stats-container { display: flex; flex-direction: row; gap: 40px; }');
+    printWindow.document.write('.stats-column { flex: 1; }');
+    printWindow.document.write('.stat-row { display: flex; margin-bottom: 4px; }');
+    printWindow.document.write('.stat-label { font-weight: 500; min-width: 240px; color: #333; }');
+    printWindow.document.write('.stat-value { font-weight: bold; color: #000; }');
+    printWindow.document.write('.formula-label { color: #1976d2; }');
+    printWindow.document.write('.percent-container { margin-top: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #1976d2; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Production & Collection Summary Report - ' + groupName + '</h2>');
+    printWindow.document.write(`<p>Date Range: ${dateRange} (${startDate} to ${endDate})</p>`);
+
+    let html = '<div class="provider-section">';
+    html += '<div class="stats-container">';
+    
+    // Production Column
+    html += '<div class="stats-column">';
+    stats.prodStats.forEach(s => {
+      const labelClass = s.isFormula ? 'stat-label formula-label' : 'stat-label';
+      html += `<div class="stat-row"><span class="${labelClass}">${s.label}</span><span class="stat-value">${s.value}</span></div>`;
+    });
+    html += '</div>';
+
+    // Collection Column
+    html += '<div class="stats-column">';
+    stats.collStats.forEach(s => {
+      html += `<div class="stat-row"><span class="stat-label formula-label">${s.label}</span><span class="stat-value" style="margin-left:10px;">${s.value}</span></div>`;
+    });
+    html += '</div>';
+    
+    html += '</div>';
+    html += `<div class="percent-container">Collection Percentage: ${stats.percent.toFixed(1)}%</div>`;
+    html += '</div>';
+
+    printWindow.document.write(html);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
+  const renderStatsGrid = (prodStats, collStats, percent, heading = '') => (
+    <Box sx={{ mb: heading ? 6 : 0, p: heading ? 2 : 0, border: heading ? '1px dashed #ccc' : 'none', borderRadius: heading ? 1 : 0 }}>
+      {heading && (
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main', mb: 2 }}>
+          {heading}
+        </Typography>
+      )}
+      <Grid container spacing={8} sx={{ px: heading ? 0 : 4 }}>
+        <Grid item xs={12} md={5}>
+          {prodStats.map((stat, idx) => (
+            <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 180, color: stat.isFormula ? 'primary.main' : 'inherit' }}>{stat.label}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: stat.isFormula || stat.value !== '$0.00' ? 700 : 400 }}>{stat.value}</Typography>
+            </Box>
+          ))}
+        </Grid>
+
+        <Grid item xs={12} md={7}>
+          {collStats.map((stat, idx) => (
+            <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 260, color: 'primary.main' }}>{stat.label}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: stat.value !== '$0.00' ? 700 : 400, ml: 2 }}>{stat.value}</Typography>
+            </Box>
+          ))}
+        </Grid>
+      </Grid>
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main' }}>Collection Percentage:</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 700 }}>
+          (Total Collection + Collection Adjustment) / Net est. Production * 100 = {percent.toFixed(1)}%
+        </Typography>
+      </Box>
+    </Box>
+  );
 
   return (
     <Box sx={{ p: 0, position: 'relative' }}>
@@ -273,21 +509,30 @@ const ProductionCollectionSummary = () => {
         Production & Collection Summary Report:
       </Typography>
 
-      {/* Filters Section */}
       <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
         <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Grid item>
+          <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
             <Select 
               size="small" 
               value={dateRange} 
               onChange={handleFilterModeChange} 
-              sx={{ minWidth: 100, fontSize: '0.75rem' }}
+              sx={{ minWidth: 140, fontSize: '0.75rem' }}
             >
               <MenuItem value="daily">Daily</MenuItem>
               <MenuItem value="range">Range</MenuItem>
               <MenuItem value="this_week">This Week</MenuItem>
               <MenuItem value="this_month">This Month</MenuItem>
+              <MenuItem value="last_7_days">Last 7 days</MenuItem>
+              <MenuItem value="last_week">Last Week</MenuItem>
+              <MenuItem value="last_4_weeks">Last 4 Weeks</MenuItem>
+              <MenuItem value="last_month">Last Month</MenuItem>
+              <MenuItem value="last_3_months">Last 3 Months</MenuItem>
+              <MenuItem value="last_12_months">Last 12 Months</MenuItem>
+              <MenuItem value="month_to_date">Month to date</MenuItem>
+              <MenuItem value="quarter_to_date">Quarter to date</MenuItem>
+              <MenuItem value="year_to_date">Year to date</MenuItem>
+              <MenuItem value="last_year">Last Year</MenuItem>
             </Select>
           </Grid>
           <Grid item sx={{ display: 'flex', gap: 2 }}>
@@ -350,39 +595,56 @@ const ProductionCollectionSummary = () => {
       </Box>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
-        <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#ef4444' }}>Print</Button>
-      </Box>
+      {grouping === 'no-grouping' && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
+          <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
+          <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#ef4444' }}>Print</Button>
+        </Box>
+      )}
 
       {/* Stats Section */}
-      <Grid container spacing={8} sx={{ px: 4 }}>
-        <Grid item xs={12} md={5}>
-          {productionStats.map((stat, idx) => (
-            <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 180, color: stat.isFormula ? 'primary.main' : 'inherit' }}>{stat.label}</Typography>
-              <Typography variant="caption" sx={{ fontWeight: stat.isFormula || stat.value !== '$0.00' ? 700 : 400 }}>{stat.value}</Typography>
-            </Box>
-          ))}
-        </Grid>
-
-        <Grid item xs={12} md={7}>
-          {collectionStats.map((stat, idx) => (
-            <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 260, color: 'primary.main' }}>{stat.label}</Typography>
-              <Typography variant="caption" sx={{ fontWeight: stat.value !== '$0.00' ? 700 : 400, ml: 2 }}>{stat.value}</Typography>
-            </Box>
-          ))}
-        </Grid>
-      </Grid>
-
-      {/* Footer Calculation */}
-      <Box sx={{ mt: 8, display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main' }}>Collection Percentage:</Typography>
-        <Typography variant="caption" sx={{ fontWeight: 700 }}>
-          (Total Collection + Collection Adjustment) / Net est. Production * 100 = {collectionPercent.toFixed(1)}%
-        </Typography>
-      </Box>
+      {grouping === 'group-provider' ? (
+        <Box>
+          {Object.entries(providerGroups).map(([provName, groupRows]) => {
+            const groupStats = calculateStats(groupRows);
+            return (
+              <Box key={provName} sx={{ mb: 4, p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    Provider: {provName}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      onClick={() => handleExportGroupCSV(provName, groupRows)} 
+                      startIcon={<FileDownloadIcon />} 
+                      sx={{ textTransform: 'none', py: 0.25, fontSize: '0.65rem', height: 24 }}
+                    >
+                      Export CSV
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      onClick={() => handlePrintGroup(provName, groupRows)} 
+                      startIcon={<PrintIcon />} 
+                      sx={{ textTransform: 'none', py: 0.25, fontSize: '0.65rem', height: 24 }}
+                    >
+                      Print
+                    </Button>
+                  </Box>
+                </Box>
+                {renderStatsGrid(groupStats.prodStats, groupStats.collStats, groupStats.percent)}
+              </Box>
+            );
+          })}
+          <Box sx={{ mt: 6, borderTop: '2px double #1976d2', pt: 4 }}>
+            {renderStatsGrid(globalStats.prodStats, globalStats.collStats, globalStats.percent, 'Grand Total')}
+          </Box>
+        </Box>
+      ) : (
+        renderStatsGrid(globalStats.prodStats, globalStats.collStats, globalStats.percent)
+      )}
     </Box>
   );
 };

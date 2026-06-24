@@ -264,8 +264,28 @@ const ReferralProductionReport = () => {
 
       {/* Bar Graph / Line Graph toggle buttons */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={filterBtnStyle}>Bar Graph</Button>
-        <Button variant="contained" size="small" sx={filterBtnStyle}>Line Graph</Button>
+        <Button 
+          variant="contained" 
+          size="small" 
+          disabled 
+          sx={{ 
+            ...filterBtnStyle,
+            '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#9e9e9e' }
+          }}
+        >
+          Bar Graph
+        </Button>
+        <Button 
+          variant="contained" 
+          size="small" 
+          disabled 
+          sx={{ 
+            ...filterBtnStyle,
+            '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#9e9e9e' }
+          }}
+        >
+          Line Graph
+        </Button>
       </Box>
 
       {/* Pie Chart Section */}

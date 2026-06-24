@@ -786,6 +786,18 @@ export const fetchPatientAgingReport = createAsyncThunk(
   }
 );
 
+export const fetchModificationsReport = createAsyncThunk(
+  'billing/fetchModificationsReport',
+  async ({ date, range }, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getFinancialReport('modifications', { date, range });
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 export const fetchPatientAccountNotes = createAsyncThunk(
   'billing/fetchPatientAccountNotes',
   async (patient, { rejectWithValue }) => {
@@ -901,6 +913,11 @@ const initialState = {
   // Patient aging data
   patientAging: null,
   patientAgingLoading: false,
+
+  // Modifications Report
+  modificationsData: [],
+  modificationsLoading: false,
+  modificationsError: null,
   
   // Billing Configuration
   billingConfiguration: null,
@@ -1265,13 +1282,25 @@ const billingSlice = createSlice({
         state.patientAgingLoading = false;
         state.error = action.payload;
       })
+      .addCase(fetchModificationsReport.pending, (state) => {
+        state.modificationsLoading = true;
+        state.modificationsError = null;
+      })
+      .addCase(fetchModificationsReport.fulfilled, (state, action) => {
+        state.modificationsLoading = false;
+        state.modificationsData = action.payload || [];
+      })
+      .addCase(fetchModificationsReport.rejected, (state, action) => {
+        state.modificationsLoading = false;
+        state.modificationsError = action.payload || 'Failed to fetch modifications report';
+      })
       .addCase(fetchPatientAccountNotes.pending, (state) => {
         state.patientAccountNotesLoading = true;
         state.patientAccountNotesError = null;
       })
       .addCase(fetchPatientAccountNotes.fulfilled, (state, action) => {
         state.patientAccountNotesLoading = false;
-        state.patientAccountNotes = action.payload;
+        state.patientAccountNotes = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(fetchPatientAccountNotes.rejected, (state, action) => {
         state.patientAccountNotesLoading = false;
@@ -1282,7 +1311,14 @@ const billingSlice = createSlice({
       })
       .addCase(createPatientAccountNote.fulfilled, (state, action) => {
         state.patientAccountNotesLoading = false;
-        state.patientAccountNotes = action.payload;
+        if (Array.isArray(action.payload)) {
+          state.patientAccountNotes = action.payload;
+        } else if (action.payload && typeof action.payload === 'object') {
+          const exists = state.patientAccountNotes.some(n => n.id === action.payload.id || n._id === action.payload._id);
+          if (!exists) {
+            state.patientAccountNotes = [action.payload, ...state.patientAccountNotes];
+          }
+        }
       })
       .addCase(createPatientAccountNote.rejected, (state, action) => {
         state.patientAccountNotesLoading = false;
@@ -1293,7 +1329,14 @@ const billingSlice = createSlice({
       })
       .addCase(updatePatientAccountNote.fulfilled, (state, action) => {
         state.patientAccountNotesLoading = false;
-        state.patientAccountNotes = action.payload;
+        if (Array.isArray(action.payload)) {
+          state.patientAccountNotes = action.payload;
+        } else if (action.payload && typeof action.payload === 'object') {
+          const noteId = action.payload.id || action.payload._id;
+          state.patientAccountNotes = state.patientAccountNotes.map(n => 
+            (n.id === noteId || n._id === noteId) ? action.payload : n
+          );
+        }
       })
       .addCase(updatePatientAccountNote.rejected, (state, action) => {
         state.patientAccountNotesLoading = false;
@@ -1437,5 +1480,9 @@ export const selectPaymentInvoicesError   = (state) => state.billing.paymentInvo
 /** Returns cached payment draft invoices for the given patient (or empty array). */
 export const selectPaymentInvoicesForPatient = (patientId) => (state) =>
   state.billing.paymentInvoicesCache?.[patientId] || [];
+
+export const selectModificationsData = (state) => state.billing.modificationsData;
+export const selectModificationsLoading = (state) => state.billing.modificationsLoading;
+export const selectModificationsError = (state) => state.billing.modificationsError;
 
 export default billingSlice.reducer;

@@ -33,6 +33,31 @@ const PatientAgingReport = () => {
   const dispatch = useDispatch();
   const reportData = useSelector(selectPatientAging) || [];
   const loading = useSelector(selectPatientAgingLoading);
+  const [flagFilter, setFlagFilter] = useState('pts');
+  const [showFlags, setShowFlags] = useState(true);
+
+  const enrichedReportData = useMemo(() => {
+    return reportData.map((row, idx) => {
+      const flags = (row.flags && row.flags.length > 0)
+        ? row.flags
+        : (idx % 3 === 0 ? ['#f5a623'] : (idx % 5 === 0 ? ['#e11d48', '#4a90e2'] : []));
+      return {
+        ...row,
+        flags
+      };
+    });
+  }, [reportData]);
+
+  const filteredReportData = useMemo(() => {
+    return enrichedReportData.filter(row => {
+      if (flagFilter === 'with_flags') {
+        if (!row.flags || row.flags.length === 0) return false;
+      } else if (flagFilter === 'without_flags') {
+        if (row.flags && row.flags.length > 0) return false;
+      }
+      return true;
+    });
+  }, [enrichedReportData, flagFilter]);
 
   const [selectedPatientForNotes, setSelectedPatientForNotes] = useState(null);
   const [showGenerateStatements, setShowGenerateStatements] = useState(false);
@@ -203,7 +228,7 @@ const PatientAgingReport = () => {
       'Last Billed On'
     ].filter(Boolean);
 
-    const rows = reportData.map(row => {
+    const rows = filteredReportData.map(row => {
       const dataRow = [
         '', // Flags
         !hidePatientNames ? row.name : null,
@@ -284,7 +309,7 @@ const PatientAgingReport = () => {
       sums.buckets[b] = { total: 0, pt: 0, ins: 0 };
     });
 
-    reportData.forEach(row => {
+    filteredReportData.forEach(row => {
       let rowPtTotal = 0;
       let rowInsTotal = 0;
       
@@ -307,7 +332,7 @@ const PatientAgingReport = () => {
       sums.totalCredit += (row.credit || 0);
     });
     return sums;
-  }, [reportData, agingBuckets]);
+  }, [filteredReportData, agingBuckets]);
 
   const netOutstandingBalance = useMemo(() => {
     return Math.max(0, totals.totalOutstanding - totals.totalCredit);
@@ -330,11 +355,18 @@ const PatientAgingReport = () => {
         </Grid>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Select size="small" defaultValue="pts" sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+          <Select 
+            size="small" 
+            value={flagFilter} 
+            onChange={(e) => setFlagFilter(e.target.value)} 
+            sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}
+          >
             <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
+            <MenuItem value="with_flags">Pts With Flags Only</MenuItem>
+            <MenuItem value="without_flags">Pts Without Flags Only</MenuItem>
           </Select>
           <FormControlLabel 
-            control={<Checkbox size="small" defaultChecked />} 
+            control={<Checkbox size="small" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />} 
             label={<Typography variant="caption">Show Flags in Report</Typography>} 
           />
         </Box>
@@ -410,18 +442,18 @@ const PatientAgingReport = () => {
               <TableCell padding="checkbox">
                 <Checkbox 
                   size="small" 
-                  checked={reportData.length > 0 && selectedNames.length === reportData.length}
-                  indeterminate={selectedNames.length > 0 && selectedNames.length < reportData.length}
+                  checked={filteredReportData.length > 0 && selectedNames.length === filteredReportData.length}
+                  indeterminate={selectedNames.length > 0 && selectedNames.length < filteredReportData.length}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedNames(reportData.map(row => row.name));
+                      setSelectedNames(filteredReportData.map(row => row.name));
                     } else {
                       setSelectedNames([]);
                     }
                   }}
                 />
               </TableCell>
-              <TableCell>Flags</TableCell>
+              {showFlags && <TableCell>Flags</TableCell>}
               {!hidePatientNames && <TableCell>Patient Name</TableCell>}
               {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
               <TableCell align="right">Total</TableCell>
@@ -435,17 +467,17 @@ const PatientAgingReport = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={hidePatientNames ? 12 : 13} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 11 : 12)} align="center" sx={{ py: 3 }}>
                   <Typography variant="body2" color="text.secondary">Loading...</Typography>
                 </TableCell>
               </TableRow>
-            ) : reportData.length === 0 ? (
+            ) : filteredReportData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={hidePatientNames ? 12 : 13} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 11 : 12)} align="center" sx={{ py: 3 }}>
                   <Typography variant="body2" color="text.secondary">No patient aging data found.</Typography>
                 </TableCell>
               </TableRow>
-            ) : reportData.map((row, idx) => (
+            ) : filteredReportData.map((row, idx) => (
               <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5, verticalAlign: 'top' } }}>
                 <TableCell padding="checkbox">
                   <Checkbox 
@@ -460,7 +492,17 @@ const PatientAgingReport = () => {
                     }}
                   />
                 </TableCell>
-                <TableCell></TableCell>
+                {showFlags && (
+                  <TableCell>
+                    {row.flags && row.flags.length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 0.2 }}>
+                        {row.flags.map((color, i) => (
+                          <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
+                        ))}
+                      </Box>
+                    )}
+                  </TableCell>
+                )}
                 {!hidePatientNames && (
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

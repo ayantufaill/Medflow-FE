@@ -255,6 +255,79 @@ const ProductionReport = () => {
     printWindow.close();
   };
 
+  const handleExportGroupCSV = (groupName, groupRows) => {
+    const headers = [
+      'Date',
+      'Patient',
+      'Code',
+      'Procedure',
+      'Render Provider',
+      'Bill Provider',
+      'Procedure Charge',
+      'Adj',
+      'Estimate write off'
+    ];
+
+    const rows = groupRows.map(row => [
+      row.date ? new Date(row.date).toLocaleDateString() : '',
+      row.patient || '',
+      row.code || '',
+      row.procedure || '',
+      row.provider || '',
+      row.provider || '',
+      `$${(row.fee || row.charge || 0).toFixed(2)}`,
+      `$${(row.adj || 0).toFixed(2)}`,
+      `$${(row.estWriteOff || 0).toFixed(2)}`
+    ]);
+
+    const grpCharge = groupRows.reduce((sum, row) => sum + (row.fee || row.charge || 0), 0);
+    const grpAdj = groupRows.reduce((sum, row) => sum + (row.adj || 0), 0);
+    const grpWriteOff = groupRows.reduce((sum, row) => sum + (row.estWriteOff || 0), 0);
+    
+    rows.push([
+      `Subtotal (${groupName})`,
+      '', '', '', '', '',
+      `$${grpCharge.toFixed(2)}`,
+      `$${grpAdj.toFixed(2)}`,
+      `$${grpWriteOff.toFixed(2)}`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Production_Report_${groupName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrintGroup = (elementId, groupName) => {
+    const tableEl = document.getElementById(elementId);
+    if (!tableEl) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Production Report - ' + groupName + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Production Report - ' + groupName + '</h2>');
+    printWindow.document.write(tableEl.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
   return (
     <Box sx={{ p: 0 }}>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
@@ -397,103 +470,173 @@ const ProductionReport = () => {
       </Box>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
-      </Box>
+      {grouping === 'no-grouping' && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+          <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
+          <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
+        </Box>
+      )}
 
       {/* Table Section */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', position: 'relative' }} id="production-report-table">
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
-            <CircularProgress size={30} />
-          </Box>
-        )}
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
-              <TableCell>Date</TableCell>
-              <TableCell>Flags</TableCell>
-              <TableCell>Patient</TableCell>
-              <TableCell>Code</TableCell>
-              <TableCell>Procedure</TableCell>
-              <TableCell align="center" colSpan={2} sx={{ borderLeft: '1px solid #e0e0e0' }}>Provider / Internal Code</TableCell>
-              <TableCell align="center" colSpan={3} sx={{ borderLeft: '1px solid #e0e0e0' }}>Production</TableCell>
-            </TableRow>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
-              <TableCell colSpan={5}></TableCell>
-              <TableCell align="center" sx={{ borderLeft: '1px solid #e0e0e0' }}>Render</TableCell>
-              <TableCell align="center">Bill</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>Procedure Charge</TableCell>
-              <TableCell align="right">Adj</TableCell>
-              <TableCell align="right">Estimate write off ⓘ</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedReportData.length === 0 ? (
+      {sortedReportData.length === 0 ? (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id="production-report-table">
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
+                <TableCell>Date</TableCell>
+                <TableCell>Flags</TableCell>
+                <TableCell>Patient</TableCell>
+                <TableCell>Code</TableCell>
+                <TableCell>Procedure</TableCell>
+                <TableCell align="center" colSpan={2} sx={{ borderLeft: '1px solid #e0e0e0' }}>Provider / Internal Code</TableCell>
+                <TableCell align="center" colSpan={3} sx={{ borderLeft: '1px solid #e0e0e0' }}>Production</TableCell>
+              </TableRow>
+              <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
+                <TableCell colSpan={5}></TableCell>
+                <TableCell align="center" sx={{ borderLeft: '1px solid #e0e0e0' }}>Render</TableCell>
+                <TableCell align="center">Bill</TableCell>
+                <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>Procedure Charge</TableCell>
+                <TableCell align="right">Adj</TableCell>
+                <TableCell align="right">Estimate write off ⓘ</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={10} align="center" sx={{ py: 3, color: 'text.secondary', fontSize: '0.75rem' }}>
                   No records found matching current criteria.
                 </TableCell>
               </TableRow>
-            ) : grouping === 'group-provider' ? (
-              (() => {
-                const groups = {};
-                sortedReportData.forEach(row => {
-                  const prov = row.provider || 'Unassigned';
-                  if (!groups[prov]) groups[prov] = [];
-                  groups[prov].push(row);
-                });
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : grouping === 'group-provider' ? (
+        <Box id="production-report-table">
+          {(() => {
+            const groups = {};
+            sortedReportData.forEach(row => {
+              const prov = row.provider || 'Unassigned';
+              if (!groups[prov]) groups[prov] = [];
+              groups[prov].push(row);
+            });
 
-                return Object.keys(groups).map((provName) => {
-                  const groupRows = groups[provName];
-                  const grpCharge = groupRows.reduce((sum, row) => sum + (row.fee || row.charge || 0), 0);
-                  const grpAdj = groupRows.reduce((sum, row) => sum + (row.adj || 0), 0);
-                  const grpWriteOff = groupRows.reduce((sum, row) => sum + (row.estWriteOff || 0), 0);
+            return Object.keys(groups).map((provName) => {
+              const groupRows = groups[provName];
+              const grpCharge = groupRows.reduce((sum, row) => sum + (row.fee || row.charge || 0), 0);
+              const grpAdj = groupRows.reduce((sum, row) => sum + (row.adj || 0), 0);
+              const grpWriteOff = groupRows.reduce((sum, row) => sum + (row.estWriteOff || 0), 0);
+              const tableId = `production-report-table-${provName.replace(/\s+/g, '-')}`;
 
-                  return (
-                    <React.Fragment key={provName}>
-                      <TableRow sx={{ backgroundColor: '#eef2f6' }}>
-                        <TableCell colSpan={10} sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1 }}>
-                          Provider: {provName}
-                        </TableCell>
-                      </TableRow>
-                      {groupRows.map((row, idx) => (
-                        <TableRow key={row.procedureId || idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
-                          <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
-                          <TableCell>
-                            {showFlags && (row.flags && row.flags.length > 0 ? (
-                              <Box sx={{ display: 'flex', gap: 0.2 }}>
-                                {row.flags.map((color, i) => (
-                                  <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                                ))}
-                              </Box>
-                            ) : (
-                              <Box sx={{ width: 10, height: 10, bgcolor: '#f5a623', borderRadius: '2px' }} />
-                            ))}
-                          </TableCell>
-                          <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Mock Patient'}</TableCell>
-                          <TableCell>{row.code || 'D0120'}</TableCell>
-                          <TableCell>{row.procedure || 'Periodic Exam'}</TableCell>
-                          <TableCell align="center">{row.provider || 'SAB'}</TableCell>
-                          <TableCell align="center">{row.provider || 'SAB'}</TableCell>
-                          <TableCell align="right">${(row.fee || row.charge || 0).toFixed(2)}</TableCell>
-                          <TableCell align="right">${(row.adj || 0).toFixed(2)}</TableCell>
-                          <TableCell align="right">${(row.estWriteOff || 0).toFixed(2)}</TableCell>
+              return (
+                <Box key={provName} sx={{ mb: 4 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, px: 0.5 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                      Provider: {provName}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button 
+                        variant="outlined" 
+                        size="small" 
+                        onClick={() => handleExportGroupCSV(provName, groupRows)} 
+                        startIcon={<FileDownloadIcon />} 
+                        sx={{ textTransform: 'none', py: 0.25, fontSize: '0.65rem', height: 24 }}
+                      >
+                        Export CSV
+                      </Button>
+                      <Button 
+                        variant="outlined" 
+                        size="small" 
+                        onClick={() => handlePrintGroup(tableId, provName)} 
+                        startIcon={<PrintIcon />} 
+                        sx={{ textTransform: 'none', py: 0.25, fontSize: '0.65rem', height: 24 }}
+                      >
+                        Print
+                      </Button>
+                    </Box>
+                  </Box>
+                  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id={tableId}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Flags</TableCell>
+                          <TableCell>Patient</TableCell>
+                          <TableCell>Code</TableCell>
+                          <TableCell>Procedure</TableCell>
+                          <TableCell align="center" colSpan={2} sx={{ borderLeft: '1px solid #e0e0e0' }}>Provider / Internal Code</TableCell>
+                          <TableCell align="center" colSpan={3} sx={{ borderLeft: '1px solid #e0e0e0' }}>Production</TableCell>
                         </TableRow>
-                      ))}
-                      <TableRow sx={{ backgroundColor: '#fcfcfc', '& td': { fontWeight: 600, fontSize: '0.7rem' } }}>
-                        <TableCell colSpan={7} align="right">Subtotal ({provName}):</TableCell>
-                        <TableCell align="right">${grpCharge.toFixed(2)}</TableCell>
-                        <TableCell align="right">${grpAdj.toFixed(2)}</TableCell>
-                        <TableCell align="right">${grpWriteOff.toFixed(2)}</TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  );
-                });
-              })()
-            ) : (
-              sortedReportData.map((row, idx) => (
+                        <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
+                          <TableCell colSpan={5}></TableCell>
+                          <TableCell align="center" sx={{ borderLeft: '1px solid #e0e0e0' }}>Render</TableCell>
+                          <TableCell align="center">Bill</TableCell>
+                          <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>Procedure Charge</TableCell>
+                          <TableCell align="right">Adj</TableCell>
+                          <TableCell align="right">Estimate write off ⓘ</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {groupRows.map((row, idx) => (
+                          <TableRow key={row.procedureId || idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
+                            <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
+                            <TableCell>
+                              {showFlags && (row.flags && row.flags.length > 0 ? (
+                                <Box sx={{ display: 'flex', gap: 0.2 }}>
+                                  {row.flags.map((color, i) => (
+                                    <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Box sx={{ width: 10, height: 10, bgcolor: '#f5a623', borderRadius: '2px' }} />
+                              ))}
+                            </TableCell>
+                            <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Mock Patient'}</TableCell>
+                            <TableCell>{row.code || 'D0120'}</TableCell>
+                            <TableCell>{row.procedure || 'Periodic Exam'}</TableCell>
+                            <TableCell align="center">{row.provider || 'SAB'}</TableCell>
+                            <TableCell align="center">{row.provider || 'SAB'}</TableCell>
+                            <TableCell align="right">${(row.fee || row.charge || 0).toFixed(2)}</TableCell>
+                            <TableCell align="right">${(row.adj || 0).toFixed(2)}</TableCell>
+                            <TableCell align="right">${(row.estWriteOff || 0).toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow sx={{ backgroundColor: '#fcfcfc', '& td': { fontWeight: 600, fontSize: '0.7rem' } }}>
+                          <TableCell colSpan={7} align="right">Subtotal ({provName}):</TableCell>
+                          <TableCell align="right">${grpCharge.toFixed(2)}</TableCell>
+                          <TableCell align="right">${grpAdj.toFixed(2)}</TableCell>
+                          <TableCell align="right">${grpWriteOff.toFixed(2)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              );
+            });
+          })()}
+        </Box>
+      ) : (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id="production-report-table">
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
+                <TableCell>Date</TableCell>
+                <TableCell>Flags</TableCell>
+                <TableCell>Patient</TableCell>
+                <TableCell>Code</TableCell>
+                <TableCell>Procedure</TableCell>
+                <TableCell align="center" colSpan={2} sx={{ borderLeft: '1px solid #e0e0e0' }}>Provider / Internal Code</TableCell>
+                <TableCell align="center" colSpan={3} sx={{ borderLeft: '1px solid #e0e0e0' }}>Production</TableCell>
+              </TableRow>
+              <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700 } }}>
+                <TableCell colSpan={5}></TableCell>
+                <TableCell align="center" sx={{ borderLeft: '1px solid #e0e0e0' }}>Render</TableCell>
+                <TableCell align="center">Bill</TableCell>
+                <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>Procedure Charge</TableCell>
+                <TableCell align="right">Adj</TableCell>
+                <TableCell align="right">Estimate write off ⓘ</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedReportData.map((row, idx) => (
                 <TableRow key={row.procedureId || idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
                   <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>
@@ -516,17 +659,17 @@ const ProductionReport = () => {
                   <TableCell align="right">${(row.adj || 0).toFixed(2)}</TableCell>
                   <TableCell align="right">${(row.estWriteOff || 0).toFixed(2)}</TableCell>
                 </TableRow>
-              ))
-            )}
-            <TableRow>
-              <TableCell colSpan={7} align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Total:</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>${totalCharge.toFixed(2)}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>${totalAdj.toFixed(2)}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>${totalWriteOff.toFixed(2)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ))}
+              <TableRow>
+                <TableCell colSpan={7} align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Total:</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>${totalCharge.toFixed(2)}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>${totalAdj.toFixed(2)}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>${totalWriteOff.toFixed(2)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Footer Summary */}
       <Box sx={{ mt: 3, ml: 4 }}>

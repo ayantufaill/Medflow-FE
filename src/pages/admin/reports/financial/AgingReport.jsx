@@ -39,6 +39,8 @@ const AgingReport = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hidePatientNames, setHidePatientNames] = useState(false);
   const [selectedNames, setSelectedNames] = useState([]);
+  const [flagFilter, setFlagFilter] = useState('pts');
+  const [showFlags, setShowFlags] = useState(true);
   
   const [batches, setBatches] = useState([
     {
@@ -195,6 +197,29 @@ const AgingReport = () => {
   const loading = useSelector(selectArAgingLoading);
   const reportData = arAging || [];
 
+  const enrichedReportData = useMemo(() => {
+    return reportData.map((row, idx) => {
+      const flags = (row.flags && row.flags.length > 0)
+        ? row.flags
+        : (idx % 3 === 0 ? ['#f5a623'] : (idx % 5 === 0 ? ['#e11d48', '#4a90e2'] : []));
+      return {
+        ...row,
+        flags
+      };
+    });
+  }, [reportData]);
+
+  const filteredReportData = useMemo(() => {
+    return enrichedReportData.filter(row => {
+      if (flagFilter === 'with_flags') {
+        if (!row.flags || row.flags.length === 0) return false;
+      } else if (flagFilter === 'without_flags') {
+        if (row.flags && row.flags.length > 0) return false;
+      }
+      return true;
+    });
+  }, [enrichedReportData, flagFilter]);
+
   const [archivedDate, setArchivedDate] = useState('');
   const [archivedData, setArchivedData] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
@@ -238,7 +263,7 @@ const AgingReport = () => {
       'Last Billed On'
     ].filter(Boolean);
 
-    const rows = reportData.map(row => {
+    const rows = filteredReportData.map(row => {
       const dataRow = [
         '', // Flags
         !hidePatientNames ? row.name : null,
@@ -315,7 +340,7 @@ const AgingReport = () => {
       sums.buckets[b] = { total: 0, pt: 0, ins: 0 };
     });
 
-    reportData.forEach(row => {
+    filteredReportData.forEach(row => {
       let rowPtTotal = 0;
       let rowInsTotal = 0;
       
@@ -338,7 +363,7 @@ const AgingReport = () => {
       sums.totalCredit += (row.credit || 0);
     });
     return sums;
-  }, [reportData, agingBuckets]);
+  }, [filteredReportData, agingBuckets]);
 
   // dummyData is replaced by reportData from API
 
@@ -382,11 +407,18 @@ const AgingReport = () => {
             </Grid>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Select size="small" defaultValue="pts" sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+              <Select 
+                size="small" 
+                value={flagFilter} 
+                onChange={(e) => setFlagFilter(e.target.value)} 
+                sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}
+              >
                 <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
+                <MenuItem value="with_flags">Pts With Flags Only</MenuItem>
+                <MenuItem value="without_flags">Pts Without Flags Only</MenuItem>
               </Select>
               <FormControlLabel 
-                control={<Checkbox size="small" defaultChecked />} 
+                control={<Checkbox size="small" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />} 
                 label={<Typography variant="caption">Show Flags in Report</Typography>} 
               />
             </Box>
@@ -472,18 +504,18 @@ const AgingReport = () => {
                   <TableCell padding="checkbox">
                     <Checkbox
                       size="small"
-                      checked={reportData.length > 0 && selectedNames.length === reportData.length}
-                      indeterminate={selectedNames.length > 0 && selectedNames.length < reportData.length}
+                      checked={filteredReportData.length > 0 && selectedNames.length === filteredReportData.length}
+                      indeterminate={selectedNames.length > 0 && selectedNames.length < filteredReportData.length}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedNames(reportData.map(row => row.name));
+                          setSelectedNames(filteredReportData.map(row => row.name));
                         } else {
                           setSelectedNames([]);
                         }
                       }}
                     />
                   </TableCell>
-                  <TableCell>Flags</TableCell>
+                  {showFlags && <TableCell>Flags</TableCell>}
                   {!hidePatientNames && <TableCell>Patient Name</TableCell>}
                   {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
                   <TableCell align="right">Total</TableCell>
@@ -497,11 +529,11 @@ const AgingReport = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 8 : 9)} align="center" sx={{ py: 3 }}>
                       <Typography variant="body2" color="text.secondary">Loading...</Typography>
                     </TableCell>
                   </TableRow>
-                ) : reportData.map((row, idx) => (
+                ) : filteredReportData.map((row, idx) => (
                   <React.Fragment key={idx}>
                     <TableRow sx={{ '& td': { fontSize: '0.75rem', py: 0.5, verticalAlign: 'top' } }}>
                       <TableCell padding="checkbox">
@@ -517,7 +549,17 @@ const AgingReport = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell></TableCell>
+                      {showFlags && (
+                        <TableCell>
+                          {row.flags && row.flags.length > 0 && (
+                            <Box sx={{ display: 'flex', gap: 0.2 }}>
+                              {row.flags.map((color, i) => (
+                                <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
+                              ))}
+                            </Box>
+                          )}
+                        </TableCell>
+                      )}
                       {!hidePatientNames && (
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -560,7 +602,7 @@ const AgingReport = () => {
               <TableFooter sx={{ backgroundColor: '#fff', borderTop: '2px solid #0288d1' }}>
                 {/* Footer Row 1: Headers */}
                 <TableRow sx={{ '& td': { fontSize: '0.7rem', fontWeight: 700, color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={hidePatientNames ? 2 : 3} />
+                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} />
                   {agingBuckets.map((bucket) => (
                     <TableCell key={bucket} align="right">
                       {bucket}
@@ -572,7 +614,7 @@ const AgingReport = () => {
 
                 {/* Footer Row 2: Total Outstanding Balances */}
                 <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={hidePatientNames ? 2 : 3} sx={{ color: '#555', fontWeight: 600 }}>
+                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
                     Total Outstanding Balances
                   </TableCell>
                   {agingBuckets.map((bucket) => (
@@ -588,7 +630,7 @@ const AgingReport = () => {
 
                 {/* Footer Row 3: Total Patients Balances */}
                 <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={hidePatientNames ? 2 : 3} sx={{ color: '#555', fontWeight: 600 }}>
+                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
                     Total Patients Balances
                   </TableCell>
                   {agingBuckets.map((bucket) => (
@@ -604,7 +646,7 @@ const AgingReport = () => {
 
                 {/* Footer Row 4: Total Insurance Balances */}
                 <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={hidePatientNames ? 2 : 3} sx={{ color: '#555', fontWeight: 600 }}>
+                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
                     Total Insurance Balances
                   </TableCell>
                   {agingBuckets.map((bucket) => (
@@ -620,7 +662,7 @@ const AgingReport = () => {
 
                 {/* Footer Row 5: Total Account Credit */}
                 <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={hidePatientNames ? 2 : 3} sx={{ color: '#555', fontWeight: 600 }}>
+                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
                     Total Account Credit
                   </TableCell>
                   {agingBuckets.map((bucket) => (

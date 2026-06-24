@@ -342,6 +342,10 @@ const AddNewPatientAppointmentForm = ({
 
     // Calculate endTime from dateTime + durationMins
     const start = dateTime || dayjs();
+    if (start.isBefore(dayjs().startOf('day'))) {
+      alert("Appointment date cannot be in the past.");
+      return;
+    }
     const end = start.add(durationMins || 30, "minute");
 
     onSubmit({
@@ -918,6 +922,7 @@ const AddNewPatientAppointmentForm = ({
                   value={dateTime}
                   onChange={(val) => val && setDateTime(val)}
                   shouldDisableTime={shouldDisableTime}
+                  minDate={dayjs().startOf('day')}
                   slotProps={{
                     textField: {
                       size: "small",

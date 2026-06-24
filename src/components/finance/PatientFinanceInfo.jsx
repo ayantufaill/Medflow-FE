@@ -778,6 +778,7 @@ const PatientFinanceInfo = ({ view, flags = [], patient = null, onCalendarClick,
             onClick={(e) => e.stopPropagation()}
           >
             <AccountNotesDialog 
+              patient={patient}
               onClose={() => setShowAccountNotes(false)}
             />
           </Box>
