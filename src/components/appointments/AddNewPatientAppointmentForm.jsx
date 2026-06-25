@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
 import {
   Autocomplete, Box, Button, Checkbox, Chip, Dialog,
   FormControlLabel, IconButton, MenuItem,
@@ -114,6 +114,120 @@ const FieldBox = ({ label, children, sx }) => (
   </Box>
 );
 
+const SquareCheckbox = ({ checked, onChange, size = 16 }) => (
+  <Checkbox
+    size="small"
+    checked={checked}
+    onChange={onChange}
+    icon={
+      <Box component="span" sx={{
+        display: "block", width: size, height: size,
+        border: "1.5px solid #9aa3ae", borderRadius: "3px",
+        backgroundColor: "transparent", flexShrink: 0,
+      }} />
+    }
+    checkedIcon={
+      <Box component="span" sx={{
+        display: "flex", width: size, height: size,
+        border: "1.5px solid #2262ef", borderRadius: "3px",
+        backgroundColor: "#2262ef", alignItems: "center",
+        justifyContent: "center", flexShrink: 0,
+      }}>
+        <Box component="span" sx={{
+          display: "block", width: 9, height: 5,
+          borderLeft: "2px solid #fff", borderBottom: "2px solid #fff",
+          transform: "rotate(-45deg)", mt: "-2px",
+        }} />
+      </Box>
+    }
+    sx={{ p: "2px" }}
+  />
+);
+
+/* ─── Pure helper (stable reference, safe to use in memo deps) ───── */
+const providerLabel = (p) => {
+  if (!p) return "";
+  const u = p.userId || p;
+  return [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || p.providerCode || "";
+};
+
+/* ─── Memoized table row — only the edited row re-renders ─────────── */
+const ProcedureRow = memo(({ row, isLast, providers, setProcedures }) => {
+  const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
+
+  const handleToggleCheck = useCallback(
+    () => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, checked: !p.checked } : p)),
+    [row.id, setProcedures],
+  );
+  const handleSiteChange = useCallback(
+    (e) => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, site: e.target.value } : p)),
+    [row.id, setProcedures],
+  );
+  const handleProviderChange = useCallback(
+    (e) => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, provider: e.target.value } : p)),
+    [row.id, setProcedures],
+  );
+  const handleDelete = useCallback(
+    () => setProcedures((prev) => prev.filter((p) => p.id !== row.id)),
+    [row.id, setProcedures],
+  );
+
+  return (
+    <TableRow sx={{ "&:hover": { backgroundColor: "#fafbfc" } }}>
+      <TableCell padding="checkbox" sx={{ ...cellSx, pl: "12px" }}>
+        <SquareCheckbox checked={row.checked} onChange={handleToggleCheck} />
+      </TableCell>
+      <TableCell sx={{ ...cellSx, fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", whiteSpace: "nowrap" }}>
+        {row.code}
+      </TableCell>
+      <TableCell sx={cellSx}>
+        <TextField
+          size="small"
+          value={row.site || ""}
+          onChange={handleSiteChange}
+          placeholder="—"
+          sx={{
+            width: "100%",
+            "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "5px", px: "8px" },
+            "& .MuiInputBase-input::placeholder": { color: "#374151", opacity: 1 },
+            "& .MuiOutlinedInput-root": { borderRadius: "6px" },
+          }}
+        />
+      </TableCell>
+      <TableCell sx={cellSx}>
+        <Select
+          size="small"
+          value={row.treatment}
+          sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
+        >
+          <MenuItem value={row.treatment} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{row.treatment}</MenuItem>
+        </Select>
+      </TableCell>
+      <TableCell sx={cellSx}>
+        <Select
+          size="small"
+          displayEmpty
+          value={row.provider}
+          onChange={handleProviderChange}
+          sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
+        >
+          <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
+          {providers.map((p) => (
+            <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
+              {providerLabel(p)}
+            </MenuItem>
+          ))}
+        </Select>
+      </TableCell>
+      <TableCell sx={{ ...cellSx, width: "44px", pr: "8px", textAlign: "center" }}>
+        <IconButton size="small" onClick={handleDelete} sx={{ color: "#ef4444", p: "4px" }}>
+          <DeleteOutline sx={{ fontSize: "18px" }} />
+        </IconButton>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 /* ─── Main component ──────────────────────────────────────────────── */
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -166,13 +280,6 @@ const AddNewPatientAppointmentForm = ({
     const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
     return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
   }, [apptDate, timeHours, timeMins, amPm]);
-
-  /* ── Provider helpers ── */
-  const providerLabel = (p) => {
-    if (!p) return "";
-    const u = p.userId || p;
-    return [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || p.providerCode || "";
-  };
 
   /* ── Tag handlers ── */
   const handleTagClick = (label, idx) => {
@@ -512,82 +619,40 @@ const AddNewPatientAppointmentForm = ({
             </Box>
 
             {/* New procedures table */}
-            <Box sx={{ 
-              mb: "16px", display: "flex", flexDirection: "column",
-              gap: "2.5px", width:'100%', padding :'5.199999809265137px 0px 0px 0px' }}>
+            <Box sx={{ mb: "16px" }}>
               <Label sx={{ mb: "8px" }}>New procedures</Label>
-              <Table size="small" sx={{ border: "1px solid #e0e5eb", borderRadius: "12px", overflow: "hidden", borderColor:'pink', borderColor:'#e0e5eb' }}>
+              {/* Border + borderRadius live on the wrapper Box so clipping works */}
+              <Box sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead sx={{ backgroundColor: "#f8fafc" }}>
-                  <TableRow sx={{ backgroundColor: "rgba(241, 246, 252, 0.60)" }}>
-                    <TableCell padding="checkbox" sx={{ borderBottom: "1px solid #e0e5eb", width: "36px" }}>
-                      <Checkbox size="small" sx={{height: '16px', width: '16px'}}/>
-                    </TableCell>
+                  <TableRow>
+                    <TableCell padding="checkbox" sx={{ borderBottom: "1px solid #e0e5eb", width: "44px", pl: "12px" }} />
                     {[
-                      { label: "PROCEDURE", width: "14%"  },
-                      { label: "SITE",      width: "20%" },
-                      { label: "TREATMENT", width: "38%"   },
-                      { label: "PROVIDER",  width: "28%"   },
+                      { label: "PROCEDURE", width: "88px" },
+                      { label: "SITE",      width: "22%"  },
+                      { label: "TREATMENT", width: "38%"  },
+                      { label: "PROVIDER",  width: "38%" },
                     ].map(({ label, width }) => (
-                      <TableCell key={label} sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#5c646f", borderBottom: "1px solid #e0e5eb", letterSpacing: "0.5px", py: "8px", width }}>
+                      <TableCell key={label} sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#5c646f", borderBottom: "1px solid #e0e5eb", letterSpacing: "0.5px", py: "6px", width }}>
                         {label}
                       </TableCell>
                     ))}
-                    <TableCell sx={{ borderBottom: "1px solid #green", width: "36px" }} />
+                    <TableCell sx={{ borderBottom: "1px solid #e0e5eb", width: "44px" }} />
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {procedures.map((row) => (
-                    <TableRow key={row.id} sx={{ "&:hover": { backgroundColor: "#f8fafc" } }}>
-                      <TableCell padding="checkbox">
-                        <Checkbox size="small" checked={row.checked} onChange={() => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, checked: !p.checked } : p))} sx={{ color: "#ffffff", borderColor:'#767676', borderStyle:'solid',borderRadius: '2.5px', "&.Mui-checked": { color: "#2262ef" } }} />
-                      </TableCell>
-                      <TableCell sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", whiteSpace: "nowrap" }}>
-                        {row.code}
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          value={row.site || ""}
-                          onChange={(e) => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, site: e.target.value } : p))}
-                          placeholder="—"
-                          sx={{ width: "100%", "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "4px", px: "6px" }, "& .MuiOutlinedInput-root": { borderRadius: "4px" } }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          size="small"
-                          value={row.treatment}
-                          sx={{ fontFamily: "Inter", fontSize: "12px", height: "28px", width: "100%", "& .MuiSelect-select": { py: "4px" } }}
-                        >
-                          <MenuItem value={row.treatment} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{row.treatment}</MenuItem>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          size="small"
-                          displayEmpty
-                          value={row.provider}
-                          onChange={(e) => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, provider: e.target.value } : p))}
-                          sx={{ fontFamily: "Inter", fontSize: "12px", height: "28px", width: "100%", "& .MuiSelect-select": { py: "4px" } }}
-                        >
-                          <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
-                          {providers.map((p) => (
-                            <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
-                              {providerLabel(p)}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small" onClick={() => setProcedures((prev) => prev.filter((p) => p.id !== row.id))} sx={{ color: "#ef4444" }}>
-                          <DeleteOutline sx={{ fontSize: "16px" }} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
+                  {procedures.map((row, idx) => (
+                    <ProcedureRow
+                      key={row.id}
+                      row={row}
+                      isLast={idx === procedures.length - 1}
+                      providers={providers}
+                      setProcedures={setProcedures}
+                    />
                   ))}
                   {procedures.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: "center", py: "20px" }}>
+                      <TableCell colSpan={6} sx={{ textAlign: "center", py: "20px", border: "none" }}>
                         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>
                           No procedures added. Select a quick tag above.
                         </Typography>
@@ -596,6 +661,7 @@ const AddNewPatientAppointmentForm = ({
                   )}
                 </TableBody>
               </Table>
+              </Box>
             </Box>
 
             <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px" }}>
@@ -666,12 +732,15 @@ const AddNewPatientAppointmentForm = ({
             <Box>
               <Label>Provider / Assistant times</Label>
               <Box sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 0, backgroundColor: "rgba(241, 246, 252, 0.60)", px: "10px", py: "6px", borderBottom: "1px solid #e0e5eb" }}>
-                  <Typography sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.5px" }}>PROVIDER</Typography>
-                  <Typography sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.5px" }}>TIME</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(241, 246, 252, 0.60)", px: "8px", py: "6px", borderBottom: "1px solid #e0e5eb" }}>
+                  <Typography sx={{ flex: 1, fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.5px" }}>PROVIDER</Typography>
+                  <Typography sx={{ width: "56px", fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.5px" }}>TIME</Typography>
+                  {/* invisible spacers matching "m" label + delete button so TIME sits above the input */}
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "11px", visibility: "hidden", userSelect: "none" }}>m</Typography>
+                  <Box sx={{ width: "20px" }} />
                 </Box>
                 {providerRows.map((row) => (
-                  <Box key={row.id} sx={{ display: "flex", alignItems: "center", gap: "6px", px: "8px", py: "8px", borderBottom: "1px solid #f0f2f5", "&:last-child": { borderBottom: "none" } }}>
+                  <Box key={row.id} sx={{ display: "flex", alignItems: "center", gap: "6px", px: "8px", py: "8px", borderBottom: "1px solid #f0f2f5" }}>
                     <Select
                       size="small" displayEmpty
                       value={row.providerId}
@@ -687,7 +756,13 @@ const AddNewPatientAppointmentForm = ({
                       size="small" type="number"
                       value={row.time}
                       onChange={(e) => setProviderRows((prev) => prev.map((r) => r.id === row.id ? { ...r, time: Number(e.target.value) } : r))}
-                      sx={{ width: "48px", "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "5px", textAlign: "center" } }}
+                      sx={{
+                        width: "56px",
+                        "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", fontWeight: 700, py: "5px", px: "4px", textAlign: "center" },
+                        "& input[type=number]": { MozAppearance: "textfield" },
+                        "& input[type=number]::-webkit-outer-spin-button": { display: "none" },
+                        "& input[type=number]::-webkit-inner-spin-button": { display: "none" },
+                      }}
                     />
                     <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>m</Typography>
                     <IconButton size="small" onClick={() => setProviderRows((prev) => prev.filter((r) => r.id !== row.id))} sx={{ color: "#ef4444", p: "2px" }}>
@@ -695,13 +770,15 @@ const AddNewPatientAppointmentForm = ({
                     </IconButton>
                   </Box>
                 ))}
-              </Box>
-              <Typography
+              <Box
                 onClick={() => setProviderRows((prev) => [...prev, { id: Date.now(), providerId: "", time: 60 }])}
-                sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", mt: "6px", "&:hover": { textDecoration: "underline" } }}
+                sx={{ px: "10px", py: "8px", cursor: "pointer", textAlign: "center", "&:hover": { backgroundColor: "#f8fafc" } }}
               >
-                + Add provider / assistant
-              </Typography>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", fontWeight: 500 }}>
+                  + Add provider / assistant
+                </Typography>
+              </Box>
+              </Box>
             </Box>
 
             {/* Patient's preferred dentist */}
@@ -811,22 +888,25 @@ const AddNewPatientAppointmentForm = ({
           <Box sx={{ display: "flex", gap: "8px" }}>
             <Button
               variant="outlined"
+              color="inherit"
               onClick={onCancel}
-              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, textTransform: "none", borderRadius: "8px", borderColor: "#e0e5eb", color: "#374151", px: "16px", py: "7px", "&:hover": { borderColor: "#d1d5db", backgroundColor: "#f9fafb" } }}
+              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, textTransform: "none", borderRadius: "8px", border: "1px solid #d0d5dd", color: "#374151", px: "16px", py: "7px", "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" } }}
             >
               Cancel
             </Button>
             <Button
               variant="outlined"
-              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, textTransform: "none", borderRadius: "8px", borderColor: "#e0e5eb", color: "#374151", px: "16px", py: "7px", "&:hover": { borderColor: "#d1d5db", backgroundColor: "#f9fafb" } }}
+              color="inherit"
+              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, textTransform: "none", borderRadius: "8px", border: "1px solid #d0d5dd", color: "#374151", px: "16px", py: "7px", "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" } }}
             >
               Save as draft
             </Button>
             <Button
               variant="contained"
+              disableElevation
               onClick={handleSubmit}
               disabled={loading || !patient}
-              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 600, textTransform: "none", borderRadius: "8px", backgroundColor: "#2262ef", color: "#fff", px: "20px", py: "7px", boxShadow: "none", "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" }, "&.Mui-disabled": { backgroundColor: "#9aa3ae", color: "#fff" } }}
+              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 600, textTransform: "none", borderRadius: "8px", backgroundColor: "#2262ef", color: "#fff", px: "20px", py: "7px", "&:hover": { backgroundColor: "#1a50cc" }, "&.Mui-disabled": { backgroundColor: "#c5d3f8", color: "#fff" } }}
             >
               {loading ? "Saving…" : "Add appointment"}
             </Button>
