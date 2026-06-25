@@ -512,32 +512,34 @@ const AddNewPatientAppointmentForm = ({
             </Box>
 
             {/* New procedures table */}
-            <Box sx={{ mb: "16px" }}>
+            <Box sx={{ 
+              mb: "16px", display: "flex", flexDirection: "column",
+              gap: "2.5px", width:'100%', padding :'5.199999809265137px 0px 0px 0px' }}>
               <Label sx={{ mb: "8px" }}>New procedures</Label>
-              <Table size="small" sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f8fafc" }}>
+              <Table size="small" sx={{ border: "1px solid #e0e5eb", borderRadius: "12px", overflow: "hidden", borderColor:'pink', borderColor:'#e0e5eb' }}>
+                <TableHead sx={{ backgroundColor: "#f8fafc" }}>
+                  <TableRow sx={{ backgroundColor: "rgba(241, 246, 252, 0.60)" }}>
                     <TableCell padding="checkbox" sx={{ borderBottom: "1px solid #e0e5eb", width: "36px" }}>
-                      <Checkbox size="small" />
+                      <Checkbox size="small" sx={{height: '16px', width: '16px'}}/>
                     </TableCell>
                     {[
-                      { label: "PROCEDURE", width: "90px"  },
-                      { label: "SITE",      width: "120px" },
+                      { label: "PROCEDURE", width: "14%"  },
+                      { label: "SITE",      width: "20%" },
                       { label: "TREATMENT", width: "38%"   },
-                      { label: "PROVIDER",  width: "25%"   },
+                      { label: "PROVIDER",  width: "28%"   },
                     ].map(({ label, width }) => (
                       <TableCell key={label} sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#5c646f", borderBottom: "1px solid #e0e5eb", letterSpacing: "0.5px", py: "8px", width }}>
                         {label}
                       </TableCell>
                     ))}
-                    <TableCell sx={{ borderBottom: "1px solid #e0e5eb", width: "36px" }} />
+                    <TableCell sx={{ borderBottom: "1px solid #green", width: "36px" }} />
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {procedures.map((row) => (
                     <TableRow key={row.id} sx={{ "&:hover": { backgroundColor: "#f8fafc" } }}>
                       <TableCell padding="checkbox">
-                        <Checkbox size="small" checked={row.checked} onChange={() => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, checked: !p.checked } : p))} sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#2262ef" } }} />
+                        <Checkbox size="small" checked={row.checked} onChange={() => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, checked: !p.checked } : p))} sx={{ color: "#ffffff", borderColor:'#767676', borderStyle:'solid',borderRadius: '2.5px', "&.Mui-checked": { color: "#2262ef" } }} />
                       </TableCell>
                       <TableCell sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", whiteSpace: "nowrap" }}>
                         {row.code}
