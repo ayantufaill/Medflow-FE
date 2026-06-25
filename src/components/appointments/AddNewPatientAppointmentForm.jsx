@@ -1,40 +1,20 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
-  Box,
-  Button,
-  Checkbox,
-  Chip,
-  Dialog,
-  FormControl,
-  FormControlLabel,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Radio,
-  RadioGroup,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
+  Autocomplete, Box, Button, Checkbox, Chip, Dialog,
+  FormControlLabel, IconButton, MenuItem,
+  Radio, RadioGroup, Select, Table, TableBody, TableCell,
+  TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import {
-  DeleteOutline as DeleteOutlineIcon,
-  Close as CloseIcon,
-  MailOutline,
-  ChatBubbleOutline,
+  DeleteOutline, Close, EventNote, AutoAwesome,
+  AccessTime, Person, LocalOffer, Add, Search,
 } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
-import Autocomplete from "@mui/material/Autocomplete";
-import { FONT_SM, FONT_XS } from "../../constants/styles";
-import { appointmentService } from "../../services/appointment.service";
 
+/* ─── Constants ───────────────────────────────────────────────────── */
 const STATUS_OPTIONS = [
   { value: "unconfirmed", label: "Unconfirmed" },
   { value: "preconfirmed", label: "Preconfirmed" },
@@ -56,954 +36,801 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
   { value: "rescheduled", label: "Rescheduled" },
 ];
-
-// Default procedure tags shown in the tag bar
 const DEFAULT_PROCEDURE_TAGS = [
-  { label: "New",  color: "#81ecec" },
-  { label: "Scr",  color: "#ff7675" },
-  { label: "FULL", color: "#ffeaa7" },
-  { label: "Pano", color: "#636e72", font: "white" },
-  { label: "FMX",  color: "#2d3436", font: "white" },
-  { label: "Xray", color: "#636e72", font: "white" },
-  { label: "AdX",  color: "#b2bec3" },
-  { label: "SCN",  color: "#55efc4" },
-  { label: "Con",  color: "#81ecec" },
-  { label: "Vir",  color: "#00b894", font: "white" },
+  { label: "NP",    color: "#0d9488" },
+  { label: "Exm",   color: "#92400e", font: "white" },
+  { label: "Del",   color: "#4d7c0f", font: "white" },
+  { label: "DFV",   color: "#1d4ed8", font: "white" },
+  { label: "P-OP",  color: "#c2410c", font: "white" },
+  { label: "P-OP",  color: "#ea580c", font: "white" },
+  { label: "HYG",   color: "#16a34a", font: "white" },
+  { label: "HYG",   color: "#059669", font: "white" },
+  { label: "Perio", color: "#6b7280", font: "white" },
+  { label: "LOE",   color: "#65a30d", font: "white" },
+  { label: "HYG",   color: "#10b981" },
+  { label: "POE",   color: "#374151", font: "white" },
+  { label: "PA1",   color: "#f87171" },
+  { label: "Pano",  color: "#1e293b", font: "white" },
+  { label: "PAJ",   color: "#7c3aed", font: "white" },
+  { label: "VEL",   color: "#0891b2", font: "white" },
+  { label: "RCR",   color: "#1e40af", font: "white" },
+  { label: "LTD",   color: "#d97706", font: "white" },
+  { label: "FULL",  color: "#7f1d1d", font: "white" },
+  { label: "FMD",   color: "#78350f", font: "white" },
 ];
 
-// Default rows shown in the scheduled procedures table
-const DEFAULT_PROCEDURES = [
-  { id: 1, code: "D0150", treatment: "Comprehensive Evaluation", tag: { label: "New",  color: "#81ecec" },                provider: "", charge: "$85.00",  checked: true },
-  { id: 2, code: "D1110", treatment: "Prophy",                   tag: { label: "SCN",  color: "#55efc4" },                provider: "", charge: "$120.00", checked: true },
-  { id: 3, code: "D0274", treatment: "Bitewing Four Xrays",      tag: { label: "Xray", color: "#636e72", font: "white" }, provider: "", charge: "$65.00",  checked: true },
-];
-
-// Default procedure added to the table when each tag chip is selected
 const TAG_DEFAULT_PROCEDURES = {
-  New:  { code: "D0150", treatment: "Comprehensive Evaluation",         charge: "$85.00"  },
-  Scr:  { code: "D4341", treatment: "Periodontal Scaling & Root Planing", charge: "$220.00" },
-  FULL: { code: "D2391", treatment: "Resin Composite – One Surface",     charge: "$185.00" },
-  Pano: { code: "D0330", treatment: "Panoramic Radiographic Image",      charge: "$120.00" },
-  FMX:  { code: "D0210", treatment: "Complete Series of Radiographs",    charge: "$150.00" },
-  Xray: { code: "D0220", treatment: "Periapical First Image",            charge: "$30.00"  },
-  AdX:  { code: "D0230", treatment: "Periapical Each Additional Image",  charge: "$25.00"  },
-  SCN:  { code: "D1110", treatment: "Prophy",                            charge: "$120.00" },
-  Con:  { code: "D0120", treatment: "Periodic Oral Evaluation",          charge: "$55.00"  },
-  Vir:  { code: "D9310", treatment: "Consultation – Diagnostic Service", charge: "$95.00"  },
+  NP:    { code: "D0150", treatment: "Comprehensive Evaluation",         charge: "$85.00"  },
+  Exm:   { code: "D0120", treatment: "Periodic Oral Evaluation",         charge: "$55.00"  },
+  FULL:  { code: "D2391", treatment: "Resin Composite – One Surface",    charge: "$185.00" },
+  Pano:  { code: "D0330", treatment: "Panoramic Radiographic Image",     charge: "$120.00" },
+  HYG:   { code: "D1110", treatment: "Prophy",                           charge: "$120.00" },
+  Perio: { code: "D4341", treatment: "Periodontal Scaling & Root Planing", charge: "$220.00" },
+  DFV:   { code: "D0220", treatment: "Periapical First Image",           charge: "$30.00"  },
+  FMD:   { code: "D0210", treatment: "Complete Series of Radiographs",   charge: "$150.00" },
 };
 
-// Dummy searchable procedure catalog for the "Add Procedure" autocomplete
 const DUMMY_PROCEDURE_OPTIONS = [
-  { code: "D0120", treatment: "Periodic Oral Evaluation",           tag: { label: "Con",  color: "#81ecec" },                charge: "$55.00"  },
-  { code: "D0140", treatment: "Limited Oral Evaluation",            tag: { label: "Con",  color: "#81ecec" },                charge: "$75.00"  },
-  { code: "D0210", treatment: "Complete Series of Radiographs",     tag: { label: "FMX",  color: "#2d3436", font: "white" }, charge: "$150.00" },
-  { code: "D0220", treatment: "Periapical First Image",             tag: { label: "Xray", color: "#636e72", font: "white" }, charge: "$30.00"  },
-  { code: "D0230", treatment: "Periapical Each Additional Image",   tag: { label: "Xray", color: "#636e72", font: "white" }, charge: "$25.00"  },
-  { code: "D0330", treatment: "Panoramic Radiographic Image",       tag: { label: "Pano", color: "#636e72", font: "white" }, charge: "$120.00" },
-  { code: "D1120", treatment: "Child Prophylaxis",                  tag: { label: "SCN",  color: "#55efc4" },                charge: "$85.00"  },
-  { code: "D2140", treatment: "Amalgam – One Surface Primary",      tag: { label: "FULL", color: "#ffeaa7" },                charge: "$145.00" },
-  { code: "D2391", treatment: "Resin Composite – One Surface",      tag: { label: "FULL", color: "#ffeaa7" },                charge: "$185.00" },
-  { code: "D4341", treatment: "Periodontal Scaling & Root Planing", tag: { label: "Scr",  color: "#ff7675" },                charge: "$220.00" },
-  { code: "D7140", treatment: "Extraction – Erupted Tooth",         tag: { label: "New",  color: "#81ecec" },                charge: "$175.00" },
-  { code: "D9310", treatment: "Consultation – Diagnostic Service",  tag: { label: "Vir",  color: "#00b894", font: "white" }, charge: "$95.00"  },
+  { code: "D0120", treatment: "Periodic Oral Evaluation",           tag: { label: "Exm",  color: "#92400e", font: "white" }, charge: "$55.00"  },
+  { code: "D0150", treatment: "Comprehensive Evaluation",           tag: { label: "NP",   color: "#0d9488" },                charge: "$85.00"  },
+  { code: "D0210", treatment: "Complete Series of Radiographs",     tag: { label: "FMD",  color: "#78350f", font: "white" }, charge: "$150.00" },
+  { code: "D0220", treatment: "Periapical First Image",             tag: { label: "DFV",  color: "#1d4ed8", font: "white" }, charge: "$30.00"  },
+  { code: "D0330", treatment: "Panoramic Radiographic Image",       tag: { label: "Pano", color: "#1e293b", font: "white" }, charge: "$120.00" },
+  { code: "D1110", treatment: "Prophy",                             tag: { label: "HYG",  color: "#16a34a", font: "white" }, charge: "$120.00" },
+  { code: "D1206", treatment: "Fluoride",                           tag: { label: "HYG",  color: "#059669", font: "white" }, charge: "$45.00"  },
+  { code: "D2391", treatment: "Resin Composite – One Surface",      tag: { label: "FULL", color: "#7f1d1d", font: "white" }, charge: "$185.00" },
+  { code: "D4341", treatment: "Periodontal Scaling & Root Planing", tag: { label: "Perio",color: "#6b7280", font: "white" }, charge: "$220.00" },
 ];
 
-// props:
-//   patients, loadingPatients, onPatientSearch — patient autocomplete
-//   providers   — array from providerService/Redux (objects with _id, userId.firstName, etc.)
-//   rooms       — array from roomService/Redux (objects with _id, name)
-//   appointmentTypes — array from appointmentTypeService/Redux (objects with _id, name)
-//   onSubmit, onCancel, loading, initialPatient, initialDateTime, open
+const COLOR_TAGS = [
+  "#0d9488", "#f97316", "#eab308",
+  "#ef4444", "#8b5cf6", "#06b6d4",
+  "#22c55e", "#ec4899",
+];
+
+const INITIAL_PROCEDURES = [
+  { id: 1,  code: "D1110", site: "Adult",   treatment: "Prophy",               provider: "", charge: "$120.00", checked: true },
+  { id: 2,  code: "D1206", site: "Varnish", treatment: "Fluoride",              provider: "", charge: "$45.00",  checked: true },
+  { id: 3,  code: "D0330", site: "",        treatment: "Panoramic Xray",        provider: "", charge: "$120.00", checked: true },
+  { id: 4,  code: "D0274", site: "",        treatment: "Bitewing Four Xrays",   provider: "", charge: "$65.00",  checked: true },
+  { id: 5,  code: "FMD",   site: "",        treatment: "FMD",                   provider: "", charge: "$150.00", checked: true },
+  { id: 6,  code: "FULL",  site: "",        treatment: "FULL",                  provider: "", charge: "$185.00", checked: true },
+  { id: 7,  code: "POP2",  site: "",        treatment: "P-OP",                  provider: "", charge: "$95.00",  checked: true },
+  { id: 8,  code: "POP",   site: "",        treatment: "P-OP",                  provider: "", charge: "$95.00",  checked: true },
+  { id: 9,  code: "DFV",   site: "",        treatment: "DFV",                   provider: "", charge: "$30.00",  checked: true },
+];
+
+/* ─── Tiny helpers ────────────────────────────────────────────────── */
+const Label = ({ children, sx }) => (
+  <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "4px", ...sx }}>
+    {children}
+  </Typography>
+);
+
+const FieldBox = ({ label, children, sx }) => (
+  <Box sx={sx}>
+    <Label>{label}</Label>
+    {children}
+  </Box>
+);
+
+/* ─── Main component ──────────────────────────────────────────────── */
 const AddNewPatientAppointmentForm = ({
   patients = [],
   loadingPatients = false,
   onPatientSearch,
   providers = [],
-  rooms = [],
-  appointmentTypes = [],
+  // rooms and appointmentTypes accepted for API compatibility but not rendered
+  // eslint-disable-next-line no-unused-vars
+  rooms: _rooms = [],
+  // eslint-disable-next-line no-unused-vars
+  appointmentTypes: _appointmentTypes = [],
   onSubmit,
   onCancel,
   loading = false,
   initialPatient = null,
   initialDateTime = null,
   open = true,
-  appointments: initialAppointments = [],
+  // eslint-disable-next-line no-unused-vars
+  appointments: _appointments = [],
 }) => {
-  // Initialize patient from initialPatient prop, reset when it changes
-  const [patient, setPatient] = useState(initialPatient || null);
-  const [dateTime, setDateTime] = useState(
-    initialDateTime || dayjs().hour(9).minute(5),
-  );
-  const [visitType, setVisitType] = useState("treatment");
-
-  // Reset form when initialPatient changes (e.g., when opening from sidebar)
-  useEffect(() => {
-    if (initialPatient) {
-      setPatient(initialPatient);
-    }
-  }, [initialPatient]);
-
-  // Scheduled procedure table rows
-  const [procedures, setProcedures] = useState([]);
-
-  // Procedure tags: all available tags + which ones are selected
-  const [procedureTags, setProcedureTags] = useState(DEFAULT_PROCEDURE_TAGS);
+  /* ── State ── */
+  const [patient,       setPatient]       = useState(initialPatient || null);
+  const [apptDate,      setApptDate]      = useState(initialDateTime || dayjs());
+  const [timeHours,     setTimeHours]     = useState(initialDateTime ? initialDateTime.format("hh") : "09");
+  const [timeMins,      setTimeMins]      = useState(initialDateTime ? initialDateTime.format("mm") : "00");
+  const [amPm,          setAmPm]          = useState(initialDateTime ? initialDateTime.format("A") : "AM");
+  const [visitType,     setVisitType]     = useState("recare");
+  const [procedures,    setProcedures]    = useState(INITIAL_PROCEDURES);
   const [selectedTagLabels, setSelectedTagLabels] = useState(new Set());
+  const [tagProcedureIds,   setTagProcedureIds]   = useState({});
+  const [addingProcedure,   setAddingProcedure]   = useState(false);
+  const [procedureInput,    setProcedureInput]    = useState("");
+  const nextId = useRef(10);
 
-  // Tracks which table row id was added by each tag (label → procedure id)
-  const [tagProcedureIds, setTagProcedureIds] = useState({});
+  // Right panel
+  const [status,             setStatus]             = useState("confirmed");
+  const [durationMins,       setDurationMins]       = useState(60);
+  const [providerRows,       setProviderRows]       = useState([{ id: 1, providerId: "", time: 60 }]);
+  const [preferredDentist,   setPreferredDentist]   = useState("");
+  const [preferredHygienist, setPreferredHygienist] = useState("");
+  const [notes,              setNotes]              = useState("");
+  const [selectedColorTags,  setSelectedColorTags]  = useState(new Set(["#eab308"]));
 
-  // "Add Procedure" autocomplete state
-  const [addingProcedure, setAddingProcedure] = useState(false);
-  const [procedureInputValue, setProcedureInputValue] = useState("");
-  const nextProcedureId = useRef(1);
+  useEffect(() => { if (initialPatient) setPatient(initialPatient); }, [initialPatient]);
 
-  // Right-panel fields
-  const [appointmentStatus, setAppointmentStatus] = useState("unconfirmed");
-  const [durationMins, setDurationMins] = useState(60);
-  const [selectedRoomId, setSelectedRoomId] = useState("");
-  const [selectedProviderId, setSelectedProviderId] = useState("");
-  const [selectedAssistantId, setSelectedAssistantId] = useState("");
-  const [selectedAppointmentTypeId, setSelectedAppointmentTypeId] = useState("");
-  const [notes, setNotes] = useState("");
+  // Derive the full dayjs datetime from the split fields
+  const dateTime = useMemo(() => {
+    const h = parseInt(timeHours || "9", 10);
+    const m = parseInt(timeMins  || "0", 10);
+    const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
+    return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
+  }, [apptDate, timeHours, timeMins, amPm]);
 
-  const [existingAppointments, setExistingAppointments] = useState([]);
-
-  const isTimeSlotOverlap = (newStart, duration, a) => {
-    if (["cancelled", "no_show"].includes(a.status?.toLowerCase())) return false;
-
-    const dateVal = a.appointmentDate || a.date;
-    if (!dateVal || (!a.startTime && !a.start)) return false;
-    
-    const dateStr = typeof dateVal === "string" ? dateVal : String(dateVal);
-    const dateOnly = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.slice(0, 10);
-    
-    const aStart = a.startTime 
-      ? dayjs(`${dateOnly}T${a.startTime}`) 
-      : dayjs(a.start);
-      
-    const aEnd = a.endTime 
-      ? dayjs(`${dateOnly}T${a.endTime}`) 
-      : (a.end ? dayjs(a.end) : aStart.add(a.durationMinutes || 30, "minute"));
-
-    const newEnd = newStart.add(Number(duration) || 30, "minute");
-
-    return newStart.isBefore(aEnd) && newEnd.isAfter(aStart);
-  };
-
-  useEffect(() => {
-    if (dateTime) {
-      const dateStr = dateTime.format("YYYY-MM-DD");
-      const nextDateStr = dateTime.add(1, "day").format("YYYY-MM-DD");
-      appointmentService
-        .getAllAppointments(1, 100, "", "", "", dateStr, nextDateStr)
-        .then((res) => {
-          const appts = Array.isArray(res) ? res : (res.appointments || []);
-          setExistingAppointments(appts);
-        })
-        .catch((err) => console.error("Error fetching appointments for room filtering:", err));
-    }
-  }, [dateTime ? dateTime.format("YYYY-MM-DD") : "", initialAppointments]);
-
-  const availableRooms = useMemo(() => {
-    if (!dateTime || !durationMins) return rooms;
-
-    return rooms.filter((r) => {
-      const roomIdStr = String(r._id || r.id);
-      // Check if there is any overlapping appointment for this room
-      const hasOverlap = existingAppointments.some((a) => {
-        const apptRoomId = String(a.roomId?._id || a.roomId?.id || a.roomId || "").replace("op", "") || 
-                           String(a.columnId || "").replace("op", "");
-        if (apptRoomId !== roomIdStr) return false;
-
-        return isTimeSlotOverlap(dateTime, durationMins, a);
-      });
-
-      return !hasOverlap;
-    });
-  }, [rooms, dateTime, durationMins, existingAppointments]);
-
-  useEffect(() => {
-    if (selectedRoomId && !availableRooms.some(r => String(r._id || r.id) === selectedRoomId)) {
-      setSelectedRoomId("");
-    }
-  }, [availableRooms, selectedRoomId]);
-
-  const shouldDisableTime = (value, view) => {
-    if (!selectedRoomId) return false;
-
-    return existingAppointments.some((a) => {
-      const apptRoomId = String(a.roomId?._id || a.roomId?.id || a.roomId || "").replace("op", "") || 
-                         String(a.columnId || "").replace("op", "");
-      if (apptRoomId !== selectedRoomId) return false;
-
-      return isTimeSlotOverlap(value, durationMins, a);
-    });
-  };
-
-  // Debounce ref for patient search
-  const searchDebounceRef = useRef(null);
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  // Format a provider object into a display name
+  /* ── Provider helpers ── */
   const providerLabel = (p) => {
     if (!p) return "";
     const u = p.userId || p;
-    const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
-    return name || p.providerCode || `Provider ${p._id || p.id}`;
+    return [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || p.providerCode || "";
   };
 
-  // ── Procedure tag handlers ────────────────────────────────────────────────
-
-  // Toggle a tag: selecting adds its default procedure to the table; deselecting removes it
-  const handleTagClick = (label) => {
-    const isSelected = selectedTagLabels.has(label);
-
+  /* ── Tag handlers ── */
+  const handleTagClick = (label, idx) => {
+    const key = `${label}-${idx}`;
+    const isSelected = selectedTagLabels.has(key);
     if (isSelected) {
-      // Deselect — remove the procedure row that was added by this tag
-      setSelectedTagLabels((prev) => { const n = new Set(prev); n.delete(label); return n; });
-      const procId = tagProcedureIds[label];
+      setSelectedTagLabels((prev) => { const n = new Set(prev); n.delete(key); return n; });
+      const procId = tagProcedureIds[key];
       if (procId != null) {
         setProcedures((prev) => prev.filter((p) => p.id !== procId));
-        setTagProcedureIds((prev) => { const { [label]: _, ...rest } = prev; return rest; });
+        setTagProcedureIds((prev) => { const { [key]: _, ...rest } = prev; return rest; });
       }
     } else {
-      // Select — add the tag's default procedure to the table
-      setSelectedTagLabels((prev) => new Set([...prev, label]));
+      setSelectedTagLabels((prev) => new Set([...prev, key]));
       const template = TAG_DEFAULT_PROCEDURES[label];
-      const tagInfo  = DEFAULT_PROCEDURE_TAGS.find((t) => t.label === label);
+      const tagInfo  = DEFAULT_PROCEDURE_TAGS[idx];
       if (template && tagInfo) {
-        const newId = nextProcedureId.current++;
-        setProcedures((prev) => [
-          ...prev,
-          {
-            id: newId,
-            code: template.code,
-            treatment: template.treatment,
-            tag: { label: tagInfo.label, color: tagInfo.color, font: tagInfo.font },
-            provider: "",
-            charge: template.charge,
-            checked: true,
-          },
-        ]);
-        setTagProcedureIds((prev) => ({ ...prev, [label]: newId }));
+        const newId = nextId.current++;
+        setProcedures((prev) => [...prev, {
+          id: newId, code: template.code, treatment: template.treatment,
+          site: "", provider: "", charge: template.charge, checked: true,
+          tag: { label: tagInfo.label, color: tagInfo.color, font: tagInfo.font },
+        }]);
+        setTagProcedureIds((prev) => ({ ...prev, [key]: newId }));
       }
     }
   };
 
-  // Add a procedure from the autocomplete search to the scheduled procedures table
   const handleSelectProcedure = (option) => {
     if (!option) return;
-    setProcedures((prev) => [
-      ...prev,
-      {
-        id: nextProcedureId.current++,
-        code: option.code,
-        treatment: option.treatment,
-        tag: option.tag,
-        provider: "",
-        charge: option.charge,
-        checked: true,
-      },
-    ]);
-    setProcedureInputValue("");
-    setAddingProcedure(false);
+    setProcedures((prev) => [...prev, {
+      id: nextId.current++, code: option.code, treatment: option.treatment,
+      site: "", provider: "", charge: option.charge, checked: true, tag: option.tag,
+    }]);
+    setProcedureInput(""); setAddingProcedure(false);
   };
 
-  // ── Procedure table handlers ──────────────────────────────────────────────
-
-  const handleProcedureCheck = (id) => {
-    setProcedures((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, checked: !p.checked } : p)),
-    );
-  };
-
-  const handleProcedureProviderChange = (id, value) => {
-    setProcedures((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, provider: value } : p)),
-    );
-  };
-
-  const handleDeleteProcedure = (id) => {
-    setProcedures((prev) => prev.filter((p) => p.id !== id));
-    // If this row was added by a tag, deselect that tag too
-    const tagLabel = Object.entries(tagProcedureIds).find(([, pid]) => pid === id)?.[0];
-    if (tagLabel) {
-      setSelectedTagLabels((prev) => { const n = new Set(prev); n.delete(tagLabel); return n; });
-      setTagProcedureIds((prev) => { const { [tagLabel]: _, ...rest } = prev; return rest; });
-    }
-  };
-
-  // ── Submit ────────────────────────────────────────────────────────────────
-
+  /* ── Submit ── */
   const handleSubmit = () => {
     if (!onSubmit) return;
-
-    // Calculate endTime from dateTime + durationMins
-    const start = dateTime || dayjs();
-    const end = start.add(durationMins || 30, "minute");
-
+    const end = dateTime.add(durationMins || 30, "minute");
     onSubmit({
-      patientId:    patient?._id || patient?.id,
-      patientName:  patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "",
-      appointmentDate: start.format("YYYY-MM-DD"),
-      startTime:    start.format("HH:mm"),
-      endTime:      end.format("HH:mm"),          // required by the API
+      patientId:       patient?._id || patient?.id,
+      patientName:     patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "",
+      appointmentDate: dateTime.format("YYYY-MM-DD"),
+      startTime:       dateTime.format("HH:mm"),
+      endTime:         end.format("HH:mm"),
       durationMinutes: durationMins,
-      status:       appointmentStatus,             // valid API values only
+      status,
       notes,
-      providerId:   selectedProviderId || undefined,
-      roomId:       selectedRoomId || undefined,   // API field name is roomId, not operatoryId
-      ...(selectedAppointmentTypeId && { appointmentTypeId: selectedAppointmentTypeId }),
-      // Pack selected tags, procedures, and assistant into customFields (no dedicated API field)
+      providerId: providerRows[0]?.providerId || undefined,
+      roomId:     undefined,
       customFields: {
-        selectedProcedureTags: [...selectedTagLabels],
-        procedures: procedures
-          .filter((p) => p.checked)
-          .map((p) => ({
-            code: p.code,
-            treatment: p.treatment,
-            charge: p.charge,
-          })),
-        ...(selectedAssistantId && { assistantId: selectedAssistantId }),
         visitType,
+        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge }) => ({ code, treatment, charge })),
+        preferredDentist,
+        preferredHygienist,
+        colorTags: [...selectedColorTags],
       },
     });
-
-    if (onCancel) onCancel();
   };
 
+  const patientDisplayName = patient
+    ? (patient.name || patient.fullName || `${patient.firstName || ""} ${patient.lastName || ""}`.trim() || "Patient")
+    : "";
+  const patientId = patient?.patientId || patient?.chartNumber || patient?.id || patient?._id || "";
+
+  /* ────────────────────── JSX ────────────────────── */
   return (
     <Dialog
       open={open}
-      onClose={(event, reason) => {
-        if (reason !== 'backdropClick' && onCancel) {
-          onCancel();
-        }
-      }}
+      onClose={(_, reason) => { if (reason !== "backdropClick" && onCancel) onCancel(); }}
       maxWidth="lg"
       fullWidth
       disableScrollLock
-      BackdropProps={{
-        sx: {
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        },
-      }}
       PaperProps={{
-        sx: {
-          borderRadius: 2,
-          border: "1px solid #eef2f6",
-          maxHeight: "90vh",
-          overflow: "hidden",
-          zIndex: 1301,
-        },
+        sx: { borderRadius: "12px", border: "1px solid #e0e5eb", maxHeight: "92vh", overflow: "hidden" },
       }}
     >
-      <Box
-        sx={{
-          bgcolor: "white",
-          display: "flex",
-          flexDirection: "column",
-          fontFamily: "sans-serif",
-          height: "100%",
-          overflow: "hidden",
-        }}
-      >
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            position: "relative",
-            py: 1.5,
-            px: 2,
-            bgcolor: "#2b6cb0",
-            color: "#fff",
-          }}
-        >
-          <Typography sx={{ fontWeight: 600, ...FONT_SM }}>
-            Add New Patient Appointment
-          </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", backgroundColor: "#fff" }}>
+
+        {/* ── HEADER ── */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: "12px", px: "10px", py: "10px", borderBottom: "1px solid #e0e5eb", flexShrink: 0, backgroundColor: "#f3f8fd" }}>
+          <Box sx={{ width: "36px", height: "36px", borderRadius: "8px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <EventNote sx={{ fontSize: "20px", color: "#2262ef" }} />
+          </Box>
+          <Box>
+            <Typography sx={{ 
+              display :'flex',
+              flexDirection :'column',
+              justifyContent :'flex-start',
+              alignItems :'flex-start',
+              width :'320px',
+              height :'24px',
+              padding :'0px',
+              fontFamily: "Inter", 
+              fontSize: "15px", 
+              fontWeight: 700, 
+              color: "#09121f" }}>
+              Add new patient appointment
+            </Typography>
+            <Typography sx={{ fontWeight :'400', lineHeight :'16.25px', letterSpacing :'0px', textAlign :'left', color :'#5c646f', fontFamily: "Inter", fontSize: "11px" }}>
+              Schedule treatment or recare with smart conflict detection.
+            </Typography>
+          </Box>
+
+          <Box sx={{ flex: 1 }} />
+
           <Button
-            variant="contained"
-            size="small"
+            variant="outlined"
+            startIcon={<AutoAwesome sx={{ fontSize: "14px" }} />}
             sx={{
-              position: "absolute",
-              right: 16,
-              textTransform: "none",
-              ...FONT_XS,
-              bgcolor: "#e07c24",
-              color: "#fff",
-              "&:hover": { bgcolor: "#c96b1a" },
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexDirection:'row', padding :'0px 11.800000190734863px', borderWidth:'1px',
+              fontFamily: "Inter", fontSize: "12px", fontWeight: 500,
+              textTransform: "none", borderRadius: "20px",
+              borderColor: "#e0e5eb", color: "#09121f",gap:'12px',
+              px: "14px", py: "6px", bgcolor: '#fbfdfe',
+              "&:hover": { borderColor: "#9ca3af", backgroundColor: "#f9fafb" },
             }}
           >
             Convert to shortlist
           </Button>
+
+          <IconButton onClick={onCancel} size="small" sx={{ color: "#6b7280" }}>
+            <Close sx={{ fontSize: "18px" }} />
+          </IconButton>
         </Box>
 
-        <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden", minHeight: 0 }}>
+        {/* ── BODY ── */}
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
 
-          {/* ── LEFT PANEL ─────────────────────────────────────────────── */}
-          <Box
-            sx={{
-              flexGrow: 1,
-              p: 2,
-              borderRight: "1px solid #cbd5e1",
-              overflowY: "auto",
-              minHeight: 0,
-            }}
-          >
-            {/* Visit Type */}
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
-              <Typography sx={{ fontSize: "12px", mr: 2, fontWeight: 600, color: "#4a6da7" }}>
-                Type of visit:
-              </Typography>
-              <RadioGroup row value={visitType} onChange={(e) => setVisitType(e.target.value)}>
-                <FormControlLabel
-                  value="treatment"
-                  control={<Radio size="small" sx={{ p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: "12px" }}>Treatment</Typography>}
+          {/* ── LEFT PANEL ── */}
+          <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
+
+            {/* For Patient / Date / Time */}
+            <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
+
+              {/* For Patient */}
+              <FieldBox label="For Patient" sx={{ flex: 1 }}>
+                <Autocomplete
+                  size="small"
+                  options={patients}
+                  loading={loadingPatients}
+                  getOptionLabel={(o) => {
+                    const name = o.name || o.fullName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
+                    const id = o.patientId || o.chartNumber || o.id || o._id || "";
+                    return id ? `${name}  pt #${id}` : name;
+                  }}
+                  value={patient}
+                  onChange={(_, v) => setPatient(v)}
+                  onInputChange={(_, v, reason) => { if (reason === "input" && onPatientSearch) onPatientSearch(v); }}
+                  renderOption={(props, o) => {
+                    const name = o.name || o.fullName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
+                    const initials = o.name
+                      ? o.name.slice(0, 2).toUpperCase()
+                      : `${o.firstName?.[0] || ""}${o.lastName?.[0] || ""}`.toUpperCase();
+                    const id = o.patientId || o.chartNumber || o.id || o._id;
+                    return (
+                      <Box component="li" {...props} key={o._id || o.id} sx={{ display: "flex", alignItems: "center", gap: "8px", py: "6px !important" }}>
+                        <Box sx={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "#2262ef", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Typography sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#fff" }}>{initials}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#09121f" }}>{name}</Typography>
+                          {id && <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>pt #{id}</Typography>}
+                        </Box>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => {
+                    const initials = patient
+                      ? (patient.name
+                          ? patient.name.slice(0, 2).toUpperCase()
+                          : `${patient.firstName?.[0] || ""}${patient.lastName?.[0] || ""}`.toUpperCase())
+                      : "";
+                    return (
+                      <TextField
+                        {...params}
+                        placeholder="Search patient..."
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <Search sx={{ fontSize: "16px", color: "#9aa3ae", ml: "4px", mr: "2px", flexShrink: 0 }} />
+                              {patient && (
+                                <Box sx={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "#2262ef", display: "flex", alignItems: "center", justifyContent: "center", mx: "4px", flexShrink: 0 }}>
+                                  <Typography sx={{ fontFamily: "Inter", fontSize: "9px", fontWeight: 700, color: "#fff" }}>{initials}</Typography>
+                                </Box>
+                              )}
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                          sx: { fontFamily: "Inter", fontWeight: 500, fontSize: "13px", borderRadius: "8px", height: "40px" },
+                        }}
+                      />
+                    );
+                  }}
                 />
-                <FormControlLabel
-                  value="recare"
-                  control={<Radio size="small" sx={{ p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: "12px" }}>Recare</Typography>}
-                />
+              </FieldBox>
+
+              {/* Date */}
+              <FieldBox label="Date" sx={{ width: "165px", flexShrink: 0 }}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    value={apptDate}
+                    onChange={(v) => v && setApptDate(v)}
+                    slotProps={{
+                      textField: {
+                        size: "small",
+                        sx: { width: "165px", "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", height: "40px" } },
+                      },
+                    }}
+                  />
+                </LocalizationProvider>
+              </FieldBox>
+
+              {/* Time */}
+              <FieldBox label="Time" sx={{ flexShrink: 0 }}>
+                <Box sx={{ display: "flex", alignItems: "center", border: "1px solid #d1d5db", borderRadius: "8px", overflow: "hidden", height: "40px" }}>
+                  <AccessTime sx={{ fontSize: "16px", color: "#9aa3ae", ml: "10px", mr: "4px", flexShrink: 0 }} />
+                  <input
+                    value={`${timeHours}:${timeMins}`}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(":");
+                      if (h !== undefined) setTimeHours(h.slice(0, 2));
+                      if (m !== undefined) setTimeMins(m.slice(0, 2));
+                    }}
+                    style={{ border: "none", outline: "none", width: "60px", fontFamily: "Inter", fontSize: "13px", color: "#09121f", background: "transparent" }}
+                  />
+                  {["AM", "PM"].map((p) => (
+                    <Box
+                      key={p}
+                      onClick={() => setAmPm(p)}
+                      sx={{
+                        px: "10px", height: "100%", display: "flex", alignItems: "center",
+                        cursor: "pointer", fontFamily: "Inter", fontSize: "12px", fontWeight: 600,
+                        backgroundColor: amPm === p ? "#2262ef" : "transparent",
+                        color: amPm === p ? "#fff" : "#6b7280",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {p}
+                    </Box>
+                  ))}
+                </Box>
+              </FieldBox>
+            </Box>
+
+            {/* Type of visit */}
+            <Box sx={{ mb: "16px" }}>
+              <Label>Type of visit</Label>
+              <RadioGroup row value={visitType} onChange={(e) => setVisitType(e.target.value)} sx={{ gap: "8px" }}>
+                {["Treatment", "Recare"].map((v) => (
+                  <FormControlLabel
+                    key={v}
+                    value={v.toLowerCase()}
+                    control={<Radio size="small" sx={{ p: "4px", color: "#d1d5db", "&.Mui-checked": { color: "#2262ef" } }} />}
+                    label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>{v}</Typography>}
+                  />
+                ))}
               </RadioGroup>
             </Box>
 
-            {/* Procedure Tags
-                - Click a tag to select/deselect it (highlighted with a border)
-                - Click "+Add Procedure" to create a new custom tag */}
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5, alignItems: "center" }}>
-              {procedureTags.map((item) => {
-                const isSelected = selectedTagLabels.has(item.label);
-                return (
-                  <Chip
-                    key={item.label}
-                    label={item.label}
-                    onClick={() => handleTagClick(item.label)}
-                    sx={{
-                      bgcolor: item.color,
-                      color: item.font || "black",
-                      borderRadius: "4px",
-                      height: 24,
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      // Highlight selected tags with a dark border + slight shadow
-                      border: isSelected ? "2px solid #1e293b" : "2px solid transparent",
-                      boxShadow: isSelected ? "0 0 0 2px rgba(30,41,59,0.25)" : "none",
-                      transition: "border 0.1s, box-shadow 0.1s",
-                      "&:hover": { opacity: 0.85 },
-                    }}
-                  />
-                );
-              })}
+            {/* Quick add procedure */}
+            <Box sx={{ mb: "20px" }}>
+              <Label>Quick add procedure</Label>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                {DEFAULT_PROCEDURE_TAGS.map((tag, idx) => {
+                  const key = `${tag.label}-${idx}`;
+                  const isSelected = selectedTagLabels.has(key);
+                  return (
+                    <Chip
+                      key={key}
+                      label={tag.label}
+                      onClick={() => handleTagClick(tag.label, idx)}
+                      sx={{
+                        backgroundColor: tag.color,
+                        color: tag.font || "#111",
+                        borderRadius: "20px",
+                        height: "26px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        fontFamily: "Inter",
+                        cursor: "pointer",
+                        border: isSelected ? "2px solid #09121f" : "2px solid transparent",
+                        "& .MuiChip-label": { px: "8px" },
+                        "&:hover": { opacity: 0.85 },
+                      }}
+                    />
+                  );
+                })}
 
-              {/* Inline "Add Procedure" autocomplete */}
-              {addingProcedure ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <Autocomplete
-                    autoFocus
-                    open={procedureInputValue.length > 0}
-                    options={DUMMY_PROCEDURE_OPTIONS}
-                    getOptionLabel={(o) => `${o.code} – ${o.treatment}`}
-                    inputValue={procedureInputValue}
-                    onInputChange={(_, val) => setProcedureInputValue(val)}
-                    onChange={(_, val) => handleSelectProcedure(val)}
-                    filterOptions={(opts, { inputValue }) => {
-                      const q = inputValue.toLowerCase();
-                      return opts.filter(
-                        (o) =>
-                          o.code.toLowerCase().includes(q) ||
-                          o.treatment.toLowerCase().includes(q),
-                      );
-                    }}
-                    renderOption={(props, option) => (
-                      <Box
-                        component="li"
-                        {...props}
-                        key={option.code}
-                        sx={{ display: "flex", alignItems: "center", gap: 1, py: "4px !important" }}
-                      >
-                        <Chip
-                          label={option.tag.label}
-                          size="small"
-                          sx={{
-                            bgcolor: option.tag.color,
-                            color: option.tag.font || "black",
-                            fontSize: "9px",
-                            height: 18,
-                            borderRadius: "3px",
-                            fontWeight: 700,
-                          }}
+                {addingProcedure ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Autocomplete
+                      autoFocus
+                      open={procedureInput.length > 0}
+                      options={DUMMY_PROCEDURE_OPTIONS}
+                      getOptionLabel={(o) => `${o.code} – ${o.treatment}`}
+                      inputValue={procedureInput}
+                      onInputChange={(_, v) => setProcedureInput(v)}
+                      onChange={(_, v) => handleSelectProcedure(v)}
+                      filterOptions={(opts, { inputValue }) => {
+                        const q = inputValue.toLowerCase();
+                        return opts.filter((o) => o.code.toLowerCase().includes(q) || o.treatment.toLowerCase().includes(q));
+                      }}
+                      renderOption={(props, o) => (
+                        <Box component="li" {...props} key={o.code} sx={{ display: "flex", alignItems: "center", gap: "8px", py: "4px !important" }}>
+                          <Chip label={o.tag.label} size="small" sx={{ backgroundColor: o.tag.color, color: o.tag.font || "#111", fontSize: "9px", height: "16px", borderRadius: "4px", fontWeight: 700, "& .MuiChip-label": { px: "6px" } }} />
+                          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600 }}>{o.code}</Typography>
+                          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#6b7280" }}>{o.treatment}</Typography>
+                          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae", ml: "auto" }}>{o.charge}</Typography>
+                        </Box>
+                      )}
+                      sx={{ width: 260 }}
+                      renderInput={(params) => (
+                        <TextField {...params} size="small" autoFocus placeholder="Search by code or name…"
+                          onKeyDown={(e) => { if (e.key === "Escape") { setProcedureInput(""); setAddingProcedure(false); } }}
+                          sx={{ "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "11px" } }}
                         />
-                        <Typography sx={{ fontSize: "11px", fontWeight: 600 }}>
-                          {option.code}
-                        </Typography>
-                        <Typography sx={{ fontSize: "11px", color: "#475569" }}>
-                          {option.treatment}
-                        </Typography>
-                        <Typography sx={{ fontSize: "11px", color: "#94a3b8", ml: "auto" }}>
-                          {option.charge}
-                        </Typography>
-                      </Box>
-                    )}
-                    sx={{ width: 280 }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        size="small"
-                        autoFocus
-                        placeholder="Search by code or name…"
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            setProcedureInputValue("");
-                            setAddingProcedure(false);
-                          }
-                        }}
-                        sx={{ "& .MuiInputBase-input": { fontSize: "11px", py: "4px !important" } }}
-                      />
-                    )}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => { setProcedureInputValue(""); setAddingProcedure(false); }}
-                    sx={{ p: 0.25 }}
+                      )}
+                    />
+                    <IconButton size="small" onClick={() => { setProcedureInput(""); setAddingProcedure(false); }} sx={{ p: "2px" }}>
+                      <Close sx={{ fontSize: "14px", color: "#9aa3ae" }} />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Box
+                    onClick={() => setAddingProcedure(true)}
+                    sx={{ display: "flex", alignItems: "center", gap: "4px", border: "1.5px dashed #d1d5db", borderRadius: "20px", px: "10px", height: "26px", cursor: "pointer", "&:hover": { borderColor: "#2262ef" } }}
                   >
-                    <CloseIcon sx={{ fontSize: 14, color: "#94a3b8" }} />
-                  </IconButton>
-                </Box>
-              ) : (
-                <Typography
-                  onClick={() => setAddingProcedure(true)}
-                  sx={{
-                    color: "#64748b",
-                    fontSize: "12px",
-                    ml: 0.5,
-                    cursor: "pointer",
-                    "&:hover": { textDecoration: "underline", color: "#1976d2" },
-                  }}
-                >
-                  + Add Procedure
-                </Typography>
-              )}
-            </Box>
-
-            {/* Scheduled Procedures Table Header */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 1,
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", fontWeight: 600, color: "#4a6da7" }}>
-                Scheduled Procedures:{" "}
-                <span style={{ fontWeight: 400, color: "#64748b", fontSize: "12px" }}>
-                  (show all procedures)
-                </span>
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Button
-                  sx={{
-                    bgcolor: "#e74c3c",
-                    color: "white",
-                    textTransform: "none",
-                    fontSize: "11px",
-                    height: 28,
-                    px: 2,
-                  }}
-                >
-                  Compute next visit
-                </Button>
-                <Button
-                  sx={{
-                    bgcolor: "#d4a373",
-                    color: "white",
-                    textTransform: "none",
-                    fontSize: "11px",
-                    height: 28,
-                    px: 2,
-                  }}
-                >
-                  Re-estimate
-                </Button>
+                    <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 500, color: "#6b7280" }}>+ Add Procedure</Typography>
+                  </Box>
+                )}
               </Box>
             </Box>
 
-            {/* Procedures Table */}
-            <Table size="small" sx={{ border: "1px solid #e2e8f0" }}>
-              <TableHead sx={{ bgcolor: "#f8fafc" }}>
-                <TableRow>
-                  <TableCell padding="checkbox" sx={{ borderBottom: "2px solid #cbd5e1" }}>
-                    <Checkbox size="small" checked />
-                  </TableCell>
-                  {["Procedure", "Site", "Treatment", "Provider", "Pt Part", "Total Charge"].map(
-                    (head) => (
-                      <TableCell
-                        key={head}
-                        sx={{
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#475569",
-                          borderBottom: "2px solid #cbd5e1",
-                        }}
-                      >
-                        {head}
+            {/* New procedures table */}
+            <Box sx={{ mb: "16px" }}>
+              <Label sx={{ mb: "8px" }}>New procedures</Label>
+              <Table size="small" sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "#f8fafc" }}>
+                    <TableCell padding="checkbox" sx={{ borderBottom: "1px solid #e0e5eb", width: "36px" }}>
+                      <Checkbox size="small" />
+                    </TableCell>
+                    {[
+                      { label: "PROCEDURE", width: "90px"  },
+                      { label: "SITE",      width: "120px" },
+                      { label: "TREATMENT", width: "38%"   },
+                      { label: "PROVIDER",  width: "25%"   },
+                    ].map(({ label, width }) => (
+                      <TableCell key={label} sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#5c646f", borderBottom: "1px solid #e0e5eb", letterSpacing: "0.5px", py: "8px", width }}>
+                        {label}
                       </TableCell>
-                    ),
-                  )}
-                  <TableCell sx={{ borderBottom: "2px solid #cbd5e1" }} />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {procedures.map((row) => (
-                  <TableRow key={row.id} sx={{ "&:hover": { bgcolor: "#f1f5f9" } }}>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        size="small"
-                        checked={row.checked}
-                        onChange={() => handleProcedureCheck(row.id)}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: "12px" }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                        {row.tag && (
-                          <Chip
-                            label={row.tag.label}
-                            size="small"
-                            sx={{
-                              bgcolor: row.tag.color,
-                              color: row.tag.font || "black",
-                              fontSize: "9px",
-                              height: 18,
-                              borderRadius: "3px",
-                              fontWeight: 700,
-                            }}
-                          />
-                        )}
-                        {row.code}
-                      </Box>
-                    </TableCell>
-                    <TableCell />
-                    <TableCell>
-                      <Select
-                        size="small"
-                        value={row.treatment}
-                        sx={{ height: 26, fontSize: "11px", width: 140, bgcolor: "white" }}
-                      >
-                        <MenuItem value={row.treatment}>{row.treatment}</MenuItem>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {/* Provider dropdown uses real providers from props */}
-                      <Select
-                        size="small"
-                        value={row.provider}
-                        onChange={(e) => handleProcedureProviderChange(row.id, e.target.value)}
-                        sx={{ height: 26, fontSize: "11px", minWidth: 120, bgcolor: "white" }}
-                        displayEmpty
-                      >
-                        <MenuItem value="" sx={{ fontSize: "11px" }}>
-                          — Select —
-                        </MenuItem>
-                        {providers.map((p) => (
-                          <MenuItem
-                            key={p._id || p.id}
-                            value={String(p._id || p.id)}
-                            sx={{ fontSize: "11px" }}
-                          >
-                            {providerLabel(p)}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: "12px" }}>{row.charge}</TableCell>
-                    <TableCell sx={{ fontSize: "12px", fontWeight: 600 }}>{row.charge}</TableCell>
-                    <TableCell sx={{ width: 60 }}>
-                      <IconButton size="small" onClick={() => handleDeleteProcedure(row.id)}>
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
+                    ))}
+                    <TableCell sx={{ borderBottom: "1px solid #e0e5eb", width: "36px" }} />
                   </TableRow>
-                ))}
-                {/* Totals row */}
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    align="right"
-                    sx={{ fontSize: "12px", fontWeight: 700, py: 0.5, pr: 2 }}
-                  >
-                    $
-                    {procedures
-                      .reduce(
-                        (sum, p) => sum + parseFloat(p.charge?.replace("$", "") || "0"),
-                        0,
-                      )
-                      .toFixed(2)}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: "12px", fontWeight: 700, py: 0.5 }}>
-                    $
-                    {procedures
-                      .reduce(
-                        (sum, p) => sum + parseFloat(p.charge?.replace("$", "") || "0"),
-                        0,
-                      )
-                      .toFixed(2)}
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableBody>
-            </Table>
-
-            {/* Treatment Plan Procedures */}
-            <Typography sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mt: 2, mb: 1 }}>
-              Treatment Plan Procedures:
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1, mb: 0.5 }}>
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel sx={FONT_XS}>Appointment Type</InputLabel>
-                <Select
-                  label="Appointment Type"
-                  value={selectedAppointmentTypeId}
-                  onChange={(e) => setSelectedAppointmentTypeId(e.target.value)}
-                  sx={FONT_XS}
-                >
-                  <MenuItem value="" sx={FONT_XS}>— None —</MenuItem>
-                  {appointmentTypes.map((t) => (
-                    <MenuItem key={t._id || t.id} value={String(t._id || t.id)} sx={FONT_XS}>
-                      {t.name}
-                    </MenuItem>
+                </TableHead>
+                <TableBody>
+                  {procedures.map((row) => (
+                    <TableRow key={row.id} sx={{ "&:hover": { backgroundColor: "#f8fafc" } }}>
+                      <TableCell padding="checkbox">
+                        <Checkbox size="small" checked={row.checked} onChange={() => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, checked: !p.checked } : p))} sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#2262ef" } }} />
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", whiteSpace: "nowrap" }}>
+                        {row.code}
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          size="small"
+                          value={row.site || ""}
+                          onChange={(e) => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, site: e.target.value } : p))}
+                          placeholder="—"
+                          sx={{ width: "100%", "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "4px", px: "6px" }, "& .MuiOutlinedInput-root": { borderRadius: "4px" } }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          size="small"
+                          value={row.treatment}
+                          sx={{ fontFamily: "Inter", fontSize: "12px", height: "28px", width: "100%", "& .MuiSelect-select": { py: "4px" } }}
+                        >
+                          <MenuItem value={row.treatment} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{row.treatment}</MenuItem>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          size="small"
+                          displayEmpty
+                          value={row.provider}
+                          onChange={(e) => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, provider: e.target.value } : p))}
+                          sx={{ fontFamily: "Inter", fontSize: "12px", height: "28px", width: "100%", "& .MuiSelect-select": { py: "4px" } }}
+                        >
+                          <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
+                          {providers.map((p) => (
+                            <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
+                              {providerLabel(p)}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton size="small" onClick={() => setProcedures((prev) => prev.filter((p) => p.id !== row.id))} sx={{ color: "#ef4444" }}>
+                          <DeleteOutline sx={{ fontSize: "16px" }} />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Select>
-              </FormControl>
+                  {procedures.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} sx={{ textAlign: "center", py: "20px" }}>
+                        <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>
+                          No procedures added. Select a quick tag above.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </Box>
-            <Button
-              sx={{ color: "#1976d2", textTransform: "none", ...FONT_XS, p: 0, minHeight: 0 }}
-            >
+
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px" }}>
+              Patient doesn't have a recare plan.{" "}
+              <Box component="span" sx={{ color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
+              {" "}or{" "}
+              <Box component="span" sx={{ color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
+            </Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
               + add procedures from another visit
-            </Button>
+            </Typography>
           </Box>
 
-          {/* ── RIGHT PANEL ────────────────────────────────────────────── */}
-          <Box
-            sx={{
-              width: 320,
-              borderLeft: "1px solid #e2e8f0",
-              p: 2,
-              display: "flex",
-              flexDirection: "column",
-              gap: 1.5,
-              overflowY: "auto",
-            }}
-          >
-            {/* Appointment Status — values match backend API enum */}
-            <FormControl size="small" fullWidth>
-              <InputLabel sx={FONT_XS}>Appointment Status</InputLabel>
+          {/* ── RIGHT PANEL ── */}
+          <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "18px" }}>
+
+            {/* Appointment status */}
+            <FieldBox label="Appointment status">
               <Select
-                value={appointmentStatus}
-                onChange={(e) => setAppointmentStatus(e.target.value)}
-                label="Appointment Status"
-                sx={FONT_XS}
+                size="small" fullWidth
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }}
               >
-                {STATUS_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value} sx={FONT_XS}>
-                    {opt.label}
-                  </MenuItem>
+                {STATUS_OPTIONS.map((o) => (
+                  <MenuItem key={o.value} value={o.value} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{o.label}</MenuItem>
                 ))}
               </Select>
-            </FormControl>
+            </FieldBox>
 
-            {/* Operatory / Room — populated from rooms API */}
-            <FormControl size="small" fullWidth>
-              <InputLabel sx={FONT_XS}>Operatory / Room</InputLabel>
-              <Select
-                value={selectedRoomId}
-                onChange={(e) => setSelectedRoomId(e.target.value)}
-                label="Operatory / Room"
-                sx={FONT_XS}
-              >
-                <MenuItem value="" sx={FONT_XS}>— Select —</MenuItem>
-                {availableRooms.map((r) => (
-                  <MenuItem key={r._id || r.id} value={String(r._id || r.id)} sx={FONT_XS}>
-                    {r.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Appointment Duration */}
+            {/* Appt duration */}
             <Box>
-              <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
-                Appt Duration:
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <TextField
-                  type="number"
-                  size="small"
-                  value={durationMins}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setDurationMins(v === "" ? "" : Number(v) || 0);
-                  }}
-                  onBlur={(e) => {
-                    const v = Number(e.target.value);
-                    if (!v || v < 5) setDurationMins(5);
-                  }}
-                  sx={{ width: 80, "& .MuiInputBase-input": FONT_XS }}
-                  inputProps={{ min: 5, step: 5 }}
-                />
-                <Typography component="span" sx={{ ...FONT_XS, color: "#64748b" }}>
-                  mins
-                </Typography>
+              <Label>Appt duration</Label>
+              <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {/* Number input */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <TextField
+                    type="number"
+                    size="small"
+                    value={durationMins}
+                    onChange={(e) => setDurationMins(Number(e.target.value) || 0)}
+                    sx={{ width: "64px", "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "6px", textAlign: "center" }, "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                    inputProps={{ min: 5, step: 5 }}
+                  />
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280" }}>mins</Typography>
+                </Box>
+                {/* Quick preset pills */}
+                <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <Box sx={{ display: "flex", gap: "4px" }}>
+                    {[30, 45, 60].map((v) => (
+                      <Box key={v} onClick={() => setDurationMins(v)} sx={{ px: "10px", py: "3px", borderRadius: "6px", cursor: "pointer", fontFamily: "Inter", fontSize: "11px", fontWeight: 600, backgroundColor: durationMins === v ? "#2262ef" : "#f1f5f9", color: durationMins === v ? "#fff" : "#6b7280", transition: "all 0.15s", "&:hover": { backgroundColor: durationMins === v ? "#1a50cc" : "#e2e8f0" } }}>
+                        {v}m
+                      </Box>
+                    ))}
+                  </Box>
+                  <Box sx={{ display: "flex", gap: "4px" }}>
+                    {[90, 120].map((v) => (
+                      <Box key={v} onClick={() => setDurationMins(v)} sx={{ px: "10px", py: "3px", borderRadius: "6px", cursor: "pointer", fontFamily: "Inter", fontSize: "11px", fontWeight: 600, backgroundColor: durationMins === v ? "#2262ef" : "#f1f5f9", color: durationMins === v ? "#fff" : "#6b7280", transition: "all 0.15s", "&:hover": { backgroundColor: durationMins === v ? "#1a50cc" : "#e2e8f0" } }}>
+                        {v}m
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
               </Box>
             </Box>
 
-            {/* Provider — populated from providers API */}
+            {/* Provider / Assistant times */}
             <Box>
-              <Typography sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 0.5 }}>
-                Provider
+              <Label>Provider / Assistant times</Label>
+              <Box sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 0, backgroundColor: "rgba(241, 246, 252, 0.60)", px: "10px", py: "6px", borderBottom: "1px solid #e0e5eb" }}>
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.5px" }}>PROVIDER</Typography>
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.5px" }}>TIME</Typography>
+                </Box>
+                {providerRows.map((row) => (
+                  <Box key={row.id} sx={{ display: "flex", alignItems: "center", gap: "6px", px: "8px", py: "8px", borderBottom: "1px solid #f0f2f5", "&:last-child": { borderBottom: "none" } }}>
+                    <Select
+                      size="small" displayEmpty
+                      value={row.providerId}
+                      onChange={(e) => setProviderRows((prev) => prev.map((r) => r.id === row.id ? { ...r, providerId: e.target.value } : r))}
+                      sx={{ flex: 1, fontFamily: "Inter", fontSize: "12px", "& .MuiSelect-select": { py: "5px" } }}
+                    >
+                      <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
+                      {providers.map((p) => (
+                        <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{providerLabel(p)}</MenuItem>
+                      ))}
+                    </Select>
+                    <TextField
+                      size="small" type="number"
+                      value={row.time}
+                      onChange={(e) => setProviderRows((prev) => prev.map((r) => r.id === row.id ? { ...r, time: Number(e.target.value) } : r))}
+                      sx={{ width: "48px", "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "5px", textAlign: "center" } }}
+                    />
+                    <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>m</Typography>
+                    <IconButton size="small" onClick={() => setProviderRows((prev) => prev.filter((r) => r.id !== row.id))} sx={{ color: "#ef4444", p: "2px" }}>
+                      <DeleteOutline sx={{ fontSize: "14px" }} />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+              <Typography
+                onClick={() => setProviderRows((prev) => [...prev, { id: Date.now(), providerId: "", time: 60 }])}
+                sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", mt: "6px", "&:hover": { textDecoration: "underline" } }}
+              >
+                + Add provider / assistant
               </Typography>
-              <FormControl size="small" fullWidth>
-                <Select
-                  value={selectedProviderId}
-                  onChange={(e) => setSelectedProviderId(e.target.value)}
-                  displayEmpty
-                  sx={FONT_XS}
-                >
-                  <MenuItem value="" sx={FONT_XS}>— Select Provider —</MenuItem>
-                  {providers.map((p) => (
-                    <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={FONT_XS}>
-                      {providerLabel(p)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Box>
 
-            {/* Provider's Assistant — second provider slot */}
-            <Box>
-              <Typography sx={{ ...FONT_XS, fontWeight: 600, color: "#334155", mb: 0.5 }}>
-                Provider's Assistant
-              </Typography>
-              <FormControl size="small" fullWidth>
-                <Select
-                  value={selectedAssistantId}
-                  onChange={(e) => setSelectedAssistantId(e.target.value)}
-                  displayEmpty
-                  sx={FONT_XS}
-                >
-                  <MenuItem value="" sx={FONT_XS}>— Select Assistant —</MenuItem>
-                  {providers.map((p) => (
-                    <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={FONT_XS}>
-                      {providerLabel(p)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+            {/* Patient's preferred dentist */}
+            <FieldBox label="Patient's preferred dentist">
+              <Select
+                size="small" fullWidth displayEmpty
+                value={preferredDentist}
+                onChange={(e) => setPreferredDentist(e.target.value)}
+                sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: preferredDentist ? "#09121f" : "#9aa3ae" }}
+              >
+                <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select dentist</MenuItem>
+                {providers.map((p) => (
+                  <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{providerLabel(p)}</MenuItem>
+                ))}
+              </Select>
+            </FieldBox>
 
-            {/* Date / Time */}
-            <Box>
-              <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>
-                Date &amp; Time
-              </Typography>
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <DateTimePicker
-                  value={dateTime}
-                  onChange={(val) => val && setDateTime(val)}
-                  shouldDisableTime={shouldDisableTime}
-                  slotProps={{
-                    textField: {
-                      size: "small",
-                      fullWidth: true,
-                      sx: { "& .MuiInputBase-input": FONT_XS },
-                    },
-                  }}
-                />
-              </LocalizationProvider>
-            </Box>
+            {/* Patient's preferred hygienist */}
+            <FieldBox label="Patient's preferred hygienist">
+              <Select
+                size="small" fullWidth displayEmpty
+                value={preferredHygienist}
+                onChange={(e) => setPreferredHygienist(e.target.value)}
+                sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: preferredHygienist ? "#09121f" : "#9aa3ae" }}
+              >
+                <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select hygienist</MenuItem>
+                {providers.map((p) => (
+                  <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{providerLabel(p)}</MenuItem>
+                ))}
+              </Select>
+            </FieldBox>
 
             {/* Notes */}
             <Box>
-              <Typography sx={{ ...FONT_XS, color: "#475569", mb: 0.5 }}>Notes</Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: "4px" }}>
+                <Label sx={{ mb: 0 }}>Notes</Label>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
+                  Show system notes
+                </Typography>
+              </Box>
               <TextField
-                size="small"
-                fullWidth
-                placeholder="Add note..."
+                size="small" fullWidth multiline rows={3}
+                placeholder="Add note / tags..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                multiline
-                rows={2}
-                sx={{ "& .MuiInputBase-input": FONT_XS }}
+                sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
               />
             </Box>
+
+            {/* Tags */}
+            <Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mb: "8px" }}>
+                <LocalOffer sx={{ fontSize: "14px", color: "#6b7280" }} />
+                <Label sx={{ mb: 0 }}>Tags</Label>
+              </Box>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                {COLOR_TAGS.map((color) => {
+                  const isSelected = selectedColorTags.has(color);
+                  return (
+                    <Box
+                      key={color}
+                      onClick={() => setSelectedColorTags((prev) => {
+                        const n = new Set(prev);
+                        isSelected ? n.delete(color) : n.add(color);
+                        return n;
+                      })}
+                      sx={{
+                        width: "28px", height: "28px",
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        border: isSelected ? "2px solid #09121f" : "2px solid transparent",
+                        transition: "border 0.15s",
+                      }}
+                    >
+                      {isSelected && (
+                        <Box sx={{ width: "10px", height: "6px", border: "2px solid #fff", borderTop: "none", borderRight: "none", transform: "rotate(-45deg)", mt: "-2px" }} />
+                      )}
+                    </Box>
+                  );
+                })}
+                <Box sx={{ width: "28px", height: "28px", borderRadius: "50%", border: "1.5px solid #d1d5db", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { borderColor: "#9ca3af" } }}>
+                  <Add sx={{ fontSize: "14px", color: "#9aa3ae" }} />
+                </Box>
+              </Box>
+            </Box>
+
           </Box>
         </Box>
 
-        {/* Footer */}
-        <Box sx={{ p: 1.5, borderTop: "1px solid #e2e8f0", bgcolor: "#f8fafc" }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography sx={{ fontSize: "12px", color: "#475569" }}>
-                Send a reminder to "save the date" now:
-              </Typography>
-              <Button
-                startIcon={<MailOutline />}
-                sx={{ fontSize: "11px", textTransform: "none", color: "#4a6da7" }}
-              >
-                Via Email
-              </Button>
-              <Button
-                startIcon={<ChatBubbleOutline />}
-                sx={{ fontSize: "11px", textTransform: "none", color: "#4a6da7" }}
-              >
-                Via Text Message
-              </Button>
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleSubmit}
-                disabled={loading || !patient}
-                sx={{
-                  textTransform: "none",
-                  ...FONT_SM,
-                  bgcolor: "#e07c24",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#c96b1a" },
-                }}
-              >
-                {loading ? "Saving..." : "Add"}
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={onCancel}
-                sx={{
-                  textTransform: "none",
-                  ...FONT_SM,
-                  borderColor: "#94a3b8",
-                  color: "#475569",
-                }}
-              >
-                Cancel
-              </Button>
-            </Box>
+        {/* ── FOOTER ── */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: "20px", py: "12px", borderTop: "1px solid #e0e5eb", flexShrink: 0 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Person sx={{ fontSize: "16px", color: "#9aa3ae" }} />
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280" }}>
+              Booking for{" "}
+              <Box component="span" sx={{ fontWeight: 700, color: "#09121f" }}>
+                {patientDisplayName || "—"}
+              </Box>
+              {patient && (
+                <Box component="span" sx={{ color: "#9aa3ae" }}> · pt #{patientId || "—"}</Box>
+              )}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant="outlined"
+              onClick={onCancel}
+              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, textTransform: "none", borderRadius: "8px", borderColor: "#e0e5eb", color: "#374151", px: "16px", py: "7px", "&:hover": { borderColor: "#d1d5db", backgroundColor: "#f9fafb" } }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outlined"
+              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, textTransform: "none", borderRadius: "8px", borderColor: "#e0e5eb", color: "#374151", px: "16px", py: "7px", "&:hover": { borderColor: "#d1d5db", backgroundColor: "#f9fafb" } }}
+            >
+              Save as draft
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={loading || !patient}
+              sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 600, textTransform: "none", borderRadius: "8px", backgroundColor: "#2262ef", color: "#fff", px: "20px", py: "7px", boxShadow: "none", "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" }, "&.Mui-disabled": { backgroundColor: "#9aa3ae", color: "#fff" } }}
+            >
+              {loading ? "Saving…" : "Add appointment"}
+            </Button>
           </Box>
         </Box>
+
       </Box>
     </Dialog>
   );
