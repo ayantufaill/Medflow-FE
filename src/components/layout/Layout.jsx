@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box } from '@mui/material';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import PatientSlider from '../patient-slider/PatientSlider';
 
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 const SIDEBAR_EXPANDED_WIDTH = 280;
@@ -9,6 +10,7 @@ const SIDEBAR_EXPANDED_WIDTH = 280;
 const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sliderOpen, setSliderOpen] = useState(false);
 
   const handleMobileDrawerToggle = () => setMobileOpen((prev) => !prev);
   const handleDesktopSidebarToggle = () => setSidebarOpen((prev) => !prev);
@@ -20,7 +22,9 @@ const Layout = ({ children }) => {
       <Header
         onMobileMenuClick={handleMobileDrawerToggle}
         onDesktopMenuClick={handleDesktopSidebarToggle}
+        onOpenPatientSlider={() => setSliderOpen(true)}
       />
+      <PatientSlider open={sliderOpen} onClose={() => setSliderOpen(false)} />
 
       <Box sx={{ display: 'flex', flex: 1 }}>
         <Sidebar
