@@ -1,7 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDebounce } from 'use-debounce';
 import { claimService } from '../../services/claim.service';
+import { insuranceCompanyService } from '../../services/insurance.service';
+import { patientService } from '../../services/patient.service';
 import ClaimAttachmentsDialog from '../../components/claims/attachments/ClaimAttachmentsDialog';
 import ClaimPrintPreviewDialog from '../../components/claims/ClaimPrintPreviewDialog';
 import {
@@ -35,6 +38,7 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -58,10 +62,8 @@ import {
 // Claim type options
 const CLAIM_TYPES = [
   { value: 'all', label: 'All' },
-  { value: 'eclaim_primary', label: 'E-claim Primary' },
-  { value: 'eclaim_secondary', label: 'E-claim Secondary' },
-  { value: 'paper_primary', label: 'Paper Primary' },
-  { value: 'manual_primary', label: 'Manual Primary' },
+  { value: 'electronic', label: 'Electronic' },
+  { value: 'manual', label: 'Manual' },
 ];
 
 // Carrier options
@@ -657,6 +659,10 @@ const INITIAL_CLAIMS = [
     sentDate: '05/15/2026',
     printedDate: '—',
     subscriber: 'Sean Carpenter',
+    subscriberFirstName: 'Sean',
+    subscriberLastName: 'Carpenter',
+    subscriberNumber: 'AET-8834210',
+    subscriberDob: '03/22/1982',
     carrier: 'Aetna Dental Plans',
     planName: 'Aetna PPO (083321)',
     status: 'accepted',
@@ -682,6 +688,10 @@ const INITIAL_CLAIMS = [
     sentDate: '05/04/2026',
     printedDate: '—',
     subscriber: 'Amy Guy',
+    subscriberFirstName: 'Amy',
+    subscriberLastName: 'Guy',
+    subscriberNumber: 'BCBS-1209840',
+    subscriberDob: '11/04/1991',
     carrier: 'Blue Cross',
     planName: 'BCBS Choice (120984)',
     status: 'inProcess',
@@ -1077,7 +1087,25 @@ const ClaimsListPage = () => {
   const [searchPatient, setSearchPatient] = useState('');
   const [searchClaimOrDate, setSearchClaimOrDate] = useState('');
   const [searchReportContent, setSearchReportContent] = useState('');
+  const [convertMenuAnchor, setConvertMenuAnchor] = useState(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [showHidden, setShowHidden] = useState(false);
+
+  // Debounced search values (prevents excessive API calls on every keystroke)
+  const [debouncedSearchPatient] = useDebounce(searchPatient, 400);
+  const [debouncedSearchClaimOrDate] = useDebounce(searchClaimOrDate, 400);
+
+  // Patient Autocomplete State
+  const [patientOptions, setPatientOptions] = useState([]);
+  const [patientSearchLoading, setPatientSearchLoading] = useState(false);
+
+  // Void & Recreate Dialog State
+  const [confirmVoidDialog, setConfirmVoidDialog] = useState(false);
+
+  // Subscriber Info Pop-up State
+  const [subscriberDialog, setSubscriberDialog] = useState({ open: false, data: null });
+  // Carrier Info Pop-up State
+  const [carrierDialog, setCarrierDialog] = useState({ open: false, data: null, loading: false });
 
   // Clearing house message expansion state
   const [expandAllMessages, setExpandAllMessages] = useState(false);
@@ -1093,6 +1121,27 @@ const ClaimsListPage = () => {
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedClaims, setSelectedClaims] = useState({});
+
+  // Fetch patients for autocomplete
+  useEffect(() => {
+    let active = true;
+    if (debouncedSearchPatient) {
+      setPatientSearchLoading(true);
+      patientService.getAllPatients(1, 10, debouncedSearchPatient)
+        .then(res => {
+          if (active) {
+            setPatientOptions(res.patients || res || []);
+            setPatientSearchLoading(false);
+          }
+        })
+        .catch(() => {
+          if (active) setPatientSearchLoading(false);
+        });
+    } else {
+      setPatientOptions([]);
+    }
+    return () => { active = false; };
+  }, [debouncedSearchPatient]);
 
   // Fetch data from backend based on the active tab and filters
   useEffect(() => {
@@ -1125,7 +1174,14 @@ const ClaimsListPage = () => {
             patientCode: c.patient ? `(${c.patient.patientCode})` : '',
             patientDob: c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : '',
             carrier: c.insuranceCompany?.name || 'No Carrier',
-            claimType: c.insuranceType ? `${c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)}` : 'Primary',
+            insuranceCompanyId: c.insuranceCompanyId?._id || c.insuranceCompanyId?.id || c.insuranceCompanyId || c.insuranceCompany?._id || c.insuranceCompany?.id || null,
+            subscriber: c.subscriberName || (c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : ''),
+            subscriberFirstName: c.subscriberFirstName || c.patient?.firstName || '',
+            subscriberLastName: c.subscriberLastName || c.patient?.lastName || '',
+            subscriberNumber: c.subscriberNumber || c.policyNumber || '',
+            subscriberDob: c.subscriberDob || (c.patient?.dateOfBirth ? new Date(c.patient.dateOfBirth).toLocaleDateString() : ''),
+            claimFormat: c.claimFormat || 'Electronic',
+            claimType: `${c.claimFormat === 'Manual' ? 'Manual' : 'E-claim'} ${c.insuranceType ? (c.insuranceType.charAt(0).toUpperCase() + c.insuranceType.slice(1)) : 'Primary'}`,
             claimNumber: c.claimNumber || c.claimCode || `#${c.id}`,
             createdDate: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
             sentDate: c.submittedDate ? new Date(c.submittedDate).toLocaleDateString() : (c.submissionDate ? new Date(c.submissionDate).toLocaleDateString() : ''),
@@ -1139,10 +1195,11 @@ const ClaimsListPage = () => {
           // Claims (tab specific)
           let fetchedClaims = [];
           if (activeTab >= 0 && activeTab <= 3) {
-            // Fetch all claims for tabs 0-3; filter by status client-side
+            const tabMap = { 0: 'unsent', 1: 'errored', 2: 'rejected', 3: 'history' };
             const filterParams = { 
               page: 1, 
               limit: 500,
+              tab: tabMap[activeTab],
               ...(claimType !== 'all' && { claimFormat: claimType }),
               ...(carrier !== 'all' && { carrierName: carrier }),
               ...(claimAttachment !== 'all' && { hasAttachment: claimAttachment === 'with_attachments' ? 'true' : 'false' }),
@@ -1154,7 +1211,7 @@ const ClaimsListPage = () => {
             const data = await claimService.getAllClaims(filterParams);
             fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'claims'));
           } else if (activeTab === 4) {
-            const data = await claimService.getOutstandingClaims({ limit: 100, dateRange: groupDateRange, groupBy: groupByOption });
+            const data = await claimService.getOutstandingClaims({ limit: 500, dateRange: groupDateRange, groupBy: groupByOption, search: debouncedSearchClaimOrDate || debouncedSearchPatient });
             fetchedClaims = (data.claims || []).map(c => mapClaimFields(c, 'outstanding'));
           } else if (activeTab === 5) {
             const data = await claimService.getPredeterminations({ limit: 100 });
@@ -1186,8 +1243,8 @@ const ClaimsListPage = () => {
     carrier,
     claimAttachment,
     claimStatus,
-    searchPatient,
-    searchClaimOrDate,
+    debouncedSearchPatient,
+    debouncedSearchClaimOrDate,
     showHidden
   ]);
 
@@ -1198,6 +1255,8 @@ const ClaimsListPage = () => {
   const [notePopover, setNotePopover] = useState({
     anchorEl: null,
     text: '',
+    claimId: null,
+    loading: false,
   });
 
   // Modal Dialogs for Actions
@@ -1215,10 +1274,12 @@ const ClaimsListPage = () => {
   }, [claims]);
 
   // Handle Note Popover Open
-  const handleNoteOpen = (event, text) => {
+  const handleNoteOpen = (event, text, claimId) => {
     setNotePopover({
       anchorEl: event.currentTarget,
-      text: text || 'No additional notes provided.',
+      text: text || '',
+      claimId,
+      loading: false,
     });
   };
 
@@ -1226,7 +1287,25 @@ const ClaimsListPage = () => {
     setNotePopover({
       anchorEl: null,
       text: '',
+      claimId: null,
+      loading: false,
     });
+  };
+
+  const handleNoteSave = async () => {
+    if (!notePopover.claimId) return;
+    try {
+      setNotePopover(prev => ({ ...prev, loading: true }));
+      await claimService.updateClaim(notePopover.claimId, { notes: notePopover.text });
+      setRefreshTrigger((prev) => prev + 1);
+      setSnackbarMessage('Note updated successfully.');
+      setSnackbarOpen(true);
+      handleNoteClose();
+    } catch (err) {
+      console.error(err);
+      setNotePopover(prev => ({ ...prev, loading: false }));
+      alert('Error saving note: ' + (err.message || err));
+    }
   };
 
   // Revalidate/Retry validation error claims
@@ -1256,6 +1335,18 @@ const ClaimsListPage = () => {
     try {
       setLoading(true);
       await claimService.quickStatusUpdate(claimId, newStatus, `Status updated to ${newStatus}`);
+      
+      // OPTIMISTIC UI UPDATE: Remove from current tab if status no longer belongs
+      setClaims((prev) => {
+        return prev.filter((c) => {
+          if (c.id !== claimId) return true;
+          if (activeTab === 0 && newStatus !== 'draft') return false;
+          if (activeTab === 1 && !['error', 'validationError'].includes(newStatus)) return false;
+          if (activeTab === 2 && newStatus !== 'rejected') return false;
+          return true;
+        });
+      });
+
       setRefreshTrigger(prev => prev + 1);
     } catch (err) {
       console.error(err);
@@ -1388,32 +1479,15 @@ const ClaimsListPage = () => {
   // Filter & Sort Claims based on Active Tab, Filter inputs and Sort choice
   const filteredClaims = useMemo(() => {
     let result = claims.filter((claim) => {
-      // 1. Tab filtration mapping (status-based for tabs 0-3)
-      if (activeTab === 0) {
-        // Unsent: draft claims AND errored claims
-        if (!['draft', 'error', 'validationError', 'rejected', 'denied'].includes(claim.status)) return false;
-      } else if (activeTab === 1) {
-        // Errored: rejected, denied, or validation error claims
-        if (!['rejected', 'denied', 'validationError', 'error'].includes(claim.status)) return false;
-      } else if (activeTab === 2) {
-        // Rejected only
-        if (claim.status !== 'rejected') return false;
-      } else if (activeTab === 3) {
-        // History: everything that has been processed (not draft)
-        if (claim.status === 'draft') return false;
-      } else if (activeTab === 4) {
-        if (claim.tab !== 'outstanding') return false;
-      } else if (activeTab === 5) {
-        if (claim.tab !== 'predetermination') return false;
-      } else {
-        return false;
-      }
+      // 1. Tab filtration mapping (Now handled by backend via tab parameter, so we just pass all claims through)
+      // We only filter out predetermination or outstanding if they leaked in, but they use different APIs anyway.
+      if (activeTab === 4 && claim.tab !== 'outstanding') return false;
+      if (activeTab === 5 && claim.tab !== 'predetermination') return false;
 
       // 2. Claim Type filtration
       if (claimType !== 'all') {
-        const typeNormalized = claim.claimType.toLowerCase().replace('-', '');
-        const filterNormalized = claimType.toLowerCase().replace('_', '');
-        if (!typeNormalized.includes(filterNormalized)) return false;
+        const typeNormalized = (claim.claimFormat || claim.claimType || '').toLowerCase();
+        if (!typeNormalized.includes(claimType.toLowerCase())) return false;
       }
 
       // 3. Carrier filtration
@@ -1442,7 +1516,7 @@ const ClaimsListPage = () => {
       }
 
       // 5. Claim Status filtration (Specific to History, Outstanding & Predetermination tabs)
-      if ((activeTab === 3 || activeTab === 4 || activeTab === 5) && claimStatus !== 'all') {
+      if ((activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4 || activeTab === 5) && claimStatus !== 'all') {
         if (claim.status !== claimStatus) return false;
       }
 
@@ -1529,14 +1603,57 @@ const ClaimsListPage = () => {
   }, [eraReports, activeEraTab, searchEraContent, visibleEraCount]);
 
   // Action for Unsent/Predetermination: Convert type
-  const handleConvertType = () => {
-    alert(`Converting selected claim types for: ${Object.keys(selectedClaims).filter(k => selectedClaims[k]).join(', ')}`);
+  const handleConvertType = async (newType) => {
+    setConvertMenuAnchor(null);
+    const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+    try {
+      setLoading(true);
+      await Promise.all(
+        selectedIds.map((id) => claimService.updateClaim(id, { claimFormat: newType }))
+      );
+      setSelectedClaims({});
+      setRefreshTrigger((prev) => prev + 1);
+      setSnackbarMessage(`Converted ${selectedIds.length} claim(s) to ${newType}.`);
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error(err);
+      alert('Error converting claims: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Action: Change Status
-  const handleChangeStatus = () => {
+  const handleChangeStatusAction = async (newStatus) => {
+    setStatusMenuAnchor(null);
     const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
-    alert(`Change Status clicked for predeterminations: ${selectedIds.map(id => claims.find(c => c.id === id)?.claimNumber).join(', ')}`);
+    try {
+      setLoading(true);
+      await Promise.all(
+        selectedIds.map((id) => claimService.quickStatusUpdate(id, newStatus, 'Bulk updated via Change Status'))
+      );
+
+      // OPTIMISTIC UI UPDATE: Remove from current tab if status no longer belongs
+      setClaims((prev) => {
+        return prev.filter((c) => {
+          if (!selectedIds.includes(c.id)) return true;
+          if (activeTab === 0 && newStatus !== 'draft') return false;
+          if (activeTab === 1 && !['error', 'validationError'].includes(newStatus)) return false;
+          if (activeTab === 2 && newStatus !== 'rejected') return false;
+          return true;
+        });
+      });
+
+      setSelectedClaims({});
+      setRefreshTrigger((prev) => prev + 1);
+      setSnackbarMessage(`Updated status for ${selectedIds.length} claim(s).`);
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error(err);
+      alert('Error updating status: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Action for Unsent: Send Claims
@@ -1616,7 +1733,16 @@ const ClaimsListPage = () => {
   };
 
   // Action for Errored / Rejected / History: Void & Recreate Claims
-  const handleVoidAndRecreate = async () => {
+  const handleVoidAndRecreate = () => {
+    const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+    if (selectedIds.length === 0) {
+      alert('Please select at least one claim to void and recreate.');
+      return;
+    }
+    setConfirmVoidDialog(true);
+  };
+
+  const confirmVoidAndRecreate = async () => {
     const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
     try {
       setLoading(true);
@@ -1627,7 +1753,8 @@ const ClaimsListPage = () => {
       );
       setSelectedClaims({});
       setRefreshTrigger((prev) => prev + 1);
-      alert(`Voided and Recreated ${selectedIds.length} claim(s). They are now in the UNSENT CLAIMS tab.`);
+      setSnackbarMessage(`Voided and Recreated ${selectedIds.length} claim(s). They are now in the UNSENT CLAIMS tab.`);
+      setSnackbarOpen(true);
     } catch (err) {
       console.error(err);
       alert('Error voiding and recreating claims: ' + (err.message || err));
@@ -1704,6 +1831,19 @@ const ClaimsListPage = () => {
       if (sAmount !== undefined) payload.submittedAmount = sAmount;
 
       await claimService.updateClaim(editingClaim.id, payload);
+      
+      // OPTIMISTIC UI UPDATE: Remove from current tab if status no longer belongs
+      setClaims((prev) => {
+        return prev.filter((c) => {
+          if (c.id !== editingClaim.id) return true;
+          const ns = payload.status;
+          if (activeTab === 0 && ns !== 'draft') return false;
+          if (activeTab === 1 && !['error', 'validationError'].includes(ns)) return false;
+          if (activeTab === 2 && ns !== 'rejected') return false;
+          return true;
+        });
+      });
+
       setOpenEditDialog(false);
       setEditingClaim(null);
       setRefreshTrigger((prev) => prev + 1);
@@ -1998,7 +2138,7 @@ const ClaimsListPage = () => {
         <Paper sx={{ p: 2.5, mb: 3, backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: 'none', border: '1px solid #e0e6ed' }}>
           <Grid container spacing={2.5}>
             {/* Sort dropdown */}
-            {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
+            {(activeTab >= 0 && activeTab <= 4) && (
               <Grid item xs={12} sm={3}>
                 <Box>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>
@@ -2023,7 +2163,7 @@ const ClaimsListPage = () => {
             )}
 
             {/* Filter by Claim Type */}
-            <Grid item xs={12} sm={(activeTab === 2 || activeTab === 3 || activeTab === 4) ? 3 : 4}>
+            <Grid item xs={12} sm={(activeTab >= 0 && activeTab <= 4) ? 3 : 4}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>
                   Filter by Claim Type:
@@ -2045,7 +2185,7 @@ const ClaimsListPage = () => {
             </Grid>
 
             {/* Filter by Carrier */}
-            <Grid item xs={12} sm={(activeTab === 2 || activeTab === 3 || activeTab === 4) ? 3 : 4}>
+            <Grid item xs={12} sm={(activeTab >= 0 && activeTab <= 4) ? 3 : 4}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>
                   Filter by Carrier:
@@ -2067,7 +2207,7 @@ const ClaimsListPage = () => {
             </Grid>
 
             {/* Filter by Claim Attachment */}
-            <Grid item xs={12} sm={(activeTab === 2 || activeTab === 3 || activeTab === 4) ? 3 : 4}>
+            <Grid item xs={12} sm={(activeTab >= 0 && activeTab <= 4) ? 3 : 4}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>
                   Filter by Claim Attachment:
@@ -2087,7 +2227,7 @@ const ClaimsListPage = () => {
             </Grid>
 
             {/* Filter by Claim Status */}
-            {(activeTab === 3 || activeTab === 4 || activeTab === 5) && (
+            {(activeTab >= 0 && activeTab <= 5) && (
               <Grid item xs={12} sm={4}>
                 <Box>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>
@@ -2183,18 +2323,65 @@ const ClaimsListPage = () => {
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
                   Search by patient:
                 </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search by patient"
-                  value={searchPatient}
-                  onChange={(e) => setSearchPatient(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff',
-                      fontSize: '0.85rem',
-                    },
+                <Autocomplete
+                  freeSolo
+                  options={patientOptions}
+                  getOptionLabel={(option) => {
+                    if (typeof option === 'string') return option;
+                    return `${option.firstName || ''} ${option.lastName || ''}`.trim();
                   }}
+                  filterOptions={(x) => x} // Disable built-in filtering, backend handles it
+                  loading={patientSearchLoading}
+                  inputValue={searchPatient}
+                  onInputChange={(event, newInputValue) => {
+                    setSearchPatient(newInputValue);
+                  }}
+                  onChange={(event, newValue) => {
+                    if (newValue && typeof newValue === 'object') {
+                      setSearchPatient(`${newValue.firstName || ''} ${newValue.lastName || ''}`.trim());
+                    } else {
+                      setSearchPatient(newValue || '');
+                    }
+                  }}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1, borderBottom: '1px solid #f0f0f0' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#2b3445' }}>
+                        {option.firstName} {option.lastName} {option.patientCode ? `(#${option.patientCode})` : ''}
+                      </Typography>
+                      {option.dateOfBirth && (
+                        <Typography variant="caption" sx={{ color: '#718096' }}>
+                          {new Date(option.dateOfBirth).toLocaleDateString()}
+                        </Typography>
+                      )}
+                      {option.mobileNumber && (
+                        <Typography variant="caption" sx={{ color: '#718096' }}>
+                          {option.mobileNumber}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search by patient"
+                      size="small"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {patientSearchLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#ffffff',
+                          fontSize: '0.85rem',
+                        },
+                      }}
+                    />
+                  )}
                 />
               </Box>
             </Grid>
@@ -2361,7 +2548,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleConvertType}
+                    onClick={(e) => setConvertMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -2379,7 +2566,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleChangeStatus}
+                    onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -2438,7 +2625,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleChangeStatus}
+                    onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -2479,7 +2666,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleChangeStatus}
+                    onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -2553,7 +2740,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleChangeStatus}
+                    onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -2652,7 +2839,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleConvertType}
+                    onClick={(e) => setConvertMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -2670,7 +2857,7 @@ const ClaimsListPage = () => {
                   <Button
                     variant="contained"
                     disabled={!hasSelection}
-                    onClick={handleChangeStatus}
+                    onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                     sx={{
                       textTransform: 'none',
                       fontSize: '0.8rem',
@@ -3208,10 +3395,14 @@ const ClaimsListPage = () => {
 
                         {/* Claim Type */}
                         <TableCell>
-                          <Typography sx={{ color: isError && activeTab === 0 ? '#d93838' : '#718096', display: 'flex', flexDirection: 'column', fontSize: '0.7rem' }}>
-                            <span style={{ fontWeight: 600 }}>{claim.claimType.split(' ')[0]}</span>
-                            <span>{claim.claimType.split(' ').slice(1).join(' ')}</span>
-                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem' }}>
+                            <Typography component="span" sx={{ color: '#2b659b', fontSize: '0.85rem' }}>
+                              {claim.claimType.split(' ')[0]}
+                            </Typography>
+                            <Typography component="span" sx={{ color: '#718096', fontSize: '0.85rem' }}>
+                              {claim.claimType.split(' ').slice(1).join(' ')}
+                            </Typography>
+                          </Box>
                         </TableCell>
 
                         {/* Created Date / Sent Date */}
@@ -3233,7 +3424,26 @@ const ClaimsListPage = () => {
                         {/* Subscriber */}
                         {activeTab === 4 && (
                           <TableCell>
-                            <Typography sx={{ color: '#4a5568', fontWeight: 500 }}>
+                            <Typography
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSubscriberDialog({
+                                  open: true,
+                                  data: {
+                                    firstName: claim.subscriberFirstName || claim.subscriber?.split(' ')[0] || '',
+                                    lastName: claim.subscriberLastName || claim.subscriber?.split(' ').slice(1).join(' ') || '',
+                                    subscriberNumber: claim.subscriberNumber || '',
+                                    dateOfBirth: claim.subscriberDob || claim.patientDob || '',
+                                  }
+                                });
+                              }}
+                              sx={{
+                                color: '#1976d2',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                '&:hover': { textDecoration: 'underline' },
+                              }}
+                            >
                               {claim.subscriber || '—'}
                             </Typography>
                           </TableCell>
@@ -3241,7 +3451,30 @@ const ClaimsListPage = () => {
 
                         {/* Carrier */}
                         <TableCell>
-                          <Typography sx={{ color: isError && activeTab === 0 ? '#d93838' : '#4a5568', fontWeight: 500, fontSize: '0.72rem' }}>
+                          <Typography
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const carrierIdToFetch = claim.insuranceCompanyId;
+                              if (carrierIdToFetch) {
+                                setCarrierDialog({ open: true, data: null, loading: true });
+                                try {
+                                  const carrierData = await insuranceCompanyService.getInsuranceCompanyById(carrierIdToFetch);
+                                  setCarrierDialog({ open: true, data: carrierData, loading: false });
+                                } catch {
+                                  setCarrierDialog({ open: true, data: { name: claim.carrier }, loading: false });
+                                }
+                              } else {
+                                setCarrierDialog({ open: true, data: { name: claim.carrier }, loading: false });
+                              }
+                            }}
+                            sx={{
+                              color: '#1976d2',
+                              cursor: 'pointer',
+                              fontWeight: 500,
+                              fontSize: '0.72rem',
+                              '&:hover': { textDecoration: 'underline' },
+                            }}
+                          >
                             {claim.carrier}
                           </Typography>
                         </TableCell>
@@ -3370,7 +3603,7 @@ const ClaimsListPage = () => {
                         <TableCell sx={{ verticalAlign: 'top' }}>
                           <IconButton
                             size="small"
-                            onClick={(e) => handleNoteOpen(e, claim.notes)}
+                            onClick={(e) => handleNoteOpen(e, claim.notes, claim.id)}
                             sx={{ color: '#a0aec0', '&:hover': { color: '#1a3a6b' }, p: 0.2 }}
                           >
                             <DescriptionIcon sx={{ fontSize: 14 }} />
@@ -3608,6 +3841,41 @@ const ClaimsListPage = () => {
         )}
       </Box>
 
+      {/* Convert Type Menu */}
+      <Menu
+        anchorEl={convertMenuAnchor}
+        open={Boolean(convertMenuAnchor)}
+        onClose={() => setConvertMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: { mt: 0.5, minWidth: 130, boxShadow: '0px 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px' }
+        }}
+      >
+        <MenuItem onClick={() => handleConvertType('Manual')} sx={{ fontSize: '0.85rem', color: '#1a3a6b' }}>To Manual</MenuItem>
+        <MenuItem onClick={() => handleConvertType('Electronic')} sx={{ fontSize: '0.85rem', color: '#1a3a6b' }}>To Electronic</MenuItem>
+      </Menu>
+
+      {/* Change Status Menu */}
+      <Menu
+        anchorEl={statusMenuAnchor}
+        open={Boolean(statusMenuAnchor)}
+        onClose={() => setStatusMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: { mt: 0.5, minWidth: 150, boxShadow: '0px 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px' }
+        }}
+      >
+        <MenuItem onClick={() => handleChangeStatusAction('readyForSubmission')} sx={{ fontSize: '0.85rem' }}>Ready for Submission</MenuItem>
+        <MenuItem onClick={() => handleChangeStatusAction('inProcess')} sx={{ fontSize: '0.85rem' }}>In Process</MenuItem>
+        <MenuItem onClick={() => handleChangeStatusAction('accepted')} sx={{ fontSize: '0.85rem' }}>Accepted</MenuItem>
+        <MenuItem onClick={() => handleChangeStatusAction('acceptedPaid')} sx={{ fontSize: '0.85rem' }}>Accepted / Paid</MenuItem>
+        <MenuItem onClick={() => handleChangeStatusAction('rejected')} sx={{ fontSize: '0.85rem' }}>Rejected</MenuItem>
+        <MenuItem onClick={() => handleChangeStatusAction('error')} sx={{ fontSize: '0.85rem' }}>Error</MenuItem>
+      </Menu>
+
+
       {/* Notes Popover */}
       <Popover
         open={Boolean(notePopover.anchorEl)}
@@ -3615,22 +3883,74 @@ const ClaimsListPage = () => {
         onClose={handleNoteClose}
         anchorOrigin={{
           vertical: 'bottom',
-          horizontal: 'center',
+          horizontal: 'right',
         }}
         transformOrigin={{
           vertical: 'top',
-          horizontal: 'center',
+          horizontal: 'right',
         }}
         PaperProps={{
-          sx: { p: 2, maxWidth: 300, borderRadius: '6px', mt: 0.5, boxShadow: '0px 2px 10px rgba(0,0,0,0.1)' },
+          sx: { 
+            p: 2, 
+            minWidth: 380, 
+            borderRadius: '4px', 
+            border: '1px solid #1a3a6b', 
+            mt: 0.5, 
+            boxShadow: '0px 4px 15px rgba(0,0,0,0.1)' 
+          },
         }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a3a6b', mb: 0.5 }}>
-          Claim Note
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#4a5568', lineHeight: 1.5 }}>
-          {notePopover.text}
-        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <TextField
+            multiline
+            minRows={3}
+            maxRows={6}
+            fullWidth
+            value={notePopover.text}
+            onChange={(e) => setNotePopover(prev => ({ ...prev, text: e.target.value }))}
+            disabled={notePopover.loading}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                p: 1,
+                fontSize: '0.85rem'
+              }
+            }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              disableElevation
+              disabled={notePopover.loading}
+              sx={{ 
+                bgcolor: '#d3c0a3', 
+                color: '#fff', 
+                textTransform: 'none',
+                minWidth: '60px',
+                '&:hover': { bgcolor: '#c2b093' } 
+              }}
+              onClick={handleNoteSave}
+            >
+              {notePopover.loading ? <CircularProgress size={16} color="inherit" /> : 'Add'}
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              disableElevation
+              disabled={notePopover.loading}
+              sx={{ 
+                bgcolor: '#a0aec0', 
+                color: '#fff', 
+                textTransform: 'none',
+                minWidth: '60px',
+                '&:hover': { bgcolor: '#8a99a8' } 
+              }}
+              onClick={handleNoteClose}
+            >
+              Cancel
+            </Button>
+          </Box>
+        </Box>
       </Popover>
 
       {/* Edit Claim Dialog */}
@@ -3823,6 +4143,192 @@ const ClaimsListPage = () => {
         claim={previewingClaim} 
         onClose={() => setOpenPreviewDialog(false)} 
       />
+      {/* Subscriber Info Dialog */}
+      <Dialog
+        open={subscriberDialog.open}
+        onClose={() => setSubscriberDialog({ open: false, data: null })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 1, overflow: 'hidden' } }}
+      >
+        <DialogTitle sx={{ backgroundColor: '#4b71a1', color: '#fff', fontSize: '1rem', py: 1.5, textAlign: 'center', fontWeight: 500 }}>
+          Subscriber Info
+        </DialogTitle>
+        <DialogContent sx={{ mt: 3, pb: 1 }}>
+          {subscriberDialog.data && (
+            <Table size="small" sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #e0e0e0', py: 1.5, px: 2 } }}>
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333', width: '25%' }}>First Name</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{subscriberDialog.data.firstName}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333', width: '25%' }}>Last Name</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{subscriberDialog.data.lastName}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Subscriber Number</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{subscriberDialog.data.subscriberNumber || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Date of Birth</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{subscriberDialog.data.dateOfBirth || '—'}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2.5 }}>
+          <Button
+            onClick={() => setSubscriberDialog({ open: false, data: null })}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#a0aec0',
+              color: '#fff',
+              fontSize: '0.85rem',
+              px: 4,
+              borderRadius: '4px',
+              '&:hover': { backgroundColor: '#8a99a8' },
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Carrier Info Dialog */}
+      <Dialog
+        open={carrierDialog.open}
+        onClose={() => setCarrierDialog({ open: false, data: null, loading: false })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 1, overflow: 'hidden' } }}
+      >
+        <DialogTitle sx={{ backgroundColor: '#4b71a1', color: '#fff', fontSize: '1rem', py: 1.5, textAlign: 'center', fontWeight: 500 }}>
+          Carrier Info
+        </DialogTitle>
+        <DialogContent sx={{ mt: 3, pb: 1 }}>
+          {carrierDialog.loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : carrierDialog.data && (
+            <Table size="small" sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #e0e0e0', py: 1.5, px: 2 } }}>
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333', width: '20%' }}>Name</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.name || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333', width: '20%' }}>Country</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.country || '—'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Electronic ID</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.payerId || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Address Line 1</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.address || '—'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Phone</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.phone || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Address Line 2</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.address2 || '—'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Email</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.email || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>City</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.city || '—'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Fax</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.fax || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>State</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.state || '—'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Website</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.website || '—'}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#333' }}>Zip/Postal Code</TableCell>
+                  <TableCell sx={{ color: '#555' }}>{carrierDialog.data.zipCode || '—'}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2.5 }}>
+          <Button
+            onClick={() => setCarrierDialog({ open: false, data: null, loading: false })}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#a0aec0',
+              color: '#fff',
+              fontSize: '0.85rem',
+              px: 4,
+              borderRadius: '4px',
+              '&:hover': { backgroundColor: '#8a99a8' },
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Void and Recreate Confirmation Dialog */}
+      <Dialog 
+        open={confirmVoidDialog} 
+        onClose={() => setConfirmVoidDialog(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { 
+            borderRadius: '6px',
+            border: '2px solid #dfa5a4',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          }
+        }}
+      >
+        <DialogContent sx={{ textAlign: 'center', p: 4 }}>
+          <Typography variant="body1" sx={{ mb: 1, color: '#333' }}>
+            Are you sure you want to Void and Recreate the selected ({Object.keys(selectedClaims).filter((id) => selectedClaims[id]).length}) claim/s?
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#333' }}>
+            Note: This can't be undone!
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 4, pt: 0, gap: 1 }}>
+          <Button
+            variant="contained"
+            disableElevation
+            sx={{ 
+              bgcolor: '#d9534f', 
+              color: '#fff', 
+              textTransform: 'none',
+              borderRadius: '4px',
+              px: 3,
+              '&:hover': { bgcolor: '#c9302c' } 
+            }}
+            onClick={() => {
+              setConfirmVoidDialog(false);
+              confirmVoidAndRecreate();
+            }}
+          >
+            Yes, Void & Recreate Claims
+          </Button>
+          <Button
+            variant="contained"
+            disableElevation
+            sx={{ 
+              bgcolor: '#a0aec0', 
+              color: '#fff', 
+              textTransform: 'none',
+              borderRadius: '4px',
+              px: 3,
+              '&:hover': { bgcolor: '#8a99a8' } 
+            }}
+            onClick={() => setConfirmVoidDialog(false)}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Success Snackbar */}
       <Snackbar 
