@@ -1,21 +1,9 @@
 import { Box, Typography } from '@mui/material';
+import InitialsAvatar from '../../shared/InitialsAvatar';
 
 const DoctorProfile = () => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-    <Box
-      sx={{
-        width: '36px',
-        height: '36px',
-        backgroundColor: '#2262ef',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <Typography sx={{ color: '#fff', fontSize: '12px', fontWeight: 600 }}>SW</Typography>
-    </Box>
+    <InitialsAvatar name="Dr. Sarah Wells" size={36} fontSize={12} />
     <Box>
       <Typography
         sx={{
