@@ -6,6 +6,7 @@ import ScheduleCalendar from '../../components/appointments/schedule/ScheduleCal
 import LeftPanel from '../../components/appointments/left-panel/LeftPanel';
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
+import PatientSlider from '../../components/patient-slider/PatientSlider';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { usePatients } from '../../hooks/redux/usePatient';
 import { useAppointments } from '../../hooks/redux/useAppointments';
@@ -37,7 +38,8 @@ const OperatorySchedulePage = () => {
   }, [fetchPatients]);
 
   // ── Modal state ───────────────────────────────────────────────────
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen,   setFormOpen]   = useState(false);
+  const [sliderOpen, setSliderOpen] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
 
   useEffect(() => {
@@ -98,7 +100,7 @@ const OperatorySchedulePage = () => {
 
       {/* CENTER PANEL — 3/5 */}
       <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e0e5eb', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <ScheduleGridHeader onNewAppointment={() => setFormOpen(true)} />
+        <ScheduleGridHeader onNewAppointment={() => setFormOpen(true)} onOpenPatientSlider={() => setSliderOpen(true)} />
         <ScheduleCalendar />
       </Box>
 
@@ -106,6 +108,9 @@ const OperatorySchedulePage = () => {
       <Box sx={{ flex: 1, minWidth: 0, height: '100%', overflowY: 'auto' }}>
         <RightPanel />
       </Box>
+
+      {/* Patient Slider */}
+      <PatientSlider open={sliderOpen} onClose={() => setSliderOpen(false)} />
 
       {/* Add New Appointment Modal */}
       <AddNewPatientAppointmentForm
