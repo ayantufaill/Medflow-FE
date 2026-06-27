@@ -45,8 +45,13 @@ import {
   deleteCarrierThunk, 
   addCarrierOptimistic, 
   selectCarriersList, 
-  selectCarriersLoading 
+  selectCarriersLoading,
+  updateCarrierThunk
 } from '../../store/slices/insuranceSlice';
+import { 
+  fetchAllProvidersForDropdown, 
+  selectProviderDropdownList 
+} from '../../store/slices/providerSlice';
 
 
 const InsuranceCarriers = () => {
@@ -56,11 +61,14 @@ const InsuranceCarriers = () => {
   
   const companies = useSelector(selectCarriersList);
   const loading = useSelector(selectCarriersLoading);
+  const providersList = useSelector(selectProviderDropdownList);
 
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 500);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editCarrier, setEditCarrier] = useState(null);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   const [deleteDialog, setDeleteDialog] = useState({
@@ -102,12 +110,47 @@ const InsuranceCarriers = () => {
     dispatch(fetchCarriersList(params));
   }, [dispatch, debouncedSearch]);
 
+  const getProviderName = useCallback((provider) => {
+    const first = provider?.userId?.firstName || provider?.firstName || '';
+    const last = provider?.userId?.lastName || provider?.lastName || '';
+    return `${first} ${last}`.trim() || 'Unknown Provider';
+  }, []);
+
   useEffect(() => {
     fetchCompanies();
-  }, [fetchCompanies]);
+    dispatch(fetchAllProvidersForDropdown());
+  }, [fetchCompanies, dispatch]);
 
   const handleDeleteClick = (id, name) => {
     setDeleteDialog({ open: true, companyId: id, companyName: name });
+  };
+
+  const handleEditClick = (company) => {
+    setEditCarrier({
+      ...company,
+      providersOutOfNetwork: company.providersOutOfNetwork || [],
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateCarrier = async () => {
+    try {
+      if (!editCarrier.name || !editCarrier.payerId) {
+        showSnackbar('Carrier Name and Electronic ID are required', 'error');
+        return;
+      }
+      
+      await dispatch(updateCarrierThunk({ 
+        id: editCarrier._id || editCarrier.id, 
+        payload: editCarrier 
+      })).unwrap();
+      
+      showSnackbar('Insurance carrier updated successfully', 'success');
+      setIsEditDialogOpen(false);
+      setEditCarrier(null);
+    } catch (err) {
+      showSnackbar('Failed to update carrier', 'error');
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -272,7 +315,12 @@ const InsuranceCarriers = () => {
               </TableRow>
             ) : (
               companies.map((company) => (
-                <TableRow key={company._id || company.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                <TableRow 
+                  key={company._id || company.id} 
+                  hover
+                  onClick={() => handleEditClick(company)}
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}
+                >
                   <TableCell sx={{ color: '#1a3a6b', fontWeight: 500 }}>{company.name}</TableCell>
                   <TableCell>{company.phone || '-'}</TableCell>
                   <TableCell>
@@ -286,7 +334,7 @@ const InsuranceCarriers = () => {
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                       <Box
-                        onClick={() => setIsSyncDialogOpen(true)}
+                        onClick={(e) => { e.stopPropagation(); setIsSyncDialogOpen(true); }}
                         sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: 'text.secondary' }}
                       >
                         <SyncIcon sx={{ fontSize: '1rem' }} />
@@ -295,6 +343,7 @@ const InsuranceCarriers = () => {
 
                       <Link
                         component="button"
+                        onClick={(e) => e.stopPropagation()}
                         sx={{ fontSize: '0.85rem', color: '#1976d2', textDecoration: 'none' }}
                       >
                         {company.plansCount || 1} Plan(s)
@@ -302,7 +351,7 @@ const InsuranceCarriers = () => {
 
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteClick(company._id || company.id, company.name)}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(company._id || company.id, company.name); }}
                         sx={{ color: '#d32f2f' }}
                       >
                         <DeleteIcon sx={{ fontSize: '1.1rem' }} />
@@ -473,24 +522,37 @@ const InsuranceCarriers = () => {
             </Grid>
 
             {/* Bottom Row */}
-            <Grid item xs={4}>
+            <Grid item xs={12} md={8}>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Providers out of network</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <FormControlLabel
-                  control={<Checkbox size="small" sx={{ p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: '0.75rem' }}>Christina Sabour</Typography>}
-                />
-                <FormControlLabel
-                  control={<Checkbox size="small" sx={{ p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: '0.75rem' }}>Test</Typography>}
-                />
-                <FormControlLabel
-                  control={<Checkbox size="small" sx={{ p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: '0.75rem' }}>Saba’s Office</Typography>}
-                />
-              </Box>
+              <Grid container spacing={1}>
+                {providersList?.map((provider) => (
+                  <Grid item xs={6} sm={4} key={provider._id}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          sx={{ p: 0.5 }}
+                          checked={newCarrier?.providersOutOfNetwork?.includes(provider._id) || false}
+                          onChange={(e) => {
+                            const currentList = newCarrier.providersOutOfNetwork || [];
+                            if (e.target.checked) {
+                              setNewCarrier({ ...newCarrier, providersOutOfNetwork: [...currentList, provider._id] });
+                            } else {
+                              setNewCarrier({
+                                ...newCarrier,
+                                providersOutOfNetwork: currentList.filter(id => id !== provider._id)
+                              });
+                            }
+                          }}
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: '0.75rem' }}>{getProviderName(provider)}</Typography>}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={12} md={4}>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Claim Type</Typography>
               <FormControl fullWidth size="small">
                 <Select
@@ -505,7 +567,6 @@ const InsuranceCarriers = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={4}></Grid>
 
             {/* Row 7: Notes */}
             <Grid item xs={12}>
@@ -633,6 +694,237 @@ const InsuranceCarriers = () => {
             }}
           >
             Sync
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Carrier Dialog */}
+      <Dialog
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 1, overflow: 'hidden' } }}
+      >
+        <DialogTitle sx={{ backgroundColor: '#4b71a1', color: '#fff', fontSize: '1rem', py: 1, textAlign: 'center', fontWeight: 500 }}>
+          Edit {editCarrier?.name || 'Carrier'}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 3 }}>
+          {editCarrier && (
+            <Grid container spacing={2}>
+              {/* Row 1 */}
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Carrier's Name *</Typography>
+                <TextField
+                  fullWidth size="small" placeholder="Enter Name"
+                  value={editCarrier.name || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, name: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Carrier's Electronic Id *</Typography>
+                <TextField
+                  fullWidth size="small"
+                  value={editCarrier.payerId || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, payerId: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Phone</Typography>
+                <TextField
+                  fullWidth size="small"
+                  value={editCarrier.phone || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, phone: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+
+              {/* Row 2 */}
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Email</Typography>
+                <TextField
+                  fullWidth size="small"
+                  value={editCarrier.email || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, email: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Fax</Typography>
+                <TextField
+                  fullWidth size="small"
+                  value={editCarrier.fax || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, fax: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Website</Typography>
+                <TextField
+                  fullWidth size="small"
+                  value={editCarrier.website || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, website: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+
+              {/* Address Row 1 */}
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Country:</Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={editCarrier.country || 'United States'}
+                    onChange={(e) => setEditCarrier({ ...editCarrier, country: e.target.value })}
+                    sx={{ fontSize: '0.85rem' }}
+                  >
+                    <MenuItem value="United States">United States</MenuItem>
+                    <MenuItem value="Canada">Canada</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Address Line 1:</Typography>
+                <TextField
+                  fullWidth size="small" placeholder="Address line 1"
+                  value={editCarrier.address || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, address: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Address Line 2:</Typography>
+                <TextField
+                  fullWidth size="small" placeholder="Address line 2"
+                  value={editCarrier.address2 || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, address2: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+
+              {/* Address Row 2 */}
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>City:</Typography>
+                <TextField
+                  fullWidth size="small" placeholder="City"
+                  value={editCarrier.city || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, city: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>State/Province:</Typography>
+                <TextField
+                  fullWidth size="small" placeholder="State/Province"
+                  value={editCarrier.state || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, state: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Zip/Postal Code:</Typography>
+                <TextField
+                  fullWidth size="small" placeholder="Zip/Postal Code"
+                  value={editCarrier.zipCode || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, zipCode: e.target.value })}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                />
+              </Grid>
+
+              {/* Bottom Row */}
+              <Grid item xs={12} md={8}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Providers out of network</Typography>
+                <Grid container spacing={1}>
+                  {providersList?.map((provider) => (
+                    <Grid item xs={6} sm={4} key={provider._id}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            sx={{ p: 0.5 }}
+                            checked={editCarrier?.providersOutOfNetwork?.includes(provider._id) || false}
+                            onChange={(e) => {
+                              const currentList = editCarrier.providersOutOfNetwork || [];
+                              if (e.target.checked) {
+                                setEditCarrier({ ...editCarrier, providersOutOfNetwork: [...currentList, provider._id] });
+                              } else {
+                                setEditCarrier({
+                                  ...editCarrier,
+                                  providersOutOfNetwork: currentList.filter(id => id !== provider._id)
+                                });
+                              }
+                            }}
+                          />
+                        }
+                        label={<Typography sx={{ fontSize: '0.75rem' }}>{getProviderName(provider)}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Claim Type</Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={editCarrier.claimType || ''}
+                    onChange={(e) => setEditCarrier({ ...editCarrier, claimType: e.target.value })}
+                    sx={{ fontSize: '0.85rem' }}
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>Select Type</MenuItem>
+                    <MenuItem value="Dental">Dental</MenuItem>
+                    <MenuItem value="Medical">Medical</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Row 7: Notes */}
+              <Grid item xs={12}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Notes</Typography>
+                <TextField
+                  fullWidth multiline rows={4}
+                  value={editCarrier.notes || ''}
+                  onChange={(e) => setEditCarrier({ ...editCarrier, notes: e.target.value })}
+                  sx={{
+                    '& .MuiInputBase-root': { py: 1, fontSize: '0.85rem' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#eee' }
+                  }}
+                />
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleUpdateCarrier}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#d1a97d',
+              color: '#fff',
+              fontSize: '0.85rem',
+              px: 3,
+              borderRadius: '4px',
+              '&:hover': { backgroundColor: '#c0986c' }
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            onClick={() => setIsEditDialogOpen(false)}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#a0aec0',
+              color: '#fff',
+              fontSize: '0.85rem',
+              px: 3,
+              borderRadius: '4px',
+              '&:hover': { backgroundColor: '#8a99a8' }
+            }}
+          >
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>

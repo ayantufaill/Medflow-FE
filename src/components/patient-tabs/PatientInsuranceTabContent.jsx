@@ -288,7 +288,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
         verificationStatus: 'pending',
       };
       await createInsurance(payload).unwrap();
-      showSnackbar('Plan saved successfully', 'success');
+      showSnackbar('Plan saved successfully. Unbilled procedures have been converted to unsent claims.', 'success');
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save plan', 'error');
       throw err;
