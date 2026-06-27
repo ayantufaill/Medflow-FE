@@ -1,4 +1,4 @@
-import { Box, Divider, InputAdornment, TextField, Typography } from "@mui/material";
+import { Box, Divider, Typography } from "@mui/material";
 import { Search, PersonAdd, Add } from "@mui/icons-material";
 import CurrentPatientCard from "./CurrentPatientCard";
 import PatientListCard from "./PatientListCard";
@@ -22,7 +22,7 @@ const ALL_PATIENTS = [
 ];
 
 const SectionLabel = ({ children }) => (
-  <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae", px: "12px", mb: "6px" }}>
+  <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#5c646f", fontWeight:500, px: "12px", mb: "6px" }}>
     {children}
   </Typography>
 );
@@ -31,13 +31,13 @@ const FooterAction = ({ icon, label, onClick }) => (
   <Box
     onClick={onClick}
     sx={{
-      display: "flex", alignItems: "center", gap: "8px",
-      px: "12px", py: "10px", cursor: "pointer",
+      display: "flex", alignItems: "center", gap: "15px",
+      px: "14px", py: "7px", cursor: "pointer", lineHeight:'20px',
       "&:hover": { backgroundColor: "#f8fafc" },
     }}
   >
     {icon}
-    <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#2262ef", fontWeight: 500 }}>
+    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#09121f", fontWeight: 500 }}>
       {label}
     </Typography>
   </Box>
@@ -54,31 +54,28 @@ const PatientDropdownPanel = () => (
   }}>
     {/* Search bar */}
     <Box sx={{ px: "12px", pt: "12px", pb: "10px" }}>
-      <TextField
-        fullWidth
-        placeholder="Search by name, chart #, phone, email..."
-        size="small"
-        autoFocus
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search sx={{ fontSize: "16px", color: "#9aa3ae" }} />
-            </InputAdornment>
-          ),
-        }}
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            borderRadius: "10px",
-            backgroundColor: "#f5f7fa",
-            fontFamily: "Inter",
-            fontSize: "13px",
-            "& fieldset": { borderColor: "transparent" },
-            "&:hover fieldset": { borderColor: "#e0e5eb" },
-            "&.Mui-focused fieldset": { borderColor: "#2262ef", borderWidth: "1.5px" },
-          },
-          "& input::placeholder": { color: "#9aa3ae", opacity: 1 },
-        }}
-      />
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "8px",
+        backgroundColor: "#f1f4f7",
+        borderRadius: "10px",
+        px: "10px", py: "7px",
+        border: "1.5px solid transparent",
+        "&:focus-within": { borderColor: "#2262ef", backgroundColor: "#f1f4f7" },
+        transition: "border-color 0.15s, background-color 0.15s",
+      }}>
+        <Search sx={{ fontSize: "15px", color: "#9aa3ae", flexShrink: 0 }} />
+        <Box
+          component="input"
+          autoFocus
+          placeholder="Search by name, chart #, phone, email..."
+          sx={{
+            flex: 1, border: "none", outline: "none",
+            backgroundColor: "#f1f4f7",
+            fontFamily: "Inter", fontSize: "13px", color: "#374151",
+            "&::placeholder": { color: "#9aa3ae" },
+          }}
+        />
+      </Box>
     </Box>
 
     {/* Current patient section */}
@@ -108,11 +105,11 @@ const PatientDropdownPanel = () => (
 
     {/* Footer actions */}
     <FooterAction
-      icon={<PersonAdd sx={{ fontSize: "16px", color: "#2262ef" }} />}
+      icon={<PersonAdd sx={{ fontSize: "15px", color: "#2262ef" }} />}
       label="Add new patient"
     />
     <FooterAction
-      icon={<Add sx={{ fontSize: "16px", color: "#2262ef" }} />}
+      icon={<Add sx={{ fontSize: "15px", color: "#2262ef" }} />}
       label="Quick book without chart"
     />
   </Box>
