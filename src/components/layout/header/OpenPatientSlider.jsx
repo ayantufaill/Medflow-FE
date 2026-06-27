@@ -1,8 +1,9 @@
 import { Box, Typography } from '@mui/material';
 import { TableChart } from '@mui/icons-material';
 
-const OpenPatientSlider = () => (
+const OpenPatientSlider = ({ onClick }) => (
   <Box
+    onClick={onClick}
     sx={{
       display: 'flex',
       flexDirection: 'row',
@@ -15,6 +16,7 @@ const OpenPatientSlider = () => (
       borderRadius: '14px',
       cursor: 'pointer',
       flexShrink: 0,
+      '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#c8d0d9' },
     }}
   >
     <TableChart sx={{ fontSize: '14px', color: '#7a8a9a' }} />

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { Box, Chip, Divider, IconButton, MenuItem, Select, Typography } from "@mui/material";
 import {
   Close, ContentCopy, AttachMoney, Assignment, People, History,
@@ -96,16 +97,16 @@ const PatientSlider = ({ open, onClose, patient }) => {
     ? pt.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
     : "AT";
 
-  return (
+  return createPortal(
     <>
-      {/* Backdrop */}
+      {/* Backdrop — starts below the fixed header so the header stays interactive */}
       <Box
         onClick={onClose}
         sx={{
-          position: "fixed", inset: 0,
+          position: "fixed", top: "65px", left: 0, right: 0, bottom: 0,
           backgroundColor: "rgba(0,0,0,0.35)",
           backdropFilter: "blur(2px)",
-          zIndex: 1100,
+          zIndex: 1300,
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
           transition: "opacity 0.25s ease",
@@ -115,13 +116,18 @@ const PatientSlider = ({ open, onClose, patient }) => {
       {/* Slider panel */}
       <Box
         sx={{
-          position: "fixed", top: "64px", left: 0, right: 0,
+          position: "fixed", top: "65px", left: 0, right: 0,
           backgroundColor: "#fff",
           borderBottom: "1px solid #e0e5eb",
           boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
-          zIndex: 1101,
+          zIndex: 1301,
           transform: open ? "translateY(0)" : "translateY(-110%)",
-          transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+          visibility: open ? "visible" : "hidden",
+          // when opening: visibility turns on instantly; when closing: wait for slide-up to finish
+          transition: open
+            ? "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)"
+            : "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.28s",
+          overflowX: "auto",
         }}
       >
         {/* ── HEADER ROW ── */}
@@ -371,7 +377,8 @@ const PatientSlider = ({ open, onClose, patient }) => {
           </Typography>
         </Box>
       </Box>
-    </>
+    </>,
+    document.body,
   );
 };
 
