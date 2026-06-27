@@ -117,7 +117,8 @@ const PatientSlider = ({ open, onClose, patient }) => {
       <Box
         sx={{
           position: "fixed", top: "65px", left: 0, right: 0,
-          backgroundColor: "#fff",
+          backgroundColor: "#FCFCFC",
+          // backgroundColor: 'yellow',
           borderBottom: "1px solid #e0e5eb",
           boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
           zIndex: 1301,
@@ -135,7 +136,8 @@ const PatientSlider = ({ open, onClose, patient }) => {
           display: "flex", alignItems: "center", gap: "12px",
           px: "16px", py: "10px",
           borderBottom: "1px solid #f0f2f5",
-          backgroundColor: "#f8fafc",
+          backgroundColor: "#f3f8fd",
+
         }}>
           {/* Avatar */}
           <Box sx={{
