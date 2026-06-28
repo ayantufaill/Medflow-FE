@@ -6,6 +6,7 @@ const RightPanelCard = ({
   title,
   count,
   headerAction = null,   // 'expand' | 'addButton' | 'plus'
+  onExpand,
   footerLabel = null,
   onFooterClick,
   children,
@@ -48,7 +49,7 @@ const RightPanelCard = ({
 
       {/* Header action — conditional */}
       {headerAction === 'expand' && (
-        <OpenInFull sx={{ fontSize: '16px', color: '#9aa3ae', cursor: 'pointer' }} />
+        <OpenInFull onClick={onExpand} sx={{ fontSize: '16px', color: '#9aa3ae', cursor: 'pointer', '&:hover': { color: '#2262ef' } }} />
       )}
 
       {headerAction === 'addButton' && (
