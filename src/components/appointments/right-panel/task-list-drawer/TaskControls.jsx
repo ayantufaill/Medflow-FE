@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Box, Typography, Checkbox } from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
 
-const TaskControls = () => {
+const TaskControls = ({ onAddTask }) => {
   const [todayOnly, setTodayOnly] = useState(false);
 
   return (
@@ -22,12 +22,15 @@ const TaskControls = () => {
         </Box>
 
         {/* Add a task button */}
-        <Box sx={{
-          backgroundColor: "#2262ef", borderRadius: "8px",
-          px: "16px", height: "36px",
-          display: "flex", alignItems: "center",
-          cursor: "pointer", "&:hover": { backgroundColor: "#1a50cc" },
-        }}>
+        <Box
+          onClick={onAddTask}
+          sx={{
+            backgroundColor: "#2262ef", borderRadius: "8px",
+            px: "16px", height: "36px",
+            display: "flex", alignItems: "center",
+            cursor: "pointer", "&:hover": { backgroundColor: "#1a50cc" },
+          }}
+        >
           <Typography sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 600, color: "#fff" }}>
             Add a task
           </Typography>
