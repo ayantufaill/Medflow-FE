@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Box, Tabs, Tab, useTheme, Typography } from '@mui/material';
+import { Box, Tabs, Tab, useTheme, Typography, Grid } from '@mui/material';
 import PatientInsuranceCoverage from './reports/patient/PatientInsuranceCoverage';
 import PatientMembershipPlan from './reports/patient/PatientMembershipPlan';
 import OnlineSchedulingReferral from './reports/patient/OnlineSchedulingReferral';
@@ -58,6 +58,8 @@ import ClinicalReportsSubNav from '../../components/admin/reports/ClinicalReport
 import OthersReportsSubNav from '../../components/admin/reports/OthersReportsSubNav';
 import SavingReportsSubNav from '../../components/admin/reports/SavingReportsSubNav';
 import FinancialReportsSubNav from '../../components/admin/reports/FinancialReportsSubNav';
+import TaskList from '../../components/appointments/right-panel/TaskList';
+import Messages from '../../components/appointments/right-panel/Messages';
 
 const ReportsDashboard = () => {
   const theme = useTheme();
@@ -85,162 +87,173 @@ const ReportsDashboard = () => {
   };
 
   return (
-    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ width: '100%' }}>
-      <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', mb: hoveredTab !== null ? 0 : 3 }}>
-        <Tabs
-          value={activeTab === -1 ? false : activeTab}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            '& .MuiTab-root': {
-              fontWeight: 600,
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              minWidth: 140,
-              color: 'text.secondary',
-              borderBottom: '3px solid transparent',
-              '&.Mui-selected': {
-                color: theme.palette.primary.main,
-              },
-            },
-            '& .MuiTabs-indicator': {
-              height: 3,
-              backgroundColor: theme.palette.primary.main,
-            },
-          }}
-        >
-          {TABS.map((tab, index) => (
-            <Tab
-              key={tab.label}
-              label={tab.label}
-              component={Link}
-              to={tab.path}
-              disableRipple
-              onMouseEnter={() => setHoveredTab(index)}
-            />
-          ))}
-        </Tabs>
-      </Box>
-
-      {/* Sub-nav — visible on hover */}
-      {hoveredTab === 0 && <FinancialReportsSubNav />}
-      {hoveredTab === 1 && <ClinicalReportsSubNav />}
-      {hoveredTab === 2 && <PatientReportsSubNav />}
-      {hoveredTab === 3 && <OthersReportsSubNav />}
-      {hoveredTab === 4 && <SavingReportsSubNav />}
-
-      {/* Page content */}
-      <Box sx={{ p: 3, backgroundColor: '#fff', borderRadius: 2, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
-        {(location.pathname === '/admin/reports' || location.pathname === '/admin/reports/dashboard') ? (
-          <DashboardTab />
-        ) : location.pathname.toLowerCase().includes('/kpi') ? (
-          <KpiDashboard />
-        ) : location.pathname === '/admin/reports/patient/insurance-coverage' ? (
-          <PatientInsuranceCoverage />
-        ) : location.pathname === '/admin/reports/patient/membership-plan' ? (
-          <PatientMembershipPlan />
-        ) : location.pathname === '/admin/reports/patient/online-scheduling-referral' ? (
-          <OnlineSchedulingReferral />
-        ) : location.pathname === '/admin/reports/patient/by-flag' ? (
-          <PatientFlagsReport />
-        ) : location.pathname === '/admin/reports/patient/cancelled-appointments' ? (
-          <CancelledAppointmentsReport />
-        ) : location.pathname === '/admin/reports/patient/no-show-appointments' ? (
-          <NoShowAppointmentsReport />
-        ) : location.pathname === '/admin/reports/patient/appointments' ? (
-          <AppointmentsReport />
-        ) : location.pathname === '/admin/reports/patient/duplicate-patients' ? (
-          <DuplicatePatientsReport />
-        ) : location.pathname === '/admin/reports/patient/contact-preferences' ? (
-          <PatientContactPreferencesReport />
-        ) : location.pathname === '/admin/reports/patient/last-appointment' ? (
-          <PatientLastAppointmentReport />
-        ) : location.pathname === '/admin/reports/patient/next-appointment' ? (
-          <PatientNextAppointmentReport />
-        ) : location.pathname === '/admin/reports/patient/referral-document' ? (
-          <ReferralDocumentReport />
-        ) : location.pathname === '/admin/reports/patient/lab-case' ? (
-          <LabCaseReport />
-        ) : location.pathname === '/admin/reports/patient/discount-edited-fee' ? (
-          <PatientDiscountEditedFeeReport />
-        ) : location.pathname === '/admin/reports/patient/review' ? (
-          <ReviewReport />
-        ) : location.pathname === '/admin/reports/patient/notifications' ? (
-          <NotificationsReport />
-        ) : location.pathname === '/admin/reports/patient/procedures' ? (
-          <ProceduresReport />
-        ) : location.pathname === '/admin/reports/patient/trackers' ? (
-          <PatientTrackersReport />
-        ) : location.pathname === '/admin/reports/patient/referral-by-patient' ? (
-          <ReferralByPatientReport />
-        ) : location.pathname === '/admin/reports/clinical/recare' ? (
-          <RecareReport />
-        ) : location.pathname === '/admin/reports/clinical/unsigned-progress-notes' ? (
-          <UnsignedProgressNotesReport />
-        ) : location.pathname === '/admin/reports/clinical/rx' ? (
-          <RxReport />
-        ) : location.pathname === '/admin/reports/others/login' ? (
-          <LoginReport />
-        ) : location.pathname === '/admin/reports/others/audit' ? (
-          <AuditReport />
-                ) : location.pathname === '/admin/reports/financial/aging' ? (
-          <AgingReport />
-        ) : location.pathname === '/admin/reports/financial/patient-aging' ? (
-          <PatientAgingReport />
-        ) : location.pathname === '/admin/reports/financial/deposit-slips' ? (
-          <DepositSlips />
-        ) : location.pathname === '/admin/reports/financial/production' ? (
-          <ProductionReport />
-        ) : location.pathname === '/admin/reports/financial/production-collection' ? (
-          <ProductionCollection />
-        ) : location.pathname === '/admin/reports/financial/production-collection-summary' ? (
-          <ProductionCollectionSummary />
-        ) : location.pathname === '/admin/reports/financial/provider-collection-payment-type' ? (
-          <ProviderCollectionPaymentType />
-        ) : location.pathname === '/admin/reports/financial/production-per-code' ? (
-          <ProductionPerCode />
-        ) : location.pathname === '/admin/reports/financial/collection-code-carrier' ? (
-          <CollectionCodeCarrier />
-        ) : location.pathname === '/admin/reports/financial/adjustment' ? (
-          <AdjustmentReport />
-        ) : location.pathname === '/admin/reports/financial/courtesy-credit' ? (
-          <CourtesyCreditReport />
-        ) : location.pathname === '/admin/reports/financial/courtesy-credit-modifications' ? (
-          <CourtesyCreditModifications />
-        ) : location.pathname === '/admin/reports/financial/credit-accounts' ? (
-          <CreditAccountsReport />
-        ) : location.pathname === '/admin/reports/financial/modifications' ? (
-          <ModificationsReport />
-        ) : location.pathname === '/admin/reports/financial/deposit-summary' ? (
-          <DepositSummary />
-        ) : location.pathname === '/admin/reports/financial/collection-carrier' ? (
-          <CollectionCarrier />
-        ) : location.pathname === '/admin/reports/financial/total-collection-individuals' ? (
-          <TotalCollectionIndividuals />
-        ) : location.pathname === '/admin/reports/financial/total-collection-family' ? (
-          <TotalCollectionFamily />
-        ) : location.pathname === '/admin/reports/financial/payment-plans' ? (
-          <PaymentPlans />
-        ) : location.pathname === '/admin/reports/financial/payment-lines' ? (
-          <PaymentLines />
-        ) : location.pathname === '/admin/reports/financial/payment-request' ? (
-          <PaymentRequest />
-        ) : location.pathname === '/admin/reports/financial/openedge-transactions' ? (
-          <OpenEdgeTransactions />
-        ) : location.pathname === '/admin/reports/financial/procedures-insurance' ? (
-          <ProceduresInsurance />
-        ) : location.pathname === '/admin/reports/financial/family-migrated-balances' ? (
-          <FamilyMigratedBalances />
-        ) : location.pathname === '/admin/reports/saving' ? (
-          <SavedReports />
-        ) : (
-          <Box sx={{ textAlign: 'center', p: 3, backgroundColor: '#f9fafb', borderRadius: 2 }}>
-            <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-              {getCurrentPageLabel()}
-            </Typography>
-            <Typography color="text.secondary">Content for this report is coming soon.</Typography>
+    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ display: 'flex', width: '100%', gap: 3, p: 3, backgroundColor: '#f8f9fa', minHeight: 'calc(100vh - 65px)' }}>
+      {/* Main Reports Area */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden' }}>
+          <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 2, pt: 1, mb: hoveredTab !== null ? 0 : 2 }}>
+            <Tabs
+              value={activeTab === -1 ? false : activeTab}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  minWidth: 140,
+                  color: '#64748b',
+                  borderBottom: '3px solid transparent',
+                  '&.Mui-selected': {
+                    color: '#3b82f6',
+                  },
+                },
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  backgroundColor: '#3b82f6',
+                },
+              }}
+            >
+              {TABS.map((tab, index) => (
+                <Tab
+                  key={tab.label}
+                  label={tab.label}
+                  component={Link}
+                  to={tab.path}
+                  disableRipple
+                  onMouseEnter={() => setHoveredTab(index)}
+                />
+              ))}
+            </Tabs>
           </Box>
-        )}
+
+          {/* Sub-nav — visible on hover */}
+          {hoveredTab === 0 && <FinancialReportsSubNav />}
+          {hoveredTab === 1 && <ClinicalReportsSubNav />}
+          {hoveredTab === 2 && <PatientReportsSubNav />}
+          {hoveredTab === 3 && <OthersReportsSubNav />}
+          {hoveredTab === 4 && <SavingReportsSubNav />}
+
+          {/* Page content */}
+          <Box sx={{ p: 3, backgroundColor: '#fff', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+            {(location.pathname === '/admin/reports' || location.pathname === '/admin/reports/dashboard') ? (
+              <Navigate to="/admin/reports/financial/aging" replace />
+            ) : location.pathname.toLowerCase().includes('/kpi') ? (
+              <KpiDashboard />
+            ) : location.pathname === '/admin/reports/patient/insurance-coverage' ? (
+              <PatientInsuranceCoverage />
+            ) : location.pathname === '/admin/reports/patient/membership-plan' ? (
+              <PatientMembershipPlan />
+            ) : location.pathname === '/admin/reports/patient/online-scheduling-referral' ? (
+              <OnlineSchedulingReferral />
+            ) : location.pathname === '/admin/reports/patient/by-flag' ? (
+              <PatientFlagsReport />
+            ) : location.pathname === '/admin/reports/patient/cancelled-appointments' ? (
+              <CancelledAppointmentsReport />
+            ) : location.pathname === '/admin/reports/patient/no-show-appointments' ? (
+              <NoShowAppointmentsReport />
+            ) : location.pathname === '/admin/reports/patient/appointments' ? (
+              <AppointmentsReport />
+            ) : location.pathname === '/admin/reports/patient/duplicate-patients' ? (
+              <DuplicatePatientsReport />
+            ) : location.pathname === '/admin/reports/patient/contact-preferences' ? (
+              <PatientContactPreferencesReport />
+            ) : location.pathname === '/admin/reports/patient/last-appointment' ? (
+              <PatientLastAppointmentReport />
+            ) : location.pathname === '/admin/reports/patient/next-appointment' ? (
+              <PatientNextAppointmentReport />
+            ) : location.pathname === '/admin/reports/patient/referral-document' ? (
+              <ReferralDocumentReport />
+            ) : location.pathname === '/admin/reports/patient/lab-case' ? (
+              <LabCaseReport />
+            ) : location.pathname === '/admin/reports/patient/discount-edited-fee' ? (
+              <PatientDiscountEditedFeeReport />
+            ) : location.pathname === '/admin/reports/patient/review' ? (
+              <ReviewReport />
+            ) : location.pathname === '/admin/reports/patient/notifications' ? (
+              <NotificationsReport />
+            ) : location.pathname === '/admin/reports/patient/procedures' ? (
+              <ProceduresReport />
+            ) : location.pathname === '/admin/reports/patient/trackers' ? (
+              <PatientTrackersReport />
+            ) : location.pathname === '/admin/reports/patient/referral-by-patient' ? (
+              <ReferralByPatientReport />
+            ) : location.pathname === '/admin/reports/clinical/recare' ? (
+              <RecareReport />
+            ) : location.pathname === '/admin/reports/clinical/unsigned-progress-notes' ? (
+              <UnsignedProgressNotesReport />
+            ) : location.pathname === '/admin/reports/clinical/rx' ? (
+              <RxReport />
+            ) : location.pathname === '/admin/reports/others/login' ? (
+              <LoginReport />
+            ) : location.pathname === '/admin/reports/others/audit' ? (
+              <AuditReport />
+            ) : location.pathname === '/admin/reports/financial/aging' ? (
+              <AgingReport />
+            ) : location.pathname === '/admin/reports/financial/patient-aging' ? (
+              <PatientAgingReport />
+            ) : location.pathname === '/admin/reports/financial/deposit-slips' ? (
+              <DepositSlips />
+            ) : location.pathname === '/admin/reports/financial/production' ? (
+              <ProductionReport />
+            ) : location.pathname === '/admin/reports/financial/production-collection' ? (
+              <ProductionCollection />
+            ) : location.pathname === '/admin/reports/financial/production-collection-summary' ? (
+              <ProductionCollectionSummary />
+            ) : location.pathname === '/admin/reports/financial/provider-collection-payment-type' ? (
+              <ProviderCollectionPaymentType />
+            ) : location.pathname === '/admin/reports/financial/production-per-code' ? (
+              <ProductionPerCode />
+            ) : location.pathname === '/admin/reports/financial/collection-code-carrier' ? (
+              <CollectionCodeCarrier />
+            ) : location.pathname === '/admin/reports/financial/adjustment' ? (
+              <AdjustmentReport />
+            ) : location.pathname === '/admin/reports/financial/courtesy-credit' ? (
+              <CourtesyCreditReport />
+            ) : location.pathname === '/admin/reports/financial/courtesy-credit-modifications' ? (
+              <CourtesyCreditModifications />
+            ) : location.pathname === '/admin/reports/financial/credit-accounts' ? (
+              <CreditAccountsReport />
+            ) : location.pathname === '/admin/reports/financial/modifications' ? (
+              <ModificationsReport />
+            ) : location.pathname === '/admin/reports/financial/deposit-summary' ? (
+              <DepositSummary />
+            ) : location.pathname === '/admin/reports/financial/collection-carrier' ? (
+              <CollectionCarrier />
+            ) : location.pathname === '/admin/reports/financial/total-collection-individuals' ? (
+              <TotalCollectionIndividuals />
+            ) : location.pathname === '/admin/reports/financial/total-collection-family' ? (
+              <TotalCollectionFamily />
+            ) : location.pathname === '/admin/reports/financial/payment-plans' ? (
+              <PaymentPlans />
+            ) : location.pathname === '/admin/reports/financial/payment-lines' ? (
+              <PaymentLines />
+            ) : location.pathname === '/admin/reports/financial/payment-request' ? (
+              <PaymentRequest />
+            ) : location.pathname === '/admin/reports/financial/openedge-transactions' ? (
+              <OpenEdgeTransactions />
+            ) : location.pathname === '/admin/reports/financial/procedures-insurance' ? (
+              <ProceduresInsurance />
+            ) : location.pathname === '/admin/reports/financial/family-migrated-balances' ? (
+              <FamilyMigratedBalances />
+            ) : location.pathname === '/admin/reports/saving' ? (
+              <SavedReports />
+            ) : (
+              <Box sx={{ textAlign: 'center', p: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                  {getCurrentPageLabel()}
+                </Typography>
+                <Typography color="text.secondary">Content for this report is coming soon.</Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Box>
+      
+      {/* Right Panel: Tasks and Messages */}
+      <Box sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <TaskList />
+        <Messages />
       </Box>
     </Box>
   );
