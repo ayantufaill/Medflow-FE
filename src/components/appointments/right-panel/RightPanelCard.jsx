@@ -1,5 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { OpenInFull, Add } from '@mui/icons-material';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight, radius, spacing, headingPrimarySx } from '../../../constants/styles';
 
 const RightPanelCard = ({
   icon,
@@ -14,9 +16,9 @@ const RightPanelCard = ({
 }) => (
   <Box
     sx={{
-      backgroundColor: '#ffffff',
-      border: '1px solid #e0e5eb',
-      borderRadius: '12px',
+      backgroundColor: COLORS.SURFACE_CARD,
+      border: `1px solid ${COLORS.BORDER}`,
+      borderRadius: radius.lg,
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
@@ -27,21 +29,21 @@ const RightPanelCard = ({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        px: '14px',
-        py: '12px',
-        backgroundColor: '#f3f8fd',
-        borderBottom: '1px solid #e0e5eb',
+        gap: spacing.cardGap,
+        px: spacing.cardPx,
+        py: spacing.cardPy,
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderBottom: `1px solid ${COLORS.BORDER}`,
       }}
     >
       {icon}
 
-      <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: '#09121f' }}>
+      <Typography sx={{ ...headingPrimarySx }}>
         {title}
       </Typography>
 
       {count !== undefined && (
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 400, color: '#9aa3ae' }}>
+        <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.regular, color: COLORS.TEXT_MUTED }}>
           {count}
         </Typography>
       )}
@@ -50,34 +52,34 @@ const RightPanelCard = ({
 
       {/* Header action — conditional */}
       {headerAction === 'expand' && (
-        <OpenInFull onClick={onExpand} sx={{ fontSize: '16px', color: '#9aa3ae', cursor: 'pointer', '&:hover': { color: '#2262ef' } }} />
+        <OpenInFull onClick={onExpand} sx={{ fontSize: '16px', color: COLORS.TEXT_MUTED, cursor: 'pointer', '&:hover': { color: COLORS.ACCENT } }} />
       )}
 
       {headerAction === 'addButton' && (
         <Box
           onClick={onAdd}
           sx={{
-            backgroundColor: '#2262ef',
-            borderRadius: '6px',
-            px: '14px',
+            backgroundColor: COLORS.ACCENT,
+            borderRadius: radius.sm,
+            px: spacing.cardPx,
             py: '5px',
             cursor: 'pointer',
-            '&:hover': { backgroundColor: '#1a50cc' },
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
           }}
         >
-          <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>
+          <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
             Add
           </Typography>
         </Box>
       )}
 
       {headerAction === 'plus' && (
-        <Add sx={{ fontSize: '18px', color: '#9aa3ae', cursor: 'pointer' }} />
+        <Add sx={{ fontSize: '18px', color: COLORS.TEXT_MUTED, cursor: 'pointer' }} />
       )}
     </Box>
 
     {/* ── Card content ── */}
-    <Box sx={{ flex: 1, px: '14px', py: '10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+    <Box sx={{ flex: 1, px: spacing.cardPx, py: spacing.cardContentPy, display: 'flex', flexDirection: 'column', gap: '2px' }}>
       {children}
     </Box>
 
@@ -89,12 +91,12 @@ const RightPanelCard = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          py: '10px',
-          borderTop: '1px solid #f0f2f5',
+          py: spacing.cardContentPy,
+          borderTop: `1px solid ${COLORS.BORDER_LIGHT}`,
           cursor: 'pointer',
         }}
       >
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 500, color: '#2262ef' }}>
+        <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.medium, color: COLORS.ACCENT }}>
           {footerLabel}
         </Typography>
       </Box>

@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight } from '../../../constants/styles';
 
 const TABS = [
   { label: 'Patient' },
@@ -16,7 +17,7 @@ const LeftPanelTabs = ({ activeTab, onChange }) => (
       alignItems: 'flex-end',
       width: '100%',
       height: '44px',
-      borderBottom: '1px solid #e0e5eb',
+      borderBottom: `1px solid ${COLORS.BORDER}`,
       px: '12px',
       gap: '4px',
       flexShrink: 0,
@@ -35,16 +36,15 @@ const LeftPanelTabs = ({ activeTab, onChange }) => (
             px: '8px',
             pb: '10px',
             cursor: 'pointer',
-            borderBottom: isActive ? '2px solid #2262ef' : '2px solid transparent',
+            borderBottom: isActive ? `2px solid ${COLORS.ACCENT}` : '2px solid transparent',
             transition: 'border-color 0.15s ease',
           }}
         >
           <Typography
             sx={{
-              fontFamily: 'Inter',
-              fontSize: '11px',
-              fontWeight: isActive ? 600 : 400,
-              color: isActive ? '#2262ef' : '#5c646f',
+              fontSize: fontSize.sm,
+              fontWeight: isActive ? fontWeight.semibold : fontWeight.regular,
+              color: isActive ? COLORS.ACCENT : COLORS.TEXT_SECONDARY,
               whiteSpace: 'nowrap',
               userSelect: 'none',
             }}

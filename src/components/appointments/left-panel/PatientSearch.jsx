@@ -1,5 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { Search } from '@mui/icons-material';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 const PatientSearch = () => (
   <Box
@@ -9,16 +11,16 @@ const PatientSearch = () => (
       gap: '8px',
       width: '100%',
       height: '40px',
-      backgroundColor: '#f5f7fa',
-      border: '1px solid #e0e5eb',
-      borderRadius: '8px',
+      backgroundColor: COLORS.SURFACE_INPUT,
+      border: `1px solid ${COLORS.BORDER}`,
+      borderRadius: radius.md,
       px: '12px',
       mb: '10px',
       cursor: 'text',
     }}
   >
-    <Search sx={{ fontSize: '16px', color: '#9aa3ae' }} />
-    <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', color: '#9aa3ae', fontWeight: 400 }}>
+    <Search sx={{ fontSize: '16px', color: COLORS.TEXT_MUTED }} />
+    <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_MUTED, fontWeight: fontWeight.regular }}>
       Search patient...
     </Typography>
   </Box>

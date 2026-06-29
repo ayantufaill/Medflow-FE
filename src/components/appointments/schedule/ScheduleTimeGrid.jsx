@@ -4,6 +4,8 @@ import {
   COLUMN_MIN_WIDTH, START_HOUR, MOCK_APPOINTMENTS, formatHour,
 } from './scheduleConstants';
 import AppointmentCard from './AppointmentCard';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight } from '../../../constants/styles';
 
 const TOTAL_HEIGHT = HOURS.length * HOUR_HEIGHT;
 const TOTAL_WIDTH = TIME_LABEL_WIDTH + OPERATORIES.length * COLUMN_MIN_WIDTH;
@@ -31,7 +33,7 @@ const ScheduleTimeGrid = () => (
           width: TOTAL_WIDTH,
           height: HOUR_HEIGHT,
           display: 'flex',
-          borderBottom: '1px solid #f0f2f5',
+          borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`,
         }}
       >
         {/* Time label */}
@@ -46,7 +48,7 @@ const ScheduleTimeGrid = () => (
             alignItems: 'flex-start',
           }}
         >
-          <Typography sx={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 500, color: '#9aa3ae' }}>
+          <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_MUTED }}>
             {formatHour(hour)}
           </Typography>
         </Box>
@@ -58,7 +60,7 @@ const ScheduleTimeGrid = () => (
             sx={{
               width: COLUMN_MIN_WIDTH,
               flexShrink: 0,
-              borderLeft: '1px solid #e0e5eb',
+              borderLeft: `1px solid ${COLORS.BORDER}`,
               position: 'relative',
               '&::after': {
                 content: '""',
