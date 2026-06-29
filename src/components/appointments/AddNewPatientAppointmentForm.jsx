@@ -138,10 +138,18 @@ const AddNewPatientAppointmentForm = ({
 
   // Reset form when initialPatient changes (e.g., when opening from sidebar)
   useEffect(() => {
-    if (initialPatient) {
-      setPatient(initialPatient);
+    if (open) {
+      setPatient(initialPatient || null);
+      setDateTime(initialDateTime || dayjs().hour(9).minute(5));
+      setVisitType("treatment");
+      setProcedures([]);
+      setProcedureTags(DEFAULT_PROCEDURE_TAGS);
+      setSelectedProviderId("");
+      setSelectedAssistantId("");
+      setDurationMins(30);
+      setNotes("");
     }
-  }, [initialPatient]);
+  }, [open, initialPatient, initialDateTime]);
 
   // Scheduled procedure table rows
   const [procedures, setProcedures] = useState([]);
@@ -923,6 +931,7 @@ const AddNewPatientAppointmentForm = ({
                   onChange={(val) => val && setDateTime(val)}
                   shouldDisableTime={shouldDisableTime}
                   minDate={dayjs().startOf('day')}
+                  views={['year', 'month', 'day', 'hours', 'minutes']}
                   slotProps={{
                     textField: {
                       size: "small",

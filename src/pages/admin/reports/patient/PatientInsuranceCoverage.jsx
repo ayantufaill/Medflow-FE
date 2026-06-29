@@ -18,6 +18,7 @@ import {
   TableRow,
   Paper,
   CircularProgress,
+  Autocomplete,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -158,6 +159,11 @@ const PatientInsuranceCoverage = () => {
   const [apptEndDate, setApptEndDate] = useState('');
   const [apptSingleDate, setApptSingleDate] = useState('');
   const [showNoCoverage, setShowNoCoverage] = useState(false);
+
+  const availablePlans = useMemo(() => {
+    const plans = rawReportData.map(item => item.planName).filter(Boolean);
+    return [...new Set(plans)].sort();
+  }, [rawReportData]);
 
   useEffect(() => {
     dispatch(fetchPatientInsuranceCoverageReport());
@@ -403,27 +409,42 @@ const PatientInsuranceCoverage = () => {
         {/* Search */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Search by payer or plan:</Typography>
-          <TextField
+          <Autocomplete
             size="small"
-            placeholder="Search for plan"
-            variant="outlined"
+            freeSolo
+            options={availablePlans}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
-                </InputAdornment>
-              ),
-              sx: { 
-                height: 30, 
-                fontSize: '0.8rem',
-                backgroundColor: '#f9f9f9',
-                '& fieldset': { borderColor: '#ccc' }
-              }
+            onInputChange={(event, newInputValue) => {
+              setSearchQuery(newInputValue);
             }}
-            sx={{ width: 220 }}
+            onChange={(event, newValue) => {
+              setSearchQuery(newValue || '');
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search for plan, patient, or payer"
+                variant="outlined"
+                onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start" sx={{ pl: 1 }}>
+                        <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
+                      </InputAdornment>
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                  sx: { 
+                    fontSize: '0.8rem',
+                    backgroundColor: '#f9f9f9',
+                    '& fieldset': { borderColor: '#ccc' }
+                  }
+                }}
+              />
+            )}
+            sx={{ width: 300 }}
           />
         </Box>
 
@@ -534,6 +555,7 @@ const PatientInsuranceCoverage = () => {
         <Button 
           variant="contained" 
           size="small" 
+          disabled
           onClick={handleCreateTemplate}
           sx={{ 
             textTransform: 'none', 

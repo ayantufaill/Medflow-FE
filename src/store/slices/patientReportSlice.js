@@ -13,8 +13,47 @@ export const fetchPatientInsuranceCoverageReport = createAsyncThunk(
   }
 );
 
+export const fetchReferralByPatientReport = createAsyncThunk(
+  'patientReport/fetchReferralByPatient',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientReport('referral-by-patient', params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
+export const fetchPatientFlagsReport = createAsyncThunk(
+  'patientReport/fetchPatientFlags',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientReport('by-flag', params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
+export const fetchCancelledAppointmentsReport = createAsyncThunk(
+  'patientReport/fetchCancelledAppointments',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientReport('cancelled-appointments', params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
 const initialState = {
   insuranceCoverage: [],
+  referralByPatient: [],
+  patientFlagsReportData: [],
+  cancelledAppointmentsData: [],
   loading: false,
   error: null,
 };
@@ -25,6 +64,9 @@ const patientReportSlice = createSlice({
   reducers: {
     clearReportData: (state) => {
       state.insuranceCoverage = [];
+      state.referralByPatient = [];
+      state.patientFlagsReportData = [];
+      state.cancelledAppointmentsData = [];
       state.error = null;
       state.loading = false;
     }
@@ -42,14 +84,54 @@ const patientReportSlice = createSlice({
       .addCase(fetchPatientInsuranceCoverageReport.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to load report';
+      })
+      .addCase(fetchPatientFlagsReport.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPatientFlagsReport.fulfilled, (state, action) => {
+        state.loading = false;
+        state.patientFlagsReportData = action.payload || [];
+      })
+      .addCase(fetchPatientFlagsReport.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to load report';
+      })
+      .addCase(fetchCancelledAppointmentsReport.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCancelledAppointmentsReport.fulfilled, (state, action) => {
+        state.loading = false;
+        state.cancelledAppointmentsData = action.payload || [];
+      })
+      .addCase(fetchCancelledAppointmentsReport.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to load report';
+      })
+      .addCase(fetchReferralByPatientReport.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchReferralByPatientReport.fulfilled, (state, action) => {
+        state.loading = false;
+        state.referralByPatient = action.payload || [];
+      })
+      .addCase(fetchReferralByPatientReport.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to load report';
       });
-  }
+  },
 });
 
 export const { clearReportData } = patientReportSlice.actions;
 
-export const selectInsuranceCoverageData = (state) => state.patientReport.insuranceCoverage;
-export const selectInsuranceCoverageLoading = (state) => state.patientReport.loading;
-export const selectInsuranceCoverageError = (state) => state.patientReport.error;
+export const selectInsuranceCoverageData = (state) => state.patientReport?.insuranceCoverage;
+export const selectInsuranceCoverageLoading = (state) => state.patientReport?.loading;
+export const selectReferralByPatientData = (state) => state.patientReport?.referralByPatient;
+export const selectPatientFlagsReportData = (state) => state.patientReport?.patientFlagsReportData;
+export const selectCancelledAppointmentsData = (state) => state.patientReport?.cancelledAppointmentsData;
+export const selectPatientReportLoading = (state) => state.patientReport?.loading;
+export const selectPatientReportError = (state) => state.patientReport?.error;
 
 export default patientReportSlice.reducer;
