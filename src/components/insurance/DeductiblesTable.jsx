@@ -1,16 +1,34 @@
 import {
-  Box, Typography, TextField, Checkbox, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton
+  Box, Typography, TextField, Checkbox, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, InputAdornment
 } from "@mui/material";
-import { Person as PersonIcon, Groups as GroupsIcon, DeleteOutlined as DeleteIcon } from "@mui/icons-material";
+import { DeleteOutlined as DeleteIcon, Layers as LayersIcon } from "@mui/icons-material";
 
 // Sample deductible data structure - Replace with API data when implemented
 const DEFAULT_DEDUCTIBLES = [
-  { id: 1, type: 'Standard', lifetime: false, standard: false, individual: '$50.00', family: '$150.00', metAmount: '$50.00', metDate: '2026-03-03' },
-  { id: 2, type: 'Preventative', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '2026-03-03' },
-  { id: 3, type: 'Basic', lifetime: false, standard: true, individual: '', family: '', metAmount: '', metDate: '' },
-  { id: 4, type: 'Major', lifetime: false, standard: true, individual: '', family: '', metAmount: '', metDate: '' },
-  { id: 5, type: 'Orthodontics', lifetime: false, standard: false, individual: '$0.00', family: '$0.00', metAmount: '$0.00', metDate: '2026-03-03' }
+  { id: 1, type: 'Standard', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+  { id: 2, type: 'Preventative', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+  { id: 3, type: 'Basic', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+  { id: 4, type: 'Major', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+  { id: 5, type: '3 rthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
 ];
+
+const inputSx = {
+  bgcolor: '#f8f9fc',
+  borderRadius: '6px',
+  '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px', color: '#555' },
+  '& fieldset': { borderColor: '#DFE5EC' }
+};
+
+const headerCellSx = {
+  fontSize: '0.65rem',
+  fontWeight: 700,
+  color: '#777',
+  textTransform: 'uppercase',
+  borderBottom: '1px solid #DFE5EC',
+  borderRight: 'none',
+  py: 1.5,
+  letterSpacing: '0.3px'
+};
 
 const DeductiblesTable = ({ 
   formData, 
@@ -23,33 +41,53 @@ const DeductiblesTable = ({
   // Use formData.deductibles if available, otherwise use default structure
   const deductibles = formData.deductibles?.length > 0 ? formData.deductibles : DEFAULT_DEDUCTIBLES;
   return (
-    <Box>
-      <Typography sx={{ fontWeight: 700, mt: 2, color: "#333", fontSize: "0.85rem" }}>Deductibles</Typography>
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 0, overflowX: 'auto' }}>
-        <Table size="small">
+    <Box sx={{ 
+      border: '1px solid #DFE5EC', 
+      borderRadius: '12px', 
+      backgroundColor: '#FFFFFF', 
+      display: 'flex', 
+      flexDirection: 'column',
+      width: '100%',
+      boxSizing: 'border-box',
+      overflow: 'hidden'
+    }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 2, borderBottom: '1px solid #DFE5EC' }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
+            <LayersIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "1rem", mb: 0.1, letterSpacing: '-0.3px' }}>
+              Deductibles
+            </Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+              Per-type lifetime, standard and met amounts
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ p: 2 }}>
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table size="small" sx={{ minWidth: 800 }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: blueHeader }}>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '90px' }}>Types</TableCell>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '70px' }} align="center">Lifetime</TableCell>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '80px' }} align="center">Standard</TableCell>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '130px' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                  <PersonIcon sx={{ fontSize: 11 }} /> Individual Deductibles
-                </Box>
-              </TableCell>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '120px' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                  <GroupsIcon sx={{ fontSize: 12 }} /> Family Deductibles
-                </Box>
-              </TableCell>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '110px' }}>Deductibles Met Amount</TableCell>
-              <TableCell sx={{ ...tableHeaderStyle, minWidth: '100px', borderRight: 0 }}>Deductibles Met Date</TableCell>
+            <TableRow sx={{ bgcolor: '#f8f9fc' }}>
+              <TableCell sx={{ ...headerCellSx, minWidth: '90px' }}>TYPES</TableCell>
+              <TableCell sx={{ ...headerCellSx, minWidth: '70px' }} align="center">LIFETIME</TableCell>
+              <TableCell sx={{ ...headerCellSx, minWidth: '80px' }} align="center">STANDARD</TableCell>
+              <TableCell sx={{ ...headerCellSx, minWidth: '130px' }}>INDIVIDUAL</TableCell>
+              <TableCell sx={{ ...headerCellSx, minWidth: '120px' }}>FAMILY</TableCell>
+              <TableCell sx={{ ...headerCellSx, minWidth: '130px' }}>MET AMOUNT</TableCell>
+              <TableCell sx={{ ...headerCellSx, minWidth: '120px' }}>MET DATE</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {deductibles.map((row, index) => (
-              <TableRow key={index} sx={{ '&:nth-of-type(odd)': { bgcolor: '#fff' } }}>
-                <TableCell sx={{ fontSize: '0.65rem', fontWeight: 600, borderRight: '1px solid #eee', minWidth: '90px' }}>
+              <TableRow key={index} sx={{ '&:hover': { bgcolor: '#fafbfd' } }}>
+                <TableCell sx={{ fontSize: '0.8rem', fontWeight: 500, color: '#333', borderBottom: '1px solid #f0f0f0', py: 2 }}>
                   {row.isCodeRow ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <TextField 
@@ -57,83 +95,87 @@ const DeductiblesTable = ({
                         placeholder="CDT Code"
                         value={row.type}
                         onChange={(e) => handleDeductibleChange(index, 'type', e.target.value)}
-                        sx={{ '& input': { py: 0.15, fontSize: '0.6rem' }, width: '70px' }} 
+                        sx={{ ...inputSx, width: '100px' }} 
                       />
-                      <IconButton size="small" onClick={() => handleRemoveDeductibleRow && handleRemoveDeductibleRow(index)} sx={{ p: 0.2, color: '#d32f2f' }}>
-                        <DeleteIcon sx={{ fontSize: 14 }} />
+                      <IconButton size="small" onClick={() => handleRemoveDeductibleRow && handleRemoveDeductibleRow(index)} sx={{ p: 0.5, color: '#d32f2f' }}>
+                        <DeleteIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Box>
                   ) : (
                     row.type
                   )}
                 </TableCell>
-                <TableCell align="center" sx={{ borderRight: '1px solid #eee', minWidth: '70px', py: 0 }}>
+                <TableCell align="center" sx={{ borderBottom: '1px solid #f0f0f0', py: 2 }}>
                   <Checkbox 
                     size="small" 
                     checked={row.lifetime}
                     onChange={(e) => handleDeductibleChange(index, 'lifetime', e.target.checked)}
-                    sx={{ p: 0.1 }}
+                    sx={{ p: 0.5, color: '#ccc', '&.Mui-checked': { color: '#1976d2' } }}
                   />
                 </TableCell>
-                <TableCell align="center" sx={{ borderRight: '1px solid #eee', minWidth: '80px', py: 0 }}>
+                <TableCell align="center" sx={{ borderBottom: '1px solid #f0f0f0', py: 2 }}>
                   <Checkbox 
                     size="small" 
                     checked={row.standard}
                     onChange={(e) => handleDeductibleChange(index, 'standard', e.target.checked)}
-                    sx={{ p: 0.1 }}
+                    sx={{ p: 0.5, color: '#ccc', '&.Mui-checked': { color: '#1976d2' } }}
                   />
                 </TableCell>
-                <TableCell sx={{ borderRight: '1px solid #eee', bgcolor: row.individual ? '#fff' : '#f5f7fa', minWidth: '130px', py: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.65rem', color: '#555', ml: 1, mr: -0.5 }}>$</Typography>
-                    <TextField 
-                      size="small" 
-                      value={row.individual}
-                      onChange={(e) => handleDeductibleChange(index, 'individual', e.target.value)}
-                      sx={{ '& input': { py: 0.15, fontSize: '0.6rem', border: 'none' }, width: '100px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                    />
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ borderRight: '1px solid #eee', bgcolor: row.family ? '#fff' : '#f5f7fa', minWidth: '120px', py: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.65rem', color: '#555', ml: 1, mr: -0.5 }}>$</Typography>
-                    <TextField 
-                      size="small" 
-                      value={row.family}
-                      onChange={(e) => handleDeductibleChange(index, 'family', e.target.value)}
-                      sx={{ '& input': { py: 0.15, fontSize: '0.6rem', border: 'none' }, width: '90px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                    />
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ borderRight: '1px solid #eee', minWidth: '110px', py: 0, bgcolor: '#f5f5f5' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.65rem', color: '#999', ml: 1, mr: -0.5 }}>$</Typography>
-                    <TextField 
-                      size="small" 
-                      value={row.metAmount}
-                      disabled
-                      placeholder="Auto-calc"
-                      sx={{ '& input': { py: 0.15, fontSize: '0.6rem', border: 'none', color: '#999', WebkitTextFillColor: '#999' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                    />
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ fontSize: '0.65rem', minWidth: '100px', py: 0 }}>
+                <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
                   <TextField 
+                    fullWidth
                     size="small" 
-                    type="date"
+                    value={row.individual}
+                    onChange={(e) => handleDeductibleChange(index, 'individual', e.target.value)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+                    }}
+                    sx={inputSx}
+                  />
+                </TableCell>
+                <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
+                  <TextField 
+                    fullWidth
+                    size="small" 
+                    value={row.family}
+                    onChange={(e) => handleDeductibleChange(index, 'family', e.target.value)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+                    }}
+                    sx={inputSx}
+                  />
+                </TableCell>
+                <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
+                  <TextField 
+                    fullWidth
+                    size="small" 
+                    value={row.metAmount}
+                    disabled
+                    placeholder="Auto-calc"
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                    }}
+                    sx={{ ...inputSx, '& .MuiInputBase-root.Mui-disabled': { bgcolor: '#f8f9fc', color: '#aaa' } }}
+                  />
+                </TableCell>
+                <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
+                  <TextField 
+                    fullWidth
+                    size="small" 
+                    placeholder="mm / dd / yyyy"
                     value={row.metDate || ''}
                     onChange={(e) => handleDeductibleChange(index, 'metDate', e.target.value)}
-                    sx={{ '& input': { py: 0.15, fontSize: '0.6rem', border: 'none' }, width: '100px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
+                    sx={inputSx}
                   />
                 </TableCell>
               </TableRow>
             ))}
             {/* Add Deductible by Procedure Code Row */}
             <TableRow>
-              <TableCell colSpan={7} sx={{ py: 1, px: 2 }}>
+              <TableCell colSpan={7} sx={{ py: 2, borderBottom: 'none' }}>
                 <Typography 
                   onClick={() => handleAddDeductibleRow && handleAddDeductibleRow()}
-                  sx={{ color: '#1976d2', fontSize: '0.65rem', cursor: 'pointer', fontWeight: 600, display: 'inline-block' }}
+                  sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, display: 'inline-block' }}
                 >
                   + Add Deductible by Procedure Code
                 </Typography>
@@ -142,6 +184,7 @@ const DeductiblesTable = ({
           </TableBody>
         </Table>
       </TableContainer>
+      </Box>
     </Box>
   );
 };

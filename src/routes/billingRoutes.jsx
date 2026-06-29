@@ -39,9 +39,9 @@ const adminBilling = (children) => (
   </ProtectedRoute>
 );
 
-const adminBillingReception = (children) => (
+const adminBillingReception = (children, hideSidebar = false) => (
   <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
-    <Layout>{children}</Layout>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
@@ -59,7 +59,7 @@ const adminBillingFrontDesk = (children) => (
 
 const billingRoutes = [
   <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />)} />,
-  <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />)} />,
+  <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />, true)} />,
   <Route key="/finance" path="/finance" element={adminBillingReception(<FinancePage />)} />,
 
   <Route key="/services" path="/services" element={adminBilling(<ServicesListPage />)} />,

@@ -3,6 +3,8 @@ export { default as CoverageTable, DEFAULT_COVERAGE, COVERAGE_DATA } from './Cov
 export { default as DeductiblesTable, DEFAULT_DEDUCTIBLES } from './DeductiblesTable';
 export { default as EditCoverageModal } from './EditCoverageModal';
 export { default as ImportedCoverageModal } from './ImportedCoverageModal';
+export { default as AdvancedSection } from './AdvancedSection';
+export { default as PlanFeeGuideSection } from './PlanFeeGuideSection';
 export { default as InsuranceDialog } from './InsuranceDialog';
 export { default as InsuranceInformation } from './InsuranceInformation';
 export { default as MemberCoverageTable } from './MemberCoverageTable';

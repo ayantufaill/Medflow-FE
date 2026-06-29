@@ -5,6 +5,7 @@ const TABS = [
   { label: 'Schedule', path: '/appointments/operatory-schedule' },
   { label: 'Patients', path: '/patients' },
   { label: 'Clinical', path: '/clinical' },
+  { label: 'Insurance', path: '/insurance' },
   { label: 'Billing', path: '/finance' },
   { label: 'Reports', path: '/patient-reports' },
 ];
