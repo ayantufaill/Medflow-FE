@@ -7,6 +7,7 @@ const RightPanelCard = ({
   count,
   headerAction = null,   // 'expand' | 'addButton' | 'plus'
   onExpand,
+  onAdd,
   footerLabel = null,
   onFooterClick,
   children,
@@ -54,6 +55,7 @@ const RightPanelCard = ({
 
       {headerAction === 'addButton' && (
         <Box
+          onClick={onAdd}
           sx={{
             backgroundColor: '#2262ef',
             borderRadius: '6px',
