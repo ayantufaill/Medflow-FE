@@ -12,6 +12,10 @@ const TASKS = [
 
 const TaskList = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerView, setDrawerView] = useState("list");
+
+  const openList = () => { setDrawerView("list"); setDrawerOpen(true); };
+  const openAdd  = () => { setDrawerView("add");  setDrawerOpen(true); };
 
   return (
     <>
@@ -20,8 +24,9 @@ const TaskList = () => {
         title="Task List"
         count={5}
         headerAction="addButton"
+        onAdd={openAdd}
         footerLabel="Open task list →"
-        onFooterClick={() => setDrawerOpen(true)}
+        onFooterClick={openList}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {TASKS.map(({ title, sub, dot }, i) => (
@@ -58,7 +63,11 @@ const TaskList = () => {
         </Box>
       </RightPanelCard>
 
-      <TaskListDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <TaskListDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        initialView={drawerView}
+      />
     </>
   );
 };
