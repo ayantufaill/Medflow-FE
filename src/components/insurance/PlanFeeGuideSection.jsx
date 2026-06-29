@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, TextField, MenuItem, IconButton, Button } from "@mui/material";
 import { InfoOutlined as InfoIcon, DeleteOutlined as DeleteIcon, RequestQuote as RequestQuoteIcon } from "@mui/icons-material";
+import FormInput from './FormInput';
 
 const PlanFeeGuideSection = ({ 
   formData, 
@@ -48,7 +49,7 @@ const PlanFeeGuideSection = ({
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* Plan Fee Guide */}
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', letterSpacing: '1px', mb: 0.5, textTransform: 'uppercase' }}>
+          <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#6b7280', letterSpacing: '1px', mb: 0.5, textTransform: 'uppercase' }}>
             PLAN FEE GUIDE
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -62,14 +63,14 @@ const PlanFeeGuideSection = ({
                 '& .MuiOutlinedInput-root': { 
                   bgcolor: '#f3f4f6', 
                   borderRadius: '8px',
-                  fontSize: '0.75rem', 
+                  fontSize: '14px', 
                   height: '36px' 
                 },
                 '& fieldset': { borderColor: '#DFE5EC' }
               }}
             >
               {planFeeGuideOptions.map(option => (
-                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.75rem' }}>{option.label}</MenuItem>
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '14px' }}>{option.label}</MenuItem>
               ))}
             </TextField>
             <Button 
@@ -99,30 +100,23 @@ const PlanFeeGuideSection = ({
 
         {/* Coverage Type */}
         <Box sx={{ flex: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>COVERAGE TYPE</Typography>
-            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />
-          </Box>
-          <TextField
+          <FormInput
             select
-            fullWidth
-            size="small"
+            label="COVERAGE TYPE"
+            labelEndAdornment={<InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />}
             value={formData.coverageType || ''}
             onChange={(e) => handleInputChange('coverageType', e.target.value)}
             sx={{ 
               '& .MuiOutlinedInput-root': { 
                 bgcolor: '#f3f4f6', 
                 borderRadius: '8px',
-                fontSize: '0.75rem', 
-                height: '36px' 
-              },
-              '& fieldset': { borderColor: '#DFE5EC' }
+              }
             }}
           >
             {COVERAGE_TYPES.map(option => (
-              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.75rem' }}>{option.label}</MenuItem>
+              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '14px' }}>{option.label}</MenuItem>
             ))}
-          </TextField>
+          </FormInput>
         </Box>
       </Box>
 
@@ -137,20 +131,20 @@ const PlanFeeGuideSection = ({
             size="small"
             value={guide.providerId}
             onChange={(e) => handleProviderFeeGuideChange(index, 'providerId', e.target.value)}
-            sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
+            sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '14px', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
           />
           <TextField
             select
             size="small"
             value={guide.feeGuide}
             onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
-            sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
+            sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '14px', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
           >
-            <MenuItem value="" disabled sx={{ fontSize: '0.75rem', color: '#aaa' }}>
+            <MenuItem value="" disabled sx={{ fontSize: '14px', color: '#aaa' }}>
               <em>Select Fee Guide</em>
             </MenuItem>
             {planFeeGuideOptions.map(option => (
-              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.75rem' }}>{option.label}</MenuItem>
+              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '14px' }}>{option.label}</MenuItem>
             ))}
           </TextField>
           <IconButton size="small" onClick={() => handleRemoveProviderFeeGuide(index)} sx={{ color: '#d32f2f', p: 0.5 }}>

@@ -9,6 +9,7 @@ import {
   Edit as EditIcon,
   InfoOutlined as InfoIcon
 } from "@mui/icons-material";
+import FormInput from './FormInput';
 
 const SubscriberInformation = ({ 
   formData, 
@@ -64,134 +65,77 @@ const SubscriberInformation = ({
       
       <Stack spacing={1.5} sx={{ mt: 1 }}>
         {/* Relationship Dropdown */}
-        <Box>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-            Patient Relationship to Subscriber <span style={{ color: '#d32f2f' }}>*</span>
-          </Typography>
-          <TextField
-            select
-            fullWidth
-            value={formData.subscriber?.relationship || ''}
-            onChange={(e) => handleSubscriberChange('relationship', e.target.value)}
-            size="small"
-            sx={{ 
-              bgcolor: '#f8f9fc',
-              '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-              '& fieldset': { borderColor: '#DFE5EC' }
-            }}
-          >
-            {relationships.map(rel => (
-              <MenuItem key={rel} value={rel} sx={{ fontSize: '0.75rem' }}>{rel}</MenuItem>
-            ))}
-          </TextField>
-        </Box>
+        <FormInput
+          select
+          label="Patient Relationship to Subscriber"
+          required
+          value={formData.subscriber?.relationship || ''}
+          onChange={(e) => handleSubscriberChange('relationship', e.target.value)}
+        >
+          {relationships.map(rel => (
+            <MenuItem key={rel} value={rel} sx={{ fontSize: '14px' }}>{rel}</MenuItem>
+          ))}
+        </FormInput>
 
         {/* Name and ID */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-              Subscriber Name <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            <TextField
-              fullWidth
+            <FormInput
+              label="Subscriber Name"
+              required
               value={formData.subscriber?.name || ''}
               onChange={(e) => handleSubscriberChange('name', e.target.value)}
-              size="small"
               disabled={formData.subscriber?.relationship === 'Self'}
-              sx={{ 
-                bgcolor: '#f8f9fc',
-                '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-                '& fieldset': { borderColor: '#DFE5EC' }
-              }}
             />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-              Subscriber ID <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            <TextField
-              fullWidth
+            <FormInput
+              label="Subscriber ID"
+              required
               value={formData.subscriber?.subscriberId || ''}
               onChange={(e) => {
                 const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
                 handleSubscriberChange('subscriberId', alphanumericValue);
-              }}
-              size="small"
-              sx={{ 
-                bgcolor: '#f8f9fc',
-                '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-                '& fieldset': { borderColor: '#DFE5EC' }
               }}
             />
           </Box>
         </Box>
 
         {/* SSN */}
-        <Box>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-            Subscriber Social Security Number
-          </Typography>
-          <TextField
-            fullWidth
-            type="password"
-            placeholder="•••-••-••••"
-            value={formData.subscriber?.ssn || ''}
-            onChange={(e) => handleSubscriberChange('ssn', e.target.value)}
-            size="small"
-            sx={{ 
-              bgcolor: '#f8f9fc',
-              '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px', letterSpacing: '2px' },
-              '& fieldset': { borderColor: '#DFE5EC' }
-            }}
-          />
-        </Box>
+        <FormInput
+          label="Subscriber Social Security Number"
+          type="password"
+          placeholder="•••-••-••••"
+          value={formData.subscriber?.ssn || ''}
+          onChange={(e) => handleSubscriberChange('ssn', e.target.value)}
+          sx={{ '& .MuiInputBase-root': { letterSpacing: '2px' } }}
+        />
 
         {/* Date of Birth */}
-        <Box>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-            Date of Birth <span style={{ color: '#d32f2f' }}>*</span>
-          </Typography>
-          <TextField
-            fullWidth
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            value={formData.subscriber?.dateOfBirth || ''}
-            onChange={(e) => handleSubscriberChange('dateOfBirth', e.target.value)}
-            size="small"
-            sx={{ 
-              bgcolor: '#f8f9fc',
-              '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-              '& fieldset': { borderColor: '#DFE5EC' }
-            }}
-          />
-        </Box>
+        <FormInput
+          label="Date of Birth"
+          required
+          type="date"
+          InputLabelProps={{ shrink: true }}
+          value={formData.subscriber?.dateOfBirth || ''}
+          onChange={(e) => handleSubscriberChange('dateOfBirth', e.target.value)}
+        />
       </Stack>
 
       {/* Assignment and Release Info */}
       <Box sx={{ display: 'flex', gap: 2, mb: 1, mt: 3, alignItems: 'flex-end' }}>
         <Box sx={{ flex: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase' }}>
-              Assignment of Benefit to
-            </Typography>
-            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />
-          </Box>
-          <TextField
+          <FormInput
             select
-            fullWidth
+            label="Assignment of Benefit to"
+            labelEndAdornment={<InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />}
             value={formData.assignmentOfBenefits || 1}
             onChange={(e) => handleInputChange('assignmentOfBenefits', e.target.value)}
-            size="small"
-            sx={{ 
-              bgcolor: '#f8f9fc',
-              '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-              '& fieldset': { borderColor: '#DFE5EC' }
-            }}
           >
             {benefits.map(option => (
-              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.75rem' }}>{option.label}</MenuItem>
+              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '14px' }}>{option.label}</MenuItem>
             ))}
-          </TextField>
+          </FormInput>
         </Box>
         
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0.5, height: '36px' }}>
