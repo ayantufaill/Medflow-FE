@@ -126,6 +126,7 @@ const AddNewPatientAppointmentForm = ({
   loading = false,
   initialPatient = null,
   initialDateTime = null,
+  initialRoomId = "",
   open = true,
   appointments: initialAppointments = [],
 }) => {
@@ -138,10 +139,21 @@ const AddNewPatientAppointmentForm = ({
 
   // Reset form when initialPatient changes (e.g., when opening from sidebar)
   useEffect(() => {
-    if (initialPatient) {
-      setPatient(initialPatient);
+    if (open) {
+      setPatient(initialPatient || null);
+      setDateTime(initialDateTime || dayjs().hour(9).minute(5));
+      setVisitType("treatment");
+      setProcedures([]);
+      setProcedureTags(DEFAULT_PROCEDURE_TAGS);
+      setSelectedProviderId("");
+      setSelectedAssistantId("");
+      setDurationMins(30);
+      setSelectedRoomId(initialRoomId || "");
+      setAppointmentStatus("unconfirmed");
+      setSelectedAppointmentTypeId("");
+      setNotes("");
     }
-  }, [initialPatient]);
+  }, [open, initialPatient, initialDateTime, initialRoomId]);
 
   // Scheduled procedure table rows
   const [procedures, setProcedures] = useState([]);
@@ -342,6 +354,10 @@ const AddNewPatientAppointmentForm = ({
 
     // Calculate endTime from dateTime + durationMins
     const start = dateTime || dayjs();
+    if (start.isBefore(dayjs().startOf('day'))) {
+      alert("Appointment date cannot be in the past.");
+      return;
+    }
     const end = start.add(durationMins || 30, "minute");
 
     onSubmit({
@@ -918,6 +934,8 @@ const AddNewPatientAppointmentForm = ({
                   value={dateTime}
                   onChange={(val) => val && setDateTime(val)}
                   shouldDisableTime={shouldDisableTime}
+                  minDate={dayjs().startOf('day')}
+                  views={['year', 'month', 'day', 'hours', 'minutes']}
                   slotProps={{
                     textField: {
                       size: "small",

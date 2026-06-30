@@ -50,14 +50,18 @@ const AccountNotesDialog = ({ patient, onClose }) => {
           patient,
           noteId: editingNoteId,
           updates: { text: noteText }
-        }));
+        })).then(() => {
+          dispatch(fetchPatientAccountNotes(patient));
+        });
         setEditingNoteId(null);
       } else {
         // Create new note
         dispatch(createPatientAccountNote({
           patient,
           text: noteText
-        }));
+        })).then(() => {
+          dispatch(fetchPatientAccountNotes(patient));
+        });
       }
       setNoteText('');
     }
@@ -69,14 +73,16 @@ const AccountNotesDialog = ({ patient, onClose }) => {
   };
 
   const handleToggleRemindMe = (noteId) => {
-    const notesList = notes || [];
+    const notesList = Array.isArray(notes) ? notes : [];
     const note = notesList.find(n => n.id === noteId || String(n.id) === String(noteId));
     if (note) {
       dispatch(updatePatientAccountNote({
         patient,
         noteId,
         updates: { remindMe: !note.remindMe }
-      }));
+      })).then(() => {
+        dispatch(fetchPatientAccountNotes(patient));
+      });
     }
   };
 
@@ -144,7 +150,7 @@ const AccountNotesDialog = ({ patient, onClose }) => {
     }
   };
 
-  const notesList = notes || [];
+  const notesList = Array.isArray(notes) ? notes : [];
   const activeNotesList = notesList.filter(n => !n.archived);
   const archivedNotesList = notesList.filter(n => n.archived);
 
