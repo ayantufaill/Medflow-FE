@@ -126,6 +126,7 @@ const AddNewPatientAppointmentForm = ({
   loading = false,
   initialPatient = null,
   initialDateTime = null,
+  initialRoomId = "",
   open = true,
   appointments: initialAppointments = [],
 }) => {
@@ -147,9 +148,12 @@ const AddNewPatientAppointmentForm = ({
       setSelectedProviderId("");
       setSelectedAssistantId("");
       setDurationMins(30);
+      setSelectedRoomId(initialRoomId || "");
+      setAppointmentStatus("unconfirmed");
+      setSelectedAppointmentTypeId("");
       setNotes("");
     }
-  }, [open, initialPatient, initialDateTime]);
+  }, [open, initialPatient, initialDateTime, initialRoomId]);
 
   // Scheduled procedure table rows
   const [procedures, setProcedures] = useState([]);

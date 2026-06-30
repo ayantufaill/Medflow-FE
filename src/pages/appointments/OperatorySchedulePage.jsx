@@ -228,6 +228,8 @@ const OperatorySchedulePage = () => {
       }
     } else if (isBlock) {
       try {
+        // Always delete the old block, even if it's coming from pending, 
+        // because we don't delete it when moving it TO pending (to prevent data loss on refresh)
         if (itemId && !String(itemId).startsWith("temp-")) {
           await scheduleBlockService.deleteBlock(itemId);
         }
@@ -263,6 +265,7 @@ const OperatorySchedulePage = () => {
 
   // Slot blocking and popover state
   const [customFormDateTime, setCustomFormDateTime] = useState(null);
+  const [customFormRoomId, setCustomFormRoomId] = useState(null);
   const [scheduleBlocks, setScheduleBlocks] = useState([]);
   const [blockSlotDialogOpen, setBlockSlotDialogOpen] = useState(false);
   const [blockSlotDialogData, setBlockSlotDialogData] = useState(null);
@@ -726,11 +729,13 @@ const OperatorySchedulePage = () => {
   const mapAppointment = (a) => {
     try {
       const iso = String(a.appointmentDate || "");
-      const dateOnly = iso.includes("T") ? iso.split("T")[0] : iso.slice(0, 10);
-      if (!dateOnly) {
-        console.warn("mapAppointment dropped: missing dateOnly", a);
+      if (!iso) {
+        console.warn("mapAppointment dropped: missing appointmentDate", a);
         return null;
       }
+
+      // Parse the ISO string to the local timezone to avoid shifting days
+      const dateOnly = dayjs(iso).format("YYYY-MM-DD");
 
       const startObj = a.startTime ? dayjs(`${dateOnly}T${a.startTime}`) : null;
       if (!startObj || !startObj.isValid()) {
@@ -842,7 +847,8 @@ const OperatorySchedulePage = () => {
 
   // Uses the new custom hook to automatically fetch and cache via Redux
   const fetchStartDate = selectedDate.startOf('month').format('YYYY-MM-DD');
-  const fetchEndDate = selectedDate.endOf('month').format('YYYY-MM-DD');
+  // Add 1 day to the end date so the backend's "less than" filter safely includes the entire final day of the month
+  const fetchEndDate = selectedDate.endOf('month').add(1, 'day').format('YYYY-MM-DD');
   
   const { 
     appointments: reduxAppointments, 
@@ -1553,6 +1559,7 @@ const OperatorySchedulePage = () => {
         onCancel={() => setAddAppointmentFormOpen(false)}
         loading={formSaving}
         initialDateTime={initialFormDateTime}
+        initialRoomId={customFormRoomId}
         initialPatient={selectedPatient}
         providers={providers || []}
         rooms={rooms || []}
@@ -1612,6 +1619,12 @@ const OperatorySchedulePage = () => {
                   .startOf("day")
                   .add(selectedSlotInfo.minutesFromStart, "minute");
                 setCustomFormDateTime(start);
+                // The columnId is the operatory room ID (e.g., 'op1', 'op2', or MongoDB ID)
+                const roomId = selectedSlotInfo.columnId.startsWith("op") 
+                  ? selectedSlotInfo.columnId.substring(2) 
+                  : selectedSlotInfo.columnId;
+                setCustomFormRoomId(roomId);
+                
                 // Also set the sidebar patient query if needed, otherwise just open form
                 setAddAppointmentFormOpen(true);
               }

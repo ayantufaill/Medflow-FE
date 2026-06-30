@@ -630,7 +630,7 @@ const OperatorySidebar = ({
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
                         <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>
-                          Birthday: {(() => {
+                          Date of Birth (DOB): {(() => {
                             const dob = patientDetails?.dateOfBirth || selectedPatient?.dateOfBirth;
                             if (!dob) return '---';
                             const age = dayjs().diff(dayjs(dob), 'year');
