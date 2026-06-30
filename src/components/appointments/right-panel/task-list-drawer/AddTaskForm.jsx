@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Box, Typography, IconButton } from "@mui/material";
 import {
   KeyboardDoubleArrowLeft, Close,
-  PersonOutlined, PeopleOutline, CalendarMonth, AccessTime,
+  AlternateEmailOutlined, HubOutlined, CalendarTodayOutlined, AccessTimeOutlined,
 } from "@mui/icons-material";
 
 /* ── atoms ─────────────────────────────────────────────────── */
@@ -119,7 +119,7 @@ const AddTaskForm = ({ onBack, onClose }) => {
         {/* Assign to user */}
         <FormSection>
           <IconFieldLabel
-            icon={<PersonOutlined sx={{ fontSize: "14px" }} />}
+            icon={<AlternateEmailOutlined sx={{ fontSize: "14px" }} />}
             label="Assign to user:"
             extra={
               <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", cursor: "pointer" }}>
@@ -133,7 +133,7 @@ const AddTaskForm = ({ onBack, onClose }) => {
         {/* Assign to group */}
         <FormSection>
           <IconFieldLabel
-            icon={<PeopleOutline sx={{ fontSize: "14px" }} />}
+            icon={<HubOutlined sx={{ fontSize: "14px", transform: "rotate(90deg)" }} />}
             label="Assign to group:"
           />
           <FieldInput defaultValue="None" focused />
@@ -142,7 +142,7 @@ const AddTaskForm = ({ onBack, onClose }) => {
         {/* Due date */}
         <FormSection>
           <IconFieldLabel
-            icon={<CalendarMonth sx={{ fontSize: "14px" }} />}
+            icon={<CalendarTodayOutlined sx={{ fontSize: "14px" }} />}
             label="Due date:"
           />
           <FieldInput placeholder="MM/dd/yyyy" />
@@ -151,7 +151,7 @@ const AddTaskForm = ({ onBack, onClose }) => {
         {/* Time */}
         <FormSection>
           <IconFieldLabel
-            icon={<AccessTime sx={{ fontSize: "14px" }} />}
+            icon={<AccessTimeOutlined sx={{ fontSize: "14px" }} />}
             label="Time:"
           />
           <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>

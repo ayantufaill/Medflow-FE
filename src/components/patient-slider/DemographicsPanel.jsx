@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import { LinkOutlined, MonitorHeart, StarBorder } from "@mui/icons-material";
+import { LinkOutlined, FavoriteBorder, StarBorder } from "@mui/icons-material";
 import { LetterBadge, NoteLine } from "./helpers";
 
 const DemographicsPanel = ({ pt }) => (
@@ -16,7 +16,7 @@ const DemographicsPanel = ({ pt }) => (
     </Box>
 
     <NoteLine icon={<LinkOutlined sx={{ fontSize: "13px" }} />}  text="Premed not required" iconColor="#9aa3ae" />
-    <NoteLine icon={<MonitorHeart sx={{ fontSize: "13px" }} />}  text="No medical alerts"   iconColor="#22c55e" />
+    <NoteLine icon={<FavoriteBorder sx={{ fontSize: "13px" }} />}  text="No medical alerts"   iconColor="#22c55e" />
     <NoteLine icon={<StarBorder   sx={{ fontSize: "13px" }} />}  text="No request sent"     iconColor="#f59e0b" />
   </Box>
 );

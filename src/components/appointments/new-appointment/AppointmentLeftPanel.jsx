@@ -1,5 +1,5 @@
 import { Box, FormControlLabel, Radio, RadioGroup, TextField, Typography } from "@mui/material";
-import { AccessTime } from "@mui/icons-material";
+import { AccessTimeOutlined } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -53,7 +53,7 @@ const AppointmentLeftPanel = ({
 
       <FieldBox label="Time" sx={{ flexShrink: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", border: "1px solid #d1d5db", borderRadius: "8px", overflow: "hidden", height: "40px" }}>
-          <AccessTime sx={{ fontSize: "16px", color: "#9aa3ae", ml: "10px", mr: "4px", flexShrink: 0 }} />
+          <AccessTimeOutlined sx={{ fontSize: "16px", color: "#9aa3ae", ml: "10px", mr: "4px", flexShrink: 0 }} />
           <input
             value={`${timeHours}:${timeMins}`}
             onChange={(e) => {

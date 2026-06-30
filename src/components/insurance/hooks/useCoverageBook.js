@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { feeService } from '../../services/fee.service';
+import { feeService } from '../../../services/fee.service';
 import { getProcedureType } from '../utils/insuranceHelpers';
 
 export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData) => {

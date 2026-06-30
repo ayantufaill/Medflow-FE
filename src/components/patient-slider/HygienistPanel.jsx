@@ -1,5 +1,5 @@
 import { Box, InputAdornment, MenuItem, Select, Typography } from "@mui/material";
-import { PersonOutlined, CalendarMonth, WarningAmber } from "@mui/icons-material";
+import { PersonOutline, CalendarTodayOutlined, PendingActionsOutlined } from "@mui/icons-material";
 import { ApptBlock, SL, selectSx } from "./helpers";
 
 const HygienistPanel = ({ pt }) => (
@@ -7,7 +7,7 @@ const HygienistPanel = ({ pt }) => (
     <Select size="small" displayEmpty value="" sx={selectSx}
       startAdornment={
         <InputAdornment position="start" sx={{ mr: 0 }}>
-          <PersonOutlined sx={{ fontSize: "14px", color: "#9aa3ae" }} />
+          <PersonOutline sx={{ fontSize: "14px", color: "#9aa3ae" }} />
         </InputAdornment>
       }
     >
@@ -21,12 +21,12 @@ const HygienistPanel = ({ pt }) => (
       date={pt.nextHygAppt.date}
       time={pt.nextHygAppt.time}
       provider={pt.nextHygAppt.provider}
-      icon={<CalendarMonth sx={{ fontSize: "12px" }} />}
+      icon={<CalendarTodayOutlined sx={{ fontSize: "12px" }} />}
     />
 
     <Box sx={{ mt: "auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: "3px", mb: "2px" }}>
-        <WarningAmber sx={{ fontSize: "12px", color: "#f59e0b" }} />
+        <PendingActionsOutlined sx={{ fontSize: "12px", color: "#f59e0b" }} />
         <SL>HYG DUE DATE</SL>
       </Box>
       <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600, color: "#f59e0b" }}>

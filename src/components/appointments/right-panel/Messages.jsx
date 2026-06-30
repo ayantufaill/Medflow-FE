@@ -1,18 +1,18 @@
 import { Box, Typography } from '@mui/material';
-import { ChatBubbleOutline, CheckCircleOutline, Phone, MapsUgc } from '@mui/icons-material';
+import { ChatBubbleOutline, CheckCircleOutline, PhoneOutlined } from '@mui/icons-material';
 import RightPanelCard from './RightPanelCard';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
 
 const MESSAGE_ROWS = [
-  { title: 'Recare reminders', sub: '34 delivered today', icon: <ChatBubbleOutline sx={{ fontSize: '18px', color: COLORS.TEXT_MUTED }} /> },
-  { title: 'Confirmations',    sub: '12 received',        icon: <CheckCircleOutline sx={{ fontSize: '18px', color: COLORS.TEXT_MUTED }} /> },
-  { title: 'Voicemails',       sub: '6 transcribed',      icon: <Phone sx={{ fontSize: '18px', color: COLORS.TEXT_MUTED }} /> },
+  { title: 'Recare reminders', sub: '34 delivered today', icon: <ChatBubbleOutline sx={{ fontSize: '18px', color: '#4b5563' }} /> },
+  { title: 'Confirmations',    sub: '12 received',        icon: <CheckCircleOutline sx={{ fontSize: '18px', color: '#4b5563' }} /> },
+  { title: 'Voicemails',       sub: '6 transcribed',      icon: <PhoneOutlined sx={{ fontSize: '18px', color: '#4b5563' }} /> },
 ];
 
 const Messages = () => (
   <RightPanelCard
-    icon={<MapsUgc sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
+    icon={<ChatBubbleOutline sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
     title="Messages"
     count={4}
     headerAction="plus"
@@ -23,8 +23,8 @@ const Messages = () => (
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          py: '9px',
+          gap: '12px',
+          py: '12px',
           borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
           '&:last-child': { borderBottom: 'none' },
           cursor: 'pointer',
@@ -32,9 +32,9 @@ const Messages = () => (
       >
         <Box
           sx={{
-            width: avatarSize.md, height: avatarSize.md,
-            backgroundColor: COLORS.SURFACE_TINT,
-            borderRadius: radius.md,
+            width: '36px', height: '36px',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}
@@ -46,7 +46,7 @@ const Messages = () => (
           <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
             {title}
           </Typography>
-          <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>
+          <Typography sx={{ fontSize: fontSize.base, color: '#6b7280' }}>
             {sub}
           </Typography>
         </Box>

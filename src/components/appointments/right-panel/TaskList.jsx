@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { RadioButtonUnchecked, AssignmentTurnedIn } from '@mui/icons-material';
+import { RadioButtonUnchecked, Checklist } from '@mui/icons-material';
 import RightPanelCard from './RightPanelCard';
 import TaskListDrawer from './TaskListDrawer';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 const TASKS = [
-  { title: 'Procedure Followup Required', sub: 'Jun 29, 2022 · Front', dot: true },
-  { title: 'Procedure Followup Required', sub: 'Jun 29, 2022 · Front', dot: false },
-  { title: 'Procedure Followup Required', sub: 'Jun 29, 2022 · Front', dot: false },
+  { title: 'Procedure Followup Required', sub: '06/29/2022 · Front', dot: true },
+  { title: 'Procedure Followup Required', sub: '06/29/2022 · Front', dot: false },
+  { title: 'Procedure Followup Required', sub: '06/29/2022 · Front', dot: false },
 ];
 
 const TaskList = () => {
@@ -22,7 +22,7 @@ const TaskList = () => {
   return (
     <>
       <RightPanelCard
-        icon={<AssignmentTurnedIn sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
+        icon={<Checklist sx={{ fontSize: '20px', color: '#10b981' }} />}
         title="Task List"
         count={5}
         headerAction="addButton"
@@ -46,13 +46,13 @@ const TaskList = () => {
                 position: 'relative',
               }}
             >
-              <RadioButtonUnchecked sx={{ fontSize: '20px', color: COLORS.ACCENT, flexShrink: 0 }} />
+              <RadioButtonUnchecked sx={{ fontSize: '20px', color: '#3b82f6', flexShrink: 0 }} />
 
               <Box sx={{ flex: 1 }}>
                 <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
                   {title}
                 </Typography>
-                <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>
+                <Typography sx={{ fontSize: fontSize.base, color: '#6b7280' }}>
                   {sub}
                 </Typography>
               </Box>

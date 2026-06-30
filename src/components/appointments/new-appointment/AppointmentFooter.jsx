@@ -1,5 +1,5 @@
 import { Box, Button, Typography } from "@mui/material";
-import { Person } from "@mui/icons-material";
+import { PersonOutline } from "@mui/icons-material";
 
 const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, loading }) => (
   <Box sx={{
@@ -8,7 +8,7 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
     borderTop: "1px solid #e0e5eb", flexShrink: 0,
   }}>
     <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <Person sx={{ fontSize: "16px", color: "#9aa3ae" }} />
+      <PersonOutline sx={{ fontSize: "16px", color: "#9aa3ae" }} />
       <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280" }}>
         Booking for{" "}
         <Box component="span" sx={{ fontWeight: 700, color: "#09121f" }}>
