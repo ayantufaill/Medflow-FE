@@ -38,9 +38,9 @@ import PaymentPresentation from './PaymentPresentation';
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
   { label: 'Providers', path: '/admin/user-management/providers' },
-  { label: 'Roles', path: '/admin/user-management/roles' },
-  { label: 'Time Clock', path: '/admin/user-management/time-clock' },
-  { label: 'Task Management', path: '/admin/user-management/task-management' },
+  { label: 'Roles', path: '/admin/user-management/roles', disabled: true },
+  { label: 'Time Clock', path: '/admin/user-management/time-clock', disabled: true },
+  { label: 'Task Management', path: '/admin/user-management/task-management', disabled: true },
 ];
 
 const TABS = [
@@ -224,6 +224,28 @@ const AdminPage = () => {
                         : INSURANCE_MANAGEMENT_SUB_TABS
               ).map((sub) => {
                 const isActive = location.pathname === sub.path;
+                if (sub.disabled) {
+                  return (
+                    <Typography
+                      key={sub.label}
+                      component="span"
+                      sx={{
+                        px: 2,
+                        py: 1.2,
+                        fontSize: '0.8rem',
+                        fontWeight: 400,
+                        color: 'text.disabled',
+                        textDecoration: 'none',
+                        display: 'block',
+                        cursor: 'not-allowed',
+                        userSelect: 'none',
+                        opacity: 0.5,
+                      }}
+                    >
+                      {sub.label}
+                    </Typography>
+                  );
+                }
                 return (
                   <Typography
                     key={sub.label}

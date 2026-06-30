@@ -9,6 +9,7 @@ export const TABS = [
 export const PATIENT_REPORT_SUB_TABS = [
   { label: 'Patient by Insurance Coverage', path: '/admin/reports/patient/insurance-coverage' },
   { label: 'Patient by Membership Plan', path: '/admin/reports/patient/membership-plan' },
+  { label: 'Referral Report', path: '/admin/reports/patient/referral' },
   { label: 'Referral By Patient Report', path: '/admin/reports/patient/referral-by-patient' },
   { label: 'Online Scheduling Referral Report', path: '/admin/reports/patient/online-scheduling-referral' },
   { label: 'Patients By Flag Report', path: '/admin/reports/patient/by-flag' },

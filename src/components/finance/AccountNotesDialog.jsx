@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchPatientAccountNotes,
@@ -183,7 +184,7 @@ const AccountNotesDialog = ({ patient, onClose }) => {
               {/* Note Details */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                 <Typography sx={{ fontSize: '0.85rem', color: '#555' }}>
-                  {note.date} -
+                  {dayjs(note.createdAt || note.date || new Date()).format('MM/DD/YYYY')} -
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', color: '#4a70b0', cursor: 'pointer' }} onClick={() => handleEditNote(note)}>
                   <Typography sx={{ fontSize: '0.85rem', fontStyle: 'italic', mr: 0.25, fontWeight: 500 }}>
