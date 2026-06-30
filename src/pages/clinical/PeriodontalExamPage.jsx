@@ -4,7 +4,7 @@ import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
   Button, Select, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
   Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogContent, TextField, Stack,
-  CircularProgress, Alert
+  CircularProgress, Alert, Menu
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -40,6 +40,8 @@ const SummaryData = [
 const DiagnosticHeader = () => {
   const [healthStatus, setHealthStatus] = useState('Healthy');
   const [distribution, setDistribution] = useState('Localized');
+  const [periodontitisStage, setPeriodontitisStage] = useState('stage II');
+  const [periodontalGrading, setPeriodontalGrading] = useState('grade B');
 
   return (
   <Box sx={{ p: 2, bgcolor: '#fff', borderTop: '1px solid #e0e0e0' }}>
@@ -49,7 +51,7 @@ const DiagnosticHeader = () => {
               <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
               <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
             </Box>
-      <IconButton size="small"><PrintIcon sx={{ fontSize: 18, color: '#999' }} /></IconButton>
+      <IconButton size="small" onClick={() => window.print()}><PrintIcon sx={{ fontSize: 18, color: '#999' }} /></IconButton>
     </Box>
 
     <Grid container spacing={4}>
@@ -66,7 +68,8 @@ const DiagnosticHeader = () => {
           <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs }}>Periodontitis:</Typography>
           <Select 
             size="small" 
-            value="stage2" 
+            value={periodontitisStage}
+            onChange={(e) => setPeriodontitisStage(e.target.value)}
             sx={{ 
               height: 24, 
               fontSize: fontSize.xs, 
@@ -79,7 +82,10 @@ const DiagnosticHeader = () => {
               '& .MuiSvgIcon-root': { fontSize: '1rem' }
             }} 
           >
-            <MenuItem value="stage2" sx={{ fontSize: fontSize.xs }}>stage II</MenuItem>
+            <MenuItem value="stage I" sx={{ fontSize: fontSize.xs }}>stage I</MenuItem>
+            <MenuItem value="stage II" sx={{ fontSize: fontSize.xs }}>stage II</MenuItem>
+            <MenuItem value="stage III" sx={{ fontSize: fontSize.xs }}>stage III</MenuItem>
+            <MenuItem value="stage IV" sx={{ fontSize: fontSize.xs }}>stage IV</MenuItem>
           </Select>
         </Box>
 
@@ -95,7 +101,8 @@ const DiagnosticHeader = () => {
           <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs }}>Periodontal Grading:</Typography>
           <Select 
             size="small" 
-            value="gradeB" 
+            value={periodontalGrading}
+            onChange={(e) => setPeriodontalGrading(e.target.value)}
             sx={{ 
               height: 24, 
               fontSize: fontSize.xs, 
@@ -108,7 +115,9 @@ const DiagnosticHeader = () => {
               '& .MuiSvgIcon-root': { fontSize: '1rem' }
             }} 
           >
-            <MenuItem value="gradeB" sx={{ fontSize: fontSize.xs }}>grade B</MenuItem>
+            <MenuItem value="grade A" sx={{ fontSize: fontSize.xs }}>grade A</MenuItem>
+            <MenuItem value="grade B" sx={{ fontSize: fontSize.xs }}>grade B</MenuItem>
+            <MenuItem value="grade C" sx={{ fontSize: fontSize.xs }}>grade C</MenuItem>
           </Select>
         </Box>
       </Grid>
@@ -228,6 +237,7 @@ const PeriodontalExamPage = () => {
   }, [historicalDates, currentAppointment]);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [newChartAnchorEl, setNewChartAnchorEl] = useState(null);
   
   const defaultSettings = {
     probing: ['3', '2', '3'],
@@ -568,10 +578,30 @@ const PeriodontalExamPage = () => {
             </Button>
             <Button 
               variant="contained" 
+              onClick={(e) => setNewChartAnchorEl(e.currentTarget)}
               sx={{ bgcolor: '#d4a373', textTransform: 'none', borderRadius: 2, fontSize: fontSize.sm, px: 3, fontWeight: fontWeight.semibold }}
             >
               New Perio Chart ▾
             </Button>
+            <Menu
+              anchorEl={newChartAnchorEl}
+              open={Boolean(newChartAnchorEl)}
+              onClose={() => setNewChartAnchorEl(null)}
+            >
+              <MenuItem onClick={() => {
+                handleNewExam();
+                setNewChartAnchorEl(null);
+              }} sx={{ fontSize: fontSize.sm }}>
+                Copy from latest
+              </MenuItem>
+              <MenuItem onClick={() => {
+                setChartData(initialToothData());
+                handleNewExam();
+                setNewChartAnchorEl(null);
+              }} sx={{ fontSize: fontSize.sm }}>
+                New Chart
+              </MenuItem>
+            </Menu>
           </Box>
         </Box>
 

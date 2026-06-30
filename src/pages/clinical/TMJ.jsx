@@ -696,7 +696,15 @@ const DentalTmdExamPage = () => {
                           </Box>
                         </Box>
                         <Box>
-                          <Typography variant="caption" sx={{ fontSize: '13px' }}>Duration:</Typography>
+                          <Typography variant="caption" sx={{ fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+                            Duration:
+                            <TextField
+                              variant="standard"
+                              value={formData.durationText || ''}
+                              onChange={(e) => handleFieldChange('durationText', e.target.value)}
+                              sx={{ ml: 1, width: 80, '& input': { fontSize: '13px', padding: '1px 0' } }}
+                            />
+                          </Typography>
                           <Box sx={{ display: 'flex', mt: 1 }}>
                             <RadioGroup 
                               row 

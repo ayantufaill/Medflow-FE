@@ -471,11 +471,35 @@ const Lesions = ({
                   placeholder="Add note..."
                   value={popoverNoteValue}
                   onChange={(e) => setPopoverNoteValue(e.target.value)}
-                  onBlur={() => handleSaveNote(activeToothNum, popoverNoteValue)}
                   sx={{
                     '& .MuiInputBase-root': { fontSize: '0.75rem', p: 1 }
                   }}
                 />
+                <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: 'flex-end' }}>
+                  <Button 
+                    size="small" 
+                    color="error" 
+                    onClick={() => {
+                      setPopoverNoteValue('');
+                      handleSaveNote(activeToothNum, '');
+                      setShowPopoverNoteInput(false);
+                    }}
+                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', p: '2px 8px' }}
+                  >
+                    Delete Note
+                  </Button>
+                  <Button 
+                    size="small" 
+                    variant="contained" 
+                    onClick={() => {
+                      handleSaveNote(activeToothNum, popoverNoteValue);
+                      setShowPopoverNoteInput(false);
+                    }}
+                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', p: '2px 8px' }}
+                  >
+                    Save Note
+                  </Button>
+                </Stack>
               </Box>
             ) : (
               <Button
