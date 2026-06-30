@@ -10,8 +10,8 @@ const renderFilterSelect = (label, prefix = '', options = [], defaultValue) => (
   <Select
     size="small"
     defaultValue={defaultValue}
-    sx={{ 
-      minWidth: 140, 
+    sx={{
+      minWidth: 140,
       height: 36,
       fontSize: '0.75rem',
       fontWeight: 600,
@@ -47,10 +47,10 @@ const RecareListFilters = () => {
         {renderFilterSelect('All Dentists', 'DENTIST', [], 'All Dentists')}
         {renderFilterSelect('All Hygienists', 'HYGIENIST', [], 'All Hygienists')}
         {renderFilterSelect('With or Without', 'FLAGS', [], 'With or Without')}
-        
-        <TextField 
-          size="small" 
-          placeholder="Search patient" 
+
+        <TextField
+          size="small"
+          placeholder="Search patient"
           variant="outlined"
           sx={{
             '& .MuiOutlinedInput-root': {
@@ -71,8 +71,8 @@ const RecareListFilters = () => {
         />
 
         <Box sx={{ flexGrow: 1 }} />
-        
-        <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f59e0b', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#d97706', boxShadow: 'none' } }}>
+
+        <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#00BBAB', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#00A395', boxShadow: 'none' } }}>
           Regenerate Recare
         </Button>
       </Box>
@@ -80,25 +80,25 @@ const RecareListFilters = () => {
       {/* Second Filter Row */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 3, p: 2, pt: 1.5, backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <FormControlLabel 
-            control={<Checkbox size="small" icon={<RadioButtonUncheckedIcon sx={{ color: '#3b82f6' }} />} checkedIcon={<CheckCircleIcon sx={{ color: '#2563eb' }} />} sx={{ padding: '4px' }} />} 
-            label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', ml: 0.5 }}>Include Appointed</Typography>} 
+          <FormControlLabel
+            control={<Checkbox size="small" icon={<RadioButtonUncheckedIcon sx={{ color: '#3b82f6' }} />} checkedIcon={<CheckCircleIcon sx={{ color: '#2563eb' }} />} sx={{ padding: '4px' }} />}
+            label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', ml: 0.5 }}>Include Appointed</Typography>}
             sx={{ m: 0 }}
           />
-          <FormControlLabel 
-            control={<Checkbox size="small" defaultChecked icon={<RadioButtonUncheckedIcon sx={{ color: '#3b82f6' }} />} checkedIcon={<CheckCircleIcon sx={{ color: '#2563eb' }} />} sx={{ padding: '4px' }} />} 
-            label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', ml: 0.5 }}>Show Flags in Report</Typography>} 
+          <FormControlLabel
+            control={<Checkbox size="small" defaultChecked icon={<RadioButtonUncheckedIcon sx={{ color: '#3b82f6' }} />} checkedIcon={<CheckCircleIcon sx={{ color: '#2563eb' }} />} sx={{ padding: '4px' }} />}
+            label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', ml: 0.5 }}>Show Flags in Report</Typography>}
             sx={{ m: 0 }}
           />
         </Box>
 
         <Box sx={{ flexGrow: 1 }} />
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
             Clear all
           </Typography>
-          <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#2563eb', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', whiteSpace: 'nowrap' }}>
+          <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#2362EF', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#1D53CC', boxShadow: 'none' } }}>
             Apply Filters
           </Button>
           <Button variant="outlined" size="small" sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap' }}>
@@ -107,7 +107,7 @@ const RecareListFilters = () => {
           <Button variant="outlined" size="small" startIcon={<PrintIcon sx={{ color: '#3b82f6' }} />} sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap' }}>
             Print
           </Button>
-          <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#f59e0b', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { bgcolor: '#d97706', boxShadow: 'none' } }}>
+          <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { bgcolor: '#2E8CCC', boxShadow: 'none' } }}>
             Export CSV
           </Button>
         </Box>

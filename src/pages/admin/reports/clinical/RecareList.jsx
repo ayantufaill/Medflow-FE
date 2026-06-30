@@ -9,6 +9,7 @@ const RecareList = () => {
     {
       id: 1,
       patient: 'Patient A',
+      icons: ['calendar', 'dollar', 'factCheck', 'chat'],
       flags: 'red',
       age: 37,
       contact: '(555) 123-4567',
@@ -26,6 +27,7 @@ const RecareList = () => {
     {
       id: 2,
       patient: 'Patient B',
+      icons: [],
       flags: '',
       age: 54,
       contact: '(555) 987-6543',
@@ -43,6 +45,7 @@ const RecareList = () => {
     {
       id: 3,
       patient: 'Patient C',
+      icons: [],
       flags: '',
       age: 44,
       contact: '(555) 456-7890',
