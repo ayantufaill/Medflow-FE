@@ -5,6 +5,7 @@ import {
   Paper, Button, InputAdornment, Select, MenuItem, Menu, ListItemText
 } from "@mui/material";
 import { Search as SearchIcon, InfoOutlined as InfoIcon, PeopleOutline as PeopleIcon, Business as BusinessIcon } from "@mui/icons-material";
+import FormInput from './FormInput';
 
 const InsuranceInformation = ({ 
   formData, 
@@ -122,18 +123,11 @@ const InsuranceInformation = ({
       </Box>
       <Box sx={{ p: 2 }}>
       <Box sx={{ position: 'relative', mt: 1 }}>
-        <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-          Search Carrier
-        </Typography>
-        <TextField 
-          fullWidth size="small" placeholder="Search by Payer Id, Carrier..." 
+        <FormInput
+          label="Search Carrier"
+          placeholder="Search by Payer Id, Carrier..."
           InputProps={{ endAdornment: <SearchIcon color="disabled" fontSize="small" /> }}
-          sx={{ 
-            mb: 0.75, 
-            bgcolor: '#f8f9fc',
-            '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-            '& fieldset': { borderColor: '#DFE5EC' }
-          }}
+          sx={{ mb: 0.75 }}
           value={formData.carrierSearch || ''}
           onChange={(e) => handleSearch(e.target.value)}
           onFocus={() => handleSearch(formData.carrierSearch || '')}
@@ -202,66 +196,36 @@ const InsuranceInformation = ({
 
       {/* Carrier Info Fields */}
       <Box sx={{ mt: 1, mb: 1.5 }}>
-        <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-          Carrier / Payer Name <span style={{ color: '#d32f2f' }}>*</span>
-        </Typography>
-        <TextField 
-          fullWidth size="small" 
+        <FormInput
+          label="Carrier / Payer Name"
+          required
           value={formData.carrierName || ''}
           onChange={(e) => handleInputChange('carrierName', e.target.value)}
-          sx={{ 
-            mb: 1.5,
-            bgcolor: '#f8f9fc',
-            '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-            '& fieldset': { borderColor: '#DFE5EC' }
-          }}
+          sx={{ mb: 1.5 }}
         />
 
         <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-              Payer ID <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            <TextField 
-              fullWidth size="small" 
+            <FormInput
+              label="Payer ID"
+              required
               value={formData.payerId || ''}
               onChange={(e) => handleInputChange('payerId', e.target.value)}
-              sx={{ 
-                bgcolor: '#f8f9fc',
-                '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-                '& fieldset': { borderColor: '#DFE5EC' }
-              }}
             />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-              Carrier Phone
-            </Typography>
-            <TextField 
-              fullWidth size="small" 
+            <FormInput
+              label="Carrier Phone"
               value={formData.carrierPhone || ''}
               onChange={(e) => handleInputChange('carrierPhone', e.target.value)}
-              sx={{ 
-                bgcolor: '#f8f9fc',
-                '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-                '& fieldset': { borderColor: '#DFE5EC' }
-              }}
             />
           </Box>
         </Box>
 
-        <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-          Payer Address
-        </Typography>
-        <TextField 
-          fullWidth size="small" 
+        <FormInput
+          label="Payer Address"
           value={formData.payerAddress || ''}
           onChange={(e) => handleInputChange('payerAddress', e.target.value)}
-          sx={{ 
-            bgcolor: '#f8f9fc',
-            '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-            '& fieldset': { borderColor: '#DFE5EC' }
-          }}
         />
       </Box>
 

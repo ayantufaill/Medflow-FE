@@ -1,5 +1,6 @@
 import { Box, Typography, TextField, MenuItem, Stack } from "@mui/material";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import FormInput from './FormInput';
 
 const RenewalSection = ({ 
   formData, 
@@ -39,64 +40,37 @@ const RenewalSection = ({
       <Stack spacing={1.5} sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-              Policy Started <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            <TextField
-              fullWidth
+            <FormInput
+              label="Policy Started"
+              required
               type="date"
               InputLabelProps={{ shrink: true }}
               value={formData.policyStarted || ''}
               onChange={(e) => handleRenewalChange('policyStarted', e.target.value)}
-              size="small"
-              sx={{ 
-                bgcolor: '#f8f9fc',
-                '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-                '& fieldset': { borderColor: '#DFE5EC' }
-              }}
             />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-              Policy Ends
-            </Typography>
-            <TextField
-              fullWidth
+            <FormInput
+              label="Policy Ends"
               type="date"
               InputLabelProps={{ shrink: true }}
               value={formData.policyEnds || ''}
               onChange={(e) => handleRenewalChange('policyEnds', e.target.value)}
-              size="small"
-              sx={{ 
-                bgcolor: '#f8f9fc',
-                '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-                '& fieldset': { borderColor: '#DFE5EC' }
-              }}
             />
           </Box>
         </Box>
 
-        <Box>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', mb: 0.5, textTransform: 'uppercase' }}>
-            Renewal Month <span style={{ color: '#d32f2f' }}>*</span>
-          </Typography>
-          <TextField
-            select
-            fullWidth
-            value={formData.renewalMonth || ''}
-            onChange={(e) => handleRenewalChange('renewalMonth', e.target.value)}
-            size="small"
-            sx={{ 
-              bgcolor: '#f8f9fc',
-              '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px' },
-              '& fieldset': { borderColor: '#DFE5EC' }
-            }}
-          >
-            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => (
-              <MenuItem key={month} value={month} sx={{ fontSize: '0.75rem' }}>{month}</MenuItem>
-            ))}
-          </TextField>
-        </Box>
+        <FormInput
+          select
+          label="Renewal Month"
+          required
+          value={formData.renewalMonth || ''}
+          onChange={(e) => handleRenewalChange('renewalMonth', e.target.value)}
+        >
+          {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => (
+            <MenuItem key={month} value={month} sx={{ fontSize: '14px' }}>{month}</MenuItem>
+          ))}
+        </FormInput>
       </Stack>
       </Box>
     </Box>
