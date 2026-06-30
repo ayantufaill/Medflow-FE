@@ -1,5 +1,6 @@
 export { default as CoverageBookSummary } from './CoverageBookSummary';
-export { default as CoverageTable, DEFAULT_COVERAGE, COVERAGE_DATA } from './CoverageTable';
+export { default as CoverageTable } from './CoverageTable';
+export { DEFAULT_COVERAGE, COVERAGE_DATA, DUMMY_INSURANCE, DEFAULT_BOOK_ROW_DATA } from './utils/insuranceConstants';
 export { default as DeductiblesTable, DEFAULT_DEDUCTIBLES } from './DeductiblesTable';
 export { default as EditCoverageModal } from './EditCoverageModal';
 export { default as ImportedCoverageModal } from './ImportedCoverageModal';
