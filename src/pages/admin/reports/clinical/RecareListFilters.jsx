@@ -6,12 +6,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
-const renderFilterSelect = (label, prefix = '', options = [], defaultValue) => (
+const renderFilterSelect = (label, prefix = '', options = [], defaultValue, customWidth) => (
   <Select
     size="small"
     defaultValue={defaultValue}
     sx={{
-      minWidth: 140,
+      width: customWidth || 'auto',
       height: 36,
       fontSize: '0.75rem',
       fontWeight: 600,
@@ -43,16 +43,17 @@ const RecareListFilters = () => {
     <Box sx={{ mb: 2, border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
       {/* Top Filter Row */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 1.5, p: 2, pb: 1.5, backgroundColor: '#fff' }}>
-        {renderFilterSelect('05/08/2026 - 06/08/2026', 'RANGE', [], '05/08/2026 - 06/08/2026')}
-        {renderFilterSelect('All Dentists', 'DENTIST', [], 'All Dentists')}
-        {renderFilterSelect('All Hygienists', 'HYGIENIST', [], 'All Hygienists')}
-        {renderFilterSelect('With or Without', 'FLAGS', [], 'With or Without')}
+        {renderFilterSelect('05/08/2026 — 06/08/2026', 'RANGE', [], '05/08/2026 — 06/08/2026', '274.76px')}
+        {renderFilterSelect('All Dentists', 'DENTIST', [], 'All Dentists', '176.13px')}
+        {renderFilterSelect('All Hygienists', 'HYGIENIST', [], 'All Hygienists', '203.53px')}
+        {renderFilterSelect('With or Without', 'FLAGS', [], 'With or Without', '193.24px')}
 
         <TextField
           size="small"
           placeholder="Search patient"
           variant="outlined"
           sx={{
+            width: '224px',
             '& .MuiOutlinedInput-root': {
               borderRadius: '8px',
               backgroundColor: '#f8fafc',

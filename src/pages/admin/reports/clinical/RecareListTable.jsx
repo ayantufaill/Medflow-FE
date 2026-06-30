@@ -54,7 +54,7 @@ const RecareListTable = ({ rows = [] }) => {
           </TableHead>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'top', borderBottom: '1px solid #e2e8f0', color: '#1e293b', fontWeight: 600 } }}>
+              <TableRow key={row.id} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b', fontWeight: 600 } }}>
                 <TableCell sx={{ color: '#1e293b', fontWeight: 700 }}>
                   <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', mb: row.icons && row.icons.length > 0 ? 0.5 : 0 }}>
                     {row.patient}
@@ -90,8 +90,8 @@ const RecareListTable = ({ rows = [] }) => {
                 <TableCell sx={{ color: '#475569' }}>{row.contactAgain}</TableCell>
                 <TableCell sx={{ color: '#475569' }}>{row.followUp}</TableCell>
                 <TableCell sx={{ color: '#475569' }}>{row.apptDate}</TableCell>
-                <TableCell align="center" sx={{ color: '#3b82f6', verticalAlign: 'middle' }}>{row.contactCount}</TableCell>
-                <TableCell align="center" sx={{ verticalAlign: 'middle' }}>
+                <TableCell align="center" sx={{ color: '#3b82f6' }}>{row.contactCount}</TableCell>
+                <TableCell align="center">
                   <Button sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#fff', backgroundColor: '#EFA831', borderRadius: '6px', width: '62px', height: '28px', minWidth: 'auto', p: 0, boxShadow: 'none', '&:hover': { backgroundColor: '#d97706', boxShadow: 'none' } }}>
                     RESET
                   </Button>
