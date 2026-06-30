@@ -15,6 +15,7 @@ import {
   TableRow,
   Paper,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import { 
   Edit as EditIcon, 
@@ -83,18 +84,63 @@ const PatientFlagsReport = () => {
   const [excludeFlags, setExcludeFlags] = useState([]);
 
   useEffect(() => {
+    let baseData = DUMMY_DATA;
     if (patientFlagsReportData && patientFlagsReportData.length > 0) {
-      setData(patientFlagsReportData.map(item => ({
+      baseData = patientFlagsReportData.map(item => ({
         patient: item.patient,
         dob: item.dob || 'N/A',
         phone: item.phone || 'N/A',
         email: item.email || 'N/A',
         flags: item.flags || (item.flag ? [item.flag] : [])
-      })));
-    } else if (!loading && showData) {
-      setData(DUMMY_DATA);
+      }));
+    } else if (loading || !showData) {
+      return;
     }
-  }, [patientFlagsReportData, loading, showData]);
+
+    // 1. Remove patients with no flags
+    let filtered = baseData.filter(patient => patient.flags && patient.flags.length > 0);
+    
+    // Helper to normalize and split clumped flags
+    const getNormalizedFlags = (rawFlags) => {
+      const arr = Array.isArray(rawFlags) ? rawFlags : [rawFlags].filter(Boolean);
+      let splitFlags = [];
+      arr.forEach(flagObj => {
+        if (typeof flagObj === 'string') {
+          // Split by comma or semicolon in case they are clumped
+          splitFlags.push(...flagObj.split(/[,;]/).map(s => s.trim()).filter(Boolean));
+        } else {
+          splitFlags.push(flagObj);
+        }
+      });
+      return splitFlags;
+    };
+
+    // 2. Apply "Include" filters
+    if (includeFlags && includeFlags.length > 0) {
+      const lowerIncludes = includeFlags.map(f => typeof f === 'string' ? f.toLowerCase() : String(f));
+      filtered = filtered.filter(patient => {
+        const flagsArray = getNormalizedFlags(patient.flags);
+        return flagsArray.length > 0 && flagsArray.some(flagObj => {
+          const val = typeof flagObj === 'object' ? (flagObj.id || flagObj.name || flagObj.label) : flagObj;
+          return typeof val === 'string' && lowerIncludes.includes(val.toLowerCase());
+        });
+      });
+    }
+    
+    // 3. Apply "Exclude" filters
+    if (excludeFlags && excludeFlags.length > 0) {
+      const lowerExcludes = excludeFlags.map(f => typeof f === 'string' ? f.toLowerCase() : String(f));
+      filtered = filtered.filter(patient => {
+        const flagsArray = getNormalizedFlags(patient.flags);
+        return !(flagsArray.length > 0 && flagsArray.some(flagObj => {
+          const val = typeof flagObj === 'object' ? (flagObj.id || flagObj.name || flagObj.label) : flagObj;
+          return typeof val === 'string' && lowerExcludes.includes(val.toLowerCase());
+        }));
+      });
+    }
+    
+    setData(filtered);
+  }, [patientFlagsReportData, loading, showData, includeFlags, excludeFlags]);
 
   const handleApplyFilters = () => {
     setShowData(true);
@@ -123,7 +169,26 @@ const PatientFlagsReport = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const tableEl = document.getElementById('patient-flags-report-table');
+    if (!tableEl) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Patient Flags Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('.hide-print { display: none !important; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Patient Flags Report</h2>');
+    printWindow.document.write(tableEl.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 100);
   };
 
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
@@ -138,23 +203,53 @@ const PatientFlagsReport = () => {
   };
 
   const renderFlagSquares = (flagIds) => {
-    if (!flagIds || flagIds.length === 0) return null;
+    if (!flagIds) return null;
+    const idsArray = Array.isArray(flagIds) ? flagIds : [flagIds];
+    let splitIds = [];
+    idsArray.forEach(f => {
+      if (typeof f === 'string') {
+        splitIds.push(...f.split(/[,;]/).map(s => s.trim()).filter(Boolean));
+      } else {
+        splitIds.push(f);
+      }
+    });
+
+    if (splitIds.length === 0) return null;
+    
     return (
       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-        {flagIds.map((flagId, i) => {
-          const flagDef = ALL_FLAGS.find(f => f.id === flagId || f.label.toLowerCase() === flagId.toLowerCase());
-          if (!flagDef) return null;
+        {splitIds.map((flagObj, i) => {
+          const flagId = typeof flagObj === 'object' ? (flagObj.id || flagObj.name || flagObj.label) : flagObj;
+          const flagDef = ALL_FLAGS.find(f => f.id === flagId || (typeof flagId === 'string' && f.label.toLowerCase() === flagId.toLowerCase()));
+          
+          if (!flagDef) {
+            return (
+              <Tooltip key={`unknown-${i}`} title={typeof flagId === 'string' ? flagId : 'Flag'} arrow>
+                <Box 
+                  sx={{ 
+                    width: 16, 
+                    height: 16, 
+                    backgroundColor: '#ccc', 
+                    borderRadius: '2px',
+                    cursor: 'pointer'
+                  }} 
+                />
+              </Tooltip>
+            );
+          }
+          
           return (
-            <Box 
-              key={`${flagId}-${i}`} 
-              sx={{ 
-                width: 16, 
-                height: 16, 
-                backgroundColor: flagDef.color, 
-                borderRadius: '2px',
-                title: flagDef.label 
-              }} 
-            />
+            <Tooltip key={`${flagId}-${i}`} title={flagDef.label} arrow>
+              <Box 
+                sx={{ 
+                  width: 16, 
+                  height: 16, 
+                  backgroundColor: flagDef.color, 
+                  borderRadius: '2px',
+                  cursor: 'pointer'
+                }} 
+              />
+            </Tooltip>
           );
         })}
       </Box>
@@ -258,7 +353,7 @@ const PatientFlagsReport = () => {
         </Box>
       ) : (
         <TableContainer component={Paper} elevation={0} sx={{ border: 'none', borderRadius: 0 }}>
-          <Table size="small">
+          <Table id="patient-flags-report-table" size="small">
             <TableHead>
               <TableRow>
                 {['Flags', 'Patient Name', 'Patient DOB', 'Phone Number', 'Email Address'].map((header) => (
@@ -278,7 +373,9 @@ const PatientFlagsReport = () => {
                     <Typography sx={{ fontSize: '0.8rem', color: '#337ab7', fontWeight: 500 }}>
                       {row.patient}
                     </Typography>
-                    <ActionIcons />
+                    <Box className="hide-print">
+                      <ActionIcons />
+                    </Box>
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', color: '#666', py: 1.5, px: 1 }}>{row.dob}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', color: '#666', py: 1.5, px: 1 }}>{row.phone}</TableCell>

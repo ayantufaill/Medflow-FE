@@ -29,6 +29,7 @@ export const FLAG_GROUPS = {
         { id: 'Interested in Whitening', label: 'Interested in Whitening', color: '#f8bbd0' },
         { id: 'Rotated Teeth', label: 'Rotated Teeth', color: '#7e57c2' },
         { id: 'Tongue Tied', label: 'Tongue Tied', color: '#e57373' },
+        { id: 'bioclear patient', label: 'Bioclear Patient', color: '#0288d1' },
       ]
     }
   ],
@@ -68,6 +69,7 @@ export const FLAG_GROUPS = {
         { id: 'EAGLESOFT', label: 'EAGLESOFT', color: '#4caf50' },
         { id: 'Difficult Patient', label: 'Difficult Patient', color: '#000000' },
         { id: 'Pillow & Blanket', label: 'Pillow & Blanket', color: '#00c853' },
+        { id: 'balance owed', label: 'Balance Owed', color: '#e65100' },
       ]
     }
   ]

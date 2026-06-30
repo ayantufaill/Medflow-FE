@@ -20,6 +20,7 @@ import NotificationsReport from './reports/patient/NotificationsReport';
 import ProceduresReport from './reports/patient/ProceduresReport';
 import PatientTrackersReport from './reports/patient/PatientTrackersReport';
 import ReferralByPatientReport from './reports/patient/ReferralByPatientReport';
+import PatientsReferralReport from './reports/patient/PatientsReferralReport';
 import RecareReport from './reports/clinical/RecareReport';
 import UnsignedProgressNotesReport from './reports/clinical/UnsignedProgressNotesReport';
 import RxReport from './reports/clinical/RxReport';
@@ -140,6 +141,8 @@ const ReportsDashboard = () => {
           <PatientInsuranceCoverage />
         ) : location.pathname === '/admin/reports/patient/membership-plan' ? (
           <PatientMembershipPlan />
+        ) : location.pathname === '/admin/reports/patient/referral' ? (
+          <PatientsReferralReport />
         ) : location.pathname === '/admin/reports/patient/online-scheduling-referral' ? (
           <OnlineSchedulingReferral />
         ) : location.pathname === '/admin/reports/patient/by-flag' ? (

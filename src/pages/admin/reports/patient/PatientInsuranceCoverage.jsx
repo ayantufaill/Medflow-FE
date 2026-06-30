@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -24,6 +24,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import { useInsuranceCatalog } from '../../../../hooks/redux/useInsuranceCatalog';
 import {
   fetchPatientInsuranceCoverageReport,
   selectInsuranceCoverageData,
@@ -148,7 +149,45 @@ const PatientInsuranceCoverage = () => {
   const reduxData = useSelector(selectInsuranceCoverageData);
   const loading = useSelector(selectInsuranceCoverageLoading);
 
+  const { companies: allCompanies, fetchCompanies } = useInsuranceCatalog();
+  const initialFetchRef = useRef({ companies: false });
+
+  useEffect(() => {
+    if ((!allCompanies || allCompanies.length === 0) && !initialFetchRef.current.companies) {
+      initialFetchRef.current.companies = true;
+      fetchCompanies();
+    }
+  }, [allCompanies, fetchCompanies]);
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+
+  const DUMMY_INSURANCE = [
+    { payerId: '00621', carrierName: 'Blue Cross Blue Shield of Illinois', groupName: 'VIVID SEATS, LLC', groupNumber: '300871', planName: 'BCBS IL', payerAddress: '123 Blue St, Chicago, IL', carrierPhone: '800-123-4567' },
+    { payerId: '52133', carrierName: 'United Healthcare Dental', groupName: 'DOXIM', groupNumber: '1602187', planName: 'UHC ( DOXIM )', payerAddress: '456 Health Way, Minnetonka, MN', carrierPhone: '800-987-6543' },
+    { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TEXAS HEALTH RESOURCES', groupNumber: '087639801300001', planName: 'Aetna Dental Plans', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
+  ];
+
+  const handleSearch = (val) => {
+    setSearchQuery(val);
+
+    const searchPool = (allCompanies && allCompanies.length > 0) ? allCompanies : DUMMY_INSURANCE;
+    let filtered = searchPool;
+    
+    if (val) {
+      filtered = searchPool.filter(item => 
+        (item.payerId || item.id?.toString() || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.carrierName || item.name || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.groupName || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.groupNumber || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.planName || item.name || '').toLowerCase().includes(val.toLowerCase())
+      );
+    }
+    
+    setSearchResults(filtered);
+    setShowDropdown(true);
+  };
   const [rawReportData, setRawReportData] = useState(INITIAL_DATA);
   const [data, setData] = useState(INITIAL_DATA);
   const [grouping, setGrouping] = useState('no');
@@ -184,10 +223,10 @@ const PatientInsuranceCoverage = () => {
       // 1. Search Query
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery || (
-        item.patient.toLowerCase().includes(searchLower) ||
+        (item.patient && item.patient.toLowerCase().includes(searchLower)) ||
         (item.planName && item.planName.toLowerCase().includes(searchLower)) ||
         (item.payer && item.payer.toLowerCase().includes(searchLower)) ||
-        item.number.includes(searchLower)
+        (item.number && String(item.number).toLowerCase().includes(searchLower))
       );
 
       // 2. Assignment Status
@@ -219,14 +258,27 @@ const PatientInsuranceCoverage = () => {
       }
 
       // 4. Show patients with no coverage
-      const hasCoverage = item.payer || item.planName;
-      const matchesCoverage = showNoCoverage || hasCoverage;
+      const hasCoverage = Boolean((item.payer && item.payer !== 'N/A') || (item.planName && item.planName !== 'N/A'));
+      const matchesCoverage = showNoCoverage ? !hasCoverage : hasCoverage;
 
       return matchesSearch && matchesAssignment && matchesApptDate && matchesCoverage;
     });
 
     setData(filtered);
   };
+
+  useEffect(() => {
+    handleApplyFilters();
+  }, [
+    searchQuery,
+    rawReportData,
+    assignmentFilter,
+    apptFilterType,
+    apptStartDate,
+    apptEndDate,
+    apptSingleDate,
+    showNoCoverage
+  ]);
 
   const groupedData = useMemo(() => {
     if (grouping === 'no') return null;
@@ -304,7 +356,7 @@ const PatientInsuranceCoverage = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    handlePrintGroup('patient-insurance-coverage-table', 'All Patients');
   };
 
   const handlePrintGroup = (elementId, groupName) => {
@@ -409,43 +461,76 @@ const PatientInsuranceCoverage = () => {
         {/* Search */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Search by payer or plan:</Typography>
-          <Autocomplete
-            size="small"
-            freeSolo
-            options={availablePlans}
-            value={searchQuery}
-            onInputChange={(event, newInputValue) => {
-              setSearchQuery(newInputValue);
-            }}
-            onChange={(event, newValue) => {
-              setSearchQuery(newValue || '');
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="Search for plan, patient, or payer"
-                variant="outlined"
-                onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start" sx={{ pl: 1 }}>
-                        <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                  sx: { 
-                    fontSize: '0.8rem',
-                    backgroundColor: '#f9f9f9',
-                    '& fieldset': { borderColor: '#ccc' }
-                  }
+          <Box sx={{ position: 'relative', width: 300 }}>
+            <TextField 
+              fullWidth
+              size="small" 
+              placeholder="Search for plan, patient, or payer" 
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => handleSearch(searchQuery)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ pl: 1 }}>
+                    <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
+                  </InputAdornment>
+                ),
+                sx: { 
+                  fontSize: '0.8rem',
+                  backgroundColor: '#f9f9f9',
+                  '& fieldset': { borderColor: '#ccc' }
+                }
+              }}
+            />
+
+            {showDropdown && searchResults.length > 0 && (
+              <Paper 
+                elevation={8} 
+                sx={{ 
+                  position: 'absolute', 
+                  top: '100%', 
+                  left: 0, 
+                  zIndex: 9999, 
+                  maxHeight: '400px', 
+                  overflowY: 'auto', 
+                  border: '1px solid #ddd',
+                  width: { xs: '300px', sm: '500px', md: '700px' },
+                  mt: 0.5,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
                 }}
-              />
+              >
+                <Table size="small" stickyHeader>
+                  <TableBody>
+                    <TableRow sx={{ bgcolor: '#eef4ff' }}>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer ID</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group Name</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
+                    </TableRow>
+                    {searchResults.map((item, idx) => (
+                      <TableRow 
+                        key={idx} 
+                        hover 
+                        sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }}
+                        onClick={() => {
+                          setSearchQuery(item.planName || item.name || item.carrierName || '');
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupName || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Paper>
             )}
-            sx={{ width: 300 }}
-          />
+          </Box>
         </Box>
 
         {/* Grouping */}

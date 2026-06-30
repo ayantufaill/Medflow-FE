@@ -42,8 +42,9 @@ const CancelledAppointmentsReport = () => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   useEffect(() => {
+    let baseData = DUMMY_DATA;
     if (cancelledAppointmentsData && cancelledAppointmentsData.length > 0) {
-      setData(cancelledAppointmentsData.map(item => ({
+      baseData = cancelledAppointmentsData.map(item => ({
         patient: item.patient || 'Unknown',
         type: item.type || '',
         providers: item.provider || item.providers || '',
@@ -53,11 +54,29 @@ const CancelledAppointmentsReport = () => {
         procedures: item.procedures || '',
         aptDate: item.date || item.aptDate || '',
         nextAptDate: item.nextAptDate || '',
-      })));
-    } else if (!loading && showData) {
-      setData(DUMMY_DATA);
+      }));
+    } else if (loading || !showData) {
+      return;
     }
-  }, [cancelledAppointmentsData, loading, showData]);
+
+    let filtered = baseData;
+    
+    // Apply date range filter
+    if (startDate || endDate) {
+      const startT = startDate ? new Date(startDate).getTime() : 0;
+      // Add one day to end date to make it inclusive
+      const endT = endDate ? new Date(endDate).getTime() + 86400000 : Infinity;
+      
+      filtered = filtered.filter(item => {
+        if (!item.aptDate) return true; // If no date, maybe keep it or drop it? Let's keep if no date.
+        const itemT = new Date(item.aptDate).getTime();
+        if (isNaN(itemT)) return true; // Invalid date
+        return itemT >= startT && itemT < endT;
+      });
+    }
+
+    setData(filtered);
+  }, [cancelledAppointmentsData, loading, showData, startDate, endDate]);
 
   const handleApply = () => {
     setShowData(true);
@@ -65,7 +84,22 @@ const CancelledAppointmentsReport = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const tableEl = document.getElementById('cancelled-appointments-table');
+    if (!tableEl) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Cancelled Appointments Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Cancelled Appointments Report</h2>');
+    printWindow.document.write(tableEl.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
@@ -115,6 +149,7 @@ const CancelledAppointmentsReport = () => {
           </Button>
           <Button 
             variant="contained" 
+            disabled
             onClick={handleCreateTemplate}
             sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', px: 2, boxShadow: 'none' }}
           >
@@ -139,7 +174,7 @@ const CancelledAppointmentsReport = () => {
         </Box>
       ) : (
         <TableContainer elevation={0} sx={{ border: 'none', borderRadius: 0 }}>
-          <Table size="small">
+          <Table id="cancelled-appointments-table" size="small">
             <TableHead>
               <TableRow>
                 {[
