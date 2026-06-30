@@ -509,24 +509,27 @@ const DentalTmdExamPage = () => {
                         </RadioGroup>
                       </Grid>
                       <Grid item xs={5}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Box sx={{ 
+                          display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+                          ...(formData.deviationOnOpening === 'no' && { opacity: 0.5, pointerEvents: 'none' })
+                        }}>
                           <FormControlLabel 
-                            control={<Checkbox size="small" checked={formData.deviationLeft} onChange={(e) => handleCheckboxChange('deviationLeft', e.target.checked)} />} 
+                            control={<Checkbox disabled={formData.deviationOnOpening === 'no'} size="small" checked={formData.deviationLeft} onChange={(e) => handleCheckboxChange('deviationLeft', e.target.checked)} />} 
                             label={<Typography sx={{ fontSize: '13px' }}>Left</Typography>} 
                             sx={{ mr: 0.5 }} 
                           />
                           <FormControlLabel 
-                            control={<Checkbox size="small" checked={formData.deviationLeftReduction} onChange={(e) => handleCheckboxChange('deviationLeftReduction', e.target.checked)} />} 
+                            control={<Checkbox disabled={formData.deviationOnOpening === 'no'} size="small" checked={formData.deviationLeftReduction} onChange={(e) => handleCheckboxChange('deviationLeftReduction', e.target.checked)} />} 
                             label={<Typography sx={{ fontSize: '12px', fontStyle: 'italic', color: formData.deviationLeftReduction ? '#333' : '#aaa' }}>w/ Reduction</Typography>} 
                             sx={{ mr: 1.5 }} 
                           />
                           <FormControlLabel 
-                            control={<Checkbox size="small" checked={formData.deviationRight} onChange={(e) => handleCheckboxChange('deviationRight', e.target.checked)} />} 
+                            control={<Checkbox disabled={formData.deviationOnOpening === 'no'} size="small" checked={formData.deviationRight} onChange={(e) => handleCheckboxChange('deviationRight', e.target.checked)} />} 
                             label={<Typography sx={{ fontSize: '13px' }}>Right</Typography>} 
                             sx={{ mr: 0.5 }} 
                           />
                           <FormControlLabel 
-                            control={<Checkbox size="small" checked={formData.deviationRightReduction} onChange={(e) => handleCheckboxChange('deviationRightReduction', e.target.checked)} />} 
+                            control={<Checkbox disabled={formData.deviationOnOpening === 'no'} size="small" checked={formData.deviationRightReduction} onChange={(e) => handleCheckboxChange('deviationRightReduction', e.target.checked)} />} 
                             label={<Typography sx={{ fontSize: '12px', fontStyle: 'italic', color: formData.deviationRightReduction ? '#333' : '#aaa' }}>w/ Reduction</Typography>} 
                           />
                         </Box>
@@ -550,12 +553,16 @@ const DentalTmdExamPage = () => {
                         </RadioGroup>
                       </Grid>
                       <Grid item xs={5}>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
+                        <Box sx={{ 
+                          display: 'flex', flexWrap: 'wrap',
+                          ...(formData.painWhenInMotion === 'no' && { opacity: 0.5, pointerEvents: 'none' })
+                        }}>
                           {['Sharp', 'Dull', 'Muscle', 'Right TMJ', 'Left TMJ'].map((text) => (
                             <FormControlLabel 
                               key={text} 
                               control={
                                 <Checkbox 
+                                  disabled={formData.painWhenInMotion === 'no'}
                                   size="small" 
                                   checked={formData.painTypes.includes(text)}
                                   onChange={(e) => handleCheckboxArrayChange('painTypes', text, e.target.checked)}

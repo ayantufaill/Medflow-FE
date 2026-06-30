@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import { fontSize, fontWeight } from "../../../constants/styles";
@@ -6,6 +7,8 @@ import NumberBox from "../common/NumberBox";
 import SurveyRow from "../common/SurveyRow";
 
 const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTeethClick }) => {
+  const [noFindings, setNoFindings] = useState(false);
+
   return (
     <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
       {/* Header */}
@@ -15,7 +18,7 @@ const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTe
       }}>
         <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>General Tooth Survey</Typography>
         <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+          control={<Checkbox checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
           label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
           labelPlacement="start"
           sx={{ ml: 0 }}
@@ -23,7 +26,14 @@ const GeneralToothSurvey = ({ expanded, onToggle, missingTeeth = [], onMissingTe
       </Box>
       
       {expanded && (
-        <Box sx={{ p: 1.5 }}>
+        <Box sx={{ 
+          p: 1.5,
+          ...(noFindings && {
+            opacity: 0.4,
+            pointerEvents: 'none',
+            userSelect: 'none'
+          })
+        }}>
           {/* Missing Teeth Section */}
           <SurveyRow label="Missing Teeth" hasChat onLabelClick={onMissingTeethClick}>
             <Stack direction="row" spacing={1}>

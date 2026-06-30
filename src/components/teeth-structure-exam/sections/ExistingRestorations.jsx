@@ -11,7 +11,9 @@ import AddIcon from '@mui/icons-material/Add';
 import { fontSize, fontWeight } from "../../../constants/styles";
 import RestorationToothIcon from "../common/RestorationToothIcon";
 
-const DentalSection = ({ title, children, badge }) => (
+const DentalSection = ({ title, children, badge }) => {
+  const [noFindings, setNoFindings] = useState(false);
+  return (
   <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
     <Box sx={{ 
       bgcolor: '#6b7cb4', color: 'white', px: 1.5, py: 0.4, 
@@ -24,15 +26,16 @@ const DentalSection = ({ title, children, badge }) => (
         )}
       </Stack>
       <FormControlLabel
-        control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+        control={<Checkbox size="small" checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
         label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
         labelPlacement="start"
         sx={{ ml: 0 }}
       />
     </Box>
-    <Box sx={{ p: 1.5 }}>{children}</Box>
+    <Box sx={{ p: 1.5, ...(noFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }) }}>{children}</Box>
   </Card>
-);
+  );
+};
 
 const Row = ({ label, children, hasChat = false, isGray = false }) => (
   <Box sx={{ py: 1 }}>

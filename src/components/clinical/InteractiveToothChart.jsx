@@ -17,6 +17,7 @@ const InteractiveToothChart = ({
   onSidebarSurfaceClick,
   onMaxToggle,
   onManToggle,
+  onQuadrantToggle,
   isTreatmentPlan = false
 }) => {
 
@@ -87,14 +88,26 @@ const InteractiveToothChart = ({
             
             {/* Upper Label */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([1, 2, 3, 4, 5])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >Q1</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([1, 2, 3, 4, 5])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >UR</Typography>
             </Box>
             
             {/* Lower Label */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([32, 31, 30, 29, 28])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >Q4</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([32, 31, 30, 29, 28])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >LR</Typography>
             </Box>
             
             {/* Lower Row */}
@@ -115,12 +128,18 @@ const InteractiveToothChart = ({
             
             {/* Upper Label */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([6, 7, 8, 9, 10, 11])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >UA</Typography>
             </Box>
             
             {/* Lower Label */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([27, 26, 25, 24, 23, 22])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >LA</Typography>
             </Box>
             
             {/* Lower Row */}
@@ -141,8 +160,14 @@ const InteractiveToothChart = ({
             
             {/* Upper Label */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([12, 13, 14, 15, 16])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >UL</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([12, 13, 14, 15, 16])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >Q2</Typography>
               <Typography 
                 onClick={onMaxToggle}
                 sx={{ 
@@ -163,8 +188,14 @@ const InteractiveToothChart = ({
             
             {/* Lower Label */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([21, 20, 19, 18, 17])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >LL</Typography>
+              <Typography 
+                onClick={() => onQuadrantToggle && onQuadrantToggle([21, 20, 19, 18, 17])}
+                sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}
+              >Q3</Typography>
               <Typography 
                 onClick={onManToggle}
                 sx={{ 

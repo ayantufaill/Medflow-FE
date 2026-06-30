@@ -1,17 +1,20 @@
 import React, { useState } from "react";
 import { 
   Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider, 
-  Button, Popover, IconButton, RadioGroup, Radio, TextField 
+  Button, Popover, IconButton, RadioGroup, Radio, TextField, InputAdornment 
 } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { fontSize, fontWeight } from "../../../constants/styles";
 import RestorationToothIcon from "../common/RestorationToothIcon";
 
-const DentalSection = ({ title, children, badge }) => (
+const DentalSection = ({ title, children, badge }) => {
+  const [noFindings, setNoFindings] = useState(false);
+  return (
   <Box sx={{ mb: 1, border: '1px solid #b4bedb', overflow: 'hidden', bgcolor: 'white' }}>
     <Box sx={{ 
       bgcolor: '#6b7cb4', 
@@ -31,15 +34,26 @@ const DentalSection = ({ title, children, badge }) => (
         )}
       </Stack>
       <FormControlLabel
-        control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+        control={<Checkbox checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
         label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
         labelPlacement="start"
         sx={{ ml: 0 }}
       />
     </Box>
-    <Box sx={{ p: 1.5, bgcolor: 'white' }}>{children}</Box>
+    <Box sx={{ 
+      p: 1.5, 
+      bgcolor: 'white',
+      ...(noFindings && {
+        opacity: 0.4,
+        pointerEvents: 'none',
+        userSelect: 'none'
+      })
+    }}>
+      {children}
+    </Box>
   </Box>
 );
+};
 
 const ConcernRow = ({ label, options, selectedValue, onChange }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.2 }}>
@@ -430,11 +444,35 @@ const RadicularToothStructure = ({
                   placeholder="Add note..."
                   value={popoverNoteValue}
                   onChange={(e) => setPopoverNoteValue(e.target.value)}
-                  onBlur={() => handleSaveNote(activeToothNum, popoverNoteValue)}
                   sx={{
                     '& .MuiInputBase-root': { fontSize: '0.75rem', p: 1 }
                   }}
                 />
+                <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: 'flex-end' }}>
+                  <Button 
+                    size="small" 
+                    color="error" 
+                    onClick={() => {
+                      setPopoverNoteValue('');
+                      handleSaveNote(activeToothNum, '');
+                      setShowPopoverNoteInput(false);
+                    }}
+                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', p: '2px 8px' }}
+                  >
+                    Delete Note
+                  </Button>
+                  <Button 
+                    size="small" 
+                    variant="contained" 
+                    onClick={() => {
+                      handleSaveNote(activeToothNum, popoverNoteValue);
+                      setShowPopoverNoteInput(false);
+                    }}
+                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', p: '2px 8px' }}
+                  >
+                    Save Note
+                  </Button>
+                </Stack>
               </Box>
             )}
 

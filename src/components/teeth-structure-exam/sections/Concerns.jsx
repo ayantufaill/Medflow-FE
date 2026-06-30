@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Box, Typography, Stack, Checkbox } from "@mui/material";
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import { fontSize, fontWeight } from "../../../constants/styles";
 
-const SectionHeader = ({ title, color = "#6b7cb4", tag = "DH" }) => (
+const SectionHeader = ({ title, color = "#6b7cb4", tag = "DH", noFindings, onNoFindingsChange }) => (
   <Box
     sx={{
       bgcolor: color,
@@ -22,15 +23,16 @@ const SectionHeader = ({ title, color = "#6b7cb4", tag = "DH" }) => (
     </Stack>
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
       <Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic', opacity: 0.9 }}>no findings</Typography>
-      <Checkbox size="small" sx={{ p: 0.25, color: '#fff', '&.Mui-checked': { color: '#fff' } }} />
+      <Checkbox size="small" checked={noFindings} onChange={(e) => onNoFindingsChange(e.target.checked)} sx={{ p: 0.25, color: '#fff', '&.Mui-checked': { color: '#fff' } }} />
     </Box>
   </Box>
 );
 
 const Concerns = () => {
+  const [noFindings, setNoFindings] = useState(false);
   return (
     <Box sx={{ mb: 0.5, border: "1px solid #6b7cb4" }}>
-      <SectionHeader title="Concerns" tag="DH" />
+      <SectionHeader title="Concerns" tag="DH" noFindings={noFindings} onNoFindingsChange={setNoFindings} />
       
       <Box sx={{ 
         p: 1.2, 
@@ -39,7 +41,8 @@ const Concerns = () => {
         alignItems: 'center', 
         justifyContent: 'space-between', 
         cursor: 'pointer',
-        '&:hover': { bgcolor: '#fcfcfc' }
+        '&:hover': { bgcolor: '#fcfcfc' },
+        ...(noFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' })
       }}>
         <Typography sx={{ 
           fontSize: fontSize.sm, 

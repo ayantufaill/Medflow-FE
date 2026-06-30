@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { 
   Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider, 
-  Button, Popover, IconButton, RadioGroup, Radio, TextField 
+  Button, Popover, IconButton, RadioGroup, Radio, TextField, InputAdornment 
 } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { fontSize, fontWeight } from "../../../constants/styles";
 import RestorationToothIcon from "../common/RestorationToothIcon";
 import ToothNumber from "../common/ToothNumber";
@@ -24,6 +25,7 @@ const CoronalToothStructure = ({
   const [anchorEl, setAnchorEl] = useState(null);
   const [showPopoverNoteInput, setShowPopoverNoteInput] = useState(false);
   const [popoverNoteValue, setPopoverNoteValue] = useState('');
+  const [noFindings, setNoFindings] = useState(false);
 
   const handleApplyCoronalRadiolucency = () => {
     if (!selectedTeeth || selectedTeeth.length === 0) return;
@@ -212,7 +214,7 @@ const CoronalToothStructure = ({
           <Box sx={{ bgcolor: '#e57373', px: 0.5, borderRadius: '2px', fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>DH</Box>
         </Stack>
         <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+          control={<Checkbox checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
           label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
           labelPlacement="start"
           sx={{ ml: 0 }}
@@ -220,7 +222,14 @@ const CoronalToothStructure = ({
       </Box>
       
       {expanded && (
-        <Box sx={{ p: 1.5 }}>
+        <Box sx={{ 
+          p: 1.5,
+          ...(noFindings && {
+            opacity: 0.4,
+            pointerEvents: 'none',
+            userSelect: 'none'
+          })
+        }}>
           {/* Coronal Radiolucency Row */}
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
             <Stack 
@@ -558,11 +567,35 @@ const CoronalToothStructure = ({
                   placeholder="Add note..."
                   value={popoverNoteValue}
                   onChange={(e) => setPopoverNoteValue(e.target.value)}
-                  onBlur={() => handleSaveNote(activeToothNum, popoverNoteValue)}
                   sx={{
                     '& .MuiInputBase-root': { fontSize: '0.75rem', p: 1 }
                   }}
                 />
+                <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: 'flex-end' }}>
+                  <Button 
+                    size="small" 
+                    color="error" 
+                    onClick={() => {
+                      setPopoverNoteValue('');
+                      handleSaveNote(activeToothNum, '');
+                      setShowPopoverNoteInput(false);
+                    }}
+                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', p: '2px 8px' }}
+                  >
+                    Delete Note
+                  </Button>
+                  <Button 
+                    size="small" 
+                    variant="contained" 
+                    onClick={() => {
+                      handleSaveNote(activeToothNum, popoverNoteValue);
+                      setShowPopoverNoteInput(false);
+                    }}
+                    sx={{ textTransform: 'none', fontSize: '0.7rem', minWidth: 'auto', p: '2px 8px' }}
+                  >
+                    Save Note
+                  </Button>
+                </Stack>
               </Box>
             ) : (
               <Button

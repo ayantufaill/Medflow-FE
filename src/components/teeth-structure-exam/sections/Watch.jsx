@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Button } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
@@ -22,6 +22,7 @@ const Watch = ({
   setActiveToothNum,
   setDetailModalTooth
 }) => {
+  const [noFindings, setNoFindings] = useState(false);
 
   const handleApplyWatch = () => {
     if (!selectedTeeth || selectedTeeth.length === 0) return;
@@ -57,7 +58,7 @@ const Watch = ({
       }}>
         <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Watch</Typography>
         <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+          control={<Checkbox size="small" checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
           label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
           labelPlacement="start"
           sx={{ ml: 0 }}
@@ -65,7 +66,7 @@ const Watch = ({
       </Box>
       
       {expanded && (
-        <Box sx={{ p: 1.5 }}>
+        <Box sx={{ p: 1.5, ...(noFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }) }}>
           {/* Watch Row */}
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack 

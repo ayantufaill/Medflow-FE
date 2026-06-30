@@ -883,6 +883,15 @@ export default function TreatmentPlanPage() {
     setSelectedTeeth(prev => allLowerSelected ? prev.filter(t => !LOWER_TEETH.includes(t)) : [...new Set([...prev, ...LOWER_TEETH])]);
   };
 
+  const handleQuadrantToggle = (teethArray) => {
+    const allSelected = teethArray.every(t => selectedTeeth.includes(t));
+    if (allSelected) {
+      setSelectedTeeth(prev => prev.filter(t => !teethArray.includes(t)));
+    } else {
+      setSelectedTeeth(prev => [...new Set([...prev, ...teethArray])]);
+    }
+  };
+
   const handleSurfaceClick = (toothNum, surfaceCode) => {
     if (!activeRestorativeCode) return;
     
@@ -2135,14 +2144,14 @@ export default function TreatmentPlanPage() {
                     
                     {/* Upper Label */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q1</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>UR</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([1, 2, 3, 4, 5])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>Q1</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([1, 2, 3, 4, 5])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>UR</Typography>
                     </Box>
                     
                     {/* Lower Label */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q4</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>LR</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([32, 31, 30, 29, 28])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>Q4</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([32, 31, 30, 29, 28])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>LR</Typography>
                     </Box>
                     
                     {/* Lower Row */}
@@ -2187,12 +2196,12 @@ export default function TreatmentPlanPage() {
                     
                     {/* Upper Label */}
                     <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>UA</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([6, 7, 8, 9, 10, 11])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>UA</Typography>
                     </Box>
                     
                     {/* Lower Label */}
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>LA</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([27, 26, 25, 24, 23, 22])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>LA</Typography>
                     </Box>
                     
                     {/* Lower Row */}
@@ -2237,8 +2246,8 @@ export default function TreatmentPlanPage() {
                     
                     {/* Upper Label */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>UL</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q2</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([12, 13, 14, 15, 16])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>UL</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([12, 13, 14, 15, 16])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>Q2</Typography>
                       <Typography 
                         onClick={handleMaxToggle}
                         sx={{ 
@@ -2259,8 +2268,8 @@ export default function TreatmentPlanPage() {
                     
                     {/* Lower Label */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>LL</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold' }}>Q3</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([21, 20, 19, 18, 17])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>LL</Typography>
+                      <Typography onClick={() => handleQuadrantToggle([21, 20, 19, 18, 17])} sx={{ fontSize: '0.75rem', color: '#6b7cb4', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s', '&:hover': { opacity: 0.7 } }}>Q3</Typography>
                       <Typography 
                         onClick={handleManToggle}
                         sx={{ 
@@ -2327,7 +2336,9 @@ export default function TreatmentPlanPage() {
                 
                 {/* Badges for selected additional teeth */}
                 <Stack direction="row" spacing={0.5}>
-                  {additionalTeeth.map(tooth => (
+                  {additionalTeeth.map(tooth => {
+                    const isSelected = selectedTeeth.includes(tooth);
+                    return (
                     <Box
                       key={tooth}
                       sx={{
@@ -2337,14 +2348,17 @@ export default function TreatmentPlanPage() {
                         }
                       }}
                     >
-                      <Box sx={{ 
+                      <Box 
+                        onClick={() => handleToothClick(tooth)}
+                        sx={{ 
                         px: 0.6, py: 0.1, border: '1px solid',
                         borderColor: '#4a69bd',
-                        bgcolor: '#f8fafc',
-                        color: '#4a69bd',
+                        bgcolor: isSelected ? '#4a69bd' : '#f8fafc',
+                        color: isSelected ? '#ffffff' : '#4a69bd',
                         fontSize: '0.75rem', fontWeight: 'bold',
                         borderRadius: '2px', minWidth: '20px', textAlign: 'center',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        cursor: 'pointer'
                       }}>
                         {tooth}
                       </Box>
@@ -2378,7 +2392,8 @@ export default function TreatmentPlanPage() {
                         ×
                       </Box>
                     </Box>
-                  ))}
+                    );
+                  })}
                 </Stack>
               </Stack>
             </Box>

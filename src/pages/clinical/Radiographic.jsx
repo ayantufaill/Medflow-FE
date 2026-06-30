@@ -173,6 +173,15 @@ const Radiographic = () => {
     setSelectedTeeth(prev => allLowerSelected ? prev.filter(t => !LOWER_TEETH.includes(t)) : [...new Set([...prev, ...LOWER_TEETH])]);
   };
 
+  const handleQuadrantToggle = (teethArray) => {
+    const allSelected = teethArray.every(t => selectedTeeth.includes(t));
+    if (allSelected) {
+      setSelectedTeeth(prev => prev.filter(t => !teethArray.includes(t)));
+    } else {
+      setSelectedTeeth(prev => [...new Set([...prev, ...teethArray])]);
+    }
+  };
+
   const handleMarkMissing = () => {
     if (selectedTeeth.length === 0) return;
     setMissingTeeth(prev => {
@@ -444,6 +453,7 @@ const Radiographic = () => {
             onSidebarSurfaceClick={handleSidebarSurfaceClick}
             onMaxToggle={handleMaxToggle}
             onManToggle={handleManToggle}
+            onQuadrantToggle={handleQuadrantToggle}
             isTreatmentPlan={false}
           />
 
@@ -462,7 +472,9 @@ const Radiographic = () => {
               
               {/* Badges for selected additional teeth */}
               <Stack direction="row" spacing={0.5}>
-                {additionalTeeth.map(tooth => (
+                {additionalTeeth.map(tooth => {
+                  const isSelected = selectedTeeth.includes(tooth);
+                  return (
                   <Box
                     key={tooth}
                     sx={{
@@ -472,14 +484,17 @@ const Radiographic = () => {
                       }
                     }}
                   >
-                    <Box sx={{ 
+                    <Box 
+                      onClick={() => handleToothClick(tooth)}
+                      sx={{ 
                       px: 0.6, py: 0.1, border: '1px solid',
                       borderColor: '#4a69bd',
-                      bgcolor: '#f8fafc',
-                      color: '#4a69bd',
+                      bgcolor: isSelected ? '#4a69bd' : '#f8fafc',
+                      color: isSelected ? '#ffffff' : '#4a69bd',
                       fontSize: '0.75rem', fontWeight: 'bold',
                       borderRadius: '2px', minWidth: '20px', textAlign: 'center',
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      cursor: 'pointer'
                     }}>
                       {tooth}
                     </Box>
@@ -513,7 +528,8 @@ const Radiographic = () => {
                       ×
                     </Box>
                   </Box>
-                ))}
+                  );
+                })}
               </Stack>
             </Stack>
 

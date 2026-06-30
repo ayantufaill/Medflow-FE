@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack, Divider, Radio, RadioGroup } from "@mui/material";
 import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
@@ -22,6 +23,8 @@ const DataTag = ({ label }) => (
 );
 
 const SupportingStructure = ({ expanded, onToggle }) => {
+  const [noFindings, setNoFindings] = useState(false);
+
   return (
     <Card variant="outlined" sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4' }}>
       {/* Header */}
@@ -35,7 +38,7 @@ const SupportingStructure = ({ expanded, onToggle }) => {
           <HeaderBadge label="DH" color="#ef9a9a" />
         </Stack>
         <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+          control={<Checkbox checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
           label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
           labelPlacement="start"
           sx={{ ml: 0 }}
@@ -43,7 +46,14 @@ const SupportingStructure = ({ expanded, onToggle }) => {
       </Box>
       
       {expanded && (
-        <Box sx={{ p: 1.5 }}>
+        <Box sx={{ 
+          p: 1.5,
+          ...(noFindings && {
+            opacity: 0.4,
+            pointerEvents: 'none',
+            userSelect: 'none'
+          })
+        }}>
           {/* Generalized Horizontal Bone Loss */}
           <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Generalized Horizontal</Typography>
           <Typography sx={{ fontSize: fontSize.xs, mb: 1 }}>Bone Loss <Box component="span" sx={{ fontSize: fontSize.xs }}>Relative to CEJ</Box></Typography>

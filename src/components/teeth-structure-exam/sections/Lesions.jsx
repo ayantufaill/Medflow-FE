@@ -29,6 +29,7 @@ const Lesions = ({
   setActiveToothNum
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
+  const [noFindings, setNoFindings] = useState(false);
   const [showPopoverNoteInput, setShowPopoverNoteInput] = useState(false);
   const [popoverNoteValue, setPopoverNoteValue] = useState('');
 
@@ -218,7 +219,7 @@ const Lesions = ({
           <Box sx={{ bgcolor: '#e57373', px: 0.5, borderRadius: '2px', fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>DH</Box>
         </Stack>
         <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
+          control={<Checkbox size="small" checked={noFindings} onChange={(e) => setNoFindings(e.target.checked)} sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
           label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
           labelPlacement="start"
           sx={{ ml: 0 }}
@@ -226,7 +227,7 @@ const Lesions = ({
       </Box>
       
       {expanded && (
-        <Box sx={{ p: 1.5 }}>
+        <Box sx={{ p: 1.5, ...(noFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }) }}>
           {/* Coronal Cavitation Row */}
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
             <Stack 

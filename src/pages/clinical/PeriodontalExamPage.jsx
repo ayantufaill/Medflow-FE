@@ -37,7 +37,11 @@ const SummaryData = [
   { label: '% of teeth', bleeding: '60%', p4: '100%', p5: '0%', p6: '0%', recession: '56%' },
 ];
 
-const DiagnosticHeader = () => (
+const DiagnosticHeader = () => {
+  const [healthStatus, setHealthStatus] = useState('Healthy');
+  const [distribution, setDistribution] = useState('Localized');
+
+  return (
   <Box sx={{ p: 2, bgcolor: '#fff', borderTop: '1px solid #e0e0e0' }}>
     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
       {/* 3. MH/DH Badges */}
@@ -51,10 +55,12 @@ const DiagnosticHeader = () => (
     <Grid container spacing={4}>
       {/* Classification Column */}
       <Grid item xs={12} md={5}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Healthy</Typography>} />
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Gingivitis</Typography>} />
-        </Box>
+        <RadioGroup row value={healthStatus} onChange={(e) => setHealthStatus(e.target.value)}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
+            <FormControlLabel value="Healthy" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Healthy</Typography>} />
+            <FormControlLabel value="Gingivitis" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Gingivitis</Typography>} />
+          </Box>
+        </RadioGroup>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs }}>Periodontitis:</Typography>
@@ -77,11 +83,13 @@ const DiagnosticHeader = () => (
           </Select>
         </Box>
 
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 1 }}>
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Localized (&lt; 30% of teeth)</Typography>} />
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Generalized</Typography>} />
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Molar/Incisor</Typography>} />
-        </Box>
+        <RadioGroup row value={distribution} onChange={(e) => setDistribution(e.target.value)}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 1 }}>
+            <FormControlLabel value="Localized" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Localized (&lt; 30% of teeth)</Typography>} />
+            <FormControlLabel value="Generalized" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Generalized</Typography>} />
+            <FormControlLabel value="Molar/Incisor" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Molar/Incisor</Typography>} />
+          </Box>
+        </RadioGroup>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs }}>Periodontal Grading:</Typography>
@@ -135,7 +143,8 @@ const DiagnosticHeader = () => (
       </Grid>
     </Grid>
   </Box>
-);
+  );
+};
 
 const MISSING_TEETH = [1, 12, 16, 17, 32];
 

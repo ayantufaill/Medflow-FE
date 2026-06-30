@@ -154,6 +154,7 @@ const DentalAnatomyExamPage = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFinding, setEditingFinding] = useState(null);
+  const [noSignificantFindings, setNoSignificantFindings] = useState(false);
 
   // Dialog form state
   const [formState, setFormState] = useState({
@@ -363,7 +364,15 @@ const DentalAnatomyExamPage = () => {
             {/* Finding Options Checkboxes */}
             <Box sx={{ display: 'flex', gap: 2, mb: 1.5, px: 1 }}>
               <FormControlLabel 
-                control={<Checkbox size="small" sx={{ color: '#ccc', p: 0.5 }} />} 
+                control={<Checkbox 
+                  size="small" 
+                  checked={noSignificantFindings}
+                  onChange={(e) => {
+                    setNoSignificantFindings(e.target.checked);
+                    if (e.target.checked) setActiveTool(null);
+                  }}
+                  sx={{ color: '#ccc', p: 0.5 }} 
+                />} 
                 label={<Typography sx={{ fontSize: '11px', color: '#333' }}>No Significant Findings</Typography>} 
                 sx={{ m: 0 }} 
               />
@@ -375,7 +384,13 @@ const DentalAnatomyExamPage = () => {
             </Box>
 
             {/* Left Panel Bordered Container */}
-            <Box sx={{ border: '1px solid #cfd8dc', borderRadius: 0, overflow: 'hidden', mb: 3 }}>
+            <Box sx={{ 
+              border: '1px solid #cfd8dc', 
+              borderRadius: 0, 
+              overflow: 'hidden', 
+              mb: 3,
+              ...(noSignificantFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' })
+            }}>
               
               {/* Lesions Section */}
               <BlueHeader text="Lesions" />
@@ -521,7 +536,12 @@ const DentalAnatomyExamPage = () => {
             )}
 
             {/* Main Oral Anatomy Map */}
-            <Box sx={{ position: 'relative', display: 'inline-block', mb: 3 }}>
+            <Box sx={{ 
+              position: 'relative', 
+              display: 'inline-block', 
+              mb: 3,
+              ...(noSignificantFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' })
+            }}>
               <img 
                 src="/anatomy.png" 
                 alt="Oral Anatomy Map" 
@@ -633,14 +653,14 @@ const DentalAnatomyExamPage = () => {
                   <TextField 
                     size="small" 
                     value={formState.sizeAP}
-                    onChange={(e) => setFormState({ ...formState, sizeAP: e.target.value })}
+                    onChange={(e) => setFormState({ ...formState, sizeAP: e.target.value.replace(/[^0-9.]/g, '') })}
                     sx={{ width: 50, '& input': { p: '4px 6px', textAlign: 'center', fontSize: '13px' } }} 
                   />
                   <Typography sx={{ fontSize: '13px' }}>mm (AP) x</Typography>
                   <TextField 
                     size="small" 
                     value={formState.sizeInfSup}
-                    onChange={(e) => setFormState({ ...formState, sizeInfSup: e.target.value })}
+                    onChange={(e) => setFormState({ ...formState, sizeInfSup: e.target.value.replace(/[^0-9.]/g, '') })}
                     sx={{ width: 50, '& input': { p: '4px 6px', textAlign: 'center', fontSize: '13px' } }} 
                   />
                   <Typography sx={{ fontSize: '13px' }}>mm (inf-sup)</Typography>

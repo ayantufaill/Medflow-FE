@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Box, Card, Typography, Checkbox, FormControlLabel, Stack } from "@mui/material";
 import { 
   MedicalServices, Healing, Psychology, SelfImprovement, Science, 
@@ -5,7 +6,7 @@ import {
 } from "@mui/icons-material";
 import { fontSize, fontWeight } from "../../../constants/styles";
 
-const SectionHeader = ({ title, color = "#6b7cb4", tag = "DH" }) => (
+const SectionHeader = ({ title, color = "#6b7cb4", tag = "DH", noFindings, onNoFindingsChange }) => (
   <Box
     sx={{
       bgcolor: color,
@@ -25,7 +26,7 @@ const SectionHeader = ({ title, color = "#6b7cb4", tag = "DH" }) => (
     </Stack>
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
       <Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>
-      <Checkbox size="small" sx={{ p: 0.25, color: "#fff", "&.Mui-checked": { color: "#fff" } }} />
+      <Checkbox size="small" checked={noFindings} onChange={(e) => onNoFindingsChange(e.target.checked)} sx={{ p: 0.25, color: "#fff", "&.Mui-checked": { color: "#fff" } }} />
     </Box>
   </Box>
 );
@@ -72,10 +73,11 @@ const ApplianceIcon = ({ name }) => {
 };
 
 const Appliances = () => {
+  const [noFindings, setNoFindings] = useState(false);
   return (
     <Card sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4', bgcolor: 'white' }}>
-      <SectionHeader title="Appliances" tag="DH" />
-      <Box sx={{ p: 2, bgcolor: 'white' }}>
+      <SectionHeader title="Appliances" tag="DH" noFindings={noFindings} onNoFindingsChange={setNoFindings} />
+      <Box sx={{ p: 2, bgcolor: 'white', ...(noFindings && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }) }}>
         {/* Row 1 */}
         <Box sx={{ 
           display: 'flex', 
