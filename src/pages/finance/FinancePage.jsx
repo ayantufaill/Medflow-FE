@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
 } from '@mui/material';
 
 // Sub-components
@@ -42,6 +39,7 @@ const FinancePage = () => {
     includeVoided: false,
     hideBillingTransfers: false
   });
+  const patientFinanceRef = useRef(null);
 
   useEffect(() => {
     const loadPatientDetails = async () => {
@@ -246,29 +244,12 @@ const FinancePage = () => {
 
   return (
     <Box sx={{ p: '8px 8px 8px 8px', bgcolor: '#fff', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
-      {/* View Selection Header */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#555', mb: 0.5 }}>View</Typography>
-        <RadioGroup row value={view} onChange={handleViewChange}>
-          {[
-            { value: 'invoices', label: 'Invoices' },
-            { value: 'individual', label: 'Individual Ledger' },
-            { value: 'family', label: 'Family Ledger' },
-          ].map((option) => (
-            <FormControlLabel 
-              key={option.value}
-              value={option.value} 
-              control={<Radio size="small" sx={{ color: '#7cb342', '&.Mui-checked': { color: '#7cb342' } }} />} 
-              label={<Typography variant="caption">{option.label}</Typography>} 
-            />
-          ))}
-        </RadioGroup>
-      </Box>
-
       {/* Main Dashboard Section */}
-      <Box sx={{ display: 'flex', width: '100%', mt: 2, alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 3, width: '100%', mt: 2, mb: 3 }}>
         <PatientFinanceInfo 
+          ref={patientFinanceRef}
           view={view} 
+          onViewChange={handleViewChange}
           flags={currentPatient?.patientFlags || []}
           patient={currentPatient}
           onCalendarClick={() => setShowPaymentPlan(true)} 
@@ -286,7 +267,34 @@ const FinancePage = () => {
         expanded={expanded} 
         onExpandToggle={() => setExpanded(!expanded)}
         onFilterChange={handleFilterChange}
+        onCalendarClick={() => setShowPaymentPlan(true)} 
+        onCashMinusClick={() => setShowAccountAdjustment(true)}
+        onRefreshCoinClick={() => setShowCourtesyRefund(true)}
+        onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
+        onTriggerPatientFinanceIcon={(iconId, e) => patientFinanceRef.current?.triggerIcon?.(iconId, e)}
       />
+
+      {/* Ledger Filters */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 2, px: 1 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <input 
+            type="checkbox" 
+            checked={filters.includeVoided} 
+            onChange={(e) => handleFilterChange({ includeVoided: e.target.checked })} 
+          />
+          <Typography variant="caption">Include voided transactions</Typography>
+        </label>
+        {view !== 'family' && view !== 'individual' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={filters.hideBillingTransfers} 
+              onChange={(e) => handleFilterChange({ hideBillingTransfers: e.target.checked })} 
+            />
+            <Typography variant="caption">Hide billing transfers</Typography>
+          </label>
+        )}
+      </Box>
 
       {/* Dynamic Ledger Section */}
       <ErrorBoundary>
