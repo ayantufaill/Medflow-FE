@@ -15,21 +15,8 @@ export const fetchAppointments = createAsyncThunk(
     }
   },
   {
-    condition: (args = {}, { getState }) => {
-      const { appointment } = getState();
-      if (appointment.listLoading) return false;
-      
-      const { page = 1, limit = 10, providerId = '', patientId = '', status = '', startDate = '', endDate = '', appointmentTypeId = '', search = '' } = args;
-      const currentArgs = { page, limit, providerId, patientId, status, startDate, endDate, appointmentTypeId, search };
-      
-      if (appointment.lastFetched && appointment.lastParams) {
-        if (JSON.stringify(currentArgs) !== JSON.stringify(appointment.lastParams)) {
-          return true; // arguments changed, so fetch
-        }
-        // If arguments are exactly the same, still fetch (timer removed)
-        // returning true will allow the fetch to proceed.
-      }
-      return true;
+    condition: (_args, { getState }) => {
+      return !getState().appointment.listLoading;
     },
   }
 );
@@ -66,6 +53,30 @@ export const updateAppointmentThunk = createAsyncThunk(
       return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update appointment');
+    }
+  }
+);
+
+export const deleteAppointmentThunk = createAsyncThunk(
+  'appointment/delete',
+  async (appointmentId, { rejectWithValue }) => {
+    try {
+      await appointmentService.deleteAppointment(appointmentId);
+      return appointmentId;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete appointment');
+    }
+  }
+);
+
+export const cancelAppointmentThunk = createAsyncThunk(
+  'appointment/cancel',
+  async ({ appointmentId, cancellationReason = '' }, { rejectWithValue }) => {
+    try {
+      const response = await appointmentService.cancelAppointment(appointmentId, cancellationReason);
+      return response;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to cancel appointment');
     }
   }
 );
@@ -153,6 +164,9 @@ const initialState = {
   calendarView: 'week',
   selectedDate: new Date().toISOString(),
   conflicts: [],
+
+  // Operatory schedule — items dragged off the grid into the pending tray
+  pendingItems: [],
 };
 
 const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes for appointments (change more frequently)
@@ -217,6 +231,19 @@ const appointmentSlice = createSlice({
     removeAppointmentFromList: (state, action) => {
       state.list = state.list.filter(a => a._id !== action.payload);
       state.pagination.total = Math.max(0, state.pagination.total - 1);
+    },
+
+    // Pending tray (operatory schedule drag-to-hold)
+    addPendingItem: (state, action) => {
+      const item = action.payload; // { id, type: 'appointment' | 'block', data }
+      const alreadyExists = state.pendingItems.some(i => i.id === item.id);
+      if (!alreadyExists) state.pendingItems.push(item);
+    },
+    removePendingItem: (state, action) => {
+      state.pendingItems = state.pendingItems.filter(i => i.id !== action.payload);
+    },
+    clearPendingItems: (state) => {
+      state.pendingItems = [];
     },
   },
   extraReducers: (builder) => {
@@ -300,6 +327,31 @@ const appointmentSlice = createSlice({
       })
       .addCase(fetchPatientHistory.rejected, (state) => {
         state.patientHistoryLoading = false;
+      })
+
+      // Delete
+      .addCase(deleteAppointmentThunk.fulfilled, (state, action) => {
+        const deletedId = action.payload;
+        state.list = state.list.filter(a => (a._id || a.id) !== deletedId);
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
+        // Also remove from pending tray if it was there
+        state.pendingItems = state.pendingItems.filter(i => i.id !== deletedId);
+        if (state.selectedAppointmentId === deletedId) {
+          state.selectedAppointmentId = null;
+          state.currentAppointment = null;
+          localStorage.removeItem('selectedAppointmentId');
+        }
+      })
+
+      // Cancel (keeps the appointment in list but updates its status)
+      .addCase(cancelAppointmentThunk.fulfilled, (state, action) => {
+        if (action.payload) {
+          const idx = state.list.findIndex(a => (a._id || a.id) === (action.payload._id || action.payload.id));
+          if (idx !== -1) state.list[idx] = action.payload;
+          if (state.currentAppointment?._id === action.payload._id) {
+            state.currentAppointment = action.payload;
+          }
+        }
       });
   },
 });
@@ -318,6 +370,9 @@ export const {
   invalidateAppointmentDetail,
   updateAppointmentInList,
   removeAppointmentFromList,
+  addPendingItem,
+  removePendingItem,
+  clearPendingItems,
 } = appointmentSlice.actions;
 
 // ─── Selectors ───────────────────────────────────────────────
@@ -344,5 +399,6 @@ export const selectAppointmentDetailLoading = (state) => state.appointment.detai
 export const selectCalendarView = (state) => state.appointment.calendarView;
 export const selectSelectedDate = (state) => state.appointment.selectedDate;
 export const selectConflicts = (state) => state.appointment.conflicts;
+export const selectPendingItems = (state) => state.appointment.pendingItems;
 
 export default appointmentSlice.reducer;
