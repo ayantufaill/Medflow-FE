@@ -5,7 +5,11 @@ import {
 } from "@mui/icons-material";
 import InitialsAvatar from "../shared/InitialsAvatar";
 import { ActionBtn, VDiv } from "./helpers";
-import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
+import ToothSvg from "../../assets/operatory icons/Vector (2).svg";
+import ReportIcon from "../../assets/operatory icons/report.png";
+import DollarIcon from "../../assets/operatory icons/dollar.png";
+import PremmedIcon from "../../assets/operatory icons/premmed.png";
+import PeopleIcon from "../../assets/operatory icons/people.png";
 
 const SliderHeader = ({ pt, onClose }) => (
   <Box sx={{
@@ -33,10 +37,10 @@ const SliderHeader = ({ pt, onClose }) => (
     <VDiv />
 
     <Box sx={{ display: "flex", alignItems: "center", gap: "2px" }}>
-      <ActionBtn icon={<DescriptionOutlined sx={{ fontSize: "18px" }} />}      title="Notes" />
-      <ActionBtn icon={<AttachMoney sx={{ fontSize: "18px" }} />}  title="Billing" active />
-      <ActionBtn icon={<LinkOutlined sx={{ fontSize: "18px" }} />}         title="Tags" />
-      <ActionBtn icon={<PeopleOutline sx={{ fontSize: "18px" }} />}       title="Family" />
+      <ActionBtn icon={<Box component="img" src={ReportIcon} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />}      title="Notes" />
+      <ActionBtn icon={<Box component="img" src={DollarIcon} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />}  title="Billing" active />
+      <ActionBtn icon={<Box component="img" src={PremmedIcon} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />}         title="Tags" />
+      <ActionBtn icon={<Box component="img" src={PeopleIcon} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />}       title="Family" />
       <ActionBtn icon={<Box component="img" src={ToothSvg} sx={{ width: "16px", height: "16px" }} />} title="Clinical" />
     </Box>
 

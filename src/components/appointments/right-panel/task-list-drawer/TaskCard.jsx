@@ -1,5 +1,6 @@
 import { Box, Typography, IconButton } from "@mui/material";
 import { RadioButtonUnchecked, CalendarTodayOutlined, PeopleOutline, DeleteOutline, AddLinkOutlined } from "@mui/icons-material";
+import DeleteIconImg from "../../../../assets/operatory icons/delete.png";
 
 const TaskCard = ({ task }) => (
   <Box sx={{
@@ -59,8 +60,8 @@ const TaskCard = ({ task }) => (
     </Box>
 
     {/* Delete icon */}
-    <IconButton size="small" sx={{ p: "2px", color: "#ef4444", flexShrink: 0, mt: "1px", "&:hover": { backgroundColor: "rgba(239,68,68,0.08)" } }}>
-      <DeleteOutline sx={{ fontSize: "18px" }} />
+    <IconButton size="small" sx={{ p: "2px", flexShrink: 0, mt: "1px", "&:hover": { backgroundColor: "rgba(239,68,68,0.08)" } }}>
+      <Box component="img" src={DeleteIconImg} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />
     </IconButton>
   </Box>
 );

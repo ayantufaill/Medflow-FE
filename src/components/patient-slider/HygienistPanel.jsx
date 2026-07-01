@@ -29,7 +29,7 @@ const HygienistPanel = ({ pt }) => (
         <PendingActionsOutlined sx={{ fontSize: "12px", color: "#f59e0b" }} />
         <SL>HYG DUE DATE</SL>
       </Box>
-      <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600, color: "#f59e0b" }}>
+      <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600, color: "#09121f" }}>
         {pt.hygQueDate}
       </Typography>
     </Box>

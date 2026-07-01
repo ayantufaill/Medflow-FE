@@ -1,9 +1,10 @@
 import { Box, Typography } from "@mui/material";
 import {
   EmailOutlined, PhoneOutlined, ChatBubbleOutline, PeopleOutline,
-  KeyboardArrowDown, AutoAwesome,
+  KeyboardArrowDown,
 } from "@mui/icons-material";
 import { ContactLine } from "./helpers";
+import SparkleIcon from "../../assets/operatory icons/sparkle.png";
 
 const ContactPanel = ({ pt }) => (
   <Box sx={{ flex: 1, minWidth: 0, px: "16px", py: "12px", borderRight: "1px solid #f0f2f5", overflow: "hidden" }}>
@@ -25,7 +26,7 @@ const ContactPanel = ({ pt }) => (
       px: "12px", py: "6px", cursor: "pointer",
       "&:hover": { backgroundColor: "#1a50cc" },
     }}>
-      <AutoAwesome sx={{ fontSize: "12px", color: "#fff" }} />
+      <Box component="img" src={SparkleIcon} sx={{ width: "12px", height: "12px" }} />
       <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600, color: "#fff" }}>
         Request review
       </Typography>

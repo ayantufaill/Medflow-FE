@@ -1,6 +1,7 @@
 import { Box, IconButton, MenuItem, Select, TextField, Typography } from "@mui/material";
 import { DeleteOutline } from "@mui/icons-material";
 import { Label, providerLabel } from "./helpers";
+import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
 const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
   <Box>
@@ -50,9 +51,9 @@ const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
           <IconButton
             size="small"
             onClick={() => setProviderRows((prev) => prev.filter((r) => r.id !== row.id))}
-            sx={{ color: "#ef4444", p: "2px" }}
+            sx={{ p: "2px" }}
           >
-            <DeleteOutline sx={{ fontSize: "14px" }} />
+            <Box component="img" src={DeleteIconImg} sx={{ width: "12px", height: "12px", objectFit: "contain" }} />
           </IconButton>
         </Box>
       ))}

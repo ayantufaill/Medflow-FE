@@ -1,6 +1,7 @@
 import { Box, Typography, Checkbox, IconButton } from "@mui/material";
 import { Delete, KeyboardArrowDown } from "@mui/icons-material";
 import { Cell, ColLabel, ProcChip } from "./helpers";
+import DeleteIconImg from "../../../../assets/operatory icons/delete.png";
 
 /* ── table header row ──────────────────────────────────────── */
 const TableHeader = ({ allChecked, onToggleAll }) => (
@@ -111,8 +112,8 @@ const TableRow = ({ patient, checked, onToggle }) => (
         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#0d9488", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
           +add to schedule
         </Typography>
-        <IconButton size="small" sx={{ p: "2px", color: "#ef4444", "&:hover": { backgroundColor: "#fef2f2" } }}>
-          <Delete sx={{ fontSize: "14px" }} />
+        <IconButton size="small" sx={{ p: "2px", "&:hover": { backgroundColor: "#fef2f2" } }}>
+          <Box component="img" src={DeleteIconImg} sx={{ width: "14px", height: "14px", objectFit: "contain" }} />
         </IconButton>
       </Box>
     </Cell>

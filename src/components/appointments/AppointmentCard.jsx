@@ -177,7 +177,7 @@ const AppointmentCard = ({
           color: "#000000",
           p: 0,
           cursor: "grab",
-          transition: isNewAppointment 
+          transition: isNewAppointment
             ? "transform 0.1s, box-shadow 0.1s, border 0.3s ease-out"
             : "transform 0.1s, box-shadow 0.1s",
           overflow: "hidden",
@@ -402,10 +402,10 @@ const AppointmentHeader = ({
             whiteSpace: "nowrap",
           }}
         >
-          {privacyMode 
-            ? (appointment.patientName?.includes('(') 
-                ? `•••• •••• ${appointment.patientName.substring(appointment.patientName.indexOf('('))}`
-                : "•••• ••••")
+          {privacyMode
+            ? (appointment.patientName?.includes('(')
+              ? `•••• •••• ${appointment.patientName.substring(appointment.patientName.indexOf('('))}`
+              : "•••• ••••")
             : (appointment.patientName || "John Doe")}
         </Typography>
       </Box>

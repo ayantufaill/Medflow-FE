@@ -6,6 +6,7 @@ import {
 import { DeleteOutline } from "@mui/icons-material";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
+import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
 const ProcedureRow = memo(({ row, isLast, providers, setProcedures }) => {
   const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
@@ -75,8 +76,8 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures }) => {
         </Select>
       </TableCell>
       <TableCell sx={{ ...cellSx, width: "44px", pr: "8px", textAlign: "center" }}>
-        <IconButton size="small" onClick={handleDelete} sx={{ color: "#ef4444", p: "4px" }}>
-          <DeleteOutline sx={{ fontSize: "18px" }} />
+        <IconButton size="small" onClick={handleDelete} sx={{ p: "4px" }}>
+          <Box component="img" src={DeleteIconImg} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />
         </IconButton>
       </TableCell>
     </TableRow>
