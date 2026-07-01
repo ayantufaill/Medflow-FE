@@ -28,7 +28,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { useAppointment } from '../../hooks/redux/useAppointment';
+import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
 
 const SummaryData = [
   { label: '# of sites', bleeding: '50', p4: '150', p5: '0', p6: '0', recession: '43' },
@@ -195,7 +195,7 @@ const PeriodontalExamPage = () => {
   const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
   const dispatch = useDispatch();
 
-  const { currentAppointment } = useAppointment();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('periodontal', patientId);
   const visitDates = React.useMemo(() => {

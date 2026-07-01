@@ -8,7 +8,7 @@ import RightPanel from '../../components/appointments/right-panel/RightPanel';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { usePatients } from '../../hooks/redux/usePatient';
-import { useAppointments } from '../../hooks/redux/useAppointments';
+import { useAppointmentList } from '../../hooks/redux/useAppointment';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
@@ -49,7 +49,7 @@ const OperatorySchedulePage = () => {
   const initialFormDateTime = useMemo(() => dayjs().hour(9).minute(0), []);
 
   // ── Appointments (for conflict detection inside the form) ─────────
-  const { appointments, createAppointment } = useAppointments();
+  const { appointments, createAppointment } = useAppointmentList();
 
   // ── Submit handler ────────────────────────────────────────────────
   const handleSubmit = async (formData) => {

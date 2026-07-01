@@ -45,7 +45,7 @@ import { useSnackbar } from "../../contexts/SnackbarContext";
 
 import { patientService } from "../../services/patient.service";
 import { useDropdownData } from "../../hooks/redux/useDropdownData";
-import { useAppointments } from "../../hooks/redux/useAppointments";
+import { useAppointmentList } from "../../hooks/redux/useAppointment";
 import { usePatients } from "../../hooks/redux/usePatient";
 import { useDispatch } from "react-redux";
 import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
@@ -849,7 +849,7 @@ const OperatorySchedulePage = () => {
     refresh: refreshAppointments,
     createAppointment: reduxCreateAppointment,
     updateAppointment,
-  } = useAppointments({
+  } = useAppointmentList({
     patientId: selectedPatientId || "", // Filter by selected patient, otherwise show all
     startDate: fetchStartDate,
     endDate: fetchEndDate,

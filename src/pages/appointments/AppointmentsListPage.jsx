@@ -57,7 +57,7 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentService } from '../../services/appointment.service';
-import { useAppointments } from '../../hooks/redux/useAppointment';
+import { useAppointmentList } from '../../hooks/redux/useAppointment';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const AppointmentsListPage = () => {
@@ -75,7 +75,7 @@ const AppointmentsListPage = () => {
     refetch,
     updateInList,
     removeFromList,
-  } = useAppointments();
+  } = useAppointmentList();
 
   // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);

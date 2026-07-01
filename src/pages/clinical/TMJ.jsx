@@ -22,7 +22,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { useAppointment } from '../../hooks/redux/useAppointment';
+import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
 
 
 // Custom Ring Radio to match the "Acceptable/Warning/Issue" style
@@ -275,7 +275,7 @@ const DentalTmdExamPage = () => {
     });
   };
 
-  const { currentAppointment } = useAppointment();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('tmj', patientId);
   const visitDates = React.useMemo(() => {
