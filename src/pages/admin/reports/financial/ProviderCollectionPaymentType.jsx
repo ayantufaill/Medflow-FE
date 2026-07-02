@@ -40,28 +40,85 @@ const ProviderCollectionPerPaymentType = () => {
   const handleFilterModeChange = (e) => {
     const newMode = e.target.value;
     setDateRange(newMode);
-    const today = new Date();
     
-    if (newMode === 'daily') {
-      const todayStr = today.toISOString().split('T')[0];
-      setStartDate(todayStr);
-      setEndDate(todayStr);
-    } else if (newMode === 'weekly') {
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(today.setDate(diff));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
-      setStartDate(startOfWeek.toISOString().split('T')[0]);
-      setEndDate(endOfWeek.toISOString().split('T')[0]);
-    } else if (newMode === 'monthly') {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      setStartDate(startOfMonth.toISOString().split('T')[0]);
-      setEndDate(endOfMonth.toISOString().split('T')[0]);
+    if (newMode === 'range') return;
+
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    switch (newMode) {
+      case 'daily':
+        break;
+      case 'this_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        start = new Date(today.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'this_month': {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      }
+      case 'last_7_days': {
+        start.setDate(today.getDate() - 7);
+        break;
+      }
+      case 'last_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
+        start = new Date(today.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'last_4_weeks': {
+        start.setDate(today.getDate() - 28);
+        break;
+      }
+      case 'last_month': {
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      }
+      case 'last_3_months': {
+        start.setMonth(today.getMonth() - 3);
+        break;
+      }
+      case 'last_12_months': {
+        start.setFullYear(today.getFullYear() - 1);
+        break;
+      }
+      case 'quarter_to_date': {
+        const quarter = Math.floor(today.getMonth() / 3);
+        start = new Date(today.getFullYear(), quarter * 3, 1);
+        break;
+      }
+      case 'year_to_date': {
+        start = new Date(today.getFullYear(), 0, 1);
+        break;
+      }
+      case 'last_year': {
+        start = new Date(today.getFullYear() - 1, 0, 1);
+        end = new Date(today.getFullYear() - 1, 11, 31);
+        break;
+      }
+      default:
+        break;
     }
+    
+    setStartDate(getLocalDateString(start));
+    setEndDate(getLocalDateString(end));
   };
 
   const lastFetchedRef = React.useRef(null);
@@ -202,12 +259,21 @@ const ProviderCollectionPerPaymentType = () => {
               size="small" 
               value={dateRange} 
               onChange={handleFilterModeChange} 
-              sx={{ minWidth: 100, fontSize: '0.75rem' }}
+              sx={{ minWidth: 140, fontSize: '0.75rem' }}
             >
               <MenuItem value="daily">Daily</MenuItem>
               <MenuItem value="range">Range</MenuItem>
               <MenuItem value="this_week">This Week</MenuItem>
               <MenuItem value="this_month">This Month</MenuItem>
+              <MenuItem value="last_7_days">Last 7 days</MenuItem>
+              <MenuItem value="last_week">Last Week</MenuItem>
+              <MenuItem value="last_4_weeks">Last 4 Weeks</MenuItem>
+              <MenuItem value="last_month">Last Month</MenuItem>
+              <MenuItem value="last_3_months">Last 3 Months</MenuItem>
+              <MenuItem value="last_12_months">Last 12 Months</MenuItem>
+              <MenuItem value="quarter_to_date">Quarter to date</MenuItem>
+              <MenuItem value="year_to_date">Year to date</MenuItem>
+              <MenuItem value="last_year">Last Year</MenuItem>
             </Select>
           </Grid>
           <Grid item sx={{ display: 'flex', gap: 2 }}>

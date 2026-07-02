@@ -125,7 +125,12 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
               }}
               onClick={() => {
                 if (!isReordering && report.kind === 'Financial' && report.filters?.some(f => f.type === 'patientPayTypes')) {
-                  navigate('/admin/reports/financial/deposit-slips', { state: { templateData: report } });
+                  const isSummary = report.filters?.some(f => f.type === 'isSummary' && f.value === true);
+                  if (isSummary) {
+                    navigate('/admin/reports/financial/deposit-summary', { state: { templateData: report } });
+                  } else {
+                    navigate('/admin/reports/financial/deposit-slips', { state: { templateData: report } });
+                  }
                 }
               }}
             >
