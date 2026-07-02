@@ -1,24 +1,9 @@
 import React from 'react';
 import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Select, 
-  MenuItem, 
-  FormControl, 
-  InputLabel, 
-  Button, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper,
-  Divider,
-  IconButton
+  Box, Typography, TextField, Select, MenuItem, Button, IconButton, Divider, TableCell, TableRow
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, FileDownload, Print } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
 
 const LoginReport = () => {
   const rows = [
@@ -29,81 +14,70 @@ const LoginReport = () => {
     { id: 5, username: 'Babar Magsi', date: '05/08/2026 12:42 PM', status: 'Success', ip: '182.188.108.206', machine: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' },
   ];
 
+  const columns = [
+    { label: 'Username' },
+    { label: 'Login date' },
+    { label: 'Login status' },
+    { label: 'IP address' },
+    { label: 'Machine info' }
+  ];
+
+  const renderRow = (row, index) => (
+    <TableRow key={row.id} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600 }}>{row.username}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Success' ? '#166534' : '#d93025', fontWeight: 500 }}>{row.status}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.ip}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', maxWidth: 400, wordBreak: 'break-all', color: '#666' }}>{row.machine}</TableCell>
+    </TableRow>
+  );
+
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="Daily" 
+        prefix="Date Range:" 
+        defaultValue="Daily"
+        options={[{ value: 'Daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 2, mr: 2 }}>
+        <IconButton size="small" sx={{ color: '#337ab7', p: 0 }}><ChevronLeft fontSize="small" /></IconButton>
+        <Typography variant="body2" sx={{ color: '#337ab7', fontWeight: 600 }}>May 08, 2026</Typography>
+        <Typography variant="body2" sx={{ mx: 0.5, color: '#337ab7' }}>➔</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 600 }}>Date:</Typography>
+        <Typography variant="body2" sx={{ color: '#337ab7', fontWeight: 600 }}>05/08/2026</Typography>
+        <IconButton size="small" sx={{ color: '#337ab7', p: 0 }}><ChevronRight fontSize="small" /></IconButton>
+      </Box>
+
+      <Box sx={{ ml: 'auto' }}>
+        <ReportSearchInput 
+          placeholder="Search User" 
+          value="" 
+          onChange={() => {}}
+        />
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 1 }}>
-      <Typography variant="body2" color="primary" sx={{ textDecoration: 'underline', mb: 2, cursor: 'pointer', display: 'inline-block' }}>
-        Login Report:
-      </Typography>
-
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Date Range:</Typography>
-          <Select defaultValue="Daily" size="small" variant="standard" sx={{ minWidth: 100, fontSize: '0.85rem' }}>
-            <MenuItem value="Daily">Daily</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <IconButton size="small"><ChevronLeft fontSize="small" /></IconButton>
-          <Typography variant="body2" color="primary">May 08, 2026</Typography>
-          <Typography variant="body2" sx={{ mx: 0.5 }}>➔</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Date:</Typography>
-          <Typography variant="body2" color="primary">05/08/2026</Typography>
-          <IconButton size="small"><ChevronRight fontSize="small" /></IconButton>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Filter by User:</Typography>
-          <TextField 
-            placeholder="Search User" 
-            size="small" 
-            variant="outlined" 
-            sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }}
-          />
-        </Box>
-
-        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button variant="contained" size="small" sx={{ backgroundColor: '#8db3d9', textTransform: 'none', px: 3 }}>Apply</Button>
-          <Button variant="contained" size="small" sx={{ backgroundColor: '#d1a066', textTransform: 'none', px: 3 }}>Create Template</Button>
-        </Box>
-      </Box>
-
-      <Divider sx={{ my: 3, borderColor: '#d1a066' }} />
-
-      {/* Export Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
-        <Button variant="contained" size="small" startIcon={<FileDownload />} sx={{ backgroundColor: '#4a90e2', textTransform: 'none' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" startIcon={<Print />} sx={{ backgroundColor: '#d1a066', textTransform: 'none' }}>Print</Button>
-      </Box>
+    <ReportLayout title="Login Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply Filters')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Login Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
-        <Table size="small">
-          <TableHead sx={{ backgroundColor: '#f9fafb' }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Username</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Login date</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Login status</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>IP address</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Machine info</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600 }}>{row.username}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.status}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.ip}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', maxWidth: 400, wordBreak: 'break-all', color: 'text.secondary' }}>{row.machine}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      <ReportDataTable 
+        columns={columns} 
+        data={rows} 
+        renderRow={renderRow} 
+        emptyMessage="No login logs found for this date range"
+      />
+    </ReportLayout>
   );
 };
 
 export default LoginReport;
+

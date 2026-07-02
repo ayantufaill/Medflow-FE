@@ -1,18 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  Box, Typography, Select, MenuItem, Button, TableCell, TableRow
 } from '@mui/material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const MOCK_REQUESTS = [
   { patient: 'Patient One', created: '05/08/2025', requested: '$358.00', paid: '--------', date: '', status: '' },
@@ -23,66 +13,61 @@ const MOCK_REQUESTS = [
 ];
 
 const PaymentRequest = () => {
+  const columns = [
+    { label: 'Patient' },
+    { label: 'Created On' },
+    { label: 'Amount Requested' },
+    { label: 'Amount Paid' },
+    { label: 'Date Paid' },
+    { label: 'Status' },
+  ];
+
+  const renderRow = (row, index) => (
+    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{row.patient}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.created}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.requested}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.paid}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.date}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: row.status.includes('Successful') ? '#166534' : '#000', fontWeight: row.status.includes('Successful') ? 500 : 400 }}>{row.status}</TableCell>
+    </TableRow>
+  );
+
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="Range" 
+        prefix="Created On Date Filter:" 
+        defaultValue="Range"
+        options={[{ value: 'Range', label: 'Range' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2025</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
-        Payment Request Report:
-      </Typography>
-
-      {/* Filters */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Created On Date Filter:</Typography>
-          <Select value="Range" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2025</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2026</Typography>
-        </Box>
-        <Box sx={{ ml: 'auto' }}>
-          <Button variant="contained" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.8rem' }}>Apply Filters</Button>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
-      </Box>
+    <ReportLayout title="Payment Request Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Table */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Patient</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Created On</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Amount Requested</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Amount Paid</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Date Paid</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {MOCK_REQUESTS.map((row, index) => (
-              <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.patient}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.created}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.requested}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.paid}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', color: row.status.includes('Successful') ? '#007b3e' : '#000' }}>{row.status}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      <ReportDataTable 
+        columns={columns} 
+        data={MOCK_REQUESTS} 
+        renderRow={renderRow} 
+      />
+    </ReportLayout>
   );
 };
 

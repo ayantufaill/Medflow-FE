@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  Grid,
-  Divider,
+  Box, Typography, Select, MenuItem, Checkbox, FormControlLabel, Button, Grid, Divider
 } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
 
 const PAYMENT_TYPES = [
   'Do not use', 'Check', 'Debit Card', 'EFT', 'Cash', 'Care Credit', 'Master Card', 'Visa Card', 'ACH Payment',
@@ -39,40 +32,36 @@ const DepositSummary = () => {
   );
 
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 3, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
-        Deposit Summary:
-      </Typography>
-
+    <ReportLayout title="Deposit Summary:">
       <Grid container spacing={4}>
         {/* Left Column */}
         <Grid item xs={12} md={7}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a3a6b', mb: 1, borderBottom: '1px solid #e0e0e0', pb: 0.5 }}>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#337ab7', mb: 1, borderBottom: '1px solid #e0e0e0', pb: 0.5 }}>
             Create new deposit summary:
           </Typography>
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#4a89dc', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '0.85rem' }}>Transactions Date Range:</Typography>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Transactions Date Range:</Typography>
               <Select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
                 size="small"
                 variant="standard"
-                sx={{ fontSize: '0.85rem', minWidth: 100 }}
+                sx={{ fontSize: '0.85rem', minWidth: 100, backgroundColor: '#fff' }}
               >
                 <MenuItem value="Daily">Daily</MenuItem>
                 <MenuItem value="Weekly">Weekly</MenuItem>
               </Select>
             </Box>
             <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-              <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
-              <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
+              <Button variant="contained" size="small" sx={{ backgroundColor: '#00BBAB', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#009b8e' } }}>Apply Filters</Button>
+              <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c89255' } }}>Create Template</Button>
             </Box>
           </Box>
 
@@ -95,10 +84,10 @@ const DepositSummary = () => {
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#4a89dc', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
               Preview Deposit
             </Button>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c89255' } }}>
               Print Slip
             </Button>
           </Box>
@@ -106,25 +95,25 @@ const DepositSummary = () => {
 
         {/* Divider */}
         <Grid item xs={false} md={0.5} sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
-          <Divider orientation="vertical" flexItem sx={{ borderRightWidth: 2, borderColor: '#5c85bb' }} />
+          <Divider orientation="vertical" flexItem sx={{ borderRightWidth: 1, borderColor: '#e0e0e0' }} />
         </Grid>
 
         {/* Right Column */}
         <Grid item xs={12} md={4.5}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-             <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a3a6b', borderBottom: '1px solid #1a3a6b', pb: 0.5 }}>
+             <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#337ab7', borderBottom: '1px solid #337ab7', pb: 0.5 }}>
               Deposit summary:
             </Typography>
              <Button
               variant="contained"
               sx={{
-                backgroundColor: '#dcb265',
+                backgroundColor: '#d9a366',
                 textTransform: 'none',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 minWidth: 60,
                 height: 30,
-                '&:hover': { backgroundColor: '#c99f54' }
+                '&:hover': { backgroundColor: '#c89255' }
               }}
             >
               Print
@@ -133,17 +122,16 @@ const DepositSummary = () => {
           
           <Box sx={{ mt: 2 }}>
             <Typography sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: '#333', mb: 1 }}>
-              No summary create.
+              No summary created.
             </Typography>
             <Typography sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: '#666' }}>
-              Create a deposit summary by editing the left side options and clicking 'create'.
+              Create a deposit summary by editing the left side options and clicking 'Preview Deposit'.
             </Typography>
           </Box>
         </Grid>
       </Grid>
-    </Box>
+    </ReportLayout>
   );
 };
 
 export default DepositSummary;
-
