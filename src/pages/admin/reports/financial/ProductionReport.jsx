@@ -48,31 +48,86 @@ const ProductionReport = () => {
     dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
 
+  const getLocalDateString = (d) => {
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  };
+
   const handleFilterModeChange = (e) => {
     const newMode = e.target.value;
     setDateRange(newMode);
-    const today = new Date();
+    if (newMode === 'range') return;
     
-    if (newMode === 'daily') {
-      const todayStr = today.toISOString().split('T')[0];
-      setStartDate(todayStr);
-      setEndDate(todayStr);
-    } else if (newMode === 'weekly') {
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(today.setDate(diff));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
-      setStartDate(startOfWeek.toISOString().split('T')[0]);
-      setEndDate(endOfWeek.toISOString().split('T')[0]);
-    } else if (newMode === 'monthly') {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      setStartDate(startOfMonth.toISOString().split('T')[0]);
-      setEndDate(endOfMonth.toISOString().split('T')[0]);
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+    
+    switch (newMode) {
+      case 'daily':
+        break;
+      case 'this_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Start on Monday
+        start = new Date(today.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'this_month':
+      case 'month_to_date': {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = newMode === 'this_month' ? new Date(today.getFullYear(), today.getMonth() + 1, 0) : new Date();
+        break;
+      }
+      case 'last_7_days': {
+        start.setDate(today.getDate() - 7);
+        break;
+      }
+      case 'last_week': {
+        const day = today.getDay();
+        const diffToLastWeekStart = today.getDate() - day - 7 + (day === 0 ? -6 : 1);
+        start = new Date(new Date().setDate(diffToLastWeekStart));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'last_4_weeks': {
+        start.setDate(today.getDate() - 28);
+        break;
+      }
+      case 'last_month': {
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      }
+      case 'last_3_months': {
+        start.setMonth(today.getMonth() - 3);
+        break;
+      }
+      case 'last_12_months': {
+        start.setFullYear(today.getFullYear() - 1);
+        break;
+      }
+      case 'quarter_to_date': {
+        const quarter = Math.floor(today.getMonth() / 3);
+        start = new Date(today.getFullYear(), quarter * 3, 1);
+        break;
+      }
+      case 'year_to_date': {
+        start = new Date(today.getFullYear(), 0, 1);
+        break;
+      }
+      case 'last_year': {
+        start = new Date(today.getFullYear() - 1, 0, 1);
+        end = new Date(today.getFullYear() - 1, 11, 31);
+        break;
+      }
+      default:
+        break;
     }
+    
+    setStartDate(getLocalDateString(start));
+    setEndDate(getLocalDateString(end));
   };
 
   const fetchData = async () => {
@@ -579,15 +634,13 @@ const ProductionReport = () => {
                           <TableRow key={row.procedureId || idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
                             <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
                             <TableCell>
-                              {showFlags && (row.flags && row.flags.length > 0 ? (
+                              {showFlags && row.flags && row.flags.length > 0 && (
                                 <Box sx={{ display: 'flex', gap: 0.2 }}>
                                   {row.flags.map((color, i) => (
                                     <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
                                   ))}
                                 </Box>
-                              ) : (
-                                <Box sx={{ width: 10, height: 10, bgcolor: '#f5a623', borderRadius: '2px' }} />
-                              ))}
+                              )}
                             </TableCell>
                             <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Mock Patient'}</TableCell>
                             <TableCell>{row.code || 'D0120'}</TableCell>
@@ -640,15 +693,13 @@ const ProductionReport = () => {
                 <TableRow key={row.procedureId || idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
                   <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>
-                    {showFlags && (row.flags && row.flags.length > 0 ? (
+                    {showFlags && row.flags && row.flags.length > 0 && (
                       <Box sx={{ display: 'flex', gap: 0.2 }}>
                         {row.flags.map((color, i) => (
                           <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
                         ))}
                       </Box>
-                    ) : (
-                      <Box sx={{ width: 10, height: 10, bgcolor: '#f5a623', borderRadius: '2px' }} />
-                    ))}
+                    )}
                   </TableCell>
                   <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Mock Patient'}</TableCell>
                   <TableCell>{row.code || 'D0120'}</TableCell>

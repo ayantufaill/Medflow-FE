@@ -29,6 +29,7 @@ import GenerateStatementsDialog from '../../../../components/finance/GenerateSta
 import ViewGeneratedStatementsDialog from '../../../../components/finance/ViewGeneratedStatementsDialog';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchArAgingReport, selectArAging, selectArAgingLoading } from '../../../../store/slices/billingSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 import { reportingService } from '../../../../services/reporting.service';
 
 const AgingReport = () => {
@@ -41,6 +42,17 @@ const AgingReport = () => {
   const [selectedNames, setSelectedNames] = useState([]);
   const [flagFilter, setFlagFilter] = useState('pts');
   const [showFlags, setShowFlags] = useState(true);
+  
+  const [providerFilter, setProviderFilter] = useState('all');
+  const [patientStatusFilter, setPatientStatusFilter] = useState('active');
+  const [claimsFilter, setClaimsFilter] = useState('both');
+  
+  const [balanceFilter, setBalanceFilter] = useState('any');
+  const [owingFilter, setOwingFilter] = useState('any');
+  const [billingDateFilter, setBillingDateFilter] = useState('any');
+  const [arRangeFilter, setArRangeFilter] = useState('any');
+  const [sortBy, setSortBy] = useState('high-low');
+  const [showPaymentPlan, setShowPaymentPlan] = useState(true);
   
   const [batches, setBatches] = useState([
     {
@@ -195,7 +207,14 @@ const AgingReport = () => {
   const dispatch = useDispatch();
   const arAging = useSelector(selectArAging);
   const loading = useSelector(selectArAgingLoading);
+  const providersList = useSelector(selectProviderDropdownList) || [];
   const reportData = arAging || [];
+
+  const getProviderName = (p) => {
+    const first = p.userId?.firstName || p.firstName || p.FName || '';
+    const last  = p.userId?.lastName  || p.lastName  || p.LName  || '';
+    return `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+  };
 
   const enrichedReportData = useMemo(() => {
     return reportData.map((row, idx) => {
@@ -210,15 +229,80 @@ const AgingReport = () => {
   }, [reportData]);
 
   const filteredReportData = useMemo(() => {
-    return enrichedReportData.filter(row => {
-      if (flagFilter === 'with_flags') {
-        if (!row.flags || row.flags.length === 0) return false;
-      } else if (flagFilter === 'without_flags') {
-        if (row.flags && row.flags.length > 0) return false;
+    let result = enrichedReportData.filter(row => {
+      // Flag Filter
+      if (flagFilter === 'with_flags' && (!row.flags || row.flags.length === 0)) return false;
+      if (flagFilter === 'without_flags' && (row.flags && row.flags.length > 0)) return false;
+      
+      // Provider Filter
+      if (providerFilter !== 'all' && row.providerId !== providerFilter) return false;
+      
+      // Patient Status Filter
+      if (patientStatusFilter === 'active' && row.isActive === false) return false;
+      if (patientStatusFilter === 'inactive' && row.isActive !== false) return false;
+      
+      // Claims Filter
+      if (claimsFilter === 'with_claims' && !row.hasOpenClaims) return false;
+      if (claimsFilter === 'without_claims' && row.hasOpenClaims) return false;
+      
+      // Balance Filter
+      if (balanceFilter === 'positive' && (row.total || 0) <= 0) return false;
+      if (balanceFilter === 'negative' && (row.total || 0) >= 0) return false;
+      
+      // Owing Type Filter
+      if (owingFilter === 'patient') {
+        const ptTotal = Object.values(row.buckets || {}).reduce((sum, b) => sum + (b.pt || 0), 0);
+        if (ptTotal <= 0) return false;
       }
+      if (owingFilter === 'insurance') {
+        const insTotal = Object.values(row.buckets || {}).reduce((sum, b) => sum + (b.ins || 0), 0);
+        if (insTotal <= 0) return false;
+      }
+      
+      // Billing Date Filter
+      if (billingDateFilter !== 'any' && row.lastBilled) {
+        const billedDate = new Date(row.lastBilled);
+        const today = new Date();
+        const diffDays = Math.floor((today - billedDate) / (1000 * 60 * 60 * 24));
+        if (billingDateFilter === '30' && diffDays > 30) return false;
+        if (billingDateFilter === '60' && diffDays > 60) return false;
+        if (billingDateFilter === '90' && diffDays <= 90) return false;
+      }
+      
+      // AR Range Filter
+      if (arRangeFilter !== 'any' && row.buckets) {
+        if (arRangeFilter === '0-30' && (row.buckets['0 - 30 days']?.total || 0) <= 0) return false;
+        if (arRangeFilter === '31-60' && (row.buckets['31 - 60 days']?.total || 0) <= 0) return false;
+        if (arRangeFilter === '61-90' && (row.buckets['61 - 90 days']?.total || 0) <= 0) return false;
+        if (arRangeFilter === '>90') {
+          const over90 = ['91 - 120 days', '121 - 150 days', '151 - 180 days', '> 180 day']
+            .reduce((sum, b) => sum + (row.buckets[b]?.total || 0), 0);
+          if (over90 <= 0) return false;
+        }
+      }
+      
       return true;
     });
-  }, [enrichedReportData, flagFilter]);
+
+    // Sorting
+    result.sort((a, b) => {
+      if (sortBy === 'high-low') return (b.total || 0) - (a.total || 0);
+      if (sortBy === 'patient-name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'last-billed') {
+        const da = a.lastBilled ? new Date(a.lastBilled).getTime() : 0;
+        const db = b.lastBilled ? new Date(b.lastBilled).getTime() : 0;
+        return db - da; // newest first
+      }
+      if (sortBy === 'flags') {
+        const aFlags = a.flags && a.flags.length > 0 ? 1 : 0;
+        const bFlags = b.flags && b.flags.length > 0 ? 1 : 0;
+        return bFlags - aFlags;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [enrichedReportData, flagFilter, providerFilter, patientStatusFilter, claimsFilter, balanceFilter, owingFilter, billingDateFilter, arRangeFilter, sortBy]);
 
   const [archivedDate, setArchivedDate] = useState('');
   const [archivedData, setArchivedData] = useState([]);
@@ -226,6 +310,7 @@ const AgingReport = () => {
 
   useEffect(() => {
     dispatch(fetchArAgingReport());
+    dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
 
   const handleDateSelect = async (e) => {
@@ -258,7 +343,7 @@ const AgingReport = () => {
       ...agingBuckets,
       'Total',
       'Total owings',
-      'Payment Plan Owing',
+      showPaymentPlan ? 'Payment Plan Owing' : null,
       'Credit',
       'Last Billed On'
     ].filter(Boolean);
@@ -274,7 +359,7 @@ const AgingReport = () => {
         }),
         `$${(row.total || 0).toFixed(2)}`,
         `$${(row.totalOwings || 0).toFixed(2)}`,
-        `$${(row.paymentPlan || 0).toFixed(2)}`,
+        showPaymentPlan ? `$${(row.paymentPlan || 0).toFixed(2)}` : null,
         `$${(row.credit || 0).toFixed(2)}`,
         row.lastBilled || ''
       ].filter(val => val !== null);
@@ -397,13 +482,65 @@ const AgingReport = () => {
           <Box sx={{ backgroundColor: '#f8f9fa', p: 2, borderRadius: 1, mb: 3 }}>
             <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: 'text.secondary' }}>Filter Report By</Typography>
             <Grid container spacing={1} sx={{ mb: 2 }}>
-              <Grid item>{renderFilterSelect('Any Balance', [], 'Any Balance')}</Grid>
-              <Grid item>{renderFilterSelect('Any Type of Owing', [], 'Any Type of Owing')}</Grid>
-              <Grid item>{renderFilterSelect('Any Billing Date', [], 'Any Billing Date')}</Grid>
-              <Grid item>{renderFilterSelect('With OR Without Open Claims', [], 'With OR Without Open Claims')}</Grid>
-              <Grid item>{renderFilterSelect('Active Patients Only', [], 'Active Patients Only')}</Grid>
-              <Grid item>{renderFilterSelect('All Providers', [], 'All Providers')}</Grid>
-              <Grid item>{renderFilterSelect('Any AR Range', [], 'Any AR Range')}</Grid>
+              <Grid item>
+                <Select size="small" value={balanceFilter} onChange={(e) => setBalanceFilter(e.target.value)} sx={{ minWidth: 120, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="any">Any Balance</MenuItem>
+                  <MenuItem value="positive">Positive Balances</MenuItem>
+                  <MenuItem value="negative">Negative Balances</MenuItem>
+                </Select>
+              </Grid>
+              <Grid item>
+                <Select size="small" value={owingFilter} onChange={(e) => setOwingFilter(e.target.value)} sx={{ minWidth: 150, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="any">Any Type of Owing</MenuItem>
+                  <MenuItem value="patient">Patient Owings Only</MenuItem>
+                  <MenuItem value="insurance">Insurance Owings Only</MenuItem>
+                </Select>
+              </Grid>
+              <Grid item>
+                <Select size="small" value={billingDateFilter} onChange={(e) => setBillingDateFilter(e.target.value)} sx={{ minWidth: 140, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="any">Any Billing Date</MenuItem>
+                  <MenuItem value="30">Last 30 Days</MenuItem>
+                  <MenuItem value="60">Last 60 Days</MenuItem>
+                  <MenuItem value="90">Over 90 Days</MenuItem>
+                </Select>
+              </Grid>
+              
+              <Grid item>
+                <Select size="small" value={claimsFilter} onChange={(e) => setClaimsFilter(e.target.value)} sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="both">With OR Without Open Claims</MenuItem>
+                  <MenuItem value="with_claims">With Claims Only</MenuItem>
+                  <MenuItem value="without_claims">Without Claims Only</MenuItem>
+                </Select>
+              </Grid>
+
+              <Grid item>
+                <Select size="small" value={patientStatusFilter} onChange={(e) => setPatientStatusFilter(e.target.value)} sx={{ minWidth: 150, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="active">Active Patients Only</MenuItem>
+                  <MenuItem value="inactive">Inactive Only</MenuItem>
+                  <MenuItem value="all">All Patients</MenuItem>
+                </Select>
+              </Grid>
+
+              <Grid item>
+                <Select size="small" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} sx={{ minWidth: 150, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="all">All Providers</MenuItem>
+                  {providersList.map(prov => (
+                    <MenuItem key={prov._id || prov.id} value={prov._id || prov.id}>
+                      {getProviderName(prov)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+
+              <Grid item>
+                <Select size="small" value={arRangeFilter} onChange={(e) => setArRangeFilter(e.target.value)} sx={{ minWidth: 140, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                  <MenuItem value="any">Any AR Range</MenuItem>
+                  <MenuItem value="0-30">0-30 days</MenuItem>
+                  <MenuItem value="31-60">31-60 days</MenuItem>
+                  <MenuItem value="61-90">61-90 days</MenuItem>
+                  <MenuItem value=">90">Over 90 days</MenuItem>
+                </Select>
+              </Grid>
             </Grid>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -425,15 +562,14 @@ const AgingReport = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-              <Select size="small" defaultValue="high-low" sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+              <Select size="small" value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
                 <MenuItem value="high-low">High to low owings</MenuItem>
-                <MenuItem value="carriers">Carriers</MenuItem>
-                <MenuItem value="flags">Flags</MenuItem>
-                <MenuItem value="last-billed">Last Billed</MenuItem>
                 <MenuItem value="patient-name">By Patient Name</MenuItem>
+                <MenuItem value="last-billed">Last Billed</MenuItem>
+                <MenuItem value="flags">Flags</MenuItem>
               </Select>
               <FormControlLabel 
-                control={<Checkbox size="small" defaultChecked />} 
+                control={<Checkbox size="small" checked={showPaymentPlan} onChange={(e) => setShowPaymentPlan(e.target.checked)} />} 
                 label={<Typography variant="caption">Show Payment Plan Owing</Typography>} 
               />
             </Box>
@@ -520,7 +656,7 @@ const AgingReport = () => {
                   {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
                   <TableCell align="right">Total</TableCell>
                   <TableCell align="right">Total owings</TableCell>
-                  <TableCell align="right">Payment Plan Owing</TableCell>
+                  {showPaymentPlan && <TableCell align="right">Payment Plan Owing</TableCell>}
                   <TableCell align="right">Credit</TableCell>
                   <TableCell>Last Billed On</TableCell>
                   <TableCell>Notes</TableCell>
@@ -563,10 +699,17 @@ const AgingReport = () => {
                       {!hidePatientNames && (
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
                             </Box>
-                            <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
+                            <Box>
+                              <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', display: 'block' }}>{row.name}</Typography>
+                              {row.insuranceName && (
+                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.65rem' }}>
+                                  {row.insuranceName}
+                                </Typography>
+                              )}
+                            </Box>
                           </Box>
                         </TableCell>
                       )}
@@ -582,9 +725,9 @@ const AgingReport = () => {
                         <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>${row.total.toFixed(2)}</Typography>
                         <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>$2,000.00</Typography>
                       </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>${row.totalOwings.toFixed(2)}</TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>${row.paymentPlan.toFixed(2)}</TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>${row.credit.toFixed(2)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>${row.totalOwings?.toFixed(2) || '0.00'}</TableCell>
+                      {showPaymentPlan && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>${row.paymentPlan?.toFixed(2) || '0.00'}</TableCell>}
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>${row.credit?.toFixed(2) || '0.00'}</TableCell>
                       <TableCell>{row.lastBilled}</TableCell>
                       <TableCell>
                         <Box 
@@ -685,11 +828,8 @@ const AgingReport = () => {
             <Typography variant="caption" sx={{ fontWeight: 600 }}>Select report by date:</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #ccc', pb: 0.5, width: 200 }}>
               <input 
-                type="text" 
-                placeholder="Enter date"
+                type="date" 
                 value={archivedDate} 
-                onFocus={(e) => e.target.type = 'date'}
-                onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
                 onChange={handleDateSelect} 
                 style={{ border: 'none', outline: 'none', width: '100%', color: '#333', fontSize: '0.875rem' }} 
               />

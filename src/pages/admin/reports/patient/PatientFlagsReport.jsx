@@ -261,7 +261,21 @@ const PatientFlagsReport = () => {
 
       {/* Filter Section */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 4, pt: 1 }}>
+        <Box sx={{ display: 'flex', gap: 4, pt: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ color: '#555' }}>Status:</Typography>
+            <Select
+              size="small"
+              value={filterBy}
+              onChange={(e) => setFilterBy(e.target.value)}
+              sx={{ minWidth: 120, height: 32, fontSize: '0.8rem' }}
+            >
+              <MenuItem value="active" sx={{ fontSize: '0.8rem' }}>Active</MenuItem>
+              <MenuItem value="inactive" sx={{ fontSize: '0.8rem' }}>Inactive</MenuItem>
+              <MenuItem value="all" sx={{ fontSize: '0.8rem' }}>All</MenuItem>
+            </Select>
+          </Box>
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: '#555' }}>Including Flags:</Typography>
             <Button

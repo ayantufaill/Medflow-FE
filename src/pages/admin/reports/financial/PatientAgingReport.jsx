@@ -35,6 +35,9 @@ const PatientAgingReport = () => {
   const loading = useSelector(selectPatientAgingLoading);
   const [flagFilter, setFlagFilter] = useState('pts');
   const [showFlags, setShowFlags] = useState(true);
+  const [arRangeFilter, setArRangeFilter] = useState('any');
+  const [sortBy, setSortBy] = useState('high-low');
+  const [showPaymentPlan, setShowPaymentPlan] = useState(true);
 
   const enrichedReportData = useMemo(() => {
     return reportData.map((row, idx) => {
@@ -49,15 +52,45 @@ const PatientAgingReport = () => {
   }, [reportData]);
 
   const filteredReportData = useMemo(() => {
-    return enrichedReportData.filter(row => {
-      if (flagFilter === 'with_flags') {
-        if (!row.flags || row.flags.length === 0) return false;
-      } else if (flagFilter === 'without_flags') {
-        if (row.flags && row.flags.length > 0) return false;
+    let result = enrichedReportData.filter(row => {
+      // Flag Filter
+      if (flagFilter === 'with_flags' && (!row.flags || row.flags.length === 0)) return false;
+      if (flagFilter === 'without_flags' && (row.flags && row.flags.length > 0)) return false;
+      
+      // AR Range Filter
+      if (arRangeFilter !== 'any' && row.buckets) {
+        if (arRangeFilter === '0-30' && (row.buckets['0 - 30 days']?.total || 0) <= 0) return false;
+        if (arRangeFilter === '31-60' && (row.buckets['31 - 60 days']?.total || 0) <= 0) return false;
+        if (arRangeFilter === '61-90' && (row.buckets['61 - 90 days']?.total || 0) <= 0) return false;
+        if (arRangeFilter === '>90') {
+          const over90 = ['91 - 120 days', '121 - 150 days', '151 - 180 days', '> 180 day']
+            .reduce((sum, b) => sum + (row.buckets[b]?.total || 0), 0);
+          if (over90 <= 0) return false;
+        }
       }
+      
       return true;
     });
-  }, [enrichedReportData, flagFilter]);
+
+    // Sorting
+    result.sort((a, b) => {
+      if (sortBy === 'high-low') return (b.total || 0) - (a.total || 0);
+      if (sortBy === 'patient-name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'last-billed') {
+        const da = a.lastBilled ? new Date(a.lastBilled).getTime() : 0;
+        const db = b.lastBilled ? new Date(b.lastBilled).getTime() : 0;
+        return db - da; // newest first
+      }
+      if (sortBy === 'flags') {
+        const aFlags = a.flags && a.flags.length > 0 ? 1 : 0;
+        const bFlags = b.flags && b.flags.length > 0 ? 1 : 0;
+        return bFlags - aFlags;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [enrichedReportData, flagFilter, arRangeFilter, sortBy]);
 
   const [selectedPatientForNotes, setSelectedPatientForNotes] = useState(null);
   const [showGenerateStatements, setShowGenerateStatements] = useState(false);
@@ -223,7 +256,7 @@ const PatientAgingReport = () => {
       ...agingBuckets,
       'Total',
       'Total owings',
-      'Payment Plan Owing',
+      showPaymentPlan ? 'Payment Plan Owing' : null,
       'Credit',
       'Last Billed On'
     ].filter(Boolean);
@@ -239,7 +272,7 @@ const PatientAgingReport = () => {
         }),
         `$${(row.total || 0).toFixed(2)}`,
         `$${(row.totalOwings || 0).toFixed(2)}`,
-        `$${(row.paymentPlan || 0).toFixed(2)}`,
+        showPaymentPlan ? `$${(row.paymentPlan || 0).toFixed(2)}` : null,
         `$${(row.credit || 0).toFixed(2)}`,
         row.lastBilled || ''
       ].filter(val => val !== null);
@@ -348,8 +381,12 @@ const PatientAgingReport = () => {
       <Box sx={{ backgroundColor: '#f8f9fa', p: 2, borderRadius: 1, mb: 3 }}>
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item>
-            <Select size="small" defaultValue="any" sx={{ minWidth: 120, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+            <Select size="small" value={arRangeFilter} onChange={(e) => setArRangeFilter(e.target.value)} sx={{ minWidth: 140, fontSize: '0.75rem', backgroundColor: '#fff' }}>
               <MenuItem value="any">Any AR Range</MenuItem>
+              <MenuItem value="0-30">0-30 days</MenuItem>
+              <MenuItem value="31-60">31-60 days</MenuItem>
+              <MenuItem value="61-90">61-90 days</MenuItem>
+              <MenuItem value=">90">Over 90 days</MenuItem>
             </Select>
           </Grid>
         </Grid>
@@ -373,11 +410,14 @@ const PatientAgingReport = () => {
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-          <Select size="small" defaultValue="high-low" sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
+          <Select size="small" value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
             <MenuItem value="high-low">High to Low Owings</MenuItem>
+            <MenuItem value="patient-name">By Patient Name</MenuItem>
+            <MenuItem value="last-billed">Last Billed</MenuItem>
+            <MenuItem value="flags">Flags</MenuItem>
           </Select>
           <FormControlLabel 
-            control={<Checkbox size="small" defaultChecked />} 
+            control={<Checkbox size="small" checked={showPaymentPlan} onChange={(e) => setShowPaymentPlan(e.target.checked)} />} 
             label={<Typography variant="caption">Show Payment Plan Owing</Typography>} 
           />
         </Box>
@@ -458,7 +498,7 @@ const PatientAgingReport = () => {
               {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
               <TableCell align="right">Total</TableCell>
               <TableCell align="right">Total owings</TableCell>
-              <TableCell align="right">Payment Plan Owing</TableCell>
+              {showPaymentPlan && <TableCell align="right">Payment Plan Owing</TableCell>}
               <TableCell align="right">Credit</TableCell>
               <TableCell>Last Billed On</TableCell>
               <TableCell>Notes</TableCell>
@@ -506,10 +546,17 @@ const PatientAgingReport = () => {
                 {!hidePatientNames && (
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
                       </Box>
-                      <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
+                      <Box>
+                        <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', display: 'block' }}>{row.name}</Typography>
+                        {row.insuranceName && (
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.65rem' }}>
+                            {row.insuranceName}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   </TableCell>
                 )}
@@ -524,7 +571,7 @@ const PatientAgingReport = () => {
                   <Typography variant="caption" sx={{ display: 'block' }}>${(row.total || 0).toFixed(2)}</Typography>
                 </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>${(row.totalOwings || 0).toFixed(2)}</TableCell>
-                <TableCell align="right">${(row.paymentPlan || 0).toFixed(2)}</TableCell>
+                {showPaymentPlan && <TableCell align="right">${(row.paymentPlan || 0).toFixed(2)}</TableCell>}
                 <TableCell align="right">${(row.credit || 0).toFixed(2)}</TableCell>
                 <TableCell>{row.lastBilled}</TableCell>
                 <TableCell>

@@ -61,6 +61,7 @@ export const fetchPatientsReferralReport = createAsyncThunk(
   }
 );
 
+
 const initialState = {
   insuranceCoverage: [],
   referralByPatient: [],
