@@ -57,6 +57,8 @@ import {
   FilterList as FilterIcon,
   Search as SearchIcon,
   ArrowDropDown as ArrowDropDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
 
 // Claim type options
@@ -3082,7 +3084,7 @@ const ClaimsListPage = () => {
                   </Box>
                   <Menu
                     anchorEl={selectAllAnchorEl}
-                    open={isSelectAllMenuOpen}
+                    open={Boolean(selectAllAnchorEl)}
                     onClose={handleSelectAllMenuClose}
                     sx={{
                       '& .MuiPaper-root': {
@@ -3134,6 +3136,9 @@ const ClaimsListPage = () => {
                   <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Treating Provider</TableCell>
                 )}
                 <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Status</TableCell>
+                {activeTab === 0 && (
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Alert</TableCell>
+                )}
                 {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
                   <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     ERA Status
@@ -3204,25 +3209,32 @@ const ClaimsListPage = () => {
                   let attachTooltip = 'Manage Attachments';
                   let attachHoverBg = '#cbd5e1';
 
-                  if (!hasAttachments) {
-                    if (errorStatuses.includes(claim.status)) {
-                      attachBg = '#fecdd3'; // Red
-                      attachColor = '#e11d48';
-                      attachBorder = '1px solid #f43f5e';
-                      attachTooltip = 'Error';
-                      attachHoverBg = '#fda4af';
-                    } else {
-                      attachBg = '#fef08a'; // Yellow
-                      attachColor = '#a16207';
-                      attachBorder = '1px solid #eab308';
-                      attachTooltip = 'Attachments Not Sent';
-                      attachHoverBg = '#fde047';
-                    }
-                  } else {
-                    attachBg = '#dbeafe'; // Blue (Correct)
+                  const isSentStatus = claim.status === 'submitted' || claim.status === 'accepted' || claim.status === 'paid' || claim.status === 'partial';
+
+                  if (errorStatuses.includes(claim.status)) {
+                    attachBg = '#fecdd3'; // Red
+                    attachColor = '#e11d48';
+                    attachBorder = '1px solid #f43f5e';
+                    attachTooltip = 'Attachment Error';
+                    attachHoverBg = '#fda4af';
+                  } else if (!hasAttachments) {
+                    attachBg = '#dbeafe'; // Blue
                     attachColor = '#3b82f6';
                     attachBorder = '1px solid #93c5fd';
+                    attachTooltip = 'No Attachments';
                     attachHoverBg = '#bfdbfe';
+                  } else if (!isSentStatus) {
+                    attachBg = '#fef08a'; // Yellow
+                    attachColor = '#a16207';
+                    attachBorder = '1px solid #eab308';
+                    attachTooltip = 'Attachments Not Sent';
+                    attachHoverBg = '#fde047';
+                  } else {
+                    attachBg = '#dcfce7'; // Green
+                    attachColor = '#16a34a';
+                    attachBorder = '1px solid #86efac';
+                    attachTooltip = 'Attachments Sent';
+                    attachHoverBg = '#bbf7d0';
                   }
 
                   return (
@@ -3417,7 +3429,12 @@ const ClaimsListPage = () => {
                               '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.08)' },
                             }}
                           >
-                            {isExpanded ? 'Hide' : 'v Show'}
+                            {isExpanded ? 'Hide' : 'Show'}
+                            {isExpanded ? (
+                              <KeyboardArrowUpIcon sx={{ fontSize: 16, ml: 0.5 }} />
+                            ) : (
+                              <KeyboardArrowDownIcon sx={{ fontSize: 16, ml: 0.5 }} />
+                            )}
                           </Button>
                         </TableCell>
 
@@ -3477,6 +3494,17 @@ const ClaimsListPage = () => {
                             )
                           )}
                         </TableCell>
+
+                        {/* Alert Column */}
+                        {activeTab === 0 && (
+                          <TableCell>
+                            {isError && (
+                              <Tooltip title="Validation Error">
+                                <WarningIcon sx={{ color: '#d93838', fontSize: 18 }} />
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        )}
 
                         {/* ERA Status */}
                         {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
