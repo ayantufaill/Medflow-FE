@@ -111,8 +111,10 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
     fontSize: '14px'
   };
 
-  const handleSaveProcedure = (savedData) => {
-    setShowAddProcedure(false);
+  const handleSaveProcedure = (savedData, keepOpen = false) => {
+    if (!keepOpen) {
+      setShowAddProcedure(false);
+    }
     if (!savedData) return;
     
     const newProcedure = {
