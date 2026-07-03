@@ -118,7 +118,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
     if (!savedData) return;
     
     const newProcedure = {
-      id: Date.now(),
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
       date: new Date().toISOString().split('T')[0],
       code: savedData.procedureCode || '',
       site: savedData.selectedTeeth.join(',') + (savedData.selectedSurfaces.length > 0 ? ` (${savedData.selectedSurfaces.join('')})` : ''),
@@ -140,6 +140,10 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
     setProcedures(prev => prev.map(p => 
       p.id === procedureId ? { ...p, provider: newProvider } : p
     ));
+  };
+
+  const handleDeleteProcedure = (procedureId) => {
+    setProcedures(prev => prev.filter(p => p.id !== procedureId));
   };
 
   const handleAmountChange = (procedureId, field, value) => {
@@ -259,7 +263,12 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
                 {procedures.map((row) => (
                   <TableRow key={row.id} sx={{ '& td': { px: 0.5, py: 0.5, borderBottom: '1px solid #f0f0f0', fontSize: '12px', color: '#333' } }}>
                     <TableCell padding="none" align="center">
-                      <span style={{ color: '#ff6347', cursor: 'pointer', fontWeight: 'bold' }}>x</span>
+                      <span 
+                        onClick={() => handleDeleteProcedure(row.id)}
+                        style={{ color: '#ff6347', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                        x
+                      </span>
                     </TableCell>
                     <TableCell>
                       <input 
