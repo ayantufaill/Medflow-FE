@@ -105,15 +105,14 @@ const DeductiblesTable = ({
                     />
                   </Box>
                 </TableCell>
-                <TableCell sx={{ borderRight: '1px solid #eee', minWidth: '110px', py: 0, bgcolor: '#f5f5f5' }}>
+                <TableCell sx={{ borderRight: '1px solid #eee', bgcolor: row.metAmount ? '#fff' : '#f5f7fa', minWidth: '110px', py: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.65rem', color: '#999', ml: 1, mr: -0.5 }}>$</Typography>
+                    <Typography sx={{ fontSize: '0.65rem', color: '#555', ml: 1, mr: -0.5 }}>$</Typography>
                     <TextField 
                       size="small" 
                       value={row.metAmount}
-                      disabled
-                      placeholder="Auto-calc"
-                      sx={{ '& input': { py: 0.15, fontSize: '0.6rem', border: 'none', color: '#999', WebkitTextFillColor: '#999' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
+                      onChange={(e) => handleDeductibleChange(index, 'metAmount', e.target.value)}
+                      sx={{ '& input': { py: 0.15, fontSize: '0.6rem', border: 'none' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
                     />
                   </Box>
                 </TableCell>

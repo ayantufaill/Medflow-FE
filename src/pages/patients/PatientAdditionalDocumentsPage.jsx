@@ -137,7 +137,9 @@ const PatientAdditionalDocumentsPage = () => {
           status: doc.status || "Completed",
           type: (doc.fileType || "PDF").toUpperCase(),
           category: (doc.documentType || "Other").toLowerCase(),
-          title: doc.documentName || "Unknown Form"
+          title: doc.documentName || "Unknown Form",
+          fileUrl: doc.fileUrl || doc.documentUrl,
+          documentUrl: doc.fileUrl || doc.documentUrl
         }));
       setDocuments(nonHipaaDocs);
     }
@@ -211,7 +213,12 @@ const PatientAdditionalDocumentsPage = () => {
       showSnackbar(`Opening ${row.name}...`, "info");
       return;
     }
-    window.open(row.fileUrl || row.documentUrl, "_blank");
+    const url = row.fileUrl || row.documentUrl;
+    if (!url) {
+      showSnackbar("Error: File URL is missing", "error");
+      return;
+    }
+    window.open(url, "_blank");
   };
 
   const handleDownloadDocument = (row) => {
@@ -219,9 +226,14 @@ const PatientAdditionalDocumentsPage = () => {
       showSnackbar(`Downloading ${row.name}...`, "info");
       return;
     }
+    const url = row.fileUrl || row.documentUrl;
+    if (!url) {
+      showSnackbar("Error: File URL is missing", "error");
+      return;
+    }
     const link = document.createElement("a");
-    link.href = row.fileUrl || row.documentUrl;
-    link.download = row.name;
+    link.href = url;
+    link.download = row.name || "document";
     link.target = "_blank";
     document.body.appendChild(link);
     link.click();
