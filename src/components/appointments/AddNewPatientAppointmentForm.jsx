@@ -978,14 +978,16 @@ const AddNewPatientAppointmentForm = ({
                 Send a reminder to "save the date" now:
               </Typography>
               <Button
+                disabled
                 startIcon={<MailOutline />}
-                sx={{ fontSize: "11px", textTransform: "none", color: "#4a6da7" }}
+                sx={{ fontSize: "11px", textTransform: "none" }}
               >
                 Via Email
               </Button>
               <Button
+                disabled
                 startIcon={<ChatBubbleOutline />}
-                sx={{ fontSize: "11px", textTransform: "none", color: "#4a6da7" }}
+                sx={{ fontSize: "11px", textTransform: "none" }}
               >
                 Via Text Message
               </Button>
