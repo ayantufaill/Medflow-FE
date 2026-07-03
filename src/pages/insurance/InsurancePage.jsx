@@ -30,7 +30,9 @@ const InsurancePage = () => {
 
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showOldDesign, setShowOldDesign] = useState(false);
+  
+  const [hasImportedCoverage, setHasImportedCoverage] = useState(false);
+  const [reviewImportedDialogOpen, setReviewImportedDialogOpen] = useState(false);
   
   // Dialog states
   const [addCoverageDialogOpen, setAddCoverageDialogOpen] = useState(false);
@@ -119,10 +121,6 @@ const InsurancePage = () => {
     handleCloseMenu();
   };
 
-  const handleViewOldDesign = () => {
-    setShowOldDesign(true);
-  };
-
   const handleViewCoverage = (row) => {
     setExpandedRowId(expandedRowId === row.id ? null : row.id);
     handleRowMenuClose();
@@ -204,15 +202,6 @@ const InsurancePage = () => {
 
   const currentTabData = getTabData();
 
-  if (showOldDesign) {
-    return (
-      <OldDesignView 
-        onSwitch={() => setShowOldDesign(false)} 
-        onAddCoverage={() => handleAddCoverage('Insurance Coverage')}
-      />
-    );
-  }
-
   return (
     <Box sx={{ p: 2, bgcolor: 'white', minHeight: '100vh' }}>
       {/* Snackbar Notification */}
@@ -250,28 +239,11 @@ const InsurancePage = () => {
             <MenuItem onClick={() => handleAddCoverage('Insurance Coverage')}>Insurance Coverage</MenuItem>
             <MenuItem onClick={() => handleAddCoverage('Membership Plan')}>Membership Plan</MenuItem>
           </Menu>
-
-          <Button
-            variant="contained"
-            onClick={handleViewOldDesign}
-            sx={{
-              bgcolor: '#e0e0e0',
-              color: '#444',
-              textTransform: 'none',
-              borderRadius: '20px',
-              px: 3,
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              boxShadow: 'none',
-              '&:hover': { bgcolor: '#d5d5d5', boxShadow: 'none' }
-            }}
-          >
-            View In Old Design
-          </Button>
         </Box>
       </Box>
 
       {/* Imported Insurance Blue Banner */}
+      {hasImportedCoverage && (
       <Box sx={{ 
         bgcolor: '#ebf5ff', 
         p: 2, 
@@ -298,6 +270,7 @@ const InsurancePage = () => {
         <Button 
           variant="contained" 
           size="small"
+          onClick={() => setReviewImportedDialogOpen(true)}
           sx={{ 
             bgcolor: '#1976d2', 
             borderRadius: '20px', 
@@ -311,6 +284,7 @@ const InsurancePage = () => {
           Review
         </Button>
       </Box>
+      )}
 
       {/* Custom Tabs */}
       <Tabs
@@ -644,80 +618,37 @@ const InsurancePage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
-  );
-};
 
-const OldDesignView = ({ onSwitch, onAddCoverage }) => {
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '80vh',
-      position: 'relative',
-      bgcolor: '#fff'
-    }}>
-      <Typography sx={{ color: '#ff8a80', fontSize: '0.85rem', mb: 4, fontWeight: 500 }}>
-        Patient has no active coverage
-      </Typography>
-
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <Typography sx={{ color: '#7788bb', fontWeight: 'bold', fontSize: '0.85rem' }}>
-          ADD PATIENT INSURANCE
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={onAddCoverage}
-          startIcon={<Box component="span" sx={{ fontSize: '1.2rem', mr: 0.5 }}>✱</Box>}
-          sx={{
-            bgcolor: '#6677aa',
-            color: '#fff',
-            textTransform: 'uppercase',
-            fontWeight: 'bold',
-            fontSize: '0.8rem',
-            px: 2.5,
-            py: 0.7,
-            boxShadow: 'none',
-            borderRadius: '4px',
-            '&:hover': { bgcolor: '#556699', boxShadow: 'none' }
-          }}
-        >
-          New Coverage
-        </Button>
-      </Stack>
-
-      <Box sx={{ 
-        position: 'absolute', 
-        bottom: 40, 
-        left: 20, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1 
-      }}>
-        <Typography sx={{ color: '#ef5350', fontSize: '0.8rem', fontStyle: 'italic' }}>
-          A new insurance design has been released.
-        </Typography>
-        <Button
-          size="small"
-          variant="contained"
-          onClick={onSwitch}
-          sx={{
-            bgcolor: '#6677aa',
-            color: '#fff',
-            textTransform: 'none',
-            fontSize: '0.75rem',
-            px: 2,
-            py: 0.5,
-            boxShadow: 'none',
-            borderRadius: '4px',
-            '&:hover': { bgcolor: '#556699' }
-          }}
-        >
-          View New Design
-        </Button>
-      </Box>
+      {/* Review Imported Coverage Dialog */}
+      <Dialog open={reviewImportedDialogOpen} onClose={() => setReviewImportedDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Review Imported Coverage</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              Please review the insurance details uploaded by the patient.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Payer:</strong> United Healthcare <br />
+              <strong>Plan:</strong> PPO Basic <br />
+              <strong>Subscriber:</strong> John Doe <br />
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReviewImportedDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={() => {
+              setReviewImportedDialogOpen(false);
+              setHasImportedCoverage(false);
+              showSnackbar('Imported coverage approved and added', 'success');
+            }} 
+            variant="contained" 
+            sx={{ bgcolor: '#2e7d32' }}
+          >
+            Approve & Add
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

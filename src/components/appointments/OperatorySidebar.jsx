@@ -519,9 +519,14 @@ const OperatorySidebar = ({
                 fullWidth
                 startIcon={<AddIcon />}
                 onClick={onScheduleAppointmentClick}
+                disabled={!selectedPatient}
                 sx={{
                   bgcolor: "#1976d2",
                   "&:hover": { bgcolor: "#1565c0" },
+                  "&.Mui-disabled": {
+                    bgcolor: "#e0e0e0",
+                    color: "#9e9e9e"
+                  },
                   textTransform: "none",
                   fontWeight: 600,
                   fontSize: "0.85rem",

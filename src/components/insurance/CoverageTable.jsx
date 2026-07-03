@@ -86,13 +86,12 @@ const CoverageTable = ({
               <TableCell sx={bodyCellStyle}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.7rem', color: '#999', ml: 1, mr: -0.5 }}>$</Typography>
+                    <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
                     <TextField 
                       size="small" 
                       value={formData.coverage.individual.usedAmount}
-                      disabled
-                      placeholder="Auto-calc"
-                      sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none', color: '#999', WebkitTextFillColor: '#999' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
+                      onChange={(e) => handleCoverageChange('individual', 'usedAmount', e.target.value)}
+                      sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
                     />
                   </Box>
                   <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', mr: 1 }} />
@@ -134,13 +133,12 @@ const CoverageTable = ({
               </TableCell>
               <TableCell sx={bodyCellStyle}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#999', ml: 1, mr: -0.5 }}>$</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
                   <TextField 
                     size="small" 
                     value={formData.coverage.family.usedAmount}
-                    disabled
-                    placeholder="Auto-calc"
-                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none', color: '#999', WebkitTextFillColor: '#999' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
+                    onChange={(e) => handleCoverageChange('family', 'usedAmount', e.target.value)}
+                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
                   />
                 </Box>
               </TableCell>
@@ -187,13 +185,12 @@ const CoverageTable = ({
               </TableCell>
               <TableCell sx={bodyCellStyle}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#999', ml: 1, mr: -0.5 }}>$</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
                   <TextField 
                     size="small" 
                     value={formData.coverage.ortho.usedAmount}
-                    disabled
-                    placeholder="Auto-calc"
-                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none', color: '#999', WebkitTextFillColor: '#999' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
+                    onChange={(e) => handleCoverageChange('ortho', 'usedAmount', e.target.value)}
+                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
                   />
                 </Box>
               </TableCell>
