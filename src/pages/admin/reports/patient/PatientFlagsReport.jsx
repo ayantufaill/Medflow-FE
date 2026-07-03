@@ -84,67 +84,28 @@ const PatientFlagsReport = () => {
   const [excludeFlags, setExcludeFlags] = useState([]);
 
   useEffect(() => {
-    let baseData = DUMMY_DATA;
-    if (patientFlagsReportData && patientFlagsReportData.length > 0) {
-      baseData = patientFlagsReportData.map(item => ({
-        patient: item.patient,
-        dob: item.dob || 'N/A',
-        phone: item.phone || 'N/A',
-        email: item.email || 'N/A',
-        flags: item.flags || (item.flag ? [item.flag] : [])
-      }));
-    } else if (loading || !showData) {
+    if (loading || !showData) {
       return;
     }
+    
+    let baseData = (patientFlagsReportData || []).map(item => ({
+      patient: item.patient,
+      dob: item.dob || 'N/A',
+      phone: item.phone || 'N/A',
+      email: item.email || 'N/A',
+      flags: item.flags || (item.flag ? [item.flag] : [])
+    }));
 
-    // 1. Remove patients with no flags
-    let filtered = baseData.filter(patient => patient.flags && patient.flags.length > 0);
-    
-    // Helper to normalize and split clumped flags
-    const getNormalizedFlags = (rawFlags) => {
-      const arr = Array.isArray(rawFlags) ? rawFlags : [rawFlags].filter(Boolean);
-      let splitFlags = [];
-      arr.forEach(flagObj => {
-        if (typeof flagObj === 'string') {
-          // Split by comma or semicolon in case they are clumped
-          splitFlags.push(...flagObj.split(/[,;]/).map(s => s.trim()).filter(Boolean));
-        } else {
-          splitFlags.push(flagObj);
-        }
-      });
-      return splitFlags;
-    };
-
-    // 2. Apply "Include" filters
-    if (includeFlags && includeFlags.length > 0) {
-      const lowerIncludes = includeFlags.map(f => typeof f === 'string' ? f.toLowerCase() : String(f));
-      filtered = filtered.filter(patient => {
-        const flagsArray = getNormalizedFlags(patient.flags);
-        return flagsArray.length > 0 && flagsArray.some(flagObj => {
-          const val = typeof flagObj === 'object' ? (flagObj.id || flagObj.name || flagObj.label) : flagObj;
-          return typeof val === 'string' && lowerIncludes.includes(val.toLowerCase());
-        });
-      });
-    }
-    
-    // 3. Apply "Exclude" filters
-    if (excludeFlags && excludeFlags.length > 0) {
-      const lowerExcludes = excludeFlags.map(f => typeof f === 'string' ? f.toLowerCase() : String(f));
-      filtered = filtered.filter(patient => {
-        const flagsArray = getNormalizedFlags(patient.flags);
-        return !(flagsArray.length > 0 && flagsArray.some(flagObj => {
-          const val = typeof flagObj === 'object' ? (flagObj.id || flagObj.name || flagObj.label) : flagObj;
-          return typeof val === 'string' && lowerExcludes.includes(val.toLowerCase());
-        }));
-      });
-    }
-    
-    setData(filtered);
-  }, [patientFlagsReportData, loading, showData, includeFlags, excludeFlags]);
+    setData(baseData);
+  }, [patientFlagsReportData, loading, showData]);
 
   const handleApplyFilters = () => {
     setShowData(true);
-    dispatch(fetchPatientFlagsReport({ filterBy, includeFlags, excludeFlags }));
+    dispatch(fetchPatientFlagsReport({ 
+      filterBy, 
+      includeFlags: includeFlags.join(','), 
+      excludeFlags: excludeFlags.join(',') 
+    }));
   };
 
   const handleExportCSV = () => {
@@ -261,7 +222,21 @@ const PatientFlagsReport = () => {
 
       {/* Filter Section */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 4, pt: 1 }}>
+        <Box sx={{ display: 'flex', gap: 4, pt: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ color: '#555' }}>Status:</Typography>
+            <Select
+              size="small"
+              value={filterBy}
+              onChange={(e) => setFilterBy(e.target.value)}
+              sx={{ minWidth: 120, height: 32, fontSize: '0.8rem' }}
+            >
+              <MenuItem value="active" sx={{ fontSize: '0.8rem' }}>Active</MenuItem>
+              <MenuItem value="inactive" sx={{ fontSize: '0.8rem' }}>Inactive</MenuItem>
+              <MenuItem value="all" sx={{ fontSize: '0.8rem' }}>All</MenuItem>
+            </Select>
+          </Box>
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: '#555' }}>Including Flags:</Typography>
             <Button

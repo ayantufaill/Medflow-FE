@@ -57,6 +57,8 @@ import {
   FilterList as FilterIcon,
   Search as SearchIcon,
   ArrowDropDown as ArrowDropDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
 
 // Claim type options
@@ -1386,7 +1388,7 @@ const ClaimsListPage = () => {
 
   // Select All Dropdown Menu State
   const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
-  const isSelectAllMenuOpen = Boolean(selectAllAnchorEl);
+
 
   const handleSelectAllMenuOpen = (event) => {
     setSelectAllAnchorEl(event.currentTarget);
@@ -2923,93 +2925,7 @@ const ClaimsListPage = () => {
           <Typography sx={{ color: '#4a5568', fontSize: '0.9rem', fontWeight: 500 }}>Loading data...</Typography>
         </Box>
       ) : activeTab === 6 ? (
-        // DENTICAL REPORTS Table Layout
-        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
-              <TableRow>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>File Name</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Report Date</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    Date Created
-                    <Tooltip title="Date the Dentical report was received and imported into Medflow.">
-                      <InfoIcon sx={{ fontSize: 14, color: '#a0aec0', cursor: 'pointer' }} />
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-                <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredDenticalReports.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body2" sx={{ color: '#718096', fontStyle: 'italic' }}>
-                      No reports found matching the selection criteria.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredDenticalReports.map((report) => (
-                  <TableRow
-                    key={report.id}
-                    hover
-                    sx={{
-                      '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' },
-                      transition: 'background-color 0.2s',
-                    }}
-                  >
-                    {/* File Name with PDF Icon */}
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <PdfIcon sx={{ color: '#e53e3e', fontSize: 20 }} />
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a3a6b', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => alert(`Opening PDF file: ${report.fileName}`)}>
-                          {report.fileName}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-
-                    {/* Report Date */}
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
-                        {report.reportDate}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Date Created */}
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
-                        {report.dateCreated}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Report Specific Actions */}
-                    <TableCell align="right" sx={{ py: 1.5 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                        <Tooltip title="View Report PDF">
-                          <IconButton size="small" onClick={() => alert(`Opening PDF file: ${report.fileName}`)} sx={{ color: '#7d9cc4' }}>
-                            <VisibilityIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Print Report">
-                          <IconButton size="small" onClick={() => alert('Sending document to printer...')} sx={{ color: '#7d9cc4' }}>
-                            <PrintIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Download PDF File">
-                          <IconButton size="small" onClick={() => alert(`Downloading ${report.fileName}`)} sx={{ color: '#7d9cc4' }}>
-                            <DownloadIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <DenticalReportsTable filteredDenticalReports={filteredDenticalReports} />
       ) : activeTab === 7 ? (
         // ERA REPORTS Table Layout (1:1 with Screenshot)
         <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
@@ -3168,7 +3084,7 @@ const ClaimsListPage = () => {
                   </Box>
                   <Menu
                     anchorEl={selectAllAnchorEl}
-                    open={isSelectAllMenuOpen}
+                    open={Boolean(selectAllAnchorEl)}
                     onClose={handleSelectAllMenuClose}
                     sx={{
                       '& .MuiPaper-root': {
@@ -3220,6 +3136,9 @@ const ClaimsListPage = () => {
                   <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Treating Provider</TableCell>
                 )}
                 <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Status</TableCell>
+                {activeTab === 0 && (
+                  <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>Alert</TableCell>
+                )}
                 {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
                   <TableCell sx={{ color: '#1a3a6b', fontWeight: 700 }}>
                     ERA Status
@@ -3290,25 +3209,32 @@ const ClaimsListPage = () => {
                   let attachTooltip = 'Manage Attachments';
                   let attachHoverBg = '#cbd5e1';
 
-                  if (!hasAttachments) {
-                    if (errorStatuses.includes(claim.status)) {
-                      attachBg = '#fecdd3'; // Red
-                      attachColor = '#e11d48';
-                      attachBorder = '1px solid #f43f5e';
-                      attachTooltip = 'Error';
-                      attachHoverBg = '#fda4af';
-                    } else {
-                      attachBg = '#fef08a'; // Yellow
-                      attachColor = '#a16207';
-                      attachBorder = '1px solid #eab308';
-                      attachTooltip = 'Attachments Not Sent';
-                      attachHoverBg = '#fde047';
-                    }
-                  } else {
-                    attachBg = '#dbeafe'; // Blue (Correct)
+                  const isSentStatus = claim.status === 'submitted' || claim.status === 'accepted' || claim.status === 'paid' || claim.status === 'partial';
+
+                  if (errorStatuses.includes(claim.status)) {
+                    attachBg = '#fecdd3'; // Red
+                    attachColor = '#e11d48';
+                    attachBorder = '1px solid #f43f5e';
+                    attachTooltip = 'Attachment Error';
+                    attachHoverBg = '#fda4af';
+                  } else if (!hasAttachments) {
+                    attachBg = '#dbeafe'; // Blue
                     attachColor = '#3b82f6';
                     attachBorder = '1px solid #93c5fd';
+                    attachTooltip = 'No Attachments';
                     attachHoverBg = '#bfdbfe';
+                  } else if (!isSentStatus) {
+                    attachBg = '#fef08a'; // Yellow
+                    attachColor = '#a16207';
+                    attachBorder = '1px solid #eab308';
+                    attachTooltip = 'Attachments Not Sent';
+                    attachHoverBg = '#fde047';
+                  } else {
+                    attachBg = '#dcfce7'; // Green
+                    attachColor = '#16a34a';
+                    attachBorder = '1px solid #86efac';
+                    attachTooltip = 'Attachments Sent';
+                    attachHoverBg = '#bbf7d0';
                   }
 
                   return (
@@ -3503,7 +3429,12 @@ const ClaimsListPage = () => {
                               '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.08)' },
                             }}
                           >
-                            {isExpanded ? 'Hide' : 'v Show'}
+                            {isExpanded ? 'Hide' : 'Show'}
+                            {isExpanded ? (
+                              <KeyboardArrowUpIcon sx={{ fontSize: 16, ml: 0.5 }} />
+                            ) : (
+                              <KeyboardArrowDownIcon sx={{ fontSize: 16, ml: 0.5 }} />
+                            )}
                           </Button>
                         </TableCell>
 
@@ -3563,6 +3494,17 @@ const ClaimsListPage = () => {
                             )
                           )}
                         </TableCell>
+
+                        {/* Alert Column */}
+                        {activeTab === 0 && (
+                          <TableCell>
+                            {isError && (
+                              <Tooltip title="Validation Error">
+                                <WarningIcon sx={{ color: '#d93838', fontSize: 18 }} />
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        )}
 
                         {/* ERA Status */}
                         {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (

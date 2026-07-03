@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -25,9 +26,12 @@ import {
   fetchUnDepositedPayments,
   createDepositSlip,
 } from '../../../../store/slices/depositSlice';
+import { reportingService } from '../../../../services/reporting.service';
 
 const DepositSlips = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const templateData = location.state?.templateData;
   const { slips, unDeposited, loading } = useSelector((state) => state.deposits || { slips: [], unDeposited: { patientPayments: [], insurancePayments: [] }, loading: false });
   const [isSlipsExpanded, setIsSlipsExpanded] = useState(true);
 
@@ -54,17 +58,54 @@ const DepositSlips = () => {
   const [refPayAll, setRefPayAll] = useState(true);
   const [incDepAll, setIncDepAll] = useState(true);
 
+  // Apply template filters if navigated from Saved Reports
+  useEffect(() => {
+    if (templateData && templateData.filters) {
+      templateData.filters.forEach(f => {
+        if (f.type === 'mode') setFilterMode(f.value);
+        if (f.type === 'patientPayTypes') setPatientPayTypes(f.value);
+        if (f.type === 'insPayTypes') setInsPayTypes(f.value);
+        if (f.type === 'refPayTypes') setRefPayTypes(f.value);
+        if (f.type === 'incDepTypes') setIncDepTypes(f.value);
+      });
+    }
+  }, [templateData]);
+
+  const formatMethodLabel = (method) => {
+    if (!method) return 'Check';
+    const lower = method.toLowerCase().trim();
+    if (lower === 'card' || lower === 'credit_card') return 'Credit Card';
+    if (lower === 'cash') return 'Cash';
+    if (lower === 'ach' || lower === 'eft') return 'EFT';
+    if (lower === 'check') return 'Check';
+    return method; // preserve legacy OpenDental strings like "Visa Card"
+  };
+
   const isMethodSelected = (method, selectedTypes) => {
     if (!method) return false;
     const lowerMethod = method.toLowerCase().trim();
-    // Allow matching both exact string (like 'Check') and partial check types
+    
     return selectedTypes.some(t => {
       const lowerT = t.toLowerCase().trim();
-      return lowerT === lowerMethod || 
-             (lowerT === 'check' && lowerMethod === 'patient check') ||
-             (lowerT === 'check' && lowerMethod === 'insurance check') ||
-             (lowerT === 'patient check' && lowerMethod === 'check') ||
-             (lowerT === 'insurance check' && lowerMethod === 'check');
+      
+      // Match exact strings
+      if (lowerT === lowerMethod) return true;
+      
+      // Map Backend "card" to UI "Visa/Master/Debit Card"
+      if (lowerMethod === 'card' && lowerT.includes('card')) return true;
+      
+      // Map Backend "ach" to UI "EFT" or "ACH Payment"
+      if (lowerMethod === 'ach' && (lowerT === 'eft' || lowerT === 'ach payment')) return true;
+      
+      // Handle the generic 'Check' mappings
+      if ((lowerT === 'check' && lowerMethod === 'patient check') ||
+          (lowerT === 'check' && lowerMethod === 'insurance check') ||
+          (lowerT === 'patient check' && lowerMethod === 'check') ||
+          (lowerT === 'insurance check' && lowerMethod === 'check')) {
+        return true;
+      }
+
+      return false;
     });
   };
 
@@ -87,6 +128,28 @@ const DepositSlips = () => {
   const [createdSlipDetails, setCreatedSlipDetails] = useState(null);
   const [depositNote, setDepositNote] = useState('');
 
+  // Template Saving States
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const templateTitle = templateData?.name;
+
+  // Apply filters from template
+  useEffect(() => {
+    if (templateData && templateData.filters) {
+      templateData.filters.forEach(f => {
+        if (f.type === 'mode') {
+          setFilterMode(f.value);
+          applyModeDates(f.value);
+        }
+        if (f.type === 'patientPayTypes') setPatientPayTypes(f.value);
+        if (f.type === 'insPayTypes') setInsPayTypes(f.value);
+        if (f.type === 'refPayTypes') setRefPayTypes(f.value);
+        if (f.type === 'incDepTypes') setIncDepTypes(f.value);
+      });
+    }
+  }, [templateData]);
+
   useEffect(() => {
     dispatch(fetchDepositSlips({ page: 1, limit: 50 }));
     dispatch(fetchUnDepositedPayments());
@@ -94,6 +157,8 @@ const DepositSlips = () => {
 
   // Automatically initialize start and end dates based on un-deposited payments available in the DB
   useEffect(() => {
+    if (templateData) return; // Do not overwrite if we are loading a template
+
     const pts = unDeposited.patientPayments || [];
     const inss = unDeposited.insurancePayments || [];
     if (pts.length > 0 || inss.length > 0) {
@@ -112,31 +177,41 @@ const DepositSlips = () => {
     }
   }, [unDeposited]);
 
-  const handleFilterModeChange = (e) => {
-    const newMode = e.target.value;
-    setFilterMode(newMode);
+  const applyModeDates = (mode) => {
     const today = new Date();
-    
-    if (newMode === 'daily') {
-      const todayStr = today.toISOString().split('T')[0];
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    if (mode === 'daily') {
+      const todayStr = getLocalDateString(today);
       setStartDate(todayStr);
       setEndDate(todayStr);
-    } else if (newMode === 'weekly') {
+    } else if (mode === 'weekly') {
       const day = today.getDay();
       const diff = today.getDate() - day + (day === 0 ? -6 : 1);
       const startOfWeek = new Date(today.setDate(diff));
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       
-      setStartDate(startOfWeek.toISOString().split('T')[0]);
-      setEndDate(endOfWeek.toISOString().split('T')[0]);
-    } else if (newMode === 'monthly') {
+      setStartDate(getLocalDateString(startOfWeek));
+      setEndDate(getLocalDateString(endOfWeek));
+    } else if (mode === 'monthly') {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       
-      setStartDate(startOfMonth.toISOString().split('T')[0]);
-      setEndDate(endOfMonth.toISOString().split('T')[0]);
+      setStartDate(getLocalDateString(startOfMonth));
+      setEndDate(getLocalDateString(endOfMonth));
     }
+  };
+
+  const handleFilterModeChange = (e) => {
+    const newMode = e.target.value;
+    setFilterMode(newMode);
+    applyModeDates(newMode);
   };
 
   const handleToggleAll = (type, checked) => {
@@ -226,7 +301,7 @@ const DepositSlips = () => {
     if (!createdSlipDetails) return {};
     const groups = {};
     createdSlipDetails.patientPayments.forEach((p) => {
-      const method = p.method || 'Check';
+      const method = formatMethodLabel(p.method);
       if (!groups[method]) groups[method] = [];
       groups[method].push(p);
     });
@@ -237,7 +312,7 @@ const DepositSlips = () => {
     if (!createdSlipDetails) return {};
     const groups = {};
     createdSlipDetails.insurancePayments.forEach((ins) => {
-      const method = ins.method || 'Check';
+      const method = formatMethodLabel(ins.method);
       if (!groups[method]) groups[method] = [];
       groups[method].push(ins);
     });
@@ -285,6 +360,48 @@ const DepositSlips = () => {
     window.print();
   };
 
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) {
+      alert("Please enter a template name.");
+      return;
+    }
+
+    // Automatically prepend the filter type to the name to organize it in Saved Reports
+    let finalName = templateName.trim();
+    if (filterMode === 'daily' && !finalName.toLowerCase().includes('daily')) {
+      finalName = `Daily ${finalName}`;
+    } else if (filterMode === 'weekly' && !finalName.toLowerCase().includes('weekly')) {
+      finalName = `Weekly ${finalName}`;
+    } else if (filterMode === 'monthly' && !finalName.toLowerCase().includes('monthly')) {
+      finalName = `Monthly ${finalName}`;
+    } else if (filterMode === 'range' && !finalName.toLowerCase().includes('custom')) {
+      // Just save it as is or add 'Custom'
+    }
+
+    try {
+      setSavingTemplate(true);
+      await reportingService.saveReport({
+        name: finalName,
+        kind: 'Financial',
+        filters: [
+          { type: 'mode', value: filterMode },
+          { type: 'patientPayTypes', value: patientPayTypes },
+          { type: 'insPayTypes', value: insPayTypes },
+          { type: 'refPayTypes', value: refPayTypes },
+          { type: 'incDepTypes', value: incDepTypes },
+        ],
+        columns: []
+      });
+      alert('Template saved successfully! It will now appear in Saved Reports.');
+      setShowTemplateForm(false);
+      setTemplateName('');
+    } catch (err) {
+      alert(err || 'Failed to save template.');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
   const renderCheckboxList = (title, items, type, selectedList, isAllChecked) => (
     <Box sx={{ mb: 2 }}>
       <FormControlLabel
@@ -323,14 +440,20 @@ const DepositSlips = () => {
 
   return (
     <Box sx={{ p: 0 }}>
+      {templateTitle && (
+        <Typography variant="h5" sx={{ textAlign: 'center', mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
+          {templateTitle}
+        </Typography>
+      )}
       <Typography variant="h6" className="no-print" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
         Deposit Slips:
       </Typography>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={2} sx={{ flexWrap: 'nowrap' }}>
         {/* Left Section - Controls */}
-        <Grid item xs={6} className="no-print" sx={{ borderRight: '1px solid #e0e0e0', pr: 4 }}>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Create new deposit slip:</Typography>
+        <Grid item xs={4} className="no-print">
+          <Box sx={{ borderRight: '1px solid #e0e0e0', pr: 3, height: '100%' }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Create new deposit slip:</Typography>
           
           <RadioGroup row value={filterMode} onChange={handleFilterModeChange} sx={{ mb: 2 }}>
             <FormControlLabel value="daily" control={<Radio size="small" />} label={<Typography variant="caption">Daily</Typography>} />
@@ -372,14 +495,14 @@ const DepositSlips = () => {
             />
           </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={4}>
+          <Grid container spacing={1}>
+            <Grid item xs={12} sm={4}>
               {renderCheckboxList('Patient payment types', paymentTypes, 'patient', patientPayTypes, patPayAll)}
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={12} sm={4}>
               {renderCheckboxList('Insurance payment types', paymentTypes, 'insurance', insPayTypes, insPayAll)}
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={12} sm={4}>
               <FormControlLabel
                 control={
                   <Checkbox 
@@ -414,20 +537,61 @@ const DepositSlips = () => {
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-            <Button 
-              variant="contained" 
-              onClick={handleCreateDepositClick}
-              disabled={loading}
-              sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}
-            >
-              {loading ? 'Creating...' : 'Create Deposit'}
-            </Button>
-            <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
+            {!showTemplateForm && (
+              <Button 
+                variant="contained" 
+                onClick={handleCreateDepositClick}
+                disabled={loading}
+                sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}
+              >
+                {loading ? 'Creating...' : 'Create Deposit'}
+              </Button>
+            )}
+            
+            {showTemplateForm ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  size="small"
+                  placeholder="Enter Template Name"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  sx={{ width: 200, '& .MuiInputBase-root': { height: 36, fontSize: '0.85rem' } }}
+                  autoFocus
+                />
+                <Button 
+                  variant="contained" 
+                  disabled={savingTemplate}
+                  onClick={handleSaveTemplate}
+                  sx={{ textTransform: 'none', bgcolor: '#8db3d9', height: 36 }}
+                >
+                  {savingTemplate ? 'Saving...' : 'Save'}
+                </Button>
+                <Button 
+                  variant="contained" 
+                  onClick={() => {
+                    setShowTemplateForm(false);
+                    setTemplateName('');
+                  }}
+                  sx={{ textTransform: 'none', bgcolor: '#d1a066', height: 36 }}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            ) : (
+              <Button 
+                variant="contained" 
+                onClick={() => setShowTemplateForm(true)}
+                sx={{ textTransform: 'none', bgcolor: '#f5a623' }}
+              >
+                Create Template
+              </Button>
+            )}
+          </Box>
           </Box>
         </Grid>
 
         {/* Right Section - Dynamic Preview / Created Report */}
-        <Grid item xs={6}>
+        <Grid item xs={8} sx={{ minWidth: 0 }}>
           {!createdSlipDetails ? (
             <Box className="no-print">
               <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
@@ -474,7 +638,7 @@ const DepositSlips = () => {
                         {previewPayments.map((p, idx) => (
                           <TableRow key={idx}>
                             <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{p.patientName || p.carrierName || 'Unknown'}</TableCell>
-                            <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{p.method}</TableCell>
+                            <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{formatMethodLabel(p.method)}</TableCell>
                             <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
                             <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>${p.amount.toFixed(2)}</TableCell>
                           </TableRow>
@@ -525,8 +689,9 @@ const DepositSlips = () => {
                         <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#555' }}>
                           {method}
                         </Typography>
-                        <Table size="small" sx={{ mb: 1 }}>
-                          <TableHead>
+                        <TableContainer sx={{ overflowX: 'auto', mb: 1 }}>
+                          <Table size="small">
+                            <TableHead>
                             <TableRow sx={{ '& th': { borderBottom: '1px solid #ddd', fontSize: '0.75rem', color: '#777', fontWeight: 600, py: 0.5 } }}>
                               <TableCell sx={{ pl: 0 }}>date</TableCell>
                               <TableCell>name</TableCell>
@@ -558,6 +723,7 @@ const DepositSlips = () => {
                             </TableRow>
                           </TableBody>
                         </Table>
+                        </TableContainer>
                       </Box>
                     );
                   })}
@@ -578,8 +744,9 @@ const DepositSlips = () => {
                         <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#555' }}>
                           {method}
                         </Typography>
-                        <Table size="small" sx={{ mb: 1 }}>
-                          <TableHead>
+                        <TableContainer sx={{ overflowX: 'auto', mb: 1 }}>
+                          <Table size="small">
+                            <TableHead>
                             <TableRow sx={{ '& th': { borderBottom: '1px solid #ddd', fontSize: '0.75rem', color: '#777', fontWeight: 600, py: 0.5 } }}>
                               <TableCell sx={{ pl: 0 }}>date</TableCell>
                               <TableCell>name</TableCell>
@@ -613,6 +780,7 @@ const DepositSlips = () => {
                             </TableRow>
                           </TableBody>
                         </Table>
+                        </TableContainer>
                       </Box>
                     );
                   })}

@@ -28,7 +28,9 @@ import {
   Checkbox,
   FormControlLabel,
   TextareaAutosize,
+  Autocomplete,
 } from '@mui/material';
+import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
 import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
@@ -53,6 +55,12 @@ import {
   selectProviderDropdownList 
 } from '../../store/slices/providerSlice';
 
+const formatPhoneInput = (value) => {
+  const digits = (value || "").replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+};
 
 const InsuranceCarriers = () => {
   const navigate = useNavigate();
@@ -417,8 +425,12 @@ const InsuranceCarriers = () => {
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Phone</Typography>
               <TextField
                 fullWidth size="small"
+                placeholder="(201) 555-0123"
                 value={newCarrier.phone}
-                onChange={(e) => setNewCarrier({ ...newCarrier, phone: e.target.value })}
+                onChange={(e) => {
+                  const formatted = formatPhoneInput(e.target.value);
+                  setNewCarrier({ ...newCarrier, phone: formatted });
+                }}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>
@@ -437,8 +449,12 @@ const InsuranceCarriers = () => {
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Fax</Typography>
               <TextField
                 fullWidth size="small"
+                placeholder="(201) 555-0123"
                 value={newCarrier.fax}
-                onChange={(e) => setNewCarrier({ ...newCarrier, fax: e.target.value })}
+                onChange={(e) => {
+                  const formatted = formatPhoneInput(e.target.value);
+                  setNewCarrier({ ...newCarrier, fax: formatted });
+                }}
                 sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
               />
             </Grid>
@@ -469,7 +485,6 @@ const InsuranceCarriers = () => {
                   sx={{ fontSize: '0.85rem' }}
                 >
                   <MenuItem value="United States">United States</MenuItem>
-                  <MenuItem value="Canada">Canada</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -493,25 +508,41 @@ const InsuranceCarriers = () => {
             </Grid>
 
             {/* Address Row 2 */}
-            <Grid item xs={4}>
-              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>City:</Typography>
-              <TextField
-                fullWidth size="small" placeholder="City"
-                value={newCarrier.city}
-                onChange={(e) => setNewCarrier({ ...newCarrier, city: e.target.value })}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
-              />
-            </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={6}>
               <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>State/Province:</Typography>
-              <TextField
-                fullWidth size="small" placeholder="State/Province"
-                value={newCarrier.state}
-                onChange={(e) => setNewCarrier({ ...newCarrier, state: e.target.value })}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+              <FormControl fullWidth size="small">
+                <Select
+                  value={newCarrier.state}
+                  displayEmpty
+                  onChange={(e) => setNewCarrier({ ...newCarrier, state: e.target.value, city: '' })}
+                  sx={{ fontSize: '0.85rem' }}
+                >
+                  <MenuItem value="" disabled>State/Province</MenuItem>
+                  {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>City:</Typography>
+              <Autocomplete
+                freeSolo
+                options={STATE_CITIES[newCarrier.state] || []}
+                value={newCarrier.city}
+                onChange={(_, newVal) => setNewCarrier({ ...newCarrier, city: newVal || '' })}
+                onInputChange={(_, newVal) => setNewCarrier({ ...newCarrier, city: newVal || '' })}
+                disabled={!newCarrier.state}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth size="small" placeholder={newCarrier.state ? "City" : "Select state first"}
+                    sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                  />
+                )}
               />
             </Grid>
-            <Grid item xs={4}>
+            
+            {/* Address Row 3 */}
+            <Grid item xs={6}>
               <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>Zip/Postal Code:</Typography>
               <TextField
                 fullWidth size="small" placeholder="Zip/Postal Code"

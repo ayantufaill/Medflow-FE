@@ -32,6 +32,11 @@ const ProductionCollectionSummary = () => {
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const getLocalDateString = (d) => {
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  };
+
   const computeDates = (mode) => {
     const today = new Date();
     let start = new Date(today);
@@ -105,8 +110,8 @@ const ProductionCollectionSummary = () => {
     }
 
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
+      startDate: getLocalDateString(start),
+      endDate: getLocalDateString(end)
     };
   };
 

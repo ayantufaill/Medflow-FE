@@ -75,9 +75,9 @@ const STATUS_COLORS = {
   confirmed: "#1976d2",
   seated: "#00796b",
   call: "#6d4c41",
-  "checkout incomplete": "#f9a825",
-  "checkout complete": "#2e7d32",
-  "no show": "#616161",
+  checked_out_incomplete: "#f9a825",
+  checked_out_complete: "#2e7d32",
+  no_show: "#616161",
   rescheduled: "#6a1b9a",
   cancelled: "#c62828",
 };

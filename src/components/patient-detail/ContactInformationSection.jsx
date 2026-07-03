@@ -66,7 +66,7 @@ const PhoneField = ({ value, label, isEditMode, onChange }) => {
   const [inputValue, setInputValue] = useState(value || '');
   
   useEffect(() => {
-    setInputValue(value || '');
+    setInputValue(formatPhoneNumber(value || ''));
   }, [value]);
   
   const handleChange = (e) => {
