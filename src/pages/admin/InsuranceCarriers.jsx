@@ -485,7 +485,6 @@ const InsuranceCarriers = () => {
                   sx={{ fontSize: '0.85rem' }}
                 >
                   <MenuItem value="United States">United States</MenuItem>
-                  <MenuItem value="Canada">Canada</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
