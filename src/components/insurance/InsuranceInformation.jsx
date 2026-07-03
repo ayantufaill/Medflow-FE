@@ -38,7 +38,7 @@ const InsuranceInformation = ({
     { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TEXAS HEALTH RESOURCES', groupNumber: '087639801300001', planName: 'Aetna(TEXAS HEALTH RESOURCES)', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
   ];
 
-  const handleSearch = (val) => {
+  const handleSearch = (val, forceOpen = true, excludeOverride = undefined) => {
     handleInputChange('carrierSearch', val);
 
     const searchPool = companies.length > 0 ? companies : DUMMY_INSURANCE;
@@ -57,12 +57,15 @@ const InsuranceInformation = ({
     // Always filter out inactive companies regardless of the checkbox
     filtered = filtered.filter(item => item.isActive !== false);
 
-    if (formData.excludeSystemCarriers) {
+    const exclude = excludeOverride !== undefined ? excludeOverride : formData.excludeSystemCarriers;
+    if (exclude) {
       filtered = filtered.filter(item => !item.isSystemCarrier && !item.isSystem);
     }
 
     setSearchResults(filtered);
-    setShowDropdown(true);
+    if (forceOpen) {
+      setShowDropdown(true);
+    }
   };
 
   const handleSelectResult = (item) => {
@@ -158,9 +161,10 @@ const InsuranceInformation = ({
             size="small" 
             checked={formData.excludeSystemCarriers || false} 
             onChange={(e) => {
-              handleInputChange('excludeSystemCarriers', e.target.checked);
-              // Trigger a re-search so the dropdown updates immediately
-              setTimeout(() => handleSearch(formData.carrierSearch || ''), 0);
+              const isChecked = e.target.checked;
+              handleInputChange('excludeSystemCarriers', isChecked);
+              // Trigger a re-search so the dropdown updates immediately without opening if closed
+              handleSearch(formData.carrierSearch || '', false, isChecked);
             }} 
           />
         } 

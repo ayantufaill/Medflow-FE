@@ -19,6 +19,7 @@ import {
   Paper,
   CircularProgress,
   Autocomplete,
+  Chip,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -160,6 +161,7 @@ const PatientInsuranceCoverage = () => {
   }, [allCompanies, fetchCompanies]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSearchItems, setSelectedSearchItems] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
 
@@ -222,12 +224,22 @@ const PatientInsuranceCoverage = () => {
     const filtered = rawReportData.filter((item) => {
       // 1. Search Query
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || (
+      const matchesSearchInput = !searchQuery || (
         (item.patient && item.patient.toLowerCase().includes(searchLower)) ||
         (item.planName && item.planName.toLowerCase().includes(searchLower)) ||
         (item.payer && item.payer.toLowerCase().includes(searchLower)) ||
         (item.number && String(item.number).toLowerCase().includes(searchLower))
       );
+
+      const matchesSelectedItems = selectedSearchItems.length === 0 || selectedSearchItems.some(selected => {
+        const sLower = selected.toLowerCase();
+        return (
+          (item.planName && item.planName.toLowerCase().includes(sLower)) ||
+          (item.payer && item.payer.toLowerCase().includes(sLower))
+        );
+      });
+
+      const matchesSearch = matchesSearchInput && matchesSelectedItems;
 
       // 2. Assignment Status
       const matchesAssignment = 
@@ -271,6 +283,7 @@ const PatientInsuranceCoverage = () => {
     handleApplyFilters();
   }, [
     searchQuery,
+    selectedSearchItems,
     rawReportData,
     assignmentFilter,
     apptFilterType,
@@ -459,9 +472,10 @@ const PatientInsuranceCoverage = () => {
       {/* Filters Section */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
         {/* Search */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Search by payer or plan:</Typography>
-          <Box sx={{ position: 'relative', width: 300 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Box sx={{ position: 'relative', width: 300 }}>
             <TextField 
               fullWidth
               size="small" 
@@ -515,7 +529,11 @@ const PatientInsuranceCoverage = () => {
                         hover 
                         sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }}
                         onClick={() => {
-                          setSearchQuery(item.planName || item.name || item.carrierName || '');
+                          const itemName = item.carrierName || item.name || item.planName || '';
+                          if (itemName && !selectedSearchItems.includes(itemName)) {
+                            setSelectedSearchItems([...selectedSearchItems, itemName]);
+                          }
+                          setSearchQuery('');
                           setShowDropdown(false);
                         }}
                       >
@@ -530,6 +548,25 @@ const PatientInsuranceCoverage = () => {
                 </Table>
               </Paper>
             )}
+            </Box>
+            
+            {/* Display Selected Tags next to search dropdown */}
+            {selectedSearchItems.map((item, idx) => (
+              <Chip
+                key={idx}
+                label={item}
+                onDelete={() => setSelectedSearchItems(selectedSearchItems.filter(i => i !== item))}
+                variant="outlined"
+                size="small"
+                sx={{ 
+                  borderRadius: '4px', 
+                  color: '#444', 
+                  borderColor: '#ddd', 
+                  bgcolor: '#fff',
+                  '& .MuiChip-deleteIcon': { color: '#e53935', fontSize: '16px' }
+                }}
+              />
+            ))}
           </Box>
         </Box>
 

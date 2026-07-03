@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -20,13 +20,73 @@ import {
   Radio,
   Divider,
   Collapse,
-  IconButton
+  IconButton,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button as MuiButton
 } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp, FileDownload, Print } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchUnsignedProgressNotesReport, selectUnsignedProgressNotesData, selectClinicalReportLoading } from '../../../../store/slices/clinicalReportSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+import RichTextEditor from '../../../../components/shared/RichTextEditor';
 
 const UnsignedProgressNotesReport = () => {
+  const dispatch = useDispatch();
+  const apiData = useSelector(selectUnsignedProgressNotesData);
+  const loading = useSelector(selectClinicalReportLoading);
+  const providerOptions = useSelector(selectProviderDropdownList);
+
   const [expandedRow, setExpandedRow] = useState(null);
   const [signedExpandedRow, setSignedExpandedRow] = useState(null);
+  
+  const [startDate, setStartDate] = useState('2026-04-08');
+  const [endDate, setEndDate] = useState('2026-05-08');
+  const [kindFilter, setKindFilter] = useState('All');
+  const [providerFilter, setProviderFilter] = useState('All');
+  const [codeFilterMode, setCodeFilterMode] = useState('filter');
+
+  // Inline Editor State
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [localNotes, setLocalNotes] = useState({});
+
+  // Signing State
+  const [signingRowId, setSigningRowId] = useState(null);
+
+  const handleOpenEditor = (row) => {
+    const currentNote = localNotes[row.id] !== undefined ? localNotes[row.id] : (row.note || '');
+    setEditingContent(currentNote);
+    setEditingRowId(row.id);
+  };
+
+  const handleSaveNote = (rowId) => {
+    setLocalNotes(prev => ({ ...prev, [rowId]: editingContent }));
+    setEditingRowId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRowId(null);
+  };
+
+  useEffect(() => {
+    dispatch(fetchUnsignedProgressNotesReport({ startDate, endDate }));
+    dispatch(fetchAllProvidersForDropdown());
+  }, [dispatch, startDate, endDate]);
+
+  // Helper: resolve provider display name
+  const getProviderName = (p) => {
+    if (p.firstName || p.lastName) return `${p.firstName || ''} ${p.lastName || ''}`.trim();
+    if (p.userId && (p.userId.firstName || p.userId.lastName)) return `${p.userId.firstName || ''} ${p.userId.lastName || ''}`.trim();
+    return p.username || 'Unknown';
+  };
+
+  const handleApplyFilters = () => {
+    dispatch(fetchUnsignedProgressNotesReport({ startDate, endDate }));
+  };
 
   const rows = [
     { id: 1, patient: 'Francis Fuller', date: '05/07/2026', kind: 'Exam', provider: 'Dr. Smith', note: 'CC: "I have a broken tooth #31". Patient had veneers done March of 2026 in Smile Texas in Houston with Dr. Mackenzie McAfee-Dooley, #\'s 4-13 and 20-29. Patient had his jaw broken in 2017 and now has a chain on right side mandible. He started to notice pain about 2-3 months ago on tooth #31. Last dental cleaning was a year ago, is now looking for a general dentist in DFW as he has recently moved to the area from Houston.' },
@@ -80,6 +140,64 @@ Thank you. YF`
     { id: 107, patient: 'Patient T', date: '04/27/2026', kind: 'Conversation', provider: 'Dr. Smith', note: '' },
   ];
 
+  const processedData = useMemo(() => {
+    if (apiData && apiData.length > 0) {
+      const parsed = apiData.map((item, i) => ({
+        id: item.id || item._id || i + 1000,
+        patient: item.patient || item.patientName || 'Unknown Patient',
+        date: item.date || item.createdAt || '',
+        kind: item.kind || item.type || 'General',
+        provider: item.provider || item.providerName || 'Unknown Provider',
+        note: item.note || item.content || '',
+        isSigned: !!item.isSigned || item.status === 'signed',
+      }));
+
+      // Apply local filters if needed
+      let filtered = parsed;
+      if (kindFilter !== 'All') {
+        filtered = filtered.filter(r => r.kind === kindFilter);
+      }
+      if (providerFilter !== 'All') {
+        filtered = filtered.filter(r => r.provider === providerFilter);
+      }
+      if (startDate) {
+        filtered = filtered.filter(r => new Date(r.date) >= new Date(startDate));
+      }
+      if (endDate) {
+        filtered = filtered.filter(r => new Date(r.date) <= new Date(endDate));
+      }
+
+      return {
+        unsigned: filtered.filter(r => !r.isSigned),
+        signed: filtered.filter(r => r.isSigned)
+      };
+    }
+    
+    // Apply local filters to mock data if apiData is empty
+    let filteredUnsigned = rows;
+    let filteredSigned = signedRows;
+    if (kindFilter !== 'All') {
+      filteredUnsigned = filteredUnsigned.filter(r => r.kind === kindFilter);
+      filteredSigned = filteredSigned.filter(r => r.kind === kindFilter);
+    }
+    if (providerFilter !== 'All') {
+      filteredUnsigned = filteredUnsigned.filter(r => r.provider === providerFilter);
+      filteredSigned = filteredSigned.filter(r => r.provider === providerFilter);
+    }
+    if (startDate) {
+      filteredUnsigned = filteredUnsigned.filter(r => new Date(r.date) >= new Date(startDate));
+      filteredSigned = filteredSigned.filter(r => new Date(r.date) >= new Date(startDate));
+    }
+    if (endDate) {
+      filteredUnsigned = filteredUnsigned.filter(r => new Date(r.date) <= new Date(endDate));
+      filteredSigned = filteredSigned.filter(r => new Date(r.date) <= new Date(endDate));
+    }
+    return { unsigned: filteredUnsigned, signed: filteredSigned };
+  }, [apiData, kindFilter, providerFilter, startDate, endDate, rows, signedRows]);
+
+  const displayUnsignedRows = processedData.unsigned;
+  const displaySignedRows = processedData.signed;
+
   const handleRowClick = (id) => {
     setExpandedRow(expandedRow === id ? null : id);
   };
@@ -95,55 +213,93 @@ Thank you. YF`
       </Typography>
 
       {/* Filters Section */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-        <TextField 
-          label="Start Date" 
-          defaultValue="04/08/2026" 
-          size="small" 
-          variant="standard"
-          sx={{ width: 150 }}
-        />
-        <TextField 
-          label="End Date" 
-          defaultValue="05/08/2026" 
-          size="small" 
-          variant="standard"
-          sx={{ width: 150 }}
-        />
-        <FormControl variant="standard" size="small" sx={{ minWidth: 120 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="primary">Start Date:</Typography>
+            <TextField 
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              size="small" 
+              variant="standard"
+              sx={{ width: 130 }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="primary">End Date:</Typography>
+            <TextField 
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              size="small" 
+              variant="standard"
+              sx={{ width: 130 }}
+            />
+          </Box>
+        </Box>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Kind</InputLabel>
-          <Select defaultValue="All" label="Kind">
+          <Select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} label="Kind">
             <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Exam">Exam</MenuItem>
+            <MenuItem value="Recare">Recare</MenuItem>
+            <MenuItem value="Conversation">Conversation</MenuItem>
+            <MenuItem value="Treatment">Treatment</MenuItem>
+            <MenuItem value="General">General</MenuItem>
           </Select>
         </FormControl>
-        <FormControl variant="standard" size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Provider</InputLabel>
-          <Select defaultValue="All" label="Provider">
+          <Select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} label="Provider">
             <MenuItem value="All">All</MenuItem>
+            {providerOptions.map(p => (
+              <MenuItem key={p._id || p.id} value={p._id || p.id}>
+                {getProviderName(p)}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Box>
 
       <Box sx={{ display: 'flex', gap: 4, mb: 2 }}>
-        <Box>
-          <FormControlLabel 
-            value="filter" 
-            control={<Radio size="small" />} 
-            label={<Typography variant="caption" color="text.secondary">Filter Codes</Typography>} 
-          />
-          <TextField placeholder="Enter code or procedure" size="small" variant="standard" sx={{ width: 180, ml: 3 }} />
-        </Box>
-        <Box>
-          <FormControlLabel 
-            value="exclude" 
-            checked
-            control={<Radio size="small" />} 
-            label={<Typography variant="caption" color="text.secondary">Enter Codes to Exclude</Typography>} 
-          />
-          <TextField placeholder="Enter code or procedure" size="small" variant="standard" sx={{ width: 180, ml: 3 }} />
-        </Box>
+        <RadioGroup 
+          row 
+          value={codeFilterMode} 
+          onChange={(e) => setCodeFilterMode(e.target.value)}
+          sx={{ display: 'flex', gap: 4 }}
+        >
+          <Box>
+            <FormControlLabel 
+              value="filter" 
+              control={<Radio size="small" />} 
+              label={<Typography variant="caption" color="text.secondary">Filter Codes</Typography>} 
+            />
+            <TextField 
+              placeholder="Enter code or procedure" 
+              size="small" 
+              variant="standard" 
+              disabled={codeFilterMode !== 'filter'}
+              sx={{ width: 180, ml: 3 }} 
+            />
+          </Box>
+          <Box>
+            <FormControlLabel 
+              value="exclude" 
+              control={<Radio size="small" />} 
+              label={<Typography variant="caption" color="text.secondary">Enter Codes to Exclude</Typography>} 
+            />
+            <TextField 
+              placeholder="Enter code or procedure" 
+              size="small" 
+              variant="standard" 
+              disabled={codeFilterMode !== 'exclude'}
+              sx={{ width: 180, ml: 3 }} 
+            />
+          </Box>
+        </RadioGroup>
         <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
-          <Button variant="contained" size="small" sx={{ backgroundColor: '#8db3d9', textTransform: 'none', px: 3 }}>Apply</Button>
+          <Button onClick={handleApplyFilters} variant="contained" size="small" sx={{ backgroundColor: '#8db3d9', textTransform: 'none', px: 3 }}>Apply</Button>
         </Box>
       </Box>
 
@@ -182,7 +338,19 @@ Thank you. YF`
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row) => (
+              {loading && (!apiData || apiData.length === 0) ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
+                    <CircularProgress size={24} />
+                  </TableCell>
+                </TableRow>
+              ) : displayUnsignedRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: 'text.secondary', fontSize: '0.8rem' }}>
+                    No unsigned notes found.
+                  </TableCell>
+                </TableRow>
+              ) : displayUnsignedRows.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow 
                     onClick={() => handleRowClick(row.id)}
@@ -204,20 +372,94 @@ Thank you. YF`
                       <Collapse in={expandedRow === row.id} timeout="auto" unmountOnExit>
                         <Box sx={{ p: 3, backgroundColor: '#fff' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-line' }}>
-                              {row.note || 'No note content available.'}
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-                              <Typography variant="caption" color="primary" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                                Sign Progress Note
-                              </Typography>
+                            {editingRowId === row.id ? (
+                              <Box sx={{ flex: 1, mr: 2 }}>
+                                <RichTextEditor 
+                                  value={editingContent} 
+                                  onChange={setEditingContent} 
+                                  minHeight={150} 
+                                />
+                              </Box>
+                            ) : (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ fontSize: '0.8rem', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                                dangerouslySetInnerHTML={{ __html: localNotes[row.id] !== undefined ? localNotes[row.id] : (row.note || 'No note content available.') }}
+                              />
+                            )}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end', minWidth: 120 }}>
+                              {signingRowId === row.id ? (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{row.provider}</Typography>
+                                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                    <TextField 
+                                      placeholder="Pin Code" 
+                                      size="small" 
+                                      type="password"
+                                      sx={{ width: 80, '& .MuiInputBase-root': { fontSize: '0.75rem', height: 24, padding: '0 8px' } }} 
+                                    />
+                                    <MuiButton 
+                                      variant="contained" 
+                                      size="small" 
+                                      sx={{ backgroundColor: '#d1a066', textTransform: 'none', minWidth: 50, height: 24, fontSize: '0.7rem', padding: 0 }}
+                                    >
+                                      Sign
+                                    </MuiButton>
+                                    <MuiButton 
+                                      variant="contained" 
+                                      size="small" 
+                                      onClick={() => setSigningRowId(null)} 
+                                      sx={{ backgroundColor: '#9e9e9e', textTransform: 'none', minWidth: 50, height: 24, fontSize: '0.7rem', padding: 0 }}
+                                    >
+                                      Cancel
+                                    </MuiButton>
+                                  </Box>
+                                </Box>
+                              ) : (
+                                <Typography 
+                                  variant="caption" 
+                                  color="primary" 
+                                  onClick={() => setSigningRowId(row.id)}
+                                  sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                                >
+                                  Sign Progress Note
+                                </Typography>
+                              )}
                             </Box>
                           </Box>
                           <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Box>
                               <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>NV:</Typography>
                               <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>Franco RDA</Typography>
-                              <Button variant="contained" size="small" sx={{ backgroundColor: '#d1a066', textTransform: 'none', fontSize: '0.7rem' }}>Edit Note</Button>
+                              {editingRowId === row.id ? (
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <MuiButton 
+                                    variant="outlined" 
+                                    size="small" 
+                                    onClick={handleCancelEdit}
+                                    sx={{ textTransform: 'none', fontSize: '0.7rem' }}
+                                  >
+                                    Cancel
+                                  </MuiButton>
+                                  <MuiButton 
+                                    variant="contained" 
+                                    size="small" 
+                                    onClick={() => handleSaveNote(row.id)}
+                                    sx={{ backgroundColor: '#4a90e2', textTransform: 'none', fontSize: '0.7rem' }}
+                                  >
+                                    Save
+                                  </MuiButton>
+                                </Box>
+                              ) : (
+                                <MuiButton 
+                                  variant="contained" 
+                                  size="small" 
+                                  onClick={() => handleOpenEditor(row)}
+                                  sx={{ backgroundColor: '#d1a066', textTransform: 'none', fontSize: '0.7rem' }}
+                                >
+                                  {(localNotes[row.id] || row.note) ? 'Edit Note' : 'Add Note'}
+                                </MuiButton>
+                              )}
                             </Box>
                             <Typography variant="caption" color="text.secondary">Babar Magsi</Typography>
                           </Box>
@@ -249,7 +491,19 @@ Thank you. YF`
               </TableRow>
             </TableHead>
             <TableBody>
-              {signedRows.map((row) => (
+              {loading && (!apiData || apiData.length === 0) ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
+                    <CircularProgress size={24} />
+                  </TableCell>
+                </TableRow>
+              ) : displaySignedRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: 'text.secondary', fontSize: '0.8rem' }}>
+                    No signed notes found.
+                  </TableCell>
+                </TableRow>
+              ) : displaySignedRows.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow 
                     onClick={() => handleSignedRowClick(row.id)}
@@ -283,6 +537,8 @@ Thank you. YF`
           </Table>
         </TableContainer>
       </Box>
+
+      {/* Note Editor Dialog removed as it is now inline */}
     </Box>
   );
 };
