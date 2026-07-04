@@ -4,6 +4,8 @@ import {
   CalendarMonth, AccessTime, Person, Email, Phone,
   AcUnit, Tune, LocalOffer, Shield,
 } from "@mui/icons-material";
+import { COLORS } from "../../../constants/colors";
+import { fontSize, fontWeight, radius, headingPrimarySx, headingSecondarySx } from "../../../constants/styles";
 
 const CARD_WIDTH = 290;
 const CARD_MAX_HEIGHT = 540;
@@ -12,18 +14,18 @@ const CARD_MAX_HEIGHT = 540;
 const InfoRow = ({ label, labelSuffix, children }) => (
   <Box sx={{ display: "flex", alignItems: "flex-start", gap: "8px", mb: "7px" }}>
     <Box sx={{ minWidth: "108px", flexShrink: 0 }}>
-      <Typography component="span" sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#374151" }}>
+      <Typography component="span" sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_BODY }}>
         {label}
       </Typography>
       {labelSuffix && (
-        <Typography component="span" sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>
+        <Typography component="span" sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
           {" "}{labelSuffix}
         </Typography>
       )}
     </Box>
     <Box sx={{ flex: 1, minWidth: 0 }}>
       {typeof children === "string"
-        ? <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151" }}>{children}</Typography>
+        ? <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{children}</Typography>
         : children}
     </Box>
   </Box>
@@ -32,15 +34,15 @@ const InfoRow = ({ label, labelSuffix, children }) => (
 /* ── status badge ────────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
   const styles = {
-    UNCONFIRMED:  { dot: "#d97706", bg: "#fef3c7", color: "#d97706", label: "Unconfirmed" },
-    PRECONFIRMED: { dot: "#7c3aed", bg: "#ede9fe", color: "#7c3aed", label: "Preconfirmed" },
-    CONFIRMED:    { dot: "#059669", bg: "#dcfce7", color: "#059669", label: "Confirmed" },
+    UNCONFIRMED:  { dot: COLORS.STATUS_UNCONFIRMED,  bg: "#fef3c7", color: COLORS.STATUS_UNCONFIRMED,  label: "Unconfirmed" },
+    PRECONFIRMED: { dot: COLORS.STATUS_PRECONFIRMED, bg: "#ede9fe", color: COLORS.STATUS_PRECONFIRMED, label: "Preconfirmed" },
+    CONFIRMED:    { dot: COLORS.STATUS_CONFIRMED,    bg: "#dcfce7", color: COLORS.STATUS_CONFIRMED,    label: "Confirmed" },
   };
   const s = styles[status] || styles.UNCONFIRMED;
   return (
     <Box sx={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: s.bg, borderRadius: "20px", px: "8px", py: "2px" }}>
       <Box sx={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: s.dot, flexShrink: 0 }} />
-      <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: s.color }}>{s.label}</Typography>
+      <Typography sx={{ fontSize: fontSize.sm, color: s.color }}>{s.label}</Typography>
     </Box>
   );
 };
@@ -48,8 +50,8 @@ const StatusBadge = ({ status }) => {
 /* ── icon + text value ───────────────────────────────────── */
 const IconValue = ({ icon, text, color }) => (
   <Box sx={{ display: "flex", alignItems: "center", gap: "5px" }}>
-    <Box sx={{ color: color || "#9aa3ae", display: "flex", flexShrink: 0 }}>{icon}</Box>
-    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    <Box sx={{ color: color || COLORS.TEXT_MUTED, display: "flex", flexShrink: 0 }}>{icon}</Box>
+    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
       {text}
     </Typography>
   </Box>
@@ -76,13 +78,13 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
     patientId:   "765",
     provider:    "Sharon Smith",
     visitType:   "Recare",
-    date:        "07/15/2022",
+    date:        "Jul 15, 2022",
     startTime:   appointment.time || "09:00 AM",
     endTime:     "10:30 AM",
     charge:      "$224.00",
     scheduledBy: "Jaylen Cuellar",
-    notes:       "07/15/2022 : Pt to bring in their DL",
-    dob:         "04/20/1990",
+    notes:       "Jul 15, 2022 : Pt to bring in their DL",
+    dob:         "Apr 20, 1990",
     phone:       "+1 855 849 5255",
     email:       "jaylen@oryxdentalsoftware.c",
     preferredDDS: "—",
@@ -99,24 +101,24 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
       sx={{
         position: "fixed", top, left,
         width: CARD_WIDTH,
-        backgroundColor: "#fff",
-        borderRadius: "16px",
+        backgroundColor: COLORS.SURFACE_CARD,
+        borderRadius: radius.xl,
         boxShadow: "0 12px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)",
-        border: "1px solid #e0e5eb",
+        border: `1px solid ${COLORS.BORDER}`,
         overflow: "hidden",
         zIndex: 2000,
       }}
     >
       {/* ── HEADER ── */}
-      <Box sx={{ backgroundColor: "#f3f8fd", px: "16px", py: "12px", borderBottom: "1px solid #e8edf3" }}>
-        <Typography sx={{ fontFamily: "Inter", fontSize: "9px", fontWeight: 700, color: "#9aa3ae", letterSpacing: "0.8px", textTransform: "uppercase", mb: "3px" }}>
+      <Box sx={{ backgroundColor: COLORS.SURFACE_TINT, px: "16px", py: "12px", borderBottom: `1px solid #e8edf3` }}>
+        <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: COLORS.TEXT_MUTED, letterSpacing: "0.8px", textTransform: "uppercase", mb: "3px" }}>
           Appointment Summary For
         </Typography>
         <Box sx={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-          <Typography sx={{ fontFamily: "Inter", fontSize: "14px", fontWeight: 700, color: "#09121f" }}>
+          <Typography sx={{ ...headingPrimarySx }}>
             {appointment.patientName}
           </Typography>
-          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>
+          <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
             (pt #{apt.patientId})
           </Typography>
         </Box>
@@ -126,12 +128,12 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
       <Box sx={{ px: "16px", py: "12px", maxHeight: CARD_MAX_HEIGHT - 110, overflowY: "auto" }}>
 
         {/* Appointment Information */}
-        <Typography sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 700, color: "#09121f", mb: "10px" }}>
+        <Typography sx={{ ...headingSecondarySx, fontWeight: fontWeight.bold, mb: "10px" }}>
           Appointment Information
         </Typography>
 
         <InfoRow label="Provider:">
-          <IconValue icon={<Phone sx={{ fontSize: "12px" }} />} text={apt.provider} color="#2262ef" />
+          <IconValue icon={<Phone sx={{ fontSize: "12px" }} />} text={apt.provider} color={COLORS.ACCENT} />
         </InfoRow>
 
         <InfoRow label="Visit Type:">{apt.visitType}</InfoRow>
@@ -139,7 +141,7 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         <InfoRow label="Tags:">
           <Box sx={{ display: "flex", gap: "6px" }}>
             <TagCircle bg="#ccfbf1" icon={<AcUnit sx={{ fontSize: "13px", color: "#0d9488" }} />} />
-            <TagCircle bg="#fef3c7" icon={<Tune sx={{ fontSize: "13px", color: "#d97706" }} />} />
+            <TagCircle bg="#fef3c7" icon={<Tune sx={{ fontSize: "13px", color: COLORS.STATUS_UNCONFIRMED }} />} />
           </Box>
         </InfoRow>
 
@@ -158,7 +160,7 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         <InfoRow label="End time:">{apt.endTime}</InfoRow>
 
         <InfoRow label="Charge:">
-          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f" }}>
+          <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
             {apt.charge}
           </Typography>
         </InfoRow>
@@ -172,26 +174,26 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         </InfoRow>
 
         <InfoRow label="Notes" labelSuffix="(latest):">
-          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", lineHeight: 1.5 }}>
+          <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, lineHeight: 1.5 }}>
             – {apt.notes}
           </Typography>
         </InfoRow>
 
-        <Divider sx={{ my: "12px", borderColor: "#f0f2f5" }} />
+        <Divider sx={{ my: "12px", borderColor: COLORS.BORDER_LIGHT }} />
 
         {/* Patient Information */}
-        <Typography sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 700, color: "#09121f", mb: "10px" }}>
+        <Typography sx={{ ...headingSecondarySx, fontWeight: fontWeight.bold, mb: "10px" }}>
           Patient Information
         </Typography>
 
         <InfoRow label="D.O.B:">{apt.dob}</InfoRow>
 
         <InfoRow label="Mobile Phone:">
-          <IconValue icon={<Phone sx={{ fontSize: "12px" }} />} text={apt.phone} color="#16a34a" />
+          <IconValue icon={<Phone sx={{ fontSize: "12px" }} />} text={apt.phone} color={COLORS.STATUS_SUCCESS} />
         </InfoRow>
 
         <InfoRow label="Email:">
-          <IconValue icon={<Email sx={{ fontSize: "12px" }} />} text={apt.email} color="#2262ef" />
+          <IconValue icon={<Email sx={{ fontSize: "12px" }} />} text={apt.email} color={COLORS.ACCENT} />
         </InfoRow>
 
         <InfoRow label="Preferred DDS:">{apt.preferredDDS}</InfoRow>
@@ -204,19 +206,19 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
 
       {/* ── FOOTER ── */}
       <Box sx={{
-        backgroundColor: "#f8fafc",
+        backgroundColor: COLORS.SURFACE_FOOTER,
         px: "16px", py: "10px",
-        borderTop: "1px solid #f0f2f5",
+        borderTop: `1px solid ${COLORS.BORDER_LIGHT}`,
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        borderRadius: "0 0 16px 16px",
+        borderRadius: `0 0 ${radius.xl} ${radius.xl}`,
       }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <LocalOffer sx={{ fontSize: "13px", color: "#9aa3ae" }} />
-          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>
+          <LocalOffer sx={{ fontSize: "13px", color: COLORS.TEXT_MUTED }} />
+          <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
             Balance / Charge
           </Typography>
         </Box>
-        <Typography sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 700, color: "#16a34a" }}>
+        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: COLORS.PRICE_TEXT }}>
           {apt.balance}
         </Typography>
       </Box>

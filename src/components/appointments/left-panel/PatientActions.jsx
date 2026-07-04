@@ -1,6 +1,8 @@
 import { Box, Typography, Divider } from '@mui/material';
 import { KeyboardArrowUp } from '@mui/icons-material';
 import { PatientDetails, FamilyDetails } from './PatientDetails';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
 
 const DotGrid = ({ color = 'rgba(255,255,255,0.6)' }) => (
   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 3px)', gap: '3px' }}>
@@ -14,7 +16,7 @@ const PatientActions = () => (
   <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', mt: '2px' }}>
 
     {/* Divider separating patient card from actions */}
-    <Divider sx={{ borderColor: '#e0e5eb', my: '6px' }} />
+    <Divider sx={{ borderColor: COLORS.BORDER, my: '6px' }} />
 
     {/* Procedure row */}
     <Box
@@ -22,19 +24,19 @@ const PatientActions = () => (
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#ffffff',
-        border: '1px solid #e0e5eb',
-        borderRadius: '8px',
+        backgroundColor: COLORS.SURFACE_CARD,
+        border: `1px solid ${COLORS.BORDER}`,
+        borderRadius: radius.md,
         px: '12px',
         py: '10px',
       }}
     >
-      <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: '#09121f' }}>
+      <Typography sx={{ ...headingSecondarySx }}>
         P 1 #15 crown /bu
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#9aa3ae' }}>___min</Typography>
-        <KeyboardArrowUp sx={{ fontSize: '18px', color: '#5c646f' }} />
+        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>___min</Typography>
+        <KeyboardArrowUp sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />
       </Box>
     </Box>
 
@@ -46,15 +48,15 @@ const PatientActions = () => (
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#2262ef',
-          borderRadius: '8px',
+          backgroundColor: COLORS.ACCENT,
+          borderRadius: radius.md,
           px: '16px',
           py: '12px',
           cursor: 'pointer',
-          '&:hover': { backgroundColor: '#1a50cc' },
+          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
         }}
       >
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
           {label}
         </Typography>
         {label !== 'Appointment History' && <DotGrid />}
@@ -68,13 +70,13 @@ const PatientActions = () => (
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#c5cad3',
-        borderRadius: '8px',
+        borderRadius: radius.md,
         px: '16px',
         py: '12px',
         cursor: 'not-allowed',
       }}
     >
-      <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+      <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
         Purchase Products
       </Typography>
     </Box>

@@ -3,6 +3,8 @@ import { Box, Typography } from '@mui/material';
 import { PlaylistAddCheck } from '@mui/icons-material';
 import RightPanelCard from './RightPanelCard';
 import AppointmentShortlistModal from './AppointmentShortlistModal';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight, avatarSize } from '../../../constants/styles';
 
 const APPOINTMENTS = [
   { initials: 'JC', name: 'JOHN CLAD',       slot: 'Mon · 04:00 PM · 70m', date: 'Feb 07, 2022' },
@@ -11,13 +13,16 @@ const APPOINTMENTS = [
   { initials: 'MH', name: 'Melina Haines',    slot: 'Thurs · 09:10 AM · 60m', date: 'Apr 28, 2022' },
 ];
 
+/** Normalize ALL-CAPS names to Title Case */
+const toTitleCase = (str) => str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
 const AppointmentShortlist = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <>
       <RightPanelCard
-        icon={<PlaylistAddCheck sx={{ fontSize: '20px', color: '#06b6d4' }} />}
+        icon={<PlaylistAddCheck sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
         title="Appointment Shortlist"
         count={7}
         headerAction="expand"
@@ -32,39 +37,39 @@ const AppointmentShortlist = () => {
               alignItems: 'center',
               gap: '10px',
               py: '9px',
-              borderBottom: '1px solid #f5f7fa',
+              borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
               '&:last-child': { borderBottom: 'none' },
               cursor: 'pointer',
-              '&:hover': { backgroundColor: '#fafbfc' },
+              '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
             }}
           >
             {/* Avatar */}
             <Box
               sx={{
-                width: '38px', height: '38px',
+                width: avatarSize.md, height: avatarSize.md,
                 borderRadius: '50%',
-                backgroundColor: '#dde4fb',
+                backgroundColor: COLORS.AVATAR_BG,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: '#3b5bd9' }}>
+              <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.bold, color: COLORS.AVATAR_TEXT }}>
                 {initials}
               </Typography>
             </Box>
 
             {/* Name + slot */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: '#09121f', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {name}
+              <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {toTitleCase(name)}
               </Typography>
-              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#09121f' }}>
+              <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>
                 {slot}
               </Typography>
             </Box>
 
             {/* Date */}
-            <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#09121f', flexShrink: 0 }}>
+            <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY, flexShrink: 0 }}>
               {date}
             </Typography>
           </Box>

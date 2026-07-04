@@ -1,34 +1,36 @@
 import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp, Assignment, PeopleAlt } from '@mui/icons-material';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight, radius, spacing, headingPrimarySx, headingSecondarySx, avatarSize } from '../../../constants/styles';
 
 /* ── Reusable sub-section row ────────────────────────────────────── */
 const SubSection = ({ label, chevronSide = null, open, onToggle, children }) => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+  <Box sx={{ display: 'flex', flexDirection: 'column', gap: spacing.innerGap }}>
     <Box
-      sx={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: chevronSide ? 'pointer' : 'default' }}
+      sx={{ display: 'flex', alignItems: 'center', gap: spacing.innerGap, cursor: chevronSide ? 'pointer' : 'default' }}
       onClick={chevronSide ? onToggle : undefined}
     >
       {/* Left chevron — Medical Alerts style */}
       {chevronSide === 'left' && (
         open
-          ? <KeyboardArrowDown sx={{ fontSize: '14px', color: '#6b7280' }} />
-          : <KeyboardArrowUp sx={{ fontSize: '14px', color: '#6b7280' }} />
+          ? <KeyboardArrowDown sx={{ fontSize: '14px', color: COLORS.TEXT_MUTED }} />
+          : <KeyboardArrowUp sx={{ fontSize: '14px', color: COLORS.TEXT_MUTED }} />
       )}
 
       {/* Vertical bar */}
       <Box sx={{ width: '2px', height: '16px', backgroundColor: '#d1d5db', borderRadius: '1px', flexShrink: 0 }} />
 
       {/* Label */}
-      <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: '#374151', flex: 1 }}>
+      <Typography sx={{ ...headingSecondarySx, flex: 1 }}>
         {label}
       </Typography>
 
       {/* Right chevron — Preferred Providers style */}
       {chevronSide === 'right' && (
         open
-          ? <KeyboardArrowDown sx={{ fontSize: '16px', color: '#6b7280' }} />
-          : <KeyboardArrowUp sx={{ fontSize: '16px', color: '#6b7280' }} />
+          ? <KeyboardArrowDown sx={{ fontSize: '16px', color: COLORS.TEXT_MUTED }} />
+          : <KeyboardArrowUp sx={{ fontSize: '16px', color: COLORS.TEXT_MUTED }} />
       )}
     </Box>
 
@@ -38,12 +40,12 @@ const SubSection = ({ label, chevronSide = null, open, onToggle, children }) => 
 
 /* ── Dropdown row (Dentist / Hygienist) ──────────────────────────── */
 const DropdownRow = ({ label }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', mb: '6px' }}>
-    <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#5c646f', whiteSpace: 'nowrap' }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: spacing.innerGap, mb: spacing.innerGap }}>
+    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, whiteSpace: 'nowrap' }}>
       {label}
     </Typography>
     <Box sx={{ flex: 1, height: '1px', backgroundColor: '#d1d5db' }} />
-    <KeyboardArrowDown sx={{ fontSize: '16px', color: '#6b7280', flexShrink: 0 }} />
+    <KeyboardArrowDown sx={{ fontSize: '16px', color: COLORS.TEXT_MUTED, flexShrink: 0 }} />
   </Box>
 );
 
@@ -51,14 +53,14 @@ const DropdownRow = ({ label }) => (
 const FormBadge = ({ label, active }) => (
   <Box
     sx={{
-      width: '26px', height: '26px',
-      borderRadius: '5px',
-      backgroundColor: active ? '#ef4444' : '#f3f4f6',
+      width: avatarSize.sm, height: avatarSize.sm,
+      borderRadius: radius.sm,
+      backgroundColor: active ? COLORS.STATUS_ERROR : '#f3f4f6',
       border: active ? 'none' : '1px solid #e5e7eb',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}
   >
-    <Typography sx={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 700, color: active ? '#fff' : '#6b7280' }}>
+    <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: active ? COLORS.WHITE : COLORS.TEXT_MUTED }}>
       {label}
     </Typography>
   </Box>
@@ -69,26 +71,26 @@ const DetailCard = ({ icon, title, children }) => {
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <Box sx={{ backgroundColor: '#ffffff', border: '1px solid #e0e5eb', borderRadius: '10px', overflow: 'hidden', mt: '8px' }}>
+    <Box sx={{ backgroundColor: COLORS.SURFACE_CARD, border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.lg, overflow: 'hidden', mt: spacing.cardGap }}>
       <Box
         onClick={() => setExpanded((p) => !p)}
         sx={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          px: '14px', py: '12px',
+          display: 'flex', alignItems: 'center', gap: spacing.cardGap,
+          px: spacing.cardPx, py: spacing.cardPy,
           cursor: 'pointer',
-          borderBottom: expanded ? '1px solid #f0f2f5' : 'none',
+          borderBottom: expanded ? `1px solid ${COLORS.BORDER_LIGHT}` : 'none',
         }}
       >
         {icon}
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 700, color: '#09121f', flex: 1 }}>
+        <Typography sx={{ ...headingPrimarySx, flex: 1 }}>
           {title}
         </Typography>
         {expanded
-          ? <KeyboardArrowUp sx={{ fontSize: '18px', color: '#5c646f' }} />
-          : <KeyboardArrowDown sx={{ fontSize: '18px', color: '#5c646f' }} />}
+          ? <KeyboardArrowUp sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />
+          : <KeyboardArrowDown sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />}
       </Box>
       {expanded && (
-        <Box sx={{ px: '14px', py: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <Box sx={{ px: spacing.cardPx, py: spacing.cardPy, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {children}
         </Box>
       )}
@@ -102,7 +104,7 @@ export const PatientDetails = () => {
   const [alertsOpen, setAlertsOpen] = useState(true);
 
   return (
-    <DetailCard icon={<Assignment sx={{ fontSize: '20px', color: '#2262ef' }} />} title="Patient Details">
+    <DetailCard icon={<Assignment sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Patient Details">
 
       {/* Preferred Providers */}
       <SubSection label="Preferred Providers" chevronSide="right" open={providersOpen} onToggle={() => setProvidersOpen((p) => !p)}>
@@ -114,7 +116,7 @@ export const PatientDetails = () => {
 
       {/* Patient Forms */}
       <SubSection label="Patient Forms" open>
-        <Box sx={{ display: 'flex', gap: '6px', pl: '8px' }}>
+        <Box sx={{ display: 'flex', gap: spacing.innerGap, pl: '8px' }}>
           <FormBadge label="B" active />
           <FormBadge label="R" />
           <FormBadge label="P" />
@@ -124,26 +126,26 @@ export const PatientDetails = () => {
 
       {/* Medical Alerts — chevron on LEFT of bar */}
       <SubSection label="Medical Alerts" chevronSide="left" open={alertsOpen} onToggle={() => setAlertsOpen((p) => !p)}>
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: '#dc2626', textAlign: 'center', pl: '8px' }}>
+        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: '#dc2626', textAlign: 'center', pl: '8px' }}>
           Diabetes Type I
         </Typography>
       </SubSection>
 
       {/* Patient Flags */}
       <SubSection label="Patient Flags" open>
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#9aa3ae', pl: '8px' }}>No flags</Typography>
+        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, pl: '8px' }}>No flags</Typography>
       </SubSection>
 
       {/* Bills */}
       <SubSection label="Bills" open>
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#5c646f', textAlign: 'center' }}>
+        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, textAlign: 'center' }}>
           Last Bill: None
         </Typography>
       </SubSection>
 
       {/* Used Amount */}
       <SubSection label="Used Amount:" open>
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 700, color: '#09121f', pl: '8px' }}>
+        <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, pl: '8px' }}>
           $0.00
         </Typography>
       </SubSection>
@@ -156,17 +158,17 @@ export const PatientDetails = () => {
 export const FamilyDetails = () => {
   const BillRow = ({ label, value }) => (
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-      <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#5c646f' }}>{label}</Typography>
-      <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: '#09121f' }}>{value}</Typography>
+      <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY }}>{label}</Typography>
+      <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>{value}</Typography>
     </Box>
   );
 
   return (
-    <DetailCard icon={<PeopleAlt sx={{ fontSize: '20px', color: '#2262ef' }} />} title="Family Details">
+    <DetailCard icon={<PeopleAlt sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Family Details">
 
       {/* Family members */}
       <SubSection label="Family members:" open>
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#9aa3ae', pl: '8px' }}>
+        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, pl: '8px' }}>
           No family found
         </Typography>
       </SubSection>

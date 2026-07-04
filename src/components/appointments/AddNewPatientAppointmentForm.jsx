@@ -131,6 +131,7 @@ const AddNewPatientAppointmentForm = ({
       maxWidth="lg"
       fullWidth
       disableScrollLock
+      sx={{ zIndex: 1305 }}
       PaperProps={{
         sx: { borderRadius: "12px", border: "1px solid #e0e5eb", maxHeight: "92vh", overflow: "hidden" },
       }}

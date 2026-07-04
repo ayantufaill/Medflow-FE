@@ -10,6 +10,8 @@ import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { usePatients } from '../../hooks/redux/usePatient';
 import { useAppointments } from '../../hooks/redux/useAppointments';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { COLORS } from '../../constants/colors';
+import { radius } from '../../constants/styles';
 
 const OperatorySchedulePage = () => {
   const { showSnackbar } = useSnackbar();
@@ -89,15 +91,15 @@ const OperatorySchedulePage = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: '#f0f2f5', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: COLORS.SURFACE_PAGE, boxSizing: 'border-box', overflow: 'hidden' }}>
 
       {/* LEFT PANEL — 1/5 */}
-      <Box sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e0e5eb', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
         <LeftPanel />
       </Box>
 
       {/* CENTER PANEL — 3/5 */}
-      <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e0e5eb', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <ScheduleGridHeader onNewAppointment={() => setFormOpen(true)} />
         <ScheduleCalendar />
       </Box>

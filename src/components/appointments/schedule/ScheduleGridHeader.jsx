@@ -6,6 +6,7 @@ import DateNavigation from './DateNavigation';
 import ActionIconsBar from './ActionIconsBar';
 import NewAppointmentButton from './NewAppointmentButton';
 import VerticalDivider from '../../common/VerticalDivider';
+import { COLORS } from '../../../constants/colors';
 
 const ScheduleGridHeader = ({ onNewAppointment }) => {
   const [view, setView] = useState('Day');
@@ -15,7 +16,7 @@ const ScheduleGridHeader = ({ onNewAppointment }) => {
     <Box
       sx={{
         width: '100%',
-        borderBottom: '1px solid #e0e5eb',
+        borderBottom: `1px solid ${COLORS.BORDER}`,
         flexShrink: 0,
       }}
     >

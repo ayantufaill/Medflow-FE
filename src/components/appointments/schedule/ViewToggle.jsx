@@ -1,4 +1,6 @@
 import { Box, Typography } from '@mui/material';
+import { COLORS } from '../../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 const VIEWS = ['Day', 'Week', 'Month'];
 
@@ -8,7 +10,7 @@ const ViewToggle = ({ value, onChange }) => (
       display: 'flex',
       alignItems: 'center',
       backgroundColor: '#eef0f3',
-      borderRadius: '12px',
+      borderRadius: radius.lg,
       padding: '3px',
       gap: '1px',
       flexShrink: 0,
@@ -23,19 +25,18 @@ const ViewToggle = ({ value, onChange }) => (
           sx={{
             px: '8px',
             py: '3px',
-            borderRadius: '8px',
+            borderRadius: radius.md,
             cursor: 'pointer',
-            backgroundColor: isActive ? '#ffffff' : 'transparent',
+            backgroundColor: isActive ? COLORS.SURFACE_CARD : 'transparent',
             boxShadow: isActive ? '0px 1px 3px rgba(0,0,0,0.12)' : 'none',
             transition: 'all 0.15s ease',
           }}
         >
           <Typography
             sx={{
-              fontFamily: 'Inter',
-              fontSize: '12px',
-              fontWeight: isActive ? 500 : 300,
-              color: isActive ? '#09121f' : '#5c646f',
+              fontSize: fontSize.base,
+              fontWeight: isActive ? fontWeight.semibold : fontWeight.regular,
+              color: isActive ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
               lineHeight: '20px',
               userSelect: 'none',
               textAlign: 'center',
