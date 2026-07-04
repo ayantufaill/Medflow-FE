@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Typography } from "@mui/material";
-import { EventNote, AutoAwesome, Close } from "@mui/icons-material";
+import { CalendarMonthOutlined, AutoAwesome, Close } from "@mui/icons-material";
 
 const AppointmentModalHeader = ({ onCancel }) => (
   <Box sx={{
@@ -13,7 +13,7 @@ const AppointmentModalHeader = ({ onCancel }) => (
       backgroundColor: "#eff6ff",
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     }}>
-      <EventNote sx={{ fontSize: "20px", color: "#2262ef" }} />
+      <CalendarMonthOutlined sx={{ fontSize: "20px", color: "#2262ef" }} />
     </Box>
 
     <Box>

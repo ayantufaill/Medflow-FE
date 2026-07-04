@@ -1,8 +1,8 @@
 import { Box, Typography, Divider } from '@mui/material';
 import dayjs from 'dayjs';
 import {
-  Phone, Email, AccessTime, ContentCopy,
-  CalendarMonth, Forum, Autorenew,
+  PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
+  CalendarMonthOutlined, PendingOutlined, Autorenew,
 } from '@mui/icons-material';
 import { usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
@@ -19,10 +19,10 @@ const TAGS = [
 ];
 
 const ACTION_BUTTONS = [
-  { label: 'Call',    icon: <Phone sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,        dot: false },
-  { label: 'Email',   icon: <Email sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: true  },
-  { label: 'Book',    icon: <CalendarMonth sx={{ fontSize: '18px', color: COLORS.ACCENT }} />, dot: false },
-  { label: 'Jump to', icon: <Forum sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false },
+  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false },
+  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true  },
+  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false },
+  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false },
 ];
 
 // Renders one contact-info row with an icon, text, and copy button.
@@ -30,10 +30,7 @@ const ContactRow = ({ icon, text }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
     <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
     <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{text}</Typography>
-    <ContentCopy
-      sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }}
-      onClick={() => navigator.clipboard?.writeText(text)}
-    />
+    <ContentCopyOutlined sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
   </Box>
 );
 

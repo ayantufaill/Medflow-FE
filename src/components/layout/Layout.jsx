@@ -7,7 +7,7 @@ import PatientSlider from '../patient-slider/PatientSlider';
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 const SIDEBAR_EXPANDED_WIDTH = 280;
 
-const Layout = ({ children }) => {
+const Layout = ({ children, hideSidebar = false }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sliderOpen, setSliderOpen] = useState(false);
@@ -26,19 +26,21 @@ const Layout = ({ children }) => {
       />
       <PatientSlider open={sliderOpen} onClose={() => setSliderOpen(false)} />
 
-      <Box sx={{ display: 'flex', flex: 1 }}>
-        <Sidebar
-          open={sidebarOpen}
-          onClose={handleMobileDrawerToggle}
-          mobileOpen={mobileOpen}
-        />
+      <Box sx={{ display: 'flex', flex: 1, mt: '65px' }}>
+        {!hideSidebar && (
+          <Sidebar
+            open={sidebarOpen}
+            onClose={handleMobileDrawerToggle}
+            mobileOpen={mobileOpen}
+          />
+        )}
 
         <Box
           component="main"
           sx={{
             flexGrow: 1,
-            p: 3,
-            width: { md: `calc(100% - ${desktopSidebarWidth}px)` },
+            p: hideSidebar ? 0 : 3,
+            width: { md: hideSidebar ? '100%' : `calc(100% - ${desktopSidebarWidth}px)` },
             transition: 'width 0.2s ease',
             backgroundColor: '#f5f5f5',
             minHeight: 'calc(100vh - 65px)',

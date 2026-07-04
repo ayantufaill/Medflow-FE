@@ -70,7 +70,7 @@ const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }}>
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f5f5f5' }}>
         <Typography variant="h6" fontWeight={700}>
           Fee Schedule Details

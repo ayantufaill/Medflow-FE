@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  Box, Typography, Select, MenuItem, Button, TableCell, TableRow
 } from '@mui/material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const MOCK_INDIVIDUALS = [
   { id: '616', name: 'Patient A', patientCollection: '-$9.90', insuranceCollection: '$148.00', totalCollection: '$138.10' },
@@ -28,120 +19,89 @@ const TotalCollectionIndividuals = () => {
   const [dateRange, setDateRange] = useState('Daily');
   const [sortBy, setSortBy] = useState('Default');
 
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label={dateRange} 
+        prefix="Date Range:" 
+        value={dateRange} 
+        onChange={(e) => setDateRange(e.target.value)}
+        options={['Daily', 'Weekly']}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        <ChevronLeft sx={{ fontSize: '1.1rem', color: '#337ab7', cursor: 'pointer', '&:hover': { opacity: 0.7 } }} />
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 600, minWidth: 80, textAlign: 'center', whiteSpace: 'nowrap' }}>
+          May 08, 2026
+        </Typography>
+        <ChevronRight sx={{ fontSize: '1.1rem', color: '#337ab7', cursor: 'pointer', '&:hover': { opacity: 0.7 } }} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', whiteSpace: 'nowrap' }}>
+          05/08/2026
+        </Typography>
+      </Box>
+
+      <ReportSelect 
+        value={sortBy} 
+        onChange={(e) => setSortBy(e.target.value)}
+        prefix="Sort Report By:"
+        options={[
+          { value: 'Default', label: 'Default' },
+          { value: 'Amount', label: 'Amount' }
+        ]}
+      />
+    </>
+  );
+
+  const columns = [
+    { label: 'ID', width: '80px' },
+    { label: 'Patient' },
+    { label: 'Patient Collection' },
+    { label: 'Insurance Collection' },
+    { label: 'Total Collection' },
+  ];
+
+  const renderRow = (row, index) => (
+    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.id}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{row.name}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: row.patientCollection.startsWith('-') ? '#d93025' : '#000' }}>{row.patientCollection}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.insuranceCollection}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.totalCollection}</TableCell>
+    </TableRow>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
-        Total Collection By Individuals Report:
-      </Typography>
-
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Date Range:</Typography>
-          <Select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            size="small"
-            variant="standard"
-            sx={{ fontSize: '0.85rem', minWidth: 100 }}
-          >
-            <MenuItem value="Daily">Daily</MenuItem>
-            <MenuItem value="Weekly">Weekly</MenuItem>
-          </Select>
-          <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', ml: 1 }}>← May 08, 2026 →</Typography>
-          <Typography sx={{ fontSize: '0.85rem' }}>Date: 05/08/2026</Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Sort Report By</Typography>
-          <Select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            size="small"
-            sx={{ fontSize: '0.85rem', minWidth: 100, height: 32, backgroundColor: '#5c85bb', color: '#fff', '& .MuiSvgIcon-root': { color: '#fff' } }}
-          >
-            <MenuItem value="Default">Default</MenuItem>
-            <MenuItem value="Amount">Amount</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
-          >
-            Apply Filters
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
-          >
-            Create Template
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button
-          variant="contained"
-          size="small"
-          sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#4a74a8' } }}
-        >
-          Export as CSV
-        </Button>
-        <Button
-          variant="contained"
-          size="small"
-          sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', fontWeight: 600, py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c99f54' } }}
-        >
-          Print
-        </Button>
-      </Box>
+    <ReportLayout title="Total Collection By Individuals Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Individuals Table */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #e0e0e0', width: '80px' }}>ID</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #e0e0e0' }}>Patient</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #e0e0e0' }}>Patient Collection</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #e0e0e0' }}>Insurance Collection</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #e0e0e0' }}>Total Collection</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {MOCK_INDIVIDUALS.map((row, index) => (
-              <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.id}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.name}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1, color: row.patientCollection.startsWith('-') ? '#d93025' : '#000' }}>{row.patientCollection}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.insuranceCollection}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.totalCollection}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <ReportDataTable 
+        columns={columns} 
+        data={MOCK_INDIVIDUALS} 
+        renderRow={renderRow} 
+      />
 
       {/* Footer Totals */}
-      <Box sx={{ mt: 3, ml: 1 }}>
-        <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 600, mb: 0.5 }}>
-          Total Patient Collection: <Typography component="span" sx={{ fontWeight: 400, color: '#d93025', ml: 1 }}>-$9.90</Typography>
+      <Box sx={{ mt: 3, ml: 1, p: 2, backgroundColor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0', width: 'fit-content' }}>
+        <Typography sx={{ fontSize: '0.85rem', color: '#337ab7', fontWeight: 600, mb: 0.5 }}>
+          Total Patient Collection: <Typography component="span" sx={{ fontWeight: 600, color: '#d93025', ml: 1 }}>-$9.90</Typography>
         </Typography>
-        <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 600, mb: 0.5 }}>
-          Total Insurance Collection: <Typography component="span" sx={{ fontWeight: 400, color: '#000', ml: 1 }}>$1,769.00</Typography>
+        <Typography sx={{ fontSize: '0.85rem', color: '#337ab7', fontWeight: 600, mb: 0.5 }}>
+          Total Insurance Collection: <Typography component="span" sx={{ fontWeight: 600, color: '#333', ml: 1 }}>$1,769.00</Typography>
         </Typography>
-        <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 600 }}>
-          Total Collection: <Typography component="span" sx={{ fontWeight: 400, color: '#000', ml: 1 }}>$1,759.10</Typography>
+        <Typography sx={{ fontSize: '0.85rem', color: '#337ab7', fontWeight: 600 }}>
+          Total Collection: <Typography component="span" sx={{ fontWeight: 600, color: '#333', ml: 1 }}>$1,759.10</Typography>
         </Typography>
       </Box>
-    </Box>
+    </ReportLayout>
   );
 };
 
 export default TotalCollectionIndividuals;
-

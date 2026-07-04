@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Typography, Grid, Paper, IconButton, Link as MuiLink } from '@mui/material';
+import { Box, Typography, Paper, IconButton } from '@mui/material';
 import { Edit } from '@mui/icons-material';
+import { ReportLayout } from '../../../../components/reports/ui';
 
 const SavedReportCard = ({ title, count, reports = [] }) => {
   return (
@@ -8,28 +9,29 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
       sx={{ 
         p: 3, 
         height: 350, 
-        backgroundColor: '#f1f5f9', 
+        backgroundColor: '#f8f9fa', 
         boxShadow: 'none', 
         borderRadius: 1,
+        border: '1px solid #e0e0e0',
         display: 'flex',
         flexDirection: 'column'
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
-        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, color: '#1a3a6b' }}>
+        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, color: '#333' }}>
           {title}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
+          <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem', fontWeight: 500 }}>
             {count} report/s
           </Typography>
-          <IconButton size="small" sx={{ p: 0, color: '#94a3b8' }}>
+          <IconButton size="small" sx={{ p: 0, color: '#999' }}>
             <Edit sx={{ fontSize: 16 }} />
           </IconButton>
           <Typography 
             variant="caption" 
             sx={{ 
-              color: '#3b82f6', 
+              color: '#337ab7', 
               fontSize: '0.75rem', 
               cursor: 'pointer',
               fontWeight: 500,
@@ -45,7 +47,7 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
         flexGrow: 1,
         overflowY: 'auto',
         pr: 1,
-        '&::-webkit-scrollbar': { width: '8px' },
+        '&::-webkit-scrollbar': { width: '6px' },
         '&::-webkit-scrollbar-track': { backgroundColor: 'transparent' },
         '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
       }}>
@@ -56,7 +58,7 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
             sx={{ 
               display: 'block', 
               mb: 1.5, 
-              color: '#3b82f6', 
+              color: '#337ab7', 
               fontSize: '0.8rem',
               cursor: 'pointer',
               lineHeight: 1.4,
@@ -67,7 +69,7 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
           </Typography>
         ))}
         {reports.length === 0 && (
-          <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>
+          <Typography variant="body2" sx={{ color: '#999', fontSize: '0.8rem', fontStyle: 'italic' }}>
             No reports saved.
           </Typography>
         )}
@@ -77,7 +79,6 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
 };
 
 const SavedReports = () => {
-  // ... data stays the same ...
   const dailyReports = [
     'Daily Adjustments - Total Office',
     'Daily Collection - Total Office',
@@ -129,11 +130,7 @@ const SavedReports = () => {
   ];
 
   return (
-    <Box sx={{ p: 4, backgroundColor: '#fff', minHeight: '100vh' }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a3a6b', mb: 6, fontSize: '1.25rem' }}>
-        Saved Reports
-      </Typography>
-
+    <ReportLayout title="Saved Reports">
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: {
@@ -141,8 +138,9 @@ const SavedReports = () => {
           sm: '1fr 1fr',
           md: '1fr 1fr 1fr'
         },
-        gap: 4,
-        alignItems: 'start'
+        gap: 3,
+        alignItems: 'start',
+        mt: 2
       }}>
         <SavedReportCard title="Daily" count={8} reports={dailyReports} />
         <SavedReportCard title="Weekly" count={8} reports={weeklyReports} />
@@ -151,7 +149,7 @@ const SavedReports = () => {
         <SavedReportCard title="Aging" count={3} reports={agingReports} />
         <SavedReportCard title="Custom" count={5} reports={customReports} />
       </Box>
-    </Box>
+    </ReportLayout>
   );
 };
 

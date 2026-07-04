@@ -1,18 +1,8 @@
 import React from 'react';
 import {
-  Box,
-  Typography,
-  Grid,
-  Select,
-  MenuItem,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  Checkbox,
-  Button,
+  Box, Typography, Grid, Select, MenuItem, Radio, RadioGroup, FormControlLabel, Checkbox, Button
 } from '@mui/material';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import PrintIcon from '@mui/icons-material/Print';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox } from '../../../../components/reports/ui';
 
 const ProductionCollectionSummary = () => {
   const productionStats = [
@@ -40,60 +30,59 @@ const ProductionCollectionSummary = () => {
     { label: 'Total Adjustments:', value: '-$2,574.00' },
   ];
 
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="daily" 
+        prefix="Date Range:" 
+        defaultValue="daily"
+        options={[{ value: 'daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      </Box>
+
+      <ReportSelect 
+        label="All" 
+        prefix="Provider:" 
+        defaultValue="All"
+        options={[{ value: 'All', label: 'Select Provider' }]}
+      />
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <RadioGroup row defaultValue="no-grouping">
+        <FormControlLabel value="no-grouping" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>No Grouping</Typography>} />
+        <FormControlLabel value="group-provider" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Group By Provider</Typography>} />
+      </RadioGroup>
+      <Box sx={{ ml: 2 }}>
+        <ReportCheckbox label="Show Summary Per Day" />
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Production & Collection Summary Report:
-      </Typography>
-
-      {/* Filters Section */}
-      <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Grid item>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
-            <Select size="small" defaultValue="daily" sx={{ minWidth: 100, fontSize: '0.75rem' }}>
-              <MenuItem value="daily">Daily</MenuItem>
-            </Select>
-          </Grid>
-          <Grid item>
-            <Typography variant="caption" color="primary">⬅ May 08, 2026 ⮕ Date: 05/08/2026</Typography>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Grid item>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Provider:</Typography>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', fontSize: '0.75rem', bgcolor: '#4a90e2' }}>Select Provider ⌄</Button>
-          </Grid>
-          <Grid item sx={{ ml: 2 }}>
-            <RadioGroup row defaultValue="no-grouping">
-              <FormControlLabel value="no-grouping" control={<Radio size="small" />} label={<Typography variant="caption">No Grouping</Typography>} />
-              <FormControlLabel value="group-provider" control={<Radio size="small" />} label={<Typography variant="caption">Group By Provider</Typography>} />
-            </RadioGroup>
-          </Grid>
-        </Grid>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-          <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Show Summary Per Day</Typography>} />
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
-        <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#ef4444' }}>Print</Button>
-      </Box>
+    <ReportLayout title="Production & Collection Summary Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Stats Section */}
-      <Grid container spacing={8} sx={{ px: 4 }}>
+      <Grid container spacing={4} sx={{ px: 2, py: 3, backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: 1 }}>
         <Grid item xs={12} md={5}>
           {productionStats.map((stat, idx) => (
             <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 180, color: stat.isFormula ? 'primary.main' : 'inherit' }}>{stat.label}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 180, color: stat.isFormula ? '#337ab7' : 'text.primary' }}>{stat.label}</Typography>
               <Typography variant="caption" sx={{ fontWeight: stat.isFormula || stat.value !== '$0.00' ? 700 : 400 }}>{stat.value}</Typography>
             </Box>
           ))}
@@ -102,27 +91,23 @@ const ProductionCollectionSummary = () => {
         <Grid item xs={12} md={7}>
           {collectionStats.map((stat, idx) => (
             <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 260, color: 'primary.main' }}>{stat.label}</Typography>
-              <Typography variant="caption" sx={{ fontWeight: stat.value !== '$0.00' ? 700 : 400, ml: 2 }}>{rowValue(stat.value)}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 260, color: '#337ab7' }}>{stat.label}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: stat.value !== '$0.00' ? 700 : 400, ml: 2 }}>{stat.value}</Typography>
             </Box>
           ))}
         </Grid>
-      </Grid>
 
-      {/* Footer Calculation */}
-      <Box sx={{ mt: 8, display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main' }}>Collection Percentage:</Typography>
-        <Typography variant="caption" sx={{ fontWeight: 700 }}>
-          (Total Collection + Collection Adjustment) / Net est. Production * 100 = 0%
-        </Typography>
-      </Box>
-    </Box>
+        {/* Footer Calculation */}
+        <Grid item xs={12} sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#337ab7' }}>Collection Percentage:</Typography>
+          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+            (Total Collection + Collection Adjustment) / Net est. Production * 100 = 0%
+          </Typography>
+        </Grid>
+      </Grid>
+    </ReportLayout>
   );
 };
 
-// Helper to format values for bolding and color if necessary
-const rowValue = (val) => {
-  return val;
-};
-
 export default ProductionCollectionSummary;
+

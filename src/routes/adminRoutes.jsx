@@ -26,9 +26,9 @@ import PrePostOps from '../pages/admin/PrePostOps';
 import ReportsDashboard from '../pages/admin/ReportsDashboard';
 import AdvancedReporting from '../pages/admin/AdvancedReporting';
 
-const adminOnly = (children) => (
+const adminOnly = (children, hideSidebar = false) => (
   <ProtectedRoute requiredRoles={['Admin']}>
-    <Layout>{children}</Layout>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
@@ -89,8 +89,8 @@ const adminRoutes = [
   <Route key="/admin/clinical-management/TreatmentPlan-Presentation" path="/admin/clinical-management/TreatmentPlan-Presentation" element={adminOnly(<TreatmentPlanPresentation />)} />,
   <Route key="/admin/clinical-management/informed-consent" path="/admin/clinical-management/informed-consent" element={adminOnly(<InformedConsent />)} />,
   <Route key="/admin/clinical-management/pre-post-ops" path="/admin/clinical-management/pre-post-ops" element={adminOnly(<PrePostOps />)} />,
-  <Route key="/admin/reports/kpi" path="/admin/reports/kpi" element={adminOnly(<ReportsDashboard />)} />,
-  <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />)} />,
+  <Route key="/admin/reports/kpi" path="/admin/reports/kpi" element={adminOnly(<ReportsDashboard />, true)} />,
+  <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />, true)} />,
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];

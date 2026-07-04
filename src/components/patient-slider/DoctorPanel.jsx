@@ -1,5 +1,5 @@
 import { Box, InputAdornment, MenuItem, Select, Typography } from "@mui/material";
-import { PersonOutlined, CalendarMonth } from "@mui/icons-material";
+import { MedicalServicesOutlined, CalendarTodayOutlined } from "@mui/icons-material";
 import { ApptBlock, selectSx } from "./helpers";
 
 const DoctorPanel = ({ pt }) => (
@@ -7,7 +7,7 @@ const DoctorPanel = ({ pt }) => (
     <Select size="small" displayEmpty value="" sx={selectSx}
       startAdornment={
         <InputAdornment position="start" sx={{ mr: 0 }}>
-          <PersonOutlined sx={{ fontSize: "14px", color: "#9aa3ae" }} />
+          <MedicalServicesOutlined sx={{ fontSize: "14px", color: "#9aa3ae" }} />
         </InputAdornment>
       }
     >
@@ -21,7 +21,7 @@ const DoctorPanel = ({ pt }) => (
       date={pt.nextTxAppt.date}
       time={pt.nextTxAppt.time}
       provider={pt.nextTxAppt.provider}
-      icon={<CalendarMonth sx={{ fontSize: "12px" }} />}
+      icon={<CalendarTodayOutlined sx={{ fontSize: "12px" }} />}
     />
 
     <Typography sx={{
