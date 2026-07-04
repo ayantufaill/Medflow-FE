@@ -4,6 +4,7 @@ import ViewToggle from './ViewToggle';
 import DateNavigation from './DateNavigation';
 import ActionIconsBar from './ActionIconsBar';
 import NewAppointmentButton from './NewAppointmentButton';
+import SchedulePatientSearch from './SchedulePatientSearch';
 import VerticalDivider from '../../common/VerticalDivider';
 import { useScheduleState } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
@@ -54,7 +55,12 @@ const ScheduleGridHeader = ({ onNewAppointment }) => {
           onPrev={handlePrev}
           onNext={handleNext}
         />
-        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Patient search lives in the center of the header so staff can quickly
+            look up a patient without leaving the schedule view. Selecting a result
+            sets currentPatient in Redux and the left panel card updates automatically. */}
+        <SchedulePatientSearch />
+
         <ActionIconsBar />
         <VerticalDivider height="36px" />
         <NewAppointmentButton onClick={onNewAppointment} />

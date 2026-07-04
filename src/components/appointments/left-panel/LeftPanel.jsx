@@ -33,11 +33,13 @@ const LeftPanel = () => {
             {/* Search is always shown — the user must be able to search before a patient is selected */}
             <PatientSearch />
 
-            {/* Card and actions render only once a patient has been selected from search */}
+            {/* Card and actions render only once a patient has been selected from search.
+                key forces a full remount when the selected patient changes so stale
+                data never bleeds through from a previous patient's render. */}
             {currentPatient && (
               <>
-                <PatientCard />
-                <PatientActions />
+                <PatientCard key={currentPatient._id || currentPatient.id} />
+                <PatientActions key={`actions-${currentPatient._id || currentPatient.id}`} />
               </>
             )}
           </>
