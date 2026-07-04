@@ -1,12 +1,12 @@
 import { Box } from "@mui/material";
-import { Add, LocalOffer } from "@mui/icons-material";
+import { Add, LocalOfferOutlined } from "@mui/icons-material";
 import { Label } from "./helpers";
 import { COLOR_TAGS } from "./constants";
 
 const ColorTagPicker = ({ selected, onChange }) => (
   <Box>
     <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mb: "8px" }}>
-      <LocalOffer sx={{ fontSize: "14px", color: "#6b7280" }} />
+      <LocalOfferOutlined sx={{ fontSize: "14px", color: "#6b7280" }} />
       <Label sx={{ mb: 0 }}>Tags</Label>
     </Box>
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>

@@ -1,15 +1,8 @@
 import React from 'react';
 import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from '@mui/material';
+import { ReportLayout, ReportFilterBar } from '../../../../components/reports/ui';
 
 const MOCK_MODIFICATIONS = [
   { action: 'Add', trans: 'pay #25197', proc: 'D0120', rendering: 'SAB', billing: 'SAB', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '+$31.00', accountCredit: '$0.00' },
@@ -23,23 +16,28 @@ const MOCK_MODIFICATIONS = [
 ];
 
 const ModificationsReport = () => {
-  return (
-    <Box sx={{ p: 0 }}>
-      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', border: '1px solid #000' }}>
-          <Box sx={{ px: 2, py: 0.5, borderRight: '1px solid #000', backgroundColor: '#f5f5f5' }}>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>affected date:</Typography>
-          </Box>
-          <Box sx={{ px: 2, py: 0.5 }}>
-            <Typography sx={{ fontSize: '0.8rem' }}>05/08/2026</Typography>
-          </Box>
-        </Box>
+  const topFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b' }}>Affected Date:</Typography>
+        <Typography sx={{ fontSize: '0.8rem', color: '#337ab7', fontWeight: 600, borderBottom: '1px solid #ccc', pb: 0.5 }}>05/08/2026</Typography>
       </Box>
+    </>
+  );
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #000', borderRadius: 0 }}>
-        <Table size="small" sx={{ '& .MuiTableCell-root': { border: '1px solid #000', px: 1, py: 0.5 } }}>
+  return (
+    <ReportLayout title="Modifications Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
+
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+        <Table size="small" sx={{ '& .MuiTableCell-root': { borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', px: 1, py: 1 } }}>
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
+            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Action</TableCell>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>transaction #</TableCell>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>procedures</TableCell>
@@ -49,7 +47,7 @@ const ModificationsReport = () => {
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>collection</TableCell>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>account credit</TableCell>
             </TableRow>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
+            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>fees</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>credit adj</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>debit adj</TableCell>
@@ -59,22 +57,22 @@ const ModificationsReport = () => {
             {MOCK_MODIFICATIONS.map((row, index) => {
               const isAdd = row.action === 'Add';
               const isVoid = row.action === 'Void';
-              const bgColor = isAdd ? '#e6f4ea' : isVoid ? '#fce8e6' : '#fff';
-              const textColor = isAdd ? '#007b3e' : isVoid ? '#d93025' : '#000';
-              const collectionColor = row.collection.startsWith('-') ? '#d93025' : row.collection.startsWith('+') ? '#007b3e' : '#000';
+              const bgColor = isAdd ? '#f6fdf9' : isVoid ? '#fff5f5' : '#fff';
+              const textColor = isAdd ? '#166534' : isVoid ? '#991b1b' : '#000';
+              const collectionColor = row.collection.startsWith('-') ? '#991b1b' : row.collection.startsWith('+') ? '#166534' : '#000';
 
               return (
                 <TableRow key={index} sx={{ backgroundColor: bgColor }}>
                   <TableCell sx={{ fontSize: '0.75rem', color: textColor, fontWeight: 600 }}>{row.action}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: '#0052cc', textDecoration: 'underline' }}>{row.trans}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{row.trans}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>{row.proc}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>{row.rendering}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>{row.billing}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>{row.fees}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: row.creditAdj.startsWith('-') ? '#007b3e' : row.creditAdj.startsWith('+') ? '#d93025' : '#000' }}>{row.creditAdj}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', color: row.creditAdj.startsWith('-') ? '#166534' : row.creditAdj.startsWith('+') ? '#991b1b' : '#000' }}>{row.creditAdj}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>{row.debitAdj}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', color: collectionColor }}>{row.collection}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: row.accountCredit.startsWith('+') ? '#007b3e' : '#000' }}>{row.accountCredit}</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', color: row.accountCredit.startsWith('+') ? '#166534' : '#000' }}>{row.accountCredit}</TableCell>
                 </TableRow>
               );
             })}
@@ -83,22 +81,22 @@ const ModificationsReport = () => {
             <TableRow sx={{ backgroundColor: '#fff' }}>
               <TableCell colSpan={5} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>totals modifications</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>$0.00</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#d93025' }}>-$2,574.00</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#991b1b' }}>-$2,574.00</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>$0.00</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#007b3e' }}>+$1,868.00</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#007b3e' }}>+$107.70</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#166534' }}>+$1,868.00</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#166534' }}>+$107.70</TableCell>
             </TableRow>
             <TableRow sx={{ backgroundColor: '#fff' }}>
               <TableCell colSpan={3} sx={{ border: 'none' }}></TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', backgroundColor: '#f5f5f5' }}>net prod modification</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', backgroundColor: '#f5f5f5' }}>(prod + adj)</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', backgroundColor: '#f5f5f5', color: '#d93025' }}>-$2,466.30</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', backgroundColor: '#f8f9fa' }}>net prod modification</TableCell>
+              <TableCell sx={{ fontSize: '0.75rem', backgroundColor: '#f8f9fa' }}>(prod + adj)</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', backgroundColor: '#f8f9fa', color: '#991b1b' }}>-$2,466.30</TableCell>
               <TableCell colSpan={4} sx={{ border: 'none' }}></TableCell>
             </TableRow>
           </TableBody>
         </Table>
       </TableContainer>
-    </Box>
+    </ReportLayout>
   );
 };
 

@@ -1,7 +1,7 @@
 import { Box, Typography, Divider } from '@mui/material';
 import {
-  Phone, Email, AccessTime, ContentCopy,
-  CalendarMonth, Forum, Autorenew,
+  PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
+  CalendarMonthOutlined, PendingOutlined, Autorenew,
 } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
@@ -15,17 +15,17 @@ const TAGS = [
 ];
 
 const ACTION_BUTTONS = [
-  { label: 'Call',    icon: <Phone sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false },
-  { label: 'Email',   icon: <Email sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true  },
-  { label: 'Book',    icon: <CalendarMonth sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false },
-  { label: 'Jump to', icon: <Forum sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false },
+  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false },
+  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true  },
+  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false },
+  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false },
 ];
 
 const ContactRow = ({ icon, text }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
     <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
     <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{text}</Typography>
-    <ContentCopy sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
+    <ContentCopyOutlined sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
   </Box>
 );
 
@@ -76,9 +76,9 @@ const PatientCard = () => (
     {/* Contact info + Hx badge */}
     <Box sx={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <ContactRow icon={<Phone sx={{ fontSize: '14px' }} />} text="+1 (855) 849-5255" />
-        <ContactRow icon={<Email sx={{ fontSize: '14px' }} />} text="jaylen@oryxdental.com" />
-        <ContactRow icon={<AccessTime sx={{ fontSize: '14px' }} />} text="DOB: 10/12/1982" />
+        <ContactRow icon={<PhoneOutlined sx={{ fontSize: '14px' }} />} text="+1 (855) 849-5255" />
+        <ContactRow icon={<EmailOutlined sx={{ fontSize: '14px' }} />} text="jaylen@oryxdental.com" />
+        <ContactRow icon={<AccessTimeOutlined sx={{ fontSize: '14px' }} />} text="DOB: 10/12/1982" />
       </Box>
 
       {/* Hx badge — Autorenew arrows with "Hx" overlaid */}

@@ -1,25 +1,11 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Radio,
-  RadioGroup,
-  IconButton,
-  Collapse,
+  Box, Typography, Select, MenuItem, Checkbox, FormControlLabel,
+  Button, Table, TableBody, TableCell, TableHead, TableRow, Radio, RadioGroup,
+  IconButton, Collapse,
 } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 
 const MOCK_PAYMENT_PLANS = [
   {
@@ -59,18 +45,18 @@ const MOCK_PAYMENT_PLANS = [
   }
 ];
 
-const Row = ({ row }) => {
+const Row = ({ row, index }) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <>
-      <TableRow sx={{ '& > *': { borderBottom: 'unset' } }}>
+    <React.Fragment>
+      <TableRow sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc', '& > *': { borderBottom: 'unset' } }}>
         <TableCell sx={{ py: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <IconButton size="small" onClick={() => setOpen(!open)}>
-              {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+              {open ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
             </IconButton>
-            <Typography sx={{ fontSize: '0.75rem', color: '#0052cc', textDecoration: 'underline', ml: 1 }}>{row.patient}</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: '#337ab7', textDecoration: 'underline', ml: 1, cursor: 'pointer' }}>{row.patient}</Typography>
           </Box>
         </TableCell>
         <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.createdOn}</TableCell>
@@ -83,15 +69,15 @@ const Row = ({ row }) => {
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.lastBilled}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.lastPayment}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.type}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.status}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000', fontWeight: 500 }}>{row.status}</TableCell>
       </TableRow>
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={12}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1, backgroundColor: '#f9f9f9', p: 2 }}>
+            <Box sx={{ margin: 1, backgroundColor: '#f8f9fa', p: 2, borderRadius: 1, border: '1px solid #e0e0e0' }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Amount</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Status</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Date Created</TableCell>
@@ -104,9 +90,9 @@ const Row = ({ row }) => {
                 </TableHead>
                 <TableBody>
                   {row.history.map((h, i) => (
-                    <TableRow key={i}>
+                    <TableRow key={i} sx={{ backgroundColor: '#fff' }}>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{h.amount}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', color: h.status === 'Paid' ? '#007b3e' : '#d93025' }}>{h.status}</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', color: h.status === 'Paid' ? '#166534' : '#d93025', fontWeight: 500 }}>{h.status}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{h.created}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{h.due}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem' }}>{h.downPayment}</TableCell>
@@ -115,99 +101,92 @@ const Row = ({ row }) => {
                       <TableCell sx={{ fontSize: '0.7rem' }}>{h.error}</TableCell>
                     </TableRow>
                   ))}
+                  {row.history.length === 0 && (
+                    <TableRow sx={{ backgroundColor: '#fff' }}>
+                      <TableCell colSpan={8} align="center" sx={{ fontSize: '0.75rem', py: 2, color: 'text.secondary' }}>No history available</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </Box>
           </Collapse>
         </TableCell>
       </TableRow>
-    </>
+    </React.Fragment>
   );
 };
 
 const PaymentPlans = () => {
   const [filterType, setFilterType] = useState('All');
 
-  return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
-        Payment Plans Report:
-      </Typography>
+  const columns = [
+    { label: 'Patient' },
+    { label: 'Created On' },
+    { label: 'Payment Amount' },
+    { label: 'Total Payments' },
+    { label: 'Remaining Payments' },
+    { label: 'Remaining Balance' },
+    { label: 'Next Payment Due' },
+    { label: 'Missed Payments' },
+    { label: 'Last Billed On' },
+    { label: 'Last Payment Due' },
+    { label: 'Type' },
+    { label: 'Status' },
+  ];
 
-      {/* Filters */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Created On Date Filter:</Typography>
-          <Select value="Range" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2025</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <Typography sx={{ fontSize: '0.85rem', borderBottom: '1px solid #ccc' }}>05/08/2026</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Filter by Status:</Typography>
-          <Select value="Select Status" size="small" sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff' }}>
-            <MenuItem value="Select Status">Select Status</MenuItem>
-          </Select>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28 }}>Failed</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28 }}>Pending</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28 }}>Scheduled</Button>
-        </Box>
+  const topFilters = (
+    <>
+      <ReportSelect defaultValue="Range" prefix="Created On Date Filter:" options={[{ value: 'Range', label: 'Range' }]} width="100px" />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', borderBottom: '1px solid #ccc', pb: 0.5 }}>05/08/2025</Typography>
       </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', borderBottom: '1px solid #ccc', pb: 0.5 }}>05/08/2026</Typography>
+      </Box>
+      <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <ReportSelect defaultValue="Select Status" prefix="Filter by Status:" options={[{ value: 'Select Status', label: 'Select Status' }]} width="160px" />
+        <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#4a89dc', color: '#4a89dc', textTransform: 'none', '&:hover': { backgroundColor: '#f0f7ff' } }}>Failed</Button>
+        <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#4a89dc', color: '#4a89dc', textTransform: 'none', '&:hover': { backgroundColor: '#f0f7ff' } }}>Pending</Button>
+        <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#4a89dc', color: '#4a89dc', textTransform: 'none', '&:hover': { backgroundColor: '#f0f7ff' } }}>Scheduled</Button>
+      </Box>
+    </>
+  );
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter by Type:</Typography>
-        <RadioGroup row value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-          <FormControlLabel value="All" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>All</Typography>} />
-          <FormControlLabel value="Manual" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Manual Fee</Typography>} />
-          <FormControlLabel value="Regular" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Regular Invoices</Typography>} />
-          <FormControlLabel value="Membership" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Membership Plans</Typography>} />
+  const bottomFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter by Type:</Typography>
+        <RadioGroup row value={filterType} onChange={(e) => setFilterType(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
+          <FormControlLabel value="All" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>All</Typography>} sx={{ m: 0, mr: 1 }} />
+          <FormControlLabel value="Manual" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Manual Fee</Typography>} sx={{ m: 0, mr: 1 }} />
+          <FormControlLabel value="Regular" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Regular Invoices</Typography>} sx={{ m: 0, mr: 1 }} />
+          <FormControlLabel value="Membership" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Membership Plans</Typography>} sx={{ m: 0 }} />
         </RadioGroup>
       </Box>
+      <ReportCheckbox label="Include Archived" />
+    </>
+  );
 
-      <Box sx={{ mb: 3 }}>
-        <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '0.85rem' }}>Include Archived</Typography>} />
-      </Box>
+  return (
+    <ReportLayout title="Payment Plans Report">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply Filters')}
+        onPrint={() => window.print()}
+        onExportCsv={() => console.log('Exporting CSV...')}
+      />
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
-      </Box>
-
-      {/* Table */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Patient</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Created On</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Payment Amount</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Total Payments</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Remaining Payments</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Remaining Balance</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Next Payment Due</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Missed Payments</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Last Billed On</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Last Payment Due</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Type</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {MOCK_PAYMENT_PLANS.map((row, index) => <Row key={index} row={row} />)}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      {/* Shared Data Table */}
+      <ReportDataTable 
+        columns={columns} 
+        data={MOCK_PAYMENT_PLANS} 
+        renderRow={(row, idx) => <Row key={idx} index={idx} row={row} />} 
+      />
+    </ReportLayout>
   );
 };
 
 export default PaymentPlans;
-

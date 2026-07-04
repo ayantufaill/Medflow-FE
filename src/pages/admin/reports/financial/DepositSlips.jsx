@@ -1,22 +1,8 @@
 import React from 'react';
 import {
-  Box,
-  Typography,
-  Grid,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  Checkbox,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Divider,
+  Box, Typography, Grid, Radio, RadioGroup, FormControlLabel, Checkbox, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Divider
 } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
 
 const DepositSlips = () => {
   const paymentTypes = [
@@ -45,29 +31,25 @@ const DepositSlips = () => {
   );
 
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Deposit Slips:
-      </Typography>
-
-      <Grid container spacing={4}>
+    <ReportLayout title="Deposit Slips:">
+      <Grid container spacing={4} sx={{ mt: 1 }}>
         {/* Left Section - Controls */}
         <Grid item xs={12} md={6} sx={{ borderRight: '1px solid #e0e0e0', pr: 4 }}>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Create new deposit slip:</Typography>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#337ab7' }}>Create new deposit slip:</Typography>
           
           <RadioGroup row defaultValue="daily" sx={{ mb: 2 }}>
-            <FormControlLabel value="daily" control={<Radio size="small" />} label={<Typography variant="caption">Daily</Typography>} />
-            <FormControlLabel value="range" control={<Radio size="small" />} label={<Typography variant="caption">Range</Typography>} />
-            <FormControlLabel value="weekly" control={<Radio size="small" />} label={<Typography variant="caption">Weekly</Typography>} />
-            <FormControlLabel value="monthly" control={<Radio size="small" />} label={<Typography variant="caption">Monthly</Typography>} />
+            <FormControlLabel value="daily" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Daily</Typography>} />
+            <FormControlLabel value="range" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Range</Typography>} />
+            <FormControlLabel value="weekly" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Weekly</Typography>} />
+            <FormControlLabel value="monthly" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Monthly</Typography>} />
           </RadioGroup>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Typography variant="caption">Transactions done from: 05/08/2026</Typography>
-            <Typography variant="caption">to: 05/08/2026</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>Transactions done from: 05/08/2026</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>to: 05/08/2026</Typography>
             <FormControlLabel
               control={<Checkbox size="small" />}
-              label={<Typography variant="caption">Group by provider</Typography>}
+              label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Group by provider</Typography>}
             />
           </Box>
 
@@ -109,14 +91,14 @@ const DepositSlips = () => {
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-            <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Create Deposit</Button>
-            <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
+            <Button variant="contained" sx={{ textTransform: 'none', backgroundColor: '#00BBAB', '&:hover': { backgroundColor: '#009b8e' } }}>Create Deposit</Button>
+            <Button variant="contained" sx={{ textTransform: 'none', backgroundColor: '#d9a366', '&:hover': { backgroundColor: '#c89255' } }}>Create Template</Button>
           </Box>
         </Grid>
 
         {/* Right Section - Preview */}
         <Grid item xs={12} md={6}>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Deposit slip:</Typography>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#337ab7' }}>Deposit slip:</Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>No slip created.</Typography>
           <Typography variant="caption" color="text.secondary">
             Create a deposit slip by editing the left side options and clicking 'create'.
@@ -128,7 +110,7 @@ const DepositSlips = () => {
 
       {/* Bottom Section - Previous Slips */}
       <Box>
-        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: '#337ab7', display: 'flex', alignItems: 'center' }}>
           <Box component="span" sx={{ mr: 1 }}>⌄</Box> Previous Deposit Slips:
         </Typography>
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
@@ -152,7 +134,7 @@ const DepositSlips = () => {
                 { date: '08/02/2023', amount: '6,212.20', note: '' },
                 { date: '08/02/2023', amount: '8,522.40', note: '' },
               ].map((row, idx) => (
-                <TableRow key={idx} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
+                <TableRow key={idx} sx={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#fcfcfc' }}>
                   <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.date}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>${row.amount}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.note}</TableCell>
@@ -162,7 +144,7 @@ const DepositSlips = () => {
           </Table>
         </TableContainer>
       </Box>
-    </Box>
+    </ReportLayout>
   );
 };
 

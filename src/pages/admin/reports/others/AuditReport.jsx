@@ -1,25 +1,9 @@
 import React from 'react';
 import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Select, 
-  MenuItem, 
-  FormControl, 
-  InputLabel, 
-  Button, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper,
-  Divider,
-  IconButton,
-  InputAdornment
+  Box, Typography, TextField, Select, MenuItem, Button, IconButton, Divider
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Search } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput } from '../../../../components/reports/ui';
 
 const AuditReport = () => {
   const rows = [
@@ -32,114 +16,113 @@ const AuditReport = () => {
     { id: 7, patient: '', user: 'Babar Magsi', category: 'Report', subcategory: 'Report', action: 'Action Performed', object: 'Advanced Report', date: '05/08/2026 02:23 PM', message: 'Success, duration=281ms', diff: { key: '', old: '', new: '' } },
   ];
 
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="Daily" 
+        prefix="Date Range:" 
+        defaultValue="Daily"
+        options={[{ value: 'Daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 2, mr: 2 }}>
+        <IconButton size="small" sx={{ color: '#337ab7', p: 0 }}><ChevronLeft fontSize="small" /></IconButton>
+        <Typography variant="body2" sx={{ color: '#337ab7', fontWeight: 600 }}>May 07, 2026</Typography>
+        <Typography variant="body2" sx={{ mx: 0.5, color: '#337ab7' }}>➔</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 600 }}>Date:</Typography>
+        <Typography variant="body2" sx={{ color: '#337ab7', fontWeight: 600 }}>05/07/2026</Typography>
+        <IconButton size="small" sx={{ color: '#337ab7', p: 0 }}><ChevronRight fontSize="small" /></IconButton>
+      </Box>
+
+      <ReportSearchInput 
+        placeholder="Search User" 
+        value="" 
+        onChange={() => {}}
+        sx={{ mr: 2 }}
+      />
+      
+      <ReportSearchInput 
+        placeholder="Search Patient" 
+        value="" 
+        onChange={() => {}}
+        sx={{ mr: 2 }}
+      />
+
+      <ReportSelect 
+        label="None" 
+        prefix="Action:" 
+        defaultValue="None"
+        options={[{ value: 'None', label: 'None' }]}
+        sx={{ mr: 2 }}
+      />
+
+      <ReportSelect 
+        label="None" 
+        prefix="Category:" 
+        defaultValue="None"
+        options={[{ value: 'None', label: 'None' }]}
+      />
+    </>
+  );
+
   return (
-    <Box sx={{ p: 1 }}>
-      <Typography variant="body2" color="primary" sx={{ textDecoration: 'underline', mb: 2, cursor: 'pointer', display: 'inline-block' }}>
-        Audit Report:
-      </Typography>
+    <ReportLayout title="Audit Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply Filters')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Date Range:</Typography>
-          <Select defaultValue="Daily" size="small" variant="standard" sx={{ minWidth: 100, fontSize: '0.85rem' }}>
-            <MenuItem value="Daily">Daily</MenuItem>
-          </Select>
-        </Box>
+      <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <IconButton size="small"><ChevronLeft fontSize="small" /></IconButton>
-          <Typography variant="body2" color="primary">May 07, 2026</Typography>
-          <Typography variant="body2" sx={{ mx: 0.5 }}>➔</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Date:</Typography>
-          <Typography variant="body2" color="primary">05/07/2026</Typography>
-          <IconButton size="small"><ChevronRight fontSize="small" /></IconButton>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Filter by User:</Typography>
-          <TextField 
-            placeholder="Search User" 
-            size="small" 
-            variant="outlined" 
-            sx={{ width: 150, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }}
-          />
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Filter by Patient:</Typography>
-          <TextField 
-            placeholder="Search Patient" 
-            size="small" 
-            variant="outlined" 
-            sx={{ width: 150, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }}
-          />
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Action:</Typography>
-          <Select defaultValue="None" size="small" variant="standard" sx={{ minWidth: 100, fontSize: '0.85rem' }}>
-            <MenuItem value="None">None</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Category:</Typography>
-          <Select defaultValue="None" size="small" variant="standard" sx={{ minWidth: 100, fontSize: '0.85rem' }}>
-            <MenuItem value="None">None</MenuItem>
-          </Select>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 3 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#8db3d9', textTransform: 'none', px: 3 }}>Apply</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#f44336', textTransform: 'none', px: 3 }}>Print</Button>
-      </Box>
-
-      <Divider sx={{ my: 3, borderColor: '#d1a066' }} />
-
-      {/* Audit Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #eee' }}>
-        <Table size="small">
-          <TableHead sx={{ backgroundColor: '#f9fafb' }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Patient</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>User</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Category</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Subcategory</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Action</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Object</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Date</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee' }} rowSpan={2}>Message</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee', textAlign: 'center' }} colSpan={3}>Difference</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee', textAlign: 'center' }}>Key</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee', textAlign: 'center' }}>Old</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', border: '1px solid #eee', textAlign: 'center' }}>New</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.patient}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.user}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.category}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.subcategory}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.action}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.object}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.date}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee', maxWidth: 300, wordBreak: 'break-word' }}>{row.message}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.diff.key}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.diff.old}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem', border: '1px solid #eee' }}>{row.diff.new}</TableCell>
-              </TableRow>
+      {/* Audit Table Custom Render since it has merged headers */}
+      <Box sx={{ border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead style={{ backgroundColor: '#f8f9fa' }}>
+            <tr>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Patient</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>User</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Category</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Subcategory</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Action</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Object</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Date</th>
+              <th rowSpan="2" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>Message</th>
+              <th colSpan="3" style={{ padding: '12px 8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', textAlign: 'center' }}>Difference</th>
+            </tr>
+            <tr>
+              <th style={{ padding: '8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0', textAlign: 'center' }}>Key</th>
+              <th style={{ padding: '8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0', textAlign: 'center' }}>Old</th>
+              <th style={{ padding: '8px', fontSize: '0.75rem', fontWeight: 600, borderBottom: '1px solid #e0e0e0', textAlign: 'center' }}>New</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row.id} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc', borderBottom: '1px solid #e0e0e0' }}>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.patient}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.user}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.category}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.subcategory}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.action}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.object}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.date}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0', maxWidth: 300, wordBreak: 'break-word', color: '#666' }}>{row.message}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.diff.key}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem', borderRight: '1px solid #e0e0e0' }}>{row.diff.old}</td>
+                <td style={{ padding: '8px', fontSize: '0.75rem' }}>{row.diff.new}</td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan="11" style={{ padding: '16px', textAlign: 'center', color: '#666' }}>No audit logs found for this date range</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Box>
+    </ReportLayout>
   );
 };
 
 export default AuditReport;
+

@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-} from '@mui/material';
+import { TableCell, TableRow, Button } from '@mui/material';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import { ReportLayout, ReportFilterBar, ReportDataTable } from '../../../../components/reports/ui';
 
 const DUMMY_DATA = [
   { id: '1049', firstName: 'Sarah', lastName: 'Miller', dob: 'Feb 03, 1983', status: 'Inactive', subscriber: 'False' },
@@ -46,74 +36,48 @@ const DuplicatePatientsReport = () => {
     link.click();
   };
 
+  const columns = [
+    { label: 'ID' },
+    { label: 'First Name' },
+    { label: 'Last Name' },
+    { label: 'Date of Birth' },
+    { label: 'Status' },
+    { label: 'Subscriber' },
+  ];
+
+  const renderRow = (row, i) => (
+    <TableRow key={i} sx={{ backgroundColor: i % 4 < 2 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.id}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.firstName}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.lastName}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.dob}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.subscriber}</TableCell>
+    </TableRow>
+  );
+
   return (
-    <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
-      <Typography 
-        variant="body2" 
-        sx={{ color: '#337ab7', fontWeight: 500, mb: 2, textDecoration: 'underline', cursor: 'pointer' }}
-      >
-        Duplicate Patients Report:
-      </Typography>
+    <React.Fragment>
+      <ReportLayout title="Duplicate Patients Report">
+        <ReportFilterBar 
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={handleExportCSV}
+          onPrint={handlePrint}
+        />
 
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={() => setTemplateDialogOpen(true)}
-          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Create Template
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handleExportCSV}
-          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Export as CSV
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handlePrint}
-          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Print
-        </Button>
-      </Box>
-
-      {/* Table Section */}
-      <TableContainer component={Paper} elevation={0}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              {['ID', 'First Name', 'Last Name', 'Date of Birth', 'Status', 'Subscriber'].map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 600, fontSize: '0.72rem', borderBottom: '1px solid #ddd' }}>{h}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {DUMMY_DATA.map((row, i) => (
-              <TableRow key={i} sx={{ backgroundColor: i % 4 < 2 ? '#fff' : '#fcfcfc' }}>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.id}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.firstName}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.lastName}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.dob}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.subscriber}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+        <ReportDataTable 
+          columns={columns} 
+          data={DUMMY_DATA} 
+          renderRow={renderRow} 
+        />
+      </ReportLayout>
 
       <CreateTemplateDialog 
         open={templateDialogOpen} 
         onClose={() => setTemplateDialogOpen(false)} 
         onSave={handleSaveTemplate} 
       />
-    </Box>
+    </React.Fragment>
   );
 };
 

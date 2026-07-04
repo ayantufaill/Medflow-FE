@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { PlaylistAddCheck } from '@mui/icons-material';
+import { Checklist } from '@mui/icons-material';
 import RightPanelCard from './RightPanelCard';
 import AppointmentShortlistModal from './AppointmentShortlistModal';
 import { COLORS } from '../../../constants/colors';
@@ -22,7 +22,7 @@ const AppointmentShortlist = () => {
   return (
     <>
       <RightPanelCard
-        icon={<PlaylistAddCheck sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
+        icon={<Checklist sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
         title="Appointment Shortlist"
         count={7}
         headerAction="expand"
@@ -63,13 +63,13 @@ const AppointmentShortlist = () => {
               <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {toTitleCase(name)}
               </Typography>
-              <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>
+              <Typography sx={{ fontSize: fontSize.base, color: '#6b7280' }}>
                 {slot}
               </Typography>
             </Box>
 
             {/* Date */}
-            <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY, flexShrink: 0 }}>
+            <Typography sx={{ fontSize: fontSize.base, color: '#6b7280', flexShrink: 0 }}>
               {date}
             </Typography>
           </Box>
