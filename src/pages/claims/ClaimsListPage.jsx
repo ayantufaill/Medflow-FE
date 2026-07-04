@@ -7,6 +7,7 @@ import { insuranceCompanyService } from '../../services/insurance.service';
 import { patientService } from '../../services/patient.service';
 import ClaimAttachmentsDialog from '../../components/claims/attachments/ClaimAttachmentsDialog';
 import ClaimPrintPreviewDialog from '../../components/claims/ClaimPrintPreviewDialog';
+import { DenticalReportsTable } from '../../components/claims/DenticalReportsTable';
 import {
   Box,
   Typography,
@@ -44,6 +45,7 @@ import {
   Refresh as RefreshIcon,
   Edit as EditIcon,
   Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   AttachFile as AttachFileIcon,
   Sync as SyncIcon,
   Description as DescriptionIcon,
@@ -1870,6 +1872,20 @@ const ClaimsListPage = () => {
     setOpenAttachDialog(true);
   };
 
+  const handleToggleHide = async (claim) => {
+    try {
+      const newHidden = !claim.isHidden;
+      await claimService.updateClaim(claim.id, { isHidden: newHidden });
+      setRefreshTrigger((prev) => prev + 1);
+      setSnackbarMessage(`Claim ${newHidden ? 'hidden' : 'unhidden'} successfully`);
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error(err);
+      setSnackbarMessage('Failed to update claim visibility');
+      setSnackbarOpen(true);
+    }
+  };
+
   const handleSaveAttach = async ({ newFiles, retainedFiles }) => {
     try {
       setLoading(true);
@@ -3655,9 +3671,9 @@ const ClaimsListPage = () => {
                                   </IconButton>
                                 </Tooltip>
                                 {claim.showEye ? (
-                                  <Tooltip title="Preview ADA Form">
-                                    <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
-                                      <VisibilityIcon sx={{ fontSize: 14 }} />
+                                  <Tooltip title={claim.isHidden ? "Unhide Claim" : "Hide Claim"}>
+                                    <IconButton size="small" onClick={() => handleToggleHide(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                      {claim.isHidden ? <VisibilityOffIcon sx={{ fontSize: 14 }} /> : <VisibilityIcon sx={{ fontSize: 14 }} />}
                                     </IconButton>
                                   </Tooltip>
                                 ) : (
@@ -3697,9 +3713,9 @@ const ClaimsListPage = () => {
                                     <AttachFileIcon sx={{ fontSize: 16, transform: 'rotate(-45deg)' }} />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Preview Claim Form">
-                                  <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
-                                    <VisibilityIcon sx={{ fontSize: 14 }} />
+                                <Tooltip title={claim.isHidden ? "Unhide Claim" : "Hide Claim"}>
+                                  <IconButton size="small" onClick={() => handleToggleHide(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                    {claim.isHidden ? <VisibilityOffIcon sx={{ fontSize: 14 }} /> : <VisibilityIcon sx={{ fontSize: 14 }} />}
                                   </IconButton>
                                 </Tooltip>
                               </>

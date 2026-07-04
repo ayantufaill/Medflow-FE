@@ -9,6 +9,7 @@ import {
   CloudUpload as CloudUploadIcon,
   Edit as EditIcon,
   Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   Description as DescriptionIcon,
   ArrowRight as ArrowRightIcon,
   ArrowDropDown as ArrowDropDownIcon,
@@ -46,7 +47,8 @@ export const StandardClaimsTable = ({
   handleOpenEdit,
   handleOpenAttach,
   handleOpenPreview,
-  handleDeletePredetermination
+  handleDeletePredetermination,
+  handleToggleHide
 }) => {
   return (
             // STANDARD CLAIMS Data Table
@@ -571,9 +573,9 @@ export const StandardClaimsTable = ({
                                   </IconButton>
                                 </Tooltip>
                                 {claim.showEye ? (
-                                  <Tooltip title="Preview ADA Form">
-                                    <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
-                                      <VisibilityIcon sx={{ fontSize: 14 }} />
+                                  <Tooltip title={claim.isHidden ? "Unhide Claim" : "Hide Claim"}>
+                                    <IconButton size="small" onClick={() => handleToggleHide(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                      {claim.isHidden ? <VisibilityOffIcon sx={{ fontSize: 14 }} /> : <VisibilityIcon sx={{ fontSize: 14 }} />}
                                     </IconButton>
                                   </Tooltip>
                                 ) : (
@@ -604,9 +606,9 @@ export const StandardClaimsTable = ({
                                     <AttachFileIcon sx={{ fontSize: 14 }} />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Preview Claim Form">
-                                  <IconButton size="small" onClick={() => handleOpenPreview(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
-                                    <VisibilityIcon sx={{ fontSize: 14 }} />
+                                <Tooltip title={claim.isHidden ? "Unhide Claim" : "Hide Claim"}>
+                                  <IconButton size="small" onClick={() => handleToggleHide(claim)} sx={{ color: '#7d9cc4', p: 0.2 }}>
+                                    {claim.isHidden ? <VisibilityOffIcon sx={{ fontSize: 14 }} /> : <VisibilityIcon sx={{ fontSize: 14 }} />}
                                   </IconButton>
                                 </Tooltip>
                               </>

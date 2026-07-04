@@ -29,6 +29,7 @@ export const claimService = {
       claimFormat = '',
       showHidden = false,
       patientName = '',
+      tab = '',
     } = options;
 
     const params = new URLSearchParams();
@@ -48,6 +49,7 @@ export const claimService = {
     if (claimFormat) params.append('claimFormat', claimFormat);
     if (showHidden) params.append('showHidden', 'true');
     if (patientName) params.append('patientName', patientName);
+    if (tab) params.append('tab', tab);
 
     const response = await apiClient.get(`/claims?${params.toString()}`);
     const data = response.data.data;
