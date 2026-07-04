@@ -1,6 +1,8 @@
 import { Autocomplete, Box, TextField, Typography } from "@mui/material";
 import { Search } from "@mui/icons-material";
 import { FieldBox } from "./helpers";
+import PatientListCard from "../../layout/header/patient-dropdown/PatientListCard";
+import { toCardShape } from "../../layout/header/patient-dropdown/PatientDropdownPanel";
 
 const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSearch }) => {
   const getOptionLabel = (o) => {
@@ -17,22 +19,18 @@ const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSear
         loading={loadingPatients}
         getOptionLabel={getOptionLabel}
         value={value}
+        componentsProps={{ popper: { sx: { zIndex: 1400 } } }}
         onChange={(_, v) => onChange(v)}
         onInputChange={(_, v, reason) => { if (reason === "input" && onSearch) onSearch(v); }}
         renderOption={(props, o) => {
-          const name = o.name || o.fullName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
-          const initials = o.name
-            ? o.name.slice(0, 2).toUpperCase()
-            : `${o.firstName?.[0] || ""}${o.lastName?.[0] || ""}`.toUpperCase();
-          const id = o.patientId || o.chartNumber || o.id || o._id;
+          const cardData = toCardShape(o);
+          if (!cardData) return null;
+          
+          const { key, ...restProps } = props;
           return (
-            <Box component="li" {...props} key={o._id || o.id} sx={{ display: "flex", alignItems: "center", gap: "8px", py: "6px !important" }}>
-              <Box sx={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "#2262ef", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Typography sx={{ fontFamily: "Inter", fontSize: "10px", fontWeight: 700, color: "#fff" }}>{initials}</Typography>
-              </Box>
-              <Box>
-                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#09121f" }}>{name}</Typography>
-                {id && <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>pt #{id}</Typography>}
+            <Box component="li" key={key} {...restProps} sx={{ p: "0 !important" }}>
+              <Box sx={{ width: "100%" }}>
+                <PatientListCard patient={cardData} />
               </Box>
             </Box>
           );

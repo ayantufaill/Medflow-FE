@@ -8,6 +8,7 @@ import ColorTagPicker from "./ColorTagPicker";
 
 const AppointmentRightPanel = ({
   status, onStatusChange,
+  roomId, onRoomChange, rooms,
   durationMins, onDurationChange,
   providerRows, setProviderRows,
   preferredDentist, onPreferredDentistChange,
@@ -19,7 +20,7 @@ const AppointmentRightPanel = ({
   <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "18px" }}>
 
     <FieldBox label="Appointment status">
-      <Select
+      <Select MenuProps={{ sx: { zIndex: 1400 } }}
         size="small"
         fullWidth
         value={status}
@@ -32,12 +33,31 @@ const AppointmentRightPanel = ({
       </Select>
     </FieldBox>
 
+    <FieldBox label="Operatory">
+      <Select MenuProps={{ sx: { zIndex: 1400 } }}
+        size="small" fullWidth displayEmpty
+        value={roomId || ""}
+        onChange={(e) => onRoomChange(e.target.value)}
+        sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: roomId ? "#09121f" : "#9aa3ae" }}
+      >
+        <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select operatory</MenuItem>
+        {(rooms || []).map((r) => {
+          const roomVal = String(r._id || r.id || r.roomCode || r.title || r.name || "");
+          return (
+            <MenuItem key={roomVal} value={roomVal} sx={{ fontFamily: "Inter", fontSize: "13px" }}>
+              {r.name || r.title || r.roomCode || `Operatory ${r.id || ""}`}
+            </MenuItem>
+          );
+        })}
+      </Select>
+    </FieldBox>
+
     <DurationPicker value={durationMins} onChange={onDurationChange} />
 
     <ProviderTimesCard providerRows={providerRows} setProviderRows={setProviderRows} providers={providers} />
 
     <FieldBox label="Patient's preferred dentist">
-      <Select
+      <Select MenuProps={{ sx: { zIndex: 1400 } }}
         size="small" fullWidth displayEmpty
         value={preferredDentist}
         onChange={(e) => onPreferredDentistChange(e.target.value)}
@@ -51,7 +71,7 @@ const AppointmentRightPanel = ({
     </FieldBox>
 
     <FieldBox label="Patient's preferred hygienist">
-      <Select
+      <Select MenuProps={{ sx: { zIndex: 1400 } }}
         size="small" fullWidth displayEmpty
         value={preferredHygienist}
         onChange={(e) => onPreferredHygienistChange(e.target.value)}

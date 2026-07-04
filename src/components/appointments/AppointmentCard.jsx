@@ -106,7 +106,7 @@ const AppointmentCard = ({
           left: "2%",
           right: "2%",
           top: topPx + 2,
-          height: finalHeight - 4,
+          height: heightPx - 4,
           borderRadius: 1,
           bgcolor: "#6b6b6b", // Dark grey sticky note
           color: "#ffffff",
@@ -171,7 +171,7 @@ const AppointmentCard = ({
           left: "5%",
           right: "5%",
           top: topPx + 2,
-          height: finalHeight - 4,
+          height: heightPx - 4,
           borderRadius: 1.5,
           bgcolor: "#ffffff",
           color: "#000000",

@@ -13,8 +13,7 @@ const AddNewPatientAppointmentForm = ({
   loadingPatients = false,
   onPatientSearch,
   providers = [],
-  // eslint-disable-next-line no-unused-vars
-  rooms: _rooms = [],
+  rooms = [],
   // eslint-disable-next-line no-unused-vars
   appointmentTypes: _appointmentTypes = [],
   onSubmit,
@@ -23,8 +22,8 @@ const AddNewPatientAppointmentForm = ({
   initialPatient = null,
   initialDateTime = null,
   open = true,
-  // eslint-disable-next-line no-unused-vars
-  appointments: _appointments = [],
+  appointments = [],
+  initialRoomId = null,
 }) => {
   /* ── Left panel state ── */
   const [patient,           setPatient]           = useState(initialPatient || null);
@@ -33,7 +32,7 @@ const AddNewPatientAppointmentForm = ({
   const [timeMins,          setTimeMins]          = useState(initialDateTime ? initialDateTime.format("mm") : "00");
   const [amPm,              setAmPm]              = useState(initialDateTime ? initialDateTime.format("A") : "AM");
   const [visitType,         setVisitType]         = useState("recare");
-  const [procedures,        setProcedures]        = useState(INITIAL_PROCEDURES);
+  const [procedures,        setProcedures]        = useState([]);
   const [selectedTagLabels, setSelectedTagLabels] = useState(new Set());
   const [tagProcedureIds,   setTagProcedureIds]   = useState({});
   const [addingProcedure,   setAddingProcedure]   = useState(false);
@@ -41,7 +40,8 @@ const AddNewPatientAppointmentForm = ({
   const nextId = useRef(10);
 
   /* ── Right panel state ── */
-  const [status,             setStatus]             = useState("confirmed");
+  const [status,             setStatus]             = useState("unconfirmed");
+  const [roomId,             setRoomId]             = useState(initialRoomId != null ? String(initialRoomId) : "");
   const [durationMins,       setDurationMins]       = useState(60);
   const [providerRows,       setProviderRows]       = useState([{ id: 1, providerId: "", time: 60 }]);
   const [preferredDentist,   setPreferredDentist]   = useState("");
@@ -49,7 +49,53 @@ const AddNewPatientAppointmentForm = ({
   const [notes,              setNotes]              = useState("");
   const [selectedColorTags,  setSelectedColorTags]  = useState(new Set(["#eab308"]));
 
-  useEffect(() => { if (initialPatient) setPatient(initialPatient); }, [initialPatient]);
+  const availableRooms = useMemo(() => {
+    const h = parseInt(timeHours) % 12;
+    const hour = amPm === "PM" ? h + 12 : h;
+    const selectedStart = dayjs(apptDate).hour(hour).minute(parseInt(timeMins));
+    const selectedEnd = selectedStart.add(durationMins || 60, "minute");
+
+    const occupied = new Set();
+    appointments.forEach(appt => {
+      if (!appt.appointmentDate || !appt.roomId || !appt.startTime) return;
+      const apptDateStr = String(appt.appointmentDate).slice(0, 10);
+      if (apptDateStr !== selectedStart.format("YYYY-MM-DD")) return;
+
+      const [startH, startM] = appt.startTime.split(':').map(Number);
+      const apptStart = dayjs(apptDate).hour(startH).minute(startM);
+      const apptEnd = apptStart.add(appt.durationMinutes || 30, 'minute');
+
+      if (selectedStart.isBefore(apptEnd) && selectedEnd.isAfter(apptStart)) {
+        occupied.add(String(appt.roomId));
+      }
+    });
+    return rooms.filter(r => !occupied.has(String(r._id || r.id)));
+  }, [rooms, appointments, apptDate, timeHours, timeMins, amPm, durationMins]);
+
+  useEffect(() => {
+    if (open) {
+      setPatient(initialPatient || null);
+      setApptDate(initialDateTime || dayjs());
+      setTimeHours(initialDateTime ? initialDateTime.format("hh") : "09");
+      setTimeMins(initialDateTime ? initialDateTime.format("mm") : "00");
+      setAmPm(initialDateTime ? initialDateTime.format("A") : "AM");
+      setRoomId(initialRoomId != null ? String(initialRoomId) : "");
+      setVisitType("Treatment");
+      setProcedures([]);
+      setSelectedTagLabels(new Set());
+      setTagProcedureIds({});
+      setAddingProcedure(false);
+      setProcedureInput("");
+      setStatus("scheduled");
+      setRoomId("");
+      setDurationMins(60);
+      setProviderRows([{ id: Date.now(), providerId: "", time: 60 }]);
+      setPreferredDentist("");
+      setPreferredHygienist("");
+      setNotes("");
+      setSelectedColorTags(new Set(["#eab308"]));
+    }
+  }, [open, initialPatient, initialDateTime, initialRoomId]);
 
   const dateTime = useMemo(() => {
     const h = parseInt(timeHours || "9", 10);
@@ -108,13 +154,14 @@ const AddNewPatientAppointmentForm = ({
       status,
       notes,
       providerId: providerRows[0]?.providerId || undefined,
-      roomId:     undefined,
+      roomId:     roomId || undefined,
       customFields: {
         visitType,
         procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge }) => ({ code, treatment, charge })),
         preferredDentist,
         preferredHygienist,
         colorTags: [...selectedColorTags],
+        procedureTags: [...selectedTagLabels].map(l => l.split('-')[0]),
       },
     });
   };
@@ -170,6 +217,9 @@ const AddNewPatientAppointmentForm = ({
           <AppointmentRightPanel
             status={status}
             onStatusChange={setStatus}
+            roomId={roomId}
+            onRoomChange={setRoomId}
+            rooms={availableRooms}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
             providerRows={providerRows}

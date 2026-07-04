@@ -27,9 +27,11 @@ const ACTION_BUTTONS = [
 
 // Renders one contact-info row with an icon, text, and copy button.
 const ContactRow = ({ icon, text }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
     <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
-    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{text}</Typography>
+    <Typography noWrap sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, minWidth: 0, flexShrink: 1 }}>
+      {text}
+    </Typography>
     <ContentCopy
       sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }}
       onClick={() => navigator.clipboard?.writeText(text)}
@@ -121,8 +123,8 @@ const PatientCard = () => {
       </Box>
 
       {/* ── Contact info + Hx history indicator ─────────────────────────────── */}
-      <Box sx={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <Box sx={{ display: 'flex', gap: '6px', alignItems: 'flex-start', minWidth: 0 }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
           <ContactRow icon={<Phone sx={{ fontSize: '14px' }} />} text={phone} />
           <ContactRow icon={<Email sx={{ fontSize: '14px' }} />} text={email} />
           <ContactRow icon={<AccessTime sx={{ fontSize: '14px' }} />} text={`DOB: ${dobDisplay}`} />

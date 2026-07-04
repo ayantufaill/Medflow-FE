@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import {
   Phone, OpenInNew, Add, Description, AttachMoney,
-  FiberManualRecord, MedicalServices, Tune,
+  FiberManualRecord, MedicalServices, Tune, AcUnit,
 } from '@mui/icons-material';
 import AppointmentHoverCard from './AppointmentHoverCard';
 import { COLORS } from '../../../constants/colors';
@@ -19,6 +19,12 @@ const TAG_STYLE = (tag) => {
   if (tag === 'Xray') return { bg: '#1f2937',                  color: COLORS.WHITE,    border: 'none' };
   return                     { bg: COLORS.SURFACE_CARD,         color: COLORS.TEXT_BODY, border: `1px solid #d1d5db` };
 };
+
+const TagCircle = ({ icon, bg }) => (
+  <Box sx={{ width: "20px", height: "20px", borderRadius: "50%", backgroundColor: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    {icon}
+  </Box>
+);
 
 const BlockCard = ({ title }) => (
   <Box
@@ -64,7 +70,7 @@ const AppointmentCard = ({ appointment }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         sx={{
-          height: '70%',
+          height: '100%',
           borderRadius: radius.md,
           overflow: 'hidden',
           boxShadow: '0px 2px 10px rgba(0,0,0,0.12)',
@@ -126,22 +132,47 @@ const AppointmentCard = ({ appointment }) => {
             }}
           >
             {/* Procedures + inline action icons */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-              <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.medium, color: '#111827', whiteSpace: 'nowrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
+              <Typography 
+                sx={{ 
+                  fontSize: fontSize.base, 
+                  fontWeight: fontWeight.medium, 
+                  color: '#111827',
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  lineHeight: 1.2
+                }}
+              >
                 {appointment.procedures}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, mt: '2px' }}>
                 <FiberManualRecord sx={{ fontSize: '11px', color: COLORS.ACCENT }} />
                 <Add sx={{ fontSize: fontSize.xs, color: COLORS.STATUS_ERROR }} />
                 <Description sx={{ fontSize: fontSize.xs, color: COLORS.ACCENT }} />
                 <AttachMoney sx={{ fontSize: fontSize.xs, color: COLORS.ACCENT }} />
                 <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: COLORS.ACCENT }}>Tx</Typography>
-                <MedicalServices sx={{ fontSize: '11px', color: COLORS.ACCENT }} />
+                <Typography sx={{ fontSize: '12px', lineHeight: 1 }}>🦷</Typography>
               </Box>
             </Box>
 
             {/* Description */}
-            <Typography sx={{ fontSize: fontSize.xs, color: COLORS.TEXT_BODY, lineHeight: 1.4 }}>
+            <Typography 
+              sx={{ 
+                fontSize: fontSize.xs, 
+                color: COLORS.TEXT_BODY, 
+                lineHeight: 1.4,
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+            >
               {appointment.description}
             </Typography>
 
@@ -170,21 +201,8 @@ const AppointmentCard = ({ appointment }) => {
 
               {/* Footer icons */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <FiberManualRecord sx={{ fontSize: '12px', color: '#06b6d4' }} />
-                <Tune sx={{ fontSize: '12px', color: COLORS.STATUS_UNCONFIRMED }} />
-                <Box
-                  sx={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    backgroundColor: COLORS.BORDER,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: COLORS.TEXT_SECONDARY }}>SS</Typography>
-                </Box>
+                <TagCircle bg="#ccfbf1" icon={<AcUnit sx={{ fontSize: "12px", color: "#0d9488" }} />} />
+                <TagCircle bg="#fef3c7" icon={<Tune sx={{ fontSize: "12px", color: COLORS.STATUS_UNCONFIRMED }} />} />
               </Box>
             </Box>
           </Box>
@@ -198,13 +216,17 @@ const AppointmentCard = ({ appointment }) => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            justifyContent: 'space-between',
             pt: '8px',
-            gap: '6px',
+            pb: '8px',
             flexShrink: 0,
           }}
         >
-          <Phone sx={{ fontSize: '14px', color: COLORS.ACCENT }} />
-          <OpenInNew sx={{ fontSize: '13px', color: COLORS.ACCENT }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+            <Phone sx={{ fontSize: '14px', color: COLORS.ACCENT }} />
+            <OpenInNew sx={{ fontSize: '13px', color: COLORS.ACCENT }} />
+          </Box>
+          <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: COLORS.ACCENT }}>SS</Typography>
         </Box>
       </Box>
 
