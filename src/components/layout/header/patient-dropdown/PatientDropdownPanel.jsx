@@ -20,20 +20,57 @@ const toCardShape = (patient) => {
     ? dayjs().diff(dayjs(patient.dateOfBirth), "year")
     : null;
 
-  return {
-    name,
-    // Patient number as shown in the UI — "765" format matching the card's "pt #765"
-    id:       patient.patientNumber || patient._id?.slice(-6)?.toUpperCase() || "---",
-    phone:    patient.mobilePhone || patient.phone || "--",
-    // Coverage/insurance — falls back gracefully when not populated on the list response
-    coverage: patient.primaryInsurance?.name || patient.insuranceName || "No active coverage",
-    insurance: patient.primaryInsurance?.name || patient.insuranceName || "--",
-    balance:  patient.balance != null ? String(patient.balance) : null,
-    appt:     patient.nextAppointmentDate
-      ? dayjs(patient.nextAppointmentDate).format("MM/DD/YYYY · h:mm A")
-      : null,
-    status:   patient.status || "new",
-    _id:      patient._id || patient.id,
+    // Insurance / Payment logic
+    const paidBy = patient.paymentMethod?.paidBy || patient.primaryInsurance?.name || patient.insuranceName;
+    const hasCoverage = paidBy && paidBy !== 'Self Pay';
+    const finalPaidBy = hasCoverage ? paidBy : 'Self Pay';
+
+    // Balance logic
+    let finalBalance = patient.displayedBalance != null 
+      ? patient.displayedBalance 
+      : null;
+    
+    // Fallback if backend hasn't deployed the change yet
+    if (finalBalance == null) {
+      if (patient.balanceBreakdown) {
+        finalBalance = hasCoverage 
+          ? patient.balanceBreakdown.insuranceBalance 
+          : patient.balanceBreakdown.patientBalance;
+      } else {
+        finalBalance = hasCoverage 
+          ? patient.InsEst 
+          : (patient.balance ?? patient.EstBalance ?? patient.BalTotal);
+      }
+    }
+    const displayBalance = (finalBalance && Number(finalBalance) !== 0) ? String(finalBalance) : null;
+
+    // Appt formatting logic
+    let apptString = null;
+    if (patient.nextAppointmentDate) {
+      const aptDate = dayjs(patient.nextAppointmentDate);
+      const today = dayjs().startOf('day');
+      const tomorrow = dayjs().add(1, 'day').startOf('day');
+      const target = aptDate.startOf('day');
+      
+      if (target.isSame(today)) {
+        apptString = `Today · ${aptDate.format("h:mm A")}`;
+      } else if (target.isSame(tomorrow)) {
+        apptString = `Tomorrow · ${aptDate.format("h:mm A")}`;
+      } else {
+        apptString = aptDate.format("MM/DD/YYYY · h:mm A");
+      }
+    }
+
+    return {
+      name,
+      id:       patient.patientNumber || patient.patientCode || patient._id?.slice(-6)?.toUpperCase() || "---",
+      phone:    patient.mobilePhone || patient.phonePrimary || patient.phone || "--",
+      coverage: finalPaidBy === 'Self Pay' ? "No active coverage" : finalPaidBy,
+      insurance: finalPaidBy,
+      balance:  displayBalance,
+      appt:     apptString,
+      status:   patient.status || "new",
+      _id:      patient._id || patient.id,
     _raw:     patient, // preserve full object for Redux dispatch on select
   };
 };

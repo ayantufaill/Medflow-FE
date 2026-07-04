@@ -61,7 +61,7 @@ const PatientCard = () => {
   const dobDisplay = currentPatient.dateOfBirth
     ? dayjs(currentPatient.dateOfBirth).format('MM/DD/YYYY')
     : '--';
-  const phone      = currentPatient.mobilePhone || currentPatient.phone || '--';
+  const phone      = currentPatient.mobilePhone || currentPatient.phonePrimary || '--';
   const email      = currentPatient.email || '--';
   // Patient number shown as "#PAT007" — use patientNumber field or last 6 chars of ID.
   const patientNo  = currentPatient.patientNumber
