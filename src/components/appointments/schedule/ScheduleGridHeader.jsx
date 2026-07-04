@@ -1,16 +1,34 @@
 import { Box } from '@mui/material';
-import { useState } from 'react';
 import dayjs from 'dayjs';
 import ViewToggle from './ViewToggle';
 import DateNavigation from './DateNavigation';
 import ActionIconsBar from './ActionIconsBar';
 import NewAppointmentButton from './NewAppointmentButton';
+import SchedulePatientSearch from './SchedulePatientSearch';
 import VerticalDivider from '../../common/VerticalDivider';
+import { useScheduleState } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 
+// ScheduleGridHeader owns the top toolbar: view-toggle, date navigation, and
+// the new-appointment button. Calendar view and selected date are lifted into
+// Redux (useScheduleState) so ScheduleTimeGrid responds to the same state
+// without prop-drilling through the page component.
+
 const ScheduleGridHeader = ({ onNewAppointment }) => {
-  const [view, setView] = useState('Day');
-  const [currentDate, setCurrentDate] = useState(dayjs());
+  const { calendarView, selectedDate, setCalendarView, setSelectedDate } = useScheduleState();
+
+  // Redux stores selectedDate as an ISO string; DateNavigation expects a dayjs object.
+  const dayjsDate = dayjs(selectedDate);
+
+  // ViewToggle emits title-case ('Day'/'Week'/'Month') but Redux keeps lowercase.
+  // Convert at both boundaries to avoid spreading the format discrepancy.
+  const viewLabel = calendarView.charAt(0).toUpperCase() + calendarView.slice(1);
+
+  const handleViewChange = (newLabel) => setCalendarView(newLabel.toLowerCase());
+
+  // Step forward/back by exactly one unit of the current view.
+  const handlePrev = () => setSelectedDate(dayjsDate.subtract(1, calendarView).toISOString());
+  const handleNext = () => setSelectedDate(dayjsDate.add(1, calendarView).toISOString());
 
   return (
     <Box
@@ -31,13 +49,18 @@ const ScheduleGridHeader = ({ onNewAppointment }) => {
           gap: '6px',
         }}
       >
-        <ViewToggle value={view} onChange={setView} />
+        <ViewToggle value={viewLabel} onChange={handleViewChange} />
         <DateNavigation
-          date={currentDate}
-          onPrev={() => setCurrentDate((d) => d.subtract(1, 'day'))}
-          onNext={() => setCurrentDate((d) => d.add(1, 'day'))}
+          date={dayjsDate}
+          onPrev={handlePrev}
+          onNext={handleNext}
         />
-        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Patient search lives in the center of the header so staff can quickly
+            look up a patient without leaving the schedule view. Selecting a result
+            sets currentPatient in Redux and the left panel card updates automatically. */}
+        <SchedulePatientSearch />
+
         <ActionIconsBar />
         <VerticalDivider height="36px" />
         <NewAppointmentButton onClick={onNewAppointment} />

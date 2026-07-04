@@ -22,7 +22,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { useAppointment } from '../../hooks/redux/useAppointment';
+import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
 
 // Custom Radio with the grey/dark theme from the image
 const StyledRadio = (props) => (
@@ -131,7 +131,7 @@ const Morphological = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // State for visit dates timeline
-  const { currentAppointment } = useAppointment();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('morphological', patientId);
   const visitDates = React.useMemo(() => {

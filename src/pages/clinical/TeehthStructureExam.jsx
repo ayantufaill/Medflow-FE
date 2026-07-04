@@ -40,7 +40,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { useAppointment } from '../../hooks/redux/useAppointment';
+import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
 
 const TeethStructureExam = () => {
   const { showSnackbar } = useSnackbar();
@@ -156,7 +156,7 @@ const TeethStructureExam = () => {
   });
 
   // State for visit dates timeline
-  const { currentAppointment } = useAppointment();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('tooth-structure', patientId);
   const visitDates = React.useMemo(() => {
