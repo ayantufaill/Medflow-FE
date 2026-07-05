@@ -66,7 +66,7 @@ const AppointmentLeftPanel = ({
               onTimeChange(h?.slice(0, 2) ?? timeHours, m?.slice(0, 2) ?? timeMins);
             }}
           />
-        </LocalizationProvider>
+        </Box>
       </FieldBox>
     </Box>
 
