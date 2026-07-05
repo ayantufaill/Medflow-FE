@@ -20,6 +20,10 @@ import statementFormsReducer from './slices/statementFormsSlice';
 import coverageShortcutsReducer from './slices/coverageShortcutsSlice';
 import clinicalExamSessionReducer from './slices/clinicalExamSessionSlice';
 import claimReducer from './slices/claimSlice';
+import depositReducer from './slices/depositSlice';
+import referralReportReducer from './slices/referralReportSlice';
+import patientReportReducer from './slices/patientReportSlice';
+import clinicalReportReducer from './slices/clinicalReportSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -43,6 +47,10 @@ const appReducer = combineReducers({
   statementForms: statementFormsReducer,
   coverageShortcuts: coverageShortcutsReducer,
   claims: claimReducer,
+  deposits: depositReducer,
+  referralReport: referralReportReducer,
+  patientReport: patientReportReducer,
+  clinicalReport: clinicalReportReducer,
 });
 
 const rootReducer = (state, action) => {

@@ -20,6 +20,7 @@ import NotificationsReport from './reports/patient/NotificationsReport';
 import ProceduresReport from './reports/patient/ProceduresReport';
 import PatientTrackersReport from './reports/patient/PatientTrackersReport';
 import ReferralByPatientReport from './reports/patient/ReferralByPatientReport';
+import PatientsReferralReport from './reports/patient/PatientsReferralReport';
 import RecareReport from './reports/clinical/RecareReport';
 import UnsignedProgressNotesReport from './reports/clinical/UnsignedProgressNotesReport';
 import RxReport from './reports/clinical/RxReport';
@@ -35,6 +36,7 @@ import ProductionCollectionSummary from './reports/financial/ProductionCollectio
 import ProviderCollectionPaymentType from './reports/financial/ProviderCollectionPaymentType';
 import ProductionPerCode from './reports/financial/ProductionPerCode';
 import CollectionCodeCarrier from './reports/financial/CollectionCodeCarrier';
+import ReferralProductionReport from './reports/financial/ReferralProductionReport';
 import AdjustmentReport from './reports/financial/AdjustmentReport';
 import CourtesyCreditReport from './reports/financial/CourtesyCreditReport';
 import CourtesyCreditModifications from './reports/financial/CourtesyCreditModifications';

@@ -16,23 +16,14 @@ import {
   Chip,
   Tooltip,
   InputAdornment,
+  Autocomplete,
 } from '@mui/material';
 import { Info as InfoIcon, Add as AddIcon } from '@mui/icons-material';
 import ReactPhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
+import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-
-const US_STATES = [
-  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
-  'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
-  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan',
-  'Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire',
-  'New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio',
-  'Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota',
-  'Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia',
-  'Wisconsin','Wyoming',
-];
 
 const SPECIALTIES = [
   'Dental Assistant',
@@ -327,8 +318,6 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
             <FormControl fullWidth size="small">
               <Select {...field}>
                 <MenuItem value="United States">United States</MenuItem>
-                <MenuItem value="Canada">Canada</MenuItem>
-                <MenuItem value="Mexico">Mexico</MenuItem>
               </Select>
             </FormControl>
           )} />
@@ -344,23 +333,44 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
           <TextField fullWidth size="small" placeholder="Address line 2" {...register('addressLine2')} />
         </Grid>
 
-        {/* Row 10: City | State | Zip */}
-        <Grid size={4}>
-          <Label required>City</Label>
-          <TextField fullWidth size="small"
-            {...register('city', { required: 'Required' })}
-            error={!!errors.city} helperText={errors.city?.message} />
-        </Grid>
+        {/* Row 10: State | City | Zip */}
         <Grid size={4}>
           <Label required>State/Province</Label>
           <Controller name="state" control={control} rules={{ required: 'Required' }} render={({ field }) => (
             <FormControl fullWidth size="small" error={!!errors.state}>
-              <Select {...field} displayEmpty>
+              <Select {...field} displayEmpty onChange={(e) => { field.onChange(e); setValue('city', ''); }}>
                 <MenuItem value=""><em>Select State</em></MenuItem>
-                {US_STATES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                {US_STATES.map((s) => <MenuItem key={s.value} value={s.label}>{s.label}</MenuItem>)}
               </Select>
             </FormControl>
           )} />
+        </Grid>
+        <Grid size={4}>
+          <Label required>City</Label>
+          <Controller name="city" control={control} rules={{ required: 'Required' }} render={({ field: { onChange, value }, fieldState: { error } }) => {
+            const currentStateLabel = watch('state');
+            const stateObj = US_STATES.find(s => s.label === currentStateLabel);
+            const stateAbbr = stateObj ? stateObj.value : '';
+            return (
+              <Autocomplete
+                options={STATE_CITIES[stateAbbr] || []}
+                value={value || ""}
+                onChange={(_, newVal) => onChange(newVal || "")}
+                onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                disabled={!currentStateLabel}
+                freeSolo
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    size="small"
+                    placeholder={currentStateLabel ? "City" : "Select state first"}
+                    error={!!error}
+                    helperText={error?.message}
+                  />
+                )}
+              />
+            );
+          }} />
         </Grid>
         <Grid size={4}>
           <Label required>Zip/Postal Code</Label>

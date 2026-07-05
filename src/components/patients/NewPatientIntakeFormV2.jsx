@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-  Autocomplete, Box, Button, CircularProgress, Grid, MenuItem, Stack, TextField, Typography, Checkbox, FormControlLabel
+  Autocomplete, Box, Button, CircularProgress, Grid, MenuItem, Stack, TextField, Typography, Checkbox, FormControlLabel, FormHelperText
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -31,7 +31,7 @@ import {
   fetchAllProvidersForDropdown, selectProviderDropdownList, selectProviderDropdownLoading 
 } from "../../store/slices/providerSlice";
 
-const COUNTRY_OPTIONS = ["United States", "Canada", "Other"];
+const COUNTRY_OPTIONS = ["United States"];
 import { US_STATES, STATE_CITIES } from "../../constants/usAddressData";
 const REFERRING_SOURCE_OPTIONS = ["Google", "Website", "Walk In", "Social Media", "Existing Patient", "Insurance Directory", "Provider Referral"];
 
@@ -150,10 +150,6 @@ const PhoneInput = ({ onChange, ...props }) => (
             }}
           >
             <MenuItem value="US">US</MenuItem>
-            <MenuItem value="CA">CA</MenuItem>
-            <MenuItem value="UK">UK</MenuItem>
-            <MenuItem value="AU">AU</MenuItem>
-            <MenuItem value="OTHER">Other</MenuItem>
           </TextField>
         </Box>
       ),
@@ -352,7 +348,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               </Grid>
               <Grid size={{ xs: 12, sm: 3 }}>
                 <FormField label="First Name" required>
-                  <OutlinedInput {...register("firstName", { required: "Required" })} error={!!errors.firstName} placeholder="First name" />
+                  <OutlinedInput {...register("firstName", { required: "First name is required" })} error={!!errors.firstName} helperText={errors.firstName?.message} placeholder="First name" />
                 </FormField>
               </Grid>
               <Grid size={{ xs: 12, sm: 3 }}>
@@ -362,7 +358,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               </Grid>
               <Grid size={{ xs: 12, sm: 3 }}>
                 <FormField label="Last Name" required>
-                  <OutlinedInput {...register("lastName", { required: "Required" })} error={!!errors.lastName} placeholder="Last name" />
+                  <OutlinedInput {...register("lastName", { required: "Last name is required" })} error={!!errors.lastName} helperText={errors.lastName?.message} placeholder="Last name" />
                 </FormField>
               </Grid>
 
@@ -373,8 +369,8 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Date of Birth" required>
-                  <Controller name="dateOfBirth" control={control} render={({ field }) => (
-                    <DatePicker value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB", "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" }, "&:hover fieldset": { borderColor: "#CBD5E1" }, "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: "0.88rem" } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true } }} />
+                  <Controller name="dateOfBirth" rules={{ required: "Date of birth is required" }} control={control} render={({ field, fieldState: { error } }) => (
+                    <DatePicker openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB", "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" }, "&:hover fieldset": { borderColor: "#CBD5E1" }, "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: "0.88rem" } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
                   )} />
                 </FormField>
               </Grid>
@@ -390,8 +386,11 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormField label="Sex at Birth" required>
-                  <Controller name="sexAtBirth" control={control} render={({ field }) => (
-                    <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label:"Male",value:"male"}, {label:"Female",value:"female"}, {label:"Intersex",value:"intersex"}]} />
+                  <Controller name="sexAtBirth" rules={{ required: "Sex at birth is required" }} control={control} render={({ field, fieldState: { error } }) => (
+                    <>
+                      <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label:"Male",value:"male"}, {label:"Female",value:"female"}, {label:"Intersex",value:"intersex"}]} />
+                      {error && <FormHelperText error>{error.message}</FormHelperText>}
+                    </>
                   )} />
                 </FormField>
               </Grid>
@@ -409,7 +408,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Mobile Number" required>
-                  <PhoneInput {...register("mobileNumber")} />
+                  <PhoneInput {...register("mobileNumber", { required: "Mobile number is required" })} error={!!errors.mobileNumber} helperText={errors.mobileNumber?.message} />
                 </FormField>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
@@ -419,7 +418,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Email Address">
-                  <OutlinedInput {...register("emailAddress")} placeholder="patient@email.com" />
+                  <OutlinedInput {...register("emailAddress", { pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Invalid email address" } })} error={!!errors.emailAddress} helperText={errors.emailAddress?.message} placeholder="patient@email.com" />
                 </FormField>
               </Grid>
               
@@ -705,13 +704,13 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Full Name" required>
-                  <OutlinedInput {...register("emergencyContactName")} placeholder="Contact full name" />
+                  <OutlinedInput {...register("emergencyContactName", { required: "Emergency contact name is required" })} error={!!errors.emergencyContactName} helperText={errors.emergencyContactName?.message} placeholder="Contact full name" />
                 </FormField>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Relationship" required>
-                  <Controller name="emergencyRelationship" control={control} render={({ field }) => (
-                    <OutlinedSelect {...field}>
+                  <Controller name="emergencyRelationship" rules={{ required: "Relationship is required" }} control={control} render={({ field, fieldState: { error } }) => (
+                    <OutlinedSelect {...field} error={!!error} helperText={error?.message}>
                       <MenuItem value="">Select relationship</MenuItem>
                       {["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"].map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
                     </OutlinedSelect>
@@ -868,7 +867,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
         </Box>
 
         {/* Bottom Action Bar */}
-        <Box sx={{ backgroundColor: "#fff", borderTop: "1px solid #E2E8F0", px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Box sx={{ position: "sticky", bottom: 0, zIndex: 100, backgroundColor: "#fff", borderTop: "1px solid #E2E8F0", px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Controller name="sendWelcome" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="Send Welcome" />

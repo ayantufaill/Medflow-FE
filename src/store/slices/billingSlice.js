@@ -98,7 +98,8 @@ export const fetchLedgerItems = createAsyncThunk(
         const invoicePms = payments.filter((p) => String(p.invoiceId) === String(invoice._id || invoice.id));
         const invoiceClaims = claims.filter((c) => 
           String(c.invoiceRefId) === String(invoice._id || invoice.id) || 
-          String(c.invoice?._id || c.invoice?.id || '') === String(invoice._id || invoice.id)
+          String(c.invoice?._id || c.invoice?.id || '') === String(invoice._id || invoice.id) ||
+          (c.selectedItems && c.selectedItems.some((item) => String(item.invoiceId) === String(invoice._id || invoice.id)))
         );
 
         let totalPaidAmt = 0;
@@ -766,6 +767,132 @@ export const fetchArAgingReport = createAsyncThunk(
   }
 );
 
+export const fetchPatientAgingReport = createAsyncThunk(
+  'billing/fetchPatientAgingReport',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getFinancialReport('patient-aging');
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.patientAgingLoading || billing.patientAging) return false;
+      return true;
+    }
+  }
+);
+
+export const fetchModificationsReport = createAsyncThunk(
+  'billing/fetchModificationsReport',
+  async ({ date, range }, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getFinancialReport('modifications', { date, range });
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const fetchPatientAccountNotes = createAsyncThunk(
+  'billing/fetchPatientAccountNotes',
+  async (patient, { rejectWithValue }) => {
+    const patientId = typeof patient === 'object' ? (patient.id || patient.name) : patient;
+    const patientName = typeof patient === 'object' ? patient.name : patient;
+    try {
+      const response = await apiClient.get(`/patients/${patientId}/account-notes`);
+      return response.data.data;
+    } catch (error) {
+      console.warn('API call failed, falling back to localStorage', error);
+      const stored = localStorage.getItem(`account_notes_${patientName}`);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          return [];
+        }
+      }
+      const seedNotes = [
+        {
+          id: 'seed-1',
+          date: '06/14/2022',
+          source: 'agingReport',
+          text: 'This is an account note',
+          remindMe: false,
+          archived: false,
+        }
+      ];
+      localStorage.setItem(`account_notes_${patientName}`, JSON.stringify(seedNotes));
+      return seedNotes;
+    }
+  }
+);
+
+export const createPatientAccountNote = createAsyncThunk(
+  'billing/createPatientAccountNote',
+  async ({ patient, text }, { rejectWithValue }) => {
+    const patientId = typeof patient === 'object' ? (patient.id || patient.name) : patient;
+    const patientName = typeof patient === 'object' ? patient.name : patient;
+    const newNote = {
+      id: Date.now(),
+      date: new Date().toLocaleDateString('en-US'),
+      source: 'agingReport',
+      text: text,
+      remindMe: false,
+      archived: false,
+    };
+    try {
+      const response = await apiClient.post(`/patients/${patientId}/account-notes`, newNote);
+      return response.data.data;
+    } catch (error) {
+      console.warn('API call failed, saving to localStorage', error);
+      const stored = localStorage.getItem(`account_notes_${patientName}`);
+      let notesList = [];
+      if (stored) {
+        try {
+          notesList = JSON.parse(stored);
+        } catch (e) {}
+      }
+      notesList.push(newNote);
+      localStorage.setItem(`account_notes_${patientName}`, JSON.stringify(notesList));
+      return notesList;
+    }
+  }
+);
+
+export const updatePatientAccountNote = createAsyncThunk(
+  'billing/updatePatientAccountNote',
+  async ({ patient, noteId, updates }, { rejectWithValue }) => {
+    const patientId = typeof patient === 'object' ? (patient.id || patient.name) : patient;
+    const patientName = typeof patient === 'object' ? patient.name : patient;
+    try {
+      const response = await apiClient.put(`/patients/${patientId}/account-notes/${noteId}`, updates);
+      return response.data.data;
+    } catch (error) {
+      console.warn('API call failed, updating in localStorage', error);
+      const stored = localStorage.getItem(`account_notes_${patientName}`);
+      let notesList = [];
+      if (stored) {
+        try {
+          notesList = JSON.parse(stored);
+        } catch (e) {}
+      }
+      const updatedList = notesList.map(n => {
+        if (n.id === noteId || String(n.id) === String(noteId)) {
+          return { ...n, ...updates };
+        }
+        return n;
+      });
+      localStorage.setItem(`account_notes_${patientName}`, JSON.stringify(updatedList));
+      return updatedList;
+    }
+  }
+);
+
 const initialState = {
   // Current invoice being viewed/edited
   currentInvoice: null,
@@ -782,6 +909,15 @@ const initialState = {
   // A/R aging data
   arAging: null,
   arAgingLoading: false,
+
+  // Patient aging data
+  patientAging: null,
+  patientAgingLoading: false,
+
+  // Modifications Report
+  modificationsData: [],
+  modificationsLoading: false,
+  modificationsError: null,
   
   // Billing Configuration
   billingConfiguration: null,
@@ -822,6 +958,11 @@ const initialState = {
 
   // Per-invoice adjustmentTypes map { [invoiceId-itemId]: string }
   adjustmentTypeMap: {},
+
+  // Patient Account Notes state
+  patientAccountNotes: [],
+  patientAccountNotesLoading: false,
+  patientAccountNotesError: null,
 };
 
 const billingSlice = createSlice({
@@ -1130,6 +1271,77 @@ const billingSlice = createSlice({
         state.arAgingLoading = false;
         state.error = action.payload;
       })
+      .addCase(fetchPatientAgingReport.pending, (state) => {
+        state.patientAgingLoading = true;
+      })
+      .addCase(fetchPatientAgingReport.fulfilled, (state, action) => {
+        state.patientAgingLoading = false;
+        state.patientAging = action.payload;
+      })
+      .addCase(fetchPatientAgingReport.rejected, (state, action) => {
+        state.patientAgingLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchModificationsReport.pending, (state) => {
+        state.modificationsLoading = true;
+        state.modificationsError = null;
+      })
+      .addCase(fetchModificationsReport.fulfilled, (state, action) => {
+        state.modificationsLoading = false;
+        state.modificationsData = action.payload || [];
+      })
+      .addCase(fetchModificationsReport.rejected, (state, action) => {
+        state.modificationsLoading = false;
+        state.modificationsError = action.payload || 'Failed to fetch modifications report';
+      })
+      .addCase(fetchPatientAccountNotes.pending, (state) => {
+        state.patientAccountNotesLoading = true;
+        state.patientAccountNotesError = null;
+      })
+      .addCase(fetchPatientAccountNotes.fulfilled, (state, action) => {
+        state.patientAccountNotesLoading = false;
+        state.patientAccountNotes = Array.isArray(action.payload) ? action.payload : [];
+      })
+      .addCase(fetchPatientAccountNotes.rejected, (state, action) => {
+        state.patientAccountNotesLoading = false;
+        state.patientAccountNotesError = action.payload || action.error?.message;
+      })
+      .addCase(createPatientAccountNote.pending, (state) => {
+        state.patientAccountNotesLoading = true;
+      })
+      .addCase(createPatientAccountNote.fulfilled, (state, action) => {
+        state.patientAccountNotesLoading = false;
+        if (Array.isArray(action.payload)) {
+          state.patientAccountNotes = action.payload;
+        } else if (action.payload && typeof action.payload === 'object') {
+          const exists = state.patientAccountNotes.some(n => n.id === action.payload.id || n._id === action.payload._id);
+          if (!exists) {
+            state.patientAccountNotes = [action.payload, ...state.patientAccountNotes];
+          }
+        }
+      })
+      .addCase(createPatientAccountNote.rejected, (state, action) => {
+        state.patientAccountNotesLoading = false;
+        state.patientAccountNotesError = action.payload || action.error?.message;
+      })
+      .addCase(updatePatientAccountNote.pending, (state) => {
+        state.patientAccountNotesLoading = true;
+      })
+      .addCase(updatePatientAccountNote.fulfilled, (state, action) => {
+        state.patientAccountNotesLoading = false;
+        if (Array.isArray(action.payload)) {
+          state.patientAccountNotes = action.payload;
+        } else if (action.payload && typeof action.payload === 'object') {
+          const noteId = action.payload.id || action.payload._id;
+          state.patientAccountNotes = state.patientAccountNotes.map(n => 
+            (n.id === noteId || n._id === noteId) ? action.payload : n
+          );
+        }
+      })
+      .addCase(updatePatientAccountNote.rejected, (state, action) => {
+        state.patientAccountNotesLoading = false;
+        state.patientAccountNotesError = action.payload || action.error?.message;
+      })
       // ── Ledger thunks ──────────────────────────────────────────────────────
       .addCase(fetchLedgerItems.pending, (state) => {
         state.ledgerLoading = true;
@@ -1246,6 +1458,11 @@ export const selectPaymentTypeDefaults = (state) => state.billing.paymentTypeDef
 export const selectPaymentTerminals = (state) => state.billing.paymentTerminals;
 export const selectPaymentTerminalsLoading = (state) => state.billing.paymentTerminalsLoading;
 export const selectArAgingLoading = (state) => state.billing.arAgingLoading;
+export const selectPatientAging = (state) => state.billing.patientAging;
+export const selectPatientAgingLoading = (state) => state.billing.patientAgingLoading;
+export const selectPatientAccountNotes = (state) => state.billing.patientAccountNotes;
+export const selectPatientAccountNotesLoading = (state) => state.billing.patientAccountNotesLoading;
+export const selectPatientAccountNotesError = (state) => state.billing.patientAccountNotesError;
 export const selectBillingLoading = (state) => state.billing.loading;
 export const selectBillingError   = (state) => state.billing.error;
 
@@ -1263,5 +1480,9 @@ export const selectPaymentInvoicesError   = (state) => state.billing.paymentInvo
 /** Returns cached payment draft invoices for the given patient (or empty array). */
 export const selectPaymentInvoicesForPatient = (patientId) => (state) =>
   state.billing.paymentInvoicesCache?.[patientId] || [];
+
+export const selectModificationsData = (state) => state.billing.modificationsData;
+export const selectModificationsLoading = (state) => state.billing.modificationsLoading;
+export const selectModificationsError = (state) => state.billing.modificationsError;
 
 export default billingSlice.reducer;

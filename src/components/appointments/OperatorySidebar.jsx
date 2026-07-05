@@ -519,9 +519,14 @@ const OperatorySidebar = ({
                 fullWidth
                 startIcon={<AddIcon />}
                 onClick={onScheduleAppointmentClick}
+                disabled={!selectedPatient}
                 sx={{
                   bgcolor: "#1976d2",
                   "&:hover": { bgcolor: "#1565c0" },
+                  "&.Mui-disabled": {
+                    bgcolor: "#e0e0e0",
+                    color: "#9e9e9e"
+                  },
                   textTransform: "none",
                   fontWeight: 600,
                   fontSize: "0.85rem",
@@ -630,7 +635,7 @@ const OperatorySidebar = ({
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
                         <Typography sx={{ fontSize: '0.72rem', color: '#666' }}>
-                          Birthday: {(() => {
+                          Date of Birth (DOB): {(() => {
                             const dob = patientDetails?.dateOfBirth || selectedPatient?.dateOfBirth;
                             if (!dob) return '---';
                             const age = dayjs().diff(dayjs(dob), 'year');

@@ -9,6 +9,7 @@ export const TABS = [
 export const PATIENT_REPORT_SUB_TABS = [
   { label: 'Patient by Insurance Coverage', path: '/admin/reports/patient/insurance-coverage' },
   { label: 'Patient by Membership Plan', path: '/admin/reports/patient/membership-plan' },
+  { label: 'Referral Report', path: '/admin/reports/patient/referral' },
   { label: 'Referral By Patient Report', path: '/admin/reports/patient/referral-by-patient' },
   { label: 'Online Scheduling Referral Report', path: '/admin/reports/patient/online-scheduling-referral' },
   { label: 'Patients By Flag Report', path: '/admin/reports/patient/by-flag' },
@@ -43,6 +44,7 @@ export const FINANCIAL_REPORT_SUB_TABS = [
   { label: 'Provider Collection Per Payment Type', path: '/admin/reports/financial/provider-collection-payment-type' },
   { label: 'Production Per Code', path: '/admin/reports/financial/production-per-code' },
   { label: 'Collection Per Code Per Carrier', path: '/admin/reports/financial/collection-code-carrier' },
+  { label: 'Referral Production Report', path: '/admin/reports/financial/referral-production' },
   { label: 'Adjustment Report', path: '/admin/reports/financial/adjustment' },
   { label: 'Courtesy Credit Report', path: '/admin/reports/financial/courtesy-credit' },
   { label: 'Courtesy Credit Modifications Report', path: '/admin/reports/financial/courtesy-credit-modifications' },

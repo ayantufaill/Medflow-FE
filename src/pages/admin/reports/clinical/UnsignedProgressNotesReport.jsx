@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, Typography, TextField, Select, MenuItem, Button, TableCell, TableRow, RadioGroup, FormControlLabel, Radio, Collapse
 } from '@mui/material';
@@ -6,8 +6,58 @@ import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const UnsignedProgressNotesReport = () => {
+  const dispatch = useDispatch();
+  const apiData = useSelector(selectUnsignedProgressNotesData);
+  const loading = useSelector(selectClinicalReportLoading);
+  const providerOptions = useSelector(selectProviderDropdownList);
+
   const [expandedRow, setExpandedRow] = useState(null);
   const [signedExpandedRow, setSignedExpandedRow] = useState(null);
+  
+  const [startDate, setStartDate] = useState('2026-04-08');
+  const [endDate, setEndDate] = useState('2026-05-08');
+  const [kindFilter, setKindFilter] = useState('All');
+  const [providerFilter, setProviderFilter] = useState('All');
+  const [codeFilterMode, setCodeFilterMode] = useState('filter');
+
+  // Inline Editor State
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [localNotes, setLocalNotes] = useState({});
+
+  // Signing State
+  const [signingRowId, setSigningRowId] = useState(null);
+
+  const handleOpenEditor = (row) => {
+    const currentNote = localNotes[row.id] !== undefined ? localNotes[row.id] : (row.note || '');
+    setEditingContent(currentNote);
+    setEditingRowId(row.id);
+  };
+
+  const handleSaveNote = (rowId) => {
+    setLocalNotes(prev => ({ ...prev, [rowId]: editingContent }));
+    setEditingRowId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRowId(null);
+  };
+
+  useEffect(() => {
+    dispatch(fetchUnsignedProgressNotesReport({ startDate, endDate }));
+    dispatch(fetchAllProvidersForDropdown());
+  }, [dispatch, startDate, endDate]);
+
+  // Helper: resolve provider display name
+  const getProviderName = (p) => {
+    if (p.firstName || p.lastName) return `${p.firstName || ''} ${p.lastName || ''}`.trim();
+    if (p.userId && (p.userId.firstName || p.userId.lastName)) return `${p.userId.firstName || ''} ${p.userId.lastName || ''}`.trim();
+    return p.username || 'Unknown';
+  };
+
+  const handleApplyFilters = () => {
+    dispatch(fetchUnsignedProgressNotesReport({ startDate, endDate }));
+  };
 
   const rows = [
     { id: 1, patient: 'Francis Fuller', date: '05/07/2026', kind: 'Exam', provider: 'Dr. Smith', note: 'CC: "I have a broken tooth #31". Patient had veneers done March of 2026 in Smile Texas in Houston with Dr. Mackenzie McAfee-Dooley, #\'s 4-13 and 20-29. Patient had his jaw broken in 2017 and now has a chain on right side mandible. He started to notice pain about 2-3 months ago on tooth #31. Last dental cleaning was a year ago, is now looking for a general dentist in DFW as he has recently moved to the area from Houston.' },
@@ -60,6 +110,64 @@ Thank you. YF`
     { id: 106, patient: 'Patient U', date: '04/15/2026', kind: 'Recare', provider: 'Hygienist A', note: '' },
     { id: 107, patient: 'Patient T', date: '04/27/2026', kind: 'Conversation', provider: 'Dr. Smith', note: '' },
   ];
+
+  const processedData = useMemo(() => {
+    if (apiData && apiData.length > 0) {
+      const parsed = apiData.map((item, i) => ({
+        id: item.id || item._id || i + 1000,
+        patient: item.patient || item.patientName || 'Unknown Patient',
+        date: item.date || item.createdAt || '',
+        kind: item.kind || item.type || 'General',
+        provider: item.provider || item.providerName || 'Unknown Provider',
+        note: item.note || item.content || '',
+        isSigned: !!item.isSigned || item.status === 'signed',
+      }));
+
+      // Apply local filters if needed
+      let filtered = parsed;
+      if (kindFilter !== 'All') {
+        filtered = filtered.filter(r => r.kind === kindFilter);
+      }
+      if (providerFilter !== 'All') {
+        filtered = filtered.filter(r => r.provider === providerFilter);
+      }
+      if (startDate) {
+        filtered = filtered.filter(r => new Date(r.date) >= new Date(startDate));
+      }
+      if (endDate) {
+        filtered = filtered.filter(r => new Date(r.date) <= new Date(endDate));
+      }
+
+      return {
+        unsigned: filtered.filter(r => !r.isSigned),
+        signed: filtered.filter(r => r.isSigned)
+      };
+    }
+    
+    // Apply local filters to mock data if apiData is empty
+    let filteredUnsigned = rows;
+    let filteredSigned = signedRows;
+    if (kindFilter !== 'All') {
+      filteredUnsigned = filteredUnsigned.filter(r => r.kind === kindFilter);
+      filteredSigned = filteredSigned.filter(r => r.kind === kindFilter);
+    }
+    if (providerFilter !== 'All') {
+      filteredUnsigned = filteredUnsigned.filter(r => r.provider === providerFilter);
+      filteredSigned = filteredSigned.filter(r => r.provider === providerFilter);
+    }
+    if (startDate) {
+      filteredUnsigned = filteredUnsigned.filter(r => new Date(r.date) >= new Date(startDate));
+      filteredSigned = filteredSigned.filter(r => new Date(r.date) >= new Date(startDate));
+    }
+    if (endDate) {
+      filteredUnsigned = filteredUnsigned.filter(r => new Date(r.date) <= new Date(endDate));
+      filteredSigned = filteredSigned.filter(r => new Date(r.date) <= new Date(endDate));
+    }
+    return { unsigned: filteredUnsigned, signed: filteredSigned };
+  }, [apiData, kindFilter, providerFilter, startDate, endDate, rows, signedRows]);
+
+  const displayUnsignedRows = processedData.unsigned;
+  const displaySignedRows = processedData.signed;
 
   const handleRowClick = (id) => {
     setExpandedRow(expandedRow === id ? null : id);

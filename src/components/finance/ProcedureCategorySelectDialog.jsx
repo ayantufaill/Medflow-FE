@@ -14,7 +14,7 @@ import {
   AccordionDetails,
   List,
   ListItem,
-  Radio,
+  Checkbox,
   FormControlLabel
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -85,11 +85,15 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
   const loading = useSelector(selectProcedureCodesLoading);
   
   const [hierarchy, setHierarchy] = useState({});
-  const [selectedProc, setSelectedProc] = useState(null);
+  const [selectedProcs, setSelectedProcs] = useState([]);
 
   useEffect(() => {
-    if (open && codes.length === 0) {
-      dispatch(fetchProcedureCodes({ limit: 1000 }));
+    if (open) {
+      // Clear selections on open
+      setSelectedProcs([]);
+      if (codes.length === 0) {
+        dispatch(fetchProcedureCodes({ limit: 1000 }));
+      }
     }
   }, [open, codes.length, dispatch]);
 
@@ -108,11 +112,22 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
     }
   }, [codes]);
 
+  const handleToggleProcedure = (proc) => {
+    setSelectedProcs((prev) => {
+      const isSelected = prev.some((p) => p.ProcCode === proc.ProcCode);
+      if (isSelected) {
+        return prev.filter((p) => p.ProcCode !== proc.ProcCode);
+      } else {
+        return [...prev, proc];
+      }
+    });
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f5f5f5' }}>
         <Typography variant="h6" fontWeight={700}>
-          Select Code:
+          Select Code(s):
         </Typography>
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
@@ -143,10 +158,10 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
                               <FormControlLabel
                                 value={proc.ProcCode}
                                 control={
-                                  <Radio 
+                                  <Checkbox 
                                     size="small" 
-                                    checked={selectedProc?.ProcCode === proc.ProcCode}
-                                    onChange={() => setSelectedProc(proc)}
+                                    checked={selectedProcs.some(p => p.ProcCode === proc.ProcCode)}
+                                    onChange={() => handleToggleProcedure(proc)}
                                     sx={{ p: 0.5, color: '#888', '&.Mui-checked': { color: '#555' } }}
                                   />
                                 }
@@ -171,11 +186,11 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
       <DialogActions sx={{ p: 2, bgcolor: '#f5f5f5' }}>
         <Button 
           onClick={() => {
-            if (selectedProc) {
-              onSelect(selectedProc);
+            if (selectedProcs.length > 0) {
+              onSelect(selectedProcs);
             }
           }} 
-          disabled={!selectedProc}
+          disabled={selectedProcs.length === 0}
           variant="contained" 
           sx={{ bgcolor: '#d2b48c', color: 'white', '&:hover': { bgcolor: '#c1a37b' } }}
         >

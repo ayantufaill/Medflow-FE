@@ -291,8 +291,19 @@ const CoverageSmallTable = ({ title, rows = [], onDeleteItem }) => (
 );
 
 const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
-  // Use dummy data if no coverageData provided
-  const data = (coverageData && Object.keys(coverageData).length > 0) ? coverageData : COVERAGE_DATA;
+  // Use empty arrays if no coverageData is provided to prevent showing misleading dummy percentages
+  const data = (coverageData && Object.keys(coverageData).length > 0) ? coverageData : {
+    diagnostic: [],
+    preventative: [],
+    restorative: [],
+    implantServices: [],
+    prosthodonticsFixed: [],
+    prosthodonticsRemovable: [],
+    oralSurgery: [],
+    adjunctiveGeneral: [],
+    frequencies: [],
+    limitations: []
+  };
 
   // Handler to delete coverage item
   const handleDeleteCoverageItem = (itemId) => {
@@ -304,7 +315,9 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
     // Find and remove the item from the appropriate category
     const updatedData = { ...data };
     Object.keys(updatedData).forEach(key => {
-      updatedData[key] = updatedData[key].filter(item => item.id !== itemId);
+      if (Array.isArray(updatedData[key])) {
+        updatedData[key] = updatedData[key].filter(item => item.id !== itemId);
+      }
     });
     
     setCoverageData(updatedData);
@@ -320,9 +333,11 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
     const updatedData = { ...data };
     Object.keys(updatedData).forEach(key => {
       if (key === 'frequencies' || key === 'limitations') return;
-      updatedData[key] = updatedData[key].map(item => 
-        item.id === itemId ? { ...item, [field]: value } : item
-      );
+      if (Array.isArray(updatedData[key])) {
+        updatedData[key] = updatedData[key].map(item => 
+          item.id === itemId ? { ...item, [field]: value } : item
+        );
+      }
     });
     
     setCoverageData(updatedData);
@@ -387,7 +402,7 @@ const MemberFinalCoverageSection = ({ coverageData, setCoverageData }) => {
         />
         <CoverageSmallTable 
           title="Prosthodontics, Fixed" 
-          rows={[{ id: 100, label: 'Prosthodontics, Fixed', coverage: 50, waiting: 0 }]}
+          rows={data.prosthodonticsFixed}
           onDeleteItem={handleDeleteCoverageItem}
         />
         <CoverageSmallTable 

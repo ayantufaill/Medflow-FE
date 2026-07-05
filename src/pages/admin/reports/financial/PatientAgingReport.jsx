@@ -6,7 +6,7 @@ import PatientAgingReportTable from './PatientAgingReportTable';
 const PatientAgingReport = () => {
   const [hidePatientNames, setHidePatientNames] = useState(false);
 
-  const agingBuckets = [
+  const agingBuckets = ([
     '0 - 30 days',
     '31 - 60 days',
     '61 - 90 days',
@@ -14,46 +14,49 @@ const PatientAgingReport = () => {
     '121 - 150 days',
     '151 - 180 days',
     '> 180 day',
-  ];
+  ], []);
 
-  const dummyData = [
-    {
-      flags: [],
-      name: 'John Doe',
-      buckets: {
-        '0 - 30 days': { pt: 1904.33, ins: 0 },
-        '31 - 60 days': { pt: 0, ins: 0 },
-        '61 - 90 days': { pt: 0, ins: 0 },
-        '91 - 120 days': { pt: 0, ins: 0 },
-        '121 - 150 days': { pt: 0, ins: 0 },
-        '151 - 180 days': { pt: 0, ins: 0 },
-        '> 180 day': { pt: 0, ins: 0 },
-      },
-      total: 1904.33,
-      totalOwings: 3904.33,
-      paymentPlan: 0,
-      credit: 0,
-      lastBilled: '',
-    },
-    {
-      flags: [],
-      name: 'Jane Smith',
-      buckets: {
-        '0 - 30 days': { pt: 1724.00, ins: 0 },
-        '31 - 60 days': { pt: 0, ins: 0 },
-        '61 - 90 days': { pt: 0, ins: 0 },
-        '91 - 120 days': { pt: 0, ins: 0 },
-        '121 - 150 days': { pt: 0, ins: 0 },
-        '151 - 180 days': { pt: 0, ins: 0 },
-        '> 180 day': { pt: 0, ins: 0 },
-      },
-      total: 1724.00,
-      totalOwings: 3724.00,
-      paymentPlan: 0,
-      credit: 0,
-      lastBilled: '',
-    }
-  ];
+  const totals = useMemo(() => {
+    const sums = {
+      buckets: {},
+      totalOutstanding: 0,
+      totalPt: 0,
+      totalIns: 0,
+      totalCredit: 0
+    };
+    
+    agingBuckets.forEach(b => {
+      sums.buckets[b] = { total: 0, pt: 0, ins: 0 };
+    });
+
+    filteredReportData.forEach(row => {
+      let rowPtTotal = 0;
+      let rowInsTotal = 0;
+      
+      agingBuckets.forEach(b => {
+        const bData = row.buckets?.[b];
+        if (bData) {
+          const ptVal = bData.pt || 0;
+          const insVal = bData.ins || 0;
+          sums.buckets[b].pt += ptVal;
+          sums.buckets[b].ins += insVal;
+          sums.buckets[b].total += (ptVal + insVal);
+          
+          rowPtTotal += ptVal;
+          rowInsTotal += insVal;
+        }
+      });
+      sums.totalPt += rowPtTotal;
+      sums.totalIns += rowInsTotal;
+      sums.totalOutstanding += (rowPtTotal + rowInsTotal);
+      sums.totalCredit += (row.credit || 0);
+    });
+    return sums;
+  }, [filteredReportData, agingBuckets]);
+
+  const netOutstandingBalance = useMemo(() => {
+    return Math.max(0, totals.totalOutstanding - totals.totalCredit);
+  }, [totals]);
 
   const topFilters = (
     <>
@@ -111,25 +114,52 @@ const PatientAgingReport = () => {
       <Box sx={{ mt: 2, borderTop: '2px solid #e0e0e0', pt: 2 }}>
         <Table size="small">
           <TableBody>
-            {[
-              { label: 'Total Outstanding Balances', values: ['28,802.75', '10,452.94', '2,808.96', '764.50', '903.50', '7,677.87', '6,146.28'], total: '57,556.80' },
-              { label: 'Total Patients Balances', values: ['7,452.05', '1,074.18', '935.56', '764.50', '83.00', '2,482.12', '3,951.58'], total: '16,742.99' },
-              { label: 'Total Insurance Balances', values: ['21,350.70', '9,378.76', '1,873.40', '0.00', '820.50', '5,195.75', '2,194.70'], total: '40,813.81' }
-            ].map((row, idx) => (
-              <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-                <TableCell sx={{ width: '25%', fontWeight: 600 }}>{row.label}</TableCell>
-                {row.values.map((val, i) => (
-                  <TableCell key={i} align="right" sx={{ width: '8%', fontWeight: 600 }}>${val}</TableCell>
-                ))}
-                <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>${row.total}</TableCell>
-                <TableCell sx={{ width: '15%' }}></TableCell>
-              </TableRow>
-            ))}
+            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
+              <TableCell sx={{ width: '25%', fontWeight: 600 }}>Total Outstanding Balances</TableCell>
+              {agingBuckets.map((bucket, i) => (
+                <TableCell key={i} align="right" sx={{ width: '8%', fontWeight: 600 }}>
+                  ${totals.buckets[bucket]?.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </TableCell>
+              ))}
+              <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>
+                ${totals.totalOutstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
+              <TableCell sx={{ width: '15%' }}></TableCell>
+            </TableRow>
+
+            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total Patients Balances</TableCell>
+              {agingBuckets.map((bucket, i) => (
+                <TableCell key={i} align="right" sx={{ fontWeight: 600 }}>
+                  ${totals.buckets[bucket]?.pt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </TableCell>
+              ))}
+              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                ${totals.totalPt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+
+            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total Insurance Balances</TableCell>
+              {agingBuckets.map((bucket, i) => (
+                <TableCell key={i} align="right" sx={{ fontWeight: 600 }}>
+                  ${totals.buckets[bucket]?.ins.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </TableCell>
+              ))}
+              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                ${totals.totalIns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+
             <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
               <TableCell sx={{ fontWeight: 600 }}>Total Account Credit</TableCell>
               {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
               <TableCell></TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600 }}>$10,546.81</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                ${totals.totalCredit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
             </TableRow>
             <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
               <TableCell sx={{ fontWeight: 600 }}>
@@ -138,7 +168,9 @@ const PatientAgingReport = () => {
               </TableCell>
               {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
               <TableCell></TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>$47,009.99</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>
+                ${netOutstandingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>

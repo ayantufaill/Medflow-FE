@@ -38,9 +38,9 @@ import PaymentPresentation from './PaymentPresentation';
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
   { label: 'Providers', path: '/admin/user-management/providers' },
-  { label: 'Roles', path: '/admin/user-management/roles' },
-  { label: 'Time Clock', path: '/admin/user-management/time-clock' },
-  { label: 'Task Management', path: '/admin/user-management/task-management' },
+  { label: 'Roles', path: '/admin/user-management/roles', disabled: true },
+  { label: 'Time Clock', path: '/admin/user-management/time-clock', disabled: true },
+  { label: 'Task Management', path: '/admin/user-management/task-management', disabled: true },
 ];
 
 const TABS = [
@@ -149,7 +149,7 @@ const AdminPage = () => {
       {!isSubPage && (
         <Box
           onMouseLeave={() => setHoveredTab(null)}
-          sx={{ mx: -3, backgroundColor: theme.palette.background.paper }}
+          sx={{ mx: -3, backgroundColor: theme.palette.background.paper, position: 'relative' }}
         >
           {/* Main tabs */}
           <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 3 }}>
@@ -193,16 +193,22 @@ const AdminPage = () => {
           {hoveredTab !== null && (hoveredTab === 0 || hoveredTab === 1 || hoveredTab === 2 || hoveredTab === 3 || hoveredTab === 4 || hoveredTab === 5) && (
             <Box
               sx={{
-                borderBottom: 1,
+                position: 'absolute',
+                top: '48px',
+                left: 24 + hoveredTab * 140,
+                zIndex: 1100,
+                backgroundColor: '#ffffff',
+                border: '1px solid',
                 borderColor: 'divider',
-                borderTop: 1,
-                px: 3,
-                backgroundColor: '#f0f4fa',
+                boxShadow: '0px 8px 24px rgba(0,0,0,0.12)',
+                borderRadius: '8px',
                 display: 'flex',
-                gap: 0,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                '&::-webkit-scrollbar': { display: 'none' },
+                flexDirection: 'column',
+                py: 1,
+                minWidth: 260,
+                maxWidth: 320,
+                maxHeight: 400,
+                overflowY: 'auto',
               }}
             >
               {(hoveredTab === 0
@@ -218,25 +224,46 @@ const AdminPage = () => {
                         : INSURANCE_MANAGEMENT_SUB_TABS
               ).map((sub) => {
                 const isActive = location.pathname === sub.path;
+                if (sub.disabled) {
+                  return (
+                    <Typography
+                      key={sub.label}
+                      component="span"
+                      sx={{
+                        px: 2,
+                        py: 1.2,
+                        fontSize: '0.8rem',
+                        fontWeight: 400,
+                        color: 'text.disabled',
+                        textDecoration: 'none',
+                        display: 'block',
+                        cursor: 'not-allowed',
+                        userSelect: 'none',
+                        opacity: 0.5,
+                      }}
+                    >
+                      {sub.label}
+                    </Typography>
+                  );
+                }
                 return (
                   <Typography
                     key={sub.label}
                     component={Link}
                     to={sub.path}
+                    onClick={() => setHoveredTab(null)}
                     sx={{
                       px: 2,
-                      py: 1.5,
+                      py: 1.2,
                       fontSize: '0.8rem',
                       fontWeight: isActive ? 600 : 500,
                       color: isActive ? theme.palette.primary.main : 'text.secondary',
                       textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                      borderBottom: isActive
-                        ? `2px solid ${theme.palette.primary.main}`
-                        : '2px solid transparent',
+                      display: 'block',
+                      transition: 'background-color 0.15s, color 0.15s',
                       '&:hover': {
                         color: theme.palette.primary.main,
-                        borderBottomColor: theme.palette.primary.main,
+                        backgroundColor: 'rgba(25, 118, 210, 0.08)',
                       },
                     }}
                   >

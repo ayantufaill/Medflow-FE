@@ -42,20 +42,9 @@ const AddCoveragePage = () => {
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   const [isCoverageBookModalOpen, setIsCoverageBookModalOpen] = useState(false);
 
-  const {
-    formData,
-    setFormData,
-    coverageBookData,
-    setCoverageBookData,
-    coverageCategoryData,
-    setCoverageCategoryData,
-    templateToApply,
-    setTemplateToApply,
-    isTemplateConfirmOpen,
-    setIsTemplateConfirmOpen,
-    applyTemplate,
-    handlers
-  } = useCoverageForm(patient);
+  const [errors, setErrors] = useState({});
+  const [coverageBookData, setCoverageBookData] = useState([]);
+  const [coverageCategoryData, setCoverageCategoryData] = useState(insuranceId ? {} : COVERAGE_DATA);
 
   const {
     loading,
@@ -82,7 +71,545 @@ const AddCoveragePage = () => {
     label: fg.Description || fg.description || fg.name || 'Unknown Fee Guide'
   }));
 
-  const handleViewFullBook = () => setIsCoverageBookModalOpen(true);
+  const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
+      <Icon sx={{ fontSize: 14, color }} />
+      <Typography sx={{ fontSize: '0.65rem', color, fontWeight: 600 }}>{text}</Typography>
+    </Box>
+  );
+
+  // Style constants
+  const blueHeader = "#f0f4f8";
+  const sectionTitle = { fontWeight: 700, mb: 1, color: "#333", fontSize: "0.85rem" };
+  const tinyText = { fontSize: '0.7rem' };
+  const tableHeaderStyle = { 
+    fontSize: '0.65rem', 
+    fontWeight: 700, 
+    color: "#555", 
+    borderRight: '1px solid #e0e0e0',
+    py: 0.5,
+    lineHeight: 1.1,
+    whiteSpace: 'normal',
+    wordWrap: 'break-word'
+  };
+  const inputBg = "#f9fafb";
+  
+  const headerStyle = { 
+    fontSize: '0.65rem', 
+    fontWeight: 700, 
+    color: "#555", 
+    borderRight: '1px solid #e0e0e0',
+    py: 0.5 
+  };
+
+  const bodyCellStyle = { 
+    fontSize: '0.75rem', 
+    borderRight: '1px solid #eee',
+    py: 0.2,
+    height: '35px'
+  };
+
+  useEffect(() => {
+    if (patientId) {
+      fetchPatient(patientId);
+    }
+  }, [patientId, fetchPatient]);
+
+  const initialFetchRef = useRef({ companies: false, templates: false });
+
+  useEffect(() => {
+    if ((!allCompanies || allCompanies.length === 0) && !companiesLoading && !initialFetchRef.current.companies) {
+      initialFetchRef.current.companies = true;
+      fetchCompanies();
+    }
+    if ((!coverageTemplates || coverageTemplates.length === 0) && !templatesLoading && !initialFetchRef.current.templates) {
+      initialFetchRef.current.templates = true;
+      fetchTemplates();
+    }
+  }, [allCompanies, coverageTemplates, companiesLoading, templatesLoading, fetchCompanies, fetchTemplates]);
+
+  useEffect(() => {
+    if (feeGuides.length === 0 && !feeGuidesLoading) {
+      dispatch(fetchFeeGuides());
+    }
+  }, [dispatch, feeGuides.length, feeGuidesLoading]);
+
+  useEffect(() => {
+    // Only fetch existing insurances if we are editing an existing policy
+    if (patientId && insuranceId && insurances.length === 0) fetchInsurances();
+  }, [patientId, insuranceId, insurances.length, fetchInsurances]);
+
+  useEffect(() => {
+  const loadData = async () => {
+    try {
+      if (patientId && insuranceId && insurances.length > 0 && allCompanies && allCompanies.length > 0) {
+        const editTarget = insurances.find(ins => (ins._id || ins.id) === insuranceId);
+
+        if (editTarget) {
+          const monthMapReverse = {
+            1: 'January', 2: 'February', 3: 'March', 4: 'April',
+            5: 'May', 6: 'June', 7: 'July', 8: 'August',
+            9: 'September', 10: 'October', 11: 'November', 12: 'December'
+          };
+
+          const fullCompany = allCompanies.find(
+            c => (c._id || c.id) === (editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId)
+          );
+
+          setFormData(prev => ({
+            ...prev,
+            insuranceCompanyId: editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId,
+            carrierName: editTarget.insuranceCompanyId?.name || '',
+            payerId: editTarget.insuranceCompanyId?.payerId || '',
+            carrierPhone: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
+            payerAddress: fullCompany?.addressLine1 || editTarget.insuranceCompanyId?.addressLine1 || fullCompany?.city || editTarget.insuranceCompanyId?.city || '',
+            phoneNumber: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
+            groupNumber: editTarget.groupNumber || '',
+            groupName: editTarget.groupName || '',
+            insurancePlan: editTarget.insurancePlan?.name || editTarget.insurancePlan || fullCompany?.name || editTarget.insuranceCompanyId?.name || '',
+            insuranceType: editTarget.insuranceType || 'primary',
+            planFeeGuide: editTarget.planFeeGuide || '',
+            coverageType: editTarget.coverageType || 'ppo',
+            assignmentOfBenefits: parseInt(editTarget.assignmentOfBenefits) || 1,
+            honorWriteOff: editTarget.honorWriteOff || false,
+            renewalMonth: monthMapReverse[editTarget.renewalMonth] || 'January',
+            policyStarted: editTarget.effectiveDate
+              ? new Date(editTarget.effectiveDate).toISOString().split('T')[0]
+              : prev.policyStarted,
+            policyEnds: editTarget.expirationDate
+              ? new Date(editTarget.expirationDate).toISOString().split('T')[0]
+              : '',
+            subscriber: {
+              ...prev.subscriber,
+              relationship: editTarget.relationshipToPatient?.charAt(0).toUpperCase() +
+                editTarget.relationshipToPatient?.slice(1) || 'Self',
+              name: editTarget.subscriberName || '',
+              subscriberId: editTarget.policyNumber || '',
+              ssn: editTarget.subscriberSsn || '',
+              dateOfBirth: editTarget.subscriberDateOfBirth
+                ? new Date(editTarget.subscriberDateOfBirth).toISOString().split('T')[0]
+                : ''
+            },
+            deductibles: editTarget.deductiblesGrid?.length ? editTarget.deductiblesGrid : prev.deductibles,
+            coverage: editTarget.coverageLimits || prev.coverage,
+
+            providersPlanFeeGuides: editTarget.providersPlanFeeGuides || [],
+            policyNotes: editTarget.policyNotes || '',
+            eligibilityPolicyNotes: editTarget.eligibilityPolicyNotes || '',
+            insurancePlanNotes: editTarget.insurancePlanNotes || '',
+            healthPlan: editTarget.healthPlan || false,
+            paymentPlan: editTarget.paymentPlan || ''
+          }));
+
+          if (editTarget.coverageBookData) {
+            setCoverageBookData(editTarget.coverageBookData);
+          }
+
+          if (editTarget.coverageCategoryTable) {
+            const covDataArray = editTarget.coverageCategoryTable;
+            if (Array.isArray(covDataArray) && covDataArray.length > 0) {
+              if (typeof covDataArray[0] === 'object' && covDataArray[0].category) {
+                const covData = {};
+                covDataArray.forEach(group => {
+                  covData[group.category] = group.items;
+                });
+                setCoverageCategoryData(covData);
+              } else if (typeof covDataArray[0] === 'object' && !covDataArray[0].category) {
+                setCoverageCategoryData(covDataArray);
+              }
+            } else if (covDataArray && !Array.isArray(covDataArray)) {
+              setCoverageCategoryData(covDataArray);
+            } else {
+              setCoverageCategoryData({});
+            }
+          } else {
+            setCoverageCategoryData({});
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load data', err);
+      showSnackbar('Failed to load required data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadData();
+}, [patientId, insuranceId, insurances, allCompanies]);
+
+  useEffect(() => {
+    if (patient && formData.subscriber.relationship === 'Self' && !formData.subscriber.name) {
+      const { firstName, lastName, dateOfBirth, ssn } = patient;
+      const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        subscriber: {
+          ...prev.subscriber,
+          name: fullName || prev.subscriber.name,
+          dateOfBirth: dateOfBirth ? dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
+          ssn: ssn || prev.subscriber.ssn
+        }
+      }));
+    }
+  }, [patient]);
+
+
+  const handleSave = async () => {
+    try {
+      if (!patientId) {
+        showSnackbar('Cannot save coverage: No patient selected. Please navigate to a specific patient\'s dashboard to add coverage.', 'error');
+        return;
+      }
+
+      const newErrors = {};
+
+      if (!formData.insuranceCompanyId || !formData.payerId) {
+        newErrors.insuranceCompanyId = 'Please search and select a carrier';
+      }
+
+      if (!formData.insurancePlan?.trim()) {
+        newErrors.insurancePlan = 'Insurance Plan is required';
+      }
+
+      if (!formData.groupName?.trim()) {
+        newErrors.groupName = 'Group Name is required';
+      }
+
+      if (!formData.groupNumber?.trim()) {
+        newErrors.groupNumber = 'Group Number is required';
+      } else if (!/^[A-Za-z0-9]+$/.test(formData.groupNumber)) {
+        newErrors.groupNumber = 'Group Number must be alphanumeric only';
+      }
+
+      if (!formData.subscriber.name?.trim()) {
+        newErrors.subscriberName = 'Subscriber Name is required';
+      } else if (!/^[A-Za-z\s'-]+$/.test(formData.subscriber.name)) {
+        newErrors.subscriberName = 'Subscriber Name can only contain letters, spaces, hyphens, and apostrophes';
+      }
+
+      if (!formData.subscriber.subscriberId?.trim()) {
+        newErrors.subscriberId = 'Subscriber ID is required';
+      } else if (formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
+        newErrors.subscriberId = 'Subscriber ID must be between 5 and 30 characters';
+      } else if (!/^[A-Za-z0-9]+$/.test(formData.subscriber.subscriberId)) {
+        newErrors.subscriberId = 'Subscriber ID must be alphanumeric only';
+      }
+
+      if (!formData.subscriber.dateOfBirth) {
+        newErrors.dateOfBirth = 'Subscriber Date of Birth is required';
+      } else {
+        const dob = new Date(formData.subscriber.dateOfBirth);
+        const today = new Date();
+        if (dob > today) {
+          newErrors.dateOfBirth = 'Date of birth must be in the past';
+        } else {
+          let age = today.getFullYear() - dob.getFullYear();
+          const monthDiff = today.getMonth() - dob.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+          }
+          if (age >= 120) {
+            newErrors.dateOfBirth = 'Subscriber age must be less than 120 years';
+          }
+        }
+      }
+
+      if (!formData.policyStarted) {
+        newErrors.policyStarted = 'Policy Started date is required';
+      }
+
+      if (formData.policyEnds && formData.policyStarted) {
+        const effectiveDate = new Date(formData.policyStarted);
+        const expirationDate = new Date(formData.policyEnds);
+        if (expirationDate <= effectiveDate) {
+          newErrors.policyEnds = 'Policy ends date must be after policy started date';
+        }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        showSnackbar('Please correct the highlighted errors', 'error');
+        return;
+      }
+
+      setErrors({});
+      setLoading(true);
+      
+      // Map UI state to backend validator requirements
+      const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
+      const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
+
+      const payload = {
+        insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
+        policyNumber: formData.subscriber.subscriberId,
+        groupNumber: formData.groupNumber || undefined,
+        groupName: formData.groupName || undefined,
+        subscriberName: formData.subscriber.name,
+        subscriberDateOfBirth: new Date(formData.subscriber.dateOfBirth).toISOString(),
+        relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
+        insuranceType: 'primary', // Hardcoded as primary for initial coverage
+        effectiveDate: new Date(formData.policyStarted).toISOString(),
+        expirationDate: formData.policyEnds ? new Date(formData.policyEnds).toISOString() : undefined,
+        deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,
+        
+        // Advanced Dentistry Fields
+        deductiblesGrid: formData.deductibles,
+        coverageLimits: formData.coverage,
+        coverageCategoryTable: Object.entries(coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
+        coverageBookData: coverageBookData,
+        planFeeGuide: formData.planFeeGuide,
+        coverageType: formData.coverageType,
+        subscriberSsn: formData.subscriber.ssn || undefined,
+        renewalMonth: renewalMonthNum,
+        assignmentOfBenefits: formData.assignmentOfBenefits.toString(),
+        honorWriteOff: formData.honorWriteOff,
+        
+        // Notes
+        policyNotes: formData.policyNotes || undefined,
+        eligibilityPolicyNotes: formData.eligibilityPolicyNotes || undefined,
+        insurancePlanNotes: formData.insurancePlanNotes || undefined,
+
+        // newly supported fields
+        providersPlanFeeGuides: formData.providersPlanFeeGuides,
+        healthPlan: formData.healthPlan,
+        paymentPlan: formData.paymentPlan
+      };
+
+      if (insuranceId) {
+        await updateInsurance(insuranceId, payload).unwrap();
+        showSnackbar('Coverage updated successfully', 'success');
+      } else {
+        await createInsurance(payload).unwrap();
+        showSnackbar('Coverage saved successfully. Any unbilled procedures have been converted to unsent claims.', 'success');
+      }
+      
+      navigate(`/patients/details/${patientId}?tab=insurance`);
+    } catch (err) {
+      console.error('Failed to save coverage', err);
+      
+      // Parse backend validation errors if any
+      const backendErrors = err?.data?.error?.errors;
+      if (backendErrors && typeof backendErrors === 'object') {
+        const mappedErrors = {};
+        if (backendErrors.policyNumber) {
+          mappedErrors.subscriberId = Array.isArray(backendErrors.policyNumber) ? backendErrors.policyNumber[0] : backendErrors.policyNumber;
+        }
+        if (backendErrors.subscriberName) {
+          mappedErrors.subscriberName = Array.isArray(backendErrors.subscriberName) ? backendErrors.subscriberName[0] : backendErrors.subscriberName;
+        }
+        if (backendErrors.subscriberDateOfBirth) {
+          mappedErrors.dateOfBirth = Array.isArray(backendErrors.subscriberDateOfBirth) ? backendErrors.subscriberDateOfBirth[0] : backendErrors.subscriberDateOfBirth;
+        }
+        if (backendErrors.effectiveDate) {
+          mappedErrors.policyStarted = Array.isArray(backendErrors.effectiveDate) ? backendErrors.effectiveDate[0] : backendErrors.effectiveDate;
+        }
+        if (backendErrors.groupNumber) {
+          mappedErrors.groupNumber = Array.isArray(backendErrors.groupNumber) ? backendErrors.groupNumber[0] : backendErrors.groupNumber;
+        }
+        if (backendErrors.groupName) {
+          mappedErrors.groupName = Array.isArray(backendErrors.groupName) ? backendErrors.groupName[0] : backendErrors.groupName;
+        }
+        if (backendErrors.insuranceCompanyId) {
+          mappedErrors.insuranceCompanyId = Array.isArray(backendErrors.insuranceCompanyId) ? backendErrors.insuranceCompanyId[0] : backendErrors.insuranceCompanyId;
+        }
+        
+        if (Object.keys(mappedErrors).length > 0) {
+          setErrors(mappedErrors);
+          showSnackbar('Please correct the highlighted errors', 'error');
+          return;
+        }
+      }
+
+      const errorMessage = err?.data?.message || err?.message || (typeof err === 'string' ? err : 'Failed to save coverage');
+      showSnackbar(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate(`/patients/details/${patientId}?tab=insurance`);
+  };
+
+  const handleCoverageChange = (type, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      coverage: {
+        ...prev.coverage,
+        [type]: {
+          ...prev.coverage[type],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const applyTemplate = (template) => {
+    setFormData(prev => ({
+      ...prev,
+      insurancePlan: template.name || prev.insurancePlan,
+      groupName: template.name || prev.groupName,
+      // Just a mock representation of filling data from a template
+      notes: template.description || prev.notes,
+    }));
+  };
+
+  const handleApplyTemplate = (template) => {
+    // Check if we have existing values that would be overwritten
+    if (formData.insurancePlan || formData.groupName) {
+      setTemplateToApply(template);
+      setIsTemplateConfirmOpen(true);
+    } else {
+      applyTemplate(template);
+      showSnackbar(`Template "${template.name}" applied successfully`, 'success');
+    }
+  };
+
+  const handleViewFullBook = () => {
+    if (!formData.insurancePlan) {
+      showSnackbar('Please select an insurance plan or apply a template before viewing the full book.', 'warning');
+      return;
+    }
+    setIsCoverageBookModalOpen(true);
+  };
+
+  const handleRemoveOrthoMax = () => {
+    setFormData(prev => ({
+      ...prev,
+      coverage: {
+        ...prev.coverage,
+        ortho: {
+          annualMax: '',
+          usedAmount: '',
+          usedAmountDate: ''
+        }
+      }
+    }));
+  };
+
+  const handleAddCategoryMax = (category) => {
+    console.log('Add max for category:', category);
+    // TODO: Implement add category max logic
+  };
+
+  const handleAddProviderFeeGuide = () => {
+    setFormData(prev => ({
+      ...prev,
+      providersPlanFeeGuides: [...(prev.providersPlanFeeGuides || []), { providerId: '', feeGuide: '' }]
+    }));
+  };
+
+  const handleRemoveProviderFeeGuide = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      providersPlanFeeGuides: (prev.providersPlanFeeGuides || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleProviderFeeGuideChange = (index, field, value) => {
+    setFormData(prev => {
+      const newGuides = [...(prev.providersPlanFeeGuides || [])];
+      newGuides[index] = { ...newGuides[index], [field]: value };
+      return { ...prev, providersPlanFeeGuides: newGuides };
+    });
+  };
+
+  const handleAddDeductibleRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: [
+        ...prev.deductibles,
+        { type: '', isCodeRow: true, lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
+      ]
+    }));
+  };
+
+  const handleRemoveDeductibleRow = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: prev.deductibles.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubscriberChange = (field, value) => {
+    setFormData(prev => {
+      const newSubscriber = {
+        ...prev.subscriber,
+        [field]: value
+      };
+      
+      if (field === 'relationship') {
+        // Clear previous auto-populated fields
+        newSubscriber.name = '';
+        newSubscriber.dateOfBirth = '';
+        newSubscriber.ssn = '';
+
+        if (value === 'Self' && patient) {
+          const { firstName, lastName, dateOfBirth, ssn } = patient;
+          const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+          if (fullName) newSubscriber.name = fullName;
+          if (dateOfBirth) newSubscriber.dateOfBirth = dateOfBirth.split('T')[0];
+          if (ssn) newSubscriber.ssn = ssn;
+        } else if (value === 'Spouse' && patient) {
+          const spouse = patient.patientMeta?.spouseInfo || patient.spouseInfo;
+          if (spouse) {
+            const spouseName = spouse.name || `${spouse.firstName || ''} ${spouse.lastName || ''}`.trim();
+            if (spouseName) newSubscriber.name = spouseName;
+            
+            const dob = spouse.dateOfBirth || spouse.dob;
+            if (dob) newSubscriber.dateOfBirth = dob.split('T')[0];
+            
+            if (spouse.ssn) newSubscriber.ssn = spouse.ssn;
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        subscriber: newSubscriber
+      };
+    });
+    
+    // Clear specific subscriber errors
+    const errKey = field === 'subscriberId' ? 'subscriberId' : (field === 'dateOfBirth' ? 'dateOfBirth' : (field === 'name' ? 'subscriberName' : null));
+    if (errKey) {
+      setErrors(prev => ({ ...prev, [errKey]: null }));
+    }
+  };
+
+  const handleRenewalChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (field === 'policyStarted' || field === 'policyEnds') {
+      setErrors(prev => ({ ...prev, policyStarted: null, policyEnds: null }));
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
+      setErrors(prev => ({ ...prev, insurancePlan: null, insuranceCompanyId: null }));
+    } else if (field === 'groupName') {
+      setErrors(prev => ({ ...prev, groupName: null }));
+    } else if (field === 'groupNumber') {
+      setErrors(prev => ({ ...prev, groupNumber: null }));
+    }
+  };
+
+  const handleDeductibleChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      deductibles: prev.deductibles.map((deductible, i) => 
+        i === index ? { ...deductible, [field]: value } : deductible
+      )
+    }));
+  };
 
   return (
     <Box sx={{ bgcolor: "#f5f6f8", minHeight: "100vh" }}>

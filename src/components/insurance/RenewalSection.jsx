@@ -5,7 +5,8 @@ import FormInput from './FormInput';
 const RenewalSection = ({ 
   formData, 
   handleRenewalChange,
-  inputBg
+  inputBg,
+  errors = {}
 }) => {
   return (
     <Box sx={{ 

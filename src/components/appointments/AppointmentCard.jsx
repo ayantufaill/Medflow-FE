@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { Box, Paper, Typography, IconButton, Popover, Divider } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -527,7 +528,9 @@ const AppointmentContent = ({
   isCompactAppointment,
   statusColor,
   sizing,
+  onAppointmentClick,
 }) => {
+  const navigate = useNavigate();
   return (
     <>
       {/* Disease/Procedure Names with Status Indicators */}
@@ -573,12 +576,25 @@ const AppointmentContent = ({
           </IconButton>
 
           {/* Dollar Sign Icon (Financial Status) */}
-          <IconButton size="small" sx={{ p: isUltraCompact ? 0.1 : isCompactAppointment ? 0.15 : 0.2, minWidth: isUltraCompact ? 16 : isCompactAppointment ? 18 : 20, mx: 0 }}>
+          <IconButton 
+            size="small" 
+            sx={{ p: isUltraCompact ? 0.1 : isCompactAppointment ? 0.15 : 0.2, minWidth: isUltraCompact ? 16 : isCompactAppointment ? 18 : 20, mx: 0 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAppointmentClick) onAppointmentClick(appointment);
+              navigate('/finance');
+            }}
+          >
             <AttachMoneyIcon sx={{ fontSize: sizing.iconSize, color: "#4caf50" }} />
           </IconButton>
 
           {/* Tx Icon (Treatment Plan) */}
           <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAppointmentClick) onAppointmentClick(appointment);
+              navigate('/clinical/treatment-plan');
+            }}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -605,6 +621,11 @@ const AppointmentContent = ({
 
           {/* Tooth Outline Icon (Charting) */}
           <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAppointmentClick) onAppointmentClick(appointment);
+              navigate('/clinical/exam');
+            }}
             sx={{
               display: "flex",
               alignItems: "center",

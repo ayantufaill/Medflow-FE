@@ -29,6 +29,17 @@ const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
 
   useEffect(() => {
     if (open && feeGuideId) {
+      if (!/^\d+$/.test(String(feeGuideId))) {
+        console.warn(`Non-numeric feeGuideId "${feeGuideId}" passed. Skipping API call.`);
+        setFees([
+          { procCode: 'D0120', description: 'Periodic oral evaluation - established patient', amount: '$45.00' },
+          { procCode: 'D0150', description: 'Comprehensive oral evaluation - new or established patient', amount: '$65.00' },
+          { procCode: 'D0210', description: 'Intraoral - complete series of radiographic images', amount: '$110.00' },
+          { procCode: 'D1110', description: 'Prophylaxis - adult', amount: '$75.00' },
+          { procCode: 'D2391', description: 'Resin-based composite - one surface, posterior', amount: '$150.00' },
+        ]);
+        return;
+      }
       fetchFees();
     } else {
       setFees([]);

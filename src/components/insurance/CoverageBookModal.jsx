@@ -2,6 +2,8 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogActions,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -15,6 +17,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
+import SelectToothDialog from './SelectToothDialog';
 import { 
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowRight as KeyboardArrowRightIcon,
@@ -168,6 +171,16 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
 
   const getGroupKey = (type, group) => `${type}_${group}`;
 
+  const handleSaveClick = () => {
+    if (setCoverageData) {
+      setCoverageData(localCoverageData);
+    }
+    if (onSave) {
+      onSave(localCoverageData);
+    }
+    onClose();
+  };
+
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: '95vw', height: '90vh', m: 0, borderRadius: 1 }}}>
@@ -260,6 +273,18 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
             </TableContainer>
           ))}
         </DialogContent>
+        <DialogActions sx={{ p: 2, bgcolor: '#f5f5f5', borderTop: '1px solid #e0e0e0' }}>
+          <Button onClick={onClose} variant="outlined" sx={{ textTransform: 'none', color: '#555', borderColor: '#ccc' }}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveClick}
+            variant="contained" 
+            sx={{ textTransform: 'none', bgcolor: '#4A75B4', '&:hover': { bgcolor: '#3b5f94' } }}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <ToothSelectionDialog

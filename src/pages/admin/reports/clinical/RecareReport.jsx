@@ -7,17 +7,18 @@ import RecareMonthly from './RecareMonthly';
 const RecareReport = () => {
   const theme = useTheme();
   const [view, setView] = useState('list'); // 'list', 'month-to-day', 'monthly'
+  const [subtitle, setSubtitle] = useState('');
 
   const renderView = () => {
     switch (view) {
       case 'list':
-        return <RecareList />;
+        return <RecareList setSubtitle={setSubtitle} />;
       case 'month-to-day':
-        return <RecareMonthToDay />;
+        return <RecareMonthToDay setSubtitle={setSubtitle} />;
       case 'monthly':
-        return <RecareMonthly />;
+        return <RecareMonthly setSubtitle={setSubtitle} />;
       default:
-        return <RecareList />;
+        return <RecareList setSubtitle={setSubtitle} />;
     }
   };
 
@@ -28,10 +29,8 @@ const RecareReport = () => {
         <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700, color: '#1e293b' }}>
           Recare Report
         </Typography>
-        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', fontSize: '0.8rem' }}>
-          {view === 'list' 
-            ? "Patients due for their recare between 05/08/2026 and 06/08/2026"
-            : "Select a date range to view recare statistics"}
+        <Typography variant="body2" color="text.secondary">
+          {subtitle}
         </Typography>
       </Box>
 

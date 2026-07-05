@@ -48,5 +48,25 @@ export const reportingService = {
   async getFinancialReport(reportName, params = {}) {
     const response = await apiClient.get(`/reports/financial/${reportName}`, { params });
     return response.data.data;
+  },
+
+  /**
+   * Get patient report data by name
+   * @param {string} reportName 
+   * @param {Object} params - Query params like date, range
+   */
+  async getPatientReport(reportName, params = {}) {
+    const response = await apiClient.get(`/reports/patient/${reportName}`, { params });
+    return response.data.data;
+  },
+
+  /**
+   * Get clinical report data by name
+   * @param {string} reportName - e.g. 'recare', 'unsigned-progress-notes', 'rx'
+   * @param {Object} params - Query params like startDate, endDate, range
+   */
+  async getClinicalReport(reportName, params = {}) {
+    const response = await apiClient.get(`/reports/clinical/${reportName}`, { params });
+    return response.data.data;
   }
 };

@@ -167,6 +167,7 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
             invoiceId: invoice.id,
             amount: invoicePaymentAmount,
             paymentMethod: backendMethod,
+            method: paymentData.paymentMethod, // Sends the specific type (e.g. "Visa Card") to be preserved in the backend JSON
             paymentDate: new Date().toISOString(),
             status: 'completed',
             notes: paymentData.description || 'Patient payment'

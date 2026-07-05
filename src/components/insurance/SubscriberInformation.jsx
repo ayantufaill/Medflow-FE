@@ -17,7 +17,8 @@ const SubscriberInformation = ({
   handleInputChange,
   relationshipOptions = ['Self', 'Spouse', 'Child', 'Parent', 'Other'],
   assignmentOptions = [],
-  inputBg
+  inputBg,
+  errors = {}
 }) => {
   const [showSsn, setShowSsn] = useState(false);
 

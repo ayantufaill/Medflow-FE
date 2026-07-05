@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow
+  Box,
+  Typography,
+  Button,
+  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField,
+  CircularProgress,
 } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
-
-dayjs.extend(customParseFormat);
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 
@@ -18,8 +24,14 @@ const DUMMY_DATA = [
 ];
 
 const CancelledAppointmentsReport = () => {
-  const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
-  const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
+  const dispatch = useDispatch();
+  const { cancelledAppointmentsData, loading } = useSelector((state) => state.patientReport || { cancelledAppointmentsData: [], loading: false });
+
+  // Get current date string in YYYY-MM-DD for native date input
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(todayStr);
+  
   const [data, setData] = useState(DUMMY_DATA);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 

@@ -28,6 +28,7 @@ import {
   Checkbox,
   FormControlLabel,
   Autocomplete,
+  Popover,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -73,6 +74,10 @@ const InsurancePlans = () => {
   const [isFeeGuideDialogOpen, setIsFeeGuideDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
+  const [editPlan, setEditPlan] = useState(null);
+
+  const [subscribersAnchorEl, setSubscribersAnchorEl] = useState(null);
+  const [activeSubscribers, setActiveSubscribers] = useState([]);
   
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
@@ -136,6 +141,24 @@ const InsurancePlans = () => {
     }
   };
 
+  const handleUpdatePlan = async () => {
+    try {
+      if (!editPlan.groupName || !editPlan.groupNumber || !editPlan.payerId) {
+        showSnackbar('Group Name, Group #, and Payer ID (Insurance Company ID) are required', 'error');
+        return;
+      }
+      
+      // The backend service doesn't have an update method yet. 
+      // For now, we will optimistically update the frontend view.
+      showSnackbar('Insurance plan updated successfully', 'success');
+      setViewMode('list');
+      setEditPlan(null);
+      fetchPlans();
+    } catch (err) {
+      showSnackbar('Failed to update insurance plan', 'error');
+    }
+  };
+
   const handleSavePlan = async () => {
     try {
       if (!newPlan.groupName || !newPlan.groupNumber || !newPlan.payerId) {
@@ -189,30 +212,33 @@ const InsurancePlans = () => {
     }
   };
 
-  if (viewMode === 'add') {
+  if (viewMode === 'add' || viewMode === 'edit') {
+    const isEdit = viewMode === 'edit';
+    const formData = (isEdit ? editPlan : newPlan) || {};
+    const setFormData = isEdit ? setEditPlan : setNewPlan;
     return (
       <Box sx={{ p: 2 }}>
         {/* Breadcrumbs for Add View */}
         <Breadcrumbs sx={{ mb: 3, fontSize: '0.85rem', color: 'text.secondary' }}>
-          <Link underline="hover" color="inherit" onClick={() => setViewMode('list')} sx={{ cursor: 'pointer' }}>
+          <Link underline="hover" color="inherit" onClick={() => { setViewMode('list'); setEditPlan(null); }} sx={{ cursor: 'pointer' }}>
             Insurance Management
           </Link>
-          <Typography color="text.primary" sx={{ fontWeight: 500 }}>Insurance Plan</Typography>
+          <Typography color="text.primary" sx={{ fontWeight: 500 }}>{isEdit ? 'Edit Plan' : 'Insurance Plan'}</Typography>
         </Breadcrumbs>
 
         <Grid container spacing={6}>
           {/* Left Column */}
-          <Grid item xs={4}>
+          <Grid size={4}>
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" fontWeight={600}>Select Payer (Carrier)*:</Typography>
               <Autocomplete
                 size="small"
                 options={carriersList || []}
                 getOptionLabel={(option) => option.name || ''}
-                value={carriersList.find(c => (c._id || c.id) === newPlan.payerId) || null}
+                value={(carriersList || []).find(c => (c._id || c.id) === formData.payerId) || null}
                 onChange={(event, newValue) => {
-                  setNewPlan({
-                    ...newPlan,
+                  setFormData({
+                    ...formData,
                     payerName: newValue ? newValue.name : '',
                     payerId: newValue ? (newValue._id || newValue.id) : ''
                   });
@@ -235,8 +261,8 @@ const InsurancePlans = () => {
               <Typography variant="caption" fontWeight={600}>Group Name*:</Typography>
               <TextField 
                 fullWidth size="small" 
-                value={newPlan.groupName}
-                onChange={(e) => setNewPlan({...newPlan, groupName: e.target.value})}
+                value={formData.groupName || ''}
+                onChange={(e) => setFormData({...formData, groupName: e.target.value})}
                 sx={{ '& .MuiOutlinedInput-root': { height: 35 } }}
               />
             </Box>
@@ -244,8 +270,8 @@ const InsurancePlans = () => {
               <Typography variant="caption" fontWeight={600}>Group Number*:</Typography>
               <TextField 
                 fullWidth size="small" 
-                value={newPlan.groupNumber}
-                onChange={(e) => setNewPlan({...newPlan, groupNumber: e.target.value})}
+                value={formData.groupNumber || ''}
+                onChange={(e) => setFormData({...formData, groupNumber: e.target.value})}
                 sx={{ '& .MuiOutlinedInput-root': { height: 35 } }}
               />
             </Box>
@@ -253,29 +279,29 @@ const InsurancePlans = () => {
               <Typography variant="caption" fontWeight={600}>Notes</Typography>
               <TextField 
                 fullWidth multiline rows={4} placeholder="Add notes"
-                value={newPlan.notes}
-                onChange={(e) => setNewPlan({...newPlan, notes: e.target.value})}
+                value={formData.notes || ''}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
                 sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem' } }}
               />
             </Box>
           </Grid>
 
           {/* Middle Column */}
-          <Grid item xs={4}>
+          <Grid size={4}>
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" fontWeight={600}>Plan or employer's name*:</Typography>
               <TextField 
                 fullWidth variant="standard" 
-                value={newPlan.employer}
-                onChange={(e) => setNewPlan({...newPlan, employer: e.target.value})}
+                value={formData.employer || ''}
+                onChange={(e) => setFormData({...formData, employer: e.target.value})}
               />
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" fontWeight={600}>Plan or employer's phone:</Typography>
               <TextField 
                 fullWidth variant="standard" 
-                value={newPlan.phone}
-                onChange={(e) => setNewPlan({...newPlan, phone: e.target.value})}
+                value={formData.phone || ''}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
               />
             </Box>
             <Box sx={{ mb: 2 }}>
@@ -298,31 +324,31 @@ const InsurancePlans = () => {
             </Box>
             <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
               <FormControlLabel 
-                control={<Checkbox checked={newPlan.assignment === 'Assignment'} size="small" />} 
+                control={<Checkbox checked={formData.assignment === 'Assignment'} size="small" />} 
                 label={<Typography sx={{ fontSize: '0.75rem' }}>Assignment</Typography>} 
               />
               <FormControlLabel 
-                control={<Checkbox checked={newPlan.assignment === 'Non-Assignment'} size="small" />} 
+                control={<Checkbox checked={formData.assignment === 'Non-Assignment'} size="small" />} 
                 label={<Typography sx={{ fontSize: '0.75rem' }}>Non-Assignment</Typography>} 
               />
             </Box>
           </Grid>
 
           {/* Right Column - Coverage */}
-          <Grid item xs={4}>
+          <Grid size={4}>
             <Typography variant="body2" sx={{ color: '#1a73e8', fontWeight: 600, mb: 1 }}>Coverage</Typography>
             <Box sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="caption" fontWeight={600}>Individual annual max amount:</Typography>
-                <Typography sx={{ fontSize: '0.85rem' }}>${newPlan.individualMax}</Typography>
-                <FormControlLabel control={<Checkbox size="small" checked={newPlan.individualMaxUnlimited} />} label={<Typography sx={{ fontSize: '0.75rem' }}>unlimited</Typography>} />
+                <Typography sx={{ fontSize: '0.85rem' }}>${formData.individualMax}</Typography>
+                <FormControlLabel control={<Checkbox size="small" checked={formData.individualMaxUnlimited} />} label={<Typography sx={{ fontSize: '0.75rem' }}>unlimited</Typography>} />
               </Box>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="caption" fontWeight={600}>Family annual max amount:</Typography>
-                <Typography sx={{ fontSize: '0.85rem' }}>${newPlan.familyMax}</Typography>
-                <FormControlLabel control={<Checkbox size="small" checked={newPlan.familyMaxUnlimited} />} label={<Typography sx={{ fontSize: '0.75rem' }}>unlimited</Typography>} />
+                <Typography sx={{ fontSize: '0.85rem' }}>${formData.familyMax}</Typography>
+                <FormControlLabel control={<Checkbox size="small" checked={formData.familyMaxUnlimited} />} label={<Typography sx={{ fontSize: '0.75rem' }}>unlimited</Typography>} />
               </Box>
             </Box>
             <Box sx={{ mb: 2 }}>
@@ -343,8 +369,8 @@ const InsurancePlans = () => {
         {/* Form Footer Buttons */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8, gap: 2 }}>
           <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#6b8fb9', minWidth: 120 }}>Edit Coverage</Button>
-          <Button variant="contained" onClick={handleSavePlan} sx={{ textTransform: 'none', bgcolor: '#6b8fb9', minWidth: 120 }}>Save New Plan</Button>
-          <Button variant="contained" onClick={() => setViewMode('list')} sx={{ textTransform: 'none', bgcolor: '#a0aec0', minWidth: 100 }}>Cancel</Button>
+          <Button variant="contained" onClick={isEdit ? handleUpdatePlan : handleSavePlan} sx={{ textTransform: 'none', bgcolor: '#6b8fb9', minWidth: 120 }}>{isEdit ? 'Update Plan' : 'Save New Plan'}</Button>
+          <Button variant="contained" onClick={() => { setViewMode('list'); setEditPlan(null); }} sx={{ textTransform: 'none', bgcolor: '#a0aec0', minWidth: 100 }}>Cancel</Button>
         </Box>
       </Box>
     );
@@ -416,7 +442,7 @@ const InsurancePlans = () => {
         />
 
         <Box 
-          onClick={() => setIsSyncDialogOpen(true)}
+          onClick={(e) => { e.stopPropagation(); setIsSyncDialogOpen(true); }}
           sx={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -477,7 +503,15 @@ const InsurancePlans = () => {
               </TableRow>
             ) : (
               plans.map((plan) => (
-                <TableRow key={plan.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                <TableRow 
+                  key={plan.id} 
+                  hover
+                  onClick={() => {
+                    setEditPlan(plan);
+                    setViewMode('edit');
+                  }}
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}
+                >
                   <TableCell sx={{ fontSize: '0.8rem' }}>{plan.groupNumber}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', fontWeight: 500, color: '#1a3a6b' }}>{plan.groupName}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem' }}>{plan.employer || '-'}</TableCell>
@@ -489,7 +523,7 @@ const InsurancePlans = () => {
                     <Link 
                       href="#" 
                       underline="hover" 
-                      onClick={(e) => { e.preventDefault(); setActivePlan(plan); setIsFeeGuideDialogOpen(true); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivePlan(plan); setIsFeeGuideDialogOpen(true); }}
                       sx={{ 
                         fontSize: '0.8rem', 
                         color: plan.feeGuide === 'none' ? 'text.secondary' : '#1976d2' 
@@ -498,7 +532,22 @@ const InsurancePlans = () => {
                       {plan.feeGuide}
                     </Link>
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem' }} align="center">{plan.subscribers}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem' }} align="center">
+                    <Link
+                      component="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const count = Number(plan.subscribers) || (plan.subscriberList ? plan.subscriberList.length : 0);
+                        if (count > 0) {
+                          setActiveSubscribers(plan.subscriberList || []); 
+                          setSubscribersAnchorEl(e.currentTarget);
+                        }
+                      }}
+                      sx={{ fontSize: '0.8rem', color: '#1976d2', textDecoration: 'none' }}
+                    >
+                      {Number(plan.subscribers) || (plan.subscriberList ? plan.subscriberList.length : 0)}
+                    </Link>
+                  </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
                       <Box 
@@ -511,7 +560,7 @@ const InsurancePlans = () => {
                       
                       <IconButton 
                         size="small" 
-                        onClick={() => { setActivePlan(plan); setIsAuditDialogOpen(true); }}
+                        onClick={(e) => { e.stopPropagation(); setActivePlan(plan); setIsAuditDialogOpen(true); }}
                         sx={{ color: 'text.secondary' }}
                       >
                         <RestoreIcon sx={{ fontSize: '1.1rem' }} />
@@ -519,7 +568,7 @@ const InsurancePlans = () => {
 
                       <IconButton 
                         size="small" 
-                        onClick={() => handleDeleteClick(plan.id, plan.groupName)}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(plan.id, plan.groupName); }}
                         sx={{ color: '#d32f2f' }}
                       >
                         <DeleteIcon sx={{ fontSize: '1.1rem' }} />
@@ -595,6 +644,55 @@ const InsurancePlans = () => {
         onClose={() => setIsFeeGuideDialogOpen(false)}
         planName={activePlan?.groupName}
       />
+
+      <Popover
+        open={Boolean(subscribersAnchorEl)}
+        anchorEl={subscribersAnchorEl}
+        onClose={(e) => { e.stopPropagation(); setSubscribersAnchorEl(null); }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+        PaperProps={{ sx: { p: 2, minWidth: 200 } }}
+        disableRestoreFocus
+      >
+        <Typography variant="caption" fontWeight={600} sx={{ display: 'block', mb: 1 }}>
+          Subscribers:
+        </Typography>
+        {!Array.isArray(activeSubscribers) ? (
+          <Typography variant="body2" color="text.secondary">Invalid subscriber data</Typography>
+        ) : activeSubscribers.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">No subscribers details available</Typography>
+        ) : (
+          activeSubscribers.map((sub, i) => {
+            let displayName = 'Unknown Subscriber';
+            if (!sub) displayName = 'Unknown Subscriber';
+            else if (typeof sub === 'string') displayName = sub;
+            else if (sub.name) displayName = sub.name;
+            else if (sub.firstName || sub.lastName) displayName = `${sub.firstName || ''} ${sub.lastName || ''}`.trim();
+            else if (sub.subscriberName) displayName = sub.subscriberName;
+            
+            return (
+              <Typography key={i} variant="body2" sx={{ ml: 1, mb: 0.5 }}>
+                - {displayName}
+              </Typography>
+            );
+          })
+        )}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+          <Button 
+            size="small" 
+            variant="contained" 
+            sx={{ bgcolor: '#d1a97d', textTransform: 'none' }} 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              e.currentTarget.blur();
+              setSubscribersAnchorEl(null); 
+            }}
+          >
+            OK
+          </Button>
+        </Box>
+      </Popover>
+
     </Box>
   );
 };

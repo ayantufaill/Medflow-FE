@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box } from '@mui/material';
+import { useLocation } from 'react-router-dom';
+import {
+  Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent,
+  Button, Menu, MenuItem,
+} from '@mui/material';
+import {
+  CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh,
+  CheckCircle, Refresh, Tune, MoreHoriz,
+} from '@mui/icons-material';
 
 // Redux
 import {
@@ -22,6 +30,7 @@ import LedgerDialogManager from './LedgerDialogManager';
 
 const LedgerList = ({ patient, expanded }) => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const patientId = patient?._id || patient?.id;
 
   // ── Redux state ──────────────────────────────────────────────────────────
@@ -91,6 +100,42 @@ const LedgerList = ({ patient, expanded }) => {
       setExpandedItems(all);
     }
   }, [expanded, ledgerItems, dispatch, patientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (location.state?.invoiceId && ledgerItems.length > 0) {
+      const targetInvoiceId = location.state.invoiceId;
+      const idx = ledgerItems.findIndex(item => 
+        String(item.id) === String(targetInvoiceId) || 
+        String(item.invoiceNumber) === String(targetInvoiceId)
+      );
+      
+      if (idx !== -1) {
+        setExpandedItems((prev) => {
+          if (!prev[idx]) {
+            const targetItem = ledgerItems[idx];
+            if (targetItem?.method === 'Invoice') {
+              dispatch(fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }));
+            }
+            return { ...prev, [idx]: true };
+          }
+          return prev;
+        });
+
+        setTimeout(() => {
+          const element = document.getElementById(`ledger-item-${idx}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Add a temporary highlight effect
+            element.style.transition = 'box-shadow 0.3s ease-in-out';
+            element.style.boxShadow = '0 0 10px 2px #4caf50';
+            setTimeout(() => {
+              element.style.boxShadow = 'none';
+            }, 2000);
+          }
+        }, 300);
+      }
+    }
+  }, [location.state?.invoiceId, ledgerItems, patientId, dispatch]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleItemClick = (idx) => {

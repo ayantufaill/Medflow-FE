@@ -12,6 +12,7 @@ import {
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { insuranceCompanyService } from '../../services/insurance.service';
+import { feeService } from '../../services/fee.service';
 import {
   Renewal,
   DeductiblesTable,
@@ -32,6 +33,7 @@ const MemberPage = () => {
   const [patient, setPatient] = useState(null);
   const [allCompanies, setAllCompanies] = useState({ companies: [] });
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
+  const [feeGuides, setFeeGuides] = useState([]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -126,7 +128,10 @@ const MemberPage = () => {
     { value: 'flat', label: 'Flat Fee' }
   ];
 
-  const PLAN_FEE_GUIDE_OPTIONS = [
+  const PLAN_FEE_GUIDE_OPTIONS = feeGuides.length > 0 ? feeGuides.map(fg => ({
+    value: fg._id || fg.FeeSchedNum || fg.feeSchedNum || fg.id,
+    label: fg.Description || fg.description || fg.name || 'Unknown Fee Guide'
+  })) : [
     { value: 'careington', label: 'Careington PPO Platinum (directly in network)' },
     { value: 'metlife', label: 'MetLife PPO Plus' },
     { value: 'delta', label: 'Delta Dental PPO' }
@@ -179,12 +184,17 @@ const MemberPage = () => {
   const fetchPatientData = async () => {
     try {
       setLoading(true);
-      const [patientData, companies] = await Promise.all([
+      const [patientData, companies, schedules] = await Promise.all([
         patientService.getPatientWorkspace(patientId),
         insuranceCompanyService.getAllInsuranceCompanies(1, 500),
+        feeService.getFeeSchedules().catch(err => {
+          console.warn("Failed to load fee schedules:", err);
+          return [];
+        })
       ]);
       setPatient(patientData);
       setAllCompanies(companies || { companies: [] });
+      setFeeGuides(schedules || []);
     } catch (err) {
       console.error('Failed to load patient data', err);
       showSnackbar('Failed to load patient data', 'error');
@@ -192,6 +202,20 @@ const MemberPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (feeGuides.length > 0) {
+      const mockValues = ['careington', 'metlife', 'delta'];
+      if (!formData.planFeeGuide || mockValues.includes(formData.planFeeGuide)) {
+        const firstGuide = feeGuides[0];
+        const firstGuideId = firstGuide._id || firstGuide.FeeSchedNum || firstGuide.feeSchedNum || firstGuide.id;
+        setFormData(prev => ({
+          ...prev,
+          planFeeGuide: String(firstGuideId)
+        }));
+      }
+    }
+  }, [feeGuides]);
 
   useEffect(() => {
     if (patient && formData.subscriber.relationship === 'Self' && !formData.subscriber.name) {

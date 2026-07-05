@@ -13,6 +13,73 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 
+import { patientService } from "../../services/patient.service";
+import { useDropdownData } from "../../hooks/redux/useDropdownData";
+import { useAppointments } from "../../hooks/redux/useAppointments";
+import { usePatients } from "../../hooks/redux/usePatient";
+import { useDispatch } from "react-redux";
+import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
+import { setSelectedPatientId } from "../../store/slices/patientSlice";
+import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
+import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
+import LabCasesDialog from "../../components/appointments/LabCasesDialog";
+import BlockSlotDialog from "../../components/appointments/BlockSlotDialog";
+import { scheduleBlockService } from "../../services/schedule-block.service";
+
+// Constants
+const START_HOUR = 0;
+const END_HOUR = 24;
+const SLOT_MINUTES = 30;
+const SLOT_HEIGHT = 40;
+
+// Color palette for operatory columns (repeating)
+const OPERATORY_COLORS = [
+  "#7e57c2", "#26a69a", "#ef6c00", "#42a5f5", "#8d6e63",
+  "#ab47bc", "#29b6f6", "#66bb6a", "#ffa726", "#ec407a",
+];
+
+// Status-based colors (background) for appointment cards
+const STATUS_COLORS = {
+  unconfirmed: "#9e9e9e",
+  preconfirmed: "#5c6bc0",
+  confirmed: "#1976d2",
+  seated: "#00796b",
+  call: "#6d4c41",
+  checked_out_incomplete: "#f9a825",
+  checked_out_complete: "#2e7d32",
+  no_show: "#616161",
+  rescheduled: "#6a1b9a",
+  cancelled: "#c62828",
+};
+
+// Uses UUID-like format to satisfy common ID validators
+const DUMMY_PROVIDER_ID = "01";
+
+// Testing mode flag - bypasses provider validation
+const IS_TESTING_MODE = import.meta.env.VITE_APP_ENV === "development" || import.meta.env.VITE_TESTING_MODE === "true";
+
+const providerLabel = (p) => {
+  if (!p) return "";
+  const u = p.userId || p;
+  const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+  return name || p.providerCode || `Provider ${p._id || p.id}`;
+};
+
+const getStatusColor = (status, fallback) => {
+  if (!status) return fallback;
+  const key = String(status).toLowerCase();
+  return STATUS_COLORS[key] || fallback;
+};
+
+// Utility functions
+const minutesSinceStart = (iso, startHour = START_HOUR) => {
+  const t = dayjs(iso);
+  return t.diff(t.startOf("day").hour(startHour).minute(0), "minute");
+};
+
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+// Main Component
 const OperatorySchedulePage = () => {
   const { showSnackbar } = useSnackbar();
 
@@ -23,8 +90,201 @@ const OperatorySchedulePage = () => {
     appointmentTypes: true,
   });
 
-  // ── Patients for the form autocomplete ───────────────────────────
-  const { patients, fetch: fetchPatients } = usePatients();
+  const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
+  const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
+
+  const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
+    const key = `${dateStr}:${columnId}`;
+    setClosedOperatories(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  }, []);
+
+  const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
+  const [printingOrientation, setPrintingOrientation] = useState(null);
+
+  const handlePrint = (orientation) => {
+    setPrintingOrientation(orientation);
+    setViewMode("day");
+  };
+
+
+
+  const handleDropOnPending = (dragData) => {
+    if (dragData.isAppointment) {
+      const appt = dragData.appointment;
+      const apptId = dragData.appointmentId;
+      if (pendingItems.some(item => item.id === apptId)) {
+        showSnackbar("Appointment is already in the pending list", "info");
+        return;
+      }
+      setPendingItems(prev => [...prev, {
+        id: apptId,
+        type: "appointment",
+        data: appt
+      }]);
+      showSnackbar(`Moved ${appt.patientName}'s appointment to Pending`, "success");
+      setActiveTab(1);
+    } else if (dragData.isBlockSlot) {
+      const block = dragData.block;
+      const blockId = dragData.blockId;
+      if (pendingItems.some(item => item.id === blockId)) {
+        showSnackbar("Block is already in the pending list", "info");
+        return;
+      }
+      setPendingItems(prev => [...prev, {
+        id: blockId,
+        type: "block",
+        data: block
+      }]);
+      showSnackbar(`Moved calendar block to Pending`, "success");
+      setActiveTab(1);
+    }
+  };
+
+  const handleRemovePending = (item) => {
+    setPendingItems(prev => prev.filter(i => i.id !== item.id));
+    showSnackbar("Restored item back to calendar", "info");
+  };
+
+  const handleDropReschedule = async (columnId, minutesFromStart, dragData) => {
+    const isAppt = dragData.isAppointment || (dragData.isPendingItem && dragData.type === "appointment");
+    const isBlock = dragData.isBlockSlot || (dragData.isPendingItem && dragData.type === "block");
+    
+    const itemData = dragData.isPendingItem ? dragData.originalData : (dragData.appointment || dragData.block);
+    const itemId = dragData.isPendingItem ? dragData.id : (dragData.appointmentId || dragData.blockId);
+
+    const start = selectedDate
+      .clone()
+      .startOf("day")
+      .add(minutesFromStart, "minute");
+    
+    const duration = isAppt 
+      ? (itemData.durationMinutes || 60) 
+      : 30;
+    
+    let blockDuration = 30;
+    if (isBlock && itemData.startTime && itemData.endTime) {
+      const startMin = minutesSinceStart(dayjs(`${itemData.date}T${itemData.startTime}`));
+      const endMin = minutesSinceStart(dayjs(`${itemData.date}T${itemData.endTime}`));
+      blockDuration = endMin - startMin;
+    }
+    
+    const end = start.clone().add(isAppt ? duration : blockDuration, "minute");
+
+    if (isAppt) {
+      try {
+        setFormSaving(true);
+        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+        
+        await updateAppointment(itemId, {
+          appointmentDate: start.format("YYYY-MM-DD"),
+          startTime: start.format("HH:mm"),
+          endTime: end.format("HH:mm"),
+          roomId: roomId
+        }).unwrap();
+
+        showSnackbar("Appointment rescheduled successfully", "success");
+        setPendingItems(prev => prev.filter(i => i.id !== itemId));
+        await refreshAppointments();
+      } catch (err) {
+        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+        showSnackbar(msg, "error");
+      } finally {
+        setFormSaving(false);
+      }
+    } else if (isBlock) {
+      try {
+        // Always delete the old block, even if it's coming from pending, 
+        // because we don't delete it when moving it TO pending (to prevent data loss on refresh)
+        if (itemId && !String(itemId).startsWith("temp-")) {
+          await scheduleBlockService.deleteBlock(itemId);
+        }
+        
+        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+        const newBlockData = {
+          roomId: roomId,
+          date: start.format("YYYY-MM-DD"),
+          startTime: start.format("HH:mm"),
+          endTime: end.format("HH:mm"),
+          notes: itemData.notes || "Blocked Slot",
+          color: itemData.color || "#ffe082"
+        };
+        
+        await scheduleBlockService.createBlock(newBlockData);
+        showSnackbar("Calendar block rescheduled successfully", "success");
+        setPendingItems(prev => prev.filter(i => i.id !== itemId));
+        fetchScheduleBlocks();
+      } catch (err) {
+        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
+        showSnackbar(msg, "error");
+      }
+    }
+  };
+
+  const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
+  const [patientQuery, setPatientQuery] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [showConsult, setShowConsult] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [addAppointmentFormOpen, setAddAppointmentFormOpen] = useState(false);
+
+  // Slot blocking and popover state
+  const [customFormDateTime, setCustomFormDateTime] = useState(null);
+  const [customFormRoomId, setCustomFormRoomId] = useState(null);
+  const [scheduleBlocks, setScheduleBlocks] = useState([]);
+  const [blockSlotDialogOpen, setBlockSlotDialogOpen] = useState(false);
+  const [blockSlotDialogData, setBlockSlotDialogData] = useState(null);
+  const [slotPopoverAnchorEl, setSlotPopoverAnchorEl] = useState(null);
+  const [selectedSlotInfo, setSelectedSlotInfo] = useState(null);
+
+  const fetchScheduleBlocks = useCallback(async () => {
+    try {
+      const dateStr = selectedDate.format("YYYY-MM-DD");
+      const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
+      setScheduleBlocks(blocks);
+    } catch (err) {
+      console.error("Error fetching schedule blocks:", err);
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    fetchScheduleBlocks();
+  }, [fetchScheduleBlocks]);
+
+  const handleSaveBlock = async (blockData) => {
+    try {
+      await scheduleBlockService.createBlock(blockData);
+      showSnackbar("Block created successfully", "success");
+      setBlockSlotDialogOpen(false);
+      fetchScheduleBlocks();
+    } catch (err) {
+      const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to block slot";
+      showSnackbar(msg, "error");
+    }
+  };
+
+  const handleDeleteBlock = async (blockId) => {
+    try {
+      await scheduleBlockService.deleteBlock(blockId);
+      showSnackbar("Block deleted successfully", "success");
+      fetchScheduleBlocks();
+    } catch (err) {
+      const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
+      showSnackbar(msg, "error");
+    }
+  };
+
+  // Dialogs
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [completeProceduresOpen, setCompleteProceduresOpen] = useState(false);
+  const [selectProductsOpen, setSelectProductsOpen] = useState(false);
+  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
+  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
   const [loadingFormPatients, setLoadingFormPatients] = useState(false);
 
   const searchFormPatients = useCallback(async (search = '') => {
@@ -51,10 +311,230 @@ const OperatorySchedulePage = () => {
   // ── Appointments (for conflict detection inside the form) ─────────
   const { appointments, createAppointment } = useAppointmentList();
 
-  // ── Submit handler ────────────────────────────────────────────────
-  const handleSubmit = async (formData) => {
-    if (!formData.patientId) {
-      showSnackbar('Please select a patient.', 'warning');
+  const initialFormDateTime = useMemo(() => {
+    if (customFormDateTime) return customFormDateTime;
+    return selectedDate
+      .clone()
+      .hour(START_HOUR === 0 ? 9 : START_HOUR)
+      .minute(5);
+  }, [selectedDate, customFormDateTime]);
+
+  // Maps a raw appointment object from the API into the shape the grid expects
+  const mapAppointment = (a) => {
+    try {
+      const iso = String(a.appointmentDate || "");
+      if (!iso) {
+        console.warn("mapAppointment dropped: missing appointmentDate", a);
+        return null;
+      }
+
+      // Parse the ISO string to the local timezone to avoid shifting days
+      const dateOnly = dayjs(iso).format("YYYY-MM-DD");
+
+      const startObj = a.startTime ? dayjs(`${dateOnly}T${a.startTime}`) : null;
+      if (!startObj || !startObj.isValid()) {
+        console.warn("mapAppointment dropped: invalid startObj", a);
+        return null;
+      }
+
+      const endObj = a.endTime
+        ? dayjs(`${dateOnly}T${a.endTime}`)
+        : startObj.add(a.durationMinutes || SLOT_MINUTES, "minute");
+      if (!endObj.isValid()) {
+        console.warn("mapAppointment dropped: invalid endObj", a);
+        return null;
+      }
+
+      const fullName =
+        (a.patientId &&
+          (a.patientId.firstName || a.patientId.lastName) &&
+          `${a.patientId.firstName || ""} ${a.patientId.lastName || ""}`.trim()) ||
+        a.patientName ||
+        "";
+      const initials = fullName
+        ? fullName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+        : "PT";
+
+      // Map roomId to operatory column
+      let columnId = "op1";
+      const apptTitle = (a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "").toLowerCase();
+      const isConsultation =
+        apptTitle.includes("consult") ||
+        apptTitle.includes("evaluation") ||
+        apptTitle.includes("cleaning") ||
+        apptTitle.includes("exam") ||
+        apptTitle.includes("hygiene");
+
+      if (isConsultation && showConsult) {
+        columnId = "consult";
+      } else if (a.roomId) {
+        // Match the column ID format used in OPERATORY_COLUMNS generation
+        columnId = `op${a.roomId}`;
+
+        // Verify this column exists in OPERATORY_COLUMNS, otherwise fallback
+        if (!OPERATORY_COLUMNS.some(col => col.id === columnId)) {
+          // Fallback: distribute based on room number modulo
+          const roomNum = Number(a.roomId);
+          if (Number.isFinite(roomNum) && roomNum > 0) {
+            const mappedColIndex = (roomNum - 1) % OPERATORY_COLUMNS.length;
+            columnId = OPERATORY_COLUMNS[mappedColIndex]?.id || "op1";
+          }
+        }
+      } else {
+        // Fallback: Distribute appointments across operatory columns based on providerId index
+        const rawProviderId = a.providerId && (a.providerId._id || a.providerId.id);
+        const providerNum = rawProviderId ? Number(rawProviderId) : NaN;
+        const colIndex =
+          Number.isFinite(providerNum) && providerNum > 0
+            ? (providerNum - 1) % OPERATORY_COLUMNS.length
+            : 0;
+        columnId = OPERATORY_COLUMNS[colIndex]?.id || "op1";
+      }
+
+      // Resolve provider name
+      const rawProvider = a.providerId;
+      let providerName = "";
+      if (rawProvider) {
+        if (typeof rawProvider === "object") {
+          const u = rawProvider.userId || rawProvider;
+          providerName = [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || rawProvider.providerCode || "";
+        } else {
+          const matched = providers?.find(p => String(p._id || p.id) === String(rawProvider));
+          if (matched) {
+            providerName = providerLabel(matched);
+          }
+        }
+      }
+
+      // Resolve operatory room label
+      const operatoryLabel =
+        OPERATORY_COLUMNS?.find((c) => c.id === columnId)?.label || columnId || "—";
+
+      return {
+        id: a._id || a.id,
+        appointmentDate: a.appointmentDate,
+        date: dateOnly,
+        patientId: (a.patientId && (a.patientId._id || a.patientId.id)) || "",
+        columnId,
+        roomId: a.roomId || "",
+        startTime: a.startTime || "",
+        endTime: a.endTime || "",
+        title: a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "Appointment",
+        patientName: fullName || "Patient",
+        patientInitials: initials,
+        start: startObj.toISOString(),
+        end: endObj.toISOString(),
+        status: a.status || "scheduled",
+        note: a.notes || "",
+        color: "#1976d2",
+        providerName,
+        providerId: (a.providerId && (a.providerId._id || a.providerId.id || a.providerId)) || "",
+        operatoryLabel,
+        durationMinutes: a.durationMinutes || dayjs(endObj).diff(startObj, "minute"),
+        customFields: a.customFields,
+        checklists: a.checklists,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // Uses the new custom hook to automatically fetch and cache via Redux
+  const fetchStartDate = selectedDate.startOf('month').format('YYYY-MM-DD');
+  // Add 1 day to the end date so the backend's "less than" filter safely includes the entire final day of the month
+  const fetchEndDate = selectedDate.endOf('month').add(1, 'day').format('YYYY-MM-DD');
+  
+  const { 
+    appointments: reduxAppointments, 
+    refresh: refreshAppointments,
+    createAppointment: reduxCreateAppointment,
+    updateAppointment,
+  } = useAppointments({
+    patientId: selectedPatientId || "", // Filter by selected patient, otherwise show all
+    startDate: fetchStartDate,
+    endDate: fetchEndDate,
+    limit: 100, // required to see a full day's or week's schedule
+  });
+
+  // Derived state to map Redux appointments to the Grid format
+  const mappedAppointments = useMemo(() => {
+    if (!reduxAppointments) return [];
+    console.log("Raw reduxAppointments:", reduxAppointments);
+    const mapped = reduxAppointments.map(mapAppointment).filter(Boolean);
+    console.log("Mapped appointments:", mapped);
+    return mapped;
+  }, [reduxAppointments]);
+
+  const [appointments, setAppointments] = useState([]);
+
+  useEffect(() => {
+    setAppointments(mappedAppointments);
+  }, [mappedAppointments]);
+
+  // Add sample consult appointments when showConsult is toggled on (for demo)
+  useEffect(() => {
+    if (showConsult && appointments.length > 0) {
+      const today = selectedDate.format("YYYY-MM-DD");
+      const consultAppts = [
+        {
+          id: "consult-1",
+          columnId: "consult",
+          title: "Huddle-Oksana account review. I did not fix so everyone can learn",
+          patientName: "Consult Note",
+          start: `${today}T08:00:00`,
+          end: `${today}T08:45:00`,
+          status: "confirmed",
+          note: "Huddle-Oksana account review. I did not fix so everyone can learn",
+          color: "#6b6b6b",
+        },
+        {
+          id: "consult-2",
+          columnId: "consult",
+          title: "8AM interview inperson",
+          patientName: "Consult Note",
+          start: `${today}T09:00:00`,
+          end: `${today}T09:30:00`,
+          status: "confirmed",
+          note: "8AM interview inperson",
+          color: "#6b6b6b",
+        },
+        {
+          id: "consult-3",
+          columnId: "consult",
+          title: "send x-rays What's going on with these x-rays? 3rd day on the schedule i cant figure out how to export them",
+          patientName: "Consult Note",
+          start: `${today}T10:00:00`,
+          end: `${today}T11:00:00`,
+          status: "confirmed",
+          note: "send x-rays What's going on with these x-rays? 3rd day on the schedule i cant figure out how to export them",
+          color: "#6b6b6b",
+        },
+        {
+          id: "consult-4",
+          columnId: "consult",
+          title: "Week of April 7--let's not open 4/6 for hygiene, lots of availability on Tu-Th that week",
+          patientName: "Consult Note",
+          start: `${today}T11:15:00`,
+          end: `${today}T12:00:00`,
+          status: "confirmed",
+          note: "Week of April 7--let's not open 4/6 for hygiene, lots of availability on Tu-Th that week",
+          color: "#6b6b6b",
+        }
+      ];
+
+      setAppointments(prev => {
+        const filtered = prev.filter(a => !String(a.id).startsWith("consult-"));
+        return [...filtered, ...consultAppts];
+      });
+    } else if (!showConsult) {
+      setAppointments(prev => prev.filter(a => !String(a.id).startsWith("consult-")));
+    }
+  }, [showConsult, selectedDate]);
+
+  const handleAddAppointmentSubmit = async (formData) => {
+    const patientId = formData.patientId;
+    if (!patientId) {
+      showSnackbar("Please select a patient.", "warning");
       return;
     }
     const start = formData.appointmentDate && formData.startTime
@@ -115,15 +595,313 @@ const OperatorySchedulePage = () => {
         onCancel={() => setFormOpen(false)}
         onSubmit={handleSubmit}
         loading={formSaving}
-        patients={patients || []}
-        loadingPatients={loadingFormPatients}
-        onPatientSearch={searchFormPatients}
+        initialDateTime={initialFormDateTime}
+        initialRoomId={customFormRoomId}
+        initialPatient={selectedPatient}
         providers={providers || []}
         rooms={rooms || []}
         appointmentTypes={appointmentTypes || []}
         appointments={appointments || []}
         initialDateTime={initialFormDateTime}
       />
+
+      <SendBulkTextDialog
+        open={bulkTextDialogOpen}
+        onClose={() => setBulkTextDialogOpen(false)}
+        selectedDate={selectedDate}
+        providers={providers || []}
+      />
+
+      <ProgressNotesDialog
+        open={progressNotesOpen}
+        onClose={() => setProgressNotesOpen(false)}
+        providers={providers || []}
+      />
+
+      <BlockSlotDialog
+        open={blockSlotDialogOpen}
+        onClose={() => setBlockSlotDialogOpen(false)}
+        initialData={blockSlotDialogData}
+        onSave={handleSaveBlock}
+      />
+
+      <Popover
+        open={Boolean(slotPopoverAnchorEl)}
+        anchorEl={slotPopoverAnchorEl}
+        onClose={() => setSlotPopoverAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8',
+            borderRadius: 1.5,
+          }
+        }}
+      >
+        <List size="small" disablePadding sx={{ py: 0.5 }}>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSlotPopoverAnchorEl(null);
+              if (selectedSlotInfo) {
+                const start = selectedDate
+                  .clone()
+                  .startOf("day")
+                  .add(selectedSlotInfo.minutesFromStart, "minute");
+                setCustomFormDateTime(start);
+                // The columnId is the operatory room ID (e.g., 'op1', 'op2', or MongoDB ID)
+                const roomId = selectedSlotInfo.columnId.startsWith("op") 
+                  ? selectedSlotInfo.columnId.substring(2) 
+                  : selectedSlotInfo.columnId;
+                setCustomFormRoomId(roomId);
+                
+                // Also set the sidebar patient query if needed, otherwise just open form
+                setAddAppointmentFormOpen(true);
+              }
+            }}
+            sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+          >
+            <ListItemText 
+              primary="Schedule Appointment" 
+              primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }} 
+            />
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSlotPopoverAnchorEl(null);
+              if (selectedSlotInfo) {
+                const start = selectedDate
+                  .clone()
+                  .startOf("day")
+                  .add(selectedSlotInfo.minutesFromStart, "minute");
+                const end = start.clone().add(30, "minute"); // default 30 min block
+                
+                setBlockSlotDialogData({
+                  roomId: selectedSlotInfo.columnId.replace("op", ""),
+                  date: selectedDate.format("YYYY-MM-DD"),
+                  startTime: start.format("HH:mm"),
+                  endTime: end.format("HH:mm")
+                });
+                setBlockSlotDialogOpen(true);
+              }
+            }}
+            sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+          >
+            <ListItemText 
+              primary="Block Slot" 
+              primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }} 
+            />
+          </ListItem>
+        </List>
+      </Popover>
+
+      {/* Lab Filters Popover (Matching Screenshot) */}
+      <Popover
+        open={Boolean(labAnchorEl)}
+        anchorEl={labAnchorEl}
+        onClose={() => setLabAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            p: 2,
+            width: 170, // Further reduced width as requested
+            borderRadius: '4px',
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8'
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Provider Section */}
+          <Box>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
+              Provider:
+            </Typography>
+            <Select
+              fullWidth
+              size="small"
+              value={labFilters.providerId}
+              onChange={(e) => setLabFilters(prev => ({ ...prev, providerId: e.target.value }))}
+              sx={{
+                height: '32px',
+                fontSize: '0.85rem',
+                '& .MuiSelect-select': { py: 0.5 }
+              }}
+            >
+              <MenuItem value="all">All</MenuItem>
+              {providers && providers.length > 0 && providers.map(p => (
+                <MenuItem key={p._id || p.id} value={p._id || p.id}>
+                  {/* Handling nested userId structure found in ProvidersListPage.jsx */}
+                  {p.userId?.firstName || p.firstName || ''} {p.userId?.lastName || p.lastName || ''}
+                </MenuItem>
+              ))}
+            </Select>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
+              <Link
+                component="button"
+                variant="body2"
+                sx={{
+                  color: '#1976d2',
+                  fontSize: '0.8rem',
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                +Add
+              </Link>
+            </Box>
+          </Box>
+
+          {/* Visit Type Section */}
+          <Box>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
+              Visit Type:
+            </Typography>
+            <Select
+              fullWidth
+              size="small"
+              value={labFilters.visitTypeId}
+              onChange={(e) => setLabFilters(prev => ({ ...prev, visitTypeId: e.target.value }))}
+              sx={{
+                height: '32px',
+                fontSize: '0.85rem',
+                '& .MuiSelect-select': { py: 0.5 }
+              }}
+            >
+              <MenuItem value="all">All</MenuItem>
+              {appointmentTypes && appointmentTypes.length > 0 && appointmentTypes.map(at => (
+                <MenuItem key={at._id || at.id} value={at._id || at.id}>
+                  {at.name || at.title || 'Unknown'}
+                </MenuItem>
+              ))}
+            </Select>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
+              <Link
+                component="button"
+                variant="body2"
+                sx={{
+                  color: '#1976d2',
+                  fontSize: '0.8rem',
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                +Add
+              </Link>
+            </Box>
+          </Box>
+
+          {/* Bottom Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => {
+                setLabFilters({ providerId: 'all', visitTypeId: 'all' });
+                setLabAnchorEl(null);
+              }}
+              sx={{
+                color: '#f44336',
+                fontSize: '0.8rem',
+                textDecoration: 'none',
+                opacity: 0.8,
+                '&:hover': { opacity: 1, textDecoration: 'underline' }
+              }}
+            >
+              clear filter
+            </Link>
+          </Box>
+        </Box>
+      </Popover>
+      <LabCasesDialog
+        open={labCasesDialogOpen}
+        onClose={() => setLabCasesDialogOpen(false)}
+      />
+
+      {/* More Options Menu */}
+      <Menu
+        anchorEl={moreMenuAnchorEl}
+        open={Boolean(moreMenuAnchorEl)}
+        onClose={() => setMoreMenuAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8',
+            borderRadius: 1.5,
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setShowConsult(true);
+            setMoreMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          Show all columns
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setIsCloseOpenDayMode(prev => !prev);
+            setMoreMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          {isCloseOpenDayMode ? "Exit Close/Open a day" : "Close/Open a day"}
+        </MenuItem>
+      </Menu>
+
+      {/* Print Options Menu */}
+      <Menu
+        anchorEl={printMenuAnchorEl}
+        open={Boolean(printMenuAnchorEl)}
+        onClose={() => setPrintMenuAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e1e4e8',
+            borderRadius: 1.5,
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handlePrint("portrait");
+            setPrintMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          Portrait
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handlePrint("landscape");
+            setPrintMenuAnchorEl(null);
+          }}
+          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+        >
+          Landscape
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };
