@@ -1,5 +1,5 @@
 import { Box, Typography, IconButton } from "@mui/material";
-import { Close, FormatListBulleted } from "@mui/icons-material";
+import { Close, Checklist } from "@mui/icons-material";
 
 const TaskDrawerHeader = ({ onClose }) => (
   <Box sx={{
@@ -8,7 +8,7 @@ const TaskDrawerHeader = ({ onClose }) => (
     borderBottom: "1px solid #f0f2f5",
     flexShrink: 0,
   }}>
-    <FormatListBulleted sx={{ fontSize: "20px", color: "#2262ef" }} />
+    <Checklist sx={{ fontSize: "20px", color: "#10b981" }} />
     <Typography sx={{ fontFamily: "Inter", fontSize: "16px", fontWeight: 700, color: "#09121f", flex: 1 }}>
       Task List
     </Typography>

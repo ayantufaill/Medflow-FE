@@ -21,6 +21,7 @@ const AddNewPatientAppointmentForm = ({
   loading = false,
   initialPatient = null,
   initialDateTime = null,
+  initialRoomId = "",
   open = true,
   appointments = [],
   initialRoomId = null,
@@ -32,7 +33,37 @@ const AddNewPatientAppointmentForm = ({
   const [timeMins,          setTimeMins]          = useState(initialDateTime ? initialDateTime.format("mm") : "00");
   const [amPm,              setAmPm]              = useState(initialDateTime ? initialDateTime.format("A") : "AM");
   const [visitType,         setVisitType]         = useState("recare");
-  const [procedures,        setProcedures]        = useState([]);
+  const [procedures,        setProcedures]        = useState(INITIAL_PROCEDURES);
+  // Initialize patient from initialPatient prop, reset when it changes
+  const [patient, setPatient] = useState(initialPatient || null);
+  const [dateTime, setDateTime] = useState(
+    initialDateTime || dayjs().hour(9).minute(5),
+  );
+  const [visitType, setVisitType] = useState("treatment");
+
+  // Reset form when initialPatient changes (e.g., when opening from sidebar)
+  useEffect(() => {
+    if (open) {
+      setPatient(initialPatient || null);
+      setDateTime(initialDateTime || dayjs().hour(9).minute(5));
+      setVisitType("treatment");
+      setProcedures([]);
+      setProcedureTags(DEFAULT_PROCEDURE_TAGS);
+      setSelectedProviderId("");
+      setSelectedAssistantId("");
+      setDurationMins(30);
+      setSelectedRoomId(initialRoomId || "");
+      setAppointmentStatus("unconfirmed");
+      setSelectedAppointmentTypeId("");
+      setNotes("");
+    }
+  }, [open, initialPatient, initialDateTime, initialRoomId]);
+
+  // Scheduled procedure table rows
+  const [procedures, setProcedures] = useState([]);
+
+  // Procedure tags: all available tags + which ones are selected
+  const [procedureTags, setProcedureTags] = useState(DEFAULT_PROCEDURE_TAGS);
   const [selectedTagLabels, setSelectedTagLabels] = useState(new Set());
   const [tagProcedureIds,   setTagProcedureIds]   = useState({});
   const [addingProcedure,   setAddingProcedure]   = useState(false);
@@ -144,6 +175,14 @@ const AddNewPatientAppointmentForm = ({
   const handleSubmit = () => {
     if (!onSubmit) return;
     const end = dateTime.add(durationMins || 30, "minute");
+
+    // Calculate endTime from dateTime + durationMins
+    const start = dateTime || dayjs();
+    if (start.isBefore(dayjs().startOf('day'))) {
+      alert("Appointment date cannot be in the past.");
+      return;
+    }
+
     onSubmit({
       patientId:       patient?._id || patient?.id,
       patientName:     patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "",

@@ -1,5 +1,5 @@
 import { Box, FormControlLabel, Radio, RadioGroup, TextField, Typography } from "@mui/material";
-import { AccessTime } from "@mui/icons-material";
+import { AccessTimeOutlined } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -56,23 +56,14 @@ const AppointmentLeftPanel = ({
         </LocalizationProvider>
       </FieldBox>
 
-      <FieldBox label="Time" sx={{ flexShrink: 0, width: "135px" }}>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <TimePicker
-            value={dayjs().hour(amPm === "PM" ? (parseInt(timeHours)%12)+12 : parseInt(timeHours)%12).minute(parseInt(timeMins))}
-            minTime={dayjs(apptDate).isSame(dayjs(), 'day') ? dayjs() : null}
-            onChange={(v) => {
-              if (v) {
-                onTimeChange(v.format("hh"), v.format("mm"));
-                onAmPmChange(v.format("A"));
-              }
-            }}
-            slotProps={{
-              popper: { sx: { zIndex: 1400 } },
-              textField: {
-                size: "small",
-                sx: { "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", height: "40px" } },
-              },
+      <FieldBox label="Time" sx={{ flexShrink: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", border: "1px solid #d1d5db", borderRadius: "8px", overflow: "hidden", height: "40px" }}>
+          <AccessTimeOutlined sx={{ fontSize: "16px", color: "#9aa3ae", ml: "10px", mr: "4px", flexShrink: 0 }} />
+          <input
+            value={`${timeHours}:${timeMins}`}
+            onChange={(e) => {
+              const [h, m] = e.target.value.split(":");
+              onTimeChange(h?.slice(0, 2) ?? timeHours, m?.slice(0, 2) ?? timeMins);
             }}
           />
         </LocalizationProvider>

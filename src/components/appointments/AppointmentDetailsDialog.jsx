@@ -37,9 +37,9 @@ const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmed" },
   { value: "seated", label: "Seated" },
   { value: "call", label: "Call" },
-  { value: "checkout incomplete", label: "Checkout Incomplete" },
-  { value: "checkout complete", label: "Checkout Complete" },
-  { value: "no show", label: "No Show" },
+  { value: "checked_out_incomplete", label: "Checkout Incomplete" },
+  { value: "checked_out_complete", label: "Checkout Complete" },
+  { value: "no_show", label: "No Show" },
   { value: "rescheduled", label: "Rescheduled" },
   { value: "cancelled", label: "Cancelled" },
 ];

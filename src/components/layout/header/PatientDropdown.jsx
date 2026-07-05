@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, ClickAwayListener, Typography } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import dayjs from 'dayjs';
+
 import InitialsAvatar from '../../shared/InitialsAvatar';
 import PatientDropdownPanel from './patient-dropdown/PatientDropdownPanel';
 import { usePatient } from '../../../hooks/redux';
@@ -27,7 +28,7 @@ const PatientDropdown = () => {
     ? dayjs().diff(dayjs(currentPatient.dateOfBirth), 'year')
     : null;
 
-  const chartRef = currentPatient
+  const chartRefAge = currentPatient
     ? [
         currentPatient.patientNumber ? `#PAT${currentPatient.patientNumber}` : null,
         age !== null ? `${age}y` : null,
@@ -35,6 +36,7 @@ const PatientDropdown = () => {
     : '';
 
   // avatarName drives the initial letters in InitialsAvatar.
+  // this needs to be updated as, we will be having the display pictures of the patients in the future, so we will be using the initials only when the display picture is not available.
   const avatarName = patientName !== 'Select Patient' ? patientName : 'SP';
 
   return (
@@ -58,21 +60,25 @@ const PatientDropdown = () => {
           <InitialsAvatar name={avatarName} size={28} fontSize={10} />
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{
+            <Typography sx={[patientName === 'Select Patient'?{
+              fontFamily: 'Inter', fontWeight: 400, fontSize: '12.8px',
+              lineHeight: '20px', color: '#09121f',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }:{
               fontFamily: 'Inter', fontWeight: 700, fontSize: '14px',
               lineHeight: '20px', color: '#09121f',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {patientName}
+            }]}>
+              {patientName} fahad
             </Typography>
 
             {/* Only show chart info line when a patient is selected */}
-            {chartRef && (
+            {chartRefAge && (
               <Typography sx={{
                 fontFamily: 'Inter', fontWeight: 400, fontSize: '10.5px',
                 lineHeight: '13px', color: '#5c646f',
               }}>
-                {chartRef}
+                {chartRefAge}
               </Typography>
             )}
           </Box>

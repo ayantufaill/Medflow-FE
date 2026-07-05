@@ -1,8 +1,8 @@
 import { createPortal } from "react-dom";
 import { Box, Divider, Typography } from "@mui/material";
 import {
-  CalendarMonth, AccessTime, Person, Email, Phone,
-  AcUnit, Tune, LocalOffer, Shield,
+  CalendarTodayOutlined, AccessTimeOutlined, PersonOutline, EmailOutlined, PhoneOutlined,
+  AcUnit, Tune, LocalOfferOutlined, GppMaybeOutlined, MedicalServicesOutlined,
 } from "@mui/icons-material";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius, headingPrimarySx, headingSecondarySx } from "../../../constants/styles";
@@ -133,7 +133,7 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         </Typography>
 
         <InfoRow label="Provider:">
-          <IconValue icon={<Phone sx={{ fontSize: "12px" }} />} text={apt.provider} color={COLORS.ACCENT} />
+          <IconValue icon={<MedicalServicesOutlined sx={{ fontSize: "12px" }} />} text={apt.provider} color={COLORS.ACCENT} />
         </InfoRow>
 
         <InfoRow label="Visit Type:">{apt.visitType}</InfoRow>
@@ -148,11 +148,11 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         <InfoRow label="Procedures:">{apt.procedures}</InfoRow>
 
         <InfoRow label="Date:">
-          <IconValue icon={<CalendarMonth sx={{ fontSize: "12px" }} />} text={apt.date} />
+          <IconValue icon={<CalendarTodayOutlined sx={{ fontSize: "12px" }} />} text={apt.date} />
         </InfoRow>
 
         <InfoRow label="Start time:">
-          <IconValue icon={<AccessTime sx={{ fontSize: "12px" }} />} text={apt.startTime} />
+          <IconValue icon={<AccessTimeOutlined sx={{ fontSize: "12px" }} />} text={apt.startTime} />
         </InfoRow>
 
         <Box sx={{ my: "8px" }} />
@@ -170,7 +170,7 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         </InfoRow>
 
         <InfoRow label="Scheduled By:">
-          <IconValue icon={<Person sx={{ fontSize: "13px" }} />} text={apt.scheduledBy} />
+          <IconValue icon={<PersonOutline sx={{ fontSize: "13px" }} />} text={apt.scheduledBy} />
         </InfoRow>
 
         <InfoRow label="Notes" labelSuffix="(latest):">
@@ -189,18 +189,18 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         <InfoRow label="D.O.B:">{apt.dob}</InfoRow>
 
         <InfoRow label="Mobile Phone:">
-          <IconValue icon={<Phone sx={{ fontSize: "12px" }} />} text={apt.phone} color={COLORS.STATUS_SUCCESS} />
+          <IconValue icon={<PhoneOutlined sx={{ fontSize: "12px" }} />} text={apt.phone} color={COLORS.STATUS_SUCCESS} />
         </InfoRow>
 
         <InfoRow label="Email:">
-          <IconValue icon={<Email sx={{ fontSize: "12px" }} />} text={apt.email} color={COLORS.ACCENT} />
+          <IconValue icon={<EmailOutlined sx={{ fontSize: "12px" }} />} text={apt.email} color={COLORS.ACCENT} />
         </InfoRow>
 
         <InfoRow label="Preferred DDS:">{apt.preferredDDS}</InfoRow>
         <InfoRow label="Preferred HYG:">{apt.preferredHYG}</InfoRow>
 
         <InfoRow label="Risk:">
-          <IconValue icon={<Shield sx={{ fontSize: "12px" }} />} text={apt.risk} color="#f59e0b" />
+          <IconValue icon={<GppMaybeOutlined sx={{ fontSize: "12px" }} />} text={apt.risk} color="#f59e0b" />
         </InfoRow>
       </Box>
 
@@ -213,7 +213,7 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         borderRadius: `0 0 ${radius.xl} ${radius.xl}`,
       }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <LocalOffer sx={{ fontSize: "13px", color: COLORS.TEXT_MUTED }} />
+          <LocalOfferOutlined sx={{ fontSize: "13px", color: COLORS.TEXT_MUTED }} />
           <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
             Balance / Charge
           </Typography>

@@ -1,21 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Select,
-  MenuItem,
+  Box, Typography, Button, Select, MenuItem, TableCell, TableRow
 } from '@mui/material';
-import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const DUMMY_DATA = [
   { patient: 'Bonnie Fuller', provider: 'Dr. Smith', created: '05/07/2026', due: '', shared: '05/07/2026', status: 'Sent Out' },
@@ -30,123 +18,78 @@ const ReferralDocumentReport = () => {
   const [status, setStatus] = useState('none');
   const [provider, setProvider] = useState('all');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+
+  const columns = [
+    { label: 'Referral Patient' },
+    { label: 'Referral Provider' },
+    { label: 'Created Date' },
+    { label: 'Due Date' },
+    { label: 'Shared Date' },
+    { label: 'Status' },
+  ];
+
+  const renderRow = (row, i) => (
+    <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.provider}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.created}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.due}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.shared}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
+    </TableRow>
+  );
+
+  const topFilters = (
+    <>
+      <Typography variant="caption" sx={{ fontWeight: 600, mr: 1, color: '#1e293b' }}>Filter By:</Typography>
+      <ReportSelect 
+        label="None" 
+        prefix="Status:" 
+        value={status} 
+        onChange={(e) => setStatus(e.target.value)} 
+        options={[
+          { value: 'none', label: 'None' },
+          { value: 'new', label: 'New' },
+          { value: 'sent', label: 'Sent Out' }
+        ]}
+      />
+      <ReportSelect 
+        label="All" 
+        prefix="Provider:" 
+        value={provider} 
+        onChange={(e) => setProvider(e.target.value)} 
+        options={[
+          { value: 'all', label: 'All' },
+          { value: 'smith', label: 'Dr. Smith' }
+        ]}
+      />
+    </>
+  );
 
   return (
-    <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
-      <Typography 
-        variant="body2" 
-        sx={{ color: '#337ab7', fontWeight: 500, mb: 2, textDecoration: 'underline', cursor: 'pointer' }}
-      >
-        Referral Document:
-      </Typography>
+    <React.Fragment>
+      <ReportLayout title="Referral Document:">
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          onApplyFilters={() => console.log('Apply Filters')}
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={() => alert('Exporting CSV...')}
+          onPrint={() => window.print()}
+        />
 
-      {/* Filter Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, mr: 2 }}>Filter By:</Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 4 }}>
-          <Typography variant="caption" sx={{ fontWeight: 600 }}>Status:</Typography>
-          <Select 
-            variant="standard"
-            size="small" 
-            value={status} 
-            onChange={(e) => setStatus(e.target.value)}
-            sx={{ fontSize: '0.75rem', width: 100, height: 24 }}
-          >
-            <MenuItem value="none">None</MenuItem>
-            <MenuItem value="new">New</MenuItem>
-            <MenuItem value="sent">Sent Out</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: 600 }}>Provider:</Typography>
-          <Select 
-            variant="standard"
-            size="small" 
-            value={provider} 
-            onChange={(e) => setProvider(e.target.value)}
-            sx={{ fontSize: '0.75rem', width: 120, height: 24 }}
-          >
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="smith">Dr. Smith</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-          <Button 
-            variant="contained" 
-            size="small" 
-            onClick={() => setTemplateDialogOpen(true)}
-            sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-          >
-            Create Template
-          </Button>
-          <Button 
-            variant="contained" 
-            size="small" 
-            sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-          >
-            Apply Filters
-          </Button>
-        </Box>
-      </Box>
-
-      <Divider sx={{ mb: 2, opacity: 0.3 }} />
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={() => alert('Exporting CSV...')}
-          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Export as CSV
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={() => window.print()}
-          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Print
-        </Button>
-      </Box>
-
-      {/* Table Section */}
-      <TableContainer component={Paper} elevation={0}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              {['Referral Patient', 'Referral Provider', 'Created Date', 'Due Date', 'Shared Date', 'Status'].map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 600, fontSize: '0.72rem', borderBottom: '1px solid #ddd' }}>{h}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {DUMMY_DATA.map((row, i) => (
-              <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-                <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.provider}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.created}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.due}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.shared}</TableCell>
-                <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+        <ReportDataTable 
+          columns={columns} 
+          data={DUMMY_DATA} 
+          renderRow={renderRow} 
+        />
+      </ReportLayout>
 
       <CreateTemplateDialog 
         open={templateDialogOpen} 
         onClose={() => setTemplateDialogOpen(false)} 
-        onSave={handleSaveTemplate} 
+        onSave={(name) => alert(`Template "${name}" saved!`)} 
       />
-    </Box>
+    </React.Fragment>
   );
 };
-
 export default ReferralDocumentReport;

@@ -1,135 +1,104 @@
 import React from 'react';
 import {
-  Box,
-  Typography,
-  Grid,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
+  Box, Typography, Grid, Select, MenuItem, Checkbox, FormControlLabel, Button, TableCell, TableRow, TextField
 } from '@mui/material';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import PrintIcon from '@mui/icons-material/Print';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 
 const ProductionPerCode = () => {
   const tableHeaders = [
-    { label: 'Code', align: 'left' },
-    { label: 'Procedure', align: 'left' },
-    { label: 'Quantity', align: 'right' },
-    { label: 'Total Production', align: 'right' },
-    { label: 'Average Production', align: 'right' },
-    { label: 'Percent Production', align: 'right' },
+    { label: 'Code' },
+    { label: 'Procedure' },
+    { label: <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>Quantity <UnfoldMoreIcon sx={{ fontSize: 16, ml: 0.5, color: '#94a3b8' }} /></Box>, align: 'right' },
+    { label: <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>Total Production <UnfoldMoreIcon sx={{ fontSize: 16, ml: 0.5, color: '#94a3b8' }} /></Box>, align: 'right' },
+    { label: <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>Average Production <UnfoldMoreIcon sx={{ fontSize: 16, ml: 0.5, color: '#94a3b8' }} /></Box>, align: 'right' },
+    { label: <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>Percent Production <UnfoldMoreIcon sx={{ fontSize: 16, ml: 0.5, color: '#94a3b8' }} /></Box>, align: 'right' },
   ];
 
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="daily" 
+        prefix="Date Range:" 
+        defaultValue="daily"
+        options={[{ value: 'daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      </Box>
+
+      <ReportSelect 
+        label="all" 
+        prefix="Filter Report by:" 
+        defaultValue="all"
+        options={[{ value: 'all', label: 'Provider: All' }]}
+      />
+      
+      <ReportSelect 
+        label="all" 
+        defaultValue="all"
+        options={[{ value: 'all', label: 'Referral Provider: All' }]}
+      />
+
+      <ReportSelect 
+        label="none" 
+        defaultValue="none"
+        options={[{ value: 'none', label: 'Group by: None' }]}
+      />
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <ReportCheckbox label="Show collection per code" />
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+        <Typography variant="caption" color="primary" sx={{ fontWeight: 600, textDecoration: 'underline' }}>Enter Code</Typography>
+        <TextField 
+          size="small" 
+          variant="outlined"
+          placeholder="Enter code or procedure" 
+          sx={{ width: 200, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.75rem', backgroundColor: '#fff' } }} 
+        />
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Production per code:
-      </Typography>
-
-      {/* Filters Section */}
-      <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
-        <Grid container spacing={4} sx={{ mb: 2 }}>
-          <Grid item xs={12} md={8}>
-            <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-              <Grid item>
-                <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
-                <Select size="small" defaultValue="daily" sx={{ minWidth: 100, fontSize: '0.75rem' }}>
-                  <MenuItem value="daily">Daily</MenuItem>
-                </Select>
-              </Grid>
-              <Grid item>
-                <Typography variant="caption" color="primary">⬅ May 08, 2026 ⮕ Date: 05/08/2026</Typography>
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2} alignItems="center">
-              <Grid item>
-                <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Filter Report by:</Typography>
-                <Select size="small" defaultValue="all" sx={{ minWidth: 120, fontSize: '0.75rem' }}>
-                  <MenuItem value="all">Provider: All</MenuItem>
-                </Select>
-              </Grid>
-              <Grid item>
-                <Select size="small" defaultValue="all" sx={{ minWidth: 160, fontSize: '0.75rem' }}>
-                  <MenuItem value="all">Referral Provider: All</MenuItem>
-                </Select>
-              </Grid>
-              <Grid item>
-                <Select size="small" defaultValue="none" sx={{ minWidth: 120, fontSize: '0.75rem' }}>
-                  <MenuItem value="none">Group by: None</MenuItem>
-                </Select>
-              </Grid>
-            </Grid>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Typography variant="caption" color="primary" sx={{ display: 'block', mb: 0.5, fontWeight: 600, textDecoration: 'underline' }}>Enter Code</Typography>
-            <TextField 
-              size="small" 
-              fullWidth 
-              placeholder="Enter code or procedure" 
-              sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }} 
-            />
-          </Grid>
-        </Grid>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-          <FormControlLabel control={<Checkbox size="small" />} label={<Typography variant="caption">Show collection per code</Typography>} />
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
-            <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
-      </Box>
+    <ReportLayout title="Production per code:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Table Section */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ '& th': { fontSize: '0.8rem', fontWeight: 500, color: 'text.secondary', py: 1.5 } }}>
-              {tableHeaders.map((header) => (
-                <TableCell key={header.label} align={header.align}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: header.align === 'right' ? 'flex-end' : 'flex-start' }}>
-                    {header.label}
-                    <UnfoldMoreIcon sx={{ fontSize: 16, ml: 0.5, color: '#94a3b8' }} />
-                  </Box>
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow>
-              <TableCell sx={{ fontSize: '0.8rem', py: 1 }}>Total Production Charges:</TableCell>
-              <TableCell sx={{ fontSize: '0.8rem', py: 1, fontWeight: 700 }}>$0.00</TableCell>
-              <TableCell colSpan={4}></TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell sx={{ fontSize: '0.8rem', py: 1 }}>Average Charge For All Procedures:</TableCell>
-              <TableCell sx={{ fontSize: '0.8rem', py: 1, fontWeight: 700 }}>$0.00</TableCell>
-              <TableCell colSpan={4}></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      <ReportDataTable 
+        columns={tableHeaders} 
+        data={[]} 
+        renderRow={() => null} 
+      />
+      <Box sx={{ backgroundColor: '#fff', border: '1px solid #e0e0e0', borderTop: 'none', py: 1.5, px: 2 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sx={{ display: 'flex' }}>
+             <Typography sx={{ fontSize: '0.8rem', minWidth: 240 }}>Total Production Charges:</Typography>
+             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700 }}>$0.00</Typography>
+          </Grid>
+          <Grid item xs={12} sx={{ display: 'flex' }}>
+             <Typography sx={{ fontSize: '0.8rem', minWidth: 240 }}>Average Charge For All Procedures:</Typography>
+             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700 }}>$0.00</Typography>
+          </Grid>
+        </Grid>
+      </Box>
+    </ReportLayout>
   );
 };
 
 export default ProductionPerCode;
+

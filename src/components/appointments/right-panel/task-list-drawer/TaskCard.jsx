@@ -1,5 +1,6 @@
 import { Box, Typography, IconButton } from "@mui/material";
-import { RadioButtonUnchecked, CalendarMonth, PeopleOutline, Delete, Link } from "@mui/icons-material";
+import { RadioButtonUnchecked, CalendarTodayOutlined, PeopleOutline, DeleteOutline, AddLinkOutlined } from "@mui/icons-material";
+import DeleteIconImg from "../../../../assets/operatory icons/delete.png";
 
 const TaskCard = ({ task }) => (
   <Box sx={{
@@ -30,7 +31,7 @@ const TaskCard = ({ task }) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {/* Date */}
           <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <CalendarMonth sx={{ fontSize: "13px", color: "#9aa3ae" }} />
+            <CalendarTodayOutlined sx={{ fontSize: "13px", color: "#9aa3ae" }} />
             <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>{task.date}</Typography>
           </Box>
 
@@ -43,7 +44,7 @@ const TaskCard = ({ task }) => (
 
         {/* Go to Treatment Plan link — right */}
         <Box sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", flexShrink: 0 }}>
-          <Link sx={{ fontSize: "13px", color: "#2262ef" }} />
+          <AddLinkOutlined sx={{ fontSize: "15px", color: "#2262ef" }} />
           <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", "&:hover": { textDecoration: "underline" } }}>
             Go to Treatment Plan
           </Typography>
@@ -59,8 +60,8 @@ const TaskCard = ({ task }) => (
     </Box>
 
     {/* Delete icon */}
-    <IconButton size="small" sx={{ p: "2px", color: "#ef4444", flexShrink: 0, mt: "1px", "&:hover": { backgroundColor: "rgba(239,68,68,0.08)" } }}>
-      <Delete sx={{ fontSize: "16px" }} />
+    <IconButton size="small" sx={{ p: "2px", flexShrink: 0, mt: "1px", "&:hover": { backgroundColor: "rgba(239,68,68,0.08)" } }}>
+      <Box component="img" src={DeleteIconImg} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />
     </IconButton>
   </Box>
 );

@@ -251,7 +251,7 @@ export default function InsuranceDialog({
       };
       if (mode === 'add') {
         await patientService.createPatientInsurance(patientId, payload);
-        showSnackbar('Insurance added successfully', 'success');
+        showSnackbar('Insurance added and unsent claims generated successfully', 'success');
         reset({
           insuranceCompanyId: '',
           policyNumber: '',

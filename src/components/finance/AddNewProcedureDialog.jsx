@@ -18,8 +18,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
 
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
-  const [procedureCode, setProcedureCode] = useState('');
-  const [procedureDescription, setProcedureDescription] = useState('');
+  const [selectedProcedures, setSelectedProcedures] = useState([]);
   const [dontChangeCode, setDontChangeCode] = useState(false);
   
   // Autocomplete and Dialog states
@@ -254,44 +253,52 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
           Enter Code
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <Autocomplete
-            freeSolo
-            options={searchOptions}
-            getOptionLabel={(option) => typeof option === 'string' ? option : `${option.ProcCode} - ${option.Descript}`}
-            loading={searchLoading}
-            inputValue={inputValue}
-            onInputChange={(e, newInputValue) => setInputValue(newInputValue)}
-            value={procedureCode}
-            onChange={(e, newValue) => {
-              if (typeof newValue === 'string') {
-                setProcedureCode(newValue);
-                setProcedureDescription('');
-              } else if (newValue && newValue.ProcCode) {
-                setProcedureCode(newValue.ProcCode);
-                setProcedureDescription(newValue.Descript || '');
-              } else {
-                setProcedureCode('');
-                setProcedureDescription('');
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="Enter code or procedure"
-                variant="standard"
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <React.Fragment>
-                      {searchLoading ? <CircularProgress color="inherit" size={16} /> : null}
-                      {params.InputProps.endAdornment}
-                    </React.Fragment>
-                  ),
-                }}
-              />
-            )}
-            sx={{ width: '250px', '& .MuiInputBase-root': { fontSize: '14px' } }}
-          />
+          <Box sx={{ 
+            width: '250px', 
+            borderBottom: '1px solid rgba(0, 0, 0, 0.42)', 
+            '&:focus-within': { borderBottom: '2px solid #5c7bb5' } 
+          }}>
+            <Autocomplete
+              multiple
+              freeSolo
+              options={searchOptions}
+              getOptionLabel={(option) => typeof option === 'string' ? option : `${option.ProcCode} - ${option.Descript}`}
+              loading={searchLoading}
+              inputValue={inputValue}
+              onInputChange={(e, newInputValue) => setInputValue(newInputValue)}
+              value={selectedProcedures}
+              onChange={(e, newValue) => {
+                setSelectedProcedures(newValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Enter code or procedure"
+                  variant="standard"
+                  InputProps={{
+                    ...params.InputProps,
+                    disableUnderline: true,
+                    endAdornment: (
+                      <React.Fragment>
+                        {searchLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.InputProps.endAdornment}
+                      </React.Fragment>
+                    ),
+                  }}
+                />
+              )}
+              sx={{ 
+                width: '100%', 
+                '& .MuiInputBase-root': { 
+                  fontSize: '14px',
+                  maxHeight: '90px',
+                  overflowY: 'auto',
+                  alignItems: 'flex-start',
+                  pb: 0.5
+                } 
+              }}
+            />
+          </Box>
           <Typography 
             onClick={() => setIsSelectDialogOpen(true)}
             sx={{ color: '#5c7bb5', fontSize: '14px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
@@ -318,7 +325,23 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
           <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button
               variant="contained"
-              onClick={() => onSave({ selectedTeeth, selectedSurfaces, procedureCode, procedureDescription, dontChangeCode })}
+              onClick={() => {
+                if (selectedProcedures.length === 0) return;
+                
+                selectedProcedures.forEach((proc, index) => {
+                  const isLast = index === selectedProcedures.length - 1;
+                  const code = typeof proc === 'string' ? proc : proc.ProcCode;
+                  const desc = typeof proc === 'string' ? '' : (proc.Descript || '');
+
+                  onSave({
+                    selectedTeeth,
+                    selectedSurfaces,
+                    procedureCode: code,
+                    procedureDescription: desc,
+                    dontChangeCode
+                  }, !isLast);
+                });
+              }}
               sx={{
                 bgcolor: '#d2b48c',
                 color: 'white',
@@ -351,11 +374,11 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
       <ProcedureCategorySelectDialog
         open={isSelectDialogOpen}
         onClose={() => setIsSelectDialogOpen(false)}
-        onSelect={(proc) => {
-          setProcedureCode(proc.ProcCode);
-          setProcedureDescription(proc.Descript || '');
-          setInputValue(proc.ProcCode);
-          setIsSelectDialogOpen(false);
+        onSelect={(procs) => {
+          if (Array.isArray(procs) && procs.length > 0) {
+            setSelectedProcedures(prev => [...prev, ...procs]);
+            setIsSelectDialogOpen(false);
+          }
         }}
       />
     </Box>

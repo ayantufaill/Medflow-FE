@@ -1088,6 +1088,7 @@ const AppointmentForm = ({
                   {...field}
                   label="Appointment Date *"
                   minDate={dayjs()}
+                  views={['year', 'month', 'day']}
                   slotProps={{
                     textField: {
                       fullWidth: true,

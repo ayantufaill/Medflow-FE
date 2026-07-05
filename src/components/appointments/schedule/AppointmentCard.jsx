@@ -3,10 +3,13 @@ import { Box, Typography } from '@mui/material';
 import {
   Phone, OpenInNew, Add, Description, AttachMoney,
   FiberManualRecord, MedicalServices, Tune, AcUnit,
+  Add, AttachMoney, AssignmentOutlined, AltRoute,
+  PhoneOutlined, OpenInNew
 } from '@mui/icons-material';
 import AppointmentHoverCard from './AppointmentHoverCard';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
+import ToothSvg from '../../../assets/operatory icons/Vector (2).svg';
 
 const STATUS_CONFIG = {
   PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
@@ -15,9 +18,9 @@ const STATUS_CONFIG = {
 };
 
 const TAG_STYLE = (tag) => {
-  if (tag === 'EXM')  return { bg: COLORS.STATUS_PRECONFIRMED, color: COLORS.WHITE,    border: 'none' };
-  if (tag === 'Xray') return { bg: '#1f2937',                  color: COLORS.WHITE,    border: 'none' };
-  return                     { bg: COLORS.SURFACE_CARD,         color: COLORS.TEXT_BODY, border: `1px solid #d1d5db` };
+  if (tag === 'EXM')  return { bg: '#8b5cf6', color: COLORS.WHITE, border: 'none' };
+  if (tag === 'Xray') return { bg: '#1f2937', color: COLORS.WHITE, border: 'none' };
+  return                     { bg: COLORS.WHITE, color: '#374151', border: `1px solid #d1d5db` };
 };
 
 const TagCircle = ({ icon, bg }) => (
@@ -102,7 +105,7 @@ const AppointmentCard = ({ appointment }) => {
             </Typography>
           </Box>
 
-          {/* Status stripe — flat solid color for all statuses */}
+          {/* Status stripe */}
           <Box
             sx={{
               backgroundColor: statusCfg.bg,
@@ -122,7 +125,7 @@ const AppointmentCard = ({ appointment }) => {
           <Box
             sx={{
               flex: 1,
-              backgroundColor: COLORS.SURFACE_CARD,
+              backgroundColor: COLORS.WHITE,
               px: '8px',
               py: '6px',
               display: 'flex',
@@ -177,12 +180,12 @@ const AppointmentCard = ({ appointment }) => {
             </Typography>
 
             {/* Tags */}
-            <Box sx={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: '4px', flexWrap: 'wrap', mt: 1 }}>
               {appointment.tags.map((tag, i) => {
                 const { bg, color, border } = TAG_STYLE(tag);
                 return (
-                  <Box key={i} sx={{ px: '7px', py: '2px', borderRadius: '4px', backgroundColor: bg, border }}>
-                    <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, color }}>
+                  <Box key={i} sx={{ px: '8px', py: '2px', borderRadius: '4px', backgroundColor: bg, border }}>
+                    <Typography sx={{ fontSize: '11px', fontWeight: 700, color, letterSpacing: '0.3px' }}>
                       {tag}
                     </Typography>
                   </Box>
@@ -191,18 +194,22 @@ const AppointmentCard = ({ appointment }) => {
             </Box>
 
             {/* Footer */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto', pt: 1 }}>
               {/* Price pill */}
-              <Box sx={{ backgroundColor: COLORS.PRICE_BG, borderRadius: '20px', px: '8px', py: '2px' }}>
-                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.PRICE_TEXT }}>
+              <Box sx={{ backgroundColor: '#dcfce7', borderRadius: '20px', px: '8px', py: '3px' }}>
+                <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>
                   {appointment.price}
                 </Typography>
               </Box>
 
               {/* Footer icons */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <TagCircle bg="#ccfbf1" icon={<AcUnit sx={{ fontSize: "12px", color: "#0d9488" }} />} />
-                <TagCircle bg="#fef3c7" icon={<Tune sx={{ fontSize: "12px", color: COLORS.STATUS_UNCONFIRMED }} />} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#ccfbf1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography sx={{ color: '#0d9488', fontSize: '18px', fontWeight: 800, lineHeight: 1, pt: '5px' }}>*</Typography>
+                </Box>
+                <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#ffedd5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AltRoute sx={{ color: '#f97316', fontSize: '14px', transform: 'rotate(90deg)' }} />
+                </Box>
               </Box>
             </Box>
           </Box>
@@ -212,21 +219,23 @@ const AppointmentCard = ({ appointment }) => {
         <Box
           sx={{
             width: '28px',
-            backgroundColor: '#dbeeff',
+            backgroundColor: '#dbeafe',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'space-between',
             pt: '8px',
-            pb: '8px',
+            gap: '8px',
             flexShrink: 0,
           }}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
-            <Phone sx={{ fontSize: '14px', color: COLORS.ACCENT }} />
-            <OpenInNew sx={{ fontSize: '13px', color: COLORS.ACCENT }} />
-          </Box>
-          <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: COLORS.ACCENT }}>SS</Typography>
+          <PhoneOutlined sx={{ fontSize: '14px', color: '#2563eb' }} />
+          <OpenInNew sx={{ fontSize: '14px', color: '#2563eb' }} />
+          
+          {/* SS moved to bottom */}
+          <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#2563eb', mt: 'auto', mb: '8px' }}>
+            SS
+          </Typography>
         </Box>
       </Box>
 
