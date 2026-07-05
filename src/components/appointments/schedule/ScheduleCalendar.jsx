@@ -8,7 +8,7 @@ import { useDropdownData } from '../../../hooks/redux';
 // It derives the minimum scroll-width from the live room count so both the
 // sticky header row and the time grid always share the same column widths.
 
-const ScheduleCalendar = () => {
+const ScheduleCalendar = ({ onSlotClick }) => {
   // rooms is cached by useDropdownData — no extra API call (OperatoryHeaders
   // and ScheduleTimeGrid also call this hook and share the same Redux state).
   const { rooms } = useDropdownData({ rooms: true });
@@ -21,7 +21,7 @@ const ScheduleCalendar = () => {
       {/* Min-width wrapper ensures header and grid scroll together horizontally */}
       <Box sx={{ minWidth: totalGridWidth }}>
         <OperatoryHeaders />
-        <ScheduleTimeGrid />
+        <ScheduleTimeGrid onSlotClick={onSlotClick} />
       </Box>
     </Box>
   );

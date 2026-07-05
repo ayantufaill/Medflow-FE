@@ -24,6 +24,7 @@ const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
             displayEmpty
             value={row.providerId}
             onChange={(e) => setProviderRows((prev) => prev.map((r) => r.id === row.id ? { ...r, providerId: e.target.value } : r))}
+            MenuProps={{ sx: { zIndex: 1400 } }}
             sx={{ flex: 1, fontFamily: "Inter", fontSize: "12px", "& .MuiSelect-select": { py: "5px" } }}
           >
             <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>

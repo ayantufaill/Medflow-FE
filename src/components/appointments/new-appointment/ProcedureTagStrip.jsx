@@ -1,7 +1,10 @@
-import { Autocomplete, Box, Chip, IconButton, TextField, Typography } from "@mui/material";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Autocomplete, Box, Chip, IconButton, TextField, Typography, CircularProgress } from "@mui/material";
 import { Close } from "@mui/icons-material";
+import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from "../../../store/slices/feeGuideSlice";
 import { Label } from "./helpers";
-import { DEFAULT_PROCEDURE_TAGS, DUMMY_PROCEDURE_OPTIONS } from "./constants";
+import { DEFAULT_PROCEDURE_TAGS, TAG_DEFAULT_PROCEDURES } from "./constants";
 
 const ProcedureTagStrip = ({
   selectedTagLabels,
@@ -11,11 +14,23 @@ const ProcedureTagStrip = ({
   onProcedureInputChange,
   onAddingProcedureToggle,
   onSelectProcedure,
-}) => (
+}) => {
+  const dispatch = useDispatch();
+  const procedureCodes = useSelector(selectProcedureCodes) || [];
+  const loading = useSelector(selectProcedureCodesLoading);
+
+  useEffect(() => {
+    if (addingProcedure && procedureCodes.length === 0 && !loading) {
+      dispatch(fetchProcedureCodes({ limit: 2000 }));
+    }
+  }, [addingProcedure, procedureCodes.length, loading, dispatch]);
+
+  return (
   <Box sx={{ mb: "20px" }}>
     <Label>Quick add procedure</Label>
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
       {DEFAULT_PROCEDURE_TAGS.map((tag, idx) => {
+        if (!TAG_DEFAULT_PROCEDURES[tag.label]) return null;
         const key = `${tag.label}-${idx}`;
         const isSelected = selectedTagLabels.has(key);
         return (
@@ -42,23 +57,36 @@ const ProcedureTagStrip = ({
           <Autocomplete
             autoFocus
             open={procedureInput.length > 0}
-            options={DUMMY_PROCEDURE_OPTIONS}
-            getOptionLabel={(o) => `${o.code} – ${o.treatment}`}
+            options={procedureCodes}
+            loading={loading}
+            componentsProps={{ popper: { sx: { zIndex: 1400 } } }}
+            getOptionLabel={(o) => `${o.ProcCode || o.code} – ${o.Descript || o.name || o.AbbrDesc || o.abbreviation}`}
             inputValue={procedureInput}
             onInputChange={(_, v) => onProcedureInputChange(v)}
-            onChange={(_, v) => onSelectProcedure(v)}
-            filterOptions={(opts, { inputValue }) => {
-              const q = inputValue.toLowerCase();
-              return opts.filter((o) => o.code.toLowerCase().includes(q) || o.treatment.toLowerCase().includes(q));
+            onChange={(_, v) => {
+              if (v) {
+                onSelectProcedure({
+                  code: v.ProcCode || v.code,
+                  treatment: v.Descript || v.name || v.AbbrDesc || v.abbreviation,
+                  charge: "$0.00",
+                  tag: { label: "PRC", color: "#e5e7eb", font: "#374151" },
+                });
+              }
             }}
-            renderOption={(props, o) => (
-              <Box component="li" {...props} key={o.code} sx={{ display: "flex", alignItems: "center", gap: "8px", py: "4px !important" }}>
-                <Chip label={o.tag.label} size="small" sx={{ backgroundColor: o.tag.color, color: o.tag.font || "#111", fontSize: "9px", height: "16px", borderRadius: "4px", fontWeight: 700, "& .MuiChip-label": { px: "6px" } }} />
-                <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600 }}>{o.code}</Typography>
-                <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#6b7280" }}>{o.treatment}</Typography>
-                <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae", ml: "auto" }}>{o.charge}</Typography>
-              </Box>
-            )}
+            filterOptions={(opts, { inputValue }) => {
+              const q = (inputValue || "").toLowerCase();
+              return opts.filter((o) => (o.ProcCode || o.code || "").toLowerCase().includes(q) || (o.Descript || o.name || "").toLowerCase().includes(q));
+            }}
+            renderOption={(props, o) => {
+              const { key, ...restProps } = props;
+              return (
+                <Box component="li" key={key} {...restProps} sx={{ display: "flex", alignItems: "center", gap: "8px", py: "4px !important" }}>
+                  <Chip label="PRC" size="small" sx={{ backgroundColor: "#e5e7eb", color: "#374151", fontSize: "9px", height: "16px", borderRadius: "4px", fontWeight: 700, "& .MuiChip-label": { px: "6px" } }} />
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "11px", fontWeight: 600 }}>{o.ProcCode || o.code}</Typography>
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#6b7280" }}>{o.Descript || o.name || o.AbbrDesc || o.abbreviation}</Typography>
+                </Box>
+              );
+            }}
             sx={{ width: 260 }}
             renderInput={(params) => (
               <TextField
@@ -85,6 +113,7 @@ const ProcedureTagStrip = ({
       )}
     </Box>
   </Box>
-);
+  );
+};
 
 export default ProcedureTagStrip;

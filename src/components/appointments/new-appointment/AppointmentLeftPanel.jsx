@@ -3,7 +3,9 @@ import { AccessTimeOutlined } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { FieldBox, Label } from "./helpers";
+import dayjs from "dayjs";
 import PatientSearchField from "./PatientSearchField";
 import ProcedureTagStrip from "./ProcedureTagStrip";
 import ProcedureTable from "./ProcedureTable";
@@ -41,7 +43,10 @@ const AppointmentLeftPanel = ({
           <DatePicker
             value={apptDate}
             onChange={(v) => v && onDateChange(v)}
+            views={['year', 'month', 'day']}
+            disablePast
             slotProps={{
+              popper: { sx: { zIndex: 1400 } },
               textField: {
                 size: "small",
                 sx: { width: "165px", "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", height: "40px" } },
@@ -60,24 +65,8 @@ const AppointmentLeftPanel = ({
               const [h, m] = e.target.value.split(":");
               onTimeChange(h?.slice(0, 2) ?? timeHours, m?.slice(0, 2) ?? timeMins);
             }}
-            style={{ border: "none", outline: "none", width: "60px", fontFamily: "Inter", fontSize: "13px", color: "#09121f", background: "transparent" }}
           />
-          {["AM", "PM"].map((p) => (
-            <Box
-              key={p}
-              onClick={() => onAmPmChange(p)}
-              sx={{
-                px: "10px", height: "100%", display: "flex", alignItems: "center",
-                cursor: "pointer", fontFamily: "Inter", fontSize: "12px", fontWeight: 600,
-                backgroundColor: amPm === p ? "#2262ef" : "transparent",
-                color: amPm === p ? "#fff" : "#6b7280",
-                transition: "all 0.15s",
-              }}
-            >
-              {p}
-            </Box>
-          ))}
-        </Box>
+        </LocalizationProvider>
       </FieldBox>
     </Box>
 

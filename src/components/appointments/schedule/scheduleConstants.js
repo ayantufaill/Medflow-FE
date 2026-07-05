@@ -2,7 +2,7 @@
 
 export const TIME_LABEL_WIDTH = 52;   // px — width of the time gutter on the left
 export const COLUMN_MIN_WIDTH = 260;  // px — minimum width per operatory column
-export const HOUR_HEIGHT      = 120;  // px — height of one hour row in the grid
+export const HOUR_HEIGHT      = 150;  // px — height of one hour row in the grid
 export const START_HOUR       = 7;    // 7 AM — first visible hour
 export const END_HOUR         = 21;   // 9 PM — last visible hour (exclusive)
 

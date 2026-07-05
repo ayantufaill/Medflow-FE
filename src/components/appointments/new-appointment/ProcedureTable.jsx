@@ -54,6 +54,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures }) => {
         <Select
           size="small"
           value={row.treatment}
+          MenuProps={{ sx: { zIndex: 1400 } }}
           sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
         >
           <MenuItem value={row.treatment} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{row.treatment}</MenuItem>
@@ -65,6 +66,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures }) => {
           displayEmpty
           value={row.provider}
           onChange={handleProviderChange}
+          MenuProps={{ sx: { zIndex: 1400 } }}
           sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
         >
           <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>

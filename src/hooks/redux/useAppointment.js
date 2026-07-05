@@ -106,23 +106,23 @@ export const useAppointmentList = (initialFilters = {}) => {
 
   // Optimistically appends the new appointment to the list on success.
   const createAppointment = useCallback((payload) => {
-    return dispatch(createAppointmentThunk(payload));
+    return dispatch(createAppointmentThunk(payload)).unwrap();
   }, [dispatch]);
 
   // Updates an appointment in-place in the list and invalidates its detail cache.
   const updateAppointment = useCallback((appointmentId, payload) => {
-    return dispatch(updateAppointmentThunk({ appointmentId, payload }));
+    return dispatch(updateAppointmentThunk({ appointmentId, payload })).unwrap();
   }, [dispatch]);
 
   // Removes the appointment from the list, pending tray, cache, and clears
   // selectedAppointmentId if it pointed to the deleted record.
   const deleteAppointment = useCallback((appointmentId) => {
-    return dispatch(deleteAppointmentThunk(appointmentId));
+    return dispatch(deleteAppointmentThunk(appointmentId)).unwrap();
   }, [dispatch]);
 
   // Flips the appointment status to "cancelled" without removing it from the list.
   const cancelAppointment = useCallback((appointmentId, cancellationReason = '') => {
-    return dispatch(cancelAppointmentThunk({ appointmentId, cancellationReason }));
+    return dispatch(cancelAppointmentThunk({ appointmentId, cancellationReason })).unwrap();
   }, [dispatch]);
 
   // ── Optimistic local mutations (no API call) ───────────────────────────────

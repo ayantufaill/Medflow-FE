@@ -7,8 +7,8 @@ import LeftPanel from '../../components/appointments/left-panel/LeftPanel';
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
-import { usePatients } from '../../hooks/redux/usePatient';
-import { useAppointmentList } from '../../hooks/redux/useAppointment';
+import { usePatients, usePatient } from '../../hooks/redux/usePatient';
+import { useAppointmentList, useScheduleState } from '../../hooks/redux';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
@@ -306,7 +306,16 @@ const OperatorySchedulePage = () => {
     if (formOpen) searchFormPatients('');
   }, [formOpen, searchFormPatients]);
 
-  const initialFormDateTime = useMemo(() => dayjs().hour(9).minute(0), []);
+  const { selectedDate } = useScheduleState();
+  const [initialFormDateTime, setInitialFormDateTime] = useState(null);
+  const [initialFormRoomId, setInitialFormRoomId] = useState(null);
+
+  const handleOpenForm = (dateTime, roomId) => {
+    const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+    setInitialFormDateTime(dateTime || baseDate.hour(9).minute(0));
+    setInitialFormRoomId(roomId || null);
+    setFormOpen(true);
+  };
 
   // ── Appointments (for conflict detection inside the form) ─────────
   const { appointments, createAppointment } = useAppointmentList();
@@ -557,6 +566,7 @@ const OperatorySchedulePage = () => {
         status:            formData.status || 'scheduled',
         ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
         ...(formData.roomId            && { roomId:            formData.roomId }),
+        ...(formData.customFields      && { customFields:      formData.customFields }),
       });
       showSnackbar('Appointment created successfully', 'success');
       setFormOpen(false);
@@ -580,8 +590,11 @@ const OperatorySchedulePage = () => {
 
       {/* CENTER PANEL — 3/5 */}
       <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <ScheduleGridHeader onNewAppointment={() => setFormOpen(true)} />
-        <ScheduleCalendar />
+        <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} />
+        <ScheduleCalendar onSlotClick={(hour, mins, roomId) => {
+          const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+          handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
+        }} />
       </Box>
 
       {/* RIGHT PANEL — 1/5 */}
@@ -602,7 +615,9 @@ const OperatorySchedulePage = () => {
         rooms={rooms || []}
         appointmentTypes={appointmentTypes || []}
         appointments={appointments || []}
+        initialPatient={currentPatient || null}
         initialDateTime={initialFormDateTime}
+        initialRoomId={initialFormRoomId}
       />
 
       <SendBulkTextDialog

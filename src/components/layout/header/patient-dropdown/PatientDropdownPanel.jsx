@@ -12,7 +12,7 @@ import { usePatients, usePatient } from "../../../../hooks/redux";
 // Maps an API patient object to the flat shape that CurrentPatientCard and
 // PatientListCard expect. Both card components read: name, id, phone,
 // insurance, balance, appt, status.
-const toCardShape = (patient) => {
+export const toCardShape = (patient) => {
   if (!patient) return null;
 
   const name = `${patient.firstName || ""} ${patient.lastName || ""}`.trim() || "Unknown Patient";

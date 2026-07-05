@@ -39,22 +39,39 @@ const mapApiAppointmentToGridItem = (appt) => {
 
   const statusKey = (appt.status || 'unconfirmed').toLowerCase();
 
-  return {
-    id:              appt._id || appt.id,
-    patientName,
-    time:            displayTime,
-    status:          statusKey.toUpperCase(),
-    startHour,
-    startMinute,
-    durationMinutes,
-    roomId:          appt.roomId || null,  // used below to determine column index
-    headerColor:     STATUS_COLORS[statusKey] || '#2262ef',
-    // Optional display fields — AppointmentCard renders these when present.
-    procedures:      appt.appointmentTypeName || appt.type || '',
-    description:     appt.notes || appt.reason || '',
-    tags:            Array.isArray(appt.tags) ? appt.tags : [],
-    price:           appt.totalAmount ? `$${appt.totalAmount}` : '',
-  };
+    const cf = appt.customFields || {};
+    let procString = appt.chiefComplaint || appt.appointmentTypeName || appt.type || 'EXAM, PROPHY';
+    let computedPrice = appt.totalAmount || 0;
+    
+    if (cf.procedures && Array.isArray(cf.procedures) && cf.procedures.length > 0) {
+      procString = cf.procedures.map(p => p.treatment || p.code).join(', ');
+      computedPrice = cf.procedures.reduce((sum, p) => {
+        const charge = String(p.charge || '0').replace(/[^0-9.]/g, '');
+        return sum + (parseFloat(charge) || 0);
+      }, 0);
+    }
+    
+    const tagsArray = Array.isArray(cf.procedureTags) && cf.procedureTags.length > 0 
+      ? cf.procedureTags 
+      : (Array.isArray(appt.tags) && appt.tags.length > 0 ? appt.tags : []);
+      
+    const priceStr = computedPrice > 0 ? `$${computedPrice.toFixed(2)}` : '$0.00';
+
+    return {
+      id:              appt._id || appt.id,
+      patientName,
+      time:            displayTime,
+      status:          statusKey.toUpperCase(),
+      startHour,
+      startMinute,
+      durationMinutes,
+      roomId:          appt.roomId || null,
+      headerColor:     STATUS_COLORS[statusKey] || '#2262ef',
+      procedures:      procString,
+      description:     appt.notes || appt.reason || '',
+      tags:            tagsArray,
+      price:           priceStr,
+    };
 };
 
 // Computes the absolute CSS position for a grid item inside the time grid.
@@ -69,7 +86,7 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ScheduleTimeGrid = () => {
+const ScheduleTimeGrid = ({ onSlotClick }) => {
   const { calendarView, selectedDate } = useScheduleState();
   const { rooms }                      = useDropdownData({ rooms: true });
 
@@ -162,11 +179,24 @@ const ScheduleTimeGrid = () => {
           {rooms.map((room, idx) => (
             <Box
               key={room._id || room.id || idx}
+              onClick={(e) => {
+                if (!onSlotClick) return;
+                // Get click Y relative to the box
+                const rect = e.currentTarget.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const isBottomHalf = y > (HOUR_HEIGHT / 2);
+                const mins = isBottomHalf ? 30 : 0;
+                onSlotClick(hour, mins, room._id || room.id || room.roomCode || room.title || room.name);
+              }}
               sx={{
                 width: COLUMN_MIN_WIDTH,
                 flexShrink: 0,
                 borderLeft: `1px solid ${COLORS.BORDER}`,
                 position: 'relative',
+                cursor: 'pointer',
+                '&:hover': {
+                  backgroundColor: 'rgba(34, 98, 239, 0.04)',
+                },
                 // Half-hour dashed divider drawn via CSS pseudo-element.
                 '&::after': {
                   content: '""',
