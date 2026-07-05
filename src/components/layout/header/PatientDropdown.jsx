@@ -69,7 +69,7 @@ const PatientDropdown = () => {
               lineHeight: '20px', color: '#09121f',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }]}>
-              {patientName} fahad
+              {patientName}
             </Typography>
 
             {/* Only show chart info line when a patient is selected */}
