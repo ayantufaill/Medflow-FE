@@ -24,7 +24,6 @@ const AddNewPatientAppointmentForm = ({
   initialRoomId = "",
   open = true,
   appointments = [],
-  initialRoomId = null,
 }) => {
   /* ── Left panel state ── */
   const [patient,           setPatient]           = useState(initialPatient || null);
@@ -34,33 +33,6 @@ const AddNewPatientAppointmentForm = ({
   const [amPm,              setAmPm]              = useState(initialDateTime ? initialDateTime.format("A") : "AM");
   const [visitType,         setVisitType]         = useState("recare");
   const [procedures,        setProcedures]        = useState(INITIAL_PROCEDURES);
-  // Initialize patient from initialPatient prop, reset when it changes
-  const [patient, setPatient] = useState(initialPatient || null);
-  const [dateTime, setDateTime] = useState(
-    initialDateTime || dayjs().hour(9).minute(5),
-  );
-  const [visitType, setVisitType] = useState("treatment");
-
-  // Reset form when initialPatient changes (e.g., when opening from sidebar)
-  useEffect(() => {
-    if (open) {
-      setPatient(initialPatient || null);
-      setDateTime(initialDateTime || dayjs().hour(9).minute(5));
-      setVisitType("treatment");
-      setProcedures([]);
-      setProcedureTags(DEFAULT_PROCEDURE_TAGS);
-      setSelectedProviderId("");
-      setSelectedAssistantId("");
-      setDurationMins(30);
-      setSelectedRoomId(initialRoomId || "");
-      setAppointmentStatus("unconfirmed");
-      setSelectedAppointmentTypeId("");
-      setNotes("");
-    }
-  }, [open, initialPatient, initialDateTime, initialRoomId]);
-
-  // Scheduled procedure table rows
-  const [procedures, setProcedures] = useState([]);
 
   // Procedure tags: all available tags + which ones are selected
   const [procedureTags, setProcedureTags] = useState(DEFAULT_PROCEDURE_TAGS);
@@ -100,8 +72,14 @@ const AddNewPatientAppointmentForm = ({
         occupied.add(String(appt.roomId));
       }
     });
-    return rooms.filter(r => !occupied.has(String(r._id || r.id)));
-  }, [rooms, appointments, apptDate, timeHours, timeMins, amPm, durationMins]);
+    // Keep the already-selected room in the list even if it now reads as occupied,
+    // otherwise the Select can't match `roomId` to a MenuItem and silently shows
+    // "Select operatory" instead of the operatory the user actually picked.
+    return rooms.filter(r => {
+      const id = String(r._id || r.id);
+      return id === String(roomId) || !occupied.has(id);
+    });
+  }, [rooms, appointments, apptDate, timeHours, timeMins, amPm, durationMins, roomId]);
 
   useEffect(() => {
     if (open) {
@@ -111,14 +89,20 @@ const AddNewPatientAppointmentForm = ({
       setTimeMins(initialDateTime ? initialDateTime.format("mm") : "00");
       setAmPm(initialDateTime ? initialDateTime.format("A") : "AM");
       setRoomId(initialRoomId != null ? String(initialRoomId) : "");
-      setVisitType("Treatment");
-      setProcedures([]);
+      // Radio values in AppointmentLeftPanel are lowercased ("treatment"/"recare"),
+      // so seeding with capitalized "Treatment" left both radios unchecked on open.
+      setVisitType("treatment");
+      // Re-seed the default procedure list every time the modal opens. This used to be
+      // setProcedures([]), which wiped out the INITIAL_PROCEDURES seed the moment the
+      // dialog became visible (the effect fires on every `open` transition to true),
+      // so the "New procedures" table always rendered empty instead of showing the
+      // default visit procedures — this was the "missing procedures list" bug.
+      setProcedures(INITIAL_PROCEDURES);
       setSelectedTagLabels(new Set());
       setTagProcedureIds({});
       setAddingProcedure(false);
       setProcedureInput("");
       setStatus("scheduled");
-      setRoomId("");
       setDurationMins(60);
       setProviderRows([{ id: Date.now(), providerId: "", time: 60 }]);
       setPreferredDentist("");
@@ -193,6 +177,12 @@ const AddNewPatientAppointmentForm = ({
       status,
       notes,
       providerId: providerRows[0]?.providerId || undefined,
+      // Backend appointment schema expects `roomId` (see project notes), so that stays
+      // the top-level field. `operatoryId` is mirrored into customFields as the same
+      // value so the schedule grid (which maps appointments back to an operatory
+      // column via roomId/columnId) and any operatory-scoped consumers of the
+      // created appointment have an explicit, correctly-named field to read instead
+      // of having to know that "operatory" and "room" are the same concept here.
       roomId:     roomId || undefined,
       customFields: {
         visitType,
@@ -201,6 +191,11 @@ const AddNewPatientAppointmentForm = ({
         preferredHygienist,
         colorTags: [...selectedColorTags],
         procedureTags: [...selectedTagLabels].map(l => l.split('-')[0]),
+        // operatoryId reflects the operatory chart column the appointment was created
+        // from (set via the initialRoomId prop when the user clicks a slot on the
+        // /appointments operatory grid), kept in sync with roomId if changed via the
+        // Room dropdown in the right panel.
+        operatoryId: roomId || undefined,
       },
     });
   };
