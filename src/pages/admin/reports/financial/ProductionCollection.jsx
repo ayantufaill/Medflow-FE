@@ -28,6 +28,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import { useDispatch, useSelector } from 'react-redux';
 import { reportingService } from '../../../../services/reporting.service';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+import { ReportLayout, ReportSelect } from '../../../../components/reports/ui';
 
 const ProductionCollection = () => {
   const dispatch = useDispatch();
@@ -1072,7 +1073,7 @@ const ProductionCollection = () => {
           Average Production Per Patient: <Box component="span" sx={{ ml: 2, fontWeight: 700 }}>${avgProduction.toFixed(2)}</Box>
         </Typography>
       </Box>
-    </Box>
+    </ReportLayout>
   );
 };
 

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatient } from '../../hooks/redux/usePatient';
+import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
 
 import {
   InsuranceInformation,
@@ -23,7 +24,7 @@ import TaskList from '../../components/appointments/right-panel/TaskList';
 import Messages from '../../components/appointments/right-panel/Messages';
 import AddCoverageHeader from '../../components/insurance/AddCoverageHeader';
 
-import { useCoverageForm } from './hooks/useCoverageForm';
+import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
 
@@ -36,8 +37,11 @@ const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
 
 const AddCoveragePage = () => {
   const { patientId, insuranceId } = useParams();
+  const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
+  const { create: createInsurance, update: updateInsurance } = usePatientInsurance(patientId);
+  const [saving, setSaving] = useState(false);
 
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   const [isCoverageBookModalOpen, setIsCoverageBookModalOpen] = useState(false);
@@ -45,13 +49,59 @@ const AddCoveragePage = () => {
   const [errors, setErrors] = useState({});
   const [coverageBookData, setCoverageBookData] = useState([]);
   const [coverageCategoryData, setCoverageCategoryData] = useState(insuranceId ? {} : COVERAGE_DATA);
+  const [templateToApply, setTemplateToApply] = useState(null);
+  const [isTemplateConfirmOpen, setIsTemplateConfirmOpen] = useState(false);
+
+  const [formData, setFormData] = useState({
+    carrierName: '',
+    payerId: '',
+    carrierPhone: '',
+    payerAddress: '',
+    planInfo: false,
+    insurancePlan: '',
+    groupName: '',
+    groupNumber: '',
+    phoneNumber: '',
+    healthPlan: false,
+    assignmentOfBenefits: 1,
+    saveAsTemplate: false,
+    planFeeGuide: '',
+    coverageType: 'ppo',
+    providersPlanFeeGuides: [],
+    deductibles: [
+      { type: 'Standard', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Preventative', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Basic', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Major', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
+      { type: 'Orthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
+    ],
+    coverage: {
+      individual: { unlimited: false, annualMax: '', usedAmount: '', usedAmountDate: '' },
+      family: { unlimited: false, annualMax: '', usedAmount: '', usedAmountDate: '' },
+      ortho: { unlimited: false, annualMax: '', usedAmount: '', usedAmountDate: '' },
+      diagnostic: { unlimited: false, annualMax: '' },
+      preventative: { unlimited: false, annualMax: '' },
+      major: { unlimited: false, annualMax: '' },
+      categories: ['Diagnostic', 'Preventative', 'Major']
+    },
+    subscriber: {
+      relationship: 'Self',
+      name: '',
+      subscriberId: '',
+      ssn: '',
+      dateOfBirth: ''
+    },
+    renewalMonth: 'January',
+    policyStarted: new Date().toISOString().split('T')[0],
+    policyEnds: '',
+    honorWriteOff: false
+  });
 
   const {
     loading,
     feeGuides,
     allCompanies,
     coverageTemplates,
-    handleSave,
     handleCancel
   } = useCoverageData(
     patientId, 
@@ -70,13 +120,6 @@ const AddCoveragePage = () => {
     value: fg._id || fg.FeeSchedNum || fg.feeSchedNum || fg.id,
     label: fg.Description || fg.description || fg.name || 'Unknown Fee Guide'
   }));
-
-  const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
-      <Icon sx={{ fontSize: 14, color }} />
-      <Typography sx={{ fontSize: '0.65rem', color, fontWeight: 600 }}>{text}</Typography>
-    </Box>
-  );
 
   // Style constants
   const blueHeader = "#f0f4f8";
@@ -108,135 +151,6 @@ const AddCoveragePage = () => {
     py: 0.2,
     height: '35px'
   };
-
-  useEffect(() => {
-    if (patientId) {
-      fetchPatient(patientId);
-    }
-  }, [patientId, fetchPatient]);
-
-  const initialFetchRef = useRef({ companies: false, templates: false });
-
-  useEffect(() => {
-    if ((!allCompanies || allCompanies.length === 0) && !companiesLoading && !initialFetchRef.current.companies) {
-      initialFetchRef.current.companies = true;
-      fetchCompanies();
-    }
-    if ((!coverageTemplates || coverageTemplates.length === 0) && !templatesLoading && !initialFetchRef.current.templates) {
-      initialFetchRef.current.templates = true;
-      fetchTemplates();
-    }
-  }, [allCompanies, coverageTemplates, companiesLoading, templatesLoading, fetchCompanies, fetchTemplates]);
-
-  useEffect(() => {
-    if (feeGuides.length === 0 && !feeGuidesLoading) {
-      dispatch(fetchFeeGuides());
-    }
-  }, [dispatch, feeGuides.length, feeGuidesLoading]);
-
-  useEffect(() => {
-    // Only fetch existing insurances if we are editing an existing policy
-    if (patientId && insuranceId && insurances.length === 0) fetchInsurances();
-  }, [patientId, insuranceId, insurances.length, fetchInsurances]);
-
-  useEffect(() => {
-  const loadData = async () => {
-    try {
-      if (patientId && insuranceId && insurances.length > 0 && allCompanies && allCompanies.length > 0) {
-        const editTarget = insurances.find(ins => (ins._id || ins.id) === insuranceId);
-
-        if (editTarget) {
-          const monthMapReverse = {
-            1: 'January', 2: 'February', 3: 'March', 4: 'April',
-            5: 'May', 6: 'June', 7: 'July', 8: 'August',
-            9: 'September', 10: 'October', 11: 'November', 12: 'December'
-          };
-
-          const fullCompany = allCompanies.find(
-            c => (c._id || c.id) === (editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId)
-          );
-
-          setFormData(prev => ({
-            ...prev,
-            insuranceCompanyId: editTarget.insuranceCompanyId?._id || editTarget.insuranceCompanyId,
-            carrierName: editTarget.insuranceCompanyId?.name || '',
-            payerId: editTarget.insuranceCompanyId?.payerId || '',
-            carrierPhone: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
-            payerAddress: fullCompany?.addressLine1 || editTarget.insuranceCompanyId?.addressLine1 || fullCompany?.city || editTarget.insuranceCompanyId?.city || '',
-            phoneNumber: fullCompany?.phone || editTarget.insuranceCompanyId?.phone || '',
-            groupNumber: editTarget.groupNumber || '',
-            groupName: editTarget.groupName || '',
-            insurancePlan: editTarget.insurancePlan?.name || editTarget.insurancePlan || fullCompany?.name || editTarget.insuranceCompanyId?.name || '',
-            insuranceType: editTarget.insuranceType || 'primary',
-            planFeeGuide: editTarget.planFeeGuide || '',
-            coverageType: editTarget.coverageType || 'ppo',
-            assignmentOfBenefits: parseInt(editTarget.assignmentOfBenefits) || 1,
-            honorWriteOff: editTarget.honorWriteOff || false,
-            renewalMonth: monthMapReverse[editTarget.renewalMonth] || 'January',
-            policyStarted: editTarget.effectiveDate
-              ? new Date(editTarget.effectiveDate).toISOString().split('T')[0]
-              : prev.policyStarted,
-            policyEnds: editTarget.expirationDate
-              ? new Date(editTarget.expirationDate).toISOString().split('T')[0]
-              : '',
-            subscriber: {
-              ...prev.subscriber,
-              relationship: editTarget.relationshipToPatient?.charAt(0).toUpperCase() +
-                editTarget.relationshipToPatient?.slice(1) || 'Self',
-              name: editTarget.subscriberName || '',
-              subscriberId: editTarget.policyNumber || '',
-              ssn: editTarget.subscriberSsn || '',
-              dateOfBirth: editTarget.subscriberDateOfBirth
-                ? new Date(editTarget.subscriberDateOfBirth).toISOString().split('T')[0]
-                : ''
-            },
-            deductibles: editTarget.deductiblesGrid?.length ? editTarget.deductiblesGrid : prev.deductibles,
-            coverage: editTarget.coverageLimits || prev.coverage,
-
-            providersPlanFeeGuides: editTarget.providersPlanFeeGuides || [],
-            policyNotes: editTarget.policyNotes || '',
-            eligibilityPolicyNotes: editTarget.eligibilityPolicyNotes || '',
-            insurancePlanNotes: editTarget.insurancePlanNotes || '',
-            healthPlan: editTarget.healthPlan || false,
-            paymentPlan: editTarget.paymentPlan || ''
-          }));
-
-          if (editTarget.coverageBookData) {
-            setCoverageBookData(editTarget.coverageBookData);
-          }
-
-          if (editTarget.coverageCategoryTable) {
-            const covDataArray = editTarget.coverageCategoryTable;
-            if (Array.isArray(covDataArray) && covDataArray.length > 0) {
-              if (typeof covDataArray[0] === 'object' && covDataArray[0].category) {
-                const covData = {};
-                covDataArray.forEach(group => {
-                  covData[group.category] = group.items;
-                });
-                setCoverageCategoryData(covData);
-              } else if (typeof covDataArray[0] === 'object' && !covDataArray[0].category) {
-                setCoverageCategoryData(covDataArray);
-              }
-            } else if (covDataArray && !Array.isArray(covDataArray)) {
-              setCoverageCategoryData(covDataArray);
-            } else {
-              setCoverageCategoryData({});
-            }
-          } else {
-            setCoverageCategoryData({});
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load data', err);
-      showSnackbar('Failed to load required data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadData();
-}, [patientId, insuranceId, insurances, allCompanies]);
 
   useEffect(() => {
     if (patient && formData.subscriber.relationship === 'Self' && !formData.subscriber.name) {
@@ -334,8 +248,8 @@ const AddCoveragePage = () => {
       }
 
       setErrors({});
-      setLoading(true);
-      
+      setSaving(true);
+
       // Map UI state to backend validator requirements
       const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
       const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
@@ -424,12 +338,8 @@ const AddCoveragePage = () => {
       const errorMessage = err?.data?.message || err?.message || (typeof err === 'string' ? err : 'Failed to save coverage');
       showSnackbar(errorMessage, 'error');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
-  };
-
-  const handleCancel = () => {
-    navigate(`/patients/details/${patientId}?tab=insurance`);
   };
 
   const handleCoverageChange = (type, field, value) => {
@@ -621,7 +531,7 @@ const AddCoveragePage = () => {
 
       <Box sx={{ display: 'flex', gap: '20px', p: 3, maxWidth: '1857px', margin: '0 auto' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minWidth: 0 }}>
-          <AddCoverageHeader onSave={handleSave} onCancel={handleCancel} loading={loading} />
+          <AddCoverageHeader onSave={handleSave} onCancel={handleCancel} loading={loading || saving} />
 
           <Box sx={{ display: 'flex', gap: '20px' }}>
             <Box sx={{ width: '480px', minWidth: '480px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -629,9 +539,9 @@ const AddCoveragePage = () => {
                 formData={{
                   ...formData,
                   coverageTemplates,
-                  handleApplyTemplate: (t) => handlers.handleApplyTemplate(t, showSnackbar)
+                  handleApplyTemplate: (t) => handleApplyTemplate(t)
                 }}
-                handleInputChange={handlers.handleInputChange}
+                handleInputChange={handleInputChange}
                 insuranceCompanies={allCompanies?.companies || allCompanies || []}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 tinyText={STYLE_CONSTANTS.tinyText}
@@ -641,57 +551,57 @@ const AddCoveragePage = () => {
 
               <SubscriberInformation
                 formData={formData}
-                handleSubscriberChange={handlers.handleSubscriberChange}
-                handleInputChange={handlers.handleInputChange}
+                handleSubscriberChange={handleSubscriberChange}
+                handleInputChange={handleInputChange}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 inputBg={STYLE_CONSTANTS.inputBg}
               />
 
               <RenewalSection
                 formData={formData}
-                handleRenewalChange={handlers.handleRenewalChange}
+                handleRenewalChange={handleRenewalChange}
                 inputBg={STYLE_CONSTANTS.inputBg}
               />
 
               <AdvancedSection
                 formData={formData}
-                handleInputChange={handlers.handleInputChange}
+                handleInputChange={handleInputChange}
                 inputBg={STYLE_CONSTANTS.inputBg}
               />
 
               <PolicyNotes
                 formData={formData}
-                handleInputChange={handlers.handleInputChange}
+                handleInputChange={handleInputChange}
               />
             </Box>
 
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
               <PlanFeeGuideSection
                 formData={formData}
-                handleInputChange={handlers.handleInputChange}
+                handleInputChange={handleInputChange}
                 planFeeGuideOptions={planFeeGuideOptions}
                 COVERAGE_TYPES={COVERAGE_TYPES}
                 setIsFeeGuideModalOpen={setIsFeeGuideModalOpen}
-                handleProviderFeeGuideChange={handlers.handleProviderFeeGuideChange}
-                handleRemoveProviderFeeGuide={handlers.handleRemoveProviderFeeGuide}
-                handleAddProviderFeeGuide={handlers.handleAddProviderFeeGuide}
+                handleProviderFeeGuideChange={handleProviderFeeGuideChange}
+                handleRemoveProviderFeeGuide={handleRemoveProviderFeeGuide}
+                handleAddProviderFeeGuide={handleAddProviderFeeGuide}
               />
 
               <DeductiblesTable
                 formData={formData}
-                handleDeductibleChange={handlers.handleDeductibleChange}
-                handleAddDeductibleRow={handlers.handleAddDeductibleRow}
-                handleRemoveDeductibleRow={handlers.handleRemoveDeductibleRow}
+                handleDeductibleChange={handleDeductibleChange}
+                handleAddDeductibleRow={handleAddDeductibleRow}
+                handleRemoveDeductibleRow={handleRemoveDeductibleRow}
                 tableHeaderStyle={STYLE_CONSTANTS.tableHeaderStyle}
                 blueHeader={STYLE_CONSTANTS.blueHeader}
               />
 
               <CoverageTable
                 formData={formData}
-                handleCoverageChange={handlers.handleCoverageChange}
-                handleInputChange={handlers.handleInputChange}
-                handleRemoveOrthoMax={handlers.handleRemoveOrthoMax}
-                handleAddCategoryMax={handlers.handleAddCategoryMax}
+                handleCoverageChange={handleCoverageChange}
+                handleInputChange={handleInputChange}
+                handleRemoveOrthoMax={handleRemoveOrthoMax}
+                handleAddCategoryMax={handleAddCategoryMax}
                 headerStyle={STYLE_CONSTANTS.headerStyle}
                 bodyCellStyle={STYLE_CONSTANTS.bodyCellStyle}
                 blueHeader={STYLE_CONSTANTS.blueHeader}

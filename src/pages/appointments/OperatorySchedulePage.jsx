@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu } from '@mui/material';
 import dayjs from 'dayjs';
 import ScheduleGridHeader from '../../components/appointments/schedule/ScheduleGridHeader';
 import ScheduleCalendar from '../../components/appointments/schedule/ScheduleCalendar';
@@ -14,9 +14,6 @@ import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
-import { useDropdownData } from "../../hooks/redux/useDropdownData";
-import { useAppointments } from "../../hooks/redux/useAppointments";
-import { usePatients } from "../../hooks/redux/usePatient";
 import { useDispatch } from "react-redux";
 import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
@@ -25,6 +22,9 @@ import ProgressNotesDialog from "../../components/appointments/ProgressNotesDial
 import LabCasesDialog from "../../components/appointments/LabCasesDialog";
 import BlockSlotDialog from "../../components/appointments/BlockSlotDialog";
 import { scheduleBlockService } from "../../services/schedule-block.service";
+import {
+  fetchPatients,
+} from '../../store/slices/patientSlice';
 
 // Constants
 const START_HOUR = 0;
@@ -81,6 +81,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
 // Main Component
 const OperatorySchedulePage = () => {
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
 
   // ── Dropdown data (providers, rooms, appointment types) ──────────
@@ -90,9 +91,28 @@ const OperatorySchedulePage = () => {
     appointmentTypes: true,
   });
 
+  // ── Patients (for the new appointment form's patient search) ─────
+  const { patients: formPatients } = usePatients();
+  const { currentPatient } = usePatient();
+
+  // Dynamically derive operatory columns from the rooms list.
+  const OPERATORY_COLUMNS = useMemo(() => {
+    if (!rooms || rooms.length === 0) {
+      return [{ id: "op1", label: "Op 1", color: OPERATORY_COLORS[0] }];
+    }
+    return rooms.map((room, idx) => ({
+      id: `op${room._id || room.id}`,
+      label: room.name || room.roomName || room.label || `Op ${idx + 1}`,
+      color: OPERATORY_COLORS[idx % OPERATORY_COLORS.length],
+    }));
+  }, [rooms]);
+
   const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
   const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
+  const [labAnchorEl, setLabAnchorEl] = useState(null);
+  const [labFilters, setLabFilters] = useState({ providerId: 'all', visitTypeId: 'all' });
+  const [labCasesDialogOpen, setLabCasesDialogOpen] = useState(false);
 
   const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
     const key = `${dateStr}:${columnId}`;
@@ -230,11 +250,8 @@ const OperatorySchedulePage = () => {
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [showConsult, setShowConsult] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(false);
-  const [addAppointmentFormOpen, setAddAppointmentFormOpen] = useState(false);
 
   // Slot blocking and popover state
-  const [customFormDateTime, setCustomFormDateTime] = useState(null);
-  const [customFormRoomId, setCustomFormRoomId] = useState(null);
   const [scheduleBlocks, setScheduleBlocks] = useState([]);
   const [blockSlotDialogOpen, setBlockSlotDialogOpen] = useState(false);
   const [blockSlotDialogData, setBlockSlotDialogData] = useState(null);
@@ -290,13 +307,13 @@ const OperatorySchedulePage = () => {
   const searchFormPatients = useCallback(async (search = '') => {
     try {
       setLoadingFormPatients(true);
-      await fetchPatients({ page: 1, limit: 20, search, status: '' });
+      await dispatch(fetchPatients({ page: 1, limit: 20, search, status: '' }));
     } catch (err) {
       console.error('Error searching patients:', err);
     } finally {
       setLoadingFormPatients(false);
     }
-  }, [fetchPatients]);
+  }, [dispatch]);
 
   // ── Modal state ───────────────────────────────────────────────────
   const [formOpen,   setFormOpen]   = useState(false);
@@ -306,7 +323,6 @@ const OperatorySchedulePage = () => {
     if (formOpen) searchFormPatients('');
   }, [formOpen, searchFormPatients]);
 
-  const { selectedDate } = useScheduleState();
   const [initialFormDateTime, setInitialFormDateTime] = useState(null);
   const [initialFormRoomId, setInitialFormRoomId] = useState(null);
 
@@ -318,15 +334,7 @@ const OperatorySchedulePage = () => {
   };
 
   // ── Appointments (for conflict detection inside the form) ─────────
-  const { appointments, createAppointment } = useAppointmentList();
-
-  const initialFormDateTime = useMemo(() => {
-    if (customFormDateTime) return customFormDateTime;
-    return selectedDate
-      .clone()
-      .hour(START_HOUR === 0 ? 9 : START_HOUR)
-      .minute(5);
-  }, [selectedDate, customFormDateTime]);
+  const { createAppointment } = useAppointmentList();
 
   // Maps a raw appointment object from the API into the shape the grid expects
   const mapAppointment = (a) => {
@@ -453,12 +461,12 @@ const OperatorySchedulePage = () => {
   // Add 1 day to the end date so the backend's "less than" filter safely includes the entire final day of the month
   const fetchEndDate = selectedDate.endOf('month').add(1, 'day').format('YYYY-MM-DD');
   
-  const { 
-    appointments: reduxAppointments, 
+  const {
+    appointments: reduxAppointments,
     refresh: refreshAppointments,
     createAppointment: reduxCreateAppointment,
     updateAppointment,
-  } = useAppointments({
+  } = useAppointmentList({
     patientId: selectedPatientId || "", // Filter by selected patient, otherwise show all
     startDate: fetchStartDate,
     endDate: fetchEndDate,
@@ -606,18 +614,18 @@ const OperatorySchedulePage = () => {
       <AddNewPatientAppointmentForm
         open={formOpen}
         onCancel={() => setFormOpen(false)}
-        onSubmit={handleSubmit}
+        onSubmit={handleAddAppointmentSubmit}
         loading={formSaving}
         initialDateTime={initialFormDateTime}
-        initialRoomId={customFormRoomId}
-        initialPatient={selectedPatient}
+        initialRoomId={initialFormRoomId}
+        initialPatient={currentPatient || null}
         providers={providers || []}
         rooms={rooms || []}
         appointmentTypes={appointmentTypes || []}
         appointments={appointments || []}
-        initialPatient={currentPatient || null}
-        initialDateTime={initialFormDateTime}
-        initialRoomId={initialFormRoomId}
+        patients={formPatients || []}
+        loadingPatients={loadingFormPatients}
+        onPatientSearch={searchFormPatients}
       />
 
       <SendBulkTextDialog
@@ -671,15 +679,11 @@ const OperatorySchedulePage = () => {
                   .clone()
                   .startOf("day")
                   .add(selectedSlotInfo.minutesFromStart, "minute");
-                setCustomFormDateTime(start);
                 // The columnId is the operatory room ID (e.g., 'op1', 'op2', or MongoDB ID)
-                const roomId = selectedSlotInfo.columnId.startsWith("op") 
-                  ? selectedSlotInfo.columnId.substring(2) 
+                const roomId = selectedSlotInfo.columnId.startsWith("op")
+                  ? selectedSlotInfo.columnId.substring(2)
                   : selectedSlotInfo.columnId;
-                setCustomFormRoomId(roomId);
-                
-                // Also set the sidebar patient query if needed, otherwise just open form
-                setAddAppointmentFormOpen(true);
+                handleOpenForm(start, roomId);
               }
             }}
             sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
