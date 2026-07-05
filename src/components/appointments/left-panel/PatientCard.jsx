@@ -120,9 +120,9 @@ const PatientCard = () => {
       {/* ── Contact info + Hx history indicator ─────────────────────────────── */}
       <Box sx={{ display: 'flex', gap: '6px', alignItems: 'flex-start', minWidth: 0 }}>
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
-          <ContactRow icon={<Phone sx={{ fontSize: '14px' }} />} text={phone} />
-          <ContactRow icon={<Email sx={{ fontSize: '14px' }} />} text={email} />
-          <ContactRow icon={<AccessTime sx={{ fontSize: '14px' }} />} text={`DOB: ${dobDisplay}`} />
+          <ContactRow icon={<PhoneOutlined sx={{ fontSize: '14px' }} />} text={phone} />
+          <ContactRow icon={<EmailOutlined sx={{ fontSize: '14px' }} />} text={email} />
+          <ContactRow icon={<AccessTimeOutlined sx={{ fontSize: '14px' }} />} text={`DOB: ${dobDisplay}`} />
         </Box>
 
         {/* Hx badge — "Autorenew" icon overlaid with "Hx" label. Indicates
