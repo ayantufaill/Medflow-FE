@@ -56,7 +56,7 @@ const ProcedureTagStrip = ({
         <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <Autocomplete
             autoFocus
-            open={procedureInput.length > 0}
+            openOnFocus
             options={procedureCodes}
             loading={loading}
             componentsProps={{ popper: { sx: { zIndex: 1400 } } }}
