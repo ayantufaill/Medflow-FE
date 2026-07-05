@@ -3,8 +3,7 @@ import { Box, Typography } from '@mui/material';
 import {
   Phone, OpenInNew, Add, Description, AttachMoney,
   FiberManualRecord, MedicalServices, Tune, AcUnit,
-  Add, AttachMoney, AssignmentOutlined, AltRoute,
-  PhoneOutlined, OpenInNew
+  AssignmentOutlined, AltRoute, PhoneOutlined
 } from '@mui/icons-material';
 import AppointmentHoverCard from './AppointmentHoverCard';
 import { COLORS } from '../../../constants/colors';
