@@ -23,64 +23,12 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import { ReportLayout, ReportFilterBar, ReportSearchInput, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 
 const INITIAL_DATA = [
-  {
-    number: '1249',
-    patient: 'John Doe',
-    email: 'john.doe@example.com',
-    planName: 'Foundations (Perio) Program - New Patient',
-    lastAppointment: '',
-    renewalMonth: 'April',
-  },
-  {
-    number: '1210',
-    patient: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    planName: 'Foundations (Perio) Program - New Patient',
-    lastAppointment: '',
-    renewalMonth: 'February',
-  },
-  {
-    number: '540',
-    patient: 'Robert Brown',
-    email: 'robert.b@example.com',
-    planName: 'Clean + Confident - Existing Patient',
-    lastAppointment: '',
-    renewalMonth: 'March',
-  },
-  {
-    number: '185',
-    patient: 'Michael Johnson',
-    email: 'm.johnson@example.com',
-    planName: 'Foundations (Perio) Program Existing Patient',
-    lastAppointment: '',
-    renewalMonth: 'April',
-  },
-  {
-    number: '181',
-    patient: 'William Davis',
-    email: 'w.davis@example.com',
-    planName: 'Foundations (Perio) Program - New Patient',
-    lastAppointment: '',
-    renewalMonth: 'May',
-  },
-  {
-    number: '62',
-    patient: 'Elizabeth Garcia',
-    email: 'e.garcia@example.com',
-    planName: 'Bright Beginning',
-    lastAppointment: '',
-    renewalMonth: 'February',
-  },
-  {
-    number: '4',
-    patient: 'David Martinez',
-    email: 'd.martinez@example.com',
-    planName: 'Clean + Confident - Existing Patient',
-    lastAppointment: '',
-    renewalMonth: 'February',
-  },
+  { number: '1249', patient: 'John Doe', email: 'john.doe@example.com', planName: 'Foundations (Perio) Program - New Patient', lastAppointment: '', renewalMonth: 'April' },
+  { number: '1210', patient: 'Jane Smith', email: 'jane.smith@example.com', planName: 'Foundations (Perio) Program - New Patient', lastAppointment: '', renewalMonth: 'February' },
+  { number: '540', patient: 'Robert Brown', email: 'robert.b@example.com', planName: 'Clean + Confident - Existing Patient', lastAppointment: '', renewalMonth: 'March' },
 ];
 
 const PatientMembershipPlan = () => {
@@ -318,13 +266,16 @@ const PatientMembershipPlan = () => {
   );
 
   return (
-    <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
-      <Typography 
-        variant="body2" 
-        sx={{ color: '#337ab7', fontWeight: 500, mb: 2, textDecoration: 'underline', cursor: 'pointer' }}
-      >
-        Patient by Membership Plan:
-      </Typography>
+    <React.Fragment>
+      <ReportLayout title="Patient by Membership Plan:">
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          bottomRowFilters={bottomFilters}
+          onApplyFilters={handleApplyFilters}
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={() => alert('Exporting...')}
+          onPrint={() => window.print()}
+        />
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
         {/* Search */}
@@ -596,10 +547,10 @@ const PatientMembershipPlan = () => {
       <CreateTemplateDialog 
         open={templateDialogOpen} 
         onClose={() => setTemplateDialogOpen(false)} 
-        onSave={handleSaveTemplate} 
+        onSave={(name) => alert(`Template "${name}" saved!`)} 
       />
-    </Box>
+      </ReportLayout>
+    </React.Fragment>
   );
 };
-
 export default PatientMembershipPlan;

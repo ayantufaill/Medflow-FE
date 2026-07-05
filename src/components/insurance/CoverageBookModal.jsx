@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
   TableRow,
   Box,
   Typography,
-  IconButton,
   Checkbox,
   CircularProgress,
   Select,
@@ -25,137 +24,23 @@ import {
   HelpOutline as HelpOutlineIcon,
   AutoFixNormal as ToothIcon
 } from '@mui/icons-material';
-import { feeService } from '../../services/fee.service';
+import { useCoverageBook } from './hooks/useCoverageBook';
+import ToothSelectionDialog from './shared/ToothSelectionDialog';
 
-const getProcedureType = (codeStr) => {
-  if (!codeStr || typeof codeStr !== 'string') return 'Other';
-  const code = codeStr.toUpperCase();
-  if (code.startsWith('D') || code.startsWith('C')) {
-    const num = parseInt(code.substring(1), 10);
-    if (!isNaN(num)) {
-      if (num >= 100 && num <= 999) return 'Diagnostic';
-      if (num >= 1000 && num <= 1999) return 'Preventive';
-      if (num >= 2000 && num <= 2999) return 'Restorative';
-      if (num >= 3000 && num <= 3999) return 'Endodontics';
-      if (num >= 4000 && num <= 4999) return 'Periodontics';
-      if (num >= 5000 && num <= 5899) return 'Prosthodontics, removable';
-      if (num >= 5900 && num <= 5999) return 'Maxillofacial prosthetics';
-      if (num >= 6000 && num <= 6199) return 'Implant services';
-      if (num >= 6200 && num <= 6999) return 'Prosthodontics, fixed';
-      if (num >= 7000 && num <= 7999) return 'Oral & maxillofacial surgery';
-      if (num >= 8000 && num <= 8999) return 'Orthodontics';
-      if (num >= 9000 && num <= 9999) return 'Adjunctive general services';
-    }
-  }
-  return 'Other';
-};
-
-const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, onSave, feeGuideId }) => {
-  const [loading, setLoading] = useState(false);
-  const [procedures, setProcedures] = useState([]);
-  const [expandedTypes, setExpandedTypes] = useState({'Diagnostic': true});
-  const [expandedGroups, setExpandedGroups] = useState({'Diagnostic_Oral evaluation': true});
-  const [activeToothSelection, setActiveToothSelection] = useState(null);
-  const [localCoverageData, setLocalCoverageData] = useState([]);
-
-  useEffect(() => {
-    if (open) {
-      setLocalCoverageData(coverageData || []);
-    }
-  }, [open, coverageData]);
-
-  useEffect(() => {
-    const fetchFees = async () => {
-      if (!open || !feeGuideId) {
-        if (!feeGuideId) setProcedures([]);
-        return;
-      }
-      if (!/^\d+$/.test(String(feeGuideId))) {
-        console.warn(`Non-numeric feeGuideId "${feeGuideId}" passed. Skipping API call.`);
-        setProcedures([]);
-        return;
-      }
-      setLoading(true);
-      try {
-        const response = await feeService.getFeeScheduleFees(feeGuideId, { limit: 5000 });
-        if (response && response.data) {
-          setProcedures(response.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch fees:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFees();
-  }, [feeGuideId, open]);
-
-  const mergedData = useMemo(() => {
-    const overridesMap = new Map();
-    localCoverageData.forEach(item => {
-      if (item.code) overridesMap.set(item.code, item);
-    });
-
-    return procedures.map(proc => {
-      const override = overridesMap.get(proc.code);
-      return {
-        ...proc,
-        maxAllowed: override?.maxAllowed ?? proc.fee ?? '',
-        frequency1: override?.frequency1 ?? '',
-        frequency2: override?.frequency2 ?? '',
-        period: override?.period ?? 'M',
-        lifetimeLimit: override?.lifetimeLimit ?? '',
-        age: override?.age ?? '',
-        teethLimit: override?.teethLimit ?? '',
-        hasDowngrade: override?.hasDowngrade ?? false,
-        downgrade: override?.downgrade ?? '',
-        nc: override?.nc ?? false,
-        flatPlanPortion: override?.flatPlanPortion ?? ''
-      };
-    });
-  }, [procedures, localCoverageData]);
-
-  const treeData = useMemo(() => {
-    const tree = {};
-    mergedData.forEach(item => {
-      const type = getProcedureType(item.code);
-      const group = item.category || 'General';
-
-      if (!tree[type]) tree[type] = {};
-      if (!tree[type][group]) tree[type][group] = [];
-      tree[type][group].push(item);
-    });
-    return tree;
-  }, [mergedData]);
-
-  const toggleType = (type) => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }));
-  const toggleGroup = (groupKey) => setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
-
-  const handleFieldChange = (code, field, value) => {
-    const newData = [...localCoverageData];
-    const index = newData.findIndex(item => item.code === code);
-    if (index >= 0) {
-      newData[index] = { ...newData[index], [field]: value };
-    } else {
-      const item = mergedData.find(i => i.code === code);
-      if (item) newData.push({ ...item, [field]: value });
-    }
-    setLocalCoverageData(newData);
-  };
-
-  const handleToothToggle = (tooth) => {
-    if (!activeToothSelection) return;
-    const proc = mergedData.find(p => p.code === activeToothSelection);
-    if (!proc) return;
-    
-    let currentTeeth = proc.teethLimit ? proc.teethLimit.split(',').map(t => t.trim()).filter(Boolean) : [];
-    if (currentTeeth.includes(tooth)) {
-      currentTeeth = currentTeeth.filter(t => t !== tooth);
-    } else {
-      currentTeeth.push(tooth);
-    }
-    handleFieldChange(activeToothSelection, 'teethLimit', currentTeeth.join(', '));
-  };
+const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, feeGuideId }) => {
+  const {
+    loading,
+    treeData,
+    expandedTypes,
+    expandedGroups,
+    activeToothSelection,
+    setActiveToothSelection,
+    toggleType,
+    toggleGroup,
+    handleFieldChange,
+    handleToothToggle,
+    isToothSelected
+  } = useCoverageBook(open, feeGuideId, coverageData, setCoverageData);
 
   const headerCellStyle = { 
     fontWeight: 600, 
@@ -286,8 +171,6 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
 
   const getGroupKey = (type, group) => `${type}_${group}`;
 
-
-
   const handleSaveClick = () => {
     if (setCoverageData) {
       setCoverageData(localCoverageData);
@@ -404,12 +287,12 @@ const CoverageBookModal = ({ open, onClose, coverageData = [], setCoverageData, 
         </DialogActions>
       </Dialog>
 
-      {/* Tooth Selection Dialog */}
-      <SelectToothDialog
+      <ToothSelectionDialog
         open={!!activeToothSelection}
         onClose={() => setActiveToothSelection(null)}
-        selectedTeeth={activeToothSelection ? (mergedData.find(p => p.code === activeToothSelection)?.teethLimit || []) : []}
-        onToggle={handleToothToggle}
+        activeSelectionCode={activeToothSelection}
+        isToothSelected={isToothSelected}
+        onToothToggle={handleToothToggle}
       />
     </>
   );

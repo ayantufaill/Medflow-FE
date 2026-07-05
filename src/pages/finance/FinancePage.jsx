@@ -3,9 +3,6 @@ import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
 } from '@mui/material';
 
 // Sub-components
@@ -16,12 +13,8 @@ import LedgerList from '../../components/finance/LedgerList';
 import IndividualLedgerTable from '../../components/finance/IndividualLedgerTable';
 import FamilyLedgerTable from '../../components/finance/FamilyLedgerTable';
 import NewPaymentPlan from '../../components/finance/NewPaymentPlan';
-import AccountAdjustmentDialog from '../../components/finance/AccountAdjustmentDialog';
-import CourtesyRefundDialog from '../../components/finance/CourtesyRefundDialog';
-import EditPatientFlagsDialog from '../../components/finance/EditPatientFlagsDialog';
-import DepositDialog from '../../components/finance/DepositDialog';
-import DepositOptionsMenu from '../../components/finance/DepositOptionsMenu';
-import CourtesyCreditComponent from '../../components/finance/CourtesyCreditComponent';
+import FinancePageDialogs from '../../components/finance/FinancePageDialogs';
+import LedgerFilters from '../../components/finance/LedgerFilters';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
 import { usePatient } from '../../hooks/redux/usePatient';
 import apiClient from '../../config/api';
@@ -44,6 +37,7 @@ const FinancePage = () => {
     includeVoided: false,
     hideBillingTransfers: false
   });
+  const patientFinanceRef = useRef(null);
 
   useEffect(() => {
     const loadPatientDetails = async () => {
@@ -259,29 +253,12 @@ const FinancePage = () => {
 
   return (
     <Box sx={{ p: '8px 8px 8px 8px', bgcolor: '#fff', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
-      {/* View Selection Header */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#555', mb: 0.5 }}>View</Typography>
-        <RadioGroup row value={view} onChange={handleViewChange}>
-          {[
-            { value: 'invoices', label: 'Invoices' },
-            { value: 'individual', label: 'Individual Ledger' },
-            { value: 'family', label: 'Family Ledger' },
-          ].map((option) => (
-            <FormControlLabel 
-              key={option.value}
-              value={option.value} 
-              control={<Radio size="small" sx={{ color: '#7cb342', '&.Mui-checked': { color: '#7cb342' } }} />} 
-              label={<Typography variant="caption">{option.label}</Typography>} 
-            />
-          ))}
-        </RadioGroup>
-      </Box>
-
       {/* Main Dashboard Section */}
-      <Box sx={{ display: 'flex', width: '100%', mt: 2, alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 3, width: '100%', mt: 2, mb: 3 }}>
         <PatientFinanceInfo 
+          ref={patientFinanceRef}
           view={view} 
+          onViewChange={handleViewChange}
           flags={currentPatient?.patientFlags || []}
           patient={currentPatient}
           onCalendarClick={() => setShowPaymentPlan(true)} 
@@ -299,203 +276,30 @@ const FinancePage = () => {
         expanded={expanded} 
         onExpandToggle={() => setExpanded(!expanded)}
         onFilterChange={handleFilterChange}
+        onCalendarClick={() => setShowPaymentPlan(true)} 
+        onCashMinusClick={() => setShowAccountAdjustment(true)}
+        onRefreshCoinClick={() => setShowCourtesyRefund(true)}
+        onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
+        onTriggerPatientFinanceIcon={(iconId, e) => patientFinanceRef.current?.triggerIcon?.(iconId, e)}
       />
+
+      {/* Ledger Filters */}
+      <LedgerFilters view={view} filters={filters} onFilterChange={handleFilterChange} />
 
       {/* Dynamic Ledger Section */}
       <ErrorBoundary>
         {view === 'family' ? <FamilyLedgerTable patient={currentPatient} /> : view === 'individual' ? <IndividualLedgerTable patient={currentPatient} /> : <LedgerList patient={currentPatient} expanded={expanded} />}
       </ErrorBoundary>
 
-      {/* Account Adjustment Dialog */}
-      {showAccountAdjustment && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowAccountAdjustment(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '100%', 
-              width: '95%',
-              bgcolor: '#fff',
-              borderRadius: '8px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AccountAdjustmentDialog 
-              patient={currentPatient}
-              onClose={() => setShowAccountAdjustment(false)} 
-              onSave={handleAccountAdjustmentSave}
-            />
-          </Box>
-        </Box>
-      )}
-
-      {/* Courtesy Refund Dialog */}
-      {showCourtesyRefund && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowCourtesyRefund(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '900px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '8px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CourtesyRefundDialog 
-              patient={currentPatient}
-              onClose={() => setShowCourtesyRefund(false)} 
-            />
-          </Box>
-        </Box>
-      )}
-
-      {/* Edit Patient Flags Dialog */}
-      {showEditFlags && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowEditFlags(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '750px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <EditPatientFlagsDialog 
-              onClose={() => setShowEditFlags(false)}
-              onSave={handleEditFlagsSave}
-              initialFlags={currentPatient?.patientFlags || []}
-            />
-          </Box>
-        </Box>
-      )}
-
-      {/* Deposit Dialog */}
-      {showDeposit && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowDeposit(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '900px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '8px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DepositDialog 
-              patient={currentPatient}
-              onClose={() => setShowDeposit(false)} 
-              onSave={handleDepositSave}
-              depositType={depositType}
-            />
-          </Box>
-        </Box>
-      )}
-
-      {/* Deposit Options Menu */}
-      <DepositOptionsMenu
-        anchorEl={depositMenuAnchor}
-        onClose={() => setDepositMenuAnchor(null)}
-        onSelect={handleDepositOptionSelect}
+      <FinancePageDialogs
+        patient={currentPatient}
+        showAccountAdjustment={showAccountAdjustment} setShowAccountAdjustment={setShowAccountAdjustment} handleAccountAdjustmentSave={handleAccountAdjustmentSave}
+        showCourtesyRefund={showCourtesyRefund} setShowCourtesyRefund={setShowCourtesyRefund}
+        showEditFlags={showEditFlags} setShowEditFlags={setShowEditFlags} handleEditFlagsSave={handleEditFlagsSave}
+        showDeposit={showDeposit} setShowDeposit={setShowDeposit} handleDepositSave={handleDepositSave} depositType={depositType}
+        depositMenuAnchor={depositMenuAnchor} setDepositMenuAnchor={setDepositMenuAnchor} handleDepositOptionSelect={handleDepositOptionSelect}
+        showCourtesyCredit={showCourtesyCredit} setShowCourtesyCredit={setShowCourtesyCredit} handleCourtesyCreditSave={handleCourtesyCreditSave}
       />
-
-      {/* Courtesy Credit Dialog */}
-      {showCourtesyCredit && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowCourtesyCredit(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '600px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '8px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CourtesyCreditComponent 
-              onClose={() => setShowCourtesyCredit(false)}
-              onSave={handleCourtesyCreditSave}
-            />
-          </Box>
-        </Box>
-      )}
     </Box>
   );
 };

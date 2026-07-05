@@ -25,6 +25,9 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import AccountNotesDialog from '../../../../components/finance/AccountNotesDialog';
+import AgingReportFilters from './AgingReportFilters';
+import AgingReportActions from './AgingReportActions';
+import AgingReportTable from './AgingReportTable';
 import GenerateStatementsDialog from '../../../../components/finance/GenerateStatementsDialog';
 import ViewGeneratedStatementsDialog from '../../../../components/finance/ViewGeneratedStatementsDialog';
 import { useDispatch, useSelector } from 'react-redux';
@@ -452,300 +455,73 @@ const AgingReport = () => {
 
   // dummyData is replaced by reportData from API
 
-  const renderFilterSelect = (label, options, defaultValue) => (
-    <Select
-      size="small"
-      defaultValue={defaultValue}
-      sx={{ minWidth: 120, fontSize: '0.75rem', backgroundColor: '#fff' }}
-    >
-      <MenuItem value={defaultValue}>{label}</MenuItem>
-      {options.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-    </Select>
-  );
-
   return (
     <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Aging Report:
+      <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#1e293b' }}>
+        Aging Report
       </Typography>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} sx={{ minHeight: 36 }}>
-          <Tab label="Current Report" sx={{ textTransform: 'none', minHeight: 36, fontSize: '0.875rem' }} />
-          <Tab label="Archived Reports" sx={{ textTransform: 'none', minHeight: 36, fontSize: '0.875rem' }} />
+      <Box sx={{ borderBottom: 1, borderColor: '#f1f5f9', mb: 2 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange} 
+          sx={{ 
+            minHeight: 36,
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#3b82f6',
+              height: 2,
+            }
+          }}
+        >
+          <Tab 
+            label="Current Report" 
+            sx={{ 
+              textTransform: 'none', 
+              minHeight: 36, 
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: '#64748b',
+              '&.Mui-selected': { color: '#3b82f6' }
+            }} 
+          />
+          <Tab 
+            label="Archived Reports" 
+            sx={{ 
+              textTransform: 'none', 
+              minHeight: 36, 
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: '#64748b',
+              '&.Mui-selected': { color: '#3b82f6' }
+            }} 
+          />
         </Tabs>
       </Box>
 
       {tabValue === 0 ? (
         <>
-          {/* Filter Section */}
-          <Box sx={{ backgroundColor: '#f8f9fa', p: 2, borderRadius: 1, mb: 3 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: 'text.secondary' }}>Filter Report By</Typography>
-            <Grid container spacing={1} sx={{ mb: 2 }}>
-              <Grid item>
-                <Select size="small" value={balanceFilter} onChange={(e) => setBalanceFilter(e.target.value)} sx={{ minWidth: 120, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="any">Any Balance</MenuItem>
-                  <MenuItem value="positive">Positive Balances</MenuItem>
-                  <MenuItem value="negative">Negative Balances</MenuItem>
-                </Select>
-              </Grid>
-              <Grid item>
-                <Select size="small" value={owingFilter} onChange={(e) => setOwingFilter(e.target.value)} sx={{ minWidth: 150, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="any">Any Type of Owing</MenuItem>
-                  <MenuItem value="patient">Patient Owings Only</MenuItem>
-                  <MenuItem value="insurance">Insurance Owings Only</MenuItem>
-                </Select>
-              </Grid>
-              <Grid item>
-                <Select size="small" value={billingDateFilter} onChange={(e) => setBillingDateFilter(e.target.value)} sx={{ minWidth: 140, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="any">Any Billing Date</MenuItem>
-                  <MenuItem value="30">Last 30 Days</MenuItem>
-                  <MenuItem value="60">Last 60 Days</MenuItem>
-                  <MenuItem value="90">Over 90 Days</MenuItem>
-                </Select>
-              </Grid>
-              
-              <Grid item>
-                <Select size="small" value={claimsFilter} onChange={(e) => setClaimsFilter(e.target.value)} sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="both">With OR Without Open Claims</MenuItem>
-                  <MenuItem value="with_claims">With Claims Only</MenuItem>
-                  <MenuItem value="without_claims">Without Claims Only</MenuItem>
-                </Select>
-              </Grid>
+          <AgingReportFilters />
+          
+          <AgingReportActions 
+            hidePatientNames={hidePatientNames} 
+            setHidePatientNames={setHidePatientNames} 
+          />
 
-              <Grid item>
-                <Select size="small" value={patientStatusFilter} onChange={(e) => setPatientStatusFilter(e.target.value)} sx={{ minWidth: 150, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="active">Active Patients Only</MenuItem>
-                  <MenuItem value="inactive">Inactive Only</MenuItem>
-                  <MenuItem value="all">All Patients</MenuItem>
-                </Select>
-              </Grid>
+          <AgingReportTable 
+            loading={loading}
+            reportData={reportData}
+            hidePatientNames={hidePatientNames}
+            agingBuckets={agingBuckets}
+            totals={totals}
+            setShowAccountNotes={setShowAccountNotes}
+          />
 
-              <Grid item>
-                <Select size="small" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} sx={{ minWidth: 150, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="all">All Providers</MenuItem>
-                  {providersList.map(prov => (
-                    <MenuItem key={prov._id || prov.id} value={prov._id || prov.id}>
-                      {getProviderName(prov)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </Grid>
-
-              <Grid item>
-                <Select size="small" value={arRangeFilter} onChange={(e) => setArRangeFilter(e.target.value)} sx={{ minWidth: 140, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="any">Any AR Range</MenuItem>
-                  <MenuItem value="0-30">0-30 days</MenuItem>
-                  <MenuItem value="31-60">31-60 days</MenuItem>
-                  <MenuItem value="61-90">61-90 days</MenuItem>
-                  <MenuItem value=">90">Over 90 days</MenuItem>
-                </Select>
-              </Grid>
-            </Grid>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Select 
-                size="small" 
-                value={flagFilter} 
-                onChange={(e) => setFlagFilter(e.target.value)} 
-                sx={{ minWidth: 200, fontSize: '0.75rem', backgroundColor: '#fff' }}
-              >
-                <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
-                <MenuItem value="with_flags">Pts With Flags Only</MenuItem>
-                <MenuItem value="without_flags">Pts Without Flags Only</MenuItem>
-              </Select>
-              <FormControlLabel 
-                control={<Checkbox size="small" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />} 
-                label={<Typography variant="caption">Show Flags in Report</Typography>} 
-              />
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-              <Select size="small" value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                <MenuItem value="high-low">High to low owings</MenuItem>
-                <MenuItem value="patient-name">By Patient Name</MenuItem>
-                <MenuItem value="last-billed">Last Billed</MenuItem>
-                <MenuItem value="flags">Flags</MenuItem>
-              </Select>
-              <FormControlLabel 
-                control={<Checkbox size="small" checked={showPaymentPlan} onChange={(e) => setShowPaymentPlan(e.target.checked)} />} 
-                label={<Typography variant="caption">Show Payment Plan Owing</Typography>} 
-              />
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                Reset Invoice outstanding balance age to 0 days: 
-                <Box component="span" sx={{ ml: 1, color: 'primary.main', cursor: 'help' }}>ⓘ</Box>
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption">On Patient Payment:</Typography>
-                <Select size="small" defaultValue="dont" sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="dont">Don't reset invoice age</MenuItem>
-                </Select>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption">On Insurance Payment:</Typography>
-                <Select size="small" defaultValue="dont" sx={{ minWidth: 160, fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                  <MenuItem value="dont">Don't reset invoice age</MenuItem>
-                </Select>
-              </Box>
-              <Box sx={{ flexGrow: 1 }} />
-              <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
-              <Button variant="contained" size="small" disabled sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
-            </Box>
-          </Box>
-
-          {/* Action Buttons */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Button 
-                variant="contained" 
-                size="small" 
-                sx={{ textTransform: 'none', bgcolor: '#94a3b8' }}
-                onClick={() => setShowGenerateStatements(true)}
-              >
-                Generate Batch Statement
-              </Button>
-              <Button 
-                variant="contained" 
-                size="small" 
-                sx={{ textTransform: 'none', bgcolor: '#f5a623' }}
-                onClick={() => setShowViewGeneratedStatements(true)}
-              >
-                View generated statements
-              </Button>
-              {isGenerating && (
-                <Typography variant="caption" sx={{ color: '#4a90e2', fontWeight: 600, ml: 1 }}>
-                  Generating statements...
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <FormControlLabel 
-                control={<Checkbox size="small" checked={hidePatientNames} onChange={(e) => setHidePatientNames(e.target.checked)} />} 
-                label={<Typography variant="caption">Hide Patient Names</Typography>} 
-              />
-              <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-              <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
-            </Box>
-          </Box>
-
-          {/* Table Section */}
-          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id="aging-report-table">
-            <Table size="small" stickyHeader>
-              <TableHead>
-                <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1 } }}>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      size="small"
-                      checked={filteredReportData.length > 0 && selectedNames.length === filteredReportData.length}
-                      indeterminate={selectedNames.length > 0 && selectedNames.length < filteredReportData.length}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedNames(filteredReportData.map(row => row.name));
-                        } else {
-                          setSelectedNames([]);
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  {showFlags && <TableCell>Flags</TableCell>}
-                  {!hidePatientNames && <TableCell>Patient Name</TableCell>}
-                  {agingBuckets.map(bucket => <TableCell key={bucket} align="right">{bucket}</TableCell>)}
-                  <TableCell align="right">Total</TableCell>
-                  <TableCell align="right">Total owings</TableCell>
-                  {showPaymentPlan && <TableCell align="right">Payment Plan Owing</TableCell>}
-                  <TableCell align="right">Credit</TableCell>
-                  <TableCell>Last Billed On</TableCell>
-                  <TableCell>Notes</TableCell>
-                </TableRow>
-              </TableHead>
+          {/* Summary Footer */}
+          <Box sx={{ mt: 2, borderTop: '2px solid #e0e0e0', pt: 2 }}>
+            <Table size="small">
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 8 : 9)} align="center" sx={{ py: 3 }}>
-                      <Typography variant="body2" color="text.secondary">Loading...</Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredReportData.map((row, idx) => (
-                  <React.Fragment key={idx}>
-                    <TableRow sx={{ '& td': { fontSize: '0.75rem', py: 0.5, verticalAlign: 'top' } }}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          size="small"
-                          checked={selectedNames.includes(row.name)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedNames(prev => [...prev, row.name]);
-                            } else {
-                              setSelectedNames(prev => prev.filter(name => name !== row.name));
-                            }
-                          }}
-                        />
-                      </TableCell>
-                      {showFlags && (
-                        <TableCell>
-                          {row.flags && row.flags.length > 0 && (
-                            <Box sx={{ display: 'flex', gap: 0.2 }}>
-                              {row.flags.map((color, i) => (
-                                <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                              ))}
-                            </Box>
-                          )}
-                        </TableCell>
-                      )}
-                      {!hidePatientNames && (
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
-                            </Box>
-                            <Box>
-                              <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', display: 'block' }}>{row.name}</Typography>
-                              {row.insuranceName && (
-                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.65rem' }}>
-                                  {row.insuranceName}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        </TableCell>
-                      )}
-                      {agingBuckets.map(bucket => (
-                        <TableCell key={bucket} align="right">
-                          <Box>
-                            <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>Pt. ${row.buckets[bucket].pt.toFixed(2)}</Typography>
-                            <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>Ins. ${row.buckets[bucket].ins.toFixed(2)}</Typography>
-                          </Box>
-                        </TableCell>
-                      ))}
-                      <TableCell align="right">
-                        <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>${row.total.toFixed(2)}</Typography>
-                        <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>$2,000.00</Typography>
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>${row.totalOwings?.toFixed(2) || '0.00'}</TableCell>
-                      {showPaymentPlan && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>${row.paymentPlan?.toFixed(2) || '0.00'}</TableCell>}
-                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>${row.credit?.toFixed(2) || '0.00'}</TableCell>
-                      <TableCell>{row.lastBilled}</TableCell>
-                      <TableCell>
-                        <Box 
-                          sx={{ display: 'flex', alignItems: 'center', color: 'success.main', cursor: 'pointer' }}
-                          onClick={() => setSelectedPatientForNotes(row)}
-                        >
-                          <NoteAddIcon sx={{ fontSize: 14, mr: 0.5 }} />
-                          <Typography variant="caption">add account note</Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))}
-              </TableBody>
-              <TableFooter sx={{ backgroundColor: '#fff', borderTop: '2px solid #0288d1' }}>
-                {/* Footer Row 1: Headers */}
-                <TableRow sx={{ '& td': { fontSize: '0.7rem', fontWeight: 700, color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} />
+                <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
+                  <TableCell sx={{ width: '25%', fontWeight: 600 }}>Total Patients Balances</TableCell>
                   {agingBuckets.map((bucket) => (
                     <TableCell key={bucket} align="right">
                       {bucket}
@@ -818,9 +594,9 @@ const AgingReport = () => {
                   </TableCell>
                   <TableCell colSpan={2} />
                 </TableRow>
-              </TableFooter>
+              </TableBody>
             </Table>
-          </TableContainer>
+          </Box>
         </>
       ) : (
         <Box sx={{ mt: 2 }}>

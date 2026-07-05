@@ -536,16 +536,83 @@ const ProductionCollection = () => {
     printWindow.close();
   };
 
-  return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Production & Collection Report:
-      </Typography>
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="daily" 
+        prefix="Date Range:" 
+        defaultValue="daily"
+        options={[{ value: 'daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      </Box>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} sx={{ minHeight: 36 }}>
-          <Tab label="Current Report" sx={{ textTransform: 'none', minHeight: 36, fontSize: '0.875rem' }} />
-          <Tab label="Generated Reports" sx={{ textTransform: 'none', minHeight: 36, fontSize: '0.875rem' }} />
+      <ReportSelect 
+        label="All" 
+        prefix="Provider:" 
+        defaultValue="All"
+        options={[{ value: 'All', label: 'Select Provider' }]}
+      />
+      
+      <RadioGroup row defaultValue="no-grouping" sx={{ ml: 2 }}>
+        <FormControlLabel value="no-grouping" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>No Grouping</Typography>} />
+        <FormControlLabel value="group-provider" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Group By Provider</Typography>} />
+      </RadioGroup>
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+        <RadioGroup row defaultValue="filter">
+          <FormControlLabel value="filter" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter Codes</Typography>} />
+          <FormControlLabel value="exclude" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Enter Codes to Exclude</Typography>} />
+        </RadioGroup>
+        <TextField 
+          size="small" 
+          variant="outlined"
+          placeholder="Enter code or procedure" 
+          sx={{ width: 220, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.75rem', backgroundColor: '#fff' } }} 
+        />
+      </Box>
+
+      <ReportCheckbox label="Display Only Records with Collection" />
+      <ReportCheckbox label="Exclude Products" />
+      <ReportCheckbox label="Show Flags in Report" defaultChecked />
+      <ReportCheckbox label="Show Date of Birth" defaultChecked />
+      <ReportCheckbox label="Show Provider" defaultChecked />
+      <ReportCheckbox label="Filter by DOS" />
+
+      <ReportSelect 
+        label="pts" 
+        defaultValue="pts"
+        options={[{ value: 'pts', label: 'Pts With Or Without Flags' }]}
+        sx={{ ml: 2 }}
+      />
+      <ReportSelect 
+        label="default" 
+        prefix="Sort Report By:" 
+        defaultValue="default"
+        options={[{ value: 'default', label: 'Default' }]}
+      />
+    </>
+  );
+
+  const customBottomRowLeftActions = (
+    <MuiLink sx={{ fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', color: '#337ab7', mr: 2 }}>Office (no provider section)</MuiLink>
+  );
+
+  return (
+    <ReportLayout title="Production & Collection Report:">
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} sx={{ minHeight: 36, '& .MuiTab-root': { textTransform: 'none', minHeight: 36, fontSize: '0.875rem', fontWeight: 600 } }}>
+          <Tab label="Current Report" />
+          <Tab label="Generated Reports" />
         </Tabs>
       </Box>
 

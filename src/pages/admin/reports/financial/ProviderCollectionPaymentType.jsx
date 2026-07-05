@@ -244,11 +244,58 @@ const ProviderCollectionPerPaymentType = () => {
     { label: 'Total Production Adjustments:', value: `$${totalAdj.toFixed(2)}` },
   ];
 
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="daily" 
+        prefix="Date Range:" 
+        defaultValue="daily"
+        options={[{ value: 'daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      </Box>
+
+      <ReportSelect 
+        label="all" 
+        prefix="Filter Report by:" 
+        defaultValue="all"
+        options={[{ value: 'all', label: 'Provider: All' }]}
+      />
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <ReportCheckbox label="Show Flags in Report" defaultChecked />
+      
+      <ReportSelect 
+        label="pts" 
+        defaultValue="pts"
+        options={[{ value: 'pts', label: 'Pts With Or Without Flags' }]}
+      />
+
+      <ReportSelect 
+        label="default" 
+        prefix="Sort Report By:" 
+        defaultValue="default"
+        options={[{ value: 'default', label: 'Default' }]}
+      />
+    </>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Provider Collection Per Payment Type:
-      </Typography>
+    <ReportLayout title="Provider Collection Per Payment Type:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onPrint={() => window.print()}
+      />
 
       {/* Filters Section */}
       <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
@@ -368,28 +415,26 @@ const ProviderCollectionPerPaymentType = () => {
         )}
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700 } }}>
-              <TableCell>Date</TableCell>
-              <TableCell>Flags</TableCell>
-              <TableCell>Patient</TableCell>
-              <TableCell>Code</TableCell>
-              <TableCell>Procedure</TableCell>
-              <TableCell align="center" colSpan={2} sx={{ borderLeft: '1px solid #e0e0e0' }}>Provider / Internal Code</TableCell>
-              <TableCell align="center" colSpan={3} sx={{ borderLeft: '1px solid #e0e0e0' }}>Collection</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>Adjustment</TableCell>
-              <TableCell align="right">Pt. Refund</TableCell>
-              <TableCell align="right">Ins. Refund</TableCell>
-              <TableCell align="right">Pay From Credit</TableCell>
-              <TableCell align="right">New Credit</TableCell>
+            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700, py: 1 } }}>
+              <TableCell rowSpan={2}>Date</TableCell>
+              <TableCell rowSpan={2}>Flags</TableCell>
+              <TableCell rowSpan={2}>Patient</TableCell>
+              <TableCell rowSpan={2}>Code</TableCell>
+              <TableCell rowSpan={2}>Procedure</TableCell>
+              <TableCell align="center" colSpan={2}>Provider / Internal Code</TableCell>
+              <TableCell align="center" colSpan={3}>Collection</TableCell>
+              <TableCell align="right" rowSpan={2}>Adjustment</TableCell>
+              <TableCell align="right" rowSpan={2}>Pt. Refund</TableCell>
+              <TableCell align="right" rowSpan={2}>Ins. Refund</TableCell>
+              <TableCell align="right" rowSpan={2}>Pay From Credit</TableCell>
+              <TableCell align="right" rowSpan={2}>New Credit</TableCell>
             </TableRow>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700 } }}>
-              <TableCell colSpan={5}></TableCell>
-              <TableCell align="center" sx={{ borderLeft: '1px solid #e0e0e0' }}>Render</TableCell>
+            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700, py: 1 } }}>
+              <TableCell align="center">Render</TableCell>
               <TableCell align="center">Bill</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>Insurance Payment</TableCell>
+              <TableCell align="right">Insurance Payment</TableCell>
               <TableCell align="right">Patient Payment</TableCell>
               <TableCell align="right">Actual Write-off</TableCell>
-              <TableCell colSpan={5}></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -444,16 +489,17 @@ const ProviderCollectionPerPaymentType = () => {
       </TableContainer>
 
       {/* Footer Summary Section */}
-      <Box sx={{ mt: 3, ml: 4 }}>
+      <Box sx={{ mt: 4, ml: 4 }}>
         {summaryStats.map((stat, idx) => (
           <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 240, color: 'primary.main' }}>{stat.label}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 260, color: '#337ab7' }}>{stat.label}</Typography>
             <Typography variant="caption" sx={{ fontWeight: 700 }}>{stat.value}</Typography>
           </Box>
         ))}
       </Box>
-    </Box>
+    </ReportLayout>
   );
 };
 
 export default ProviderCollectionPerPaymentType;
+

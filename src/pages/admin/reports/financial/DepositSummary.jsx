@@ -379,156 +379,82 @@ const DepositSummary = () => {
     : 0;
 
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" className="no-print" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-        Deposit Summary:
-      </Typography>
+    <ReportLayout title="Deposit Summary:">
+      <Grid container spacing={4}>
+        {/* Left Column */}
+        <Grid item xs={12} md={7}>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#337ab7', mb: 1, borderBottom: '1px solid #e0e0e0', pb: 0.5 }}>
+            Create new deposit summary:
+          </Typography>
 
-      <Grid container spacing={2} sx={{ flexWrap: 'nowrap' }}>
-        {/* Left Section - Controls */}
-        <Grid item xs={4} className="no-print">
-          <Box sx={{ borderRight: '1px solid #e0e0e0', pr: 3, height: '100%' }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>
-              Create new deposit summary:
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#4a89dc', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
+          </Box>
 
-            <RadioGroup 
-              row 
-              value={dateRangeType} 
-              onChange={handleDateModeChange}
-              sx={{ mb: 2 }}
-            >
-              <FormControlLabel value="Daily" control={<Radio size="small" />} label={<Typography variant="caption">Daily</Typography>} />
-              <FormControlLabel value="Range" control={<Radio size="small" />} label={<Typography variant="caption">Range</Typography>} />
-              <FormControlLabel value="Weekly" control={<Radio size="small" />} label={<Typography variant="caption">Weekly</Typography>} />
-              <FormControlLabel value="Monthly" control={<Radio size="small" />} label={<Typography variant="caption">Monthly</Typography>} />
-            </RadioGroup>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Transactions done from: 
-                <input 
-                  type="date" 
-                  value={fromDate} 
-                  onChange={(e) => setFromDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px', fontFamily: 'inherit' }}
-                />
-              </Typography>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                to: 
-                <input 
-                  type="date" 
-                  value={toDate} 
-                  onChange={(e) => setToDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px', fontFamily: 'inherit' }}
-                />
-              </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Transactions Date Range:</Typography>
+              <Select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                size="small"
+                variant="standard"
+                sx={{ fontSize: '0.85rem', minWidth: 100, backgroundColor: '#fff' }}
+              >
+                <MenuItem value="Daily">Daily</MenuItem>
+                <MenuItem value="Weekly">Weekly</MenuItem>
+              </Select>
             </Box>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+              <Button variant="contained" size="small" sx={{ backgroundColor: '#00BBAB', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#009b8e' } }}>Apply Filters</Button>
+              <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c89255' } }}>Create Template</Button>
+            </Box>
+          </Box>
 
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Include payment types</Typography>
-            
-            <Grid container spacing={1}>
-              <Grid item xs={12} sm={4}>
-                <CheckboxGroup 
-                  title="Patient payment types" 
-                  items={PAYMENT_TYPES} 
-                  selected={patientTypes} 
-                  setSelected={setPatientTypes} 
-                />
-                
-                <Box sx={{ mt: 3 }}>
-                  <CheckboxGroup 
-                    title="Include Deposits" 
-                    items={PAYMENT_TYPES} 
-                    selected={depositTypes} 
-                    setSelected={setDepositTypes} 
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <CheckboxGroup 
-                  title="Insurance payment types" 
-                  items={PAYMENT_TYPES} 
-                  selected={insuranceTypes} 
-                  setSelected={setInsuranceTypes} 
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <CheckboxGroup 
-                  title="Include refund payment types" 
-                  items={PAYMENT_TYPES} 
-                  selected={refundTypes} 
-                  setSelected={setRefundTypes} 
-                />
-              </Grid>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 2 }}>Include payment types</Typography>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={4}>
+              <CheckboxGroup title="Patient payment types" items={PAYMENT_TYPES} />
             </Grid>
+            <Grid item xs={4}>
+              <CheckboxGroup title="Insurance payment types" items={PAYMENT_TYPES.slice(0, 15)} />
+            </Grid>
+            <Grid item xs={4}>
+              <CheckboxGroup title="Include refund payment types" items={PAYMENT_TYPES.slice(0, 15)} />
+            </Grid>
+          </Grid>
 
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              {!showTemplateForm && (
-                <Button 
-                  variant="contained" 
-                  size="small" 
-                  onClick={executeCreateDeposit}
-                  disabled={loading || creating}
-                  sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}
-                >
-                  {loading || creating ? <CircularProgress size={20} color="inherit" /> : 'Create Deposit'}
-                </Button>
-              )}
-              
-              {showTemplateForm ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Enter Template Name"
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    sx={{ width: 200, '& .MuiInputBase-root': { height: 36, fontSize: '0.85rem' } }}
-                    autoFocus
-                  />
-                  <Button 
-                    variant="contained" 
-                    disabled={savingTemplate}
-                    onClick={handleSaveTemplate}
-                    sx={{ textTransform: 'none', bgcolor: '#8db3d9', height: 36 }}
-                  >
-                    {savingTemplate ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    onClick={() => {
-                      setShowTemplateForm(false);
-                      setTemplateName('');
-                    }}
-                    sx={{ textTransform: 'none', bgcolor: '#d1a066', height: 36 }}
-                  >
-                    Cancel
-                  </Button>
-                </Box>
-              ) : (
-                <Button 
-                  variant="contained" 
-                  size="small" 
-                  onClick={() => setShowTemplateForm(true)}
-                  sx={{ textTransform: 'none', bgcolor: '#dcb265', '&:hover': { bgcolor: '#c99f54' } }}
-                >
-                  Create Template
-                </Button>
-              )}
-            </Box>
+          <Box sx={{ mt: 2 }}>
+            <CheckboxGroup title="Include Deposits" items={PAYMENT_TYPES.slice(0, 5)} />
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#4a89dc', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
+              Preview Deposit
+            </Button>
+            <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c89255' } }}>
+              Print Slip
+            </Button>
           </Box>
         </Grid>
 
-        {/* Right Section - Dynamic Preview / Created Report */}
-        <Grid item xs={8} sx={{ minWidth: 0 }}>
+        {/* Divider */}
+        <Grid item xs={false} md={0.5} sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
+          <Divider orientation="vertical" flexItem sx={{ borderRightWidth: 1, borderColor: '#e0e0e0' }} />
+        </Grid>
+
+        {/* Right Column */}
+        <Grid item xs={12} md={4.5}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-             <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main', borderBottom: '1px solid #1a3a6b', pb: 0.5 }}>
+             <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#337ab7', borderBottom: '1px solid #337ab7', pb: 0.5 }}>
               Deposit summary:
             </Typography>
              <Button
               variant="contained"
               sx={{
-                bgcolor: '#dcb265',
+                backgroundColor: '#d9a366',
                 textTransform: 'none',
                 fontSize: '0.75rem',
                 fontWeight: 600,
@@ -600,7 +526,7 @@ const DepositSummary = () => {
           </Box>
         </Grid>
       </Grid>
-    </Box>
+    </ReportLayout>
   );
 };
 

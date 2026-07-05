@@ -233,11 +233,22 @@ const ModificationsReport = () => {
           </Button>
         </Box>
       </Box>
+    </Box>
+  );
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #000', borderRadius: 0, position: 'relative' }}>
-        <Table id="modifications-report-table" size="small" sx={{ '& .MuiTableCell-root': { border: '1px solid #000', px: 1, py: 0.5 } }}>
+  return (
+    <ReportLayout title="Modifications Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
+
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+        <Table size="small" sx={{ '& .MuiTableCell-root': { borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', px: 1, py: 1 } }}>
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
+            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Action</TableCell>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>transaction #</TableCell>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>procedures</TableCell>
@@ -247,7 +258,7 @@ const ModificationsReport = () => {
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>collection</TableCell>
               <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>account credit</TableCell>
             </TableRow>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
+            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>fees</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>credit adj</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>debit adj</TableCell>
@@ -314,7 +325,7 @@ const ModificationsReport = () => {
           </TableBody>
         </Table>
       </TableContainer>
-    </Box>
+    </ReportLayout>
   );
 };
 

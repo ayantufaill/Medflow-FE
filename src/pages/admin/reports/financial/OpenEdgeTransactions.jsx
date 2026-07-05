@@ -1,19 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
+  Box, Typography, Select, MenuItem, Button, TableCell, TableRow, TextField
 } from '@mui/material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const MOCK_TRANSACTIONS = [
   { id: 'Patient A (861)', created: '05/26/2025', type: 'Payment', number: '18381', status: 'Pending' },
@@ -29,76 +18,85 @@ const MOCK_TRANSACTIONS = [
 ];
 
 const OpenEdgeTransactions = () => {
+  const columns = [
+    { label: 'Patient ID' },
+    { label: 'Created On' },
+    { label: 'Transaction Type' },
+    { label: 'Transaction Number' },
+    { label: 'Status' },
+  ];
+
+  const renderRow = (row, index) => (
+    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer', fontWeight: 500 }}>{row.id}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.created}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.type}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.number}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Pending' ? '#f5a623' : '#333' }}>{row.status}</TableCell>
+    </TableRow>
+  );
+
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  const filteredData = MOCK_TRANSACTIONS.filter(row => {
+    if (statusFilter !== 'All' && row.status !== statusFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="Range" 
+        prefix="Created On Date Filter:" 
+        defaultValue="Range"
+        options={[{ value: 'Range', label: 'Range' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
+        <TextField size="small" variant="standard" defaultValue="05/08/2025" sx={{ width: 100, '& input': { fontSize: '0.85rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
+        <TextField size="small" variant="standard" defaultValue="05/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+        <ReportSelect 
+          label="All Statuses" 
+          prefix="Filter by Status:" 
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          options={[
+            { value: 'All', label: 'All Statuses' },
+            { value: 'Pending', label: 'Pending' },
+            { value: 'Credit Card Declined', label: 'Credit Card Declined' },
+            { value: 'Timed Out', label: 'Timed Out' }
+          ]}
+        />
+        <Button onClick={() => setStatusFilter(statusFilter === 'Credit Card Declined' ? 'All' : 'Credit Card Declined')} variant={statusFilter === 'Credit Card Declined' ? 'contained' : 'outlined'} size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#337ab7', color: statusFilter === 'Credit Card Declined' ? '#fff' : '#337ab7', backgroundColor: statusFilter === 'Credit Card Declined' ? '#337ab7' : 'transparent', '&:hover': { backgroundColor: statusFilter === 'Credit Card Declined' ? '#286090' : '#f0f7ff' } }}>Credit Card Declined</Button>
+        <Button onClick={() => setStatusFilter(statusFilter === 'Timed Out' ? 'All' : 'Timed Out')} variant={statusFilter === 'Timed Out' ? 'contained' : 'outlined'} size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#337ab7', color: statusFilter === 'Timed Out' ? '#fff' : '#337ab7', backgroundColor: statusFilter === 'Timed Out' ? '#337ab7' : 'transparent', '&:hover': { backgroundColor: statusFilter === 'Timed Out' ? '#286090' : '#f0f7ff' } }}>Timed Out</Button>
+        <Button onClick={() => setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending')} variant={statusFilter === 'Pending' ? 'contained' : 'outlined'} size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#337ab7', color: statusFilter === 'Pending' ? '#fff' : '#337ab7', backgroundColor: statusFilter === 'Pending' ? '#337ab7' : 'transparent', '&:hover': { backgroundColor: statusFilter === 'Pending' ? '#286090' : '#f0f7ff' } }}>Pending</Button>
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
-        Open Edge Transactions Report:
-      </Typography>
+    <ReportLayout title="Open Edge Transactions Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Created On Date Filter:</Typography>
-          <Select value="Range" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-            <MenuItem value="Range">Range</MenuItem>
-          </Select>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Start Date:</Typography>
-          <TextField size="small" variant="standard" defaultValue="05/08/2025" sx={{ width: 100, '& input': { fontSize: '0.85rem' } }} />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>End Date:</Typography>
-          <TextField size="small" variant="standard" defaultValue="05/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem' } }} />
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-          <Typography sx={{ fontSize: '0.85rem' }}>Filter by Status:</Typography>
-          <Select value="Select Status" size="small" sx={{ fontSize: '0.85rem', minWidth: 120, height: 32, backgroundColor: '#5c85bb', color: '#fff' }}>
-            <MenuItem value="Select Status">Select Status</MenuItem>
-          </Select>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#1a3a6b', color: '#1a3a6b' }}>Credit Card Declined</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#1a3a6b', color: '#1a3a6b' }}>Timed Out</Button>
-          <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#1a3a6b', color: '#1a3a6b' }}>Pending</Button>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 3 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
-      </Box>
-
-      {/* Table Section */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#fff' }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Patient ID</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Created On</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Transaction Type</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Transaction Number</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {MOCK_TRANSACTIONS.map((row, index) => (
-              <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fcfcfc' : '#fff' }}>
-                <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{row.id}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.created}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.type}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.number}</TableCell>
-                <TableCell sx={{ fontSize: '0.75rem' }}>{row.status}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      <ReportDataTable 
+        columns={columns} 
+        data={filteredData} 
+        renderRow={renderRow} 
+      />
+    </ReportLayout>
   );
 };
 

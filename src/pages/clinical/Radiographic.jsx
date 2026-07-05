@@ -38,7 +38,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { useAppointment } from '../../hooks/redux/useAppointment';
+import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
 
 const Radiographic = () => {
   const { showSnackbar } = useSnackbar();
@@ -257,7 +257,7 @@ const Radiographic = () => {
   });
 
   // State for visit dates timeline
-  const { currentAppointment } = useAppointment();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('radiographic', patientId);
   const visitDates = React.useMemo(() => {

@@ -25,7 +25,7 @@ import {
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { useAppointment } from '../../hooks/redux/useAppointment';
+import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
 
 // Custom sidebar header component
 const BlueHeader = ({ text }) => (
@@ -76,7 +76,7 @@ const DentalAnatomyExamPage = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const { currentAppointment } = useAppointment();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('head-neck', patientId);
   const visitDates = React.useMemo(() => {

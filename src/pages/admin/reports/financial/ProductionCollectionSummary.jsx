@@ -478,7 +478,7 @@ const ProductionCollectionSummary = () => {
         <Grid item xs={12} md={5}>
           {prodStats.map((stat, idx) => (
             <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 180, color: stat.isFormula ? 'primary.main' : 'inherit' }}>{stat.label}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 180, color: stat.isFormula ? '#337ab7' : 'text.primary' }}>{stat.label}</Typography>
               <Typography variant="caption" sx={{ fontWeight: stat.isFormula || stat.value !== '$0.00' ? 700 : 400 }}>{stat.value}</Typography>
             </Box>
           ))}
@@ -655,3 +655,4 @@ const ProductionCollectionSummary = () => {
 };
 
 export default ProductionCollectionSummary;
+

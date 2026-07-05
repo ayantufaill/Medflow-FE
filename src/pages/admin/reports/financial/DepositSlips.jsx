@@ -483,7 +483,7 @@ const DepositSlips = () => {
             </Typography>
             <FormControlLabel
               control={<Checkbox size="small" />}
-              label={<Typography variant="caption">Group by provider</Typography>}
+              label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Group by provider</Typography>}
             />
           </Box>
 

@@ -1,38 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Select, 
-  MenuItem, 
-  FormControl, 
-  InputLabel, 
-  Button, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Divider,
-  Collapse,
-  IconButton,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button as MuiButton
+  Box, Typography, TextField, Select, MenuItem, Button, TableCell, TableRow, RadioGroup, FormControlLabel, Radio, Collapse
 } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp, FileDownload, Print } from '@mui/icons-material';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchUnsignedProgressNotesReport, selectUnsignedProgressNotesData, selectClinicalReportLoading } from '../../../../store/slices/clinicalReportSlice';
-import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
-import RichTextEditor from '../../../../components/shared/RichTextEditor';
+import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const UnsignedProgressNotesReport = () => {
   const dispatch = useDispatch();
@@ -206,341 +177,179 @@ Thank you. YF`
     setSignedExpandedRow(signedExpandedRow === id ? null : id);
   };
 
+  const columns = [
+    { label: 'Patient' },
+    { label: 'Created Date' },
+    { label: 'Kind' },
+    { label: 'Provider' },
+    { label: '' }, // For collapse icon
+  ];
+
+  const renderUnsignedRow = (row, index) => (
+    <React.Fragment key={row.id}>
+      <TableRow 
+        onClick={() => handleRowClick(row.id)}
+        sx={{ cursor: 'pointer', backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc', '&:hover': { backgroundColor: '#f5f5f5' } }}
+      >
+        <TableCell sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
+        <TableCell align="right">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
+            {expandedRow === row.id ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
+            <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
+          </Box>
+        </TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell colSpan={5} sx={{ p: 0, borderBottom: expandedRow === row.id ? '1px solid rgba(224, 224, 224, 1)' : 'none' }}>
+          <Collapse in={expandedRow === row.id} timeout="auto" unmountOnExit>
+            <Box sx={{ p: 3, backgroundColor: '#fff' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-line' }}>
+                  {row.note || 'No note content available.'}
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
+                  <Typography variant="caption" sx={{ color: '#337ab7', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                    Sign Progress Note
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>NV:</Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>Franco RDA</Typography>
+                  <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.7rem', color: '#fff', '&:hover': { backgroundColor: '#c89255' } }}>Edit Note</Button>
+                </Box>
+                <Typography variant="caption" color="text.secondary">Babar Magsi</Typography>
+              </Box>
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
+    </React.Fragment>
+  );
+
+  const renderSignedRow = (row, index) => (
+    <React.Fragment key={row.id}>
+      <TableRow 
+        onClick={() => handleSignedRowClick(row.id)}
+        sx={{ cursor: 'pointer', backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc', '&:hover': { backgroundColor: '#f5f5f5' } }}
+      >
+        <TableCell sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
+        <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
+        <TableCell align="right">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
+            {signedExpandedRow === row.id ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
+            <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
+          </Box>
+        </TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell colSpan={5} sx={{ p: 0, borderBottom: signedExpandedRow === row.id ? '1px solid rgba(224, 224, 224, 1)' : 'none' }}>
+          <Collapse in={signedExpandedRow === row.id} timeout="auto" unmountOnExit>
+            <Box sx={{ p: 3, backgroundColor: '#fff' }}>
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                {row.note || 'This is a signed progress note. Content is locked for editing.'}
+              </Typography>
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
+    </React.Fragment>
+  );
+
+  const topFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
+        <TextField defaultValue="04/08/2026" size="small" variant="standard" sx={{ width: 120, '& .MuiInputBase-input': { fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
+        <TextField defaultValue="05/08/2026" size="small" variant="standard" sx={{ width: 120, '& .MuiInputBase-input': { fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
+      </Box>
+      <ReportSelect 
+        label="All" 
+        prefix="Kind:" 
+        defaultValue="All"
+        options={[{ value: 'All', label: 'All' }]}
+        sx={{ mr: 2 }}
+      />
+      <ReportSelect 
+        label="All" 
+        prefix="Provider:" 
+        defaultValue="All"
+        options={[{ value: 'All', label: 'All' }]}
+      />
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 4 }}>
+        <FormControlLabel value="filter" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter Codes</Typography>} />
+        <TextField placeholder="Enter code or procedure" size="small" variant="standard" sx={{ width: 180, '& .MuiInputBase-input': { fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <FormControlLabel value="exclude" checked control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Enter Codes to Exclude</Typography>} />
+        <TextField placeholder="Enter code or procedure" size="small" variant="standard" sx={{ width: 180, '& .MuiInputBase-input': { fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 1 }}>
-      <Typography variant="body2" color="primary" sx={{ textDecoration: 'underline', mb: 2, cursor: 'pointer', display: 'inline-block' }}>
-        Unsigned Progress Notes Report:
-      </Typography>
-
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3, alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="primary">Start Date:</Typography>
-            <TextField 
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              size="small" 
-              variant="standard"
-              sx={{ width: 130 }}
-            />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="primary">End Date:</Typography>
-            <TextField 
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              size="small" 
-              variant="standard"
-              sx={{ width: 130 }}
-            />
-          </Box>
-        </Box>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Kind</InputLabel>
-          <Select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} label="Kind">
-            <MenuItem value="All">All</MenuItem>
-            <MenuItem value="Exam">Exam</MenuItem>
-            <MenuItem value="Recare">Recare</MenuItem>
-            <MenuItem value="Conversation">Conversation</MenuItem>
-            <MenuItem value="Treatment">Treatment</MenuItem>
-            <MenuItem value="General">General</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Provider</InputLabel>
-          <Select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} label="Provider">
-            <MenuItem value="All">All</MenuItem>
-            {providerOptions.map(p => (
-              <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                {getProviderName(p)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 4, mb: 2 }}>
-        <RadioGroup 
-          row 
-          value={codeFilterMode} 
-          onChange={(e) => setCodeFilterMode(e.target.value)}
-          sx={{ display: 'flex', gap: 4 }}
-        >
-          <Box>
-            <FormControlLabel 
-              value="filter" 
-              control={<Radio size="small" />} 
-              label={<Typography variant="caption" color="text.secondary">Filter Codes</Typography>} 
-            />
-            <TextField 
-              placeholder="Enter code or procedure" 
-              size="small" 
-              variant="standard" 
-              disabled={codeFilterMode !== 'filter'}
-              sx={{ width: 180, ml: 3 }} 
-            />
-          </Box>
-          <Box>
-            <FormControlLabel 
-              value="exclude" 
-              control={<Radio size="small" />} 
-              label={<Typography variant="caption" color="text.secondary">Enter Codes to Exclude</Typography>} 
-            />
-            <TextField 
-              placeholder="Enter code or procedure" 
-              size="small" 
-              variant="standard" 
-              disabled={codeFilterMode !== 'exclude'}
-              sx={{ width: 180, ml: 3 }} 
-            />
-          </Box>
-        </RadioGroup>
-        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
-          <Button onClick={handleApplyFilters} variant="contained" size="small" sx={{ backgroundColor: '#8db3d9', textTransform: 'none', px: 3 }}>Apply</Button>
-        </Box>
-      </Box>
-
-      <Divider sx={{ my: 3, borderColor: '#d1a066' }} />
-
-      {/* Export Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 4 }}>
-        <Button variant="contained" size="small" startIcon={<FileDownload />} sx={{ backgroundColor: '#4a90e2', textTransform: 'none' }}>Export as CSV</Button>
-        <Button variant="contained" size="small" startIcon={<Print />} sx={{ backgroundColor: '#d1a066', textTransform: 'none' }}>Print</Button>
-      </Box>
+    <ReportLayout title="Unsigned Progress Notes Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => alert('Exporting as CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Missing Notes Section */}
-      <Box sx={{ mb: 6 }}>
-        <Typography variant="subtitle2" fontWeight={600} color="#1a3a6b" sx={{ mb: 2 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="subtitle2" fontWeight={600} color="#337ab7" sx={{ mb: 1 }}>
           Completed Procedures with Missing Progress Notes
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          No Data Found
-        </Typography>
+        <ReportDataTable 
+          columns={columns} 
+          data={[]} 
+          renderRow={renderUnsignedRow} 
+          emptyMessage="No Data Found"
+        />
       </Box>
 
       {/* Unsigned Notes Section */}
-      <Box sx={{ mb: 6 }}>
-        <Typography variant="subtitle2" fontWeight={600} color="#1a3a6b" sx={{ mb: 2 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="subtitle2" fontWeight={600} color="#337ab7" sx={{ mb: 1 }}>
           Unsigned Progress Notes
         </Typography>
-        <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
-          <Table size="small">
-            <TableHead sx={{ backgroundColor: '#f9fafb' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Patient</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Created Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Kind</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Provider</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading && (!apiData || apiData.length === 0) ? (
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
-                    <CircularProgress size={24} />
-                  </TableCell>
-                </TableRow>
-              ) : displayUnsignedRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: 'text.secondary', fontSize: '0.8rem' }}>
-                    No unsigned notes found.
-                  </TableCell>
-                </TableRow>
-              ) : displayUnsignedRows.map((row) => (
-                <React.Fragment key={row.id}>
-                  <TableRow 
-                    onClick={() => handleRowClick(row.id)}
-                    sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
-                  >
-                    <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b' }}>{row.patient}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
-                        {expandedRow === row.id ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
-                        <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={5} sx={{ p: 0, borderBottom: expandedRow === row.id ? '1px solid rgba(224, 224, 224, 1)' : 'none' }}>
-                      <Collapse in={expandedRow === row.id} timeout="auto" unmountOnExit>
-                        <Box sx={{ p: 3, backgroundColor: '#fff' }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                            {editingRowId === row.id ? (
-                              <Box sx={{ flex: 1, mr: 2 }}>
-                                <RichTextEditor 
-                                  value={editingContent} 
-                                  onChange={setEditingContent} 
-                                  minHeight={150} 
-                                />
-                              </Box>
-                            ) : (
-                              <Typography 
-                                variant="body2" 
-                                sx={{ fontSize: '0.8rem', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-                                dangerouslySetInnerHTML={{ __html: localNotes[row.id] !== undefined ? localNotes[row.id] : (row.note || 'No note content available.') }}
-                              />
-                            )}
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end', minWidth: 120 }}>
-                              {signingRowId === row.id ? (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{row.provider}</Typography>
-                                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                    <TextField 
-                                      placeholder="Pin Code" 
-                                      size="small" 
-                                      type="password"
-                                      sx={{ width: 80, '& .MuiInputBase-root': { fontSize: '0.75rem', height: 24, padding: '0 8px' } }} 
-                                    />
-                                    <MuiButton 
-                                      variant="contained" 
-                                      size="small" 
-                                      sx={{ backgroundColor: '#d1a066', textTransform: 'none', minWidth: 50, height: 24, fontSize: '0.7rem', padding: 0 }}
-                                    >
-                                      Sign
-                                    </MuiButton>
-                                    <MuiButton 
-                                      variant="contained" 
-                                      size="small" 
-                                      onClick={() => setSigningRowId(null)} 
-                                      sx={{ backgroundColor: '#9e9e9e', textTransform: 'none', minWidth: 50, height: 24, fontSize: '0.7rem', padding: 0 }}
-                                    >
-                                      Cancel
-                                    </MuiButton>
-                                  </Box>
-                                </Box>
-                              ) : (
-                                <Typography 
-                                  variant="caption" 
-                                  color="primary" 
-                                  onClick={() => setSigningRowId(row.id)}
-                                  sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                                >
-                                  Sign Progress Note
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
-                              <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>NV:</Typography>
-                              <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>Franco RDA</Typography>
-                              {editingRowId === row.id ? (
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                  <MuiButton 
-                                    variant="outlined" 
-                                    size="small" 
-                                    onClick={handleCancelEdit}
-                                    sx={{ textTransform: 'none', fontSize: '0.7rem' }}
-                                  >
-                                    Cancel
-                                  </MuiButton>
-                                  <MuiButton 
-                                    variant="contained" 
-                                    size="small" 
-                                    onClick={() => handleSaveNote(row.id)}
-                                    sx={{ backgroundColor: '#4a90e2', textTransform: 'none', fontSize: '0.7rem' }}
-                                  >
-                                    Save
-                                  </MuiButton>
-                                </Box>
-                              ) : (
-                                <MuiButton 
-                                  variant="contained" 
-                                  size="small" 
-                                  onClick={() => handleOpenEditor(row)}
-                                  sx={{ backgroundColor: '#d1a066', textTransform: 'none', fontSize: '0.7rem' }}
-                                >
-                                  {(localNotes[row.id] || row.note) ? 'Edit Note' : 'Add Note'}
-                                </MuiButton>
-                              )}
-                            </Box>
-                            <Typography variant="caption" color="text.secondary">Babar Magsi</Typography>
-                          </Box>
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <ReportDataTable 
+          columns={columns} 
+          data={rows} 
+          renderRow={renderUnsignedRow} 
+        />
       </Box>
 
       {/* Signed Notes Section */}
       <Box>
-        <Typography variant="subtitle2" fontWeight={600} color="#1a3a6b" sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" fontWeight={600} color="#337ab7" sx={{ mb: 1 }}>
           Signed Progress Notes
         </Typography>
-        <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
-          <Table size="small">
-            <TableHead sx={{ backgroundColor: '#f9fafb' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Patient</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Created Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Kind</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Provider</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading && (!apiData || apiData.length === 0) ? (
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
-                    <CircularProgress size={24} />
-                  </TableCell>
-                </TableRow>
-              ) : displaySignedRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: 'text.secondary', fontSize: '0.8rem' }}>
-                    No signed notes found.
-                  </TableCell>
-                </TableRow>
-              ) : displaySignedRows.map((row) => (
-                <React.Fragment key={row.id}>
-                  <TableRow 
-                    onClick={() => handleSignedRowClick(row.id)}
-                    sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
-                  >
-                    <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b' }}>{row.patient}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
-                        {signedExpandedRow === row.id ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
-                        <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={5} sx={{ p: 0, borderBottom: signedExpandedRow === row.id ? '1px solid rgba(224, 224, 224, 1)' : 'none' }}>
-                      <Collapse in={signedExpandedRow === row.id} timeout="auto" unmountOnExit>
-                        <Box sx={{ p: 3, backgroundColor: '#fff' }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                            {row.note || 'This is a signed progress note. Content is locked for editing.'}
-                          </Typography>
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <ReportDataTable 
+          columns={columns} 
+          data={signedRows} 
+          renderRow={renderSignedRow} 
+        />
       </Box>
-
-      {/* Note Editor Dialog removed as it is now inline */}
-    </Box>
+    </ReportLayout>
   );
 };
 
 export default UnsignedProgressNotesReport;
+

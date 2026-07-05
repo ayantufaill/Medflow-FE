@@ -194,6 +194,7 @@ const PatientInsuranceCoverage = () => {
   const [data, setData] = useState(INITIAL_DATA);
   const [grouping, setGrouping] = useState('no');
   const [assignmentFilter, setAssignmentFilter] = useState('no');
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const [apptFilterType, setApptFilterType] = useState('no');
   const [apptStartDate, setApptStartDate] = useState('');
@@ -392,9 +393,32 @@ const PatientInsuranceCoverage = () => {
     printWindow.close();
   };
 
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
-  const handleCreateTemplate = () => setTemplateDialogOpen(true);
+  const bottomFilters = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600, color: '#1e293b' }}>Filter by past appointment date:</Typography>
+        <RadioGroup row defaultValue="no">
+          <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>No filter</Typography>} />
+          <FormControlLabel value="range" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Range</Typography>} />
+          <FormControlLabel value="before" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Before specific date</Typography>} />
+          <FormControlLabel value="after" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>After specific date</Typography>} />
+        </RadioGroup>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600, color: '#1e293b' }}>Filter by Assignment:</Typography>
+        <RadioGroup row value={assignmentFilter} onChange={(e) => setAssignmentFilter(e.target.value)}>
+          <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>No filter</Typography>} />
+          <FormControlLabel value="assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Assignment</Typography>} />
+          <FormControlLabel value="non-assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Non-Assignment</Typography>} />
+        </RadioGroup>
+      </Box>
+
+      <Box sx={{ mt: 0.5 }}>
+        <ReportCheckbox label="Show patients with no coverage" />
+      </Box>
+    </Box>
+  );
 
   const renderTable = (tableData, tableId) => (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
@@ -454,20 +478,16 @@ const PatientInsuranceCoverage = () => {
   );
 
   return (
-    <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
-      {/* Title */}
-      <Typography 
-        variant="body2" 
-        sx={{ 
-          color: '#337ab7', 
-          fontWeight: 500, 
-          mb: 2, 
-          textDecoration: 'underline',
-          cursor: 'pointer'
-        }}
-      >
-        Patient by Insurance Coverage:
-      </Typography>
+    <React.Fragment>
+      <ReportLayout title="Patient by Insurance Coverage:">
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          bottomRowFilters={bottomFilters}
+          onApplyFilters={handleApplyFilters}
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={() => alert('Exporting...')}
+          onPrint={() => window.print()}
+        />
 
       {/* Filters Section */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
@@ -774,10 +794,10 @@ const PatientInsuranceCoverage = () => {
       <CreateTemplateDialog 
         open={templateDialogOpen} 
         onClose={() => setTemplateDialogOpen(false)} 
-        onSave={handleSaveTemplate} 
+        onSave={(name) => alert(`Template "${name}" saved!`)} 
       />
-    </Box>
+      </ReportLayout>
+    </React.Fragment>
   );
 };
-
 export default PatientInsuranceCoverage;

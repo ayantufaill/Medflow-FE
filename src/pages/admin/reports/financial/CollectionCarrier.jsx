@@ -1,22 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  TextField,
+  Box, Typography, Select, MenuItem, Button, TableCell, TableRow, Radio, RadioGroup, FormControlLabel, TextField
 } from '@mui/material';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 
 const MOCK_CARRIERS = [
   {
@@ -45,105 +31,87 @@ const CollectionCarrier = () => {
   const [networkFilter, setNetworkFilter] = useState('None');
   const [payerFilter, setPayerFilter] = useState('Payer');
 
+  const columns = [
+    { label: 'Patient' },
+    { label: 'Collection' },
+    { label: 'Production' },
+    { label: 'Write-off' },
+  ];
+
+  const renderRow = (p, pIdx) => (
+    <TableRow key={pIdx} sx={{ backgroundColor: pIdx % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{p.name}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.collection}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.production}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.writeoff}</TableCell>
+    </TableRow>
+  );
+
+  const topFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <ReportSelect label="Daily" prefix="Date Range:" defaultValue="Daily" />
+        <Typography sx={{ fontSize: '0.75rem', color: '#64748b', ml: 1, whiteSpace: 'nowrap' }}>← May 08, 2026 →</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', color: '#1e293b' }}>Date: 05/08/2026</Typography>
+      </Box>
+      <ReportSelect label="All" prefix="Provider:" defaultValue="All" />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter by:</Typography>
+        <RadioGroup row value={networkFilter} onChange={(e) => setNetworkFilter(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
+          <FormControlLabel value="None" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>None</Typography>} sx={{ m: 0, mr: 1 }} />
+          <FormControlLabel value="In" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>In Network</Typography>} sx={{ m: 0, mr: 1 }} />
+          <FormControlLabel value="Out" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Out of Network</Typography>} sx={{ m: 0 }} />
+        </RadioGroup>
+      </Box>
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
+          <FormControlLabel value="Payer" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter by Payer:</Typography>} sx={{ m: 0 }} />
+        </RadioGroup>
+        <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } }} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
+          <FormControlLabel value="Plan" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter by Plan:</Typography>} sx={{ m: 0 }} />
+        </RadioGroup>
+        <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } }} />
+      </Box>
+    </>
+  );
+
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, mb: 2, fontSize: '0.95rem', borderBottom: '1px solid #1a3a6b', width: 'fit-content', pb: 0.5 }}>
-        Collection Per Carrier Report:
-      </Typography>
-
-      {/* Filters Section */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem' }}>Date Range:</Typography>
-            <Select value="Daily" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-              <MenuItem value="Daily">Daily</MenuItem>
-            </Select>
-            <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', ml: 1 }}>← May 08, 2026 →</Typography>
-            <Typography sx={{ fontSize: '0.85rem' }}>Date: 05/08/2026</Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem' }}>Provider:</Typography>
-            <Select value="All" size="small" variant="standard" sx={{ fontSize: '0.85rem', minWidth: 100 }}>
-              <MenuItem value="All">All</MenuItem>
-            </Select>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem' }}>Filter by:</Typography>
-            <RadioGroup row value={networkFilter} onChange={(e) => setNetworkFilter(e.target.value)}>
-              <FormControlLabel value="None" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>None</Typography>} />
-              <FormControlLabel value="In" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>In Network</Typography>} />
-              <FormControlLabel value="Out" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Out of Network</Typography>} />
-            </RadioGroup>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)}>
-              <FormControlLabel value="Payer" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Filter by Payer:</Typography>} />
-            </RadioGroup>
-            <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }} />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)}>
-              <FormControlLabel value="Plan" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem' }}>Filter by Plan:</Typography>} />
-            </RadioGroup>
-            <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.8rem' } }} />
-          </Box>
-
-          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Apply Filters</Button>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Create Template</Button>
-          </Box>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#5c85bb', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
-        <Button variant="contained" size="small" sx={{ backgroundColor: '#dcb265', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
-      </Box>
+    <ReportLayout title="Collection Per Carrier Report:">
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply Filters')}
+        onExportCsv={() => alert('Exporting CSV...')}
+        onPrint={() => window.print()}
+      />
 
       {/* Carrier Sections */}
       {MOCK_CARRIERS.map((carrier, idx) => (
         <Box key={idx} sx={{ mb: 5 }}>
-          <Typography sx={{ color: '#0052cc', fontWeight: 600, fontSize: '0.85rem', mb: 0.5 }}>{carrier.name}</Typography>
+          <Typography sx={{ color: '#337ab7', fontWeight: 600, fontSize: '0.9rem', mb: 0.5 }}>{carrier.name}</Typography>
           <Box sx={{ mb: 1 }}>
             <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Total Collection: <Typography component="span" sx={{ fontWeight: 600, color: '#000' }}>{carrier.collection}</Typography></Typography>
             <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Total Production: <Typography component="span" sx={{ fontWeight: 600, color: '#000' }}>{carrier.production}</Typography></Typography>
             <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Total Write-off: <Typography component="span" sx={{ fontWeight: 600, color: '#000' }}>{carrier.writeoff}</Typography></Typography>
           </Box>
 
-          <TableContainer component={Paper} elevation={0} sx={{ borderBottom: 'none', borderRadius: 0 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ borderTop: '1px solid #e0e0e0' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Patient</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Collection</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Production</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', color: '#666' }}>Write-off</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {carrier.patients.map((p, pIdx) => (
-                  <TableRow key={pIdx} sx={{ backgroundColor: '#fcfcfc' }}>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#0052cc', textDecoration: 'underline' }}>{p.name}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.collection}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.production}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.writeoff}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <ReportDataTable 
+            columns={columns} 
+            data={carrier.patients} 
+            renderRow={renderRow} 
+          />
         </Box>
       ))}
-    </Box>
+    </ReportLayout>
   );
 };
 
 export default CollectionCarrier;
-

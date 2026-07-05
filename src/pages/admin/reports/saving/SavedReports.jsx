@@ -47,22 +47,23 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
       sx={{ 
         p: 3, 
         height: 350, 
-        backgroundColor: '#f1f5f9', 
+        backgroundColor: '#f8f9fa', 
         boxShadow: 'none', 
         borderRadius: 1,
+        border: '1px solid #e0e0e0',
         display: 'flex',
         flexDirection: 'column'
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
-        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, color: '#1a3a6b' }}>
+        <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, color: '#333' }}>
           {title}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
+          <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem', fontWeight: 500 }}>
             {count} report/s
           </Typography>
-          <IconButton size="small" sx={{ p: 0, color: '#94a3b8' }}>
+          <IconButton size="small" sx={{ p: 0, color: '#999' }}>
             <Edit sx={{ fontSize: 16 }} />
           </IconButton>
           <Typography 
@@ -88,7 +89,7 @@ const SavedReportCard = ({ title, count, reports = [] }) => {
         flexGrow: 1,
         overflowY: 'auto',
         pr: 1,
-        '&::-webkit-scrollbar': { width: '8px' },
+        '&::-webkit-scrollbar': { width: '6px' },
         '&::-webkit-scrollbar-track': { backgroundColor: 'transparent' },
         '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
       }}>

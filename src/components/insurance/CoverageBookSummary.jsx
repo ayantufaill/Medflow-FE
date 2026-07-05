@@ -1,50 +1,17 @@
 import React, { useState } from 'react';
-import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Typography, Box, Button, Checkbox, Select, MenuItem
-} from "@mui/material";
-import { AutoFixNormal as ToothIcon } from "@mui/icons-material";
-import SelectToothDialog from './SelectToothDialog';
+import { Table, TableBody, TableCell, TableHead, TableRow, Typography, Box, Button } from "@mui/material";
+import { Article as ArticleIcon } from "@mui/icons-material";
+import { headerCellSx } from './styles/coverageStyles';
+import { DEFAULT_BOOK_ROW_DATA } from './utils/insuranceConstants';
+import ToothSelectionDialog from './shared/ToothSelectionDialog';
+import CoverageBookRow from './CoverageBookRow';
 
 const CoverageBookSummary = ({ 
-  headerStyle, 
-  bodyCellStyle, 
-  blueHeader,
   coverageData = [],
   onCoverageDataChange,
   onViewFullBook
 }) => {
-  const localHeaderStyle = {
-    fontSize: "0.55rem",
-    fontWeight: 700,
-    color: "#555",
-    borderRight: "1px solid #e0e0e0",
-    lineHeight: 1.2,
-    py: 0.4,
-    whiteSpace: 'normal',
-    wordWrap: 'break-word',
-    textAlign: 'center',
-    verticalAlign: 'middle'
-  };
-
-  const localBodyCellStyle = {
-    fontSize: "0.6rem",
-    borderRight: "1px solid #e0e0e0",
-    py: 0.25,
-    height: "30px",
-    maxWidth: '80px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  };
-
-  const rowData = [
-    { code: "CNANOHA", name: "Alternative to Fluoride varnish", age: "18" },
-    { code: "D1206", name: "Topical application of fluoride", age: "18" },
-    { code: "D1208", name: "Topical application of fluoride - except varnish", age: "18" },
-    { code: "D1351", name: "Sealant - per tooth", age: "15" },
-    { code: "D2740", name: "Crown - porcelain/ceramic substrate materials", downgrade: "D2790" },
-    { code: "D2750", name: "Crown - porcelain fused to high noble metal", downgrade: "D2790" },
-  ];
+  const [activeToothSelection, setActiveToothSelection] = useState(null);
 
   const getRowData = (code) => {
     return coverageData.find(item => item.code === code || item.rowKey === `proc-${code}`) || {};
@@ -53,23 +20,16 @@ const CoverageBookSummary = ({
   const handleFieldChange = (code, field, value) => {
     if (onCoverageDataChange) {
       let updatedData = [...coverageData];
-      const existingIndex = updatedData.findIndex(item => item.code === code || item.rowKey === `proc-${code}`);
-      
-      if (existingIndex >= 0) {
-        updatedData[existingIndex] = { ...updatedData[existingIndex], [field]: value };
-      } else {
-        const templateRow = rowData.find(r => r.code === code);
-        updatedData.push({
-          ...templateRow,
-          rowKey: `proc-${code}`,
-          [field]: value
-        });
+      if (updatedData.length === 0) {
+        updatedData = DEFAULT_BOOK_ROW_DATA.map(row => ({ ...row }));
+      }
+      if (updatedData[index]) {
+        updatedData[index] = { ...updatedData[index], [field]: value };
+        onCoverageDataChange(updatedData);
       }
       onCoverageDataChange(updatedData);
     }
   };
-
-  const [activeToothSelection, setActiveToothSelection] = useState(null);
 
   const handleToothToggle = (tooth) => {
     if (activeToothSelection === null) return;

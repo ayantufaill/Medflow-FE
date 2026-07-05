@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, ButtonGroup, useTheme } from '@mui/material';
+import { Box, Typography, Button, useTheme } from '@mui/material';
 import RecareList from './RecareList';
 import RecareMonthToDay from './RecareMonthToDay';
 import RecareMonthly from './RecareMonthly';
@@ -23,67 +23,67 @@ const RecareReport = () => {
   };
 
   return (
-    <Box>
-      {/* View Toggle Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3, position: 'relative' }}>
-        <ButtonGroup variant="contained" sx={{ backgroundColor: '#d1a066' }}>
-          <Button 
-            onClick={() => setView('list')}
-            sx={{ 
-              backgroundColor: view === 'list' ? '#b88a52' : '#d1a066',
-              '&:hover': { backgroundColor: '#b88a52' },
-              textTransform: 'none',
-              px: 3
-            }}
-          >
-            Recare List
-          </Button>
-          <Button 
-            onClick={() => setView('month-to-day')}
-            sx={{ 
-              backgroundColor: view === 'month-to-day' ? '#b88a52' : '#d1a066',
-              '&:hover': { backgroundColor: '#b88a52' },
-              textTransform: 'none',
-              px: 3
-            }}
-          >
-            Month-to-day
-          </Button>
-          <Button 
-            onClick={() => setView('monthly')}
-            sx={{ 
-              backgroundColor: view === 'monthly' ? '#b88a52' : '#d1a066',
-              '&:hover': { backgroundColor: '#b88a52' },
-              textTransform: 'none',
-              px: 3
-            }}
-          >
-            Monthly
-          </Button>
-        </ButtonGroup>
-
-        <Button 
-          variant="contained" 
-          sx={{ 
-            position: 'absolute', 
-            right: 0, 
-            backgroundColor: '#d1a066',
-            '&:hover': { backgroundColor: '#b88a52' },
-            textTransform: 'none'
-          }}
-        >
-          Regenerate Recare
-        </Button>
-      </Box>
-
+    <Box sx={{ p: 0 }}>
       {/* Report Title */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography variant="h5" fontWeight={600} color="#1a3a6b">
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700, color: '#1e293b' }}>
           Recare Report
         </Typography>
         <Typography variant="body2" color="text.secondary">
           {subtitle}
         </Typography>
+      </Box>
+
+      {/* View Toggle Buttons (Modern Segmented Control) */}
+      <Box sx={{ display: 'flex', backgroundColor: '#f1f5f9', p: 0.5, borderRadius: '24px', width: 'fit-content', mb: 3 }}>
+        <Button 
+          onClick={() => setView('list')}
+          sx={{ 
+            backgroundColor: view === 'list' ? '#ffffff' : 'transparent',
+            color: view === 'list' ? '#1e293b' : '#64748b',
+            textTransform: 'none',
+            borderRadius: '20px',
+            px: 3,
+            py: 0.5,
+            fontWeight: 600,
+            boxShadow: view === 'list' ? '0px 1px 3px rgba(0,0,0,0.1)' : 'none',
+            '&:hover': { backgroundColor: view === 'list' ? '#ffffff' : 'rgba(0, 0, 0, 0.04)' },
+          }}
+        >
+          Recare List
+        </Button>
+        <Button 
+          onClick={() => setView('month-to-day')}
+          sx={{ 
+            backgroundColor: view === 'month-to-day' ? '#ffffff' : 'transparent',
+            color: view === 'month-to-day' ? '#1e293b' : '#64748b',
+            textTransform: 'none',
+            borderRadius: '20px',
+            px: 3,
+            py: 0.5,
+            fontWeight: 600,
+            boxShadow: view === 'month-to-day' ? '0px 1px 3px rgba(0,0,0,0.1)' : 'none',
+            '&:hover': { backgroundColor: view === 'month-to-day' ? '#ffffff' : 'rgba(0, 0, 0, 0.04)' },
+          }}
+        >
+          Month-to-day
+        </Button>
+        <Button 
+          onClick={() => setView('monthly')}
+          sx={{ 
+            backgroundColor: view === 'monthly' ? '#ffffff' : 'transparent',
+            color: view === 'monthly' ? '#1e293b' : '#64748b',
+            textTransform: 'none',
+            borderRadius: '20px',
+            px: 3,
+            py: 0.5,
+            fontWeight: 600,
+            boxShadow: view === 'monthly' ? '0px 1px 3px rgba(0,0,0,0.1)' : 'none',
+            '&:hover': { backgroundColor: view === 'monthly' ? '#ffffff' : 'rgba(0, 0, 0, 0.04)' },
+          }}
+        >
+          Monthly
+        </Button>
       </Box>
 
       {/* Content Area */}

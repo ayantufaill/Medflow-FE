@@ -1,262 +1,89 @@
-import {
-  Box, Typography, TextField, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, InputAdornment,
-  Grid, Select, MenuItem, IconButton, Button
-} from "@mui/material";
-import { 
-  InfoOutlined as InfoIcon, 
-  AddCircleOutline as AddIcon,
-  RemoveCircleOutline as RemoveIcon,
-  DeleteOutline as DeleteIcon,
-  Add as AddIconNew
-} from "@mui/icons-material";
-
-// Sample coverage data structure - Replace with API data when implemented
-const DEFAULT_COVERAGE = {
-  individual: {
-    unlimited: false,
-    annualMax: '$1,500.00',
-    usedAmount: '$158.00',
-    usedAmountDate: ''
-  },
-  family: {
-    unlimited: true,
-    annualMax: '',
-    usedAmount: '',
-    usedAmountDate: ''
-  },
-  ortho: {
-    annualMax: '$2,000.00',
-    usedAmount: '$18.00',
-    usedAmountDate: '03/03/2026'
-  },
-  categories: ['Diagnostic', 'Preventative', 'Major']
-};
+import React from 'react';
+import { Box, Typography } from "@mui/material";
+import { InfoOutlined as InfoIcon, GppGood as GppGoodIcon } from "@mui/icons-material";
+import AnnualMaximumsTable from './coverage-table/AnnualMaximumsTable';
+import FinalCoverageSection from './coverage-table/FinalCoverageSection';
 
 const CoverageTable = ({ 
   formData, 
   handleCoverageChange, 
   handleInputChange,
-  handleRemoveOrthoMax,
-  handleAddCategoryMax,
   headerStyle,
-  bodyCellStyle,
-  blueHeader,
-  ActionText,
   coverageCategoryData,
   setCoverageCategoryData
 }) => {
   return (
-    <Box>
-      <Typography sx={{ fontWeight: 700, mt: 2, color: "#333", fontSize: "0.85rem" }}>Coverage</Typography>
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 0 }}>
-        <Table size="small">
-          <TableHead sx={{ bgcolor: blueHeader }}>
-            <TableRow>
-              <TableCell sx={headerStyle}></TableCell>
-              <TableCell sx={headerStyle} align="center">Unlimited</TableCell>
-              <TableCell sx={headerStyle}>Annual Max</TableCell>
-              <TableCell sx={headerStyle}>Used Amount</TableCell>
-              <TableCell sx={{ ...headerStyle, borderRight: 0 }}>Used Amount up-to date</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* Individual Row */}
-            <TableRow>
-              <TableCell sx={{ ...bodyCellStyle, fontWeight: 600, width: '20%' }}>Individual</TableCell>
-              <TableCell align="center" sx={bodyCellStyle}>
-                <Checkbox 
-                  size="small" 
-                  checked={formData.coverage.individual.unlimited}
-                  onChange={(e) => handleCoverageChange('individual', 'unlimited', e.target.checked)}
-                />
-              </TableCell>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                    <TextField 
-                      size="small" 
-                      disabled={formData.coverage.individual.unlimited}
-                      value={formData.coverage.individual.unlimited ? '' : formData.coverage.individual.annualMax}
-                      placeholder={formData.coverage.individual.unlimited ? 'Unlimited' : ''}
-                      onChange={(e) => handleCoverageChange('individual', 'annualMax', e.target.value)}
-                      sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                    />
-                </Box>
-              </TableCell>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                    <TextField 
-                      size="small" 
-                      value={formData.coverage.individual.usedAmount}
-                      onChange={(e) => handleCoverageChange('individual', 'usedAmount', e.target.value)}
-                      sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                    />
-                  </Box>
-                  <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', mr: 1 }} />
-                </Box>
-              </TableCell>
-              <TableCell sx={{ ...bodyCellStyle, borderRight: 0 }}>
-                <TextField 
-                  size="small" 
-                  type="date"
-                  value={formData.coverage.individual.usedAmountDate || ''}
-                  onChange={(e) => handleCoverageChange('individual', 'usedAmountDate', e.target.value)}
-                  sx={{ '& input': { py: 0.15, fontSize: '0.65rem', border: 'none' }, width: '100px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                />
-              </TableCell>
-            </TableRow>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Card 1: Coverage */}
+      <Box sx={{ 
+        border: '1px solid #DFE5EC', 
+        borderRadius: '12px', 
+        backgroundColor: '#FFFFFF', 
+        display: 'flex', 
+        flexDirection: 'column',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', px: 3, py: 2, borderBottom: '1px solid #DFE5EC' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
+              <GppGoodIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "1rem", mb: 0.1, letterSpacing: '-0.3px' }}>
+                Coverage
+              </Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                Annual maximums and usage to date
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+          </Box>
+        </Box>
+        <AnnualMaximumsTable 
+          formData={formData} 
+          handleCoverageChange={handleCoverageChange} 
+          handleInputChange={handleInputChange} 
+          headerStyle={headerStyle} 
+        />
+      </Box>
 
-            {/* Family Row */}
-            <TableRow>
-              <TableCell sx={{ ...bodyCellStyle, fontWeight: 600 }}>Family</TableCell>
-              <TableCell align="center" sx={bodyCellStyle}>
-                <Checkbox 
-                  size="small" 
-                  checked={formData.coverage.family.unlimited}
-                  onChange={(e) => handleCoverageChange('family', 'unlimited', e.target.checked)}
-                />
-              </TableCell>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                  <TextField 
-                    size="small" 
-                    disabled={formData.coverage.family.unlimited}
-                    value={formData.coverage.family.unlimited ? '' : formData.coverage.family.annualMax}
-                    placeholder={formData.coverage.family.unlimited ? 'Unlimited' : ''}
-                    onChange={(e) => handleCoverageChange('family', 'annualMax', e.target.value)}
-                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                  />
-                </Box>
-              </TableCell>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                  <TextField 
-                    size="small" 
-                    value={formData.coverage.family.usedAmount}
-                    onChange={(e) => handleCoverageChange('family', 'usedAmount', e.target.value)}
-                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                  />
-                </Box>
-              </TableCell>
-              <TableCell sx={{ ...bodyCellStyle, borderRight: 0 }}>
-                <TextField 
-                  size="small" 
-                  type="date"
-                  value={formData.coverage.family.usedAmountDate || ''}
-                  onChange={(e) => handleCoverageChange('family', 'usedAmountDate', e.target.value)}
-                  sx={{ '& input': { py: 0.15, fontSize: '0.65rem', border: 'none' }, width: '100px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                />
-              </TableCell>
-            </TableRow>
-
-            {/* Ortho Row */}
-            <TableRow>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Ortho</Typography>
-                  {formData.coverage.ortho.annualMax && (
-                    <ActionText icon={RemoveIcon} text="Remove Max" color="#9e9e9e" onClick={handleRemoveOrthoMax} />
-                  )}
-                </Box>
-              </TableCell>
-              <TableCell align="center" sx={bodyCellStyle}>
-                <Checkbox 
-                  size="small" 
-                  checked={formData.coverage.ortho?.unlimited || false}
-                  onChange={(e) => handleCoverageChange('ortho', 'unlimited', e.target.checked)}
-                />
-              </TableCell>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                  <TextField 
-                    size="small" 
-                    disabled={formData.coverage.ortho?.unlimited}
-                    value={formData.coverage.ortho?.unlimited ? '' : formData.coverage.ortho.annualMax}
-                    placeholder={formData.coverage.ortho?.unlimited ? 'Unlimited' : ''}
-                    onChange={(e) => handleCoverageChange('ortho', 'annualMax', e.target.value)}
-                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                  />
-                </Box>
-              </TableCell>
-              <TableCell sx={bodyCellStyle}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                  <TextField 
-                    size="small" 
-                    value={formData.coverage.ortho.usedAmount}
-                    onChange={(e) => handleCoverageChange('ortho', 'usedAmount', e.target.value)}
-                    sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '70px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                  />
-                </Box>
-              </TableCell>
-              <TableCell sx={{ ...bodyCellStyle, borderRight: 0 }}>
-                <TextField 
-                  size="small" 
-                  type="date"
-                  value={formData.coverage.ortho.usedAmountDate || ''}
-                  onChange={(e) => handleCoverageChange('ortho', 'usedAmountDate', e.target.value)}
-                  sx={{ '& input': { py: 0.15, fontSize: '0.65rem', border: 'none' }, width: '100px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                />
-              </TableCell>
-            </TableRow>
-
-            {/* Category Rows with Add Max */}
-            {formData.coverage.categories.map((label) => {
-              const catKey = label.toLowerCase();
-              return (
-                <TableRow key={label}>
-                  <TableCell sx={bodyCellStyle}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{label}</Typography>
-                      {(!formData.coverage[catKey] || !formData.coverage[catKey].annualMax) && (
-                        <ActionText icon={AddIcon} text="Add Max" onClick={() => handleAddCategoryMax(label)} />
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center" sx={bodyCellStyle}>
-                    <Checkbox 
-                      size="small" 
-                      checked={formData.coverage[catKey]?.unlimited || false}
-                      onChange={(e) => handleCoverageChange(catKey, 'unlimited', e.target.checked)}
-                    />
-                  </TableCell>
-                  <TableCell sx={bodyCellStyle}>
-                    {formData.coverage[catKey]?.annualMax !== undefined ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography sx={{ fontSize: '0.7rem', ml: 1, mr: -0.5 }}>$</Typography>
-                        <TextField 
-                          size="small" 
-                          disabled={formData.coverage[catKey]?.unlimited}
-                          placeholder={formData.coverage[catKey]?.unlimited ? 'Unlimited' : '-'}
-                          value={formData.coverage[catKey]?.unlimited ? '' : formData.coverage[catKey].annualMax}
-                          onChange={(e) => handleCoverageChange(catKey, 'annualMax', e.target.value)}
-                          sx={{ '& input': { py: 0.15, fontSize: '0.7rem', border: 'none' }, width: '80px', '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }} 
-                        />
-                      </Box>
-                    ) : null}
-                  </TableCell>
-                  <TableCell sx={{ ...bodyCellStyle, textAlign: 'center', color: '#999' }}>—</TableCell>
-                  <TableCell sx={{ ...bodyCellStyle, borderRight: 0, textAlign: 'center', color: '#999' }}>—</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <FormControlLabel 
-        sx={{ mt: 1.5 }}
-        control={<Checkbox size="small" checked={formData.honorWriteOff} onChange={(e) => handleInputChange('honorWriteOff', e.target.checked)} />} 
-        label={<Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem' }}>Honor Write Off (When Limitation Reached for In-Network Providers Only) <InfoIcon sx={{ fontSize: 10 }} /></Typography>} 
-      />
-
-      {/* Final Coverage Section */}
-      <FinalCoverageSection coverageData={coverageCategoryData} setCoverageData={setCoverageCategoryData} />
+      {/* Card 2: Coverage Table */}
+      <Box sx={{ 
+        border: '1px solid #DFE5EC', 
+        borderRadius: '12px', 
+        backgroundColor: '#FFFFFF', 
+        display: 'flex', 
+        flexDirection: 'column',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', px: 3, py: 2, borderBottom: '1px solid #DFE5EC' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
+              <InfoIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "1rem", mb: 0.1, letterSpacing: '-0.3px' }}>
+                Coverage Table
+              </Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                Per-category coverage % and waiting periods
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ py: 2.5, px: 3 }}>
+          <FinalCoverageSection coverageData={coverageCategoryData} setCoverageData={setCoverageCategoryData} />
+        </Box>
+      </Box>
     </Box>
   );
 };

@@ -1,28 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box,
-  Typography,
-  Grid,
-  Select,
-  MenuItem,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  Checkbox,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
-  Tooltip,
-  CircularProgress,
+  Box, Typography, Grid, Select, MenuItem, Radio, RadioGroup,
+  FormControlLabel, Checkbox, Button, TextField, Tooltip, TableCell, TableRow
 } from '@mui/material';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import PrintIcon from '@mui/icons-material/Print';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { reportingService } from '../../../../services/reporting.service';
@@ -475,402 +455,149 @@ const AdjustmentReport = () => {
     printWindow.close();
   };
 
-  return (
-    <Box sx={{ p: 0, position: 'relative' }}>
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
-          <CircularProgress size={30} />
+  const columns = [
+    { label: 'Date' },
+    { label: 'Flags' },
+    { label: 'Patient' },
+    { label: 'Transaction #' },
+    { label: 'ADA' },
+    { label: 'Site' },
+    { label: 'Description' },
+    { label: <React.Fragment key="rendering">Rendering Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></React.Fragment> },
+    { label: <React.Fragment key="billing">Billing Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></React.Fragment> },
+    { label: 'Adj', align: 'right' },
+    { label: 'Adjustment Type' },
+  ];
+
+  const renderRow = (row, idx) => (
+    <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5 } }}>
+      <TableCell>{row.date}</TableCell>
+      <TableCell>
+        <Box sx={{ display: 'flex', gap: 0.2 }}>
+          {row.flags.map((color, i) => (
+            <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
+          ))}
         </Box>
-      )}
+      </TableCell>
+      <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient}</TableCell>
+      <TableCell>{row.transaction}</TableCell>
+      <TableCell>{row.ada}</TableCell>
+      <TableCell>{row.site}</TableCell>
+      <TableCell>{row.description}</TableCell>
+      <TableCell>{row.rendering}</TableCell>
+      <TableCell>{row.billing}</TableCell>
+      <TableCell align="right" sx={{ fontWeight: 600 }}>-${Math.abs(row.adj).toFixed(2)}</TableCell>
+      <TableCell>{row.type}</TableCell>
+    </TableRow>
+  );
 
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
-          Adjustment Report:
-        </Typography>
-        <Tooltip title="Adjustment Details">
-          <InfoOutlinedIcon sx={{ fontSize: 18, ml: 1, color: 'text.secondary', cursor: 'pointer' }} />
-        </Tooltip>
-      </Box>
-
-      {/* Filters Section */}
-      <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
-            <Select 
-              size="small" 
-              value={dateRange} 
-              onChange={handleFilterModeChange} 
-              sx={{ minWidth: 140, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="daily">Daily</MenuItem>
-              <MenuItem value="range">Range</MenuItem>
-              <MenuItem value="this_week">This Week</MenuItem>
-              <MenuItem value="this_month">This Month</MenuItem>
-              <MenuItem value="last_7_days">Last 7 days</MenuItem>
-              <MenuItem value="last_week">Last Week</MenuItem>
-              <MenuItem value="last_4_weeks">Last 4 Weeks</MenuItem>
-              <MenuItem value="last_month">Last Month</MenuItem>
-              <MenuItem value="last_3_months">Last 3 Months</MenuItem>
-              <MenuItem value="last_12_months">Last 12 Months</MenuItem>
-              <MenuItem value="month_to_date">Month to date</MenuItem>
-              <MenuItem value="quarter_to_date">Quarter to date</MenuItem>
-              <MenuItem value="year_to_date">Year to date</MenuItem>
-              <MenuItem value="last_year">Last Year</MenuItem>
-            </Select>
-          </Grid>
-          <Grid item sx={{ display: 'flex', gap: 2 }}>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Start Date:
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-              />
-            </Typography>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              End Date:
-              <input 
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-              />
-            </Typography>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Grid item sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Provider:</Typography>
-            <Select 
-              size="small" 
-              value={provider} 
-              onChange={(e) => setProvider(e.target.value)} 
-              sx={{ minWidth: 140, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="all">Provider: All</MenuItem>
-              {dropdownProviders.map((p) => (
-                <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                  {getProviderLabel(p)}
-                </MenuItem>
-              ))}
-            </Select>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Grid item sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Adjustment Type:</Typography>
-            <Select 
-              size="small" 
-              value={adjustmentType} 
-              onChange={(e) => setAdjustmentType(e.target.value)} 
-              sx={{ minWidth: 160, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="all">All Types</MenuItem>
-              {adjustmentTypes.map((t) => (
-                <MenuItem key={t.id || t._id} value={t.name || t.itemName || t.type || t}>
-                  {t.name || t.itemName || t.type || t}
-                </MenuItem>
-              ))}
-            </Select>
-          </Grid>
-          <Grid item>
-            <RadioGroup row value={grouping} onChange={(e) => setGrouping(e.target.value)}>
-              <FormControlLabel value="no-grouping" control={<Radio size="small" />} label={<Typography variant="caption">No Grouping</Typography>} />
-              <FormControlLabel value="group-provider" control={<Radio size="small" />} label={<Typography variant="caption">Group By Provider</Typography>} />
-              <FormControlLabel value="group-adj" control={<Radio size="small" />} label={<Typography variant="caption">Group By Adjustment</Typography>} />
-            </RadioGroup>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={4} sx={{ mb: 1 }}>
-          <Grid item>
-            <RadioGroup row value={codeFilter} onChange={(e) => setCodeFilter(e.target.value)}>
-              <FormControlLabel value="filter" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ borderBottom: '1px solid' }}>Filter Codes</Typography>} />
-              <FormControlLabel value="exclude" control={<Radio size="small" />} label={<Typography variant="caption">Enter Codes to Exclude</Typography>} />
-            </RadioGroup>
-            <Box sx={{ mt: 0.5 }}>
-              <TextField 
-                size="small" 
-                placeholder="Enter code, patient name, notes" 
-                value={codeText}
-                onChange={(e) => setCodeText(e.target.value)}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }} 
-              />
-            </Box>
-          </Grid>
-        </Grid>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-          <FormControlLabel control={<Checkbox size="small" checked={filterByProductionDate} onChange={(e) => setFilterByProductionDate(e.target.checked)} />} label={<Typography variant="caption">Filter by Production Date</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />} label={<Typography variant="caption">Show Flags in Report</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" checked={showDOB} onChange={(e) => setShowDOB(e.target.checked)} />} label={<Typography variant="caption">Show Date of Birth</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" checked={showProviderColumn} onChange={(e) => setShowProviderColumn(e.target.checked)} />} label={<Typography variant="caption">Show Provider</Typography>} />
-          <FormControlLabel control={<Checkbox size="small" checked={filterByDOS} onChange={(e) => setFilterByDOS(e.target.checked)} />} label={<Typography variant="caption">Filter by DOS</Typography>} />
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Select size="small" value={flagFilter} onChange={(e) => setFlagFilter(e.target.value)} sx={{ minWidth: 180, fontSize: '0.75rem' }}>
-              <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
-              <MenuItem value="with_flags">Pts With Flags Only</MenuItem>
-              <MenuItem value="without_flags">Pts Without Flags Only</MenuItem>
-            </Select>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-              <Select size="small" value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ minWidth: 120, fontSize: '0.75rem' }}>
-                <MenuItem value="default">Default</MenuItem>
-                <MenuItem value="date_asc">Date: Ascending</MenuItem>
-                <MenuItem value="date_desc">Date: Descending</MenuItem>
-                <MenuItem value="amount_desc">Amount: High to Low</MenuItem>
-                <MenuItem value="patient">Patient Name</MenuItem>
-              </Select>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" size="small" onClick={fetchData} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
-            <Button variant="contained" size="small" disabled sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      {grouping === 'no-grouping' && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-          <Button variant="contained" size="small" onClick={handleExportCSV} startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Export as CSV</Button>
-          <Button variant="contained" size="small" onClick={handlePrint} startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
-        </Box>
-      )}
-
-      {/* Table Section */}
-      {sortedReportData.length === 0 ? (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id="adjustment-report-table">
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' } }}>
-                <TableCell>Date</TableCell>
-                {showFlags && <TableCell>Flags</TableCell>}
-                <TableCell>Patient</TableCell>
-                <TableCell>Transaction #</TableCell>
-                <TableCell>ADA</TableCell>
-                <TableCell>Site</TableCell>
-                <TableCell>Description</TableCell>
-                {showProviderColumn && (
-                  <>
-                    <TableCell>Rendering Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></TableCell>
-                    <TableCell>Billing Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></TableCell>
-                  </>
-                )}
-                <TableCell align="right">Adj</TableCell>
-                <TableCell>Adjustment Type</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell colSpan={showProviderColumn ? (showFlags ? 11 : 10) : (showFlags ? 9 : 8)} align="center" sx={{ py: 3, color: 'text.secondary', fontSize: '0.75rem' }}>
-                  No records found matching current criteria.
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : grouping !== 'no-grouping' && groupedData ? (
-        <Box id="adjustment-report-table">
-          {Object.entries(groupedData).map(([groupName, groupRows]) => {
-            const subtotal = groupRows.reduce((sum, r) => sum + (typeof r.amount !== 'undefined' ? r.amount : (r.adj ?? 0)), 0);
-            const subtotalFormatted = subtotal < 0 ? `-$${Math.abs(subtotal).toFixed(2)}` : `$${subtotal.toFixed(2)}`;
-
-            let colSpanCount = 7;
-            if (showFlags) colSpanCount += 1;
-            if (showProviderColumn) colSpanCount += 2;
-            const tableId = `adjustment-report-table-${groupName.replace(/\s+/g, '-')}`;
-
-            return (
-              <Box key={groupName} sx={{ mb: 4 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, px: 0.5 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                    {grouping === 'group-provider' ? 'Provider' : 'Adjustment Type'}: {groupName}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button 
-                      variant="outlined" 
-                      size="small" 
-                      onClick={() => handleExportGroupCSV(groupName, groupRows)} 
-                      startIcon={<FileDownloadIcon />} 
-                      sx={{ textTransform: 'none', py: 0.25, fontSize: '0.65rem', height: 24 }}
-                    >
-                      Export CSV
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      size="small" 
-                      onClick={() => handlePrintGroup(tableId, groupName)} 
-                      startIcon={<PrintIcon />} 
-                      sx={{ textTransform: 'none', py: 0.25, fontSize: '0.65rem', height: 24 }}
-                    >
-                      Print
-                    </Button>
-                  </Box>
-                </Box>
-                <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id={tableId}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' } }}>
-                        <TableCell>Date</TableCell>
-                        {showFlags && <TableCell>Flags</TableCell>}
-                        <TableCell>Patient</TableCell>
-                        <TableCell>Transaction #</TableCell>
-                        <TableCell>ADA</TableCell>
-                        <TableCell>Site</TableCell>
-                        <TableCell>Description</TableCell>
-                        {showProviderColumn && (
-                          <>
-                            <TableCell>Rendering Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></TableCell>
-                            <TableCell>Billing Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></TableCell>
-                          </>
-                        )}
-                        <TableCell align="right">Adj</TableCell>
-                        <TableCell>Adjustment Type</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {groupRows.map((row, idx) => {
-                        const display = getRowDisplayValues(row);
-                        return (
-                          <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5 } }}>
-                            <TableCell>{display.date}</TableCell>
-                            {showFlags && (
-                              <TableCell>
-                                <Box sx={{ display: 'flex', gap: 0.2 }}>
-                                  {display.flags.map((color, i) => (
-                                    <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                                  ))}
-                                </Box>
-                              </TableCell>
-                            )}
-                            <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>
-                              {display.patient}
-                              {showDOB && (
-                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 400 }}>
-                                  DOB: {display.dob}
-                                </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell>{display.transaction}</TableCell>
-                            <TableCell>{display.ada}</TableCell>
-                            <TableCell>{display.site}</TableCell>
-                            <TableCell>{display.description}</TableCell>
-                            {showProviderColumn && (
-                              <>
-                                <TableCell>{display.rendering}</TableCell>
-                                <TableCell>{display.billing}</TableCell>
-                              </>
-                            )}
-                            <TableCell align="right" sx={{ fontWeight: 600 }}>{display.adj}</TableCell>
-                            <TableCell>{display.type}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {/* Subtotal Row */}
-                      <TableRow sx={{ backgroundColor: '#fcfcfc', '& td': { fontWeight: 600, fontSize: '0.75rem', py: 0.75 } }}>
-                        <TableCell colSpan={colSpanCount - 1} align="right">Subtotal ({groupName}):</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>{subtotalFormatted}</TableCell>
-                        <TableCell />
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            );
-          })}
-        </Box>
-      ) : (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }} id="adjustment-report-table">
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' } }}>
-                <TableCell>Date</TableCell>
-                {showFlags && <TableCell>Flags</TableCell>}
-                <TableCell>Patient</TableCell>
-                <TableCell>Transaction #</TableCell>
-                <TableCell>ADA</TableCell>
-                <TableCell>Site</TableCell>
-                <TableCell>Description</TableCell>
-                {showProviderColumn && (
-                  <>
-                    <TableCell>Rendering Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></TableCell>
-                    <TableCell>Billing Provider <InfoOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} /></TableCell>
-                  </>
-                )}
-                <TableCell align="right">Adj</TableCell>
-                <TableCell>Adjustment Type</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedReportData.map((row, idx) => {
-                const display = getRowDisplayValues(row);
-                return (
-                  <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5 } }}>
-                    <TableCell>{display.date}</TableCell>
-                    {showFlags && (
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.2 }}>
-                          {display.flags.map((color, i) => (
-                            <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                          ))}
-                        </Box>
-                      </TableCell>
-                    )}
-                    <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>
-                      {display.patient}
-                      {showDOB && (
-                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 400 }}>
-                          DOB: {display.dob}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>{display.transaction}</TableCell>
-                    <TableCell>{display.ada}</TableCell>
-                    <TableCell>{display.site}</TableCell>
-                    <TableCell>{display.description}</TableCell>
-                    {showProviderColumn && (
-                      <>
-                        <TableCell>{display.rendering}</TableCell>
-                        <TableCell>{display.billing}</TableCell>
-                      </>
-                    )}
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>{display.adj}</TableCell>
-                    <TableCell>{display.type}</TableCell>
-                  </TableRow>
-                );
-              })}
-
-              {/* Grand Total Row */}
-              {sortedReportData.length > 0 && (() => {
-                const grandTotal = sortedReportData.reduce((sum, r) => sum + (typeof r.amount !== 'undefined' ? r.amount : (r.adj ?? 0)), 0);
-                const grandTotalFormatted = grandTotal < 0 ? `-$${Math.abs(grandTotal).toFixed(2)}` : `$${grandTotal.toFixed(2)}`;
-                
-                let colSpanCount = 7;
-                if (showFlags) colSpanCount += 1;
-                if (showProviderColumn) colSpanCount += 2;
-
-                return (
-                  <TableRow sx={{ backgroundColor: '#f5f5f5', '& td': { fontWeight: 700, fontSize: '0.75rem', py: 1 } }}>
-                    <TableCell colSpan={colSpanCount - 1} align="right">Total Outstanding Adjustment Amount:</TableCell>
-                    <TableCell align="right">{grandTotalFormatted}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                );
-              })()}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+  const Title = (
+    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      Adjustment Report
+      <Tooltip title="Adjustment Details">
+        <InfoOutlinedIcon sx={{ fontSize: 18, ml: 1, color: 'text.secondary', cursor: 'pointer' }} />
+      </Tooltip>
     </Box>
+  );
+
+  const topFilters = (
+    <>
+      <ReportSelect 
+        label="daily" 
+        prefix="Date Range:" 
+        defaultValue="daily"
+        options={[{ value: 'daily', label: 'Daily' }]}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
+        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      </Box>
+
+      <ReportSelect 
+        label="All" 
+        prefix="Provider:" 
+        defaultValue="All"
+        options={[{ value: 'All', label: 'Select Provider' }]}
+      />
+      
+      <ReportSelect 
+        label="all" 
+        prefix="Adjustment Type:" 
+        defaultValue="all"
+        options={[{ value: 'all', label: 'All' }]}
+      />
+
+      <RadioGroup row defaultValue="no-grouping" sx={{ ml: 2 }}>
+        <FormControlLabel value="no-grouping" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>No Grouping</Typography>} />
+        <FormControlLabel value="group-provider" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Group By Provider</Typography>} />
+        <FormControlLabel value="group-adj" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Group By Adjustment</Typography>} />
+      </RadioGroup>
+    </>
+  );
+
+  const bottomFilters = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+        <RadioGroup row defaultValue="filter">
+          <FormControlLabel value="filter" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter Codes</Typography>} />
+          <FormControlLabel value="exclude" control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Enter Codes to Exclude</Typography>} />
+        </RadioGroup>
+        <TextField 
+          size="small" 
+          variant="outlined"
+          placeholder="Enter code or procedure" 
+          sx={{ width: 220, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.75rem', backgroundColor: '#fff' } }} 
+        />
+      </Box>
+
+      <ReportCheckbox label="Filter by Production Date" />
+      <ReportCheckbox label="Show Flags in Report" defaultChecked />
+      <ReportCheckbox label="Show Date of Birth" defaultChecked />
+      <ReportCheckbox label="Show Provider" defaultChecked />
+      <ReportCheckbox label="Filter by DOS" />
+
+      <ReportSelect 
+        label="pts" 
+        defaultValue="pts"
+        options={[{ value: 'pts', label: 'Pts With Or Without Flags' }]}
+        sx={{ ml: 2 }}
+      />
+      <ReportSelect 
+        label="default" 
+        prefix="Sort Report By:" 
+        defaultValue="default"
+        options={[{ value: 'default', label: 'Default' }]}
+      />
+    </>
+  );
+
+  return (
+    <ReportLayout title={Title}>
+      <ReportFilterBar 
+        topRowFilters={topFilters}
+        bottomRowFilters={bottomFilters}
+        onApplyFilters={() => console.log('Apply')}
+        onExportCsv={() => console.log('Exporting CSV...')}
+        onPrint={() => window.print()}
+        customLeftActions={
+          <Button variant="contained" size="small" sx={{ textTransform: 'none', backgroundColor: '#3CA2E0', '&:hover': { backgroundColor: '#2d8ac1' }, ml: 2 }}>
+            Create Template
+          </Button>
+        }
+      />
+
+      {/* Shared Data Table */}
+      <ReportDataTable 
+        columns={columns} 
+        data={dummyData} 
+        renderRow={renderRow} 
+      />
+    </ReportLayout>
   );
 };
 
 export default AdjustmentReport;
+

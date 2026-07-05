@@ -222,13 +222,14 @@ const ReferralByPatientReport = () => {
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   return (
-    <Box sx={{ p: 1, backgroundColor: '#fff', textAlign: 'left' }}>
-      <Typography 
-        variant="body2" 
-        sx={{ color: '#337ab7', fontWeight: 500, mb: 2, textDecoration: 'underline', cursor: 'pointer' }}
-      >
-        Referral By Patient:
-      </Typography>
+    <React.Fragment>
+      <ReportLayout title="Referral By Patient:">
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={() => alert('Exporting CSV...')}
+          onPrint={() => window.print()}
+        />
 
       {/* Filter Section */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
@@ -365,10 +366,10 @@ const ReferralByPatientReport = () => {
       <CreateTemplateDialog 
         open={templateDialogOpen} 
         onClose={() => setTemplateDialogOpen(false)} 
-        onSave={handleSaveTemplate} 
+        onSave={(name) => alert(`Template "${name}" saved!`)} 
       />
-    </Box>
+      </ReportLayout>
+    </React.Fragment>
   );
 };
-
 export default ReferralByPatientReport;
