@@ -30,6 +30,3 @@ dist-ssr
 *.sln
 *.sw?
 
-# Media files
-*.png
-*.svg
