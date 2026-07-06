@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Box, Checkbox, IconButton, TableCell, TableRow, TextField, Typography } from '@mui/material';
 import { MoreVert as MoreVertIcon } from '@mui/icons-material';
 import InitialsAvatar from '../../shared/InitialsAvatar';
@@ -25,7 +26,11 @@ const todayIsoDate = () => new Date().toISOString().split('T')[0];
 // Save/Cancel). `editingField`/`editValue` live in the parent page so a
 // double-click on one row's cell can only ever put that one cell into edit
 // mode at a time.
-const PatientRow = ({
+// Wrapped in React.memo because a patients table page can render dozens of
+// rows at once — the parent only gives the live editValue/editingField to
+// the one row actually being edited (everything else gets stable `null`/''),
+// so memo lets typing in one cell skip re-rendering every other row.
+const PatientRow = memo(function PatientRow({
   patient,
   isSelected,
   editingField,
@@ -39,7 +44,7 @@ const PatientRow = ({
   onNameSave,
   onInlineCancel,
   onActionMenuOpen,
-}) => {
+}) {
   const patientId = patient._id || patient.id;
 
   // True when this row's given column is the one currently being edited —
@@ -55,7 +60,7 @@ const PatientRow = ({
         cursor: 'pointer',
         bgcolor: patient.isActive === false ? COLORS.SURFACE_INPUT : 'inherit',
         '& .MuiTableCell-body': {
-          py: '10px',
+          py: '6px',
           fontFamily: 'Inter',
           fontSize: fontSize.md,
           color: patient.isActive === false ? COLORS.TEXT_MUTED : COLORS.TEXT_BODY,
@@ -210,6 +215,6 @@ const PatientRow = ({
       </TableCell>
     </TableRow>
   );
-};
+});
 
 export default PatientRow;
