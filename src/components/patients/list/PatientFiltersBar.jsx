@@ -16,6 +16,31 @@ const pillSelectSx = {
   '& .MuiSelect-select': { py: '8px' },
 };
 
+// The dropdown popup MUI renders for a Select is a separate Paper/Menu that
+// doesn't inherit the pill's rounded styling by default — this gives it the
+// same rounded-card treatment used by the other popovers/menus in the app
+// (see the slot-options Popover in OperatorySchedulePage.jsx).
+const pillSelectMenuProps = {
+  PaperProps: {
+    sx: {
+      mt: '4px',
+      borderRadius: radius.md,
+      border: `1px solid ${COLORS.BORDER}`,
+      boxShadow: '0px 4px 20px rgba(0,0,0,0.12)',
+      '& .MuiMenuItem-root': {
+        fontFamily: 'Inter',
+        fontSize: fontSize.md,
+        color: COLORS.TEXT_BODY,
+        '&.Mui-selected': {
+          backgroundColor: COLORS.ACCENT_BG,
+          '&:hover': { backgroundColor: COLORS.ACCENT_BG },
+        },
+        '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
+      },
+    },
+  },
+};
+
 // Row 2 of PatientsListPage: Status / Gender / Provider filters, Sort By Name,
 // and the Refresh / Reset-filters icon buttons.
 const PatientFiltersBar = ({
@@ -33,20 +58,20 @@ const PatientFiltersBar = ({
   onResetFilters,
 }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mb: '14px', flexWrap: 'wrap' }}>
-    <Select value={statusFilter} displayEmpty onChange={(e) => onStatusFilterChange(e.target.value)} sx={pillSelectSx}>
+    <Select value={statusFilter} displayEmpty onChange={(e) => onStatusFilterChange(e.target.value)} sx={pillSelectSx} MenuProps={pillSelectMenuProps}>
       <MenuItem value="">All Status</MenuItem>
       <MenuItem value="active">Active</MenuItem>
       <MenuItem value="inactive">Inactive</MenuItem>
     </Select>
 
-    <Select value={genderFilter} displayEmpty onChange={(e) => onGenderFilterChange(e.target.value)} sx={pillSelectSx}>
+    <Select value={genderFilter} displayEmpty onChange={(e) => onGenderFilterChange(e.target.value)} sx={pillSelectSx} MenuProps={pillSelectMenuProps}>
       <MenuItem value="">All Gender</MenuItem>
       <MenuItem value="male">Male</MenuItem>
       <MenuItem value="female">Female</MenuItem>
       <MenuItem value="unknown">Unknown</MenuItem>
     </Select>
 
-    <Select value={providerFilter} displayEmpty onChange={(e) => onProviderFilterChange(e.target.value)} sx={{ ...pillSelectSx, minWidth: 170 }}>
+    <Select value={providerFilter} displayEmpty onChange={(e) => onProviderFilterChange(e.target.value)} sx={{ ...pillSelectSx, minWidth: 170 }} MenuProps={pillSelectMenuProps}>
       <MenuItem value="">All Providers</MenuItem>
       {providerList.map((p) => {
         const u = p.userId || p;
