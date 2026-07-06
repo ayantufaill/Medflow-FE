@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -13,14 +12,12 @@ import {
   TableRow,
   TablePagination,
   TextField,
+  Select,
   IconButton,
-  Chip,
   Button,
   Alert,
   CircularProgress,
-  InputAdornment,
   Tooltip,
-  Avatar,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -29,7 +26,6 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import {
-  Edit as EditIcon,
   Search as SearchIcon,
   PersonAdd as PersonAddIcon,
   Upload as UploadIcon,
@@ -40,7 +36,6 @@ import {
   Clear as ClearIcon,
   FilterAltOff,
   Info as InfoIcon,
-  Event as CalendarIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
@@ -49,6 +44,39 @@ import { patientService } from '../../services/patient.service';
 import { usePatients } from '../../hooks/redux/usePatient';
 import { useProviders } from '../../hooks/queries/useProviders';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import InitialsAvatar from '../../components/shared/InitialsAvatar';
+import { COLORS } from '../../constants/colors';
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+
+// Rounded pill Select used for the Status / Gender / Provider filters —
+// same shape as the operatory Select in AppointmentRightPanel.jsx.
+const pillSelectSx = {
+  minWidth: 140,
+  height: '36px',
+  fontFamily: 'Inter',
+  fontSize: fontSize.md,
+  color: COLORS.TEXT_BODY,
+  backgroundColor: COLORS.SURFACE_CARD,
+  borderRadius: radius.md,
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+  '& .MuiSelect-select': { py: '8px' },
+};
+
+const StatusPill = ({ active }) => (
+  <Box sx={{
+    display: 'inline-flex', alignItems: 'center', gap: '6px',
+    px: '10px', py: '3px', borderRadius: radius.pill,
+    backgroundColor: active ? 'rgba(22, 163, 74, 0.10)' : COLORS.SURFACE_INPUT,
+  }}>
+    <Box sx={{
+      width: '6px', height: '6px', borderRadius: '50%',
+      backgroundColor: active ? COLORS.STATUS_SUCCESS : COLORS.TEXT_MUTED,
+    }} />
+    <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: active ? COLORS.STATUS_SUCCESS : COLORS.TEXT_MUTED }}>
+      {active ? 'Active' : 'Inactive'}
+    </Typography>
+  </Box>
+);
 
 const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const navigate = useNavigate();
@@ -417,76 +445,149 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const totalPatients = pagination?.total || 0;
 
   return (
-    <Box>
+    <Box sx={{ backgroundColor: COLORS.SURFACE_PAGE, p: embedded ? 0 : '16px' }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        {/* Row 1: Search + Action buttons (reference layout) */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-          <TextField
-            placeholder="Search Patient"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            size="small"
-            sx={{ flex: '1 1 280px', maxWidth: 480 }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  {loading && search ? (
-                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                  ) : null}
-                  {search ? (
-                    <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
-                      <ClearIcon />
-                    </IconButton>
-                  ) : (
-                    <SearchIcon color="action" />
-                  )}
-                </InputAdornment>
-              ),
-            }}
-          />
+      <Box sx={{
+        backgroundColor: COLORS.SURFACE_CARD,
+        borderRadius: radius.lg,
+        border: `1px solid ${COLORS.BORDER}`,
+        p: '16px',
+      }}>
+        {/* Row 1: Search + Action buttons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mb: '14px', flexWrap: 'wrap' }}>
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            flex: '1 1 280px', maxWidth: 420,
+            backgroundColor: COLORS.SURFACE_INPUT,
+            borderRadius: radius.md,
+            px: '10px', py: '7px',
+            border: '1.5px solid transparent',
+            '&:focus-within': { borderColor: COLORS.ACCENT },
+          }}>
+            <SearchIcon sx={{ fontSize: '16px', color: COLORS.TEXT_MUTED, flexShrink: 0 }} />
+            <Box
+              component="input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Patient Name"
+              sx={{
+                flex: 1, border: 'none', outline: 'none',
+                backgroundColor: 'transparent',
+                fontFamily: 'Inter', fontSize: fontSize.md, color: COLORS.TEXT_BODY,
+                '&::placeholder': { color: COLORS.TEXT_MUTED },
+              }}
+            />
+            {loading && search ? (
+              <CircularProgress size={16} sx={{ color: COLORS.ACCENT, flexShrink: 0 }} />
+            ) : search ? (
+              <IconButton size="small" onClick={() => setSearch('')} aria-label="clear" sx={{ p: '2px' }}>
+                <ClearIcon sx={{ fontSize: '16px' }} />
+              </IconButton>
+            ) : null}
+          </Box>
           <Tooltip title="Search help">
-            <IconButton size="small" color="info"><InfoIcon /></IconButton>
+            <IconButton size="small" sx={{ color: COLORS.TEXT_MUTED }}><InfoIcon fontSize="small" /></IconButton>
           </Tooltip>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
-            <Button
-              startIcon={<CalendarIcon />}
-              onClick={() => navigate('/appointments/operatory-schedule')}
-            >
-            </Button>
+
+          <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', ml: 'auto', alignItems: 'center' }}>
+            <Checkbox
+              size="small"
+              indeterminate={selectedIds.length > 0 && selectedIds.length < displayPatients.length}
+              checked={displayPatients.length > 0 && selectedIds.length === displayPatients.length}
+              onChange={handleSelectAll}
+            />
             <Button
               variant="contained"
-              color="warning"
-              startIcon={<PersonAddIcon />}
+              disableElevation
+              startIcon={<PersonAddIcon sx={{ fontSize: '16px' }} />}
               onClick={() => navigate('/patients/new')}
+              sx={{
+                backgroundColor: COLORS.ACCENT, textTransform: 'none', borderRadius: radius.md,
+                fontFamily: 'Inter', fontSize: fontSize.base, fontWeight: fontWeight.semibold,
+                '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+              }}
             >
               Add Patient
             </Button>
             <Button
               variant="contained"
-              color="warning"
-              startIcon={<UploadIcon />}
+              disableElevation
+              startIcon={<UploadIcon sx={{ fontSize: '16px' }} />}
               onClick={handleImportPatient}
+              sx={{
+                backgroundColor: COLORS.ACCENT, textTransform: 'none', borderRadius: radius.md,
+                fontFamily: 'Inter', fontSize: fontSize.base, fontWeight: fontWeight.semibold,
+                '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+              }}
             >
               Import Patient
             </Button>
             <Button
               variant="contained"
-              color="error"
-              startIcon={<PersonOffIcon />}
+              disableElevation
+              startIcon={<PersonOffIcon sx={{ fontSize: '16px' }} />}
               disabled={selectedIds.length === 0}
               onClick={handleDeactivateSelected}
+              sx={{
+                backgroundColor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_MUTED,
+                textTransform: 'none', borderRadius: radius.md,
+                fontFamily: 'Inter', fontSize: fontSize.base, fontWeight: fontWeight.semibold,
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: COLORS.SURFACE_INPUT, boxShadow: 'none' },
+                '&.Mui-disabled': { backgroundColor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_MUTED },
+              }}
             >
               Deactivate Patient(s)
             </Button>
           </Box>
         </Box>
 
-        {/* Row 2: Filter checkboxes and Dropdowns */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+        {/* Row 2: Filter dropdowns + Sort By Name + Refresh/Filter icons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mb: '14px', flexWrap: 'wrap' }}>
+          <Select
+            value={statusFilter}
+            displayEmpty
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+            sx={pillSelectSx}
+          >
+            <MenuItem value="">All Status</MenuItem>
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="inactive">Inactive</MenuItem>
+          </Select>
+
+          <Select
+            value={genderFilter}
+            displayEmpty
+            onChange={(e) => { setGenderFilter(e.target.value); setPage(0); }}
+            sx={pillSelectSx}
+          >
+            <MenuItem value="">All Gender</MenuItem>
+            <MenuItem value="male">Male</MenuItem>
+            <MenuItem value="female">Female</MenuItem>
+            <MenuItem value="unknown">Unknown</MenuItem>
+          </Select>
+
+          <Select
+            value={providerFilter}
+            displayEmpty
+            onChange={(e) => { setProviderFilter(e.target.value); setPage(0); }}
+            sx={{ ...pillSelectSx, minWidth: 170 }}
+          >
+            <MenuItem value="">All Providers</MenuItem>
+            {providerList.map((p) => {
+              const u = p.userId || p;
+              const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || p.providerCode || `Provider ${p._id}`;
+              return (
+                <MenuItem key={p._id} value={p._id}>
+                  {name}
+                </MenuItem>
+              );
+            })}
+          </Select>
+
           <FormControlLabel
             control={
               <Checkbox
@@ -496,76 +597,19 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               />
             }
             label="Sort By Name"
+            sx={{ '& .MuiFormControlLabel-label': { fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_BODY } }}
           />
 
-          <TextField
-            select
-            label="Status"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-            size="small"
-            sx={{ minWidth: 120 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </TextField>
-
-          <TextField
-            select
-            label="Gender"
-            value={genderFilter}
-            onChange={(e) => {
-              setGenderFilter(e.target.value);
-              setPage(0);
-            }}
-            size="small"
-            sx={{ minWidth: 120 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">All Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="unknown">Unknown</option>
-          </TextField>
-
-          <TextField
-            select
-            label="Provider"
-            value={providerFilter}
-            onChange={(e) => {
-              setProviderFilter(e.target.value);
-              setPage(0);
-            }}
-            size="small"
-            sx={{ minWidth: 150 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">All Providers</option>
-            {providerList.map((p) => {
-              const u = p.userId || p;
-              const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || p.providerCode || `Provider ${p._id}`;
-              return (
-                <option key={p._id} value={p._id}>
-                  {name}
-                </option>
-              );
-            })}
-          </TextField>
-
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 'auto' }}>
+          <Box sx={{ display: 'flex', gap: '4px', alignItems: 'center', ml: 'auto' }}>
             <Tooltip title="Refresh">
-              <IconButton size="small" onClick={handleRefresh} disabled={loading}><RefreshIcon /></IconButton>
+              <IconButton size="small" onClick={handleRefresh} disabled={loading} sx={{ color: COLORS.TEXT_MUTED }}>
+                <RefreshIcon fontSize="small" />
+              </IconButton>
             </Tooltip>
             <Tooltip title="Reset Filters">
-              <IconButton size="small" onClick={handleResetFilters}><FilterAltOff /></IconButton>
+              <IconButton size="small" onClick={handleResetFilters} sx={{ color: COLORS.TEXT_MUTED }}>
+                <FilterAltOff fontSize="small" />
+              </IconButton>
             </Tooltip>
           </Box>
         </Box>
@@ -583,7 +627,19 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' } }}>
+                    <TableRow sx={{
+                      '& .MuiTableCell-head': {
+                        py: '10px',
+                        fontFamily: 'Inter',
+                        fontSize: fontSize.sm,
+                        fontWeight: fontWeight.semibold,
+                        color: COLORS.TEXT_MUTED,
+                        letterSpacing: '0.4px',
+                        textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
+                        borderBottom: `1px solid ${COLORS.BORDER}`,
+                      },
+                    }}>
                       <TableCell padding="checkbox">
                         <Checkbox
                           size="small"
@@ -600,7 +656,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                       <TableCell>Telephone Number</TableCell>
                       <TableCell>Sex</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell align="right">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -621,9 +677,14 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                             selected={isSelected}
                             sx={{
                               cursor: 'pointer',
-                              bgcolor: patient.isActive === false ? '#f5f5f5' : 'inherit',
-                              color: patient.isActive === false ? 'text.secondary' : 'inherit',
-                              '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' },
+                              bgcolor: patient.isActive === false ? COLORS.SURFACE_INPUT : 'inherit',
+                              '& .MuiTableCell-body': {
+                                py: '10px',
+                                fontFamily: 'Inter',
+                                fontSize: fontSize.md,
+                                color: patient.isActive === false ? COLORS.TEXT_MUTED : COLORS.TEXT_BODY,
+                                borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                              },
                               '& .editable-cell:hover': {
                                 bgcolor: 'action.hover',
                               }
@@ -679,11 +740,16 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                                   </IconButton>
                                 </Box>
                               ) : (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
-                                    {getPatientInitials(patient.firstName, patient.lastName)}
-                                  </Avatar>
-                                  <Typography fontSize="0.78rem">{patient.firstName} {patient.lastName}</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <InitialsAvatar
+                                    initials={getPatientInitials(patient.firstName, patient.lastName)}
+                                    size={26}
+                                    fontSize={11}
+                                    bg={COLORS.ACCENT}
+                                  />
+                                  <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.md, fontWeight: fontWeight.medium, color: COLORS.TEXT_PRIMARY }}>
+                                    {patient.firstName} {patient.lastName}
+                                  </Typography>
                                 </Box>
                               )}
                             </TableCell>
@@ -842,12 +908,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Chip
-                                size="small"
-                                label={patient.isActive !== false ? 'Active' : 'Inactive'}
-                                color={patient.isActive !== false ? 'success' : 'default'}
-                                sx={{ height: 18, fontSize: '0.68rem' }}
-                              />
+                              <StatusPill active={patient.isActive !== false} />
                             </TableCell>
                             <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                               <IconButton
@@ -874,10 +935,19 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               rowsPerPage={rowsPerPage}
               onRowsPerPageChange={handleChangeRowsPerPage}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Rows per page:"
+              sx={{
+                borderTop: `1px solid ${COLORS.BORDER}`,
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                  fontFamily: 'Inter', fontSize: fontSize.sm, color: COLORS.TEXT_MUTED,
+                  textTransform: 'uppercase', letterSpacing: '0.3px',
+                },
+                '& .MuiTablePagination-select': { fontFamily: 'Inter', fontSize: fontSize.sm },
+              }}
             />
           </>
         )}
-      </Paper>
+      </Box>
 
       <Menu
         anchorEl={actionMenu.anchorEl}
