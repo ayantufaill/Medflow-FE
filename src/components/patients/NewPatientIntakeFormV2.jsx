@@ -6,6 +6,7 @@ import {
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
@@ -26,6 +27,8 @@ import { OutlinedInput, OutlinedSelect, CustomRadioGroup, FieldDivider } from ".
 import {
   trimValue, normalizePhone, formatSSNInput, formatDateValue, removeEmptyCustomFields,
 } from "./form-components/formatters";
+import { COLORS } from "../../constants/colors";
+import { radius, fontSize, fontWeight } from "../../constants/styles";
 
 import { patientService } from "../../services/patient.service";
 import { useSelector, useDispatch } from "react-redux";
@@ -34,6 +37,16 @@ import {
 } from "../../store/slices/providerSlice";
 
 const REFERRING_SOURCE_OPTIONS = ["Google", "Website", "Walk In", "Social Media", "Existing Patient", "Insurance Directory", "Provider Referral"];
+
+// The app's global theme (theme.js) defaults to Manrope, but every redesigned
+// page (PatientsListPage, the schedule module, etc.) explicitly renders in
+// Inter instead. Rather than repeating `fontFamily: "Inter"` on every single
+// Typography/TextField in this large form, nest a theme override for this
+// subtree — MUI components pull their font from theme.typography.fontFamily,
+// so this cascades correctly everywhere without per-element overrides.
+const withInterFont = (outerTheme) => createTheme(outerTheme, {
+  typography: { fontFamily: '"Inter", "Manrope", sans-serif' },
+});
 
 const DEFAULT_VALUES = {
   title: "", firstName: "", middleName: "", lastName: "", preferredName: "", dateOfBirth: null, sexAtBirth: "", genderIdentity: "", ssn: "",
@@ -202,40 +215,41 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
   };
 
   return (
+    <ThemeProvider theme={withInterFont}>
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ backgroundColor: "#F8FAFC", minHeight: "100vh" }}>
+      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ backgroundColor: COLORS.SURFACE_PAGE, minHeight: "100vh" }}>
 
         {/* Top Header / Nav Area */}
         <Box sx={{ px: 4, pt: 3, pb: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography sx={{ color: "#1a73e8", fontSize: "0.85rem", fontWeight: 500, cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={onCancel}>Patients</Typography>
-              <Typography sx={{ color: "#94A3B8", fontSize: "0.85rem" }}>/</Typography>
-              <Typography sx={{ color: "#1E293B", fontSize: "0.85rem", fontWeight: 600 }}>Add New Patient</Typography>
+              <Typography sx={{ color: COLORS.ACCENT, fontSize: fontSize.base, fontWeight: fontWeight.medium, cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={onCancel}>Patients</Typography>
+              <Typography sx={{ color: COLORS.TEXT_MUTED, fontSize: fontSize.base }}>/</Typography>
+              <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: fontSize.base, fontWeight: fontWeight.semibold }}>Add New Patient</Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box sx={{ backgroundColor: "#F1F5F9", color: "#64748B", px: 1.5, py: 0.5, borderRadius: "6px", fontSize: "0.75rem", fontWeight: 600, border: "1px solid #E2E8F0" }}>
+              <Box sx={{ backgroundColor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_SECONDARY, px: 1.5, py: 0.5, borderRadius: radius.sm, fontSize: fontSize.base, fontWeight: fontWeight.semibold, border: `1px solid ${COLORS.BORDER}` }}>
                 Draft auto-saved
               </Box>
-              <Button variant="outlined" sx={{ minWidth: "auto", p: "6px", borderColor: "#E2E8F0", color: "#64748B", borderRadius: "8px", "&:hover": { backgroundColor: "#F8FAFC", borderColor: "#CBD5E1" } }}>
+              <Button variant="outlined" sx={{ minWidth: "auto", p: "6px", borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}>
                 <SaveOutlinedIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
               </Button>
             </Box>
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "#1a73e8", fontWeight: 600, fontSize: "0.85rem", textTransform: "uppercase" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: COLORS.ACCENT, fontWeight: fontWeight.semibold, fontSize: fontSize.base, textTransform: "uppercase" }}>
               <PeopleAltOutlinedIcon fontSize="small" /> ASSIGN CARE TEAM
             </Box>
             <Controller name="preferredDentistId" control={control} render={({ field }) => (
-              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderColor: "#E2E8F0" } }}>
-                <MenuItem value=""><span style={{ color: "#94A3B8" }}>Preferred Dentist</span></MenuItem>
+              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
+                <MenuItem value=""><span style={{ color: COLORS.TEXT_MUTED }}>Preferred Dentist</span></MenuItem>
                 {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
             <Controller name="preferredHygienistId" control={control} render={({ field }) => (
-              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderColor: "#E2E8F0" } }}>
-                <MenuItem value=""><span style={{ color: "#94A3B8" }}>Preferred Hygienist</span></MenuItem>
+              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
+                <MenuItem value=""><span style={{ color: COLORS.TEXT_MUTED }}>Preferred Hygienist</span></MenuItem>
                 {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
@@ -253,7 +267,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Date of Birth" required>
                   <Controller name="dateOfBirth" rules={{ required: "Date of birth is required" }} control={control} render={({ field, fieldState: { error } }) => (
-                    <DatePicker openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB", "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" }, "&:hover fieldset": { borderColor: "#CBD5E1" }, "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: "0.88rem" } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
+                    <DatePicker openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER }, "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED }, "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: fontSize.md } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
                   )} />
                 </FormField>
               </Grid>
@@ -301,7 +315,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               </Grid>
 
               <Grid size={{ xs: 12 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mb: 1.5 }}>Marital Status</Typography>
+                <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mb: 1.5 }}>Marital Status</Typography>
                 <Controller name="maritalStatus" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[
                     {label:"Single",value:"single"}, {label:"Married",value:"married"}, {label:"Widowed",value:"widowed"}, {label:"Divorced",value:"divorced"}, {label:"Under 18",value:"under_18"}, {label:"Prefer not to answer",value:"prefer_not_to_answer"}
@@ -373,7 +387,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                           InputProps={{
                             ...params.InputProps,
                             startAdornment: (
-                              <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: 0.5, color: "#64748B" }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: 0.5, color: COLORS.TEXT_SECONDARY }}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                               </Box>
                             ),
@@ -394,10 +408,10 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Grid container spacing={4}>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Release Information</Typography>
-                  <Box sx={{ flexGrow: 1, borderBottom: "1px solid #E2E8F0" }} />
+                  <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Release Information</Typography>
+                  <Box sx={{ flexGrow: 1, borderBottom: `1px solid ${COLORS.BORDER}` }} />
                 </Box>
-                <Typography sx={{ fontSize: "0.85rem", color: "#475569", mb: 1.5 }}>Can discuss healthcare information with:</Typography>
+                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY, mb: 1.5 }}>Can discuss healthcare information with:</Typography>
                 <Stack spacing={1.5}>
                   <Controller name="releaseSpouse" control={control} render={({ field }) => <ColoredChipCheckbox shape="circle" checked={!!field.value} onChange={field.onChange} label="Spouse / Common-law partner" />} />
                   <Controller name="releaseChildren" control={control} render={({ field }) => <ColoredChipCheckbox shape="circle" checked={!!field.value} onChange={field.onChange} label="Children" />} />
@@ -410,8 +424,8 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Communication Consents</Typography>
-                  <Box sx={{ flexGrow: 1, borderBottom: "1px solid #E2E8F0" }} />
+                  <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Communication Consents</Typography>
+                  <Box sx={{ flexGrow: 1, borderBottom: `1px solid ${COLORS.BORDER}` }} />
                 </Box>
                 <Stack spacing={1.5}>
                   <Controller name="contactByPhone" control={control} render={({ field }) => <ColoredChipCheckbox checked={!!field.value} onChange={field.onChange} label="Contact me on the phone numbers provided" />} />
@@ -425,10 +439,10 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Confirmation Preferences</Typography>
-                  <Box sx={{ flexGrow: 1, borderBottom: "1px solid #E2E8F0" }} />
+                  <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Confirmation Preferences</Typography>
+                  <Box sx={{ flexGrow: 1, borderBottom: `1px solid ${COLORS.BORDER}` }} />
                 </Box>
-                <Typography sx={{ fontSize: "0.85rem", color: "#475569", mb: 1.5 }}>Patient prefers to receive a reminder before appointment:</Typography>
+                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY, mb: 1.5 }}>Patient prefers to receive a reminder before appointment:</Typography>
                 <Controller name="reminderPreference" control={control} render={({ field }) => (
                   <Stack spacing={1.5} mb={3}>
                     <ColoredChipCheckbox shape="circle" checked={field.value === "none"} onChange={(val) => { if(val){field.onChange("none"); setValue("stopReminderAfterConfirmation",false); setValue("dontRequestReview",false);}else field.onChange(""); }} label="No, it is unnecessary" />
@@ -439,7 +453,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                   </Stack>
                 )} />
 
-                <Typography sx={{ fontSize: "0.85rem", color: "#475569", mb: 1.5 }}>Patient prefers not to receive a review request:</Typography>
+                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY, mb: 1.5 }}>Patient prefers not to receive a review request:</Typography>
                 <Controller name="dontRequestReview" control={control} render={({ field }) => (
                   <ColoredChipCheckbox shape="circle" checked={!!field.value} onChange={(val) => { field.onChange(val); if(val){setValue("reminderPreference",""); setValue("stopReminderAfterConfirmation",false);} }} label="Don't request review" />
                 )} />
@@ -450,7 +464,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
           <SectionCard icon={ChecklistOutlinedIcon} title="Assignment & Release" subtitle="Photography, social media, and assignment consents">
             <Box sx={{ display: "flex", flexDirection: "column" }}>
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 2 }}>
-                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>Assignment & Release</Typography>
+                <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Assignment & Release</Typography>
                 <Controller name="assignmentRelease" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "No", value: "no"}, {label: "Yes", value: "yes"}]} />
                 )} />
@@ -458,7 +472,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               <FieldDivider />
 
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 2 }}>
-                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>Photography Release</Typography>
+                <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Photography Release</Typography>
                 <Controller name="photographyRelease" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "No", value: "no"}, {label: "Yes", value: "yes"}]} />
                 )} />
@@ -466,7 +480,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               <FieldDivider />
 
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 2 }}>
-                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>Social Media Release</Typography>
+                <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Social Media Release</Typography>
                 <Controller name="socialMediaRelease" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "No", value: "no"}, {label: "Yes", value: "yes"}]} />
                 )} />
@@ -476,7 +490,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
         </Box>
 
         {/* Bottom Action Bar */}
-        <Box sx={{ position: "sticky", bottom: 0, zIndex: 100, backgroundColor: "#fff", borderTop: "1px solid #E2E8F0", px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Box sx={{ position: "sticky", bottom: 0, zIndex: 100, backgroundColor: COLORS.SURFACE_CARD, borderTop: `1px solid ${COLORS.BORDER}`, px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Controller name="sendWelcome" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="Send Welcome" />
@@ -484,23 +498,24 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Controller name="sendWelcomeMethod" control={control} render={({ field }) => (
               <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "Email", value: "email"}, {label: "Text Message", value: "text"}]} />
             )} />
-            <Box sx={{ width: "1px", height: "24px", backgroundColor: "#E2E8F0", mx: 0.5 }} />
+            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, mx: 0.5 }} />
             <Controller name="newPatientFlag" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="New Patient" />
             )} />
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography sx={{ fontSize: "0.75rem", color: "#94A3B8", display: { xs: "none", lg: "block" } }}>
+            <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, display: { xs: "none", lg: "block" } }}>
               Welcome delivery is optional and will only be sent if you enable it.
             </Typography>
-            <Button variant="outlined" onClick={onCancel} sx={{ px: 3, height: "40px", borderRadius: "8px", textTransform: "none", color: "#475569", borderColor: "#CBD5E1", fontSize: "0.85rem", fontWeight: 500 }}>Cancel</Button>
-            <Button type="submit" variant="contained" disabled={loading} startIcon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>} sx={{ px: 3, height: "40px", borderRadius: "8px", textTransform: "none", backgroundColor: "#3B82F6", "&:hover": { backgroundColor: "#2563EB" }, boxShadow: "none", fontSize: "0.85rem", fontWeight: 500 }}>
+            <Button variant="outlined" onClick={onCancel} sx={{ px: 3, height: "40px", borderRadius: radius.md, textTransform: "none", color: COLORS.TEXT_BODY, borderColor: COLORS.BORDER, "&:hover": { borderColor: COLORS.TEXT_MUTED, backgroundColor: COLORS.SURFACE_HOVER }, fontSize: fontSize.md, fontWeight: fontWeight.medium }}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={loading} startIcon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>} sx={{ px: 3, height: "40px", borderRadius: radius.md, textTransform: "none", backgroundColor: COLORS.ACCENT, "&:hover": { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: "none", fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
               {loading ? <CircularProgress size={24} color="inherit" /> : "Add Patient"}
             </Button>
           </Box>
         </Box>
       </Box>
     </LocalizationProvider>
+    </ThemeProvider>
   );
 };
 
