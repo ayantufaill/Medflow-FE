@@ -80,7 +80,7 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
                   <TableCell>
                     <Box 
                       sx={{ display: 'flex', alignItems: 'center', color: '#3b82f6', cursor: 'pointer', gap: 0.5, whiteSpace: 'nowrap' }}
-                      onClick={() => setShowAccountNotes(true)}
+                      onClick={() => setShowAccountNotes(row)}
                     >
                       <NoteAddIcon sx={{ fontSize: 16 }} />
                       <Typography variant="caption" sx={{ fontWeight: 600 }}>add account note</Typography>

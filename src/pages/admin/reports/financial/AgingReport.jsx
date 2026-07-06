@@ -339,6 +339,10 @@ const AgingReport = () => {
     setTabValue(newValue);
   };
 
+  const handleOpenAccountNotes = (patient) => {
+    setSelectedPatientForNotes(patient || null);
+  };
+
   const handleExportCSV = () => {
     const headers = [
       'Flags',
@@ -513,7 +517,7 @@ const AgingReport = () => {
             hidePatientNames={hidePatientNames}
             agingBuckets={agingBuckets}
             totals={totals}
-            setShowAccountNotes={setShowAccountNotes}
+            setShowAccountNotes={handleOpenAccountNotes}
           />
 
           {/* Summary Footer */}
