@@ -74,14 +74,4 @@ export const COLOR_TAGS = [
   "#22c55e", "#ec4899",
 ];
 
-export const INITIAL_PROCEDURES = [
-  { id: 1, code: "D1110", site: "Adult",   treatment: "Prophy",             provider: "", charge: "$120.00", checked: true },
-  { id: 2, code: "D1206", site: "Varnish", treatment: "Fluoride",           provider: "", charge: "$45.00",  checked: true },
-  { id: 3, code: "D0330", site: "",        treatment: "Panoramic Xray",     provider: "", charge: "$120.00", checked: true },
-  { id: 4, code: "D0274", site: "",        treatment: "Bitewing Four Xrays",provider: "", charge: "$65.00",  checked: true },
-  { id: 5, code: "FMD",   site: "",        treatment: "FMD",                provider: "", charge: "$150.00", checked: true },
-  { id: 6, code: "FULL",  site: "",        treatment: "FULL",               provider: "", charge: "$185.00", checked: true },
-  { id: 7, code: "POP2",  site: "",        treatment: "P-OP",               provider: "", charge: "$95.00",  checked: true },
-  { id: 8, code: "POP",   site: "",        treatment: "P-OP",               provider: "", charge: "$95.00",  checked: true },
-  { id: 9, code: "DFV",   site: "",        treatment: "DFV",                provider: "", charge: "$30.00",  checked: true },
-];
+export const INITIAL_PROCEDURES = [];

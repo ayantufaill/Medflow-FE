@@ -1,8 +1,9 @@
 import { createPortal } from "react-dom";
+import dayjs from "dayjs";
 import { Box, Divider, Typography } from "@mui/material";
 import {
   CalendarTodayOutlined, AccessTimeOutlined, PersonOutline, EmailOutlined, PhoneOutlined,
-  AcUnit, Tune, LocalOfferOutlined, GppMaybeOutlined, MedicalServicesOutlined,
+  LocalOfferOutlined, GppMaybeOutlined, MedicalServicesOutlined,
 } from "@mui/icons-material";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius, headingPrimarySx, headingSecondarySx } from "../../../constants/styles";
@@ -34,15 +35,37 @@ const InfoRow = ({ label, labelSuffix, children }) => (
 /* ── status badge ────────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
   const styles = {
-    UNCONFIRMED:  { dot: COLORS.STATUS_UNCONFIRMED,  bg: "#fef3c7", color: COLORS.STATUS_UNCONFIRMED,  label: "Unconfirmed" },
-    PRECONFIRMED: { dot: COLORS.STATUS_PRECONFIRMED, bg: "#ede9fe", color: COLORS.STATUS_PRECONFIRMED, label: "Preconfirmed" },
-    CONFIRMED:    { dot: COLORS.STATUS_CONFIRMED,    bg: "#dcfce7", color: COLORS.STATUS_CONFIRMED,    label: "Confirmed" },
+    SCHEDULED:               { dot: "#64748b", bg: "#f1f5f9", color: "#475569" },
+    UNCONFIRMED:             { dot: COLORS.STATUS_UNCONFIRMED, bg: "#fef3c7", color: COLORS.STATUS_UNCONFIRMED },
+    PRECONFIRMED:            { dot: COLORS.STATUS_PRECONFIRMED, bg: "#ede9fe", color: COLORS.STATUS_PRECONFIRMED },
+    CONFIRMED:               { dot: COLORS.STATUS_CONFIRMED, bg: "#dcfce7", color: COLORS.STATUS_CONFIRMED },
+    ARRIVED:                 { dot: "#0284c7", bg: "#e0f2fe", color: "#0369a1" },
+    READY_TO_BE_SEATED:      { dot: "#0891b2", bg: "#cffafe", color: "#0e7490" },
+    SEATED:                  { dot: "#2563eb", bg: "#dbeafe", color: "#1d4ed8" },
+    READY_FOR_DOCTOR:        { dot: "#7c3aed", bg: "#ede9fe", color: "#6d28d9" },
+    IN_TREATMENT:            { dot: "#0d9488", bg: "#ccfbf1", color: "#0f766e" },
+    READY_FOR_CHECKOUT:      { dot: "#16a34a", bg: "#dcfce7", color: "#15803d" },
+    CHECKED_OUT_INCOMPLETE:  { dot: "#ea580c", bg: "#ffedd5", color: "#c2410c" },
+    CHECKED_OUT_COMPLETE:    { dot: "#22c55e", bg: "#dcfce7", color: "#15803d" },
+    COMPLETED:               { dot: "#22c55e", bg: "#dcfce7", color: "#15803d" },
+    NO_SHOW:                 { dot: "#dc2626", bg: "#fee2e2", color: "#b91c1c" },
+    CANCELLED:               { dot: "#dc2626", bg: "#fee2e2", color: "#b91c1c" },
+    RESCHEDULED:             { dot: "#9333ea", bg: "#f3e8ff", color: "#7e22ce" },
+    RUNNING_LATE:            { dot: "#d97706", bg: "#fef3c7", color: "#b45309" },
+    LATE:                    { dot: "#d97706", bg: "#fef3c7", color: "#b45309" },
+    CALL:                    { dot: "#2563eb", bg: "#dbeafe", color: "#1d4ed8" },
+    LEFT_MESSAGE:            { dot: "#64748b", bg: "#f1f5f9", color: "#475569" },
+    SENT_EMAIL_OR_TEXT:      { dot: "#0891b2", bg: "#cffafe", color: "#0e7490" },
   };
-  const s = styles[status] || styles.UNCONFIRMED;
+  const key = String(status || "").toUpperCase();
+  const label = key
+    ? key.toLowerCase().split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
+    : "Unknown";
+  const s = styles[key] || { dot: "#64748b", bg: "#f1f5f9", color: "#475569" };
   return (
     <Box sx={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: s.bg, borderRadius: "20px", px: "8px", py: "2px" }}>
       <Box sx={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: s.dot, flexShrink: 0 }} />
-      <Typography sx={{ fontSize: fontSize.sm, color: s.color }}>{s.label}</Typography>
+      <Typography sx={{ fontSize: fontSize.sm, color: s.color }}>{label}</Typography>
     </Box>
   );
 };
@@ -57,12 +80,48 @@ const IconValue = ({ icon, text, color }) => (
   </Box>
 );
 
-/* ── tag circle ──────────────────────────────────────────── */
-const TagCircle = ({ icon, bg }) => (
-  <Box sx={{ width: "26px", height: "26px", borderRadius: "50%", backgroundColor: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-    {icon}
-  </Box>
-);
+const EMPTY_VALUE = "—";
+
+const displayValue = (value) => value || EMPTY_VALUE;
+
+const getTagLabel = (tag) => (typeof tag === "object" && tag !== null ? tag.label : tag);
+
+const getTagStyle = (tag) => {
+  if (typeof tag === "object" && tag !== null && tag.color) {
+    return { bg: tag.color, color: tag.font || COLORS.WHITE, border: "none" };
+  }
+
+  const label = getTagLabel(tag);
+  if (label === "EXM" || label === "Exm") return { bg: "#92400e", color: COLORS.WHITE, border: "none" };
+  if (label === "Xray") return { bg: "#1f2937", color: COLORS.WHITE, border: "none" };
+  return { bg: COLORS.WHITE, color: "#374151", border: "1px solid #d1d5db" };
+};
+
+const providerDisplay = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.name
+    || value.fullName
+    || `${value.firstName || ""} ${value.lastName || ""}`.trim()
+    || `${value.userId?.firstName || ""} ${value.userId?.lastName || ""}`.trim()
+    || value.providerName
+    || value.providerCode
+    || "";
+};
+
+const formatProcedures = (procedures) => {
+  if (Array.isArray(procedures)) {
+    return procedures
+      .map((procedure) => {
+        if (typeof procedure === "string") return procedure;
+        return procedure.treatment || procedure.name || procedure.code || procedure.ProcCode || procedure.Descript || "";
+      })
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  return procedures;
+};
 
 /* ═══════════════════════════════════════════════════════════ */
 const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLeave }) => {
@@ -73,25 +132,30 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
     : anchorRect.left - CARD_WIDTH - 8;
   const top = Math.max(8, Math.min(anchorRect.top, window.innerHeight - CARD_MAX_HEIGHT - 8));
 
-  /* Derive display values from appointment + mock patient data */
+  const noteText = appointment.description || appointment.notes || "";
+  const appointmentDate = appointment.date || (appointment.appointmentDate ? dayjs(appointment.appointmentDate).format("MMM D, YYYY") : "");
+  const tags = Array.isArray(appointment.tags) ? appointment.tags : [];
+  const provider = providerDisplay(appointment.provider || appointment.providerId);
+
   const apt = {
-    patientId:   "765",
-    provider:    "Sharon Smith",
-    visitType:   "Recare",
-    date:        "Jul 15, 2022",
-    startTime:   appointment.time || "09:00 AM",
-    endTime:     "10:30 AM",
-    charge:      "$224.00",
-    scheduledBy: "Jaylen Cuellar",
-    notes:       "Jul 15, 2022 : Pt to bring in their DL",
-    dob:         "Apr 20, 1990",
-    phone:       "+1 855 849 5255",
-    email:       "jaylen@oryxdentalsoftware.c",
-    preferredDDS: "—",
-    preferredHYG: "—",
-    risk:        "—",
-    procedures:  appointment.procedures || "comp ex, hygiene, fl, BW4, PA1",
-    balance:     appointment.price || "$224.00 / $224.00",
+    patientId:    appointment.patientNumber,
+    patientName:  appointment.patientName,
+    provider,
+    visitType:    appointment.visitType,
+    date:         appointmentDate,
+    startTime:    appointment.time,
+    endTime:      appointment.endTime,
+    charge:       appointment.price,
+    scheduledBy:  appointment.scheduledBy,
+    notes:        noteText,
+    dob:          appointment.patientDob,
+    phone:        appointment.patientPhone,
+    email:        appointment.patientEmail,
+    preferredDDS: providerDisplay(appointment.preferredDDS),
+    preferredHYG: providerDisplay(appointment.preferredHYG),
+    risk:         appointment.risk,
+    procedures:   formatProcedures(appointment.procedures),
+    balance:      appointment.price,
   };
 
   return createPortal(
@@ -118,9 +182,11 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
           <Typography sx={{ ...headingPrimarySx }}>
             {appointment.patientName}
           </Typography>
-          <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
-            (pt #{apt.patientId})
-          </Typography>
+          {apt.patientId && (
+            <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
+              (pt #{apt.patientId})
+            </Typography>
+          )}
         </Box>
       </Box>
 
@@ -133,35 +199,45 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         </Typography>
 
         <InfoRow label="Provider:">
-          <IconValue icon={<MedicalServicesOutlined sx={{ fontSize: "12px" }} />} text={apt.provider} color={COLORS.ACCENT} />
+          <IconValue icon={<MedicalServicesOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.provider)} color={COLORS.ACCENT} />
         </InfoRow>
 
-        <InfoRow label="Visit Type:">{apt.visitType}</InfoRow>
+        <InfoRow label="Visit Type:">{displayValue(apt.visitType)}</InfoRow>
 
         <InfoRow label="Tags:">
-          <Box sx={{ display: "flex", gap: "6px" }}>
-            <TagCircle bg="#ccfbf1" icon={<AcUnit sx={{ fontSize: "13px", color: "#0d9488" }} />} />
-            <TagCircle bg="#fef3c7" icon={<Tune sx={{ fontSize: "13px", color: COLORS.STATUS_UNCONFIRMED }} />} />
+          <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+            {tags.length > 0 ? tags.map((tag, i) => {
+              const { bg, color, border } = getTagStyle(tag);
+              return (
+                <Box key={i} sx={{ px: "8px", py: "3px", borderRadius: "4px", backgroundColor: bg, border }}>
+                  <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color }}>
+                    {getTagLabel(tag)}
+                  </Typography>
+                </Box>
+              );
+            }) : (
+              <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{EMPTY_VALUE}</Typography>
+            )}
           </Box>
         </InfoRow>
 
-        <InfoRow label="Procedures:">{apt.procedures}</InfoRow>
+        <InfoRow label="Procedures:">{displayValue(apt.procedures)}</InfoRow>
 
         <InfoRow label="Date:">
-          <IconValue icon={<CalendarTodayOutlined sx={{ fontSize: "12px" }} />} text={apt.date} />
+          <IconValue icon={<CalendarTodayOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.date)} />
         </InfoRow>
 
         <InfoRow label="Start time:">
-          <IconValue icon={<AccessTimeOutlined sx={{ fontSize: "12px" }} />} text={apt.startTime} />
+          <IconValue icon={<AccessTimeOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.startTime)} />
         </InfoRow>
 
         <Box sx={{ my: "8px" }} />
 
-        <InfoRow label="End time:">{apt.endTime}</InfoRow>
+        <InfoRow label="End time:">{displayValue(apt.endTime)}</InfoRow>
 
         <InfoRow label="Charge:">
           <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
-            {apt.charge}
+            {displayValue(apt.charge)}
           </Typography>
         </InfoRow>
 
@@ -170,12 +246,12 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         </InfoRow>
 
         <InfoRow label="Scheduled By:">
-          <IconValue icon={<PersonOutline sx={{ fontSize: "13px" }} />} text={apt.scheduledBy} />
+          <IconValue icon={<PersonOutline sx={{ fontSize: "13px" }} />} text={displayValue(apt.scheduledBy)} />
         </InfoRow>
 
         <InfoRow label="Notes" labelSuffix="(latest):">
           <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, lineHeight: 1.5 }}>
-            – {apt.notes}
+            {displayValue(apt.notes)}
           </Typography>
         </InfoRow>
 
@@ -186,21 +262,23 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
           Patient Information
         </Typography>
 
-        <InfoRow label="D.O.B:">{apt.dob}</InfoRow>
+        <InfoRow label="Patient:">{displayValue(apt.patientName)}</InfoRow>
+
+        <InfoRow label="D.O.B:">{displayValue(apt.dob)}</InfoRow>
 
         <InfoRow label="Mobile Phone:">
-          <IconValue icon={<PhoneOutlined sx={{ fontSize: "12px" }} />} text={apt.phone} color={COLORS.STATUS_SUCCESS} />
+          <IconValue icon={<PhoneOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.phone)} color={COLORS.STATUS_SUCCESS} />
         </InfoRow>
 
         <InfoRow label="Email:">
-          <IconValue icon={<EmailOutlined sx={{ fontSize: "12px" }} />} text={apt.email} color={COLORS.ACCENT} />
+          <IconValue icon={<EmailOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.email)} color={COLORS.ACCENT} />
         </InfoRow>
 
-        <InfoRow label="Preferred DDS:">{apt.preferredDDS}</InfoRow>
-        <InfoRow label="Preferred HYG:">{apt.preferredHYG}</InfoRow>
+        <InfoRow label="Preferred DDS:">{displayValue(apt.preferredDDS)}</InfoRow>
+        <InfoRow label="Preferred HYG:">{displayValue(apt.preferredHYG)}</InfoRow>
 
         <InfoRow label="Risk:">
-          <IconValue icon={<GppMaybeOutlined sx={{ fontSize: "12px" }} />} text={apt.risk} color="#f59e0b" />
+          <IconValue icon={<GppMaybeOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.risk)} color="#f59e0b" />
         </InfoRow>
       </Box>
 
@@ -219,7 +297,7 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
           </Typography>
         </Box>
         <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: COLORS.PRICE_TEXT }}>
-          {apt.balance}
+          {displayValue(apt.balance)}
         </Typography>
       </Box>
     </Box>,

@@ -1,29 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-} from '@mui/material';
+import React, { useRef, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { Box, Typography } from "@mui/material";
 
 // Sub-components
-import PatientFinanceInfo from '../../components/finance/PatientFinanceInfo';
-import AgingTable from '../../components/finance/AgingTable';
-import FinanceActions from '../../components/finance/FinanceActions';
-import LedgerList from '../../components/finance/LedgerList';
-import IndividualLedgerTable from '../../components/finance/IndividualLedgerTable';
-import FamilyLedgerTable from '../../components/finance/FamilyLedgerTable';
-import NewPaymentPlan from '../../components/finance/NewPaymentPlan';
-import FinancePageDialogs from '../../components/finance/FinancePageDialogs';
-import LedgerFilters from '../../components/finance/LedgerFilters';
-import ErrorBoundary from '../../components/shared/ErrorBoundary';
-import { usePatient } from '../../hooks/redux/usePatient';
-import apiClient from '../../config/api';
-import { patientService } from '../../services/patient.service';
+import PatientFinanceInfo from "../../components/finance/PatientFinanceInfo";
+import AgingTable from "../../components/finance/AgingTable";
+import FinanceActions from "../../components/finance/FinanceActions";
+import LedgerList from "../../components/finance/LedgerList";
+import IndividualLedgerTable from "../../components/finance/IndividualLedgerTable";
+import FamilyLedgerTable from "../../components/finance/FamilyLedgerTable";
+import NewPaymentPlan from "../../components/finance/NewPaymentPlan";
+import FinancePageDialogs from "../../components/finance/FinancePageDialogs";
+import LedgerFilters from "../../components/finance/LedgerFilters";
+import ErrorBoundary from "../../components/shared/ErrorBoundary";
+import { usePatient } from "../../hooks/redux/usePatient";
+import apiClient from "../../config/api";
+import { patientService } from "../../services/patient.service";
 
 const FinancePage = () => {
   const location = useLocation();
-  const { currentPatient, selectedPatientId, fetchById, setPatient } = usePatient();
-  const [view, setView] = useState('invoices');
+  const { currentPatient, selectedPatientId, fetchById, setPatient } =
+    usePatient();
+  const [view, setView] = useState("invoices");
   const [expanded, setExpanded] = useState(false);
   const [showPaymentPlan, setShowPaymentPlan] = useState(false);
   const [showAccountAdjustment, setShowAccountAdjustment] = useState(false);
@@ -31,11 +29,11 @@ const FinancePage = () => {
   const [showEditFlags, setShowEditFlags] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositMenuAnchor, setDepositMenuAnchor] = useState(null);
-  const [depositType, setDepositType] = useState('patient-deposit');
+  const [depositType, setDepositType] = useState("patient-deposit");
   const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
   const [filters, setFilters] = useState({
     includeVoided: false,
-    hideBillingTransfers: false
+    hideBillingTransfers: false,
   });
   const patientFinanceRef = useRef(null);
 
@@ -43,11 +41,14 @@ const FinancePage = () => {
     const loadPatientDetails = async () => {
       // If we passed a patientId from routing state, fetch it
       const targetPatientId = location.state?.patientId;
-      if (targetPatientId && targetPatientId !== (currentPatient?._id || currentPatient?.id)) {
+      if (
+        targetPatientId &&
+        targetPatientId !== (currentPatient?._id || currentPatient?.id)
+      ) {
         try {
           await fetchById(targetPatientId);
         } catch (error) {
-          console.error('Error fetching target patient details:', error);
+          console.error("Error fetching target patient details:", error);
         }
         return;
       }
@@ -56,20 +57,20 @@ const FinancePage = () => {
       if (currentPatient && (currentPatient._id || currentPatient.id)) {
         return;
       }
-      
+
       // If we have selectedPatientId, fetch that patient
       if (selectedPatientId) {
         try {
           await fetchById(selectedPatientId);
         } catch (error) {
-          console.error('Error fetching selected patient details:', error);
+          console.error("Error fetching selected patient details:", error);
         }
         return;
       }
-      
+
       // Fallback: If no patient is selected, fetch the first active patient in the system
       try {
-        const result = await patientService.getAllPatients(1, 1, '', 'active');
+        const result = await patientService.getAllPatients(1, 1, "", "active");
         const firstPatient = result?.patients?.[0];
         if (firstPatient && (firstPatient._id || firstPatient.id)) {
           const patientId = firstPatient._id || firstPatient.id;
@@ -77,7 +78,7 @@ const FinancePage = () => {
           setPatient(fullPatient);
         }
       } catch (error) {
-        console.error('Error fetching fallback patient details:', error);
+        console.error("Error fetching fallback patient details:", error);
       }
     };
 
@@ -89,131 +90,146 @@ const FinancePage = () => {
   };
 
   const handleFilterChange = (newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-    console.log('Filters updated:', { ...filters, ...newFilters });
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    console.log("Filters updated:", { ...filters, ...newFilters });
     // Add logic to filter ledger data based on these filters
   };
 
   const handleDepositSave = async (depositData) => {
-    console.log('Deposit saved:', depositData);
+    console.log("Deposit saved:", depositData);
     try {
       const patientId = currentPatient?._id || currentPatient?.id;
       if (!patientId) {
-        console.warn('No active patient selected to add deposit.');
+        console.warn("No active patient selected to add deposit.");
         return;
       }
 
       // Map human-readable paymentMethod to backend-supported values
       // Backend expects: ['cash', 'check', 'card', 'ach', 'insurance']
-      let mappedMethod = 'cash';
-      const methodLower = depositData.paymentMethod?.toLowerCase() || '';
-      if (methodLower.includes('check')) mappedMethod = 'check';
-      else if (methodLower.includes('card') || methodLower.includes('visa') || methodLower.includes('master')) mappedMethod = 'card';
-      else if (methodLower.includes('eft') || methodLower.includes('ach')) mappedMethod = 'ach';
-      else if (methodLower.includes('insurance')) mappedMethod = 'insurance';
+      let mappedMethod = "cash";
+      const methodLower = depositData.paymentMethod?.toLowerCase() || "";
+      if (methodLower.includes("check")) mappedMethod = "check";
+      else if (
+        methodLower.includes("card") ||
+        methodLower.includes("visa") ||
+        methodLower.includes("master")
+      )
+        mappedMethod = "card";
+      else if (methodLower.includes("eft") || methodLower.includes("ach"))
+        mappedMethod = "ach";
+      else if (methodLower.includes("insurance")) mappedMethod = "insurance";
 
       // Map depositType: 'patient-deposit' -> 'patient', 'insurance-deposit' -> 'insurance'
-      const mappedType = depositData.depositType === 'insurance-deposit' ? 'insurance' : 'patient';
+      const mappedType =
+        depositData.depositType === "insurance-deposit"
+          ? "insurance"
+          : "patient";
 
-      await apiClient.post('/deposits', {
+      await apiClient.post("/deposits", {
         patientId: patientId.toString(),
         amount: parseFloat(depositData.depositAmount) || 0,
         paymentMethod: mappedMethod,
         depositType: mappedType,
         date: new Date().toISOString(),
-        notes: `Prepayment Deposit - Method: ${depositData.paymentMethod}. Account: ${depositData.toAccount || 'None'}. Policy: ${depositData.policy || 'None'}`
+        notes: `Prepayment Deposit - Method: ${depositData.paymentMethod}. Account: ${depositData.toAccount || "None"}. Policy: ${depositData.policy || "None"}`,
       });
 
       // Dispatch refresh event to update the ledger UI
-      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+      window.dispatchEvent(new CustomEvent("add-ledger-item"));
     } catch (err) {
-      console.error('Error saving deposit in database:', err);
+      console.error("Error saving deposit in database:", err);
     }
     setShowDeposit(false);
   };
 
   const handleCourtesyCreditSave = async (creditData) => {
-    console.log('Courtesy credit saved:', creditData);
+    console.log("Courtesy credit saved:", creditData);
     try {
       const patientId = currentPatient?._id || currentPatient?.id;
       if (!patientId) {
-        console.warn('No active patient selected to add courtesy credit.');
+        console.warn("No active patient selected to add courtesy credit.");
         return;
       }
-      
+
       // Post adjustment to backend (negative amount for credit subtraction)
       const amountVal = -Math.abs(creditData.creditAmount);
-      await apiClient.post('/adjustments', {
+      await apiClient.post("/adjustments", {
         patientId: patientId.toString(),
         amount: amountVal,
         date: new Date(),
-        notes: `Courtesy Credit - Type: ${creditData.adjustmentType}`
+        notes: `Courtesy Credit - Type: ${creditData.adjustmentType}`,
       });
 
       // Dispatch refresh event to update the ledger UI
-      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+      window.dispatchEvent(new CustomEvent("add-ledger-item"));
     } catch (err) {
-      console.error('Error saving courtesy credit in database:', err);
+      console.error("Error saving courtesy credit in database:", err);
     }
     setShowCourtesyCredit(false);
   };
 
   const handleAccountAdjustmentSave = async (adjustmentData) => {
-    console.log('Account adjustment saved:', adjustmentData);
+    console.log("Account adjustment saved:", adjustmentData);
     try {
       const patientId = currentPatient?._id || currentPatient?.id;
       if (!patientId) {
-        console.warn('No active patient selected to add account adjustment.');
+        console.warn("No active patient selected to add account adjustment.");
         return;
       }
-      
+
       // Post adjustment to backend (negative amount for balance deduction/cash minus)
       const amountVal = -Math.abs(adjustmentData.amount);
-      await apiClient.post('/adjustments', {
+      await apiClient.post("/adjustments", {
         patientId: patientId.toString(),
         amount: amountVal,
         date: new Date(),
-        notes: `Account Adjustment - Type: ${adjustmentData.adjustmentType}${adjustmentData.description ? `. Description: ${adjustmentData.description}` : ''}`
+        notes: `Account Adjustment - Type: ${adjustmentData.adjustmentType}${adjustmentData.description ? `. Description: ${adjustmentData.description}` : ""}`,
       });
 
       // Dispatch refresh event to update the ledger UI
-      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+      window.dispatchEvent(new CustomEvent("add-ledger-item"));
     } catch (err) {
-      console.error('Error saving account adjustment in database:', err);
+      console.error("Error saving account adjustment in database:", err);
     }
     setShowAccountAdjustment(false);
   };
 
   const handleEditFlagsSave = async (flagsData) => {
-    console.log('Patient flags saved:', flagsData);
-    const activeFlags = Object.keys(flagsData).filter(key => flagsData[key]);
+    console.log("Patient flags saved:", flagsData);
+    const activeFlags = Object.keys(flagsData).filter((key) => flagsData[key]);
     try {
       if (currentPatient && (currentPatient._id || currentPatient.id)) {
         const patientId = currentPatient._id || currentPatient.id;
-        const updatedPatient = await patientService.updatePatientWorkspace(patientId, {
-          patientFlags: activeFlags
-        });
+        const updatedPatient = await patientService.updatePatientWorkspace(
+          patientId,
+          {
+            patientFlags: activeFlags,
+          },
+        );
         setPatient(updatedPatient);
-        console.log('Patient flags updated successfully:', updatedPatient.patientFlags);
+        console.log(
+          "Patient flags updated successfully:",
+          updatedPatient.patientFlags,
+        );
       } else {
-        console.warn('No active patient selected to update flags.');
+        console.warn("No active patient selected to update flags.");
       }
     } catch (error) {
-      console.error('Error updating patient flags:', error);
+      console.error("Error updating patient flags:", error);
     }
     setShowEditFlags(false);
   };
 
   const handleCreatePaymentPlan = async (planData) => {
-    console.log('Creating payment plan:', planData);
+    console.log("Creating payment plan:", planData);
     try {
       const patientId = currentPatient?._id || currentPatient?.id;
       if (!patientId) {
-        console.warn('No active patient to create payment plan for.');
+        console.warn("No active patient to create payment plan for.");
         return;
       }
-      
-      await apiClient.post('/payment-plans', {
+
+      await apiClient.post("/payment-plans", {
         patientId: patientId.toString(),
         totalAmount: planData.totalAmount,
         downPayment: planData.downPayment,
@@ -221,47 +237,56 @@ const FinancePage = () => {
         numberOfPayments: planData.numberOfPayments,
         apr: 0,
         startDate: planData.startDate || new Date().toISOString(),
-        notes: planData.notes
+        notes: planData.notes,
       });
-      
+
       // Dispatch refresh event to update the ledger UI
-      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+      window.dispatchEvent(new CustomEvent("add-ledger-item"));
     } catch (err) {
-      console.error('Error creating payment plan in backend:', err);
+      console.error("Error creating payment plan in backend:", err);
     }
     setShowPaymentPlan(false);
   };
 
   const handleDepositOptionSelect = (optionId) => {
     setDepositType(optionId);
-    if (optionId === 'patient-deposit') {
+    if (optionId === "patient-deposit") {
       setShowDeposit(true);
-    } else if (optionId === 'insurance-deposit') {
+    } else if (optionId === "insurance-deposit") {
       setShowDeposit(true);
-    } else if (optionId === 'courtesy-credit') {
+    } else if (optionId === "courtesy-credit") {
       setShowCourtesyCredit(true);
     }
   };
 
   if (showPaymentPlan) {
-    return <NewPaymentPlan 
-      patient={currentPatient} 
-      onBack={() => setShowPaymentPlan(false)} 
-      onCreatePlan={handleCreatePaymentPlan}
-    />;
+    return (
+      <NewPaymentPlan
+        patient={currentPatient}
+        onBack={() => setShowPaymentPlan(false)}
+        onCreatePlan={handleCreatePaymentPlan}
+      />
+    );
   }
 
   return (
-    <Box sx={{ p: '8px 8px 8px 8px', bgcolor: '#fff', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+    <Box
+      sx={{
+        p: "8px 8px 8px 8px",
+        bgcolor: "#fff",
+        minHeight: "100vh",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
       {/* Main Dashboard Section */}
-      <Box sx={{ display: 'flex', gap: 3, width: '100%', mt: 2, mb: 3 }}>
-        <PatientFinanceInfo 
+      <Box sx={{ display: "flex", gap: 3, width: "100%", mt: 2, mb: 3 }}>
+        <PatientFinanceInfo
           ref={patientFinanceRef}
-          view={view} 
+          view={view}
           onViewChange={handleViewChange}
           flags={currentPatient?.patientFlags || []}
           patient={currentPatient}
-          onCalendarClick={() => setShowPaymentPlan(true)} 
+          onCalendarClick={() => setShowPaymentPlan(true)}
           onCashMinusClick={() => setShowAccountAdjustment(true)}
           onRefreshCoinClick={() => setShowCourtesyRefund(true)}
           onAddFlagsClick={() => setShowEditFlags(true)}
@@ -271,34 +296,58 @@ const FinancePage = () => {
       </Box>
 
       {/* Action Toolbar: Filters and Buttons */}
-      <FinanceActions 
-        view={view} 
-        expanded={expanded} 
+      <FinanceActions
+        view={view}
+        expanded={expanded}
         onExpandToggle={() => setExpanded(!expanded)}
         onFilterChange={handleFilterChange}
-        onCalendarClick={() => setShowPaymentPlan(true)} 
+        onCalendarClick={() => setShowPaymentPlan(true)}
         onCashMinusClick={() => setShowAccountAdjustment(true)}
         onRefreshCoinClick={() => setShowCourtesyRefund(true)}
         onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
-        onTriggerPatientFinanceIcon={(iconId, e) => patientFinanceRef.current?.triggerIcon?.(iconId, e)}
+        onTriggerPatientFinanceIcon={(iconId, e) =>
+          patientFinanceRef.current?.triggerIcon?.(iconId, e)
+        }
       />
 
       {/* Ledger Filters */}
-      <LedgerFilters view={view} filters={filters} onFilterChange={handleFilterChange} />
+      <LedgerFilters
+        view={view}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+      />
 
       {/* Dynamic Ledger Section */}
       <ErrorBoundary>
-        {view === 'family' ? <FamilyLedgerTable patient={currentPatient} /> : view === 'individual' ? <IndividualLedgerTable patient={currentPatient} /> : <LedgerList patient={currentPatient} expanded={expanded} />}
+        {view === "family" ? (
+          <FamilyLedgerTable patient={currentPatient} />
+        ) : view === "individual" ? (
+          <IndividualLedgerTable patient={currentPatient} />
+        ) : (
+          <LedgerList patient={currentPatient} expanded={expanded} />
+        )}
       </ErrorBoundary>
 
       <FinancePageDialogs
         patient={currentPatient}
-        showAccountAdjustment={showAccountAdjustment} setShowAccountAdjustment={setShowAccountAdjustment} handleAccountAdjustmentSave={handleAccountAdjustmentSave}
-        showCourtesyRefund={showCourtesyRefund} setShowCourtesyRefund={setShowCourtesyRefund}
-        showEditFlags={showEditFlags} setShowEditFlags={setShowEditFlags} handleEditFlagsSave={handleEditFlagsSave}
-        showDeposit={showDeposit} setShowDeposit={setShowDeposit} handleDepositSave={handleDepositSave} depositType={depositType}
-        depositMenuAnchor={depositMenuAnchor} setDepositMenuAnchor={setDepositMenuAnchor} handleDepositOptionSelect={handleDepositOptionSelect}
-        showCourtesyCredit={showCourtesyCredit} setShowCourtesyCredit={setShowCourtesyCredit} handleCourtesyCreditSave={handleCourtesyCreditSave}
+        showAccountAdjustment={showAccountAdjustment}
+        setShowAccountAdjustment={setShowAccountAdjustment}
+        handleAccountAdjustmentSave={handleAccountAdjustmentSave}
+        showCourtesyRefund={showCourtesyRefund}
+        setShowCourtesyRefund={setShowCourtesyRefund}
+        showEditFlags={showEditFlags}
+        setShowEditFlags={setShowEditFlags}
+        handleEditFlagsSave={handleEditFlagsSave}
+        showDeposit={showDeposit}
+        setShowDeposit={setShowDeposit}
+        handleDepositSave={handleDepositSave}
+        depositType={depositType}
+        depositMenuAnchor={depositMenuAnchor}
+        setDepositMenuAnchor={setDepositMenuAnchor}
+        handleDepositOptionSelect={handleDepositOptionSelect}
+        showCourtesyCredit={showCourtesyCredit}
+        setShowCourtesyCredit={setShowCourtesyCredit}
+        handleCourtesyCreditSave={handleCourtesyCreditSave}
       />
     </Box>
   );

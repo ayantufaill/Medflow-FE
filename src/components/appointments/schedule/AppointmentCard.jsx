@@ -1,29 +1,58 @@
-import { useRef, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { useRef, useState } from "react";
+import { Box, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
-  Phone, OpenInNew, Add, Description, AttachMoney,
-  FiberManualRecord, MedicalServices, Tune, AcUnit,
-  AssignmentOutlined, AltRoute, PhoneOutlined
-} from '@mui/icons-material';
-import AppointmentHoverCard from './AppointmentHoverCard';
-import { COLORS } from '../../../constants/colors';
-import { fontSize, fontWeight, radius } from '../../../constants/styles';
-import ToothSvg from '../../../assets/operatory icons/Vector (2).svg';
+  Phone,
+  OpenInNew,
+  Add,
+  Description,
+  AttachMoney,
+  FiberManualRecord,
+  MedicalServices,
+  Tune,
+  AcUnit,
+  AssignmentOutlined,
+  PhoneOutlined,
+} from "@mui/icons-material";
+import AppointmentHoverCard from "./AppointmentHoverCard";
+import { COLORS } from "../../../constants/colors";
+import { fontSize, fontWeight, radius } from "../../../constants/styles";
+import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
 
 const STATUS_CONFIG = {
   PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
-  UNCONFIRMED:  { bg: COLORS.STATUS_UNCONFIRMED },
-  CONFIRMED:    { bg: COLORS.STATUS_CONFIRMED },
+  UNCONFIRMED: { bg: COLORS.STATUS_UNCONFIRMED },
+  CONFIRMED: { bg: COLORS.STATUS_CONFIRMED },
 };
 
+const getTagLabel = (tag) =>
+  typeof tag === "object" && tag !== null ? tag.label : tag;
+
 const TAG_STYLE = (tag) => {
-  if (tag === 'EXM')  return { bg: '#8b5cf6', color: COLORS.WHITE, border: 'none' };
-  if (tag === 'Xray') return { bg: '#1f2937', color: COLORS.WHITE, border: 'none' };
-  return                     { bg: COLORS.WHITE, color: '#374151', border: `1px solid #d1d5db` };
+  if (typeof tag === "object" && tag !== null && tag.color) {
+    return { bg: tag.color, color: tag.font || COLORS.WHITE, border: "none" };
+  }
+
+  const label = getTagLabel(tag);
+  if (label === "EXM" || label === "Exm")
+    return { bg: "#92400e", color: COLORS.WHITE, border: "none" };
+  if (label === "Xray")
+    return { bg: "#1f2937", color: COLORS.WHITE, border: "none" };
+  return { bg: COLORS.WHITE, color: "#374151", border: `1px solid #d1d5db` };
 };
 
 const TagCircle = ({ icon, bg }) => (
-  <Box sx={{ width: "20px", height: "20px", borderRadius: "50%", backgroundColor: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+  <Box
+    sx={{
+      width: "20px",
+      height: "20px",
+      borderRadius: "50%",
+      backgroundColor: bg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
     {icon}
   </Box>
 );
@@ -31,26 +60,45 @@ const TagCircle = ({ icon, bg }) => (
 const BlockCard = ({ title }) => (
   <Box
     sx={{
-      height: '70%',
-      border: '1.5px dashed #90caf9',
+      height: "70%",
+      border: "1.5px dashed #90caf9",
       borderRadius: radius.sm,
-      backgroundColor: '#eef4ff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      px: '8px',
+      backgroundColor: "#eef4ff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      px: "8px",
     }}
   >
-    <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: COLORS.ACCENT }}>
+    <Typography
+      sx={{
+        fontSize: fontSize.xs,
+        fontWeight: fontWeight.medium,
+        color: COLORS.ACCENT,
+      }}
+    >
       {title}
     </Typography>
   </Box>
 );
 
+// Returns a size tier based on appointment duration in minutes:
+//   'xs'     < 20 min  — header bar only
+//   'sm'  20–44 min  — header + procedures line
+//   'md'  45–74 min  — + status stripe + tags
+//   'lg'    >= 75 min  — full card (description + footer)
+const getSizeTier = (durationMinutes = 60) => {
+  if (durationMinutes < 20) return "xs";
+  if (durationMinutes < 45) return "sm";
+  if (durationMinutes < 55) return "md";
+  return "lg";
+};
+
 const AppointmentCard = ({ appointment }) => {
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
+  const navigate = useNavigate();
 
   const handleMouseEnter = () => {
     clearTimeout(leaveTimer.current);
@@ -61,9 +109,98 @@ const AppointmentCard = ({ appointment }) => {
     leaveTimer.current = setTimeout(() => setAnchorRect(null), 200);
   };
 
-  if (appointment.type === 'block') return <BlockCard title={appointment.title} />;
+  if (appointment.type === "block")
+    return <BlockCard title={appointment.title} />;
 
-  const statusCfg = STATUS_CONFIG[appointment.status] ?? STATUS_CONFIG.CONFIRMED;
+  const statusCfg =
+    STATUS_CONFIG[appointment.status] ?? STATUS_CONFIG.CONFIRMED;
+  const tier = getSizeTier(appointment.durationMinutes);
+  const colorTags = Array.isArray(appointment.colorTags)
+    ? appointment.colorTags.filter(
+        (color) => typeof color === "string" && color.trim(),
+      )
+    : [];
+
+  // xs: just a coloured header bar with name + time, no body at all
+  if (tier === "xs") {
+    return (
+      <>
+        <Box
+          ref={cardRef}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          sx={{
+            height: "100%",
+            borderRadius: radius.sm,
+            overflow: "hidden",
+            boxShadow: "0px 2px 6px rgba(0,0,0,0.10)",
+            display: "flex",
+            flexDirection: "row",
+            cursor: "pointer",
+          }}
+        >
+          <Box
+            sx={{
+              flex: 1,
+              backgroundColor: appointment.headerColor,
+              px: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              overflow: "hidden",
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: fontWeight.bold,
+                fontSize: fontSize.xs,
+                color: COLORS.WHITE,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {appointment.patientName}
+            </Typography>
+            <Typography
+              sx={{
+                fontWeight: fontWeight.semibold,
+                fontSize: fontSize.xs,
+                color: COLORS.WHITE,
+                flexShrink: 0,
+                ml: "4px",
+              }}
+            >
+              {appointment.time}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              width: "22px",
+              backgroundColor: "#dbeafe",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              flexShrink: 0,
+            }}
+          >
+            <PhoneOutlined sx={{ fontSize: "13px", color: "#2563eb" }} />
+            <OpenInNew sx={{ fontSize: "13px", color: "#2563eb" }} />
+          </Box>
+        </Box>
+        {anchorRect && (
+          <AppointmentHoverCard
+            appointment={appointment}
+            anchorRect={anchorRect}
+            onMouseEnter={() => clearTimeout(leaveTimer.current)}
+            onMouseLeave={handleMouseLeave}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -72,169 +209,425 @@ const AppointmentCard = ({ appointment }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         sx={{
-          height: '100%',
+          height: "100%",
           borderRadius: radius.md,
-          overflow: 'hidden',
-          boxShadow: '0px 2px 10px rgba(0,0,0,0.12)',
-          display: 'flex',
-          flexDirection: 'row',
-          cursor: 'pointer',
+          overflow: "hidden",
+          boxShadow: "0px 2px 10px rgba(0,0,0,0.12)",
+          display: "flex",
+          flexDirection: "row",
+          cursor: "pointer",
         }}
       >
-        {/* ── Main content column ── */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-
+        {/* Main content column */}
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            minWidth: 0,
+          }}
+        >
           {/* Header */}
           <Box
             sx={{
               backgroundColor: appointment.headerColor,
-              px: '8px',
-              py: '5px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              px: "8px",
+              py: "5px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               flexShrink: 0,
             }}
           >
-            <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xs, color: COLORS.WHITE, letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Typography
+              sx={{
+                fontWeight: fontWeight.bold,
+                fontSize: fontSize.xs,
+                color: COLORS.WHITE,
+                letterSpacing: "0.5px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {appointment.patientName}
             </Typography>
-            <Typography sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs, color: COLORS.WHITE }}>
+            <Typography
+              sx={{
+                fontWeight: fontWeight.semibold,
+                fontSize: fontSize.xs,
+                color: COLORS.WHITE,
+              }}
+            >
               {appointment.time}
             </Typography>
           </Box>
 
-          {/* Status stripe */}
-          <Box
-            sx={{
-              backgroundColor: statusCfg.bg,
-              py: '2px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: COLORS.WHITE, letterSpacing: '0.7px' }}>
-              {appointment.status}
-            </Typography>
-          </Box>
+          {/* Status stripe — hidden on sm to save vertical space */}
+          {tier !== "sm" && (
+            <Box
+              sx={{
+                backgroundColor: statusCfg.bg,
+                py: appointment.durationMinutes < 75 ? "1px" : "2px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize:
+                    appointment.durationMinutes < 75 ? "9px" : fontSize.xs,
+                  fontWeight: fontWeight.bold,
+                  color: COLORS.WHITE,
+                  letterSpacing: "0.7px",
+                }}
+              >
+                {appointment.status}
+              </Typography>
+            </Box>
+          )}
 
           {/* Body */}
           <Box
             sx={{
               flex: 1,
               backgroundColor: COLORS.WHITE,
-              px: '8px',
-              py: '6px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              overflow: 'hidden',
+              px: "8px",
+              py: tier === "sm" ? "4px" : "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: tier === "sm" ? "2px" : "4px",
+              overflow: "hidden",
             }}
           >
             {/* Procedures + inline action icons */}
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
-              <Typography 
-                sx={{ 
-                  fontSize: fontSize.base, 
-                  fontWeight: fontWeight.medium, 
-                  color: '#111827',
-                  whiteSpace: 'normal',
-                  wordBreak: 'break-word',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  lineHeight: 1.2
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "4px",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: fontSize.base,
+                  fontWeight: fontWeight.medium,
+                  color: "#111827",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  display: "-webkit-box",
+                  WebkitLineClamp: tier === "sm" ? 1 : 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  lineHeight: 1.2,
                 }}
               >
                 {appointment.procedures}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, mt: '2px' }}>
-                <FiberManualRecord sx={{ fontSize: '11px', color: COLORS.ACCENT }} />
-                <Add sx={{ fontSize: fontSize.xs, color: COLORS.STATUS_ERROR }} />
-                <Description sx={{ fontSize: fontSize.xs, color: COLORS.ACCENT }} />
-                <AttachMoney sx={{ fontSize: fontSize.xs, color: COLORS.ACCENT }} />
-                <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: COLORS.ACCENT }}>Tx</Typography>
-                <Typography sx={{ fontSize: '12px', lineHeight: 1 }}>🦷</Typography>
-              </Box>
-            </Box>
-
-            {/* Description */}
-            <Typography 
-              sx={{ 
-                fontSize: fontSize.xs, 
-                color: COLORS.TEXT_BODY, 
-                lineHeight: 1.4,
-                whiteSpace: 'normal',
-                wordBreak: 'break-word',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}
-            >
-              {appointment.description}
-            </Typography>
-
-            {/* Tags */}
-            <Box sx={{ display: 'flex', gap: '4px', flexWrap: 'wrap', mt: 1 }}>
-              {appointment.tags.map((tag, i) => {
-                const { bg, color, border } = TAG_STYLE(tag);
-                return (
-                  <Box key={i} sx={{ px: '8px', py: '2px', borderRadius: '4px', backgroundColor: bg, border }}>
-                    <Typography sx={{ fontSize: '11px', fontWeight: 700, color, letterSpacing: '0.3px' }}>
-                      {tag}
-                    </Typography>
-                  </Box>
-                );
-              })}
-            </Box>
-
-            {/* Footer */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto', pt: 1 }}>
-              {/* Price pill */}
-              <Box sx={{ backgroundColor: '#dcfce7', borderRadius: '20px', px: '8px', py: '3px' }}>
-                <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>
-                  {appointment.price}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                  flexShrink: 0,
+                  mt: "2px",
+                }}
+              >
+                <FiberManualRecord
+                  sx={{ fontSize: "13px", color: COLORS.ACCENT }}
+                />
+                <Add sx={{ fontSize: "14px", color: COLORS.STATUS_ERROR }} />
+                <Description
+                  sx={{
+                    fontSize: "14px",
+                    color: COLORS.ACCENT,
+                    cursor: "pointer",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (appointment.patientId)
+                      navigate(
+                        `/clinical/progress-notes?patientId=${appointment.patientId}`,
+                      );
+                    else navigate("/clinical/progress-notes");
+                  }}
+                />
+                <AttachMoney
+                  sx={{
+                    fontSize: "14px",
+                    color: COLORS.ACCENT,
+                    cursor: "pointer",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (appointment.patientId)
+                      navigate(`/finance?patientId=${appointment.patientId}`);
+                    else navigate("/finance");
+                  }}
+                />
+                <Typography
+                  sx={{
+                    fontSize: "13px",
+                    fontWeight: fontWeight.bold,
+                    color: COLORS.ACCENT,
+                    cursor: "pointer",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (appointment.patientId)
+                      navigate(
+                        `/clinical/treatment-plan?patientId=${appointment.patientId}`,
+                      );
+                    else navigate("/clinical/treatment-plan");
+                  }}
+                >
+                  Tx
+                </Typography>
+                <Typography
+                  sx={{ fontSize: "14px", lineHeight: 1, cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (appointment.patientId)
+                      navigate(
+                        `/clinical/exam?patientId=${appointment.patientId}`,
+                      );
+                    else navigate("/clinical/exam");
+                  }}
+                >
+                  🦷
                 </Typography>
               </Box>
+            </Box>
 
-              {/* Footer icons */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#ccfbf1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Typography sx={{ color: '#0d9488', fontSize: '18px', fontWeight: 800, lineHeight: 1, pt: '5px' }}>*</Typography>
+            {/* Description — only on lg */}
+            {tier === "lg" && (
+              <Typography
+                sx={{
+                  fontSize:
+                    appointment.durationMinutes < 75 ? "10px" : fontSize.xs,
+                  color: COLORS.TEXT_BODY,
+                  lineHeight: 1.4,
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  display: "-webkit-box",
+                  WebkitLineClamp: appointment.durationMinutes < 75 ? 1 : 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {appointment.description}
+              </Typography>
+            )}
+
+            {/* Tags — md and lg */}
+            {(tier === "md" || tier === "lg") &&
+              (() => {
+                const isCompact = appointment.durationMinutes < 75;
+                const maxVisible = isCompact ? 3 : appointment.tags.length;
+                const visibleTags = appointment.tags.slice(0, maxVisible);
+                const hiddenCount =
+                  appointment.tags.length - visibleTags.length;
+                return (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: "4px",
+                      flexWrap: "wrap",
+                      mt: tier === "lg" && !isCompact ? 1 : 0,
+                    }}
+                  >
+                    {visibleTags.map((tag, i) => {
+                      const { bg, color, border } = TAG_STYLE(tag);
+                      const label = getTagLabel(tag);
+                      return (
+                        <Box
+                          key={i}
+                          sx={{
+                            px: "8px",
+                            py: "2px",
+                            borderRadius: "4px",
+                            backgroundColor: bg,
+                            border,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              color,
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            {label}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                    {hiddenCount > 0 && (
+                      <Box
+                        sx={{
+                          px: "6px",
+                          py: "2px",
+                          borderRadius: "4px",
+                          backgroundColor: "#f3f4f6",
+                          border: "1px solid #d1d5db",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#6b7280",
+                          }}
+                        >
+                          +{hiddenCount}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })()}
+
+            {/* Footer — only on lg */}
+            {tier === "lg" && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mt: "auto",
+                  pt: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    backgroundColor: "#dcfce7",
+                    borderRadius: "20px",
+                    px: "8px",
+                    py: "3px",
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a" }}
+                  >
+                    {appointment.price}
+                  </Typography>
                 </Box>
-                <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#ffedd5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <AltRoute sx={{ color: '#f97316', fontSize: '14px', transform: 'rotate(90deg)' }} />
+                {colorTags.length > 0 &&
+                  (() => {
+                    const visibleColorTags = colorTags.slice(0, 3);
+                    const hiddenCount =
+                      colorTags.length - visibleColorTags.length;
+                    return (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        {visibleColorTags.map((color, i) => (
+                          <Box
+                            key={`${color}-${i}`}
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              bgcolor: color,
+                              border: "2px solid rgba(255,255,255,0.9)",
+                              boxShadow: "0 0 0 1px rgba(15,23,42,0.12)",
+                            }}
+                          />
+                        ))}
+                        {hiddenCount > 0 && (
+                          <Box
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              bgcolor: "#f3f4f6",
+                              border: "1px solid #d1d5db",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                color: "#6b7280",
+                              }}
+                            >
+                              +{hiddenCount}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    );
+                  })()}
+              </Box>
+            )}
+
+            {/* Compact footer — price only on md */}
+            {tier === "md" && (
+              <Box sx={{ display: "flex", alignItems: "center", mt: "auto" }}>
+                <Box
+                  sx={{
+                    backgroundColor: "#dcfce7",
+                    borderRadius: "20px",
+                    px: "8px",
+                    py: "2px",
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}
+                  >
+                    {appointment.price}
+                  </Typography>
                 </Box>
               </Box>
-            </Box>
+            )}
           </Box>
         </Box>
 
-        {/* ── Right icon strip ── */}
+        {/* Right icon strip */}
         <Box
           sx={{
-            width: '28px',
-            backgroundColor: '#dbeafe',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            pt: '8px',
-            gap: '8px',
+            width: "28px",
+            backgroundColor: "#dbeafe",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            pt: "8px",
+            gap: "8px",
             flexShrink: 0,
           }}
         >
-          <PhoneOutlined sx={{ fontSize: '14px', color: '#2563eb' }} />
-          <OpenInNew sx={{ fontSize: '14px', color: '#2563eb' }} />
-          
-          {/* SS moved to bottom */}
-          <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#2563eb', mt: 'auto', mb: '8px' }}>
-            SS
-          </Typography>
+          <PhoneOutlined sx={{ fontSize: "16px", color: "#2563eb" }} />
+          <OpenInNew sx={{ fontSize: "16px", color: "#2563eb" }} />
+
+          {/* SS — hide on very compact cards */}
+          {tier !== "sm" && (
+            <Typography
+              sx={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#2563eb",
+                mt: "auto",
+                mb: "8px",
+              }}
+            >
+              SS
+            </Typography>
+          )}
         </Box>
       </Box>
 
