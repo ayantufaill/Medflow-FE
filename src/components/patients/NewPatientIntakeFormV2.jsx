@@ -496,16 +496,19 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
           </SectionCard>
         </Box>
 
-        {/* Bottom Action Bar */}
-        <Box sx={{ position: "sticky", bottom: 0, zIndex: 100, backgroundColor: COLORS.SURFACE_CARD, borderTop: `1px solid ${COLORS.BORDER}`, px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* Bottom Action Bar — sits in normal document flow at the end of the
+            page (not fixed/sticky), so it only comes into view once the user
+            scrolls all the way down. */}
+        <Box sx={{ backgroundColor: COLORS.SURFACE_CARD, borderTop: `1px solid ${COLORS.BORDER}`, px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Controller name="sendWelcome" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="Send Welcome" />
             )} />
+            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
             <Controller name="sendWelcomeMethod" control={control} render={({ field }) => (
               <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "Email", value: "email"}, {label: "Text Message", value: "text"}]} />
             )} />
-            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, mx: 0.5 }} />
+            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
             <Controller name="newPatientFlag" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="New Patient" />
             )} />
