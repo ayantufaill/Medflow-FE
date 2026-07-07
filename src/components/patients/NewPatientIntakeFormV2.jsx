@@ -16,7 +16,7 @@ import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import CallMadeOutlinedIcon from "@mui/icons-material/CallMadeOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import ChecklistOutlinedIcon from "@mui/icons-material/ChecklistOutlined";
-import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
+import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
 
 import SectionCard from "./form-components/SectionCard";
 import FormField from "./form-components/FormField";
@@ -217,42 +217,49 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
   return (
     <ThemeProvider theme={withInterFont}>
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ backgroundColor: COLORS.SURFACE_PAGE, minHeight: "100vh" }}>
+      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ backgroundColor: COLORS.SURFACE_PAGE, minHeight: "100%" }}>
 
-        {/* Top Header / Nav Area */}
-        <Box sx={{ px: 4, pt: 3, pb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography sx={{ color: COLORS.ACCENT, fontSize: fontSize.base, fontWeight: fontWeight.medium, cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={onCancel}>Patients</Typography>
-              <Typography sx={{ color: COLORS.TEXT_MUTED, fontSize: fontSize.base }}>/</Typography>
-              <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: fontSize.base, fontWeight: fontWeight.semibold }}>Add New Patient</Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box sx={{ backgroundColor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_SECONDARY, px: 1.5, py: 0.5, borderRadius: radius.sm, fontSize: fontSize.base, fontWeight: fontWeight.semibold, border: `1px solid ${COLORS.BORDER}` }}>
-                Draft auto-saved
-              </Box>
-              <Button variant="outlined" sx={{ minWidth: "auto", p: "6px", borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}>
-                <SaveOutlinedIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
-              </Button>
-            </Box>
+        {/* Page Header — sits directly under the app's main header. Three
+            flex sections: breadcrumb (left), Assign Care Team (center),
+            bookmark/Cancel/Save (right). */}
+        <Box sx={{
+          px: 4, py: 2, margin:2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, borderRadius:'12px',
+          backgroundColor: COLORS.SURFACE_CARD, borderBottom: `1px solid ${COLORS.BORDER}`, 
+        }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+            <Typography sx={{ color: COLORS.ACCENT, fontSize: fontSize.base, fontWeight: fontWeight.semibold, textTransform: "uppercase", cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={onCancel}>Patients</Typography>
+            <Typography sx={{ color: COLORS.TEXT_MUTED, fontSize: fontSize.base }}>/</Typography>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: fontSize.base, fontWeight: fontWeight.semibold, textTransform: "uppercase" }}>Add New Patient</Typography>
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: COLORS.ACCENT, fontWeight: fontWeight.semibold, fontSize: fontSize.base, textTransform: "uppercase" }}>
-              <PeopleAltOutlinedIcon fontSize="small" /> ASSIGN CARE TEAM
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: COLORS.ACCENT, fontWeight: fontWeight.semibold, fontSize: fontSize.base, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+              <PeopleAltOutlinedIcon fontSize="small" /> Assign Care Team
             </Box>
             <Controller name="preferredDentistId" control={control} render={({ field }) => (
-              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
-                <MenuItem value=""><span style={{ color: COLORS.TEXT_MUTED }}>Preferred Dentist</span></MenuItem>
+              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 200, "& .MuiOutlinedInput-root": { height: "36px", backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
+                <MenuItem value="">Preferred Dentist</MenuItem>
                 {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
             <Controller name="preferredHygienistId" control={control} render={({ field }) => (
-              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
-                <MenuItem value=""><span style={{ color: COLORS.TEXT_MUTED }}>Preferred Hygienist</span></MenuItem>
+              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 200, "& .MuiOutlinedInput-root": { height: "36px", backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
+                <MenuItem value="">Preferred Hygienist</MenuItem>
                 {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
+            <Button variant="outlined" sx={{ minWidth: "auto", p: "6px", borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}>
+              <BookmarkBorderOutlinedIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
+            </Button>
+            <Button variant="outlined" onClick={onCancel} sx={{ height: "36px", px: 2.5, borderRadius: radius.md, textTransform: "none", color: COLORS.TEXT_BODY, borderColor: COLORS.BORDER, "&:hover": { borderColor: COLORS.TEXT_MUTED, backgroundColor: COLORS.SURFACE_HOVER }, fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" disabled={loading} sx={{ height: "36px", px: 2.5, borderRadius: radius.md, textTransform: "none", backgroundColor: COLORS.ACCENT, "&:hover": { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: "none", fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
+              {loading ? <CircularProgress size={18} color="inherit" /> : "Save"}
+            </Button>
           </Box>
         </Box>
 
