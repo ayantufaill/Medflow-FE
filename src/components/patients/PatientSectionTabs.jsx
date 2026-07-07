@@ -1,19 +1,24 @@
 import { useNavigate } from 'react-router-dom';
-import { Box, Button } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight } from '../../constants/styles';
 
 export const PATIENT_SECTION_TABS = [
-  { id: 'details', label: 'PATIENT DETAILS' },
-  { id: 'vitals', label: 'VITALS' },
-  { id: 'medical', label: 'MEDICAL HISTORY' },
-  { id: 'dental', label: 'DENTAL HISTORY' },
-  { id: 'insurance', label: 'INSURANCE' },
-  { id: 'additional_docs', label: 'ADDITIONAL DOCS' },
-  { id: 'signed_docs', label: 'SIGNED DOCS' },
+  { id: 'details', label: 'Patient Details' },
+  { id: 'vitals', label: 'Vitals' },
+  { id: 'medical', label: 'Medical History' },
+  { id: 'dental', label: 'Dental History' },
+  { id: 'insurance', label: 'Insurance' },
+  { id: 'additional_docs', label: 'Additional Docs' },
+  { id: 'signed_docs', label: 'Signed Docs' },
 ];
 
 /**
  * Shared tab bar for patient section. Always visible on /patients, /patients/details/:id, /patients/:id/signed-documents, etc.
  * One click navigates to that section. Pass activeTab and optional patientId (when viewing a specific patient).
+ *
+ * Independent from the page header/body below it — a plain nav bar with its
+ * own underlined-active-tab styling, not a filled pill.
  */
 const PatientSectionTabs = ({ activeTab, patientId = '' }) => {
   const navigate = useNavigate();
@@ -58,32 +63,36 @@ const PatientSectionTabs = ({ activeTab, patientId = '' }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-      {PATIENT_SECTION_TABS.map((tab) => (
-        <Button
-          key={tab.id}
-          variant="text"
-          size="small"
-          onClick={() => handleTabClick(tab.id)}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.75rem',
-            letterSpacing: '0.02em',
-            py: 1,
-            px: 1.5,
-            borderRadius: 1,
-            bgcolor: activeTab === tab.id ? 'primary.main' : 'grey.100',
-            color: activeTab === tab.id ? 'primary.contrastText' : 'text.primary',
-            minWidth: 'auto',
-            '&:hover': {
-              bgcolor: activeTab === tab.id ? 'primary.dark' : 'grey.200',
-            },
-          }}
-        >
-          {tab.label}
-        </Button>
-      ))}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, px: 2.5, borderBottom: `1px solid ${COLORS.BORDER}`, overflowX: 'auto' }}>
+      {PATIENT_SECTION_TABS.map((tab) => {
+        const active = activeTab === tab.id;
+        return (
+          <Box
+            key={tab.id}
+            onClick={() => handleTabClick(tab.id)}
+            sx={{
+              py: 1.5,
+              cursor: 'pointer',
+              borderBottom: '2px solid',
+              borderColor: active ? COLORS.ACCENT : 'transparent',
+              flexShrink: 0,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: 'Inter',
+                fontSize: fontSize.md,
+                fontWeight: active ? fontWeight.semibold : fontWeight.medium,
+                color: active ? COLORS.ACCENT : COLORS.TEXT_SECONDARY,
+                whiteSpace: 'nowrap',
+                '&:hover': { color: COLORS.ACCENT },
+              }}
+            >
+              {tab.label}
+            </Typography>
+          </Box>
+        );
+      })}
     </Box>
   );
 };

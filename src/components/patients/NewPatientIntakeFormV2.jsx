@@ -18,7 +18,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import ChecklistOutlinedIcon from "@mui/icons-material/ChecklistOutlined";
 import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
 
-import SectionCard from "./form-components/SectionCard";
+import SectionCard from "../shared/SectionCard";
 import FormField from "./form-components/FormField";
 import FormFieldsGrid from "./form-components/FormFieldsGrid";
 import AddressFieldsSection from "./form-components/AddressFieldsSection";
