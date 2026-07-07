@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import { useState, useEffect, useMemo } from "react";
+import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import dayjs from "dayjs";
 import {
   HOURS,
@@ -230,8 +230,19 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ScheduleTimeGrid = ({ onSlotClick }) => {
+const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
+  const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate } = useScheduleState();
+  
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Very basic outside click handler
+      if (activeCell) setActiveCell(null);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [activeCell]);
+
   const { rooms, providers } = useDropdownData({
     rooms: true,
     providers: true,
@@ -346,23 +357,20 @@ const ScheduleTimeGrid = ({ onSlotClick }) => {
           {rooms.map((room, idx) => (
             <Box
               key={room._id || room.id || idx}
+              
               onClick={(e) => {
-                if (!onSlotClick) return;
-                // Get click Y relative to the box
+                e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
                 const y = e.clientY - rect.top;
                 const isBottomHalf = y > HOUR_HEIGHT / 2;
                 const mins = isBottomHalf ? 30 : 0;
-                onSlotClick(
+                setActiveCell({
                   hour,
                   mins,
-                  room._id ||
-                    room.id ||
-                    room.roomCode ||
-                    room.title ||
-                    room.name,
-                );
+                  roomId: room._id || room.id || room.roomCode || `op${idx + 1}`
+                });
               }}
+              onDragOver={(e) => handleDragOver(e, room._id || room.id || `op${idx + 1}`)}
               sx={{
                 width: COLUMN_MIN_WIDTH,
                 flexShrink: 0,
@@ -372,7 +380,6 @@ const ScheduleTimeGrid = ({ onSlotClick }) => {
                 "&:hover": {
                   backgroundColor: "rgba(34, 98, 239, 0.04)",
                 },
-                // Half-hour dashed divider drawn via CSS pseudo-element.
                 "&::after": {
                   content: '""',
                   position: "absolute",
@@ -383,7 +390,71 @@ const ScheduleTimeGrid = ({ onSlotClick }) => {
                   pointerEvents: "none",
                 },
               }}
-            />
+            >
+              {/* Active cell options popup */}
+              {activeCell && activeCell.hour === hour && activeCell.roomId === (room._id || room.id || room.roomCode || `op${idx + 1}`) && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: activeCell.mins === 30 ? '50%' : 0,
+                    height: '50%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 10,
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disableElevation
+                    onClick={() => {
+                      if (onSlotClick) onSlotClick(activeCell.hour, activeCell.mins, activeCell.roomId);
+                      setActiveCell(null);
+                    }}
+                    sx={{ 
+                      fontSize: '10px', 
+                      fontWeight: fontWeight.semibold, 
+                      textTransform: 'none', 
+                      py: 0.5, 
+                      minWidth: '80%', 
+                      backgroundColor: COLORS.ACCENT, 
+                      borderRadius: '6px',
+                      '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
+                    }}
+                  >
+                    Schedule Appointment
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      // if (onBlockClick) onBlockClick(activeCell.hour, activeCell.mins, activeCell.roomId);
+                      setActiveCell(null);
+                    }}
+                    sx={{ 
+                      fontSize: '10px', 
+                      fontWeight: fontWeight.semibold, 
+                      textTransform: 'none', 
+                      py: 0.5, 
+                      minWidth: '80%', 
+                      color: COLORS.TEXT_PRIMARY, 
+                      borderColor: COLORS.BORDER,
+                      borderRadius: '6px',
+                    }}
+                  >
+                    Block Slot
+                  </Button>
+                </Box>
+              )}
+            </Box>
           ))}
         </Box>
       ))}

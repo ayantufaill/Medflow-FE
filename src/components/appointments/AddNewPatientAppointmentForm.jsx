@@ -118,6 +118,17 @@ const AddNewPatientAppointmentForm = ({
     return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
   }, [apptDate, timeHours, timeMins, amPm]);
 
+  const handlePatientChange = (newPatient) => {
+    // If the user is switching from one selected patient to a different one,
+    // clear the procedure table and tags to prevent mixing procedures from the old patient.
+    if (patient && newPatient && (patient.id || patient._id) !== (newPatient.id || newPatient._id)) {
+      setProcedures([]);
+      setSelectedTagLabels(new Set());
+      setTagProcedureIds({});
+    }
+    setPatient(newPatient);
+  };
+
   /* ── Tag handlers ── */
   const handleTagClick = (label, idx) => {
     const key = `${label}-${idx}`;
@@ -139,6 +150,7 @@ const AddNewPatientAppointmentForm = ({
           id: newId, code: template.code, treatment: template.treatment,
           site: "", provider: "", charge: template.charge, checked: true,
           tag: { label: tagInfo.label, color: tagInfo.color, font: tagInfo.font },
+          treatArea: template.treatArea,
         }]);
         setTagProcedureIds((prev) => ({ ...prev, [key]: newId }));
       }
@@ -150,9 +162,32 @@ const AddNewPatientAppointmentForm = ({
     setProcedures((prev) => [...prev, {
       id: nextId.current++, code: option.code, treatment: option.treatment,
       site: "", provider: "", charge: option.charge, checked: true, tag: option.tag,
+      treatArea: option.treatArea,
     }]);
     setProcedureInput(""); setAddingProcedure(false);
   };
+
+  useEffect(() => {
+    // If a procedure associated with a tag is removed, untoggle the tag
+    const currentProcedureIds = new Set(procedures.map(p => p.id));
+    let tagsChanged = false;
+    const newTagProcedureIds = { ...tagProcedureIds };
+    const newSelectedTags = new Set(selectedTagLabels);
+
+    for (const [tagKey, procId] of Object.entries(tagProcedureIds)) {
+      if (!currentProcedureIds.has(procId)) {
+        // Procedure was deleted
+        delete newTagProcedureIds[tagKey];
+        newSelectedTags.delete(tagKey);
+        tagsChanged = true;
+      }
+    }
+
+    if (tagsChanged) {
+      setTagProcedureIds(newTagProcedureIds);
+      setSelectedTagLabels(newSelectedTags);
+    }
+  }, [procedures, tagProcedureIds, selectedTagLabels]);
 
   /* ── Submit ── */
   const handleSubmit = () => {
@@ -237,7 +272,7 @@ const AddNewPatientAppointmentForm = ({
             patients={patients}
             loadingPatients={loadingPatients}
             patient={patient}
-            onPatientChange={setPatient}
+            onPatientChange={handlePatientChange}
             onPatientSearch={onPatientSearch}
             apptDate={apptDate}
             onDateChange={setApptDate}

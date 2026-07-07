@@ -56,6 +56,16 @@ export const appointmentService = {
   },
 
   /**
+   * Get procedures for a specific appointment
+   * @param {string} appointmentId - Appointment ID
+   * @returns {Promise<Array>} Array of procedures
+   */
+  async getAppointmentProcedures(appointmentId) {
+    const response = await apiClient.get(`/appointments/${appointmentId}/procedures`);
+    return response.data.data?.procedures || [];
+  },
+
+  /**
    * Get provider schedule
    * @param {string} providerId - Provider ID
    * @param {string} view - View type ('day', 'week', 'month')
