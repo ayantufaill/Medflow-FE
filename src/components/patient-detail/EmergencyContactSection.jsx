@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Box, Typography, TextField, InputAdornment } from '@mui/material';
 import { KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material';
 import { InlineFieldRow, standardFieldSx } from './InlineField';
-import { sectionTitleSx, labelSx } from '../../constants/styles';
 
 /**
  * Format phone number for display
@@ -94,7 +93,8 @@ const PhoneField = ({ value, label, isEditMode, onChange }) => {
       label={label}
       input={
         <TextField
-          variant="standard"
+          variant="outlined"
+          size="small"
           fullWidth
           value={isEditMode ? inputValue : value || ''}
           onChange={handleChange}
@@ -105,7 +105,6 @@ const PhoneField = ({ value, label, isEditMode, onChange }) => {
           }}
           InputProps={{
             readOnly: !isEditMode,
-            disableUnderline: false,
             inputProps: { title: value || '' },
             startAdornment: (
               <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
@@ -159,13 +158,6 @@ export default function EmergencyContactSection({ patient, isEditMode = false, o
 
   return (
     <Box>
-      <Typography
-        variant="subtitle1"
-        fontWeight={700}
-        sx={{ mb: 2, ...sectionTitleSx }}
-      >
-        Emergency Contact
-      </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <InlineFieldRow 
           label="Name" 

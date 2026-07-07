@@ -46,9 +46,6 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={sectionTitleSx}>
-        Additional Information
-      </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <InlineFieldRow 
           label="Referred By" 
