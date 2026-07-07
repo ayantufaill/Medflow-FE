@@ -48,7 +48,7 @@ const MedicalGeneralInfoCard = ({ generalInfo, onChangeField }) => {
         />
       </Box>
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 2 }}>
         <FieldBox
           label="Last Physical Exam"
           value={generalInfo.lastExamDate}
@@ -60,57 +60,61 @@ const MedicalGeneralInfoCard = ({ generalInfo, onChangeField }) => {
           onChange={(e) => onChangeField("healthEstimate", e.target.value)}
         />
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <WeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
-            <Typography sx={fieldLabelSx}>Weight</Typography>
+        {/* Weight + Height share the third column's width, same as Physician
+            Specialty above, instead of each wrapping onto its own full row. */}
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <WeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
+              <Typography sx={fieldLabelSx}>Weight</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <TextField
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={generalInfo.weight || ""}
+                onChange={(e) => onChangeField("weight", e.target.value)}
+                sx={{ ...standardFieldSx, minWidth: 0 }}
+              />
+              <Select
+                variant="standard"
+                value={generalInfo.weightUnit || "LBS"}
+                onChange={(e) => onChangeField("weightUnit", e.target.value)}
+                sx={unitSelectSx}
+                IconComponent={() => null}
+              >
+                <MenuItem value="LBS">LBS</MenuItem>
+                <MenuItem value="KG">KG</MenuItem>
+              </Select>
+            </Box>
           </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <TextField
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={generalInfo.weight || ""}
-              onChange={(e) => onChangeField("weight", e.target.value)}
-              sx={standardFieldSx}
-            />
-            <Select
-              variant="standard"
-              value={generalInfo.weightUnit || "LBS"}
-              onChange={(e) => onChangeField("weightUnit", e.target.value)}
-              sx={unitSelectSx}
-              IconComponent={() => null}
-            >
-              <MenuItem value="LBS">LBS</MenuItem>
-              <MenuItem value="KG">KG</MenuItem>
-            </Select>
-          </Box>
-        </Box>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <HeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
-            <Typography sx={fieldLabelSx}>Height</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <TextField
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={generalInfo.height || ""}
-              onChange={(e) => onChangeField("height", e.target.value)}
-              sx={standardFieldSx}
-            />
-            <Select
-              variant="standard"
-              value={generalInfo.heightUnit || "FT/IN"}
-              onChange={(e) => onChangeField("heightUnit", e.target.value)}
-              sx={unitSelectSx}
-              IconComponent={() => null}
-            >
-              <MenuItem value="FT/IN">FT/IN</MenuItem>
-              <MenuItem value="CM">CM</MenuItem>
-            </Select>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <HeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
+              <Typography sx={fieldLabelSx}>Height</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <TextField
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={generalInfo.height || ""}
+                onChange={(e) => onChangeField("height", e.target.value)}
+                sx={{ ...standardFieldSx, minWidth: 0 }}
+              />
+              <Select
+                variant="standard"
+                value={generalInfo.heightUnit || "FT/IN"}
+                onChange={(e) => onChangeField("heightUnit", e.target.value)}
+                sx={unitSelectSx}
+                IconComponent={() => null}
+              >
+                <MenuItem value="FT/IN">FT/IN</MenuItem>
+                <MenuItem value="CM">CM</MenuItem>
+              </Select>
+            </Box>
           </Box>
         </Box>
       </Box>

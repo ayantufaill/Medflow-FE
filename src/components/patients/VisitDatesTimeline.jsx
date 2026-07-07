@@ -12,12 +12,12 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
   return (
     <Box 
       sx={{ 
-        py: 2, 
+        py: 0, 
         overflowX: 'auto',
         WebkitPrintColorAdjust: 'exact',
         maxWidth: '100%',
         '&::-webkit-scrollbar': {
-          height: '6px',
+          height: '4px',
         },
         '&::-webkit-scrollbar-track': {
           background: '#f1f1f1',
@@ -34,7 +34,7 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
     >
       <svg 
         width={visitDates.length * ITEM_WIDTH + 40} // Added padding for the icon
-        height="80" 
+        height="70" 
         viewBox={`0 0 ${visitDates.length * ITEM_WIDTH + 40} 80`}
         style={{ display: 'block', minWidth: '100%' }}
       >

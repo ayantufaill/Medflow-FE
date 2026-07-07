@@ -41,7 +41,7 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
           backgroundColor: COLORS.SURFACE_TINT,
           borderBottom: `1px solid ${COLORS.BORDER}`,
           px: { xs: 2, sm: 2.5 },
-          py: 2,
+          py: 0.9,
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
