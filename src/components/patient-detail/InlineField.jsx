@@ -1,45 +1,41 @@
 import { Box, Typography, TextField } from '@mui/material';
-import { labelSx, standardFieldSx } from '../../constants/styles';
+import { standardFieldSx } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight } from '../../constants/styles';
 
-const labelWidth = 200;
+const labelWidth = 200; // kept for any remaining consumers of the old grid layout
 
 /**
- * Inline field: label left (bold), underlined input right.
- * Uses grid for consistent alignment - all labels same width, all inputs align.
+ * Inline field: uppercase gray label above a gray-bordered box input —
+ * matches the New Patient Intake form's FormField + OutlinedInput, instead
+ * of the old label-left/underlined-input row.
  */
 export function InlineFieldRow({ label, value, placeholder, input, ...rest }) {
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: `${labelWidth}px 1fr`,
-        gap: 1,
-        alignItems: 'center',
-        py: 0.75,
-        minHeight: 36,
-      }}
-    >
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.75 }}>
       <Typography
         component="label"
         sx={{
-          ...labelSx,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          fontFamily: 'Inter',
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.semibold,
+          color: COLORS.TEXT_SECONDARY,
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px',
         }}
       >
-        {label}:
+        {label}
       </Typography>
-      <Box sx={{ minWidth: 0 }} title={value ?? ''}>
+      <Box title={value ?? ''}>
         {input ?? (
           <TextField
-            variant="standard"
+            variant="outlined"
+            size="small"
             fullWidth
             value={value ?? ''}
             placeholder={placeholder}
             InputProps={{
               readOnly: true,
-              disableUnderline: false,
               inputProps: { title: value ?? '' },
             }}
             sx={standardFieldSx}
@@ -51,4 +47,4 @@ export function InlineFieldRow({ label, value, placeholder, input, ...rest }) {
   );
 }
 
-export { standardFieldSx, labelSx, labelWidth };
+export { standardFieldSx, labelWidth };

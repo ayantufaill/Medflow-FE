@@ -15,10 +15,25 @@ import {
 import { useState } from 'react';
 import MyChartFileDialog from './MyChartFileDialog';
 import AuditPatientHistoryDialog from './AuditPatientHistoryDialog';
+import { COLORS } from '../../constants/colors';
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+
+const actionButtonSx = {
+  textTransform: 'none',
+  fontFamily: 'Inter',
+  fontWeight: fontWeight.semibold,
+  fontSize: fontSize.base,
+  borderRadius: radius.md,
+  boxShadow: 'none',
+};
+
+const iconButtonSx = { p: 0.5, color: COLORS.TEXT_SECONDARY, '&:hover': { color: COLORS.ACCENT, backgroundColor: COLORS.ACCENT_BG } };
 
 /**
- * Screenshot: Edit (white, pencil, light gray text), then 5 small utility icons (refresh, document, envelope, printer, person+), then Deactivate (red), Convert (blue), Request Patient Updates.
- * Modal: dark blue header; Close = light gray background, dark gray text.
+ * Compact icon toolbar (edit + utility icons) on the left, Deactivate/Convert/
+ * Request Updates on the right — matches the schedule module's icon-button
+ * treatment (small, muted, accent on hover) instead of the previous large
+ * dark-navy (#1a237e) icons and a separate labeled "Edit" button.
  */
 export default function PatientDetailActions({
   onEdit,
@@ -81,173 +96,134 @@ export default function PatientDetailActions({
 
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
         {isEditMode ? (
-          <>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <Button
               variant="contained"
               size="small"
-              startIcon={<CheckCircleIcon />}
+              startIcon={<CheckCircleIcon fontSize="small" />}
               onClick={onSave}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                borderRadius: 1.5,
-                bgcolor: '#43a047',
-                '&:hover': { bgcolor: '#388e3c' },
-              }}
+              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 } }}
             >
               Save
             </Button>
             <Button
               variant="outlined"
               size="small"
-              startIcon={<CloseIcon />}
+              startIcon={<CloseIcon fontSize="small" />}
               onClick={onCancelEdit}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                borderRadius: 1.5,
-                borderColor: 'grey.300',
-                color: 'grey.700',
-                bgcolor: 'white',
-              }}
+              sx={{ ...actionButtonSx, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, backgroundColor: COLORS.SURFACE_CARD, '&:hover': { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}
             >
               Cancel
             </Button>
-          </>
+          </Box>
         ) : (
+          /* Icon Toolbar — Edit + small utility icons, all in one compact row */
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            <IconButton size="small" sx={iconButtonSx} onClick={onEdit}>
+              <EditIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+
+            {/* Hx (History) Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                <SyncIcon sx={{ fontSize: 20 }} />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '6px',
+                    fontWeight: 'bold',
+                    color: COLORS.ACCENT,
+                  }}
+                >
+                  Hx
+                </Box>
+              </Box>
+            </IconButton>
+
+            {/* Chat Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <ChatIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+
+            {/* Email with Check Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <Box sx={{ position: 'relative' }}>
+                <MailIcon sx={{ fontSize: 18 }} />
+                <CheckCircleIcon
+                  sx={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    color: 'inherit',
+                  }}
+                />
+              </Box>
+            </IconButton>
+
+            {/* Print Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <PrintIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+
+            {/* Document/File Icon */}
+            <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
+              <FileIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+
+            {/* Profile/User Icon */}
+            <IconButton size="small" sx={iconButtonSx} onClick={handleMyChartFileOpen}>
+              <AccountBoxIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Box>
+        )}
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isActive ? (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<PersonOffIcon fontSize="small" />}
+              onClick={onDeactivate}
+              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_ERROR, '&:hover': { backgroundColor: COLORS.STATUS_ERROR, opacity: 0.9 } }}
+            >
+              Deactivate
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<CheckCircleIcon fontSize="small" />}
+              onClick={onActivate}
+              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 } }}
+            >
+              Activate
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            size="small"
+            onClick={onConvertToNonPatient}
+            sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
+          >
+            Convert
+          </Button>
           <Button
             variant="outlined"
             size="small"
-            startIcon={<EditIcon fontSize="small" />}
-            onClick={onEdit}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: 1.5,
-              borderColor: 'grey.300',
-              color: 'grey.700',
-              bgcolor: 'white',
-            }}
+            endIcon={<ExpandMoreIcon />}
+            onClick={handleRequestOpen}
+            sx={{ ...actionButtonSx, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, backgroundColor: COLORS.SURFACE_CARD, '&:hover': { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}
           >
-            Edit
+            Request updates
           </Button>
-        )}
-        
-        {/* Icon Toolbar - Small utility icons */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-          {/* Hx (History) Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }}>
-            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-              <SyncIcon sx={{ fontSize: 28, color: '#1a237e' }} />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: '7px',
-                  fontWeight: 'bold',
-                  color: '#4db6ac',
-                }}
-              >
-                Hx
-              </Box>
-            </Box>
-          </IconButton>
-
-          {/* Chat Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }}>
-            <ChatIcon sx={{ fontSize: 20, color: '#1a237e' }} />
-          </IconButton>
-
-          {/* Email with Check Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }}>
-            <Box sx={{ position: 'relative' }}>
-              <MailIcon sx={{ fontSize: 20, color: '#1a237e' }} />
-              <CheckCircleIcon 
-                sx={{ 
-                  position: 'absolute', 
-                  bottom: -2, 
-                  right: -2, 
-                  fontSize: 10, 
-                  fontWeight: 'bold',
-                  color: '#1a237e' 
-                }} 
-              />
-            </Box>
-          </IconButton>
-
-          {/* Print Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }}>
-            <PrintIcon sx={{ fontSize: 20, color: '#1a237e' }} />
-          </IconButton>
-
-          {/* Document/File Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }} onClick={handleAuditDialogOpen}>
-            <FileIcon sx={{ fontSize: 20, color: '#1a237e' }} />
-          </IconButton>
-
-          {/* Profile/User Icon */}
-          <IconButton size="small" sx={{ p: 0.5 }} onClick={handleMyChartFileOpen}>
-            <AccountBoxIcon sx={{ fontSize: 22, color: '#1a237e' }} />
-          </IconButton>
         </Box>
-
-        {isActive ? (
-          <Button
-            variant="contained"
-            color="error"
-            size="small"
-            startIcon={<PersonOffIcon />}
-            onClick={onDeactivate}
-            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
-          >
-            Deactivate Patient
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<CheckCircleIcon />}
-            onClick={onActivate}
-            sx={{ 
-              textTransform: 'none', 
-              fontWeight: 600, 
-              borderRadius: 1.5,
-              bgcolor: '#43a047',
-              '&:hover': { bgcolor: '#388e3c' },
-            }}
-          >
-            Activate Patient
-          </Button>
-        )}
-        <Button
-          variant="contained"
-          size="small"
-          color="primary"
-          onClick={onConvertToNonPatient}
-          sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
-        >
-          Convert To Non-Patient
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          endIcon={<ExpandMoreIcon />}
-          onClick={handleRequestOpen}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            borderRadius: 1.5,
-            borderColor: 'grey.300',
-            color: 'grey.700',
-            bgcolor: 'white',
-          }}
-        >
-          Request Patient Updates
-        </Button>
       </Box>
 
       <Menu
