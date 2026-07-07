@@ -75,8 +75,8 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
                 {date}
               </text>
 
-              {/* 4. Delete Icon (Only for last item) */}
-              {isLast && (
+              {/* 4. Delete Icon (Only for last item, and only when removal is supported) */}
+              {isLast && onRemoveDate && (
                 <foreignObject 
                   x={xPos + 40} // Offset to the right of the text
                   y={DOT_Y + 26} // Aligns vertically with the text baseline
