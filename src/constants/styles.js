@@ -151,3 +151,33 @@ export const compactInputLabelSx = {
 export const compactInputValueSx = {
   fontSize: fontSize.base,
 };
+
+// ── Select dropdown popup ─────────────────────────────────────────────────────
+
+/**
+ * MenuProps for a MUI <Select> / <TextField select> so its dropdown popup
+ * gets the app's rounded-card treatment (border, shadow, accent-tinted
+ * selected/hover rows) instead of MUI's plain square default. Used by every
+ * filter/form select across the app (patients list filters, the new-patient
+ * intake form, etc.) — import this instead of redefining it per component.
+ */
+export const roundedSelectMenuProps = {
+  PaperProps: {
+    sx: {
+      mt: '4px',
+      borderRadius: radius.md,
+      border: `1px solid ${COLORS.BORDER}`,
+      boxShadow: '0px 4px 20px rgba(0,0,0,0.12)',
+      '& .MuiMenuItem-root': {
+        fontFamily: 'Inter',
+        fontSize: fontSize.md,
+        color: COLORS.TEXT_BODY,
+        '&.Mui-selected': {
+          backgroundColor: COLORS.ACCENT_BG,
+          '&:hover': { backgroundColor: COLORS.ACCENT_BG },
+        },
+        '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
+      },
+    },
+  },
+};
