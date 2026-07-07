@@ -1,7 +1,7 @@
 import { Box, Select, MenuItem, FormControlLabel, Checkbox, IconButton, Tooltip } from '@mui/material';
 import { Refresh as RefreshIcon, FilterAltOff } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
-import { radius, fontSize } from '../../../constants/styles';
+import { radius, fontSize, roundedSelectMenuProps } from '../../../constants/styles';
 
 // Rounded pill Select — same shape as the operatory Select in AppointmentRightPanel.jsx.
 const pillSelectSx = {
@@ -14,31 +14,6 @@ const pillSelectSx = {
   borderRadius: radius.md,
   '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
   '& .MuiSelect-select': { py: '8px' },
-};
-
-// The dropdown popup MUI renders for a Select is a separate Paper/Menu that
-// doesn't inherit the pill's rounded styling by default — this gives it the
-// same rounded-card treatment used by the other popovers/menus in the app
-// (see the slot-options Popover in OperatorySchedulePage.jsx).
-const pillSelectMenuProps = {
-  PaperProps: {
-    sx: {
-      mt: '4px',
-      borderRadius: radius.md,
-      border: `1px solid ${COLORS.BORDER}`,
-      boxShadow: '0px 4px 20px rgba(0,0,0,0.12)',
-      '& .MuiMenuItem-root': {
-        fontFamily: 'Inter',
-        fontSize: fontSize.md,
-        color: COLORS.TEXT_BODY,
-        '&.Mui-selected': {
-          backgroundColor: COLORS.ACCENT_BG,
-          '&:hover': { backgroundColor: COLORS.ACCENT_BG },
-        },
-        '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
-      },
-    },
-  },
 };
 
 // Row 2 of PatientsListPage: Status / Gender / Provider filters, Sort By Name,
@@ -58,20 +33,20 @@ const PatientFiltersBar = ({
   onResetFilters,
 }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mb: '14px', flexWrap: 'wrap' }}>
-    <Select value={statusFilter} displayEmpty onChange={(e) => onStatusFilterChange(e.target.value)} sx={pillSelectSx} MenuProps={pillSelectMenuProps}>
+    <Select value={statusFilter} displayEmpty onChange={(e) => onStatusFilterChange(e.target.value)} sx={pillSelectSx} MenuProps={roundedSelectMenuProps}>
       <MenuItem value="">All Status</MenuItem>
       <MenuItem value="active">Active</MenuItem>
       <MenuItem value="inactive">Inactive</MenuItem>
     </Select>
 
-    <Select value={genderFilter} displayEmpty onChange={(e) => onGenderFilterChange(e.target.value)} sx={pillSelectSx} MenuProps={pillSelectMenuProps}>
+    <Select value={genderFilter} displayEmpty onChange={(e) => onGenderFilterChange(e.target.value)} sx={pillSelectSx} MenuProps={roundedSelectMenuProps}>
       <MenuItem value="">All Gender</MenuItem>
       <MenuItem value="male">Male</MenuItem>
       <MenuItem value="female">Female</MenuItem>
       <MenuItem value="unknown">Unknown</MenuItem>
     </Select>
 
-    <Select value={providerFilter} displayEmpty onChange={(e) => onProviderFilterChange(e.target.value)} sx={{ ...pillSelectSx, minWidth: 170 }} MenuProps={pillSelectMenuProps}>
+    <Select value={providerFilter} displayEmpty onChange={(e) => onProviderFilterChange(e.target.value)} sx={{ ...pillSelectSx, minWidth: 170 }} MenuProps={roundedSelectMenuProps}>
       <MenuItem value="">All Providers</MenuItem>
       {providerList.map((p) => {
         const u = p.userId || p;

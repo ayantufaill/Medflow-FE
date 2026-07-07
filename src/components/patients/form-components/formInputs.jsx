@@ -1,19 +1,22 @@
 import { Box, MenuItem, TextField, Typography } from "@mui/material";
 import { formatPhoneInput } from "./formatters";
+import { COLORS } from "../../../constants/colors";
+import { radius, fontSize, fontWeight, roundedSelectMenuProps } from "../../../constants/styles";
 
 // Styled <TextField> used for every plain text input in the intake form —
-// rounded, light-gray fill, matches the design in NewPatientIntakeFormV2.
+// rounded, light-gray fill, matches the design used across the rest of the app
+// (PatientsListPage, AppointmentRightPanel, etc.).
 export const OutlinedInput = (props) => (
   <TextField
     variant="outlined" size="small" fullWidth {...props}
     sx={{
       "& .MuiOutlinedInput-root": {
-        height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB",
-        "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" },
-        "&:hover fieldset": { borderColor: "#CBD5E1" },
-        "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" },
+        height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, fontFamily: "Inter",
+        "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER },
+        "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED },
+        "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" },
       },
-      "& .MuiOutlinedInput-input": { padding: "8px 12px", fontSize: "0.88rem" },
+      "& .MuiOutlinedInput-input": { padding: "8px 12px", fontSize: fontSize.md },
       ...props.sx
     }}
   />
@@ -23,15 +26,15 @@ export const OutlinedInput = (props) => (
 export const OutlinedSelect = ({ children, ...props }) => (
   <TextField
     select variant="outlined" size="small" fullWidth {...props}
-    SelectProps={{ displayEmpty: true, ...props.SelectProps }}
+    SelectProps={{ displayEmpty: true, MenuProps: roundedSelectMenuProps, ...props.SelectProps }}
     sx={{
       "& .MuiOutlinedInput-root": {
-        height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB",
-        "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" },
-        "&:hover fieldset": { borderColor: "#CBD5E1" },
-        "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" },
+        height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, fontFamily: "Inter",
+        "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER },
+        "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED },
+        "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" },
       },
-      "& .MuiSelect-select": { padding: "8px 12px", fontSize: "0.88rem" },
+      "& .MuiSelect-select": { padding: "8px 12px", fontSize: fontSize.md },
       ...props.sx
     }}
   >
@@ -51,8 +54,8 @@ export const PhoneInput = ({ onChange, ...props }) => (
     }}
     InputProps={{
       startAdornment: (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 1, pr: 1, borderRight: "1px solid #E2E8F0" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 1, pr: 1, borderRight: `1px solid ${COLORS.BORDER}` }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={COLORS.TEXT_SECONDARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }}>
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
           <TextField
@@ -60,11 +63,11 @@ export const PhoneInput = ({ onChange, ...props }) => (
             variant="standard"
             defaultValue="US"
             InputProps={{ disableUnderline: true }}
-            SelectProps={{ IconComponent: () => null }}
+            SelectProps={{ IconComponent: () => null, MenuProps: roundedSelectMenuProps }}
             sx={{
               "& .MuiSelect-select": {
                 py: 0, pl: 0, pr: "0 !important",
-                fontSize: "0.85rem", fontWeight: 500, color: "#1E293B",
+                fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: COLORS.TEXT_PRIMARY,
                 "&:focus": { backgroundColor: "transparent" }
               }
             }}
@@ -92,13 +95,13 @@ export const CustomRadioGroup = ({ options = [], value, onChange, sx = {} }) => 
           gap: 1,
           height: "34.8px",
           px: 1.5,
-          borderRadius: "8px",
+          borderRadius: radius.md,
           border: "1.2px solid",
-          borderColor: value === opt.value ? "#1a73e8" : "#E2E8F0",
-          backgroundColor: value === opt.value ? "#e8f0fe" : "#F0F3FB",
+          borderColor: value === opt.value ? COLORS.ACCENT : COLORS.BORDER,
+          backgroundColor: value === opt.value ? COLORS.ACCENT_BG : COLORS.SURFACE_INPUT,
           cursor: "pointer",
           transition: "all 0.2s",
-          "&:hover": { borderColor: value === opt.value ? "#1a73e8" : "#CBD5E1" },
+          "&:hover": { borderColor: value === opt.value ? COLORS.ACCENT : COLORS.TEXT_MUTED },
           ...(opt.width ? { width: opt.width } : {}),
           boxSizing: "border-box"
         }}
@@ -109,15 +112,15 @@ export const CustomRadioGroup = ({ options = [], value, onChange, sx = {} }) => 
             height: 14,
             borderRadius: "50%",
             border: "1.2px solid",
-            borderColor: value === opt.value ? "#1a73e8" : "#94A3B8",
+            borderColor: value === opt.value ? COLORS.ACCENT : COLORS.TEXT_MUTED,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          {value === opt.value && <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#1a73e8" }} />}
+          {value === opt.value && <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: COLORS.ACCENT }} />}
         </Box>
-        <Typography sx={{ fontSize: "0.85rem", color: value === opt.value ? "#1a73e8" : "#475569", fontWeight: 500, whiteSpace: "nowrap" }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: value === opt.value ? COLORS.ACCENT : COLORS.TEXT_BODY, fontWeight: fontWeight.medium, whiteSpace: "nowrap" }}>
           {opt.label}
         </Typography>
       </Box>
@@ -125,7 +128,7 @@ export const CustomRadioGroup = ({ options = [], value, onChange, sx = {} }) => 
   </Box>
 );
 
-// Small uppercase divider used between sub-groups of fields inside a SectionCard.
+// Small divider used between sub-groups of fields inside a SectionCard.
 export const FieldDivider = () => (
-  <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
+  <Box sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, ml: "-40px", width: "calc(100% + 80px)" }} />
 );
