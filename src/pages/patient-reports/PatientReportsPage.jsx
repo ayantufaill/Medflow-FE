@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -22,14 +22,21 @@ import {
   Select,
   MenuItem,
   Grid,
-} from '@mui/material';
-import { Search, Visibility, Clear, FilterAltOff, Refresh, Info } from '@mui/icons-material';
-import { FormControlLabel, Checkbox } from '@mui/material';
-import { usePatients } from '../../hooks/redux/usePatient';
+} from "@mui/material";
+import {
+  Search,
+  Visibility,
+  Clear,
+  FilterAltOff,
+  Refresh,
+  Info,
+} from "@mui/icons-material";
+import { FormControlLabel, Checkbox } from "@mui/material";
+import { usePatients } from "../../hooks/redux/usePatient";
 
 const PatientReportsPage = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [sortByName, setSortByName] = useState(false);
   const { patients, loading, fetch } = usePatients();
 
@@ -39,12 +46,13 @@ const PatientReportsPage = () => {
   }, [fetch]);
 
   const getPatientInitials = (firstName, lastName) => {
-    if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    return 'P';
+    if (firstName && lastName)
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    return "P";
   };
 
   const handleResetFilters = () => {
-    setSearchTerm('');
+    setSearchTerm("");
     setSortByName(false);
   };
 
@@ -52,7 +60,7 @@ const PatientReportsPage = () => {
 
   const filteredPatients = patients.filter((patient) => {
     if (!searchTerm) return true;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return (
       patient.firstName?.toLowerCase().includes(searchLower) ||
@@ -66,8 +74,12 @@ const PatientReportsPage = () => {
     const list = [...filteredPatients];
     if (sortByName) {
       list.sort((a, b) => {
-        const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
-        const nb = `${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase();
+        const na = `${a.firstName || ""} ${a.lastName || ""}`
+          .trim()
+          .toLowerCase();
+        const nb = `${b.firstName || ""} ${b.lastName || ""}`
+          .trim()
+          .toLowerCase();
         return na.localeCompare(nb);
       });
     }
@@ -82,7 +94,7 @@ const PatientReportsPage = () => {
     <Box>
       <Paper sx={{ p: { xs: 1.5, sm: 2 } }}>
         {/* Row 1: Search + Status Filter */}
-        <Grid container spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
+        <Grid container spacing={2} sx={{ mb: 2, alignItems: "center" }}>
           <Grid size={{ xs: 12, md: 7 }}>
             <TextField
               fullWidth
@@ -97,7 +109,11 @@ const PatientReportsPage = () => {
                   </InputAdornment>
                 ),
                 endAdornment: searchTerm.length > 0 && (
-                  <IconButton size="small" onClick={() => setSearchTerm('')} edge="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchTerm("")}
+                    edge="end"
+                  >
                     <Clear />
                   </IconButton>
                 ),
@@ -117,7 +133,14 @@ const PatientReportsPage = () => {
             />
           </Grid>
           <Grid size={{ xs: 12, md: 2 }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                alignItems: "center",
+                justifyContent: "flex-end",
+              }}
+            >
               <Tooltip title="Clear Filters">
                 <span>
                   <IconButton
@@ -131,7 +154,10 @@ const PatientReportsPage = () => {
               </Tooltip>
               <Tooltip title="Refresh">
                 <span>
-                  <IconButton onClick={() => fetch({ page: 1, limit: 100 })} disabled={loading}>
+                  <IconButton
+                    onClick={() => fetch({ page: 1, limit: 100 })}
+                    disabled={loading}
+                  >
                     <Refresh />
                   </IconButton>
                 </span>
@@ -143,7 +169,17 @@ const PatientReportsPage = () => {
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' } }}>
+              <TableRow
+                sx={{
+                  "& .MuiTableCell-head": {
+                    py: 0.75,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "text.secondary",
+                    whiteSpace: "nowrap",
+                  },
+                }}
+              >
                 <TableCell>Patient Number</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
@@ -154,39 +190,67 @@ const PatientReportsPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 3, fontSize: '0.8rem' }}>
+                  <TableCell
+                    colSpan={5}
+                    align="center"
+                    sx={{ py: 3, fontSize: "0.8rem" }}
+                  >
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredPatients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 3, fontSize: '0.8rem' }}>
+                  <TableCell
+                    colSpan={5}
+                    align="center"
+                    sx={{ py: 3, fontSize: "0.8rem" }}
+                  >
                     No patients found
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedPatients.map((patient) => (
-                  <TableRow key={patient._id || patient.id} hover sx={{ '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' } }}>
-                    <TableCell>{patient.patientCode || '-'}</TableCell>
+                  <TableRow
+                    key={patient._id || patient.id}
+                    hover
+                    sx={{
+                      "& .MuiTableCell-body": { py: 0.5, fontSize: "0.78rem" },
+                    }}
+                  >
+                    <TableCell>{patient.patientCode || "-"}</TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
-                          {getPatientInitials(patient.firstName, patient.lastName)}
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            bgcolor: "primary.main",
+                            fontSize: "0.7rem",
+                          }}
+                        >
+                          {getPatientInitials(
+                            patient.firstName,
+                            patient.lastName,
+                          )}
                         </Avatar>
                         <Typography fontSize="0.78rem">
                           {patient.firstName} {patient.lastName}
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{patient.email || '-'}</TableCell>
-                    <TableCell>{patient.phonePrimary || '-'}</TableCell>
+                    <TableCell>{patient.email || "-"}</TableCell>
+                    <TableCell>{patient.phonePrimary || "-"}</TableCell>
                     <TableCell align="right">
                       <Button
                         variant="outlined"
                         size="small"
                         startIcon={<Visibility fontSize="small" />}
-                        onClick={() => handleViewReport(patient._id || patient.id)}
-                        sx={{ fontSize: '0.75rem', py: 0.25, px: 1 }}
+                        onClick={() =>
+                          handleViewReport(patient._id || patient.id)
+                        }
+                        sx={{ fontSize: "0.75rem", py: 0.25, px: 1 }}
                       >
                         View Report
                       </Button>

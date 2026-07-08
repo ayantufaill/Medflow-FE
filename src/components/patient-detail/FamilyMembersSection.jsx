@@ -1,29 +1,15 @@
-import { Box, Typography, Button, IconButton, Chip } from '@mui/material';
-import { Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
-import { sectionTitleSx } from '../../constants/styles';
+import { Box, Typography, Avatar, IconButton } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import { getInitials, computeAge } from './utils';
 
-/**
- * Family Members (Add New, list area, "(One HOH per family)").
- * Pass onAddNew to handle adding family members.
- */
-export default function FamilyMembersSection({ patient, onAddNew, isEditMode = false, onPatientDataChange }) {
-  const name = patient ? `${patient.firstName} ${patient.lastName}` : '';
-  const preferred = patient?.preferredName || name;
-  const selfDisplayName = name + (preferred && preferred !== name ? ` (${preferred})` : '');
+export default function FamilyMembersSection({ patient, isEditMode = false, onPatientDataChange }) {
   const householdMembers = Array.isArray(patient?.household) ? patient.household : [];
-  const householdNames = householdMembers.length
-    ? householdMembers
-        .map((member) => {
-          const memberName =
-            member?.displayName ||
-            member?.name ||
-            [member?.firstName, member?.lastName].filter(Boolean).join(' ').trim();
-          if (!memberName) return null;
-          return { label: member?.relationship ? `${memberName} (${member.relationship})` : memberName, raw: member };
-        })
-        .filter(Boolean)
-    : [];
-  const members = householdNames.length ? householdNames : [selfDisplayName].filter(Boolean);
+  
+  const selfName = patient ? `${patient.firstName} ${patient.lastName}` : '';
+  const selfPreferred = patient?.preferredName || '';
+  const selfDisplayName = selfName + (selfPreferred && selfPreferred !== selfName ? ` (${selfPreferred})` : '');
+  const selfAge = computeAge(patient?.dateOfBirth);
+
   const handleRemoveMember = (memberToRemove) => {
     if (!onPatientDataChange) return;
     const updatedHousehold = householdMembers.filter(m => {
@@ -34,43 +20,80 @@ export default function FamilyMembersSection({ patient, onAddNew, isEditMode = f
     onPatientDataChange({ ...patient, household: updatedHousehold });
   };
 
+  const allMembers = [
+    {
+      id: patient?.id || patient?._id || 'self',
+      firstName: patient?.firstName,
+      lastName: patient?.lastName,
+      displayName: selfDisplayName,
+      relationship: patient?.financialResponsibility?.type === 'hoh' ? 'HOH' : 'Self',
+      age: selfAge,
+      isSelf: true
+    },
+    ...householdMembers.map(m => {
+      const name = m.displayName || m.name || [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
+      const age = computeAge(m.dateOfBirth);
+      return {
+        id: m.id || m._id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        displayName: name,
+        relationship: m.relationship || 'Family Member',
+        age: age,
+        isSelf: false,
+        raw: m
+      };
+    })
+  ];
+
   return (
-    <Box>
-      <Typography variant="subtitle1" sx={sectionTitleSx}>
-        Family Members
-      </Typography>
-      {isEditMode && (
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={onAddNew}
-          sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5, mb: 1.5 }}
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      {allMembers.map((member) => (
+        <Box 
+          key={member.id} 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1.5, 
+            p: 1.25, 
+            border: '1px solid #f1f5f9', 
+            borderRadius: '8px', 
+            bgcolor: member.isSelf ? '#f8fafc' : '#ffffff',
+            position: 'relative'
+          }}
         >
-          Add New
-        </Button>
-      )}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: isEditMode ? 0 : 0.5 }}>
-        {members.map((memberObj, index) => {
-          const isSelf = memberObj === selfDisplayName;
-          return isEditMode && !isSelf ? (
-            <Chip
-              key={index}
-              label={memberObj.label}
-              onDelete={() => handleRemoveMember(memberObj.raw)}
-              size="small"
-              sx={{ fontWeight: 600, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
-            />
-          ) : (
-            <Typography key={index} variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
-              {isSelf ? memberObj : memberObj.label}
-              {index < members.length - 1 && !isEditMode ? ', ' : ''}
+          <Avatar 
+            sx={{ 
+              width: 36, 
+              height: 36, 
+              bgcolor: '#1976d2', 
+              fontSize: '0.85rem', 
+              fontWeight: 600 
+            }}
+          >
+            {getInitials(member.firstName, member.lastName)}
+          </Avatar>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b' }}>
+              {member.displayName}
             </Typography>
-          );
-        })}
-      </Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        (One HOH per family)
+            <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+              {member.relationship} {member.age != null ? ` - ${member.age} y` : ''}
+            </Typography>
+          </Box>
+          {isEditMode && !member.isSelf && (
+            <IconButton 
+              size="small" 
+              onClick={() => handleRemoveMember(member.raw)}
+              sx={{ color: 'text.secondary', hover: { color: 'error.main' } }}
+            >
+              <CloseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          )}
+        </Box>
+      ))}
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+        One HOH per family
       </Typography>
     </Box>
   );

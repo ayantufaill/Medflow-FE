@@ -15,4 +15,5 @@ export { default as PatientDetailOverview } from './PatientDetailOverview';
 export { default as PatientDetailsSection } from './PatientDetailsSection';
 export { default as PatientFlagsSection } from './PatientFlagsSection';
 export { default as PatientSummaryCard } from './PatientSummaryCard';
+export { default as SectionCard } from './SectionCard';
 export * from './utils';

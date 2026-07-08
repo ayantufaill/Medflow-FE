@@ -1,89 +1,95 @@
-import { useNavigate } from 'react-router-dom';
-import { Box, Button } from '@mui/material';
+import { useNavigate } from "react-router-dom";
+import { Box, Button } from "@mui/material";
 
 export const PATIENT_SECTION_TABS = [
-  { id: 'details', label: 'PATIENT DETAILS' },
-  { id: 'vitals', label: 'VITALS' },
-  { id: 'medical', label: 'MEDICAL HISTORY' },
-  { id: 'dental', label: 'DENTAL HISTORY' },
-  { id: 'insurance', label: 'INSURANCE' },
-  { id: 'additional_docs', label: 'ADDITIONAL DOCS' },
-  { id: 'signed_docs', label: 'SIGNED DOCS' },
+  { id: "details", label: "Patient Details" },
+  { id: "vitals", label: "Vitals" },
+  { id: "medical", label: "Medical History" },
+  { id: "dental", label: "Dental History" },
+  { id: "insurance", label: "Insurance" },
+  { id: "additional", label: "Additional Docs" },
+  { id: "signed", label: "Signed Docs" },
 ];
 
-/**
- * Shared tab bar for patient section. Always visible on /patients, /patients/details/:id, /patients/:id/signed-documents, etc.
- * One click navigates to that section. Pass activeTab and optional patientId (when viewing a specific patient).
- */
-const PatientSectionTabs = ({ activeTab, patientId = '' }) => {
+const PatientSectionTabs = ({ activeTab, patientId = "" }) => {
   const navigate = useNavigate();
 
   const handleTabClick = (tabId) => {
-    if (tabId === 'details') {
-      if (patientId) navigate(`/patients/details/${patientId}`);
-      else navigate('/patients');
+    if (!patientId) {
+      navigate("/patients");
       return;
     }
-    if (tabId === 'vitals') {
-      if (patientId) navigate(`/vital-signs/patient/${patientId}`);
-      else navigate('/vital-signs');
-      return;
+    
+    switch (tabId) {
+      case "details":
+        navigate(`/patients/details/${patientId}`);
+        break;
+      case "vitals":
+        navigate(`/vital-signs/patient/${patientId}`);
+        break;
+      case "medical":
+        navigate(`/patients/${patientId}/medical-history`);
+        break;
+      case "dental":
+        navigate(`/patients/${patientId}/dental-history`);
+        break;
+      case "insurance":
+        navigate(`/patients/details/${patientId}?tab=insurance`);
+        break;
+      case "additional":
+        navigate(`/patients/${patientId}/additional-documents`);
+        break;
+      case "signed":
+        navigate(`/patients/${patientId}/signed-documents`);
+        break;
+      default:
+        navigate("/patients");
     }
-    if (tabId === 'signed_docs') {
-      if (patientId) navigate(`/patients/${patientId}/signed-documents`);
-      else navigate('/patients');
-      return;
-    }
-    if (tabId === 'medical') {
-      if (patientId) navigate(`/patients/${patientId}/medical-history`);
-      else navigate('/patients?tab=medical', { replace: true });
-      return;
-    }
-    if (tabId === 'insurance') {
-      if (patientId) navigate(`/patients/details/${patientId}?tab=insurance`, { replace: true });
-      else navigate('/patients?tab=insurance', { replace: true });
-      return;
-    }
-    if (tabId === 'dental') {
-      if (patientId) navigate(`/patients/${patientId}/dental-history`);
-      else navigate('/patients?tab=dental', { replace: true });
-      return;
-    }
-    if (tabId === 'additional_docs') {
-      if (patientId) navigate(`/patients/${patientId}/additional-documents`);
-      else navigate('/patients?tab=additional_docs', { replace: true });
-      return;
-    }
-    navigate('/patients', { replace: true });
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-      {PATIENT_SECTION_TABS.map((tab) => (
-        <Button
-          key={tab.id}
-          variant="text"
-          size="small"
-          onClick={() => handleTabClick(tab.id)}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.75rem',
-            letterSpacing: '0.02em',
-            py: 1,
-            px: 1.5,
-            borderRadius: 1,
-            bgcolor: activeTab === tab.id ? 'primary.main' : 'grey.100',
-            color: activeTab === tab.id ? 'primary.contrastText' : 'text.primary',
-            minWidth: 'auto',
-            '&:hover': {
-              bgcolor: activeTab === tab.id ? 'primary.dark' : 'grey.200',
-            },
-          }}
-        >
-          {tab.label}
-        </Button>
-      ))}
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 3,
+        mb: 2,
+        px: 2,
+        py: 0.5,
+        borderBottom: "1px solid #e2e8f0",
+        bgcolor: "#ffffff",
+      }}
+    >
+      {PATIENT_SECTION_TABS.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <Button
+            key={tab.id}
+            variant="text"
+            size="small"
+            onClick={() => handleTabClick(tab.id)}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              py: 1.25,
+              px: 0.5,
+              borderRadius: 0,
+              borderBottom: isActive ? "2px solid #2563eb" : "2px solid transparent",
+              color: isActive ? "#2563eb" : "#64748b",
+              minWidth: "auto",
+              "&:hover": {
+                bgcolor: "transparent",
+                color: "#2563eb",
+                borderBottom: "2px solid #2563eb",
+              },
+            }}
+          >
+            {tab.label}
+          </Button>
+        );
+      })}
     </Box>
   );
 };
