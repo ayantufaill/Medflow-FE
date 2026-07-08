@@ -1,72 +1,111 @@
-import React, { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableRow, Typography, Box, Button } from "@mui/material";
+import React, { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+  Box,
+  Button,
+  TableContainer,
+  Paper,
+  Checkbox,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { Article as ArticleIcon } from "@mui/icons-material";
-import { headerCellSx } from './styles/coverageStyles';
-import { DEFAULT_BOOK_ROW_DATA } from './utils/insuranceConstants';
-import ToothSelectionDialog from './shared/ToothSelectionDialog';
-import CoverageBookRow from './CoverageBookRow';
+import { headerCellSx, bodyCellSx } from "./styles/coverageStyles";
+import { DEFAULT_BOOK_ROW_DATA } from "./utils/insuranceConstants";
+import ToothSelectionDialog from "./shared/ToothSelectionDialog";
+import CoverageBookRow from "./CoverageBookRow";
+import { ToothIcon } from "../teeth-structure-exam";
 
-const CoverageBookSummary = ({ 
+const CoverageBookSummary = ({
   coverageData = [],
   onCoverageDataChange,
-  onViewFullBook
+  onViewFullBook,
+  headerStyle,
+  bodyCellStyle,
+  blueHeader,
 }) => {
   const [activeToothSelection, setActiveToothSelection] = useState(null);
 
+  const rowData = DEFAULT_BOOK_ROW_DATA || [];
+  const localHeaderStyle = headerStyle || headerCellSx;
+  const localBodyCellStyle = bodyCellStyle || bodyCellSx;
+  const localBlueHeader = blueHeader || "#f4f6f9";
+
   const getRowData = (code) => {
-    return coverageData.find(item => item.code === code || item.rowKey === `proc-${code}`) || {};
+    return (
+      coverageData.find(
+        (item) => item.code === code || item.rowKey === `proc-${code}`,
+      ) || {}
+    );
   };
 
   const handleFieldChange = (code, field, value) => {
-    if (onCoverageDataChange) {
-      let updatedData = [...coverageData];
-      if (updatedData.length === 0) {
-        updatedData = DEFAULT_BOOK_ROW_DATA.map(row => ({ ...row }));
-      }
-      if (updatedData[index]) {
-        updatedData[index] = { ...updatedData[index], [field]: value };
-        onCoverageDataChange(updatedData);
-      }
-      onCoverageDataChange(updatedData);
+    if (!onCoverageDataChange) return;
+    let updatedData = Array.isArray(coverageData) ? [...coverageData] : [];
+    if (!updatedData || updatedData.length === 0) {
+      updatedData = rowData.map((r) => ({ ...r }));
     }
+    const idx = updatedData.findIndex(
+      (item) => item.code === code || item.rowKey === `proc-${code}`,
+    );
+    if (idx >= 0) {
+      updatedData[idx] = { ...updatedData[idx], [field]: value };
+    } else {
+      const template = rowData.find((r) => r.code === code) || { code };
+      const newRow = { ...template, rowKey: `proc-${code}`, [field]: value };
+      updatedData.push(newRow);
+    }
+    onCoverageDataChange(updatedData);
   };
 
   const handleToothToggle = (tooth) => {
     if (activeToothSelection === null) return;
-    
+
     let updatedData = [...coverageData];
-    const existingIndex = updatedData.findIndex(item => item.code === activeToothSelection || item.rowKey === `proc-${activeToothSelection}`);
-    
+    const existingIndex = updatedData.findIndex(
+      (item) =>
+        item.code === activeToothSelection ||
+        item.rowKey === `proc-${activeToothSelection}`,
+    );
+
     let proc;
     if (existingIndex >= 0) {
       proc = { ...updatedData[existingIndex] };
     } else {
-      const templateRow = rowData.find(r => r.code === activeToothSelection);
+      const templateRow = rowData.find((r) => r.code === activeToothSelection);
       proc = { ...templateRow, rowKey: `proc-${activeToothSelection}` };
     }
-    
+
     let currentTeeth = [];
     if (proc.teethLimit) {
-      currentTeeth = proc.teethLimit.split(',').map(t => t.trim()).filter(Boolean);
+      currentTeeth = proc.teethLimit
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
     } else if (Array.isArray(proc.teeth)) {
-      currentTeeth = proc.teeth.map(t => String(t).trim()).filter(Boolean);
+      currentTeeth = proc.teeth.map((t) => String(t).trim()).filter(Boolean);
     }
 
     if (currentTeeth.includes(tooth)) {
-      currentTeeth = currentTeeth.filter(t => t !== tooth);
+      currentTeeth = currentTeeth.filter((t) => t !== tooth);
     } else {
       currentTeeth.push(tooth);
     }
-    
-    proc.teethLimit = currentTeeth.join(', ');
+
+    proc.teethLimit = currentTeeth.join(", ");
     proc.teeth = currentTeeth;
-    
+
     if (existingIndex >= 0) {
       updatedData[existingIndex] = proc;
     } else {
       updatedData.push(proc);
     }
-    
+
     if (onCoverageDataChange) {
       onCoverageDataChange(updatedData);
     }
@@ -75,16 +114,27 @@ const CoverageBookSummary = ({
   const getActiveSelectedTeeth = () => {
     if (!activeToothSelection) return [];
     const proc = {
-      ...(rowData.find(r => r.code === activeToothSelection) || {}),
-      ...getRowData(activeToothSelection)
+      ...(rowData.find((r) => r.code === activeToothSelection) || {}),
+      ...getRowData(activeToothSelection),
     };
     return proc.teethLimit || proc.teeth || [];
   };
 
   return (
     <Box sx={{ width: "100%", mt: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-        <Typography sx={{ fontWeight: 700, mt: 2, color: "#333", fontSize: "0.85rem" }}>Coverage Book Summary</Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 1,
+        }}
+      >
+        <Typography
+          sx={{ fontWeight: 700, mt: 2, color: "#333", fontSize: "0.85rem" }}
+        >
+          Coverage Book Summary
+        </Typography>
         <Button
           variant="contained"
           onClick={onViewFullBook}
@@ -95,94 +145,191 @@ const CoverageBookSummary = ({
             fontWeight: 600,
             px: 1,
             borderRadius: 1,
-            minHeight: '24px',
-            minWidth: 'auto'
+            minHeight: "24px",
+            minWidth: "auto",
           }}
         >
           View Full Coverage Book
         </Button>
       </Box>
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #e0e0e0", borderRadius: 0, overflowX: 'auto' }}>
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        sx={{ border: "1px solid #e0e0e0", borderRadius: 0, overflowX: "auto" }}
+      >
         <Table size="small">
-          <TableHead sx={{ bgcolor: blueHeader }}>
+          <TableHead sx={{ bgcolor: localBlueHeader }}>
             <TableRow>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '60px', maxWidth: '60px' }}>Code</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '140px', maxWidth: '140px' }}>Procedure Name</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '70px', maxWidth: '70px' }}>Max Allowed/UCR($)</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '100px', maxWidth: '100px' }}>Delivery Pattern(Frequency,M,Y)</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '70px', maxWidth: '70px' }}>Lifetime Limit</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '50px', maxWidth: '50px' }}>Age Limit (Years)</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '50px', maxWidth: '50px' }}>Teeth Limit(Tooth#)</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '70px', maxWidth: '70px' }}>Down-grade</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '40px', maxWidth: '40px' }}>NC</TableCell>
-              <TableCell sx={{ ...localHeaderStyle, minWidth: '70px', maxWidth: '70px', borderRight: 0 }}>Flat Plan Portion</TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "60px", maxWidth: "60px" }}
+              >
+                Code
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...localHeaderStyle,
+                  minWidth: "140px",
+                  maxWidth: "140px",
+                }}
+              >
+                Procedure Name
+              </TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "70px", maxWidth: "70px" }}
+              >
+                Max Allowed/UCR($)
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...localHeaderStyle,
+                  minWidth: "100px",
+                  maxWidth: "100px",
+                }}
+              >
+                Delivery Pattern(Frequency,M,Y)
+              </TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "70px", maxWidth: "70px" }}
+              >
+                Lifetime Limit
+              </TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "50px", maxWidth: "50px" }}
+              >
+                Age Limit (Years)
+              </TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "50px", maxWidth: "50px" }}
+              >
+                Teeth Limit(Tooth#)
+              </TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "70px", maxWidth: "70px" }}
+              >
+                Down-grade
+              </TableCell>
+              <TableCell
+                sx={{ ...localHeaderStyle, minWidth: "40px", maxWidth: "40px" }}
+              >
+                NC
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...localHeaderStyle,
+                  minWidth: "70px",
+                  maxWidth: "70px",
+                  borderRight: 0,
+                }}
+              >
+                Flat Plan Portion
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {rowData.map((templateRow, index) => {
               const row = { ...templateRow, ...getRowData(templateRow.code) };
               return (
-                <TableRow key={index} sx={{ '&:nth-of-type(odd)': { bgcolor: '#fff' } }}>
+                <TableRow
+                  key={index}
+                  sx={{ "&:nth-of-type(odd)": { bgcolor: "#fff" } }}
+                >
                   <TableCell sx={localBodyCellStyle}>{row.code}</TableCell>
                   <TableCell sx={localBodyCellStyle}>{row.name}</TableCell>
                   {/* Max Allowed */}
                   <TableCell sx={localBodyCellStyle}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.2 }}>
-                      $ <input 
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.2 }}
+                    >
+                      ${" "}
+                      <input
                         style={{
-                          border: 'none',
-                          borderBottom: '1px solid #999',
-                          width: '20px',
-                          height: '10px',
-                          fontSize: '0.6rem',
-                          backgroundColor: 'transparent',
-                          outline: 'none'
+                          border: "none",
+                          borderBottom: "1px solid #999",
+                          width: "20px",
+                          height: "10px",
+                          fontSize: "0.6rem",
+                          backgroundColor: "transparent",
+                          outline: "none",
                         }}
-                        value={row.maxAllowed || ''}
-                        onChange={(e) => handleFieldChange(row.code, 'maxAllowed', e.target.value)}
+                        value={row.maxAllowed || ""}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            row.code,
+                            "maxAllowed",
+                            e.target.value,
+                          )
+                        }
                       />
                     </Box>
                   </TableCell>
                   {/* Delivery Pattern */}
                   <TableCell sx={localBodyCellStyle}>
-                    <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
-                      <input 
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 0.5,
+                      }}
+                    >
+                      <input
                         style={{
-                          border: 'none',
-                          borderBottom: '1px solid #ccc',
-                          width: '15px',
-                          fontSize: '0.65rem',
-                          textAlign: 'center',
-                          outline: 'none',
-                          backgroundColor: 'transparent',
-                          color: '#333'
+                          border: "none",
+                          borderBottom: "1px solid #ccc",
+                          width: "15px",
+                          fontSize: "0.65rem",
+                          textAlign: "center",
+                          outline: "none",
+                          backgroundColor: "transparent",
+                          color: "#333",
                         }}
-                        value={row.frequency1 || ''}
-                        onChange={(e) => handleFieldChange(row.code, 'frequency1', e.target.value)}
+                        value={row.frequency1 || ""}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            row.code,
+                            "frequency1",
+                            e.target.value,
+                          )
+                        }
                         placeholder="_"
                       />
-                      <Typography sx={{ color: '#555', fontSize: '0.65rem' }}>/</Typography>
-                      <input 
+                      <Typography sx={{ color: "#555", fontSize: "0.65rem" }}>
+                        /
+                      </Typography>
+                      <input
                         style={{
-                          border: 'none',
-                          borderBottom: '1px solid #ccc',
-                          width: '15px',
-                          fontSize: '0.65rem',
-                          textAlign: 'center',
-                          outline: 'none',
-                          backgroundColor: 'transparent',
-                          color: '#333'
+                          border: "none",
+                          borderBottom: "1px solid #ccc",
+                          width: "15px",
+                          fontSize: "0.65rem",
+                          textAlign: "center",
+                          outline: "none",
+                          backgroundColor: "transparent",
+                          color: "#333",
                         }}
-                        value={row.frequency2 || ''}
-                        onChange={(e) => handleFieldChange(row.code, 'frequency2', e.target.value)}
+                        value={row.frequency2 || ""}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            row.code,
+                            "frequency2",
+                            e.target.value,
+                          )
+                        }
                         placeholder="_"
                       />
-                      <Select 
-                        variant="standard" 
-                        value={row.period || 'M'} 
-                        disableUnderline 
-                        onChange={(e) => handleFieldChange(row.code, 'period', e.target.value)}
-                        sx={{ fontSize: "0.55rem", '& .MuiSelect-select': { py: 0.05 }, minWidth: '18px', ml: 0.5 }}
+                      <Select
+                        variant="standard"
+                        value={row.period || "M"}
+                        onChange={(e) =>
+                          handleFieldChange(row.code, "period", e.target.value)
+                        }
+                        sx={{
+                          fontSize: "0.55rem",
+                          "& .MuiSelect-select": { py: 0.05 },
+                          minWidth: "18px",
+                          ml: 0.5,
+                        }}
                       >
                         <MenuItem value="M">M</MenuItem>
                         <MenuItem value="Y">Y</MenuItem>
@@ -191,47 +338,80 @@ const CoverageBookSummary = ({
                   </TableCell>
                   {/* Lifetime Limit */}
                   <TableCell sx={localBodyCellStyle}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.2 }}>
-                      $ <input 
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.2 }}
+                    >
+                      ${" "}
+                      <input
                         style={{
-                          border: 'none',
-                          borderBottom: '1px solid #999',
-                          width: '20px',
-                          height: '10px',
-                          fontSize: '0.6rem',
-                          backgroundColor: 'transparent',
-                          outline: 'none'
+                          border: "none",
+                          borderBottom: "1px solid #999",
+                          width: "20px",
+                          height: "10px",
+                          fontSize: "0.6rem",
+                          backgroundColor: "transparent",
+                          outline: "none",
                         }}
-                        value={row.lifetimeLimit || ''}
-                        onChange={(e) => handleFieldChange(row.code, 'lifetimeLimit', e.target.value)}
+                        value={row.lifetimeLimit || ""}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            row.code,
+                            "lifetimeLimit",
+                            e.target.value,
+                          )
+                        }
                       />
                     </Box>
                   </TableCell>
                   {/* Age Limit */}
                   <TableCell align="center" sx={localBodyCellStyle}>
-                    <input 
+                    <input
                       style={{
-                        border: 'none',
-                        width: '20px',
-                        height: '10px',
-                        fontSize: '0.6rem',
-                        backgroundColor: 'transparent',
-                        outline: 'none',
-                        textAlign: 'center'
+                        border: "none",
+                        width: "20px",
+                        height: "10px",
+                        fontSize: "0.6rem",
+                        backgroundColor: "transparent",
+                        outline: "none",
+                        textAlign: "center",
                       }}
-                      value={row.age || ''}
+                      value={row.age || ""}
                       placeholder=""
-                      onChange={(e) => handleFieldChange(row.code, 'age', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(row.code, "age", e.target.value)
+                      }
                     />
                   </TableCell>
                   {/* Teeth Limit */}
                   <TableCell align="center" sx={localBodyCellStyle}>
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5, cursor: 'pointer' }} onClick={() => setActiveToothSelection(row.code)}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 0.5,
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setActiveToothSelection(row.code)}
+                    >
                       <ToothIcon sx={{ fontSize: 14, color: "#1976d2" }} />
-                      {(row.teethLimit || (Array.isArray(row.teeth) && row.teeth.length > 0)) && (
-                        <Typography sx={{ fontSize: '0.6rem', color: '#1976d2', fontWeight: 600, px: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '40px' }}>
+                      {(row.teethLimit ||
+                        (Array.isArray(row.teeth) && row.teeth.length > 0)) && (
+                        <Typography
+                          sx={{
+                            fontSize: "0.6rem",
+                            color: "#1976d2",
+                            fontWeight: 600,
+                            px: 0.5,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            maxWidth: "40px",
+                          }}
+                        >
                           {(() => {
-                            const displayStr = row.teethLimit || row.teeth.join(', ');
+                            const displayStr =
+                              row.teethLimit || row.teeth.join(", ");
                             return displayStr;
                           })()}
                         </Typography>
@@ -240,54 +420,91 @@ const CoverageBookSummary = ({
                   </TableCell>
                   {/* Down-grade */}
                   <TableCell sx={localBodyCellStyle}>
-                    <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
-                      <Checkbox 
-                        size="small" 
-                        checked={!!row.hasDowngrade} 
-                        onChange={(e) => handleFieldChange(row.code, 'hasDowngrade', e.target.checked)}
-                        sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 16 } }} 
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 0.5,
+                      }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={!!row.hasDowngrade}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            row.code,
+                            "hasDowngrade",
+                            e.target.checked,
+                          )
+                        }
+                        sx={{ p: 0, "& .MuiSvgIcon-root": { fontSize: 16 } }}
                       />
                       {row.hasDowngrade && (
-                        <input 
+                        <input
                           style={{
-                            border: 'none',
-                            borderBottom: '1px solid #999',
-                            width: '30px',
-                            height: '10px',
-                            fontSize: '0.65rem',
-                            backgroundColor: 'transparent',
-                            outline: 'none'
+                            border: "none",
+                            borderBottom: "1px solid #999",
+                            width: "30px",
+                            height: "10px",
+                            fontSize: "0.65rem",
+                            backgroundColor: "transparent",
+                            outline: "none",
                           }}
-                          value={row.downgrade || ''}
-                          onChange={(e) => handleFieldChange(row.code, 'downgrade', e.target.value)}
+                          value={row.downgrade || ""}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              row.code,
+                              "downgrade",
+                              e.target.value,
+                            )
+                          }
                         />
                       )}
                     </Box>
                   </TableCell>
                   {/* NC */}
                   <TableCell align="center" sx={localBodyCellStyle}>
-                    <Checkbox 
-                      size="small" 
-                      checked={!!row.nc} 
-                      onChange={(e) => handleFieldChange(row.code, 'nc', e.target.checked)}
-                      sx={{ p: 0 }} 
+                    <Checkbox
+                      size="small"
+                      checked={!!row.nc}
+                      onChange={(e) =>
+                        handleFieldChange(row.code, "nc", e.target.checked)
+                      }
+                      sx={{ p: 0 }}
                     />
                   </TableCell>
                   {/* Flat Plan Portion */}
-                  <TableCell sx={{ ...localBodyCellStyle, borderRight: 0, maxWidth: '60px' }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.2 }}>
-                      $ <input 
+                  <TableCell
+                    sx={{
+                      ...localBodyCellStyle,
+                      borderRight: 0,
+                      maxWidth: "60px",
+                    }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.2 }}
+                    >
+                      ${" "}
+                      <input
                         style={{
-                          border: 'none',
-                          borderBottom: '1px solid #999',
-                          width: '20px',
-                          height: '10px',
-                          fontSize: '0.6rem',
-                          backgroundColor: 'transparent',
-                          outline: 'none'
+                          border: "none",
+                          borderBottom: "1px solid #999",
+                          width: "20px",
+                          height: "10px",
+                          fontSize: "0.6rem",
+                          backgroundColor: "transparent",
+                          outline: "none",
                         }}
-                        value={row.flatPlanPortion || ''}
-                        onChange={(e) => handleFieldChange(row.code, 'flatPlanPortion', e.target.value)}
+                        value={row.flatPlanPortion || ""}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            row.code,
+                            "flatPlanPortion",
+                            e.target.value,
+                          )
+                        }
                       />
                     </Box>
                   </TableCell>
@@ -299,7 +516,7 @@ const CoverageBookSummary = ({
       </TableContainer>
 
       {/* Tooth Selection Dialog */}
-      <SelectToothDialog
+      <ToothSelectionDialog
         open={activeToothSelection !== null}
         onClose={() => setActiveToothSelection(null)}
         selectedTeeth={getActiveSelectedTeeth()}

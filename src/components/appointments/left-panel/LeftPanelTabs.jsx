@@ -1,16 +1,20 @@
 import { Box, Typography } from '@mui/material';
+import { useSelector } from 'react-redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight } from '../../../constants/styles';
 
-const TABS = [
-  { label: 'Patient' },
-  { label: 'Pending', count: 0 },
-  { label: 'Search' },
-  { label: 'Productivity' },
-];
+const LeftPanelTabs = ({ activeTab, onChange }) => {
+  const pendingCount = useSelector((state) => state.waitlist?.total || 0);
 
-const LeftPanelTabs = ({ activeTab, onChange }) => (
-  <Box
+  const TABS = [
+    { label: 'Patient' },
+    { label: 'Pending', count: pendingCount },
+    { label: 'Search' },
+    { label: 'Productivity' },
+  ];
+
+  return (
+    <Box
     sx={{
       display: 'flex',
       flexDirection: 'row',
@@ -55,6 +59,7 @@ const LeftPanelTabs = ({ activeTab, onChange }) => (
       );
     })}
   </Box>
-);
+  );
+};
 
 export default LeftPanelTabs;

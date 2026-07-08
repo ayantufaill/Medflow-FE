@@ -28,14 +28,13 @@ const AddNewPatientAppointmentForm = ({
   /* ── Left panel state ── */
   const [patient,           setPatient]           = useState(initialPatient || null);
   const [apptDate,          setApptDate]          = useState(initialDateTime || dayjs());
-  const [timeHours,         setTimeHours]         = useState(initialDateTime ? initialDateTime.format("hh") : "09");
-  const [timeMins,          setTimeMins]          = useState(initialDateTime ? initialDateTime.format("mm") : "00");
-  const [amPm,              setAmPm]              = useState(initialDateTime ? initialDateTime.format("A") : "AM");
+  const [timeHours,         setTimeHours]         = useState(initialDateTime ? initialDateTime.format("hh") : dayjs().format("hh"));
+  const [timeMins,          setTimeMins]          = useState(initialDateTime ? initialDateTime.format("mm") : dayjs().format("mm"));
+  const [amPm,              setAmPm]              = useState(initialDateTime ? initialDateTime.format("A") : dayjs().format("A"));
   const [visitType,         setVisitType]         = useState("recare");
   const [procedures,        setProcedures]        = useState(INITIAL_PROCEDURES);
 
-  // Procedure tags: all available tags + which ones are selected
-  const [procedureTags, setProcedureTags] = useState(DEFAULT_PROCEDURE_TAGS);
+  // Procedure tags: track which quick-add tags are selected.
   const [selectedTagLabels, setSelectedTagLabels] = useState(new Set());
   const [tagProcedureIds,   setTagProcedureIds]   = useState({});
   const [addingProcedure,   setAddingProcedure]   = useState(false);
@@ -85,9 +84,9 @@ const AddNewPatientAppointmentForm = ({
     if (open) {
       setPatient(initialPatient || null);
       setApptDate(initialDateTime || dayjs());
-      setTimeHours(initialDateTime ? initialDateTime.format("hh") : "09");
-      setTimeMins(initialDateTime ? initialDateTime.format("mm") : "00");
-      setAmPm(initialDateTime ? initialDateTime.format("A") : "AM");
+      setTimeHours(initialDateTime ? initialDateTime.format("hh") : dayjs().format("hh"));
+      setTimeMins(initialDateTime ? initialDateTime.format("mm") : dayjs().format("mm"));
+      setAmPm(initialDateTime ? initialDateTime.format("A") : dayjs().format("A"));
       setRoomId(initialRoomId != null ? String(initialRoomId) : "");
       // Radio values in AppointmentLeftPanel are lowercased ("treatment"/"recare"),
       // so seeding with capitalized "Treatment" left both radios unchecked on open.
@@ -119,6 +118,17 @@ const AddNewPatientAppointmentForm = ({
     return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
   }, [apptDate, timeHours, timeMins, amPm]);
 
+  const handlePatientChange = (newPatient) => {
+    // If the user is switching from one selected patient to a different one,
+    // clear the procedure table and tags to prevent mixing procedures from the old patient.
+    if (patient && newPatient && (patient.id || patient._id) !== (newPatient.id || newPatient._id)) {
+      setProcedures([]);
+      setSelectedTagLabels(new Set());
+      setTagProcedureIds({});
+    }
+    setPatient(newPatient);
+  };
+
   /* ── Tag handlers ── */
   const handleTagClick = (label, idx) => {
     const key = `${label}-${idx}`;
@@ -140,6 +150,7 @@ const AddNewPatientAppointmentForm = ({
           id: newId, code: template.code, treatment: template.treatment,
           site: "", provider: "", charge: template.charge, checked: true,
           tag: { label: tagInfo.label, color: tagInfo.color, font: tagInfo.font },
+          treatArea: template.treatArea,
         }]);
         setTagProcedureIds((prev) => ({ ...prev, [key]: newId }));
       }
@@ -151,14 +162,50 @@ const AddNewPatientAppointmentForm = ({
     setProcedures((prev) => [...prev, {
       id: nextId.current++, code: option.code, treatment: option.treatment,
       site: "", provider: "", charge: option.charge, checked: true, tag: option.tag,
+      treatArea: option.treatArea,
     }]);
     setProcedureInput(""); setAddingProcedure(false);
   };
+
+  useEffect(() => {
+    // If a procedure associated with a tag is removed, untoggle the tag
+    const currentProcedureIds = new Set(procedures.map(p => p.id));
+    let tagsChanged = false;
+    const newTagProcedureIds = { ...tagProcedureIds };
+    const newSelectedTags = new Set(selectedTagLabels);
+
+    for (const [tagKey, procId] of Object.entries(tagProcedureIds)) {
+      if (!currentProcedureIds.has(procId)) {
+        // Procedure was deleted
+        delete newTagProcedureIds[tagKey];
+        newSelectedTags.delete(tagKey);
+        tagsChanged = true;
+      }
+    }
+
+    if (tagsChanged) {
+      setTagProcedureIds(newTagProcedureIds);
+      setSelectedTagLabels(newSelectedTags);
+    }
+  }, [procedures, tagProcedureIds, selectedTagLabels]);
 
   /* ── Submit ── */
   const handleSubmit = () => {
     if (!onSubmit) return;
     const end = dateTime.add(durationMins || 30, "minute");
+    const selectedProcedureTags = [...selectedTagLabels]
+      .map((key) => {
+        const separatorIndex = key.lastIndexOf("-");
+        const label = separatorIndex >= 0 ? key.slice(0, separatorIndex) : key;
+        const idx = separatorIndex >= 0 ? key.slice(separatorIndex + 1) : "";
+        const tagInfo = DEFAULT_PROCEDURE_TAGS[Number(idx)];
+        return {
+          label,
+          color: tagInfo?.color,
+          font: tagInfo?.font,
+        };
+      })
+      .filter((tag) => tag.label);
 
     // Calculate endTime from dateTime + durationMins
     const start = dateTime || dayjs();
@@ -190,7 +237,7 @@ const AddNewPatientAppointmentForm = ({
         preferredDentist,
         preferredHygienist,
         colorTags: [...selectedColorTags],
-        procedureTags: [...selectedTagLabels].map(l => l.split('-')[0]),
+        procedureTags: selectedProcedureTags,
         // operatoryId reflects the operatory chart column the appointment was created
         // from (set via the initialRoomId prop when the user clicks a slot on the
         // /appointments operatory grid), kept in sync with roomId if changed via the
@@ -225,7 +272,7 @@ const AddNewPatientAppointmentForm = ({
             patients={patients}
             loadingPatients={loadingPatients}
             patient={patient}
-            onPatientChange={setPatient}
+            onPatientChange={handlePatientChange}
             onPatientSearch={onPatientSearch}
             apptDate={apptDate}
             onDateChange={setApptDate}

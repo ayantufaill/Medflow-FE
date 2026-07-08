@@ -1,5 +1,6 @@
+import React, { useState } from "react";
 import { Box, FormControlLabel, Radio, RadioGroup, TextField, Typography } from "@mui/material";
-import { AccessTimeOutlined } from "@mui/icons-material";
+
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -9,6 +10,7 @@ import dayjs from "dayjs";
 import PatientSearchField from "./PatientSearchField";
 import ProcedureTagStrip from "./ProcedureTagStrip";
 import ProcedureTable from "./ProcedureTable";
+import PastVisitProceduresSelector from "./PastVisitProceduresSelector";
 
 const AppointmentLeftPanel = ({
   // Patient
@@ -25,8 +27,15 @@ const AppointmentLeftPanel = ({
   onProcedureInputChange, onAddingProcedureToggle, onSelectProcedure,
   // Procedure table
   procedures, setProcedures, providers,
-}) => (
-  <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
+}) => {
+  const [showPastVisits, setShowPastVisits] = useState(false);
+
+  const handleAddPastProcedure = (proc) => {
+    setProcedures([...procedures, proc]);
+  };
+
+  return (
+    <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
 
     {/* Patient / Date / Time row */}
     <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
@@ -57,16 +66,46 @@ const AppointmentLeftPanel = ({
       </FieldBox>
 
       <FieldBox label="Time" sx={{ flexShrink: 0 }}>
-        <Box sx={{ display: "flex", alignItems: "center", border: "1px solid #d1d5db", borderRadius: "8px", overflow: "hidden", height: "40px" }}>
-          <AccessTimeOutlined sx={{ fontSize: "16px", color: "#9aa3ae", ml: "10px", mr: "4px", flexShrink: 0 }} />
-          <input
-            value={`${timeHours}:${timeMins}`}
-            onChange={(e) => {
-              const [h, m] = e.target.value.split(":");
-              onTimeChange(h?.slice(0, 2) ?? timeHours, m?.slice(0, 2) ?? timeMins);
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <TimePicker
+            value={(() => {
+              const h = parseInt(timeHours, 10);
+              const m = parseInt(timeMins, 10);
+              const hour24 = amPm === 'PM' ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
+              return dayjs().hour(hour24).minute(m).second(0);
+            })()}
+            onChange={(v) => {
+              if (!v) return;
+              onTimeChange(v.format('hh'), v.format('mm'));
+              onAmPmChange(v.format('A'));
+            }}
+            minTime={apptDate && dayjs(apptDate).isSame(dayjs(), 'day') ? dayjs() : undefined}
+            slotProps={{
+              popper: { sx: { zIndex: 1400 } },
+              textField: {
+                size: 'small',
+                sx: {
+                  width: '130px',
+                  '& .MuiInputBase-root': {
+                    fontFamily: 'Inter',
+                    fontSize: '13px',
+                    borderRadius: '8px',
+                    height: '40px',
+                    paddingRight: '4px',
+                  },
+                  // hide the default left adornment gap
+                  '& .MuiInputAdornment-positionStart': { display: 'none' },
+                },
+              },
+              openPickerButton: {
+                sx: { color: '#9aa3ae', padding: '4px' },
+              },
+              openPickerIcon: {
+                sx: { fontSize: '16px' },
+              },
             }}
           />
-        </Box>
+        </LocalizationProvider>
       </FieldBox>
     </Box>
 
@@ -102,14 +141,23 @@ const AppointmentLeftPanel = ({
     {/* Recare hint */}
     <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px" }}>
       Patient doesn't have a recare plan.{" "}
-      <Box component="span" sx={{ color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
+      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
       {" "}or{" "}
-      <Box component="span" sx={{ color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
+      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
     </Typography>
-    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
-      + add procedures from another visit
+    
+    <Typography 
+      sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+      onClick={() => setShowPastVisits(!showPastVisits)}
+    >
+      {showPastVisits ? "- hide past visits" : "+ add procedures from another visit"}
     </Typography>
+
+    {showPastVisits && (
+      <PastVisitProceduresSelector patient={patient} onAddProcedure={handleAddPastProcedure} />
+    )}
   </Box>
-);
+  );
+};
 
 export default AppointmentLeftPanel;

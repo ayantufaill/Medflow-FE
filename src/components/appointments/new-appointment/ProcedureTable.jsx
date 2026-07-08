@@ -42,11 +42,18 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures }) => {
           value={row.site || ""}
           onChange={handleSiteChange}
           placeholder="—"
+          disabled={row.treatArea === "MOUTH"}
           sx={{
             width: "100%",
             "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "5px", px: "8px" },
             "& .MuiInputBase-input::placeholder": { color: "#374151", opacity: 1 },
-            "& .MuiOutlinedInput-root": { borderRadius: "6px" },
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "6px",
+              backgroundColor: row.treatArea === "MOUTH" ? "#f1f5f9" : "transparent",
+            },
+            "& .Mui-disabled": {
+              WebkitTextFillColor: "#9aa3ae",
+            },
           }}
         />
       </TableCell>

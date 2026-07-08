@@ -27,9 +27,9 @@ const ACTION_BUTTONS = [
 
 // Renders one contact-info row with an icon, text, and copy button.
 const ContactRow = ({ icon, text }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
     <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
-    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{text}</Typography>
+    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{text}</Typography>
     <ContentCopyOutlined sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
   </Box>
 );

@@ -175,8 +175,6 @@ export const fetchPatientHistory = createAsyncThunk(
 );
 
 // Fetches available time slots for a provider on a given date.
-// Result is NOT stored in Redux state — callers consume it locally via .unwrap()
-// because slot availability is ephemeral and only relevant during the booking flow.
 export const fetchAvailableSlots = createAsyncThunk(
   'appointment/fetchAvailableSlots',
   async ({ providerId, date, duration }, { rejectWithValue }) => {
