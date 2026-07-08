@@ -1,8 +1,48 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, TextField, InputAdornment } from '@mui/material';
-import { KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material';
+import {
+  KeyboardArrowDown as ArrowDownIcon,
+  HomeOutlined as HomeOutlinedIcon,
+  AccountBalanceOutlined as WorkAddressIcon,
+} from '@mui/icons-material';
 import { InlineFieldRow, standardFieldSx } from './InlineField';
-import { sectionTitleSx, labelSx } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
+
+// Full-width tinted pill used to head off a nested address block ("Patient's
+// Address", "Work Address") within a larger card, matching the rounded
+// icon+label bar from Figma instead of a plain bold caption.
+function AddressSectionLabel({ icon: Icon, children }) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderRadius: radius.md,
+        px: 1.5,
+        py: 1,
+        mt: 2.5,
+        mb: 1.5,
+      }}
+    >
+      {Icon && <Icon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />}
+      <Typography
+        sx={{
+          fontFamily: 'Inter',
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.semibold,
+          color: COLORS.TEXT_SECONDARY,
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px',
+        }}
+      >
+        {children}
+      </Typography>
+    </Box>
+  );
+}
 
 /**
  * Format phone number for display
@@ -94,7 +134,8 @@ const PhoneField = ({ value, label, isEditMode, onChange }) => {
       label={label}
       input={
         <TextField
-          variant="standard"
+          variant="outlined"
+          size="small"
           fullWidth
           value={isEditMode ? inputValue : value || ''}
           onChange={handleChange}
@@ -105,7 +146,6 @@ const PhoneField = ({ value, label, isEditMode, onChange }) => {
           }}
           InputProps={{
             readOnly: !isEditMode,
-            disableUnderline: false,
             inputProps: { title: value || '' },
             startAdornment: (
               <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
@@ -143,14 +183,6 @@ export default function ContactInformationSection({ patient, isEditMode = false,
 
   return (
     <Box>
-      <Typography
-        variant="subtitle1"
-        fontWeight={700}
-        sx={{ mb: 2, ...sectionTitleSx }}
-      >
-        Contact Information
-      </Typography>
-
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <PhoneField 
           label="Mobile Number" 
@@ -165,16 +197,10 @@ export default function ContactInformationSection({ patient, isEditMode = false,
           onChange={(e) => handleFieldChange('phoneSecondary', e.target.value)}
         />
 
-        <Typography
-          variant="body2"
-          fontWeight={600}
-          sx={{ mt: 2.5, mb: 1, ...labelSx }}
-        >
-          Patient&apos;s Address
-        </Typography>
+        <AddressSectionLabel icon={HomeOutlinedIcon}>Patient&apos;s Address</AddressSectionLabel>
 
-        <InlineFieldRow 
-          label="Country" 
+        <InlineFieldRow
+          label="Country"
           value={addr?.country || 'United States'}
           onChange={(e) => handleFieldChange('address', { ...addr, country: e.target.value })}
           InputProps={{ readOnly: !isEditMode }}
@@ -244,13 +270,7 @@ export default function ContactInformationSection({ patient, isEditMode = false,
           InputProps={{ readOnly: !isEditMode }}
         />
 
-        <Typography
-          variant="body2"
-          fontWeight={600}
-          sx={{ mt: 2.5, mb: 1, ...labelSx }}
-        >
-          Work Address
-        </Typography>
+        <AddressSectionLabel icon={WorkAddressIcon}>Work Address</AddressSectionLabel>
         <InlineFieldRow
           label="Country"
           value={localPatientData?.workAddress?.country || 'United States'}

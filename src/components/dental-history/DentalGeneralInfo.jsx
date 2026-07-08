@@ -1,111 +1,116 @@
-import { Box, Typography, Grid, Divider, Radio, RadioGroup, FormControlLabel, TextField } from "@mui/material";
-import Card from "../shared/Card";
+import { Box, Typography, TextField } from "@mui/material";
+import { MedicalServicesOutlined as GeneralInfoIcon } from "@mui/icons-material";
+import SectionCard from "../shared/SectionCard";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, standardFieldSx } from "../../constants/styles";
+
+const fieldLabelSx = {
+  fontFamily: "Inter",
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.semibold,
+  color: COLORS.TEXT_SECONDARY,
+  textTransform: "uppercase",
+  letterSpacing: "0.3px",
+};
+
+const FieldBox = ({ label, value, onChange }) => (
+  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+    <Typography sx={fieldLabelSx}>{label}</Typography>
+    <TextField variant="outlined" size="small" fullWidth value={value || ""} onChange={onChange} sx={standardFieldSx} />
+  </Box>
+);
+
+const FREQUENCY_OPTIONS = [
+  { value: "3mo", label: "3 Mo" },
+  { value: "6mo", label: "6 Mo" },
+  { value: "9mo", label: "9 Mo" },
+  { value: "12mo", label: "12 Mo" },
+  { value: "not", label: "Not routinely" },
+];
+
+const FrequencyPill = ({ active, label, onClick }) => (
+  <Box
+    onClick={onClick}
+    sx={{
+      px: 2,
+      py: 0.75,
+      borderRadius: 999,
+      border: `1px solid ${active ? COLORS.ACCENT : COLORS.BORDER}`,
+      backgroundColor: active ? COLORS.ACCENT_BG : COLORS.SURFACE_CARD,
+      cursor: "pointer",
+    }}
+  >
+    <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: active ? COLORS.ACCENT : COLORS.TEXT_BODY }}>
+      {label}
+    </Typography>
+  </Box>
+);
 
 const DentalGeneralInfo = ({ info, onChange }) => {
-  const lineStyle = {
-    border: 'none',
-    borderBottom: '1px solid #9e9e9e',
-    outline: 'none',
-    width: '100%',
-    fontSize: '14px',
-    padding: '0 4px',
-    backgroundColor: 'transparent',
-    fontFamily: 'inherit',
-    marginLeft: '8px'
-  };
-
-  const labelStyle = {
-    fontSize: '13px',
-    color: '#333',
-    whiteSpace: 'nowrap',
-    lineHeight: 1.2,
-    fontFamily: 'inherit'
-  };
-
-  const rowStyle = { 
-    display: 'flex', 
-    alignItems: 'flex-end', 
-    mb: 1
-  };
-
   return (
-    <Box sx={{ width: '100%', p: 2, bgcolor: '#fff' }}>
-      <Typography variant="subtitle1" sx={{ mb: 0.5, fontSize: '15px', color: '#555' }}>
-        General Information
-      </Typography>
-      <Divider sx={{ mb: 2, borderColor: '#ccc' }} />
+    <SectionCard icon={GeneralInfoIcon} title="General Information">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mb: 2 }}>
+        <FieldBox
+          label="How would you rate the condition of your mouth?"
+          value={info.mouthCondition}
+          onChange={(e) => onChange("mouthCondition", e.target.value)}
+        />
+        <FieldBox
+          label="How long have you been a patient?"
+          value={info.patientSince}
+          onChange={(e) => onChange("patientSince", e.target.value)}
+        />
 
-      <Grid container spacing={4}>
-        {/* Left Column */}
-        <Grid item xs={12} md={6}>
-          <Box sx={rowStyle}>
-            <Typography sx={labelStyle}>How would you rate the condition of your mouth?</Typography>
-            <input style={lineStyle} value={info.mouthCondition || ""} onChange={(e) => onChange("mouthCondition", e.target.value)} />
-          </Box>
-          
-          <Box sx={rowStyle}>
-            <Typography sx={labelStyle}>Previous Dentist:</Typography>
-            <input style={lineStyle} value={info.previousDentist || ""} onChange={(e) => onChange("previousDentist", e.target.value)} />
-          </Box>
+        <FieldBox
+          label="Previous Dentist"
+          value={info.previousDentist}
+          onChange={(e) => onChange("previousDentist", e.target.value)}
+        />
+        <FieldBox
+          label="Date of most recent X-rays"
+          value={info.recentXrayDate}
+          onChange={(e) => onChange("recentXrayDate", e.target.value)}
+        />
 
-          <Box sx={rowStyle}>
-            <Typography sx={labelStyle}>Date of most recent dental exam:</Typography>
-            <input style={lineStyle} value={info.recentExamDate || ""} onChange={(e) => onChange("recentExamDate", e.target.value)} />
-          </Box>
+        <FieldBox
+          label="Date of most recent dental exam"
+          value={info.recentExamDate}
+          onChange={(e) => onChange("recentExamDate", e.target.value)}
+        />
+        <FieldBox
+          label="Date of most recent treatment (other than cleaning)"
+          value={info.recentTreatmentDate}
+          onChange={(e) => onChange("recentTreatmentDate", e.target.value)}
+        />
+      </Box>
 
-          <Box sx={rowStyle}>
-            <Typography sx={labelStyle}>Date of most recent treatment (other than a cleaning):</Typography>
-            <input style={lineStyle} value={info.recentTreatmentDate || ""} onChange={(e) => onChange("recentTreatmentDate", e.target.value)} />
-          </Box>
-        </Grid>
+      <Box sx={{ mb: 2 }}>
+        <Typography sx={{ ...fieldLabelSx, mb: 1 }}>I routinely see my dentist every</Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+          {FREQUENCY_OPTIONS.map((option) => (
+            <FrequencyPill
+              key={option.value}
+              label={option.label}
+              active={(info.dentistVisitFrequency || "") === option.value}
+              onClick={() => onChange("dentistVisitFrequency", option.value)}
+            />
+          ))}
+        </Box>
+      </Box>
 
-        {/* Right Column */}
-        <Grid item xs={12} md={6}>
-          <Box sx={rowStyle}>
-            <Typography sx={labelStyle}>How long had you been a patient?</Typography>
-            <input style={lineStyle} value={info.patientSince || ""} onChange={(e) => onChange("patientSince", e.target.value)} />
-          </Box>
-
-          <Box sx={rowStyle}>
-            <Typography sx={labelStyle}>Date of most recent x-rays:</Typography>
-            <input style={lineStyle} value={info.recentXrayDate || ""} onChange={(e) => onChange("recentXrayDate", e.target.value)} />
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-            <Typography sx={labelStyle}>I routinely see my dentist every:</Typography>
-            <RadioGroup 
-              row 
-              value={info.dentistVisitFrequency || ""} 
-              onChange={(e) => onChange("dentistVisitFrequency", e.target.value)}
-              sx={{ ml: 2 }}
-            >
-              {['3mo', '4mo', '6mo', '12mo', 'not'].map((value, index) => {
-                const labels = ['3 Mo.', '4 Mo.', '6 Mo.', '12 Mo.', 'Not routinely'];
-                return (
-                  <FormControlLabel
-                    key={value}
-                    value={value}
-                    control={<Radio size="small" sx={{ p: 0.5 }} />}
-                    label={<Typography sx={{ fontSize: '12px' }}>{labels[index]}</Typography>}
-                    sx={{ mr: 1.5 }}
-                  />
-                );
-              })}
-            </RadioGroup>
-          </Box>
-        </Grid>
-
-        {/* Bottom Section: Full Width */}
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
-            <Typography sx={{ ...labelStyle, textTransform: 'uppercase' }}>
-              WHAT IS YOUR IMMEDIATE CONCERN?
-            </Typography>
-            <input style={lineStyle} value={info.immediateConcern || ""} onChange={(e) => onChange("immediateConcern", e.target.value)} />
-          </Box>
-        </Grid>
-      </Grid>
-    </Box>
+      <Box sx={{ border: "1px solid rgba(234, 88, 12, 0.25)", backgroundColor: "rgba(234, 88, 12, 0.06)", borderRadius: 2, px: 2, py: 1.5 }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.STATUS_WARNING, textTransform: "uppercase", letterSpacing: "0.3px", mb: 0.5 }}>
+          What is your immediate concern?
+        </Typography>
+        <TextField
+          variant="standard"
+          fullWidth
+          value={info.immediateConcern || ""}
+          onChange={(e) => onChange("immediateConcern", e.target.value)}
+          InputProps={{ disableUnderline: true, sx: { fontFamily: "Inter", fontSize: fontSize.md, color: COLORS.TEXT_PRIMARY } }}
+        />
+      </Box>
+    </SectionCard>
   );
 };
 

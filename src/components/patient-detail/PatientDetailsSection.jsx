@@ -11,13 +11,13 @@ import {
 import { CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { formatDate } from './utils';
 import { InlineFieldRow, standardFieldSx, labelWidth } from './InlineField';
-import { sectionTitleSx, labelSx } from '../../constants/styles';
+import { labelSx } from '../../constants/styles';
 
 /**
  * Patient Details: demographics with underlined input style.
  * Label left, input right; radio groups for Sex at Birth and Gender Identity.
  */
-export default function PatientDetailsSection({ patient, patientNumber, isEditMode = false, onPatientDataChange }) {
+export default function PatientDetailsSection({ patient, isEditMode = false, onPatientDataChange }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
 
   // Update local data when patient prop changes
@@ -57,13 +57,6 @@ export default function PatientDetailsSection({ patient, patientNumber, isEditMo
 
   return (
     <Box>
-      <Typography
-        variant="subtitle1"
-        sx={{ mb: 2, ...sectionTitleSx }}
-      >
-        Patient Details {patientNumber != null ? `(pt #${patientNumber})` : ''}
-      </Typography>
-
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <InlineFieldRow 
           label="Title" 
@@ -115,13 +108,13 @@ export default function PatientDetailsSection({ patient, patientNumber, isEditMo
             placeholder="MM/DD/YYYY"
             input={
               <TextField
-                variant="standard"
+                variant="outlined"
+                size="small"
                 fullWidth
                 value={formatDate(patient?.dateOfBirth) || ''}
                 placeholder="MM/DD/YYYY"
                 InputProps={{
                   readOnly: true,
-                  disableUnderline: false,
                   endAdornment: (
                     <Box component="span" sx={{ ml: 1, color: 'action.active', display: 'flex', alignItems: 'center' }}>
                       <CalendarIcon sx={{ fontSize: 20 }} />

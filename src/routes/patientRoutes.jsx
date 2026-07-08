@@ -2,7 +2,7 @@ import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import PatientManagementPage from '../pages/patients/PatientManagementPage';
-import CreatePatientPage from '../pages/patients/CreatePatientPage';
+import AddPatientPage from '../pages/patients/AddPatientPage';
 import EditPatientPage from '../pages/patients/EditPatientPage';
 import ViewPatientPage from '../pages/patients/ViewPatientPage';
 import PatientDetailPage from '../pages/patients/PatientDetailPage';
@@ -38,7 +38,7 @@ const adminDoctorReception = (children, hideSidebar = false) => (
 
 const patientRoutes = [
   <Route key="/patients" path="/patients" element={adminReception(<PatientManagementPage />)} />,
-  <Route key="/patients/new" path="/patients/new" element={adminReception(<CreatePatientPage />)} />,
+  <Route key="/patients/new" path="/patients/new" element={adminReception(<AddPatientPage />, true)} />,
   <Route key="/patients/import" path="/patients/import" element={adminReception(<ImportPatientsPage />)} />,
   <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={adminReception(<PatientDetailPage />)} />,
   <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={adminReception(<EditPatientPage />)} />,

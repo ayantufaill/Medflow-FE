@@ -383,7 +383,7 @@ const PatientAdditionalDocumentsPage = () => {
     <PageContainer>
       <PatientSectionTabs activeTab="additional_docs" patientId={patientId} />
 
-      <FloatingActions onUploadCustomForm={handleUploadCustomFormDocument} />
+      {/* <FloatingActions onUploadCustomForm={handleUploadCustomFormDocument} /> */}
 
       <Box
         sx={{

@@ -199,4 +199,16 @@ export const appointmentService = {
     const response = await apiClient.get(`/appointments?${params.toString()}`);
     return response.data.data.appointments;
   },
+
+  /**
+   * A patient's own appointment history (most recent first), used to drive
+   * the Medical History page's visit timeline.
+   */
+  async getPatientAppointments(patientId, limit = 20) {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit);
+
+    const response = await apiClient.get(`/patients/${patientId}/appointments?${params.toString()}`);
+    return response.data.data.appointments;
+  },
 };

@@ -1,130 +1,137 @@
-import { Box, Typography, TextField, Button, Divider, Paper } from "@mui/material";
+import { Box, Typography, TextField, Button } from "@mui/material";
+import { MedicationOutlined as MedicationIcon, Add as AddIcon, RemoveCircleOutline as RemoveIcon } from "@mui/icons-material";
+import SectionCard from "../shared/SectionCard";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, radius } from "../../constants/styles";
+
+const rowFieldSx = {
+  "& .MuiInputBase-input": { padding: 0 },
+  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+};
 
 /**
- * MedicationListCard - Minimalist styled medication list matching the screenshot
+ * A medication/supplement row — pill icon, name + dosage stacked, a
+ * freeform purpose "chip", and a remove button, matching the Task
+ * List/Messages sidebar's row-card treatment for visual consistency.
  */
-const MedicationListCard = ({ title, rows, onChangeRow, onAddRow }) => (
-  <Paper
-    elevation={0}
+const MedicationRow = ({ row, onChangeRow, onRemoveRow }) => (
+  <Box
     sx={{
-      p: 3,
-      mb: 4,
-      borderRadius: 1,
-      border: "1px solid #e0e0e0",
-      bgcolor: "#ffffff",
-      width: '100%',
+      display: "flex",
+      alignItems: "center",
+      gap: 1.5,
+      backgroundColor: "rgba(241, 246, 250, 0.60);",
+      borderRadius: '20px',
+      px: 1.5,
+      py: 1,
+      mb: 1,
     }}
   >
-    {/* Section Title */}
-    <Typography
-      variant="body1"
+    <Box
       sx={{
-        mb: 0.5,
-        color: "#424242",
-        fontSize: "1rem",
+        width: 32,
+        height: 32,
+        borderRadius: "50%",
+        backgroundColor: COLORS.ACCENT_BG,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
       }}
     >
-      {title}
-    </Typography>
+      <MedicationIcon sx={{ fontSize: 16, color: COLORS.ACCENT }} />
+    </Box>
 
-    {/* Header Underline */}
-    <Divider sx={{ mb: 2, borderColor: '#9e9e9e' }} />
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <TextField
+        variant="outlined"
+        size="small"
+        fullWidth
+        placeholder="Drug name"
+        value={row.drug}
+        onChange={(e) => onChangeRow(row.id, "drug", e.target.value)}
+        sx={{ ...rowFieldSx, "& .MuiInputBase-input": { padding: 0, fontFamily: "Inter", fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY } }}
+      />
+      <TextField
+        variant="outlined"
+        size="small"
+        fullWidth
+        placeholder="Dosage · frequency"
+        value={row.dosage}
+        onChange={(e) => onChangeRow(row.id, "dosage", e.target.value)}
+        sx={{ ...rowFieldSx, "& .MuiInputBase-input": { padding: 0, fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY } }}
+      />
+    </Box>
 
-    {rows.map((row, index) => (
-      <Box
-        key={row.id || index}
+    <TextField
+      variant="outlined"
+      size="small"
+      placeholder="Purpose"
+      value={row.purpose}
+      title={row.purpose || ""}
+      onChange={(e) => onChangeRow(row.id, "purpose", e.target.value)}
+      sx={{
+        width: 160,
+        flexShrink: 0,
+        "& .MuiOutlinedInput-root": { borderRadius: radius.pill, backgroundColor: COLORS.SURFACE_CARD },
+        "& .MuiInputBase-input": {
+          fontFamily: "Inter",
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.medium,
+          color: COLORS.TEXT_SECONDARY,
+          textAlign: "center",
+          py: 0.5,
+          textOverflow: "ellipsis",
+        },
+      }}
+    />
+
+    <Box
+      onClick={() => onRemoveRow(row.id)}
+      sx={{ display: "flex", cursor: "pointer", color: COLORS.TEXT_MUTED, "&:hover": { color: COLORS.STATUS_ERROR } }}
+    >
+      <RemoveIcon sx={{ fontSize: 20 }} />
+    </Box>
+  </Box>
+);
+
+const MedicationListCard = ({ title, rows, onChangeRow, onAddRow, onRemoveRow }) => (
+  <SectionCard
+    icon={MedicationIcon}
+    title={title}
+    action={
+      <Button
+        size="small"
+        startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+        onClick={onAddRow}
         sx={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: 4,
-          mb: 1.5,
-          width: '100%'
+          textTransform: "none",
+          fontFamily: "Inter",
+          fontWeight: fontWeight.semibold,
+          fontSize: fontSize.base,
+          borderRadius: radius.pill,
+          backgroundColor: COLORS.SURFACE_CARD,
+          color: COLORS.TEXT_BODY,
+          border: `1px solid ${COLORS.BORDER}`,
+          px: 1.5,
+          boxShadow: "none",
+          "&:hover": { backgroundColor: COLORS.SURFACE_HOVER },
         }}
       >
-        {/* Drug Field with Numbering */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-end', flex: 1, gap: 1 }}>
-          <Typography sx={{ fontSize: 14, color: '#424242', pb: 0.5, minWidth: '20px' }}>
-            {index + 1}.
-          </Typography>
-          <TextField
-            fullWidth
-            variant="standard"
-            placeholder="drug"
-            value={row.drug}
-            onChange={(e) => onChangeRow(row.id, "drug", e.target.value)}
-            InputProps={{
-              disableUnderline: false,
-              sx: { 
-                fontSize: 14, 
-                color: '#424242',
-                '&:before': { borderBottom: '1px solid #e0e0e0' },
-                '&:after': { borderBottom: '1px solid #9e9e9e' }
-              }
-            }}
-          />
-        </Box>
-
-        {/* Dosage Field */}
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            variant="standard"
-            placeholder="dosage"
-            value={row.dosage}
-            onChange={(e) => onChangeRow(row.id, "dosage", e.target.value)}
-            InputProps={{
-              sx: { 
-                fontSize: 14, 
-                color: '#424242',
-                '&:before': { borderBottom: '1px solid #e0e0e0' },
-                '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #424242' },
-                '&:after': { borderBottom: '1px solid #424242' }
-              }
-            }}
-          />
-        </Box>
-
-        {/* Purpose Field */}
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            variant="standard"
-            placeholder="purpose"
-            value={row.purpose}
-            onChange={(e) => onChangeRow(row.id, "purpose", e.target.value)}
-            InputProps={{
-              sx: { 
-                fontSize: 14, 
-                color: '#424242',
-                '&:before': { borderBottom: '1px solid #e0e0e0' },
-                '&:hover:not(.Mui-disabled):before': { borderBottom: '1px solid #424242' },
-                '&:after': { borderBottom: '1px solid #424242' }
-              }
-            }}
-          />
-        </Box>
-        
-        {/* Empty Spacer to match the wide layout of the screenshot */}
-        <Box sx={{ flex: 1 }} />
-      </Box>
-    ))}
-
-    {/* Add More Button */}
-    <Button
-      onClick={onAddRow}
-      sx={{
-        mt: 1,
-        p: 0,
-        color: "#424242",
-        textTransform: 'lowercase',
-        fontSize: '0.875rem',
-        minWidth: 'auto',
-        '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
-      }}
-    >
-      + add more
-    </Button>
-  </Paper>
+        Add
+      </Button>
+    }
+  >
+    {rows.length ? (
+      rows.map((row, index) => (
+        <MedicationRow key={row.id || index} row={row} onChangeRow={onChangeRow} onRemoveRow={onRemoveRow} />
+      ))
+    ) : (
+      <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>
+        None recorded.
+      </Typography>
+    )}
+  </SectionCard>
 );
 
 export default MedicationListCard;

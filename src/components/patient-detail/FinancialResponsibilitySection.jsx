@@ -1,7 +1,53 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, RadioGroup, FormControlLabel, Radio, TextField, MenuItem } from '@mui/material';
-import { Info as InfoIcon } from '@mui/icons-material';
-import { sectionTitleSx } from '../../constants/styles';
+import { Box, Typography, Radio, TextField, MenuItem } from '@mui/material';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
+
+const OPTIONS = [
+  { value: 'self', title: 'Self', description: 'Patient pays their own balance.' },
+  { value: 'hoh', title: 'HOH Responsible', description: 'Household head is billed.' },
+];
+
+// Selectable option card (border + tint on the active one) replacing the
+// plain RadioGroup rows, matching the Figma card-choice treatment.
+function ResponsibilityOption({ option, selected, isEditMode, onSelect }) {
+  return (
+    <Box
+      onClick={() => onSelect(option.value)}
+      sx={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 1.25,
+        border: `1.2px solid ${selected ? COLORS.ACCENT : COLORS.BORDER}`,
+        backgroundColor: selected ? COLORS.ACCENT_BG : COLORS.SURFACE_CARD,
+        borderRadius: radius.md,
+        p: 1.5,
+        mb: 1.25,
+        cursor: isEditMode ? 'pointer' : 'default',
+      }}
+    >
+      <Radio
+        checked={selected}
+        size="small"
+        onChange={() => onSelect(option.value)}
+        sx={{
+          p: 0,
+          mt: '2px',
+          color: COLORS.ACCENT,
+          '&.Mui-checked': { color: COLORS.ACCENT },
+        }}
+      />
+      <Box>
+        <Typography sx={{ fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.md, color: COLORS.TEXT_PRIMARY }}>
+          {option.title}
+        </Typography>
+        <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
+          {option.description}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
 
 export default function FinancialResponsibilitySection({ patient, isEditMode = false, onPatientDataChange }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
@@ -22,31 +68,23 @@ export default function FinancialResponsibilitySection({ patient, isEditMode = f
 
   const responsibility = localPatientData?.financialResponsibility || {};
   const value = responsibility?.type || 'hoh';
+
+  const handleSelect = (nextValue) => {
+    if (!isEditMode) return;
+    handleFieldChange('financialResponsibility', { ...responsibility, type: nextValue, name: nextValue === 'self' ? '' : responsibility.name });
+  };
+
   return (
     <Box>
-      <Typography variant="subtitle1" sx={sectionTitleSx}>
-        <InfoIcon sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
-        Financial Responsibility
-      </Typography>
-      <RadioGroup 
-        value={value} 
-        name="financialResponsibility" 
-        sx={{ mt: 0.5 }}
-        onChange={(e) => handleFieldChange('financialResponsibility', { ...responsibility, type: e.target.value, name: e.target.value === 'self' ? '' : responsibility.name })}
-      >
-        <FormControlLabel 
-          value="self" 
-          control={<Radio size="small" disabled={!isEditMode} />} 
-          label="Self"
-          sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+      {OPTIONS.map((option) => (
+        <ResponsibilityOption
+          key={option.value}
+          option={option}
+          selected={value === option.value}
+          isEditMode={isEditMode}
+          onSelect={handleSelect}
         />
-        <FormControlLabel 
-          value="hoh" 
-          control={<Radio size="small" disabled={!isEditMode} />} 
-          label="HOH responsible"
-          sx={{ opacity: !isEditMode ? 0.6 : 1 }}
-        />
-      </RadioGroup>
+      ))}
       {isEditMode && value === 'hoh' ? (
         <TextField
           select
@@ -69,8 +107,8 @@ export default function FinancialResponsibilitySection({ patient, isEditMode = f
           })}
         </TextField>
       ) : (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {value === 'self' ? 'Self' : (responsibility?.name || responsibility?.displayName || 'No responsible party selected')}
+        <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY }}>
+          {value === 'self' ? 'Self' : (responsibility?.name || responsibility?.displayName || 'No responsible party selected.')}
         </Typography>
       )}
     </Box>

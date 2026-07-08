@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-  Autocomplete, Box, Button, CircularProgress, Grid, MenuItem, Stack, TextField, Typography, Checkbox, FormControlLabel, FormHelperText
+  Autocomplete, Box, Button, CircularProgress, Grid, MenuItem, Stack, Typography, FormHelperText
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs from "dayjs";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
@@ -16,24 +16,37 @@ import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import CallMadeOutlinedIcon from "@mui/icons-material/CallMadeOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import ChecklistOutlinedIcon from "@mui/icons-material/ChecklistOutlined";
-import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
+import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
 
-import SectionCard from "./form-components/SectionCard";
+import SectionCard from "../shared/SectionCard";
 import FormField from "./form-components/FormField";
-import ChipToggleGroup from "./form-components/ChipToggleGroup";
-import PillToggle from "./form-components/PillToggle";
+import FormFieldsGrid from "./form-components/FormFieldsGrid";
+import AddressFieldsSection from "./form-components/AddressFieldsSection";
 import ColoredChipCheckbox from "./form-components/ColoredChipCheckbox";
-
+import { OutlinedInput, OutlinedSelect, CustomRadioGroup, FieldDivider } from "./form-components/formInputs";
+import {
+  trimValue, normalizePhone, formatSSNInput, formatDateValue, removeEmptyCustomFields,
+} from "./form-components/formatters";
+import { COLORS } from "../../constants/colors";
+import { radius, fontSize, fontWeight } from "../../constants/styles";
 
 import { patientService } from "../../services/patient.service";
 import { useSelector, useDispatch } from "react-redux";
-import { 
-  fetchAllProvidersForDropdown, selectProviderDropdownList, selectProviderDropdownLoading 
+import {
+  fetchAllProvidersForDropdown, selectProviderDropdownList, selectProviderDropdownLoading
 } from "../../store/slices/providerSlice";
 
-const COUNTRY_OPTIONS = ["United States"];
-import { US_STATES, STATE_CITIES } from "../../constants/usAddressData";
 const REFERRING_SOURCE_OPTIONS = ["Google", "Website", "Walk In", "Social Media", "Existing Patient", "Insurance Directory", "Provider Referral"];
+
+// The app's global theme (theme.js) defaults to Manrope, but every redesigned
+// page (PatientsListPage, the schedule module, etc.) explicitly renders in
+// Inter instead. Rather than repeating `fontFamily: "Inter"` on every single
+// Typography/TextField in this large form, nest a theme override for this
+// subtree — MUI components pull their font from theme.typography.fontFamily,
+// so this cascades correctly everywhere without per-element overrides.
+const withInterFont = (outerTheme) => createTheme(outerTheme, {
+  typography: { fontFamily: '"Inter", "Manrope", sans-serif' },
+});
 
 const DEFAULT_VALUES = {
   title: "", firstName: "", middleName: "", lastName: "", preferredName: "", dateOfBirth: null, sexAtBirth: "", genderIdentity: "", ssn: "",
@@ -49,159 +62,70 @@ const DEFAULT_VALUES = {
   sendWelcome: false, sendWelcomeMethod: "", newPatientFlag: false,
 };
 
-const trimValue = (value) => (typeof value === "string" ? value.trim() : value);
-const normalizePhone = (value) => {
-  const digits = (value || "").replace(/[^\d+]/g, "").trim();
-  if (!digits) return "";
-  return digits.startsWith("+") ? digits : `+${digits}`;
-};
-const formatPhoneInput = (value) => {
-  const digits = (value || "").replace(/\D/g, "").slice(0, 10);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-};
-const formatPostalCodeInput = (value) => {
-  const digits = (value || "").replace(/\D/g, "").slice(0, 9);
-  if (digits.length <= 5) return digits;
-  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
-};
-const formatSSNInput = (value) => {
-  const digits = (value || "").replace(/\D/g, "").slice(0, 9);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
-};
-const formatDateValue = (value) => {
-  if (!value) return undefined;
-  const parsed = dayjs(value);
-  return parsed.isValid() ? parsed.toISOString() : undefined;
-};
-const removeEmptyCustomFields = (fields) =>
-  Object.fromEntries(
-    Object.entries(fields).filter(([, value]) => {
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === "boolean") return true;
-      return value !== "" && value !== null && value !== undefined;
-    }),
-  );
+// ─── Field configs consumed by <FormFieldsGrid> ──────────────────────────────
+// Each SectionCard's plain text/select/phone fields are declared here instead
+// of hand-written as repeated Grid+FormField+Input JSX. Fields with side
+// effects on other fields (date picker, radio groups, autocompletes, address
+// blocks) are NOT declared here — they stay as explicit JSX in the section
+// that needs them; see the render below.
 
-const OutlinedInput = (props) => (
-  <TextField
-    variant="outlined" size="small" fullWidth {...props}
-    sx={{
-      "& .MuiOutlinedInput-root": {
-        height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB",
-        "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" },
-        "&:hover fieldset": { borderColor: "#CBD5E1" },
-        "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" },
-      },
-      "& .MuiOutlinedInput-input": { padding: "8px 12px", fontSize: "0.88rem" },
-      ...props.sx
-    }}
-  />
-);
+const PATIENT_NAME_FIELDS = [
+  { name: "title", label: "Title", type: "select", gridSize: { xs: 12, sm: 3 }, options: [
+    { value: "", label: "-" }, { value: "mr", label: "Mr." }, { value: "ms", label: "Ms." }, { value: "mrs", label: "Mrs." },
+  ] },
+  { name: "firstName", label: "First Name", type: "text", required: "First name is required", placeholder: "First name", gridSize: { xs: 12, sm: 3 } },
+  { name: "middleName", label: "Middle Name", type: "text", placeholder: "Middle name", gridSize: { xs: 12, sm: 3 } },
+  { name: "lastName", label: "Last Name", type: "text", required: "Last name is required", placeholder: "Last name", gridSize: { xs: 12, sm: 3 } },
+];
+const PATIENT_PREFERRED_NAME_FIELD = [
+  { name: "preferredName", label: "Preferred Name", type: "text", placeholder: "Name patient goes by", gridSize: { xs: 12, sm: 4 } },
+];
+// SSN previously lost the formatted value entirely — see formatters.js's
+// withFormattedOnChange for why — now fixed via the `formatter` option.
+const PATIENT_SSN_FIELD = [
+  { name: "ssn", label: "Social Security Number", type: "text", placeholder: "XXX-XX-XXXX", formatter: formatSSNInput, gridSize: { xs: 12, sm: 4 } },
+];
 
-const OutlinedSelect = ({ children, ...props }) => (
-  <TextField
-    select variant="outlined" size="small" fullWidth {...props}
-    SelectProps={{ displayEmpty: true, ...props.SelectProps }}
-    sx={{
-      "& .MuiOutlinedInput-root": {
-        height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB",
-        "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" },
-        "&:hover fieldset": { borderColor: "#CBD5E1" },
-        "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" },
-      },
-      "& .MuiSelect-select": { padding: "8px 12px", fontSize: "0.88rem" },
-      ...props.sx
-    }}
-  >
-    {children}
-  </TextField>
-);
+const CONTACT_FIELDS = [
+  { name: "mobileNumber", label: "Mobile Number", type: "phone", required: "Mobile number is required", gridSize: { xs: 12, sm: 4 } },
+  { name: "homePhoneNumber", label: "Home Phone Number", type: "phone", gridSize: { xs: 12, sm: 4 } },
+  { name: "emailAddress", label: "Email Address", type: "text", placeholder: "patient@email.com", gridSize: { xs: 12, sm: 4 },
+    pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Invalid email address" } },
+];
 
-const PhoneInput = ({ onChange, ...props }) => (
-  <OutlinedInput
-    {...props}
-    placeholder="(201) 555-0123"
-    onChange={(event) => {
-      event.target.value = formatPhoneInput(event.target.value);
-      onChange?.(event);
-    }}
-    InputProps={{
-      startAdornment: (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 1, pr: 1, borderRight: "1px solid #E2E8F0" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }}>
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-          <TextField
-            select
-            variant="standard"
-            defaultValue="US"
-            InputProps={{ disableUnderline: true }}
-            SelectProps={{ IconComponent: () => null }}
-            sx={{
-              "& .MuiSelect-select": {
-                py: 0, pl: 0, pr: "0 !important",
-                fontSize: "0.85rem", fontWeight: 500, color: "#1E293B",
-                "&:focus": { backgroundColor: "transparent" }
-              }
-            }}
-          >
-            <MenuItem value="US">US</MenuItem>
-          </TextField>
-        </Box>
-      ),
-      ...props.InputProps
-    }}
-  />
-);
+const ADDITIONAL_INFO_FIELDS = [
+  { name: "occupation", label: "Occupation", type: "text", placeholder: "Patient's occupation", gridSize: { xs: 12, sm: 4 } },
+  { name: "guardianEmployer", label: "Patient's / Guardian's Employer", type: "text", placeholder: "Employer name", gridSize: { xs: 12, sm: 4 } },
+  { name: "workPhoneNumber", label: "Work Phone Number", type: "phone", gridSize: { xs: 12, sm: 4 } },
+];
 
-const CustomRadioGroup = ({ options = [], value, onChange, sx = {} }) => (
-  <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", ...sx }}>
-    {options.map((opt) => (
-      <Box
-        key={opt.value}
-        onClick={() => onChange(opt.value)}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          height: "34.8px",
-          px: 1.5,
-          borderRadius: "8px",
-          border: "1.2px solid",
-          borderColor: value === opt.value ? "#1a73e8" : "#E2E8F0",
-          backgroundColor: value === opt.value ? "#e8f0fe" : "#F0F3FB",
-          cursor: "pointer",
-          transition: "all 0.2s",
-          "&:hover": { borderColor: value === opt.value ? "#1a73e8" : "#CBD5E1" },
-          ...(opt.width ? { width: opt.width } : {}),
-          boxSizing: "border-box"
-        }}
-      >
-        <Box
-          sx={{
-            width: 14,
-            height: 14,
-            borderRadius: "50%",
-            border: "1.2px solid",
-            borderColor: value === opt.value ? "#1a73e8" : "#94A3B8",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {value === opt.value && <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#1a73e8" }} />}
-        </Box>
-        <Typography sx={{ fontSize: "0.85rem", color: value === opt.value ? "#1a73e8" : "#475569", fontWeight: 500, whiteSpace: "nowrap" }}>
-          {opt.label}
-        </Typography>
-      </Box>
-    ))}
-  </Box>
-);
+// A function (not a static array) because every field needs the same
+// `disabled: isSingle` — built once per render in the component body.
+const spouseNameFields = (disabled) => [
+  { name: "spouseFirstName", label: "First Name", type: "text", placeholder: "First name", disabled, gridSize: { xs: 12, sm: 4 } },
+  { name: "spouseMiddleName", label: "Middle Name", type: "text", placeholder: "Middle name", disabled, gridSize: { xs: 12, sm: 4 } },
+  { name: "spouseLastName", label: "Last Name", type: "text", placeholder: "Last name", disabled, gridSize: { xs: 12, sm: 4 } },
+  { name: "spouseOccupation", label: "Occupation", type: "text", placeholder: "Spouse's occupation", disabled, gridSize: { xs: 12, sm: 4 } },
+  { name: "spouseEmployer", label: "Employer", type: "text", placeholder: "Employer name", disabled, gridSize: { xs: 12, sm: 4 } },
+  { name: "spouseWorkPhoneNumber", label: "Work Phone Number", type: "phone", disabled, gridSize: { xs: 12, sm: 4 } },
+];
+const spouseEmailField = (disabled) => [
+  { name: "spouseEmailAddress", label: "Email Address", type: "text", placeholder: "spouse@email.com", disabled, gridSize: { xs: 12, sm: 4 } },
+];
+
+const EMERGENCY_CONTACT_FIELDS = [
+  { name: "emergencyContactName", label: "Full Name", type: "text", required: "Emergency contact name is required", placeholder: "Contact full name", gridSize: { xs: 12, sm: 4 } },
+  { name: "emergencyRelationship", label: "Relationship", type: "select", required: "Relationship is required", gridSize: { xs: 12, sm: 4 },
+    options: [{ value: "", label: "Select relationship" }, ...["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"].map((r) => ({ value: r, label: r }))] },
+  { name: "emergencyHomePhone", label: "Home Phone", type: "phone", gridSize: { xs: 12, sm: 4 } },
+  { name: "emergencyWorkPhone", label: "Work Phone", type: "phone", gridSize: { xs: 12, sm: 4 } },
+  { name: "emergencyMobilePhone", label: "Mobile Number", type: "phone", gridSize: { xs: 12, sm: 4 } },
+];
+
+const REFERRING_SOURCE_FIELD = [
+  { name: "referringSources", label: "Referring Source", type: "select", gridSize: { xs: 12, sm: 4 },
+    options: [{ value: "", label: "Select source" }, ...REFERRING_SOURCE_OPTIONS.map((o) => ({ value: o, label: o }))] },
+];
 
 const providerLabel = (provider) => {
   if (provider?.userId?.firstName || provider?.userId?.lastName) {
@@ -291,97 +215,73 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
   };
 
   return (
+    <ThemeProvider theme={withInterFont}>
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ backgroundColor: "#F8FAFC", minHeight: "100vh" }}>
-        
-        {/* Top Header / Nav Area */}
-        <Box sx={{ px: 4, pt: 3, pb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography sx={{ color: "#1a73e8", fontSize: "0.85rem", fontWeight: 500, cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={onCancel}>Patients</Typography>
-              <Typography sx={{ color: "#94A3B8", fontSize: "0.85rem" }}>/</Typography>
-              <Typography sx={{ color: "#1E293B", fontSize: "0.85rem", fontWeight: 600 }}>Add New Patient</Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box sx={{ backgroundColor: "#F1F5F9", color: "#64748B", px: 1.5, py: 0.5, borderRadius: "6px", fontSize: "0.75rem", fontWeight: 600, border: "1px solid #E2E8F0" }}>
-                Draft auto-saved
-              </Box>
-              <Button variant="outlined" sx={{ minWidth: "auto", p: "6px", borderColor: "#E2E8F0", color: "#64748B", borderRadius: "8px", "&:hover": { backgroundColor: "#F8FAFC", borderColor: "#CBD5E1" } }}>
-                <SaveOutlinedIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
-              </Button>
-            </Box>
+      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ backgroundColor: COLORS.SURFACE_PAGE, minHeight: "100%" }}>
+
+        {/* Page Header — sits directly under the app's main header. Three
+            flex sections: breadcrumb (left), Assign Care Team (center),
+            bookmark/Cancel/Save (right). */}
+        <Box sx={{
+          px: 4, py: 2, margin:2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, borderRadius:'12px',
+          backgroundColor: COLORS.SURFACE_CARD, borderBottom: `1px solid ${COLORS.BORDER}`, 
+        }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+            <Typography sx={{ color: COLORS.ACCENT, fontSize: fontSize.base, fontWeight: fontWeight.semibold, textTransform: "uppercase", cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={onCancel}>Patients</Typography>
+            <Typography sx={{ color: COLORS.TEXT_MUTED, fontSize: fontSize.base }}>/</Typography>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: fontSize.base, fontWeight: fontWeight.semibold, textTransform: "uppercase" }}>Add New Patient</Typography>
           </Box>
-          
-          <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "#1a73e8", fontWeight: 600, fontSize: "0.85rem", textTransform: "uppercase" }}>
-              <PeopleAltOutlinedIcon fontSize="small" /> ASSIGN CARE TEAM
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: COLORS.ACCENT, fontWeight: fontWeight.semibold, fontSize: fontSize.base, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+              <PeopleAltOutlinedIcon fontSize="small" /> Assign Care Team
             </Box>
             <Controller name="preferredDentistId" control={control} render={({ field }) => (
-              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderColor: "#E2E8F0" } }}>
-                <MenuItem value=""><span style={{ color: "#94A3B8" }}>Preferred Dentist</span></MenuItem>
+              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 200, "& .MuiOutlinedInput-root": { height: "36px", backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
+                <MenuItem value="">Preferred Dentist</MenuItem>
                 {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
             <Controller name="preferredHygienistId" control={control} render={({ field }) => (
-              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 280, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderColor: "#E2E8F0" } }}>
-                <MenuItem value=""><span style={{ color: "#94A3B8" }}>Preferred Hygienist</span></MenuItem>
+              <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 200, "& .MuiOutlinedInput-root": { height: "36px", backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
+                <MenuItem value="">Preferred Hygienist</MenuItem>
                 {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
+            <Button variant="outlined" sx={{ minWidth: "auto", p: "6px", borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}>
+              <BookmarkBorderOutlinedIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
+            </Button>
+            <Button variant="outlined" onClick={onCancel} sx={{ height: "36px", px: 2.5, borderRadius: radius.md, textTransform: "none", color: COLORS.TEXT_BODY, borderColor: COLORS.BORDER, "&:hover": { borderColor: COLORS.TEXT_MUTED, backgroundColor: COLORS.SURFACE_HOVER }, fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" disabled={loading} sx={{ height: "36px", px: 2.5, borderRadius: radius.md, textTransform: "none", backgroundColor: COLORS.ACCENT, "&:hover": { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: "none", fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
+              {loading ? <CircularProgress size={18} color="inherit" /> : "Save"}
+            </Button>
           </Box>
         </Box>
 
         {/* Content Area */}
         <Box sx={{ px: 4, pb: 10, maxWidth: 1136, mx: "auto" }}>
-          
+
           <SectionCard icon={PersonOutlineIcon} title="Patient Details" subtitle="Legal name, demographics, and identity" badge="required">
             <Grid container spacing={2.5}>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <FormField label="Title">
-                  <OutlinedSelect {...register("title")} SelectProps={{ displayEmpty: true }}>
-                    <MenuItem value="">-</MenuItem>
-                    <MenuItem value="mr">Mr.</MenuItem>
-                    <MenuItem value="ms">Ms.</MenuItem>
-                    <MenuItem value="mrs">Mrs.</MenuItem>
-                  </OutlinedSelect>
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <FormField label="First Name" required>
-                  <OutlinedInput {...register("firstName", { required: "First name is required" })} error={!!errors.firstName} helperText={errors.firstName?.message} placeholder="First name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <FormField label="Middle Name">
-                  <OutlinedInput {...register("middleName")} placeholder="Middle name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <FormField label="Last Name" required>
-                  <OutlinedInput {...register("lastName", { required: "Last name is required" })} error={!!errors.lastName} helperText={errors.lastName?.message} placeholder="Last name" />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={PATIENT_NAME_FIELDS} register={register} errors={errors} />
 
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Preferred Name">
-                  <OutlinedInput {...register("preferredName")} placeholder="Name patient goes by" />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={PATIENT_PREFERRED_NAME_FIELD} register={register} errors={errors} />
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Date of Birth" required>
                   <Controller name="dateOfBirth" rules={{ required: "Date of birth is required" }} control={control} render={({ field, fieldState: { error } }) => (
-                    <DatePicker openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: "8px", backgroundColor: "#F0F3FB", "& fieldset": { borderWidth: "1.2px", borderColor: "#E2E8F0" }, "&:hover fieldset": { borderColor: "#CBD5E1" }, "&.Mui-focused fieldset": { borderColor: "#1a73e8", borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: "0.88rem" } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
+                    <DatePicker openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER }, "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED }, "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: fontSize.md } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
                   )} />
                 </FormField>
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Social Security Number">
-                  <OutlinedInput {...register("ssn")} placeholder="XXX-XX-XXXX" onChange={(e) => e.target.value = formatSSNInput(e.target.value)} />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={PATIENT_SSN_FIELD} register={register} errors={errors} />
 
               <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
-                <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
+                <FieldDivider />
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -406,94 +306,23 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
           <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Phone numbers, email, and mailing address">
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Mobile Number" required>
-                  <PhoneInput {...register("mobileNumber", { required: "Mobile number is required" })} error={!!errors.mobileNumber} helperText={errors.mobileNumber?.message} />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Home Phone Number">
-                  <PhoneInput {...register("homePhoneNumber")} />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Email Address">
-                  <OutlinedInput {...register("emailAddress", { pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Invalid email address" } })} error={!!errors.emailAddress} helperText={errors.emailAddress?.message} placeholder="patient@email.com" />
-                </FormField>
-              </Grid>
-              
+              <FormFieldsGrid fields={CONTACT_FIELDS} register={register} errors={errors} />
+
               <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
-                <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
+                <FieldDivider />
+              </Grid>
+
+              <AddressFieldsSection
+                prefix="patient" label="Patient's Address" addressLine2Placeholder="Apt, suite, unit..."
+                register={register} control={control} watch={watch} setValue={setValue}
+              />
+
+              <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
+                <FieldDivider />
               </Grid>
 
               <Grid size={{ xs: 12 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mb: 2 }}>Patient's Address</Typography>
-                <Box sx={{ border: "1px solid #E2E8F0", borderRadius: "8px", p: 2.5, backgroundColor: "#fff" }}>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <FormField label="Country">
-                        <Controller name="patientCountry" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field}>
-                            {COUNTRY_OPTIONS.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                          </OutlinedSelect>
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <FormField label="Address Line 1">
-                        <OutlinedInput {...register("patientAddressLine1")} placeholder="Street address" />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <FormField label="Address Line 2">
-                        <OutlinedInput {...register("patientAddressLine2")} placeholder="Apt, suite, unit..." />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="State">
-                        <Controller name="patientState" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field} onChange={(e) => { field.onChange(e); setValue("patientCity", ""); }}>
-                            <MenuItem value="">Select state</MenuItem>
-                            {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
-                          </OutlinedSelect>
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="City">
-                        <Controller name="patientCity" control={control} render={({ field: { onChange, value } }) => (
-                          <Autocomplete
-                            options={STATE_CITIES[watch("patientState")] || []}
-                            value={value || ""}
-                            onChange={(_, newVal) => onChange(newVal || "")}
-                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                            disabled={!watch("patientState")}
-                            freeSolo
-                            renderInput={(params) => (
-                              <OutlinedInput 
-                                {...params} 
-                                placeholder={watch("patientState") ? "City" : "Select state first"} 
-                              />
-                            )}
-                          />
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="Zip / Postal Code">
-                        <OutlinedInput {...register("patientPostalCode")} placeholder="Zip code" onChange={(e) => e.target.value = formatPostalCodeInput(e.target.value)} />
-                      </FormField>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Grid>
-
-              <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
-                <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
-              </Grid>
-
-              <Grid size={{ xs: 12 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mb: 1.5 }}>Marital Status</Typography>
+                <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mb: 1.5 }}>Marital Status</Typography>
                 <Controller name="maritalStatus" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[
                     {label:"Single",value:"single"}, {label:"Married",value:"married"}, {label:"Widowed",value:"widowed"}, {label:"Divorced",value:"divorced"}, {label:"Under 18",value:"under_18"}, {label:"Prefer not to answer",value:"prefer_not_to_answer"}
@@ -505,248 +334,49 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
           <SectionCard icon={InfoOutlinedIcon} title="Additional Information" subtitle="Occupation and work contact details" badge="optional">
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Occupation">
-                  <OutlinedInput {...register("occupation")} placeholder="Patient's occupation" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Patient's / Guardian's Employer">
-                  <OutlinedInput {...register("guardianEmployer")} placeholder="Employer name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Work Phone Number">
-                  <PhoneInput {...register("workPhoneNumber")} />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={ADDITIONAL_INFO_FIELDS} register={register} errors={errors} />
 
               <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
-                <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
+                <FieldDivider />
               </Grid>
 
-              <Grid size={{ xs: 12 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mb: 2 }}>Work Address</Typography>
-                <Box sx={{ border: "1px solid #E2E8F0", borderRadius: "8px", p: 2.5, backgroundColor: "#fff" }}>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <FormField label="Country">
-                        <Controller name="workCountry" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field}>
-                            {COUNTRY_OPTIONS.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                          </OutlinedSelect>
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <FormField label="Address Line 1">
-                        <OutlinedInput {...register("workAddressLine1")} placeholder="Street address" />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <FormField label="Address Line 2">
-                        <OutlinedInput {...register("workAddressLine2")} placeholder="Suite, floor..." />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="State">
-                        <Controller name="workState" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field} onChange={(e) => { field.onChange(e); setValue("workCity", ""); }}>
-                            <MenuItem value="">Select state</MenuItem>
-                            {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
-                          </OutlinedSelect>
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="City">
-                        <Controller name="workCity" control={control} render={({ field: { onChange, value } }) => (
-                          <Autocomplete
-                            options={STATE_CITIES[watch("workState")] || []}
-                            value={value || ""}
-                            onChange={(_, newVal) => onChange(newVal || "")}
-                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                            disabled={!watch("workState")}
-                            freeSolo
-                            renderInput={(params) => (
-                              <OutlinedInput 
-                                {...params} 
-                                placeholder={watch("workState") ? "City" : "Select state first"} 
-                              />
-                            )}
-                          />
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="Zip / Postal Code">
-                        <OutlinedInput {...register("workPostalCode")} placeholder="Zip code" onChange={(e) => e.target.value = formatPostalCodeInput(e.target.value)} />
-                      </FormField>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Grid>
+              <AddressFieldsSection
+                prefix="work" label="Work Address" addressLine2Placeholder="Suite, floor..."
+                register={register} control={control} watch={watch} setValue={setValue}
+              />
             </Grid>
           </SectionCard>
 
           <SectionCard icon={PeopleAltOutlinedIcon} title="Spouse / Partner Information" subtitle="Spouse or domestic partner details" badge="optional">
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="First Name">
-                  <OutlinedInput {...register("spouseFirstName")} disabled={isSingle} placeholder="First name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Middle Name">
-                  <OutlinedInput {...register("spouseMiddleName")} disabled={isSingle} placeholder="Middle name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Last Name">
-                  <OutlinedInput {...register("spouseLastName")} disabled={isSingle} placeholder="Last name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Occupation">
-                  <OutlinedInput {...register("spouseOccupation")} disabled={isSingle} placeholder="Spouse's occupation" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Employer">
-                  <OutlinedInput {...register("spouseEmployer")} disabled={isSingle} placeholder="Employer name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Work Phone Number">
-                  <PhoneInput {...register("spouseWorkPhoneNumber")} disabled={isSingle} />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={spouseNameFields(isSingle)} register={register} errors={errors} />
 
               <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
-                <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
+                <FieldDivider />
               </Grid>
 
-              <Grid size={{ xs: 12 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mb: 2 }}>Work Address</Typography>
-                <Box sx={{ border: "1px solid #E2E8F0", borderRadius: "8px", p: 2.5, backgroundColor: "#fff" }}>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <FormField label="Country">
-                        <Controller name="spouseCountry" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field} disabled={isSingle}>
-                            {COUNTRY_OPTIONS.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                          </OutlinedSelect>
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <FormField label="Address Line 1">
-                        <OutlinedInput {...register("spouseAddressLine1")} disabled={isSingle} placeholder="Street address" />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <FormField label="Address Line 2">
-                        <OutlinedInput {...register("spouseAddressLine2")} disabled={isSingle} placeholder="Suite, unit..." />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="State">
-                        <Controller name="spouseState" control={control} render={({ field }) => (
-                          <OutlinedSelect {...field} disabled={isSingle} onChange={(e) => { field.onChange(e); setValue("spouseCity", ""); }}>
-                            <MenuItem value="">Select state</MenuItem>
-                            {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
-                          </OutlinedSelect>
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="City">
-                        <Controller name="spouseCity" control={control} render={({ field: { onChange, value } }) => (
-                          <Autocomplete
-                            options={STATE_CITIES[watch("spouseState")] || []}
-                            value={value || ""}
-                            onChange={(_, newVal) => onChange(newVal || "")}
-                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                            disabled={isSingle || !watch("spouseState")}
-                            freeSolo
-                            renderInput={(params) => (
-                              <OutlinedInput 
-                                {...params} 
-                                placeholder={isSingle ? "" : watch("spouseState") ? "City" : "Select state first"} 
-                              />
-                            )}
-                          />
-                        )} />
-                      </FormField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormField label="Zip / Postal Code">
-                        <OutlinedInput {...register("spousePostalCode")} disabled={isSingle} placeholder="Zip code" onChange={(e) => e.target.value = formatPostalCodeInput(e.target.value)} />
-                      </FormField>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Grid>
+              <AddressFieldsSection
+                prefix="spouse" label="Work Address" addressLine2Placeholder="Suite, unit..." disabled={isSingle}
+                register={register} control={control} watch={watch} setValue={setValue}
+              />
 
               <Grid size={{ xs: 12 }} sx={{ pt: "24px !important", pb: "4px !important" }}>
-                <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
+                <FieldDivider />
               </Grid>
 
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Email Address">
-                  <OutlinedInput {...register("spouseEmailAddress")} disabled={isSingle} placeholder="spouse@email.com" />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={spouseEmailField(isSingle)} register={register} errors={errors} />
             </Grid>
           </SectionCard>
 
           <SectionCard icon={WarningAmberOutlinedIcon} title="Emergency Contact" subtitle="Who to contact in case of emergency">
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Full Name" required>
-                  <OutlinedInput {...register("emergencyContactName", { required: "Emergency contact name is required" })} error={!!errors.emergencyContactName} helperText={errors.emergencyContactName?.message} placeholder="Contact full name" />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Relationship" required>
-                  <Controller name="emergencyRelationship" rules={{ required: "Relationship is required" }} control={control} render={({ field, fieldState: { error } }) => (
-                    <OutlinedSelect {...field} error={!!error} helperText={error?.message}>
-                      <MenuItem value="">Select relationship</MenuItem>
-                      {["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"].map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
-                    </OutlinedSelect>
-                  )} />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Home Phone">
-                  <PhoneInput {...register("emergencyHomePhone")} />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Work Phone">
-                  <PhoneInput {...register("emergencyWorkPhone")} />
-                </FormField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Mobile Number">
-                  <PhoneInput {...register("emergencyMobilePhone")} />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={EMERGENCY_CONTACT_FIELDS} register={register} errors={errors} />
             </Grid>
           </SectionCard>
 
           <SectionCard icon={CallMadeOutlinedIcon} title="Referring" subtitle="Referral source and referring patient" badge="optional">
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormField label="Referring Source">
-                  <Controller name="referringSources" control={control} render={({ field }) => (
-                    <OutlinedSelect {...field}>
-                      <MenuItem value="">Select source</MenuItem>
-                      {REFERRING_SOURCE_OPTIONS.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
-                    </OutlinedSelect>
-                  )} />
-                </FormField>
-              </Grid>
+              <FormFieldsGrid fields={REFERRING_SOURCE_FIELD} register={register} errors={errors} />
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Referring Patient">
                   <Controller name="referringPatient" control={control} render={({ field }) => (
@@ -758,20 +388,20 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                       onInputChange={(_, newInpVal) => { field.onChange(newInpVal); setPatientSearchText(newInpVal); }}
                       loading={patientsLoading} noOptionsText="No patients found"
                       renderInput={(params) => (
-                        <OutlinedInput 
-                          {...params} 
-                          placeholder="Search patients..." 
-                          InputProps={{ 
-                            ...params.InputProps, 
+                        <OutlinedInput
+                          {...params}
+                          placeholder="Search patients..."
+                          InputProps={{
+                            ...params.InputProps,
                             startAdornment: (
-                              <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: 0.5, color: "#64748B" }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: 0.5, color: COLORS.TEXT_SECONDARY }}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                               </Box>
                             ),
                             endAdornment: (
                               <>{patientsLoading ? <CircularProgress size={18} /> : null}{params.InputProps.endAdornment}</>
-                            ) 
-                          }} 
+                            )
+                          }}
                         />
                       )}
                     />
@@ -785,10 +415,10 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Grid container spacing={4}>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Release Information</Typography>
-                  <Box sx={{ flexGrow: 1, borderBottom: "1px solid #E2E8F0" }} />
+                  <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Release Information</Typography>
+                  <Box sx={{ flexGrow: 1, borderBottom: `1px solid ${COLORS.BORDER}` }} />
                 </Box>
-                <Typography sx={{ fontSize: "0.85rem", color: "#475569", mb: 1.5 }}>Can discuss healthcare information with:</Typography>
+                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY, mb: 1.5 }}>Can discuss healthcare information with:</Typography>
                 <Stack spacing={1.5}>
                   <Controller name="releaseSpouse" control={control} render={({ field }) => <ColoredChipCheckbox shape="circle" checked={!!field.value} onChange={field.onChange} label="Spouse / Common-law partner" />} />
                   <Controller name="releaseChildren" control={control} render={({ field }) => <ColoredChipCheckbox shape="circle" checked={!!field.value} onChange={field.onChange} label="Children" />} />
@@ -798,11 +428,11 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                   </FormField>
                 </Stack>
               </Grid>
-              
+
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Communication Consents</Typography>
-                  <Box sx={{ flexGrow: 1, borderBottom: "1px solid #E2E8F0" }} />
+                  <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Communication Consents</Typography>
+                  <Box sx={{ flexGrow: 1, borderBottom: `1px solid ${COLORS.BORDER}` }} />
                 </Box>
                 <Stack spacing={1.5}>
                   <Controller name="contactByPhone" control={control} render={({ field }) => <ColoredChipCheckbox checked={!!field.value} onChange={field.onChange} label="Contact me on the phone numbers provided" />} />
@@ -816,10 +446,10 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Confirmation Preferences</Typography>
-                  <Box sx={{ flexGrow: 1, borderBottom: "1px solid #E2E8F0" }} />
+                  <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", mr: 2, whiteSpace: "nowrap" }}>Confirmation Preferences</Typography>
+                  <Box sx={{ flexGrow: 1, borderBottom: `1px solid ${COLORS.BORDER}` }} />
                 </Box>
-                <Typography sx={{ fontSize: "0.85rem", color: "#475569", mb: 1.5 }}>Patient prefers to receive a reminder before appointment:</Typography>
+                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY, mb: 1.5 }}>Patient prefers to receive a reminder before appointment:</Typography>
                 <Controller name="reminderPreference" control={control} render={({ field }) => (
                   <Stack spacing={1.5} mb={3}>
                     <ColoredChipCheckbox shape="circle" checked={field.value === "none"} onChange={(val) => { if(val){field.onChange("none"); setValue("stopReminderAfterConfirmation",false); setValue("dontRequestReview",false);}else field.onChange(""); }} label="No, it is unnecessary" />
@@ -830,7 +460,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                   </Stack>
                 )} />
 
-                <Typography sx={{ fontSize: "0.85rem", color: "#475569", mb: 1.5 }}>Patient prefers not to receive a review request:</Typography>
+                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY, mb: 1.5 }}>Patient prefers not to receive a review request:</Typography>
                 <Controller name="dontRequestReview" control={control} render={({ field }) => (
                   <ColoredChipCheckbox shape="circle" checked={!!field.value} onChange={(val) => { field.onChange(val); if(val){setValue("reminderPreference",""); setValue("stopReminderAfterConfirmation",false);} }} label="Don't request review" />
                 )} />
@@ -841,23 +471,23 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
           <SectionCard icon={ChecklistOutlinedIcon} title="Assignment & Release" subtitle="Photography, social media, and assignment consents">
             <Box sx={{ display: "flex", flexDirection: "column" }}>
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 2 }}>
-                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>Assignment & Release</Typography>
+                <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Assignment & Release</Typography>
                 <Controller name="assignmentRelease" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "No", value: "no"}, {label: "Yes", value: "yes"}]} />
                 )} />
               </Box>
-              <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
-              
+              <FieldDivider />
+
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 2 }}>
-                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>Photography Release</Typography>
+                <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Photography Release</Typography>
                 <Controller name="photographyRelease" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "No", value: "no"}, {label: "Yes", value: "yes"}]} />
                 )} />
               </Box>
-              <Box sx={{ borderBottom: "1px solid #F1F5F9", ml: "-40px", width: "calc(100% + 80px)" }} />
-              
+              <FieldDivider />
+
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 2 }}>
-                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>Social Media Release</Typography>
+                <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Social Media Release</Typography>
                 <Controller name="socialMediaRelease" control={control} render={({ field }) => (
                   <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "No", value: "no"}, {label: "Yes", value: "yes"}]} />
                 )} />
@@ -866,32 +496,36 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
           </SectionCard>
         </Box>
 
-        {/* Bottom Action Bar */}
-        <Box sx={{ position: "sticky", bottom: 0, zIndex: 100, backgroundColor: "#fff", borderTop: "1px solid #E2E8F0", px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* Bottom Action Bar — sits in normal document flow at the end of the
+            page (not fixed/sticky), so it only comes into view once the user
+            scrolls all the way down. */}
+        <Box sx={{ backgroundColor: COLORS.SURFACE_CARD, borderTop: `1px solid ${COLORS.BORDER}`, px: 4, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Controller name="sendWelcome" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="Send Welcome" />
             )} />
+            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
             <Controller name="sendWelcomeMethod" control={control} render={({ field }) => (
               <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "Email", value: "email"}, {label: "Text Message", value: "text"}]} />
             )} />
-            <Box sx={{ width: "1px", height: "24px", backgroundColor: "#E2E8F0", mx: 0.5 }} />
+            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
             <Controller name="newPatientFlag" control={control} render={({ field }) => (
               <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="New Patient" />
             )} />
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography sx={{ fontSize: "0.75rem", color: "#94A3B8", display: { xs: "none", lg: "block" } }}>
+            <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, display: { xs: "none", lg: "block" } }}>
               Welcome delivery is optional and will only be sent if you enable it.
             </Typography>
-            <Button variant="outlined" onClick={onCancel} sx={{ px: 3, height: "40px", borderRadius: "8px", textTransform: "none", color: "#475569", borderColor: "#CBD5E1", fontSize: "0.85rem", fontWeight: 500 }}>Cancel</Button>
-            <Button type="submit" variant="contained" disabled={loading} startIcon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>} sx={{ px: 3, height: "40px", borderRadius: "8px", textTransform: "none", backgroundColor: "#3B82F6", "&:hover": { backgroundColor: "#2563EB" }, boxShadow: "none", fontSize: "0.85rem", fontWeight: 500 }}>
+            <Button variant="outlined" onClick={onCancel} sx={{ px: 3, height: "40px", borderRadius: radius.md, textTransform: "none", color: COLORS.TEXT_BODY, borderColor: COLORS.BORDER, "&:hover": { borderColor: COLORS.TEXT_MUTED, backgroundColor: COLORS.SURFACE_HOVER }, fontSize: fontSize.md, fontWeight: fontWeight.medium }}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={loading} startIcon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>} sx={{ px: 3, height: "40px", borderRadius: radius.md, textTransform: "none", backgroundColor: COLORS.ACCENT, "&:hover": { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: "none", fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
               {loading ? <CircularProgress size={24} color="inherit" /> : "Add Patient"}
             </Button>
           </Box>
         </Box>
       </Box>
     </LocalizationProvider>
+    </ThemeProvider>
   );
 };
 

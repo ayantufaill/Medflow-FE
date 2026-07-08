@@ -1,5 +1,6 @@
 export * from './useAllergies';
 export * from './useAppointmentTypes';
+export * from './usePatientAppointments';
 export * from './usePatients';
 export * from './useProviders';
 export * from './useRoles';

@@ -1,166 +1,124 @@
-import { Box, Typography, Grid, Divider, Checkbox, FormControlLabel, Select, MenuItem } from "@mui/material";
-import Card from "../shared/Card";
+import { Box, Typography, TextField, Select, MenuItem } from "@mui/material";
+import { MedicalServicesOutlined as GeneralInfoIcon, MonitorWeightOutlined as WeightIcon, StraightenOutlined as HeightIcon } from "@mui/icons-material";
+import SectionCard from "../shared/SectionCard";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, standardFieldSx } from "../../constants/styles";
 
-const MedicalGeneralInfoCard = ({
-  generalInfo,
-  onChangeField,
-  premedRequires,
-  onPremedChange,
-}) => {
-  const lineStyle = {
-    border: 'none',
-    borderBottom: '1px solid #9e9e9e',
-    outline: 'none',
-    width: '100%',
-    fontSize: '14px',
-    padding: '0 4px',
-    backgroundColor: 'transparent',
-    fontFamily: 'inherit',
-    marginLeft: '8px'
-  };
+const fieldLabelSx = {
+  fontFamily: "Inter",
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.semibold,
+  color: COLORS.TEXT_SECONDARY,
+  textTransform: "uppercase",
+  letterSpacing: "0.3px",
+};
 
-  const labelStyle = {
-    fontSize: '13px',
-    color: '#333',
-    whiteSpace: 'nowrap',
-    lineHeight: 1.2,
-    fontFamily: 'inherit'
-  };
+const FieldBox = ({ label, value, onChange }) => (
+  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+    <Typography sx={fieldLabelSx}>{label}</Typography>
+    <TextField variant="outlined" size="small" fullWidth value={value || ""} onChange={onChange} sx={standardFieldSx} />
+  </Box>
+);
 
-  const rowStyle = { 
-    display: 'flex', 
-    alignItems: 'space-between', 
-    mb: 0.5
-  };
+const unitSelectSx = {
+  fontSize: fontSize.base,
+  fontWeight: fontWeight.semibold,
+  "&:before, &:after": { display: "none" },
+  ml: 0.5,
+};
 
+const MedicalGeneralInfoCard = ({ generalInfo, onChangeField }) => {
   return (
-    <Card sx={{ p: 2 }}>
-      <Grid container spacing={3} wrap="nowrap">
-        {/* Left Section: General Information */}
-        <Grid item xs style={{ flex: '1 1 auto' }}>
-          <Typography variant="subtitle1" sx={{ mb: 0.5, fontSize: '15px', color: '#555' }}>
-            General Information
-          </Typography>
-          <Divider sx={{ mb: 2, borderColor: '#ccc' }} />
+    <SectionCard icon={GeneralInfoIcon} title="General Information">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 2, mb: 2 }}>
+        <FieldBox
+          label="Reason for approval visit"
+          value={generalInfo.purpose}
+          onChange={(e) => onChangeField("purpose", e.target.value)}
+        />
+        <FieldBox
+          label="Physician Name"
+          value={generalInfo.physicianName}
+          onChange={(e) => onChangeField("physicianName", e.target.value)}
+        />
+        <FieldBox
+          label="Physician Specialty"
+          value={generalInfo.physicianSpecialty}
+          onChange={(e) => onChangeField("physicianSpecialty", e.target.value)}
+        />
+      </Box>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {/* First Row */}
-            <Box sx={rowStyle}>
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                <Typography sx={labelStyle}>What is your estimate of your general health?</Typography>
-                <input 
-                  style={lineStyle} 
-                  value={generalInfo.healthEstimate || ""} 
-                  onChange={(e) => onChangeField("healthEstimate", e.target.value)}
-                />
-              </Box>
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                <Typography sx={labelStyle}>Physician Name:</Typography>
-                <input 
-                  style={lineStyle} 
-                  value={generalInfo.physicianName || ""} 
-                  onChange={(e) => onChangeField("physicianName", e.target.value)}
-                />
-              </Box>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 2 }}>
+        <FieldBox
+          label="Last Physical Exam"
+          value={generalInfo.lastExamDate}
+          onChange={(e) => onChangeField("lastExamDate", e.target.value)}
+        />
+        <FieldBox
+          label="Illness / Medical Issues"
+          value={generalInfo.healthEstimate}
+          onChange={(e) => onChangeField("healthEstimate", e.target.value)}
+        />
+
+        {/* Weight + Height share the third column's width, same as Physician
+            Specialty above, instead of each wrapping onto its own full row. */}
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <WeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
+              <Typography sx={fieldLabelSx}>Weight</Typography>
             </Box>
-
-            {/* Second Row */}
-            <Box sx={rowStyle}>
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                <Typography sx={labelStyle}>Date of most recent physical examination:</Typography>
-                <input 
-                  style={lineStyle} 
-                  type="text"
-                  value={generalInfo.lastExamDate || ""} 
-                  onChange={(e) => onChangeField("lastExamDate", e.target.value)}
-                />
-              </Box>
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                <Typography sx={labelStyle}>Physician specialty:</Typography>
-                <input 
-                  style={lineStyle} 
-                  value={generalInfo.physicianSpecialty || ""} 
-                  onChange={(e) => onChangeField("physicianSpecialty", e.target.value)}
-                />
-              </Box>
-            </Box>
-
-            {/* Third Row */}
-            <Box sx={rowStyle}>
-              <Box sx={{ flex: 0.5, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                <Typography sx={labelStyle}>Purpose:</Typography>
-                <input 
-                  style={lineStyle} 
-                  value={generalInfo.purpose || ""} 
-                  onChange={(e) => onChangeField("purpose", e.target.value)}
-                />
-              </Box>
-            </Box>
-
-            {/* Fourth Row: Weight & Height */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5, gap: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ ...labelStyle, fontWeight: 600 }}>Weight:</Typography>
-                <input 
-                  style={lineStyle} 
-                  value={generalInfo.weight || ""} 
-                  onChange={(e) => onChangeField("weight", e.target.value)}
-                />
-                <Select
-                  variant="standard"
-                  value={generalInfo.weightUnit || "LBS"}
-                  onChange={(e) => onChangeField("weightUnit", e.target.value)}
-                  sx={{ fontSize: '12px', fontWeight: 600, '&:before, &:after': { display: 'none' }, ml: 0.5 }}
-                  IconComponent={() => <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>}
-                >
-                  <MenuItem value="LBS">LBS</MenuItem>
-                  <MenuItem value="KG">KG</MenuItem>
-                </Select>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ ...labelStyle, fontWeight: 600 }}>Height:</Typography>
-                <input 
-                  style={lineStyle} 
-                  value={generalInfo.height || ""} 
-                  onChange={(e) => onChangeField("height", e.target.value)}
-                />
-                <Select
-                  variant="standard"
-                  value={generalInfo.heightUnit || "FT/IN"}
-                  onChange={(e) => onChangeField("heightUnit", e.target.value)}
-                  sx={{ fontSize: '12px', fontWeight: 600, '&:before, &:after': { display: 'none' }, ml: 0.5 }}
-                  IconComponent={() => <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>}
-                >
-                  <MenuItem value="FT/IN">FT/IN</MenuItem>
-                  <MenuItem value="CM">CM</MenuItem>
-                </Select>
-              </Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <TextField
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={generalInfo.weight || ""}
+                onChange={(e) => onChangeField("weight", e.target.value)}
+                sx={{ ...standardFieldSx, minWidth: 0 }}
+              />
+              <Select
+                variant="standard"
+                value={generalInfo.weightUnit || "LBS"}
+                onChange={(e) => onChangeField("weightUnit", e.target.value)}
+                sx={unitSelectSx}
+                IconComponent={() => null}
+              >
+                <MenuItem value="LBS">LBS</MenuItem>
+                <MenuItem value="KG">KG</MenuItem>
+              </Select>
             </Box>
           </Box>
-        </Grid>
 
-        {/* Right Section: Premed */}
-        <Grid item sx={{ borderLeft: '1px solid #eee', pl: 3, minWidth: '180px', width: 'auto' }}>
-          <Typography variant="subtitle1" sx={{ mb: 0.5, fontSize: '15px' }}>
-            Premed
-          </Typography>
-          <Divider sx={{ mb: 2, borderColor: '#ccc' }} />
-          
-          <FormControlLabel
-            control={
-              <Checkbox 
-                size="small" 
-                checked={premedRequires} 
-                onChange={(e) => onPremedChange(e.target.checked)}
-                sx={{ p: 0.5 }}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <HeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
+              <Typography sx={fieldLabelSx}>Height</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <TextField
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={generalInfo.height || ""}
+                onChange={(e) => onChangeField("height", e.target.value)}
+                sx={{ ...standardFieldSx, minWidth: 0 }}
               />
-            }
-            label={<Typography sx={{ fontSize: '13px' }}>Requires premed</Typography>}
-          />
-        </Grid>
-      </Grid>
-    </Card>
+              <Select
+                variant="standard"
+                value={generalInfo.heightUnit || "FT/IN"}
+                onChange={(e) => onChangeField("heightUnit", e.target.value)}
+                sx={unitSelectSx}
+                IconComponent={() => null}
+              >
+                <MenuItem value="FT/IN">FT/IN</MenuItem>
+                <MenuItem value="CM">CM</MenuItem>
+              </Select>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    </SectionCard>
   );
 };
 

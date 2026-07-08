@@ -1,34 +1,50 @@
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, InputAdornment, Divider } from '@mui/material';
-import { KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material';
+import { Box, Button, Divider, TextField, InputAdornment } from '@mui/material';
+import {
+  KeyboardArrowDown as ArrowDownIcon,
+  PersonOutlineOutlined as PersonOutlineIcon,
+  Groups2Outlined as CareTeamIcon,
+  PhoneOutlined as PhoneOutlinedIcon,
+  ShieldOutlined as FinancialResponsibilityIcon,
+  InsightsOutlined as InsightsOutlinedIcon,
+  GroupsOutlined as FamilyIcon,
+  DescriptionOutlined as DescriptionOutlinedIcon,
+  FavoriteBorderOutlined as FavoriteBorderIcon,
+  WarningAmberOutlined as WarningAmberIcon,
+  Add as AddIcon,
+} from '@mui/icons-material';
 import PatientDetailActions from './PatientDetailActions';
 import MyChartProfileModal from './MyChartProfileModal';
 import PatientSummaryCard from './PatientSummaryCard';
 import PatientDetailsSection from './PatientDetailsSection';
+import PatientCareTeamCard from './PatientCareTeamCard';
+import PatientSnapshotCard from './PatientSnapshotCard';
 import AdditionalInformationSection from './AdditionalInformationSection';
 import ContactInformationSection from './ContactInformationSection';
 import FamilyMembersSection from './FamilyMembersSection';
 import FinancialResponsibilitySection from './FinancialResponsibilitySection';
 import HeadOfCommunicationSection from './HeadOfCommunicationSection';
 import EmergencyContactSection from './EmergencyContactSection';
-import PatientPreferencesGrid from './PatientPreferencesGrid';
+import PatientPreferencesGrid, { CommunicationPreferencesCard, ReferringCard, ConfirmationSettingsCard, AssignmentReleaseCard } from './PatientPreferencesGrid';
+import SectionCard from '../shared/SectionCard';
 import { InlineFieldRow, standardFieldSx } from './InlineField';
-import { sectionTitleSx, labelSx } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
 
 function SpouseInformationSectionContent({ patient, isEditMode = false, onPatientDataChange }) {
   const [spouseInfo, setSpouseInfo] = useState(patient?.spouseInfo || {});
-  
+
   useEffect(() => {
     setSpouseInfo(patient?.spouseInfo || {});
   }, [patient?.spouseInfo]);
-  
+
   const handleFieldChange = (field, value) => {
     const updatedSpouseInfo = { ...spouseInfo, [field]: value };
     setSpouseInfo(updatedSpouseInfo);
-    
+
     if (onPatientDataChange) {
-      const updatedData = { 
-        ...patient, 
+      const updatedData = {
+        ...patient,
         spouseInfo: updatedSpouseInfo
       };
       onPatientDataChange(updatedData);
@@ -37,39 +53,25 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
 
   const handlePhoneChange = (e) => {
     const rawValue = e.target.value;
-    
+
     // Remove all non-digit characters
     const digitsOnly = rawValue.replace(/\D/g, '');
-    
+
     // Limit to max 11 digits
     let cleanedNumber = digitsOnly;
     if (digitsOnly.length > 11) {
       cleanedNumber = digitsOnly.slice(0, 11);
     }
-    
+
     // If starts with 0 or 9 (invalid first digits), remove them
     if (cleanedNumber.length > 0 && (cleanedNumber[0] === '0' || cleanedNumber[0] === '9')) {
       cleanedNumber = cleanedNumber.slice(1);
     }
-    
-    // Format for display
-    let formattedNumber = '';
-    if (cleanedNumber.length === 10) {
-      formattedNumber = `(${cleanedNumber.slice(0, 3)}) ${cleanedNumber.slice(3, 6)}-${cleanedNumber.slice(6)}`;
-    } else if (cleanedNumber.length === 11 && cleanedNumber.startsWith('1')) {
-      formattedNumber = `+1 (${cleanedNumber.slice(1, 4)}) ${cleanedNumber.slice(4, 7)}-${cleanedNumber.slice(7)}`;
-    } else if (cleanedNumber.length <= 3) {
-      formattedNumber = cleanedNumber;
-    } else if (cleanedNumber.length <= 6) {
-      formattedNumber = `(${cleanedNumber.slice(0, 3)}) ${cleanedNumber.slice(3)}`;
-    } else {
-      formattedNumber = `(${cleanedNumber.slice(0, 3)}) ${cleanedNumber.slice(3, 6)}-${cleanedNumber.slice(6)}`;
-    }
-    
+
     // Update state with formatted value
     const updatedSpouseInfo = { ...spouseInfo, phone: cleanedNumber };
     setSpouseInfo(updatedSpouseInfo);
-    
+
     if (onPatientDataChange) {
       const updatedData = { ...patient, spouseInfo: updatedSpouseInfo };
       onPatientDataChange(updatedData);
@@ -78,84 +80,75 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ fontSize: '0.875rem', fontWeight: 700, color: 'primary.main', mb: 1.5 }}>
-        Spouse Information
-      </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 1, alignItems: 'center', py: 0.75, minHeight: 36 }}>
-          <Typography component="label" sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Spouse Name:
-          </Typography>
-          <TextField
-            variant="standard"
-            fullWidth
-            value={spouseInfo?.name || ''}
-            onChange={(e) => handleFieldChange('name', e.target.value)}
-            InputProps={{
-              readOnly: !isEditMode,
-              disableUnderline: false,
-            }}
-            sx={standardFieldSx}
-          />
-        </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 1, alignItems: 'center', py: 0.75, minHeight: 36 }}>
-          <Typography component="label" sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Spouse Phone:
-          </Typography>
-          <TextField
-            variant="standard"
-            fullWidth
-            value={spouseInfo?.phone ? (() => {
-              const digits = spouseInfo.phone.replace(/\D/g, '');
-              if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-              if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-              return spouseInfo.phone;
-            })() : ''}
-            onChange={handlePhoneChange}
-            inputProps={{
-              maxLength: isEditMode ? 16 : undefined,
-            }}
-            InputProps={{
-              readOnly: !isEditMode,
-              disableUnderline: false,
-              startAdornment: (
-                <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
-                  <span style={{ fontSize: '1rem' }}>🇺🇸</span>
-                  <ArrowDownIcon sx={{ fontSize: 18, ml: 0.25, color: 'action.active' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={standardFieldSx}
-            placeholder="(XXX) XXX-XXXX"
-          />
-        </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 1, alignItems: 'center', py: 0.75, minHeight: 36 }}>
-          <Typography component="label" sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Email Address:
-          </Typography>
-          <TextField
-            variant="standard"
-            fullWidth
-            value={spouseInfo?.email || ''}
-            onChange={(e) => handleFieldChange('email', e.target.value)}
-            InputProps={{
-              readOnly: !isEditMode,
-              disableUnderline: false,
-            }}
-            sx={standardFieldSx}
-            placeholder="email@example.com"
-          />
-        </Box>
+        <InlineFieldRow
+          label="Spouse Name"
+          value={spouseInfo?.name || ''}
+          onChange={(e) => handleFieldChange('name', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Spouse Phone"
+          input={
+            <TextField
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={spouseInfo?.phone ? (() => {
+                const digits = spouseInfo.phone.replace(/\D/g, '');
+                if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+                return spouseInfo.phone;
+              })() : ''}
+              onChange={handlePhoneChange}
+              inputProps={{
+                maxLength: isEditMode ? 16 : undefined,
+              }}
+              InputProps={{
+                readOnly: !isEditMode,
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
+                    <span style={{ fontSize: '1rem' }}>🇺🇸</span>
+                    <ArrowDownIcon sx={{ fontSize: 18, ml: 0.25, color: 'action.active' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={standardFieldSx}
+              placeholder="(XXX) XXX-XXXX"
+            />
+          }
+        />
+        <InlineFieldRow
+          label="Email Address"
+          value={spouseInfo?.email || ''}
+          placeholder="email@example.com"
+          onChange={(e) => handleFieldChange('email', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
       </Box>
     </Box>
   );
 }
 
 /**
- * Screenshot-exact layout:
- * - Row 1: Profile (avatar, name | age, email, 4 icons) + Action bar (Edit, 5 utility icons, Deactivate, Convert, Request Patient Updates)
- * - Row 2: LEFT column = only Patient Details (pt #). RIGHT column = Patient flags, Contact Information, Family Members, Financial Responsibility, Head of Communication (all stacked)
- * - Row 3: Additional Information | Spouse Information | Emergency Contact
+ * Three independent sections, each owned by a different piece of the route:
+ *  - Tabs (PatientSectionTabs, rendered by PatientDetailPage) sit above this
+ *    component entirely and never re-render because of anything below.
+ *  - Header: identity (PatientSummaryCard) + actions (PatientDetailActions),
+ *    a plain row with just a bottom border — not its own card.
+ *  - Body: a 32% / 28% / 30% three-column grid of SectionCards —
+ *      Col 1: Patient Details, Care Team Providers, Additional Information,
+ *             Communication Preferences, Family Members
+ *      Col 2: Contact Information, Spouse Information
+ *      Col 3: Financial Responsibility (+ Head of Communication nested in),
+ *             Snapshot, Emergency Contact, Referring, Confirmation Settings,
+ *             Assignment & Release
+ *    followed by the full-width Preferences area (Credit Card, Bank
+ *    Account, Release Information).
+ *    Communication Preferences / Family Members / Referring / Confirmation
+ *    Settings / Assignment & Release live in Col 1 / Col 3 rather than the
+ *    full-width area below so their height offsets Col 2's much taller
+ *    Contact Information card instead of leaving a void beside it.
  */
 export default function PatientDetailOverview({
   patient,
@@ -177,6 +170,9 @@ export default function PatientDetailOverview({
   onPatientDataChange,
 }) {
   const [myChartModalOpen, setMyChartModalOpen] = useState(false);
+  // Dentist/hygienist dropdowns share one provider list app-wide (see
+  // PatientDetailPage.jsx), so either prop works here as the lookup source.
+  const careTeamProviders = preferredDentists.length ? preferredDentists : preferredHygienists;
 
   return (
     <Box sx={{ maxWidth: 1280, position: 'relative' }}>
@@ -185,157 +181,163 @@ export default function PatientDetailOverview({
         onClose={() => setMyChartModalOpen(false)}
         patient={patient}
       />
-      <Paper
-        variant="outlined"
+      {/* Page header — its own rounded card under the tabs bar, matching the
+          SectionCard border/radius treatment used throughout the body. */}
+      <Box
         sx={{
-          p: 2.5,
-          borderRadius: 1.5,
-          borderColor: 'grey.300',
-          mb: 2.5,
-          bgcolor: 'white',
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { md: 'center' },
+          justifyContent: 'space-between',
+          gap: 2,
+          px: 2.5,
+          py: 2,
+          mb: 1.25,
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `0.8px solid ${COLORS.BORDER}`,
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { md: 'center' },
-            justifyContent: 'space-between',
-            gap: 2,
-          }}
-        >
-          <PatientSummaryCard
-            patient={patient}
-            onBalance={onBalance}
-            onProfileClick={() => setMyChartModalOpen(true)}
-          />
-          <PatientDetailActions
-            onEdit={onEdit}
-            onSave={onSave}
-            onCancelEdit={onCancelEdit}
-            onRefresh={onRefresh}
-            onDeactivate={onDeactivate}
-            onActivate={onActivate}
-            isActive={patient?.isActive}
-            onConvertToNonPatient={onConvertToNonPatient}
-            onSendUpdateRequest={onSendUpdateRequest}
-            patient={patient}
-            isEditMode={isEditMode}
-          />
-        </Box>
-      </Paper>
+        <PatientSummaryCard
+          patient={patient}
+          patientNumber={patientNumber}
+          onBalance={onBalance}
+          onProfileClick={() => setMyChartModalOpen(true)}
+        />
+        <PatientDetailActions
+          onEdit={onEdit}
+          onSave={onSave}
+          onCancelEdit={onCancelEdit}
+          onRefresh={onRefresh}
+          onDeactivate={onDeactivate}
+          onActivate={onActivate}
+          isActive={patient?.isActive}
+          onConvertToNonPatient={onConvertToNonPatient}
+          onSendUpdateRequest={onSendUpdateRequest}
+          patient={patient}
+          isEditMode={isEditMode}
+        />
+      </Box>
 
-      {/* 3-column layout:
-          Col 1: Patient details | Additional information
-          Col 2: Contact information | Spouse information
-          Col 3: Financial Responsibility | Head of communication | Emergency contact */}
-      <Paper
-        variant="outlined"
+      {/* Body — 32% / 28% / 30% three-column card grid */}
+      <Box
         sx={{
-          p: 2.5,
-          borderRadius: 1.5,
-          borderColor: 'grey.300',
-          mb: 2.5,
-          bgcolor: 'white',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '32fr 28fr 30fr' },
+          gap: 2,
+          alignItems: 'start',
         }}
       >
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' },
-            gap: 4,
-            alignItems: 'start',
-            '& > *:nth-of-type(1), & > *:nth-of-type(2), & > *:nth-of-type(3)': {
-              pl: { xs: 2, sm: 2 },
-              pr: { xs: 2, sm: 2 },
-            },
-          }}
-        >
-          {/* Row 1 */}
-          <Box>
-            <PatientDetailsSection 
-              patient={patient} 
-              patientNumber={patientNumber}
-              isEditMode={isEditMode}
-              onPatientDataChange={onPatientDataChange}
-            />
-          </Box>
-          <Box>
-            <ContactInformationSection 
+        {/* Col 1 — 32% */}
+        <Box>
+          <SectionCard icon={PersonOutlineIcon} title="Patient Details" subtitle={patientNumber != null ? `pt #${patientNumber}` : undefined}>
+            <PatientDetailsSection
               patient={patient}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
-          </Box>
-          <Box>
-            <FinancialResponsibilitySection 
+          </SectionCard>
+          <SectionCard icon={CareTeamIcon} title="Care Team Providers">
+            <PatientCareTeamCard patient={patient} providers={careTeamProviders} />
+          </SectionCard>
+          <SectionCard icon={DescriptionOutlinedIcon} title="Additional Information">
+            <AdditionalInformationSection
               patient={patient}
-              isEditMode={isEditMode}
-              onPatientDataChange={onPatientDataChange}
-            />
-            <Box sx={{ mt: 3 }}>
-              <HeadOfCommunicationSection 
-                patient={patient}
-                isEditMode={isEditMode}
-                onPatientDataChange={onPatientDataChange}
-              />
-            </Box>
-          </Box>
-
-          {/* Row 2 - Aligned Vertically */}
-          <Box sx={{ mt: 1 }}>
-            <AdditionalInformationSection 
-              patient={patient} 
               showSpouse={false}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
-          </Box>
-          <Box sx={{ mt: 1 }}>
-            <SpouseInformationSectionContent 
-              patient={patient} 
-              isEditMode={isEditMode}
-              onPatientDataChange={onPatientDataChange}
-            />
-          </Box>
-          <Box sx={{ mt: 1 }}>
-            <EmergencyContactSection 
+          </SectionCard>
+          <CommunicationPreferencesCard
+            patient={patient}
+            isEditMode={isEditMode}
+            onPatientDataChange={onPatientDataChange}
+          />
+          <SectionCard
+            icon={FamilyIcon}
+            title="Family Members"
+            subtitle="One HOH per family"
+            action={
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={onAddFamilyMember}
+                sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}
+              >
+                Add member
+              </Button>
+            }
+          >
+            <FamilyMembersSection
               patient={patient}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
-          </Box>
+          </SectionCard>
         </Box>
-        
 
-        <Divider sx={{ my: 4 }} />
-        <PatientPreferencesGrid 
-          patient={patient} 
-          isEditMode={isEditMode}
-          onPatientDataChange={onPatientDataChange}
-          providers={preferredDentists}
-        />
-      </Paper>
+        {/* Col 2 — 28% */}
+        <Box>
+          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified">
+            <ContactInformationSection
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+          </SectionCard>
+          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information">
+            <SpouseInformationSectionContent
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+          </SectionCard>
+        </Box>
 
-      {/* Family Members — full width row */}
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 2.5,
-          borderRadius: 1.5,
-          borderColor: 'grey.300',
-          bgcolor: 'white',
-        }}
-      >
-        <Box sx={{ mt: 3 }}>
-          <FamilyMembersSection 
-            patient={patient} 
-            onAddNew={onAddFamilyMember}
+        {/* Col 3 — 30% */}
+        <Box>
+          <SectionCard icon={FinancialResponsibilityIcon} title="Financial Responsibility">
+            <FinancialResponsibilitySection
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+            <Divider sx={{ my: 2.5, borderColor: COLORS.BORDER }} />
+            <HeadOfCommunicationSection
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+          </SectionCard>
+          <SectionCard icon={InsightsOutlinedIcon} title="Snapshot">
+            <PatientSnapshotCard patient={patient} patientNumber={patientNumber} />
+          </SectionCard>
+          <SectionCard icon={WarningAmberIcon} title="Emergency Contact">
+            <EmergencyContactSection
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+          </SectionCard>
+          <ReferringCard patient={patient} />
+          <ConfirmationSettingsCard
+            patient={patient}
+            isEditMode={isEditMode}
+            onPatientDataChange={onPatientDataChange}
+          />
+          <AssignmentReleaseCard
+            patient={patient}
             isEditMode={isEditMode}
             onPatientDataChange={onPatientDataChange}
           />
         </Box>
-      </Paper>
+      </Box>
+
+      <PatientPreferencesGrid
+        patient={patient}
+        isEditMode={isEditMode}
+        onPatientDataChange={onPatientDataChange}
+      />
     </Box>
   );
 }
