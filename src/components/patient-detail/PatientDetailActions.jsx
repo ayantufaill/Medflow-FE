@@ -1,15 +1,4 @@
-import {
-  Box,
-  Button,
-  IconButton,
-  Dialog,
-  DialogContent,
-  DialogActions,
-  DialogTitle,
-  Checkbox,
-  Typography,
-  Divider,
-} from "@mui/material";
+import { Box, Button, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox } from '@mui/material';
 import {
   Edit as EditIcon,
   PersonOff as PersonOffIcon,
@@ -22,28 +11,30 @@ import {
   PrintOutlined as PrintIcon,
   DescriptionOutlined as FileIcon,
   AccountBox as AccountBoxIcon,
-  Check as CheckIcon,
-  SwapHoriz as ConvertIcon,
-  CheckCircleOutline as ActiveIcon
-} from "@mui/icons-material";
-import { useState } from "react";
-import MyChartFileDialog from "./MyChartFileDialog";
-import AuditPatientHistoryDialog from "./AuditPatientHistoryDialog";
+} from '@mui/icons-material';
+import { useState } from 'react';
+import MyChartFileDialog from './MyChartFileDialog';
+import AuditPatientHistoryDialog from './AuditPatientHistoryDialog';
+import { COLORS } from '../../constants/colors';
+import { radius, fontSize, fontWeight } from '../../constants/styles';
 
-const buttonSx = {
-  textTransform: "none",
-  fontWeight: 700,
-  fontSize: "0.75rem",
-  borderRadius: 1.5,
-  px: 2,
-  py: 1,
-  height: 38,
-  boxShadow: "none",
-  "&:hover": {
-    boxShadow: "none"
-  }
+const actionButtonSx = {
+  textTransform: 'none',
+  fontFamily: 'Inter',
+  fontWeight: fontWeight.semibold,
+  fontSize: fontSize.base,
+  borderRadius: radius.md,
+  boxShadow: 'none',
 };
 
+const iconButtonSx = { p: 0.5, color: COLORS.TEXT_SECONDARY, '&:hover': { color: COLORS.ACCENT, backgroundColor: COLORS.ACCENT_BG } };
+
+/**
+ * Compact icon toolbar (edit + utility icons) on the left, Deactivate/Convert/
+ * Request Updates on the right — matches the schedule module's icon-button
+ * treatment (small, muted, accent on hover) instead of the previous large
+ * dark-navy (#1a237e) icons and a separate labeled "Edit" button.
+ */
 export default function PatientDetailActions({
   onEdit,
   onSave,
@@ -56,7 +47,7 @@ export default function PatientDetailActions({
   patient,
   isEditMode = false,
 }) {
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestMenuAnchor, setRequestMenuAnchor] = useState(null);
   const [requestChecks, setRequestChecks] = useState({
     dentalHistory: false,
     medicalHistory: true,
@@ -68,7 +59,8 @@ export default function PatientDetailActions({
   const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
 
-  const handleRequestClose = () => setRequestDialogOpen(false);
+  const handleRequestOpen = (e) => setRequestMenuAnchor(e.currentTarget);
+  const handleRequestClose = () => setRequestMenuAnchor(null);
   const handleMyChartFileOpen = () => setMyChartFileDialogOpen(true);
   const handleMyChartFileClose = () => setMyChartFileDialogOpen(false);
   const handleAuditDialogOpen = () => setAuditDialogOpen(true);
@@ -80,12 +72,12 @@ export default function PatientDetailActions({
 
   const handleSendRequest = async () => {
     const sectionMap = {
-      dentalHistory: "dental-history",
-      medicalHistory: "medical-history",
-      hipaa: "hipaa",
-      confidential: "consent",
-      tdsFinancial: "custom-form",
-      hipaa2026: "custom-form",
+      dentalHistory: 'dental-history',
+      medicalHistory: 'medical-history',
+      hipaa: 'hipaa',
+      confidential: 'consent',
+      tdsFinancial: 'custom-form',
+      hipaa2026: 'custom-form',
     };
 
     const sections = Object.entries(requestChecks)
@@ -104,264 +96,211 @@ export default function PatientDetailActions({
 
   return (
     <>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          flexWrap: "wrap",
-          justifyContent: "flex-end",
-        }}
-      >
-        {/* Outlined Action Icons Toolbar Group */}
-        <Box 
-          sx={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 0.25, 
-            border: "1px solid #e2e8f0", 
-            borderRadius: "6px", 
-            p: "3px", 
-            bgcolor: "#ffffff" 
-          }}
-        >
-          {isEditMode ? (
-            <>
-              <IconButton size="small" onClick={onSave} sx={{ color: "#16a34a" }} title="Save">
-                <CheckIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-              <IconButton size="small" onClick={onCancelEdit} sx={{ color: "#dc2626" }} title="Cancel">
-                <CloseIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            </>
-          ) : (
-            <IconButton size="small" onClick={onEdit} sx={{ color: "#475569" }} title="Edit">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+        {isEditMode ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<CheckCircleIcon fontSize="small" />}
+              onClick={onSave}
+              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 } }}
+            >
+              Save
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CloseIcon fontSize="small" />}
+              onClick={onCancelEdit}
+              sx={{ ...actionButtonSx, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, backgroundColor: COLORS.SURFACE_CARD, '&:hover': { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        ) : (
+          /* Icon Toolbar — Edit + small utility icons, all in one compact row */
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            <IconButton size="small" sx={iconButtonSx} onClick={onEdit}>
               <EditIcon sx={{ fontSize: 18 }} />
             </IconButton>
-          )}
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, my: 0.5 }} />
-
-          <IconButton size="small" sx={{ color: "#475569" }} title="History Sync">
-            <Box sx={{ position: "relative", display: "inline-flex" }}>
-              <SyncIcon sx={{ fontSize: 18 }} />
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fontSize: "5px",
-                  fontWeight: "bold",
-                  color: "#4db6ac",
-                }}
-              >
-                Hx
+            {/* Hx (History) Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                <SyncIcon sx={{ fontSize: 20 }} />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '6px',
+                    fontWeight: 'bold',
+                    color: COLORS.ACCENT,
+                  }}
+                >
+                  Hx
+                </Box>
               </Box>
-            </Box>
-          </IconButton>
+            </IconButton>
 
-          <IconButton size="small" sx={{ color: "#475569" }} title="Chat">
-            <ChatIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+            {/* Chat Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <ChatIcon sx={{ fontSize: 18 }} />
+            </IconButton>
 
-          <IconButton size="small" sx={{ color: "#475569" }} title="Email">
-            <Box sx={{ position: "relative", display: "inline-flex" }}>
-              <MailIcon sx={{ fontSize: 18 }} />
-              <CheckCircleIcon
-                sx={{
-                  position: "absolute",
-                  bottom: -1,
-                  right: -1,
-                  fontSize: 8,
-                  color: "#1e3a8a",
-                }}
-              />
-            </Box>
-          </IconButton>
+            {/* Email with Check Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <Box sx={{ position: 'relative' }}>
+                <MailIcon sx={{ fontSize: 18 }} />
+                <CheckCircleIcon
+                  sx={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    color: 'inherit',
+                  }}
+                />
+              </Box>
+            </IconButton>
 
-          <IconButton size="small" sx={{ color: "#475569" }} title="Print">
-            <PrintIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+            {/* Print Icon */}
+            <IconButton size="small" sx={iconButtonSx}>
+              <PrintIcon sx={{ fontSize: 18 }} />
+            </IconButton>
 
-          <IconButton
-            size="small"
-            sx={{ color: "#475569" }}
-            onClick={handleAuditDialogOpen}
-            title="Audit History"
-          >
-            <FileIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+            {/* Document/File Icon */}
+            <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
+              <FileIcon sx={{ fontSize: 18 }} />
+            </IconButton>
 
-          <IconButton
-            size="small"
-            sx={{ color: "#475569" }}
-            onClick={handleMyChartFileOpen}
-            title="MyChart Files"
-          >
-            <AccountBoxIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
-
-        {/* Deactivate Button */}
-        {isActive ? (
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<PersonOffIcon sx={{ fontSize: 16 }} />}
-            onClick={onDeactivate}
-            sx={{ 
-              ...buttonSx,
-              bgcolor: "#ef4444", 
-              color: "#ffffff",
-              "&:hover": { bgcolor: "#dc2626" }
-            }}
-          >
-            Deactivate
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<ActiveIcon sx={{ fontSize: 16 }} />}
-            onClick={onActivate}
-            sx={{ 
-              ...buttonSx,
-              bgcolor: "#22c55e", 
-              color: "#ffffff",
-              "&:hover": { bgcolor: "#16a34a" }
-            }}
-          >
-            Activate
-          </Button>
+            {/* Profile/User Icon */}
+            <IconButton size="small" sx={iconButtonSx} onClick={handleMyChartFileOpen}>
+              <AccountBoxIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Box>
         )}
 
-        {/* Convert Button */}
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<ConvertIcon sx={{ fontSize: 16 }} />}
-          onClick={onConvertToNonPatient}
-          sx={{ 
-            ...buttonSx,
-            bgcolor: "#3b82f6", 
-            color: "#ffffff",
-            "&:hover": { bgcolor: "#2563eb" }
-          }}
-        >
-          Convert
-        </Button>
-
-        {/* Request Updates Dropdown Button */}
-        <Button
-          variant="outlined"
-          size="small"
-          endIcon={<ExpandMoreIcon sx={{ fontSize: 16 }} />}
-          onClick={() => setRequestDialogOpen(true)}
-          sx={{ 
-            ...buttonSx,
-            bgcolor: "#ffffff", 
-            color: "#1e293b",
-            borderColor: "#cbd5e1",
-            "&:hover": { 
-              bgcolor: "#f8fafc",
-              borderColor: "#cbd5e1"
-            }
-          }}
-        >
-          Request updates
-        </Button>
-      </Box>
-
-      {/* Request Updates Dialog */}
-      <Dialog
-        open={requestDialogOpen}
-        onClose={handleRequestClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 2, overflow: "hidden" } }}
-      >
-        <DialogTitle
-          sx={{ bgcolor: "#163b6b", color: "white", py: 1.25, fontWeight: 700 }}
-        >
-          Request Patient Updates
-        </DialogTitle>
-        <DialogContent sx={{ px: 2, py: 1.5 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Select the items to request from the patient.
-          </Typography>
-          {[
-            {
-              key: "dentalHistory",
-              label: "Dental History",
-              sent: "1/22/2026",
-            },
-            {
-              key: "medicalHistory",
-              label: "Medical History",
-              sent: "1/22/2026",
-            },
-            { key: "hipaa", label: "HIPAA", sent: "1/22/2026" },
-            { key: "confidential", label: "Confidential", sent: "1/22/2026" },
-          ].map(({ key, label, sent }) => (
-            <Box
-              key={key}
-              sx={{ display: "flex", alignItems: "center", py: 0.6, cursor: "pointer" }}
-              onClick={() => toggleRequest(key)}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isActive ? (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<PersonOffIcon fontSize="small" />}
+              onClick={onDeactivate}
+              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_ERROR, '&:hover': { backgroundColor: COLORS.STATUS_ERROR, opacity: 0.9 } }}
             >
-              <Checkbox
-                checked={requestChecks[key]}
-                size="small"
-                disableRipple
-              />
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {label}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  (Sent {sent})
-                </Typography>
-              </Box>
-            </Box>
-          ))}
-          <Divider sx={{ my: 1 }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
-            Custom Forms
-          </Typography>
-          <Box
-            sx={{ display: "flex", alignItems: "center", py: 0.4, cursor: "pointer" }}
-            onClick={() => toggleRequest("tdsFinancial")}
-          >
-            <Checkbox
-              checked={requestChecks.tdsFinancial}
+              Deactivate
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
               size="small"
-              disableRipple
-            />
-            <Typography variant="body2">TDS Financial Agreement</Typography>
-          </Box>
-          <Box
-            sx={{ display: "flex", alignItems: "center", py: 0.4, cursor: "pointer" }}
-            onClick={() => toggleRequest("hipaa2026")}
-          >
-            <Checkbox
-              checked={requestChecks.hipaa2026}
-              size="small"
-              disableRipple
-            />
-            <Typography variant="body2">HIPAA 2026</Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2, justifyContent: "flex-start" }}>
+              startIcon={<CheckCircleIcon fontSize="small" />}
+              onClick={onActivate}
+              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 } }}
+            >
+              Activate
+            </Button>
+          )}
           <Button
             variant="contained"
             size="small"
+            onClick={onConvertToNonPatient}
+            sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
+          >
+            Convert
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
             endIcon={<ExpandMoreIcon />}
+            onClick={handleRequestOpen}
+            sx={{ ...actionButtonSx, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, backgroundColor: COLORS.SURFACE_CARD, '&:hover': { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}
+          >
+            Request updates
+          </Button>
+        </Box>
+      </Box>
+
+      <Menu
+        anchorEl={requestMenuAnchor}
+        open={Boolean(requestMenuAnchor)}
+        onClose={handleRequestClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            minWidth: 360,
+            borderRadius: 1.5,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <MenuItem
+          dense
+          disabled
+          sx={{
+            bgcolor: 'primary.main',
+            color: 'white',
+            fontWeight: 700,
+            fontSize: '0.875rem',
+            py: 1.25,
+            opacity: 1,
+          }}
+        >
+          Request Patient Updates
+        </MenuItem>
+        {[
+          { key: 'dentalHistory', label: 'Dental History', sent: '1/22/2026' },
+          { key: 'medicalHistory', label: 'Medical History', sent: '1/22/2026' },
+          { key: 'hipaa', label: 'HIPAA', sent: '1/22/2026' },
+          { key: 'confidential', label: 'Confidential', sent: '1/22/2026' },
+        ].map(({ key, label, sent }) => (
+          <MenuItem key={key} dense onClick={() => toggleRequest(key)} sx={{ py: 0.75 }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <Checkbox checked={requestChecks[key]} size="small" disableRipple />
+            </ListItemIcon>
+            <ListItemText
+              primary={label}
+              secondary={`(Sent ${sent})`}
+              primaryTypographyProps={{ fontSize: '0.8rem' }}
+              secondaryTypographyProps={{ color: 'grey.600', fontSize: '0.8rem' }}
+            />
+          </MenuItem>
+        ))}
+        <MenuItem dense sx={{ borderTop: 1, borderColor: 'divider', mt: 0.5, pt: 1 }}>
+          <ListItemText primary="Custom Forms" primaryTypographyProps={{ fontWeight: 700, fontSize: '0.8rem', color: 'grey.800' }} />
+        </MenuItem>
+        <MenuItem dense onClick={() => toggleRequest('tdsFinancial')} sx={{ py: 0.75 }}>
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <Checkbox checked={requestChecks.tdsFinancial} size="small" disableRipple />
+          </ListItemIcon>
+          <ListItemText primary="TDS Financial Agreement" primaryTypographyProps={{ fontSize: '0.8rem' }} />
+        </MenuItem>
+        <MenuItem dense onClick={() => toggleRequest('hipaa2026')} sx={{ py: 0.75 }}>
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <Checkbox checked={requestChecks.hipaa2026} size="small" disableRipple />
+          </ListItemIcon>
+          <ListItemText primary="HIPAA 2026" primaryTypographyProps={{ fontSize: '0.8rem' }} />
+        </MenuItem>
+        <Box sx={{ display: 'flex', gap: 1, p: 1.5, flexWrap: 'wrap', borderTop: 1, borderColor: 'divider' }}>
+          <Button
+            variant="contained"
+            size="small"
+            endIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
             onClick={handleSendRequest}
             sx={{
-              bgcolor: "#ed6c02",
-              color: "white",
-              "&:hover": { bgcolor: "#d95d00" },
-              textTransform: "none",
+              bgcolor: '#ed6c02',
+              color: 'white',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: 1.5,
+              '&:hover': { bgcolor: '#e65100' },
             }}
           >
             Send Request
@@ -372,22 +311,26 @@ export default function PatientDetailActions({
             startIcon={<CloseIcon />}
             onClick={handleRequestClose}
             sx={{
-              bgcolor: "grey.600",
-              color: "white",
-              "&:hover": { bgcolor: "grey.700" },
-              textTransform: "none",
+              textTransform: 'none',
+              borderRadius: 1.5,
+              bgcolor: 'grey.600',
+              color: 'white',
+              '&:hover': { bgcolor: 'grey.700' },
             }}
           >
             Close
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      <MyChartFileDialog
-        open={myChartFileDialogOpen}
+        </Box>
+      </Menu>
+      
+      {/* MyChart File Dialog */}
+      <MyChartFileDialog 
+        open={myChartFileDialogOpen} 
         onClose={handleMyChartFileClose}
         patient={patient}
       />
+      
+      {/* Audit Patient History Dialog */}
       <AuditPatientHistoryDialog
         open={auditDialogOpen}
         onClose={handleAuditDialogClose}

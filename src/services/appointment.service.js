@@ -56,6 +56,16 @@ export const appointmentService = {
   },
 
   /**
+   * Get procedures for a specific appointment
+   * @param {string} appointmentId - Appointment ID
+   * @returns {Promise<Array>} Array of procedures
+   */
+  async getAppointmentProcedures(appointmentId) {
+    const response = await apiClient.get(`/appointments/${appointmentId}/procedures`);
+    return response.data.data?.procedures || [];
+  },
+
+  /**
    * Get provider schedule
    * @param {string} providerId - Provider ID
    * @param {string} view - View type ('day', 'week', 'month')
@@ -197,6 +207,18 @@ export const appointmentService = {
     params.append('patientId', patientId);
 
     const response = await apiClient.get(`/appointments?${params.toString()}`);
+    return response.data.data.appointments;
+  },
+
+  /**
+   * A patient's own appointment history (most recent first), used to drive
+   * the Medical History page's visit timeline.
+   */
+  async getPatientAppointments(patientId, limit = 20) {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit);
+
+    const response = await apiClient.get(`/patients/${patientId}/appointments?${params.toString()}`);
     return response.data.data.appointments;
   },
 };

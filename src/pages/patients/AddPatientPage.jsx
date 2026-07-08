@@ -8,7 +8,7 @@ import { useSnackbar } from "../../contexts/SnackbarContext";
 import { usePatient } from "../../hooks/redux/usePatient";
 import NewPatientIntakeFormV2 from "../../components/patients/NewPatientIntakeFormV2";
 
-const CreatePatientPage = () => {
+const AddPatientPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showSnackbar } = useSnackbar();
@@ -84,5 +84,5 @@ const CreatePatientPage = () => {
   );
 };
 
-export default CreatePatientPage;
+export default AddPatientPage;
 

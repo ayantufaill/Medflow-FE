@@ -1,39 +1,108 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, TextField, InputAdornment, MenuItem } from '@mui/material';
-import { KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material';
-import { StackedFieldRow, standardFieldSx } from './InlineField';
-import { sectionTitleSx, labelSx } from '../../constants/styles';
-import WorkAddressSection from './WorkAddressSection';
+import { Box, Typography, TextField, InputAdornment } from '@mui/material';
+import {
+  KeyboardArrowDown as ArrowDownIcon,
+  HomeOutlined as HomeOutlinedIcon,
+  AccountBalanceOutlined as WorkAddressIcon,
+} from '@mui/icons-material';
+import { InlineFieldRow, standardFieldSx } from './InlineField';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
 
+// Full-width tinted pill used to head off a nested address block ("Patient's
+// Address", "Work Address") within a larger card, matching the rounded
+// icon+label bar from Figma instead of a plain bold caption.
+function AddressSectionLabel({ icon: Icon, children }) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderRadius: radius.md,
+        px: 1.5,
+        py: 1,
+        mt: 2.5,
+        mb: 1.5,
+      }}
+    >
+      {Icon && <Icon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />}
+      <Typography
+        sx={{
+          fontFamily: 'Inter',
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.semibold,
+          color: COLORS.TEXT_SECONDARY,
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px',
+        }}
+      >
+        {children}
+      </Typography>
+    </Box>
+  );
+}
+
+/**
+ * Format phone number for display
+ * @param {string} value - Raw phone number value
+ * @returns {string} - Formatted phone number
+ */
 const formatPhoneNumber = (value) => {
   if (!value) return '';
+  
+  // Remove all non-digit characters
   const digitsOnly = value.replace(/\D/g, '');
+  
+  // Handle country code
+  let phoneNumber = digitsOnly;
+  
+  // Format based on length
   if (digitsOnly.length === 10) {
+    // (XXX) XXX-XXXX
     return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`;
   } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+    // +1 (XXX) XXX-XXXX
     return `+1 (${digitsOnly.slice(1, 4)}) ${digitsOnly.slice(4, 7)}-${digitsOnly.slice(7)}`;
   } else if (digitsOnly.length <= 3) {
+    // Just show digits
     return digitsOnly;
   } else if (digitsOnly.length <= 6) {
+    // (XXX XXX
     return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
   } else {
+    // (XXX) XXX-XXXXXX
     return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`;
   }
 };
 
+/**
+ * Clean and validate phone number input
+ * Limits to max 11 digits (1 country code + 10 digit number)
+ * @param {string} value - Raw input value
+ * @returns {string} - Cleaned phone number with max 11 digits
+ */
 const cleanPhoneNumber = (value) => {
   if (!value) return '';
+  
+  // Remove all non-digit characters
   const digitsOnly = value.replace(/\D/g, '');
+  
+  // Limit to max 11 digits
   if (digitsOnly.length > 11) {
     return digitsOnly.slice(0, 11);
   }
+  
+  // If starts with 0 or 9 (invalid first digits), remove them
   if (digitsOnly.length > 0 && (digitsOnly[0] === '0' || digitsOnly[0] === '9')) {
     return digitsOnly.slice(1);
   }
+  
   return digitsOnly;
 };
 
-const PhoneField = ({ value, label, isEditMode, required = false, onChange }) => {
+const PhoneField = ({ value, label, isEditMode, onChange }) => {
   const [inputValue, setInputValue] = useState(value || '');
   
   useEffect(() => {
@@ -42,9 +111,17 @@ const PhoneField = ({ value, label, isEditMode, required = false, onChange }) =>
   
   const handleChange = (e) => {
     const rawValue = e.target.value;
+    
+    // Clean and limit the phone number
     const cleanedNumber = cleanPhoneNumber(rawValue);
+    
+    // Format for display
     const formattedNumber = formatPhoneNumber(cleanedNumber);
+    
+    // Update local state with formatted value
     setInputValue(formattedNumber);
+    
+    // Send cleaned (unformatted) value to parent
     onChange({
       target: {
         value: cleanedNumber
@@ -53,46 +130,31 @@ const PhoneField = ({ value, label, isEditMode, required = false, onChange }) =>
   };
   
   return (
-    <StackedFieldRow
+    <InlineFieldRow
       label={label}
-      required={required}
-      isEditMode={isEditMode}
       input={
         <TextField
           variant="outlined"
-          fullWidth
-          value={isEditMode ? inputValue : formatPhoneNumber(value) || ''}
-          onChange={handleChange}
-          slotProps={{
-            input: {
-              readOnly: !isEditMode,
-              maxLength: isEditMode ? 16 : undefined,
-              startAdornment: (
-                <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
-                  <span style={{ fontSize: '1rem' }}>🇺🇸</span>
-                  <ArrowDownIcon sx={{ fontSize: 16, ml: 0.25, color: 'action.active' }} />
-                </InputAdornment>
-              ),
-            }
-          }}
           size="small"
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              height: 38,
-              fontSize: '0.8rem',
-              backgroundColor: '#ffffff',
-              borderRadius: '6px',
-              '& fieldset': {
-                borderColor: '#e2e8f0',
-              },
-              '&:hover fieldset': {
-                borderColor: '#cbd5e1',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#3b82f6',
-              },
-            },
+          fullWidth
+          value={isEditMode ? inputValue : value || ''}
+          onChange={handleChange}
+          inputProps={{
+            readOnly: !isEditMode,
+            maxLength: isEditMode ? 16 : undefined, // Max: +1 (XXX) XXX-XXXX = 16 chars
+            title: value || '',
           }}
+          InputProps={{
+            readOnly: !isEditMode,
+            inputProps: { title: value || '' },
+            startAdornment: (
+              <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
+                <span style={{ fontSize: '1rem' }}>🇺🇸</span>
+                <ArrowDownIcon sx={{ fontSize: 18, ml: 0.25, color: 'action.active' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ ...standardFieldSx, minWidth: 0 }}
           placeholder="(XXX) XXX-XXXX"
         />
       }
@@ -117,231 +179,140 @@ export default function ContactInformationSection({ patient, isEditMode = false,
     }
   };
 
-  const addr = localPatientData?.address || {};
+  const addr = localPatientData?.address;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-      <PhoneField 
-        label="Mobile Number" 
-        value={localPatientData?.phonePrimary}
-        required
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('phonePrimary', e.target.value)}
-      />
-      <PhoneField 
-        label="Home Phone" 
-        value={localPatientData?.phoneSecondary}
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('phoneSecondary', e.target.value)}
-      />
-
-      <Typography
-        variant="subtitle2"
-        sx={{
-          fontWeight: 700,
-          fontSize: '0.75rem',
-          color: 'text.secondary',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          mt: 2,
-          mb: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.5,
-          pb: 0.5,
-          borderBottom: '1px solid #e2e8f0',
-          px: 1.5,
-          py: 1,
-          mx: -2,
-          bgcolor: '#F3F8FD',
-          borderRadius: '4px 4px 0 0',
-        }}
-      >
-        📍 Patient's Address
-      </Typography>
-
-      <StackedFieldRow
-        label="Country"
-        isEditMode={isEditMode}
-        input={
-          <TextField
-            select
-            variant="outlined"
-            fullWidth
-            value={addr?.country || 'United States'}
-            onChange={(e) => handleFieldChange('address', { ...addr, country: e.target.value })}
-            slotProps={{
-              input: {
-                readOnly: !isEditMode,
-              }
-            }}
-            size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                height: 38,
-                fontSize: '0.8rem',
-                backgroundColor: '#ffffff',
-                borderRadius: '6px',
-                '& fieldset': {
-                  borderColor: '#e2e8f0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#cbd5e1',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#3b82f6',
-                },
-              },
-            }}
-          >
-            <MenuItem value="United States">United States</MenuItem>
-            <MenuItem value="Canada">Canada</MenuItem>
-            <MenuItem value="United Kingdom">United Kingdom</MenuItem>
-          </TextField>
-        }
-      />
-
-      <StackedFieldRow 
-        label="Address Line 1" 
-        value={addr?.line1 || ''}
-        placeholder="Address line 1"
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('address', { ...addr, line1: e.target.value })}
-      />
-      <StackedFieldRow 
-        label="Address Line 2" 
-        value={addr?.line2 || ''}
-        placeholder="Address line 2"
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('address', { ...addr, line2: e.target.value })}
-      />
-
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 1.5 }}>
-        <StackedFieldRow 
-          label="City" 
-          value={addr?.city || ''}
-          placeholder="City"
+    <Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <PhoneField 
+          label="Mobile Number" 
+          value={localPatientData?.phonePrimary}
           isEditMode={isEditMode}
-          labelWidth={60}
-          onChange={(e) => handleFieldChange('address', { ...addr, city: e.target.value })}
+          onChange={(e) => handleFieldChange('phonePrimary', e.target.value)}
         />
-        <StackedFieldRow 
-          label="State" 
-          value={addr?.state || ''}
-          placeholder="State"
+        <PhoneField 
+          label="Home Phone Number" 
+          value={localPatientData?.phoneSecondary}
           isEditMode={isEditMode}
-          labelWidth={60}
+          onChange={(e) => handleFieldChange('phoneSecondary', e.target.value)}
+        />
+
+        <AddressSectionLabel icon={HomeOutlinedIcon}>Patient&apos;s Address</AddressSectionLabel>
+
+        <InlineFieldRow
+          label="Country"
+          value={addr?.country || 'United States'}
+          onChange={(e) => handleFieldChange('address', { ...addr, country: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="Address Line 1" 
+          value={addr?.line1}
+          placeholder="Address line 1"
+          onChange={(e) => handleFieldChange('address', { ...addr, line1: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="Address Line 2" 
+          value={addr?.line2}
+          placeholder="Address line 2"
+          onChange={(e) => handleFieldChange('address', { ...addr, line2: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="City" 
+          value={addr?.city}
+          placeholder="City"
+          onChange={(e) => handleFieldChange('address', { ...addr, city: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="State" 
+          value={addr?.state}
+          placeholder="State"
           onChange={(e) => handleFieldChange('address', { ...addr, state: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="Zip/Postal Code" 
+          value={addr?.postalCode}
+          placeholder="Zip/Postal Code"
+          onChange={(e) => handleFieldChange('address', { ...addr, postalCode: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+
+        <InlineFieldRow 
+          label="Email Address" 
+          value={localPatientData?.email}
+          placeholder="email@example.com"
+          onChange={(e) => handleFieldChange('email', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="Marital Status" 
+          value={localPatientData?.maritalStatus || 'Single'}
+          onChange={(e) => handleFieldChange('maritalStatus', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+
+        <InlineFieldRow 
+          label="Occupation" 
+          value={localPatientData?.occupation}
+          placeholder="Occupation"
+          onChange={(e) => handleFieldChange('occupation', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Patient's / Guardian's Employer"
+          value={localPatientData?.employer ?? localPatientData?.guardianEmployer}
+          placeholder="Employer"
+          onChange={(e) => handleFieldChange('employer', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+
+        <AddressSectionLabel icon={WorkAddressIcon}>Work Address</AddressSectionLabel>
+        <InlineFieldRow
+          label="Country"
+          value={localPatientData?.workAddress?.country || 'United States'}
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, country: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Address Line 1"
+          value={localPatientData?.workAddress?.line1}
+          placeholder="Address line 1"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, line1: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Address Line 2"
+          value={localPatientData?.workAddress?.line2}
+          placeholder="Address line 2"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, line2: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="City" 
+          value={localPatientData?.workAddress?.city}
+          placeholder="City"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, city: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="State" 
+          value={localPatientData?.workAddress?.state}
+          placeholder="State"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, state: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Zip/Postal Code"
+          value={localPatientData?.workAddress?.postalCode}
+          placeholder="Zip/Postal Code"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, postalCode: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
         />
       </Box>
-
-      <StackedFieldRow 
-        label="Zip / Postal" 
-        value={addr?.postalCode || ''}
-        placeholder="Zip / Postal"
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('address', { ...addr, postalCode: e.target.value })}
-      />
-
-      <StackedFieldRow 
-        label="Email" 
-        value={localPatientData?.email || ''}
-        placeholder="amanda.wilson@example.com"
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('email', e.target.value)}
-      />
-
-      <StackedFieldRow
-        label="Marital Status"
-        isEditMode={isEditMode}
-        input={
-          <TextField
-            select
-            variant="outlined"
-            fullWidth
-            value={localPatientData?.maritalStatus || 'single'}
-            onChange={(e) => handleFieldChange('maritalStatus', e.target.value)}
-            slotProps={{
-              input: {
-                readOnly: !isEditMode,
-              }
-            }}
-            size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                height: 38,
-                fontSize: '0.8rem',
-                backgroundColor: '#ffffff',
-                borderRadius: '6px',
-                '& fieldset': {
-                  borderColor: '#e2e8f0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#cbd5e1',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#3b82f6',
-                },
-              },
-            }}
-          >
-            <MenuItem value="single">single</MenuItem>
-            <MenuItem value="married">married</MenuItem>
-            <MenuItem value="divorced">divorced</MenuItem>
-            <MenuItem value="widowed">widowed</MenuItem>
-            <MenuItem value="separated">separated</MenuItem>
-          </TextField>
-        }
-      />
-
-      <StackedFieldRow 
-        label="Occupation" 
-        value={localPatientData?.occupation || ''}
-        placeholder="Occupation"
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('occupation', e.target.value)}
-      />
-      <StackedFieldRow
-        label="Employer"
-        value={localPatientData?.employer ?? localPatientData?.guardianEmployer ?? ''}
-        placeholder="Employer"
-        isEditMode={isEditMode}
-        onChange={(e) => handleFieldChange('employer', e.target.value)}
-      />
-
-      {/* Work Address subsection */}
-      <Typography
-        variant="subtitle2"
-        sx={{
-          fontWeight: 700,
-          fontSize: '0.75rem',
-          color: 'text.secondary',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          mt: 2,
-          mb: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.5,
-          pb: 0.5,
-          borderBottom: '1px solid #e2e8f0',
-          px: 1.5,
-          py: 1,
-          mx: -2,
-          bgcolor: '#F3F8FD',
-          borderRadius: '4px 4px 0 0',
-        }}
-      >
-        🏢 Work Address
-      </Typography>
-      <WorkAddressSection
-        patient={localPatientData}
-        isEditMode={isEditMode}
-        onPatientDataChange={(updatedData) => {
-          setLocalPatientData(updatedData);
-          if (onPatientDataChange) onPatientDataChange(updatedData);
-        }}
-      />
     </Box>
   );
 }

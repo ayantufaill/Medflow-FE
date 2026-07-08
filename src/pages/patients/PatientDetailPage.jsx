@@ -261,7 +261,7 @@ const PatientDetailPage = () => {
   return (
     <Box>
       <PatientSectionTabs activeTab={tabParam} patientId={patientId} />
-      <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100%' }}>
+      <Box sx={{ pt: 1.5, px: 2, pb: 2.5, minHeight: '100%' }}>
         <ErrorBoundary>
           <Suspense fallback={
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>

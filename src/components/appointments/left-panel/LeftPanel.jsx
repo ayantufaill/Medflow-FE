@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
+import { useDispatch } from 'react-redux';
+import { fetchWaitlist } from '../../../store/slices/waitlistSlice';
 import LeftPanelTabs from './LeftPanelTabs';
 import PatientSearch from './PatientSearch';
 import PatientCard from './PatientCard';
 import PatientActions from './PatientActions';
+import PendingReschedules from './PendingReschedules';
+import EmptySlotsSearch from './EmptySlotsSearch';
+import ProductivityPanel from './ProductivityPanel';
 import { usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 
@@ -14,6 +19,11 @@ import { COLORS } from '../../../constants/colors';
 
 const LeftPanel = () => {
   const [activeTab, setActiveTab] = useState('Patient');
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(fetchWaitlist({ status: 'pending' }));
+  }, [dispatch]);
 
   // Read currentPatient from Redux to conditionally show patient sub-components.
   const { currentPatient } = usePatient();
@@ -43,6 +53,18 @@ const LeftPanel = () => {
               </>
             )}
           </>
+        )}
+        
+        {activeTab === 'Pending' && (
+          <PendingReschedules />
+        )}
+        
+        {activeTab === 'Search' && (
+          <EmptySlotsSearch />
+        )}
+
+        {activeTab === 'Productivity' && (
+          <ProductivityPanel />
         )}
       </Box>
 

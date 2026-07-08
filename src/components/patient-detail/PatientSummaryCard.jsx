@@ -1,93 +1,64 @@
-import { Box, Typography, Avatar } from '@mui/material';
-import { getInitials, computeAge } from './utils';
+import { Box, Typography } from '@mui/material';
+import InitialsAvatar from '../shared/InitialsAvatar';
+import { computeAge } from './utils';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight } from '../../constants/styles';
 
-function formatDOB(dateString) {
-  if (!dateString) return '';
+// "27 Jun 1983" — distinct from utils.js's formatDate (locale numeric format),
+// matching the compact DOB format used in the header.
+const formatShortDate = (dateString) => {
+  if (!dateString) return null;
   try {
-    const d = new Date(dateString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    // Using UTC dates to avoid local timezone offset shifts
-    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+    return new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateString));
   } catch {
-    return '';
+    return null;
   }
-}
+};
 
-export default function PatientSummaryCard({ patient }) {
+// Header identity block: avatar, name, DOB/age/chart# on one line, email/phone
+// on the next — compact single-row treatment instead of the previous large
+// 88px avatar + two-line summary.
+export default function PatientSummaryCard({ patient, patientNumber, onProfileClick }) {
   const age = computeAge(patient?.dateOfBirth);
-  const dobText = formatDOB(patient?.dateOfBirth);
-  const ptCode = patient?.patientCode || patient?.patientNumber || 'PAT010';
-  
-  const displayDOB = dobText ? `DOB ${dobText}` : '';
-  const displayAge = age != null ? `${age} y` : '';
-  const displayPt = `pt #${ptCode}`;
-  
-  const detailsLine = [displayDOB, displayAge, displayPt].filter(Boolean).join(' - ');
-  
-  const phone = patient?.phonePrimary ? (() => {
-    const digits = patient.phonePrimary.replace(/\D/g, '');
-    if (digits.length === 10) return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-    return patient.phonePrimary;
-  })() : '';
-  
-  const contactLine = [patient?.email, phone].filter(Boolean).join(' - ');
+  const dob = formatShortDate(patient?.dateOfBirth);
+  const chartNumber = patientNumber || patient?.patientCode;
+  const phone = patient?.phonePrimary || patient?.phoneSecondary;
+
+  const detailParts = [
+    dob && `DOB ${dob}`,
+    age != null && `${age} y`,
+    chartNumber && `pt #${chartNumber}`,
+  ].filter(Boolean);
+
+  const contactParts = [patient?.email, phone].filter(Boolean);
 
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 2, 
-        p: 2, 
-        borderRadius: '8px', 
-        bgcolor: '#f0f7ff', 
-        border: '1px solid #dbeafe',
-        flexGrow: 1,
-        minWidth: 320
-      }}
+    <Box
+      onClick={onProfileClick}
+      sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, cursor: onProfileClick ? 'pointer' : 'default' }}
     >
-      <Avatar
-        sx={{
-          width: 44,
-          height: 44,
-          bgcolor: '#1976d2',
-          fontSize: '1rem',
-          fontWeight: 700,
-        }}
-      >
-        {getInitials(patient?.firstName, patient?.lastName)}
-      </Avatar>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1 }}>
-          <Typography
-            sx={{
-              fontSize: '0.9rem',
-              fontWeight: 800,
-              color: '#1e293b',
-            }}
-          >
+      <InitialsAvatar
+        name={`${patient?.firstName || ''} ${patient?.lastName || ''}`}
+        size={40}
+        fontSize={13}
+        bg={COLORS.ACCENT}
+      />
+      <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap', rowGap: 0 }}>
+          <Typography sx={{ fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
             {patient?.firstName} {patient?.lastName}
           </Typography>
-          <Typography
-            sx={{
-              fontSize: '0.75rem',
-              color: '#64748b',
-              fontWeight: 500
-            }}
-          >
-            {detailsLine}
-          </Typography>
+          {detailParts.length > 0 && (
+            <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_MUTED, whiteSpace: 'nowrap' }}>
+              {detailParts.join(' · ')}
+            </Typography>
+          )}
         </Box>
-        <Typography
-          sx={{
-            fontSize: '0.75rem',
-            color: '#64748b',
-            fontWeight: 500
-          }}
-        >
-          {contactLine}
-        </Typography>
+        {contactParts.length > 0 && (
+          <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
+            {contactParts.join(' · ')}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

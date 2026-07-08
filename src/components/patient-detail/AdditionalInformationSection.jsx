@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Box, TextField, MenuItem } from '@mui/material';
+import { Box, Typography, TextField } from '@mui/material';
 import { formatDate } from './utils';
-import { StackedFieldRow } from './InlineField';
+import { InlineFieldRow, labelWidth } from './InlineField';
+import { sectionTitleSx } from '../../constants/styles';
 
-export default function AdditionalInformationSection({ patient, isEditMode = false, onPatientDataChange }) {
+/**
+ * Additional Information (and optionally Spouse Information).
+ */
+export default function AdditionalInformationSection({ patient, showSpouse = true, isEditMode = false, onPatientDataChange }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
 
   useEffect(() => {
@@ -13,9 +17,11 @@ export default function AdditionalInformationSection({ patient, isEditMode = fal
   }, [patient]);
 
   const handleFieldChange = (field, value) => {
+    // Convert date strings to ISO format for consistency
     let processedValue = value;
     if ((field === 'dateOfBirth' || field === 'lastVisitDate') && value) {
       try {
+        // HTML5 date input returns YYYY-MM-DD, convert to ISO datetime at noon UTC
         const [year, month, day] = value.split('-');
         const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
         if (!isNaN(date.getTime())) {
@@ -23,7 +29,7 @@ export default function AdditionalInformationSection({ patient, isEditMode = fal
         }
       } catch (error) {
         console.error('Date conversion error:', error);
-        processedValue = value;
+        processedValue = value; // Keep original if conversion fails
       }
     }
     
@@ -39,71 +45,70 @@ export default function AdditionalInformationSection({ patient, isEditMode = fal
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-      <StackedFieldRow 
-        label="Referred By" 
-        value={stripPatientId(localPatientData?.customFields?.referringPatient) || localPatientData?.referralSource || ''}
-        isEditMode={isEditMode}
-        onChange={(e) => {
-          handleFieldChange('referralSource', e.target.value);
-          const currentCustomFields = localPatientData?.customFields || {};
-          handleFieldChange('customFields', { ...currentCustomFields, referringPatient: e.target.value });
-        }}
-      />
-      {isEditMode ? (
-        <StackedFieldRow 
-          label="Last Visit Date" 
-          value={localPatientData?.lastVisitDate ? localPatientData.lastVisitDate.split('T')[0] : ''}
-          onChange={(e) => handleFieldChange('lastVisitDate', e.target.value)}
-          isEditMode={isEditMode}
-          type="date"
+    <Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <InlineFieldRow 
+          label="Referred By" 
+          value={stripPatientId(localPatientData?.customFields?.referringPatient) || localPatientData?.referralSource || ''}
+          onChange={(e) => {
+            // Update both to be safe, though normally you'd only update one depending on the UI paradigm
+            handleFieldChange('referralSource', e.target.value);
+            if (localPatientData?.customFields?.referringPatient) {
+              handleFieldChange('customFields', { ...localPatientData.customFields, referringPatient: e.target.value });
+            }
+          }}
+          InputProps={{ readOnly: !isEditMode }}
         />
-      ) : (
-        <StackedFieldRow 
-          label="Last Visit Date" 
-          value={formatDate(localPatientData?.lastVisitDate) || '—'}
-          isEditMode={isEditMode}
+        {isEditMode ? (
+          <InlineFieldRow 
+            label="Last Visit Date" 
+            value={localPatientData?.lastVisitDate ? localPatientData.lastVisitDate.split('T')[0] : ''}
+            onChange={(e) => handleFieldChange('lastVisitDate', e.target.value)}
+            InputProps={{ readOnly: !isEditMode }}
+            type="date"
+          />
+        ) : (
+          <InlineFieldRow 
+            label="Last Visit Date" 
+            value={formatDate(localPatientData?.lastVisitDate)}
+            InputProps={{ readOnly: true }}
+          />
+        )}
+        <InlineFieldRow 
+          label="Portal Access" 
+          value={localPatientData?.portalAccessEnabled ? 'Yes' : 'No'}
+          onChange={(e) => handleFieldChange('portalAccessEnabled', e.target.value === 'Yes')}
+          InputProps={{ readOnly: !isEditMode }}
         />
+      </Box>
+
+      {showSpouse && (
+        <>
+          <Typography variant="subtitle1" sx={{ ...sectionTitleSx, mt: 2.5 }}>
+            Spouse Information
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <InlineFieldRow 
+              label="Spouse Name" 
+              value={localPatientData?.spouseInfo?.name || ''}
+              onChange={(e) => handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, name: e.target.value })}
+              InputProps={{ readOnly: !isEditMode }}
+            />
+            <InlineFieldRow 
+              label="Spouse Phone" 
+              value={localPatientData?.spouseInfo?.phone || ''}
+              onChange={(e) => handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, phone: e.target.value })}
+              InputProps={{ readOnly: !isEditMode }}
+            />
+            <InlineFieldRow 
+              label="Email Address" 
+              value={localPatientData?.spouseInfo?.email || ''}
+              onChange={(e) => handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, email: e.target.value })}
+              InputProps={{ readOnly: !isEditMode }}
+            />
+          </Box>
+        </>
       )}
-      <StackedFieldRow 
-        label="Portal Access" 
-        isEditMode={isEditMode}
-        input={
-          <TextField
-            select
-            variant="outlined"
-            fullWidth
-            value={localPatientData?.portalAccessEnabled ? 'Yes' : 'No'}
-            onChange={(e) => handleFieldChange('portalAccessEnabled', e.target.value === 'Yes')}
-            slotProps={{
-              input: {
-                readOnly: !isEditMode,
-              }
-            }}
-            size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                height: 38,
-                fontSize: '0.8rem',
-                backgroundColor: '#ffffff',
-                borderRadius: '6px',
-                '& fieldset': {
-                  borderColor: '#e2e8f0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#cbd5e1',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#3b82f6',
-                },
-              },
-            }}
-          >
-            <MenuItem value="Yes">Yes</MenuItem>
-            <MenuItem value="No">No</MenuItem>
-          </TextField>
-        }
-      />
     </Box>
   );
 }

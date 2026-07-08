@@ -1,100 +1,74 @@
-import { Box, Typography, Avatar, IconButton } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { getInitials, computeAge } from './utils';
+import InitialsAvatar from '../shared/InitialsAvatar';
+import { computeAge } from './utils';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight } from '../../constants/styles';
 
+function MemberRow({ name, roleLabel, onRemove }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+      <InitialsAvatar name={name} size={36} fontSize={13} bg={COLORS.ACCENT} />
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, lineHeight: 1.3 }}>
+          {name}
+        </Typography>
+        {roleLabel && (
+          <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, lineHeight: 1.3 }}>
+            {roleLabel}
+          </Typography>
+        )}
+      </Box>
+      {onRemove && (
+        <IconButton size="small" onClick={onRemove}>
+          <CloseIcon sx={{ fontSize: 16, color: COLORS.TEXT_MUTED }} />
+        </IconButton>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Family Members list — self (always Head of Household) plus any added
+ * household members, rendered as avatar rows matching the patient-detail
+ * card convention. The "Add member" action and "One HOH per family"
+ * subtitle live in the SectionCard header (see PatientDetailOverview.jsx).
+ */
 export default function FamilyMembersSection({ patient, isEditMode = false, onPatientDataChange }) {
-  const householdMembers = Array.isArray(patient?.household) ? patient.household : [];
-  
-  const selfName = patient ? `${patient.firstName} ${patient.lastName}` : '';
-  const selfPreferred = patient?.preferredName || '';
-  const selfDisplayName = selfName + (selfPreferred && selfPreferred !== selfName ? ` (${selfPreferred})` : '');
+  const name = patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : '';
+  const preferred = patient?.preferredName;
+  const selfDisplayName = preferred && preferred !== name ? `${name} (${preferred})` : name;
   const selfAge = computeAge(patient?.dateOfBirth);
+  const selfRoleLabel = ['HOH', selfAge != null && `${selfAge} y`].filter(Boolean).join(' · ');
 
-  const handleRemoveMember = (memberToRemove) => {
+  const householdMembers = Array.isArray(patient?.household) ? patient.household : [];
+
+  const handleRemoveMember = (member) => {
     if (!onPatientDataChange) return;
-    const updatedHousehold = householdMembers.filter(m => {
-      const mId = m._id || m.id;
-      const rId = memberToRemove._id || memberToRemove.id;
-      return mId !== rId;
-    });
-    onPatientDataChange({ ...patient, household: updatedHousehold });
+    const updated = householdMembers.filter((m) => (m._id || m.id) !== (member._id || member.id));
+    onPatientDataChange({ ...patient, household: updated });
   };
 
-  const allMembers = [
-    {
-      id: patient?.id || patient?._id || 'self',
-      firstName: patient?.firstName,
-      lastName: patient?.lastName,
-      displayName: selfDisplayName,
-      relationship: patient?.financialResponsibility?.type === 'hoh' ? 'HOH' : 'Self',
-      age: selfAge,
-      isSelf: true
-    },
-    ...householdMembers.map(m => {
-      const name = m.displayName || m.name || [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
-      const age = computeAge(m.dateOfBirth);
-      return {
-        id: m.id || m._id,
-        firstName: m.firstName,
-        lastName: m.lastName,
-        displayName: name,
-        relationship: m.relationship || 'Family Member',
-        age: age,
-        isSelf: false,
-        raw: m
-      };
-    })
-  ];
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      {allMembers.map((member) => (
-        <Box 
-          key={member.id} 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1.5, 
-            p: 1.25, 
-            border: '1px solid #f1f5f9', 
-            borderRadius: '8px', 
-            bgcolor: member.isSelf ? '#f8fafc' : '#ffffff',
-            position: 'relative'
-          }}
-        >
-          <Avatar 
-            sx={{ 
-              width: 36, 
-              height: 36, 
-              bgcolor: '#1976d2', 
-              fontSize: '0.85rem', 
-              fontWeight: 600 
-            }}
-          >
-            {getInitials(member.firstName, member.lastName)}
-          </Avatar>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b' }}>
-              {member.displayName}
-            </Typography>
-            <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-              {member.relationship} {member.age != null ? ` - ${member.age} y` : ''}
-            </Typography>
-          </Box>
-          {isEditMode && !member.isSelf && (
-            <IconButton 
-              size="small" 
-              onClick={() => handleRemoveMember(member.raw)}
-              sx={{ color: 'text.secondary', hover: { color: 'error.main' } }}
-            >
-              <CloseIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          )}
-        </Box>
-      ))}
-      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, fontStyle: 'italic' }}>
-        One HOH per family
-      </Typography>
+    <Box>
+      <MemberRow name={selfDisplayName} roleLabel={selfRoleLabel} />
+      {householdMembers.map((member, idx) => {
+        const memberName =
+          member?.displayName ||
+          member?.name ||
+          [member?.firstName, member?.lastName].filter(Boolean).join(' ').trim();
+        if (!memberName) return null;
+        const memberAge = member?.dateOfBirth ? computeAge(member.dateOfBirth) : member?.age;
+        const roleLabel = [member?.relationship, memberAge != null && `${memberAge} y`].filter(Boolean).join(' · ');
+        return (
+          <MemberRow
+            key={member._id || member.id || idx}
+            name={memberName}
+            roleLabel={roleLabel}
+            onRemove={isEditMode ? () => handleRemoveMember(member) : undefined}
+          />
+        );
+      })}
     </Box>
   );
 }

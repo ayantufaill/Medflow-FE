@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -12,55 +11,28 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  TextField,
-  IconButton,
-  Chip,
-  Button,
+  Checkbox,
   Alert,
   CircularProgress,
-  InputAdornment,
-  Tooltip,
-  Avatar,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Checkbox,
-  FormControlLabel,
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Search as SearchIcon,
-  PersonAdd as PersonAddIcon,
-  Upload as UploadIcon,
-  PersonOff as PersonOffIcon,
-  Refresh as RefreshIcon,
-  MoreVert as MoreVertIcon,
-  Visibility as VisibilityIcon,
-  Clear as ClearIcon,
-  FilterAltOff,
-  Info as InfoIcon,
-  Event as CalendarIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-} from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { usePatients } from '../../hooks/redux/usePatient';
 import { useProviders } from '../../hooks/queries/useProviders';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import PatientSearchActionsBar from '../../components/patients/list/PatientSearchActionsBar';
+import PatientFiltersBar from '../../components/patients/list/PatientFiltersBar';
+import PatientRow from '../../components/patients/list/PatientRow';
+import PatientActionMenu from '../../components/patients/list/PatientActionMenu';
+import { COLORS } from '../../constants/colors';
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { validatePhoneNumber, validateDateOfBirth } from '../../components/patients/list/patientListUtils';
+
+const EMPTY_PROVIDER_LIST = [];
 
 const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-
-  const handlePatientClick = (patientId, patientObj) => {
-    if (embedded && onPatientSelect) {
-      onPatientSelect(patientId, patientObj);
-    } else {
-      navigate(`/patients/details/${patientId}`, { state: { patient: patientObj } });
-    }
-  };
 
   // ─── Redux State ─────────────────────────────────────────
   const {
@@ -69,13 +41,15 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     loading,
     error: reduxError,
     fetch: fetchPatientsRedux,
-    refetch,
     removeFromList,
     updateInList,
   } = usePatients();
 
   const { data: providersData } = useProviders({ activeOnly: true });
-  const providerList = providersData?.providers || [];
+  // useMemo (rather than `providersData?.providers || []`) keeps a stable array
+  // reference across renders while the query hasn't changed, so PatientFiltersBar
+  // doesn't see a "new" providerList prop on every unrelated re-render.
+  const providerList = useMemo(() => providersData?.providers || EMPTY_PROVIDER_LIST, [providersData]);
 
   // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
@@ -85,17 +59,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [genderFilter, setGenderFilter] = useState('');
   const [providerFilter, setProviderFilter] = useState('');
   const [error, setError] = useState('');
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    patientId: null,
-    patientName: '',
-  });
-  const [actionMenu, setActionMenu] = useState({
-    anchorEl: null,
-    patientId: null,
-    patientName: '',
-    isActive: null,
-  });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, patientId: null, patientName: '' });
+  const [actionMenu, setActionMenu] = useState({ anchorEl: null, patientId: null, patientName: '', isActive: null });
   const [statusLoading, setStatusLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -103,51 +68,85 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [deactivateDialog, setDeactivateDialog] = useState({ open: false, count: 0 });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [debouncedSearch] = useDebounce(search, 300);
+  // Debounce delays every search-as-you-type keystroke by 300ms, but that
+  // same delay makes clearing the box (backspacing to empty, or the X
+  // button) feel like it "didn't work" for a third of a second. Bypass the
+  // debounce specifically when the box is empty so the full list comes back
+  // immediately, while normal typing still debounces as before.
+  const effectiveSearch = search === '' ? '' : debouncedSearch;
 
   // Inline editing state
-  const [editingField, setEditingField] = useState(null); // { patientId, field, value }
+  const [editingField, setEditingField] = useState(null); // { patientId, field, originalValue }
   const [editValue, setEditValue] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
 
-  const effectiveStatus = statusFilter;
+  // handleInlineSave/handleNameSave/handleInlineCancel need the LATEST
+  // editingField/editValue when the user clicks Save, but we don't want those
+  // (they change on every keystroke) in the handlers' own useCallback deps —
+  // that would recreate the callback every keystroke and defeat PatientRow's
+  // memoization for every row, not just the one being edited. Refs give the
+  // handlers a live read without becoming a dependency.
+  const editingFieldRef = useRef(editingField);
+  const editValueRef = useRef(editValue);
+  editingFieldRef.current = editingField;
+  editValueRef.current = editValue;
 
-  // ─── Fetch via Redux (only when params change) ──────────
-  useEffect(() => {
-    let sanitizedSearch = debouncedSearch;
-    if (sanitizedSearch) {
-      sanitizedSearch = sanitizedSearch.replace(/^\+/, '').trim();
-    }
-    const promise = fetchPatientsRedux({
+  // usePatients()'s own `refetch` re-fetches using REDUX's `filters`/`pagination`
+  // state, which this page never writes to — it keeps its own local
+  // page/statusFilter/genderFilter/providerFilter state instead and calls
+  // `fetch` (fetchPatientsRedux) directly with those values. That means
+  // `refetch()` silently ignores whatever the user has selected in the UI
+  // (e.g. re-fetching with no status filter after toggling a patient active,
+  // even while "Inactive" is selected). buildFetchParams + the ref below let
+  // every mutation handler re-fetch with the params actually shown on screen,
+  // via a callback whose identity stays stable across renders.
+  const buildFetchParams = () => {
+    let sanitizedSearch = effectiveSearch;
+    if (sanitizedSearch) sanitizedSearch = sanitizedSearch.replace(/^\+/, '').trim();
+    return {
       page: page + 1,
       limit: rowsPerPage,
       search: sanitizedSearch,
-      status: effectiveStatus,
+      status: statusFilter,
       gender: genderFilter,
       providerId: providerFilter,
       dobStart: '',
       dobEnd: '',
-    });
+    };
+  };
+  const fetchParamsRef = useRef();
+  fetchParamsRef.current = buildFetchParams();
+
+  const refetchList = useCallback(() => fetchPatientsRedux(fetchParamsRef.current), [fetchPatientsRedux]);
+
+  // ─── Fetch via Redux (only when params change) ──────────
+  useEffect(() => {
+    const promise = fetchPatientsRedux(fetchParamsRef.current);
 
     return () => {
-      if (promise && promise.abort) {
-        promise.abort();
-      }
+      if (promise && promise.abort) promise.abort();
     };
-  }, [page, rowsPerPage, debouncedSearch, effectiveStatus, genderFilter, providerFilter, fetchPatientsRedux]);
+  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
     if (reduxError) setError(reduxError);
   }, [reduxError]);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  const handleChangePage = useCallback((event, newPage) => setPage(newPage), []);
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = useCallback((event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
+  }, []);
+
+  // Search is debounced, but the page index should reset the instant the user
+  // types — otherwise a new search can silently request a page number that
+  // doesn't exist in the filtered result set (e.g. searching while on page 4).
+  const handleSearchChange = useCallback((value) => {
+    setSearch(value);
+    setPage(0);
+  }, []);
 
   const handleDeleteClick = (patientId, patientName) => {
     setDeleteDialog({ open: true, patientId, patientName });
@@ -173,9 +172,9 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     setDeleteDialog({ open: false, patientId: null, patientName: '' });
   };
 
-  const handleActionMenuOpen = (event, patientId, patientName, isActive) => {
+  const handleActionMenuOpen = useCallback((event, patientId, patientName, isActive) => {
     setActionMenu({ anchorEl: event.currentTarget, patientId, patientName, isActive });
-  };
+  }, []);
 
   const handleActionMenuClose = () => {
     setActionMenu({ anchorEl: null, patientId: null, patientName: '', isActive: null });
@@ -191,11 +190,6 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     }
   };
 
-  const handleEdit = (patientId) => {
-    handleActionMenuClose();
-    navigate(`/patients/${patientId}/edit`);
-  };
-
   const handleToggleInactive = async (patientId, patientName, isActive) => {
     handleActionMenuClose();
     try {
@@ -203,7 +197,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       await patientService.updatePatient(patientId, { isActive: !isActive });
       showSnackbar(`Patient ${!isActive ? 'marked inactive' : 'activated'} successfully`, 'success');
       updateInList({ _id: patientId, isActive: !isActive });
-      refetch();
+      refetchList();
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient status.';
       setError(msg);
@@ -214,80 +208,58 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   };
 
   // Inline editing handlers
-  const handleDoubleClick = (e, patient, field, currentValue) => {
+  const handleDoubleClick = useCallback((e, patient, field, currentValue) => {
     e.preventDefault();
     e.stopPropagation();
     setEditingField({ patientId: patient._id || patient.id, field, originalValue: currentValue });
-    // For name field, pass object with firstName and lastName
+    // The name field edits firstName/lastName together, so its draft is an
+    // object instead of a plain string like every other field.
     if (field === 'name') {
       setEditValue({ firstName: currentValue.firstName || '', lastName: currentValue.lastName || '' });
     } else {
       setEditValue(currentValue || '');
     }
-  };
+  }, []);
 
-  const handleInlineCancel = () => {
+  const handleInlineCancel = useCallback(() => {
     setEditingField(null);
     setEditValue('');
-  };
+  }, []);
 
-  const validatePhoneNumber = (phone) => {
-    // Remove all non-digit characters
-    const digits = phone.replace(/\D/g, '');
-    // US phone numbers can be 10 digits or 11 digits with +1 country code
-    if (digits.length === 10) {
-      return true;
-    }
-    if (digits.length === 11 && digits.startsWith('1')) {
-      return true;
-    }
-    return false;
-  };
-
-  const validateDateOfBirth = (dateString) => {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    const now = new Date();
-    // Check if date is valid and not in the future
-    return !isNaN(date.getTime()) && date <= now;
-  };
-
-  const handleInlineSave = async () => {
+  const handleInlineSave = useCallback(async () => {
+    const currentEditingField = editingFieldRef.current;
+    const currentEditValue = editValueRef.current;
     try {
       setSaveLoading(true);
-      if (!editingField) return;
+      if (!currentEditingField) return;
 
       let updateData = {};
-      // Validate phone number if editing phonePrimary field
-      if (editingField.field === 'phonePrimary' && editValue) {
-        const digits = editValue.replace(/\D/g, '');
-        if (!validatePhoneNumber(editValue)) {
+      if (currentEditingField.field === 'phonePrimary' && currentEditValue) {
+        const digits = currentEditValue.replace(/\D/g, '');
+        if (!validatePhoneNumber(currentEditValue)) {
           setError('Phone number must be 10 digits or 1 followed by 10 digits');
           showSnackbar('Phone number must be 10 digits or 1 followed by 10 digits', 'error');
           return;
         }
-        // Store as digits only (backend requirement)
-        updateData = { [editingField.field]: digits };
-        await patientService.updatePatient(editingField.patientId, updateData);
-      } else if (editingField.field === 'dateOfBirth' && editValue) {
-        // Validate date of birth
-        if (!validateDateOfBirth(editValue)) {
+        updateData = { [currentEditingField.field]: digits }; // Store as digits only (backend requirement)
+        await patientService.updatePatient(currentEditingField.patientId, updateData);
+      } else if (currentEditingField.field === 'dateOfBirth' && currentEditValue) {
+        if (!validateDateOfBirth(currentEditValue)) {
           setError('Invalid date of birth');
           showSnackbar('Invalid date of birth', 'error');
           return;
         }
-        // Convert to ISO-8601 format for backend
-        const isoDate = new Date(editValue).toISOString();
-        updateData = { [editingField.field]: isoDate };
-        await patientService.updatePatient(editingField.patientId, updateData);
+        const isoDate = new Date(currentEditValue).toISOString();
+        updateData = { [currentEditingField.field]: isoDate };
+        await patientService.updatePatient(currentEditingField.patientId, updateData);
       } else {
-        updateData = { [editingField.field]: editValue };
-        await patientService.updatePatient(editingField.patientId, updateData);
+        updateData = { [currentEditingField.field]: currentEditValue };
+        await patientService.updatePatient(currentEditingField.patientId, updateData);
       }
 
       showSnackbar('Patient updated successfully', 'success');
-      updateInList({ _id: editingField.patientId, ...updateData });
-      refetch();
+      updateInList({ _id: currentEditingField.patientId, ...updateData });
+      refetchList();
       setEditingField(null);
       setEditValue('');
     } catch (err) {
@@ -297,22 +269,22 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     } finally {
       setSaveLoading(false);
     }
-  };
+  }, [updateInList, refetchList, showSnackbar]);
 
-  // Special handler for name field to update both firstName and lastName
-  const handleNameSave = async () => {
+  // Separate from handleInlineSave because the name column edits two backend
+  // fields (firstName/lastName) at once instead of one.
+  const handleNameSave = useCallback(async () => {
+    const currentEditingField = editingFieldRef.current;
+    const currentEditValue = editValueRef.current;
     try {
       setSaveLoading(true);
-      if (!editingField || editingField.field !== 'name') return;
+      if (!currentEditingField || currentEditingField.field !== 'name') return;
 
-      const updateData = {
-        firstName: editValue.firstName || '',
-        lastName: editValue.lastName || ''
-      };
-      await patientService.updatePatient(editingField.patientId, updateData);
+      const updateData = { firstName: currentEditValue.firstName || '', lastName: currentEditValue.lastName || '' };
+      await patientService.updatePatient(currentEditingField.patientId, updateData);
       showSnackbar('Patient name updated successfully', 'success');
-      updateInList({ _id: editingField.patientId, ...updateData });
-      refetch();
+      updateInList({ _id: currentEditingField.patientId, ...updateData });
+      refetchList();
       setEditingField(null);
       setEditValue({ firstName: '', lastName: '' });
     } catch (err) {
@@ -322,18 +294,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     } finally {
       setSaveLoading(false);
     }
-  };
-
-  const getPatientInitials = (firstName, lastName) => {
-    if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    return 'P';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    try { return new Date(dateString).toLocaleDateString(); }
-    catch { return '-'; }
-  };
+  }, [updateInList, refetchList, showSnackbar]);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -343,23 +304,23 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     setPage(0);
   };
 
-  const handleRefresh = () => {
-    refetch();
-  };
+  const handleRefresh = () => refetchList();
 
-  const handleSelectAll = (event) => {
-    if (event.target.checked) {
-      setSelectedIds(patients.map((p) => p._id || p.id));
+  const handleSelectAll = useCallback((event) => {
+    setSelectedIds(event.target.checked ? patients.map((p) => p._id || p.id) : []);
+  }, [patients]);
+
+  const handleSelectOne = useCallback((patientId) => {
+    setSelectedIds((prev) => (prev.includes(patientId) ? prev.filter((id) => id !== patientId) : [...prev, patientId]));
+  }, []);
+
+  const handlePatientClick = useCallback((patientId, patientObj) => {
+    if (embedded && onPatientSelect) {
+      onPatientSelect(patientId, patientObj);
     } else {
-      setSelectedIds([]);
+      navigate(`/patients/details/${patientId}`, { state: { patient: patientObj } });
     }
-  };
-
-  const handleSelectOne = (patientId) => {
-    setSelectedIds((prev) =>
-      prev.includes(patientId) ? prev.filter((id) => id !== patientId) : [...prev, patientId]
-    );
-  };
+  }, [embedded, onPatientSelect, navigate]);
 
   const handleDeactivateSelected = () => {
     setDeactivateDialog({ open: true, count: selectedIds.length });
@@ -375,7 +336,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       showSnackbar(`Deactivated ${selectedIds.length} patient(s)`, 'success');
       setSelectedIds([]);
       setDeactivateDialog({ open: false, count: 0 });
-      refetch();
+      refetchList();
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate.';
       showSnackbar(msg, 'error');
@@ -384,26 +345,10 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     }
   };
 
-  const handleImportPatient = () => {
-    navigate('/patients/import');
-  };
-
-  const computeAge = (dateOfBirth) => {
-    if (!dateOfBirth) return '-';
-    try {
-      const today = new Date();
-      const dob = new Date(dateOfBirth);
-      let age = today.getFullYear() - dob.getFullYear();
-      const m = today.getMonth() - dob.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-      return age;
-    } catch {
-      return '-';
-    }
-  };
+  const handleImportPatient = () => navigate('/patients/import');
 
   const displayPatients = useMemo(() => {
-    let list = [...patients];
+    const list = [...patients];
     if (sortByName) {
       list.sort((a, b) => {
         const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
@@ -415,160 +360,43 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   }, [patients, sortByName]);
 
   const totalPatients = pagination?.total || 0;
+  const allSelected = displayPatients.length > 0 && selectedIds.length === displayPatients.length;
+  const someSelected = selectedIds.length > 0 && selectedIds.length < displayPatients.length;
 
   return (
-    <Box>
+    <Box sx={{ backgroundColor: COLORS.SURFACE_PAGE, p: embedded ? 0 : '16px' }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        {/* Row 1: Search + Action buttons (reference layout) */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-          <TextField
-            placeholder="Search Patient"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            size="small"
-            sx={{ flex: '1 1 280px', maxWidth: 480 }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  {loading && search ? (
-                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                  ) : null}
-                  {search ? (
-                    <IconButton size="small" onClick={() => setSearch('')} edge="end" aria-label="clear">
-                      <ClearIcon />
-                    </IconButton>
-                  ) : (
-                    <SearchIcon color="action" />
-                  )}
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Tooltip title="Search help">
-            <IconButton size="small" color="info"><InfoIcon /></IconButton>
-          </Tooltip>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
-            <Button
-              startIcon={<CalendarIcon />}
-              onClick={() => navigate('/appointments/operatory-schedule')}
-            >
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              startIcon={<PersonAddIcon />}
-              onClick={() => navigate('/patients/new')}
-            >
-              Add Patient
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              startIcon={<UploadIcon />}
-              onClick={handleImportPatient}
-            >
-              Import Patient
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<PersonOffIcon />}
-              disabled={selectedIds.length === 0}
-              onClick={handleDeactivateSelected}
-            >
-              Deactivate Patient(s)
-            </Button>
-          </Box>
-        </Box>
+      <Box sx={{ backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, p: '16px' }}>
+        <PatientSearchActionsBar
+          search={search}
+          onSearchChange={handleSearchChange}
+          loading={loading}
+          allSelected={allSelected}
+          someSelected={someSelected}
+          onSelectAll={handleSelectAll}
+          onAddPatient={() => navigate('/patients/new')}
+          onImportPatient={handleImportPatient}
+          onDeactivateSelected={handleDeactivateSelected}
+          deactivateDisabled={selectedIds.length === 0}
+        />
 
-        {/* Row 2: Filter checkboxes and Dropdowns */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={sortByName}
-                onChange={(e) => setSortByName(e.target.checked)}
-                size="small"
-              />
-            }
-            label="Sort By Name"
-          />
-
-          <TextField
-            select
-            label="Status"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-            size="small"
-            sx={{ minWidth: 120 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </TextField>
-
-          <TextField
-            select
-            label="Gender"
-            value={genderFilter}
-            onChange={(e) => {
-              setGenderFilter(e.target.value);
-              setPage(0);
-            }}
-            size="small"
-            sx={{ minWidth: 120 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">All Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="unknown">Unknown</option>
-          </TextField>
-
-          <TextField
-            select
-            label="Provider"
-            value={providerFilter}
-            onChange={(e) => {
-              setProviderFilter(e.target.value);
-              setPage(0);
-            }}
-            size="small"
-            sx={{ minWidth: 150 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-          >
-            <option value="">All Providers</option>
-            {providerList.map((p) => {
-              const u = p.userId || p;
-              const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || p.providerCode || `Provider ${p._id}`;
-              return (
-                <option key={p._id} value={p._id}>
-                  {name}
-                </option>
-              );
-            })}
-          </TextField>
-
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 'auto' }}>
-            <Tooltip title="Refresh">
-              <IconButton size="small" onClick={handleRefresh} disabled={loading}><RefreshIcon /></IconButton>
-            </Tooltip>
-            <Tooltip title="Reset Filters">
-              <IconButton size="small" onClick={handleResetFilters}><FilterAltOff /></IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
+        <PatientFiltersBar
+          statusFilter={statusFilter}
+          onStatusFilterChange={(v) => { setStatusFilter(v); setPage(0); }}
+          genderFilter={genderFilter}
+          onGenderFilterChange={(v) => { setGenderFilter(v); setPage(0); }}
+          providerFilter={providerFilter}
+          onProviderFilterChange={(v) => { setProviderFilter(v); setPage(0); }}
+          providerList={providerList}
+          sortByName={sortByName}
+          onSortByNameChange={setSortByName}
+          loading={loading}
+          onRefresh={handleRefresh}
+          onResetFilters={handleResetFilters}
+        />
 
         {loading ? (
           <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
@@ -583,14 +411,21 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' } }}>
+                    <TableRow sx={{
+                      '& .MuiTableCell-head': {
+                        py: '10px',
+                        fontFamily: 'Inter',
+                        fontSize: fontSize.sm,
+                        fontWeight: fontWeight.semibold,
+                        color: COLORS.TEXT_MUTED,
+                        letterSpacing: '0.4px',
+                        textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
+                        borderBottom: `1px solid ${COLORS.BORDER}`,
+                      },
+                    }}>
                       <TableCell padding="checkbox">
-                        <Checkbox
-                          size="small"
-                          indeterminate={selectedIds.length > 0 && selectedIds.length < displayPatients.length}
-                          checked={displayPatients.length > 0 && selectedIds.length === displayPatients.length}
-                          onChange={handleSelectAll}
-                        />
+                        <Checkbox size="small" indeterminate={someSelected} checked={allSelected} onChange={handleSelectAll} />
                       </TableCell>
                       <TableCell>Patient Number</TableCell>
                       <TableCell>Name</TableCell>
@@ -600,7 +435,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                       <TableCell>Telephone Number</TableCell>
                       <TableCell>Sex</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell align="right">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -613,252 +448,28 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
                     ) : (
                       displayPatients.map((patient) => {
                         const pid = patient._id || patient.id;
-                        const isSelected = selectedIds.includes(pid);
+                        const isEditingThisRow = editingField?.patientId === pid;
                         return (
-                          <TableRow
+                          <PatientRow
                             key={pid}
-                            hover
-                            selected={isSelected}
-                            sx={{
-                              cursor: 'pointer',
-                              bgcolor: patient.isActive === false ? '#f5f5f5' : 'inherit',
-                              color: patient.isActive === false ? 'text.secondary' : 'inherit',
-                              '& .MuiTableCell-body': { py: 0.5, fontSize: '0.78rem' },
-                              '& .editable-cell:hover': {
-                                bgcolor: 'action.hover',
-                              }
-                            }}
-                            onClick={(e) => {
-                              // Don't navigate if clicking on editable cell
-                              if (e.target.closest('.editable-cell')) {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                return;
-                              }
-                              handlePatientClick(pid, patient);
-                            }}
-                          >
-                            <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                size="small"
-                                checked={isSelected}
-                                onChange={() => handleSelectOne(pid)}
-                              />
-                            </TableCell>
-                            <TableCell>{patient.patientCode || '-'}</TableCell>
-                            <TableCell
-                              className="editable-cell"
-                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'name', { firstName: patient.firstName, lastName: patient.lastName })}
-                            >
-                              {editingField?.patientId === pid && editingField?.field === 'name' ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <TextField
-                                    size="small"
-                                    placeholder="First Name"
-                                    value={editValue.firstName || ''}
-                                    onChange={(e) => setEditValue({ ...editValue, firstName: e.target.value })}
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                    sx={{ flex: 1, fontSize: '0.78rem' }}
-                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
-                                  />
-                                  <TextField
-                                    size="small"
-                                    placeholder="Last Name"
-                                    value={editValue.lastName || ''}
-                                    onChange={(e) => setEditValue({ ...editValue, lastName: e.target.value })}
-                                    onClick={(e) => e.stopPropagation()}
-                                    sx={{ flex: 1, fontSize: '0.78rem' }}
-                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
-                                  />
-                                  <IconButton size="small" onClick={handleNameSave} disabled={saveLoading}>
-                                    <SaveIcon fontSize="small" color="success" />
-                                  </IconButton>
-                                  <IconButton size="small" onClick={handleInlineCancel}>
-                                    <CancelIcon fontSize="small" color="error" />
-                                  </IconButton>
-                                </Box>
-                              ) : (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.7rem' }}>
-                                    {getPatientInitials(patient.firstName, patient.lastName)}
-                                  </Avatar>
-                                  <Typography fontSize="0.78rem">{patient.firstName} {patient.lastName}</Typography>
-                                </Box>
-                              )}
-                            </TableCell>
-                            <TableCell>{computeAge(patient.dateOfBirth)}</TableCell>
-                            <TableCell
-                              className="editable-cell"
-                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'dateOfBirth', patient.dateOfBirth)}
-                            >
-                              {editingField?.patientId === pid && editingField?.field === 'dateOfBirth' ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <TextField
-                                    size="small"
-                                    type="date"
-                                    value={editValue ? new Date(editValue).toISOString().split('T')[0] : ''}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                    fullWidth
-                                    inputProps={{
-                                      max: new Date().toISOString().split('T')[0], // Don't allow future dates
-                                      sx: { py: 0.5, fontSize: '0.78rem' }
-                                    }}
-                                    sx={{ fontSize: '0.78rem' }}
-                                  />
-                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
-                                    <SaveIcon fontSize="small" color="success" />
-                                  </IconButton>
-                                  <IconButton size="small" onClick={handleInlineCancel}>
-                                    <CancelIcon fontSize="small" color="error" />
-                                  </IconButton>
-                                </Box>
-                              ) : (
-                                formatDate(patient.dateOfBirth)
-                              )}
-                            </TableCell>
-                            <TableCell
-                              className="editable-cell"
-                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'email', patient.email)}
-                            >
-                              {editingField?.patientId === pid && editingField?.field === 'email' ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <TextField
-                                    size="small"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                    fullWidth
-                                    type="email"
-                                    sx={{ fontSize: '0.78rem' }}
-                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
-                                  />
-                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
-                                    <SaveIcon fontSize="small" color="success" />
-                                  </IconButton>
-                                  <IconButton size="small" onClick={handleInlineCancel}>
-                                    <CancelIcon fontSize="small" color="error" />
-                                  </IconButton>
-                                </Box>
-                              ) : (
-                                patient.email || '-'
-                              )}
-                            </TableCell>
-                            <TableCell
-                              className="editable-cell"
-                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'phonePrimary', patient.phonePrimary)}
-                            >
-                              {editingField?.patientId === pid && editingField?.field === 'phonePrimary' ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <TextField
-                                    size="small"
-                                    value={editValue}
-                                    onChange={(e) => {
-                                      // Only allow digits
-                                      const value = e.target.value;
-                                      const digits = value.replace(/\D/g, '');
-                                      // Allow 10 digits or 11 digits starting with 1 (country code)
-                                      if (digits.length <= 11) {
-                                        // If more than 10 digits, must start with 1
-                                        if (digits.length === 11 && !digits.startsWith('1')) {
-                                          return; // Don't update if 11th digit doesn't start with 1
-                                        }
-                                        setEditValue(digits);
-                                      }
-                                    }}
-                                    onKeyDown={(e) => {
-                                      // Prevent non-digit keys
-                                      const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'];
-                                      if (!/\d/.test(e.key) && !allowedKeys.includes(e.key)) {
-                                        e.preventDefault();
-                                      }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                    fullWidth
-                                    placeholder="1234567890 or 11234567890"
-                                    error={editValue.length > 0 &&
-                                      editValue.length !== 10 &&
-                                      !(editValue.length === 11 && editValue.startsWith('1'))}
-                                    helperText={editValue.length > 0 ?
-                                      (editValue.length === 11 && editValue.startsWith('1')
-                                        ? 'Valid: 1 country code included'
-                                        : `${editValue.length}/10 or 11 digits`)
-                                      : ''}
-                                    sx={{ fontSize: '0.78rem' }}
-                                    inputProps={{
-                                      sx: { py: 0.5, fontSize: '0.78rem' },
-                                      maxLength: 11,
-                                      inputMode: 'numeric',
-                                      pattern: '[0-9]*'
-                                    }}
-                                  />
-                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
-                                    <SaveIcon fontSize="small" color="success" />
-                                  </IconButton>
-                                  <IconButton size="small" onClick={handleInlineCancel}>
-                                    <CancelIcon fontSize="small" color="error" />
-                                  </IconButton>
-                                </Box>
-                              ) : (
-                                patient.phonePrimary || '-'
-                              )}
-                            </TableCell>
-                            <TableCell
-                              className="editable-cell"
-                              onDoubleClick={(e) => handleDoubleClick(e, patient, 'gender', patient.gender)}
-                            >
-                              {editingField?.patientId === pid && editingField?.field === 'gender' ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <TextField
-                                    size="small"
-                                    select
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                    fullWidth
-                                    SelectProps={{ native: true }}
-                                    sx={{ fontSize: '0.78rem' }}
-                                    inputProps={{ sx: { py: 0.5, fontSize: '0.78rem' } }}
-                                  >
-                                    <option value="">Select Gender</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="other">Other</option>
-                                  </TextField>
-                                  <IconButton size="small" onClick={handleInlineSave} disabled={saveLoading}>
-                                    <SaveIcon fontSize="small" color="success" />
-                                  </IconButton>
-                                  <IconButton size="small" onClick={handleInlineCancel}>
-                                    <CancelIcon fontSize="small" color="error" />
-                                  </IconButton>
-                                </Box>
-                              ) : (
-                                patient.gender === 'male' ? 'Male' : patient.gender === 'female' ? 'Female' : patient.gender || '-'
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                size="small"
-                                label={patient.isActive !== false ? 'Active' : 'Inactive'}
-                                color={patient.isActive !== false ? 'success' : 'default'}
-                                sx={{ height: 18, fontSize: '0.68rem' }}
-                              />
-                            </TableCell>
-                            <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                              <IconButton
-                                size="small"
-                                sx={{ p: 0.25 }}
-                                onClick={(e) => handleActionMenuOpen(e, pid, `${patient.firstName} ${patient.lastName}`, patient.isActive)}
-                              >
-                                <MoreVertIcon fontSize="small" />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
+                            patient={patient}
+                            isSelected={selectedIds.includes(pid)}
+                            // Only the row actually being edited receives the live
+                            // editingField/editValue — every other row gets stable
+                            // `null`/`''` references so PatientRow's React.memo can
+                            // skip re-rendering them on every keystroke.
+                            editingField={isEditingThisRow ? editingField : null}
+                            editValue={isEditingThisRow ? editValue : ''}
+                            setEditValue={setEditValue}
+                            saveLoading={isEditingThisRow ? saveLoading : false}
+                            onSelectOne={handleSelectOne}
+                            onRowClick={handlePatientClick}
+                            onDoubleClick={handleDoubleClick}
+                            onInlineSave={handleInlineSave}
+                            onNameSave={handleNameSave}
+                            onInlineCancel={handleInlineCancel}
+                            onActionMenuOpen={handleActionMenuOpen}
+                          />
                         );
                       })
                     )}
@@ -874,36 +485,26 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               rowsPerPage={rowsPerPage}
               onRowsPerPageChange={handleChangeRowsPerPage}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Rows per page:"
+              sx={{
+                borderTop: `1px solid ${COLORS.BORDER}`,
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                  fontFamily: 'Inter', fontSize: fontSize.sm, color: COLORS.TEXT_MUTED,
+                  textTransform: 'uppercase', letterSpacing: '0.3px',
+                },
+                '& .MuiTablePagination-select': { fontFamily: 'Inter', fontSize: fontSize.sm },
+              }}
             />
           </>
         )}
-      </Paper>
+      </Box>
 
-      <Menu
-        anchorEl={actionMenu.anchorEl}
-        open={Boolean(actionMenu.anchorEl)}
+      <PatientActionMenu
+        actionMenu={actionMenu}
         onClose={handleActionMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <MenuItem onClick={() => handleViewDetails(actionMenu.patientId)}>
-          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>View Details</ListItemText>
-        </MenuItem>
-        {/* <MenuItem onClick={() => handleEdit(actionMenu.patientId)}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem> */}
-        <MenuItem
-          onClick={() => handleToggleInactive(actionMenu.patientId, actionMenu.patientName, actionMenu.isActive)}
-          sx={{ color: actionMenu.isActive ? 'error.main' : 'success.main' }}
-        >
-          <ListItemIcon>
-            <PersonOffIcon fontSize="small" color={actionMenu.isActive ? 'error' : 'success'} />
-          </ListItemIcon>
-          <ListItemText>{actionMenu.isActive ? 'Mark Inactive' : 'Mark Active'}</ListItemText>
-        </MenuItem>
-      </Menu>
+        onViewDetails={handleViewDetails}
+        onToggleInactive={handleToggleInactive}
+      />
 
       <ConfirmationDialog
         open={deleteDialog.open}

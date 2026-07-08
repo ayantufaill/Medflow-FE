@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { Box, FormControlLabel, Radio, RadioGroup, TextField, Typography } from "@mui/material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -9,6 +10,7 @@ import dayjs from "dayjs";
 import PatientSearchField from "./PatientSearchField";
 import ProcedureTagStrip from "./ProcedureTagStrip";
 import ProcedureTable from "./ProcedureTable";
+import PastVisitProceduresSelector from "./PastVisitProceduresSelector";
 
 const AppointmentLeftPanel = ({
   // Patient
@@ -25,8 +27,15 @@ const AppointmentLeftPanel = ({
   onProcedureInputChange, onAddingProcedureToggle, onSelectProcedure,
   // Procedure table
   procedures, setProcedures, providers,
-}) => (
-  <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
+}) => {
+  const [showPastVisits, setShowPastVisits] = useState(false);
+
+  const handleAddPastProcedure = (proc) => {
+    setProcedures([...procedures, proc]);
+  };
+
+  return (
+    <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
 
     {/* Patient / Date / Time row */}
     <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
@@ -132,14 +141,23 @@ const AppointmentLeftPanel = ({
     {/* Recare hint */}
     <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px" }}>
       Patient doesn't have a recare plan.{" "}
-      <Box component="span" sx={{ color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
+      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
       {" "}or{" "}
-      <Box component="span" sx={{ color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
+      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
     </Typography>
-    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
-      + add procedures from another visit
+    
+    <Typography 
+      sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+      onClick={() => setShowPastVisits(!showPastVisits)}
+    >
+      {showPastVisits ? "- hide past visits" : "+ add procedures from another visit"}
     </Typography>
+
+    {showPastVisits && (
+      <PastVisitProceduresSelector patient={patient} onAddProcedure={handleAddPastProcedure} />
+    )}
   </Box>
-);
+  );
+};
 
 export default AppointmentLeftPanel;

@@ -117,25 +117,27 @@ export const FONT_SM = { fontSize: '12px' };
 /** Compact label / input text inside the appointment modal. */
 export const FONT_XS = { fontSize: '11px' };
 
-// ── Patient-details inline field (underline variant) ──────────────────────────
+// ── Patient-details inline field (bordered-box variant) ────────────────────────
 
-/** Standard sx for MUI TextField variant="standard" used in patient detail InlineFieldRows. */
+/**
+ * sx for MUI TextField variant="outlined" used in patient detail
+ * InlineFieldRows — a gray-bordered box, matching the New Patient Intake
+ * form's OutlinedInput instead of an underlined field. Works for both
+ * `readOnly` (view mode) and editable (edit mode) states; readOnly fields
+ * keep the same box so nothing visually jumps when toggling edit mode.
+ */
 export const standardFieldSx = {
-  '& .MuiInput-root': { fontSize: fontSize.base },
-  '& .MuiInput-underline:before': {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.42)',
+  '& .MuiOutlinedInput-root': {
+    height: '40px',
+    borderRadius: radius.md,
+    backgroundColor: COLORS.SURFACE_CARD,
+    fontFamily: 'Inter',
+    '& fieldset': { borderWidth: '1.2px', borderColor: COLORS.BORDER },
+    '&:hover fieldset': { borderColor: COLORS.TEXT_MUTED },
+    '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT, borderWidth: '1.2px' },
   },
-  '& .MuiInput-underline:after': {
-    borderBottomWidth: 1,
-    borderBottomColor: 'primary.main',
-  },
-  '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.87)',
-  },
-  '& .MuiInput-input': { minWidth: 0 },
-  '& .MuiInput-input::placeholder': { opacity: 0.6, color: 'text.secondary' },
+  '& .MuiOutlinedInput-input': { padding: '8px 12px', fontSize: fontSize.base, minWidth: 0 },
+  '& .MuiOutlinedInput-input::placeholder': { opacity: 0.6, color: COLORS.TEXT_MUTED },
 };
 
 // ── Sidebar / compact form input styling ─────────────────────────────────────
@@ -150,4 +152,34 @@ export const compactInputLabelSx = {
 /** sx for MUI input base text inside compact sidebar / form fields. */
 export const compactInputValueSx = {
   fontSize: fontSize.base,
+};
+
+// ── Select dropdown popup ─────────────────────────────────────────────────────
+
+/**
+ * MenuProps for a MUI <Select> / <TextField select> so its dropdown popup
+ * gets the app's rounded-card treatment (border, shadow, accent-tinted
+ * selected/hover rows) instead of MUI's plain square default. Used by every
+ * filter/form select across the app (patients list filters, the new-patient
+ * intake form, etc.) — import this instead of redefining it per component.
+ */
+export const roundedSelectMenuProps = {
+  PaperProps: {
+    sx: {
+      mt: '4px',
+      borderRadius: radius.md,
+      border: `1px solid ${COLORS.BORDER}`,
+      boxShadow: '0px 4px 20px rgba(0,0,0,0.12)',
+      '& .MuiMenuItem-root': {
+        fontFamily: 'Inter',
+        fontSize: fontSize.md,
+        color: COLORS.TEXT_BODY,
+        '&.Mui-selected': {
+          backgroundColor: COLORS.ACCENT_BG,
+          '&:hover': { backgroundColor: COLORS.ACCENT_BG },
+        },
+        '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
+      },
+    },
+  },
 };
