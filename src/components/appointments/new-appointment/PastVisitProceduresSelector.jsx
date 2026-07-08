@@ -86,97 +86,79 @@ const PastVisitProceduresSelector = ({ patient, onAddProcedure }) => {
         Add from Past Visit
       </Typography>
       
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: '16px' }}>
-        <Box>
-          <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '4px', textTransform: 'uppercase' }}>Select Past Visit</Typography>
-          <Select
-            size="small"
-            fullWidth
-            value={selectedVisitId}
-            onChange={(e) => setSelectedVisitId(e.target.value)}
-            displayEmpty
-            disabled={loadingVisits || visits.length === 0}
-            MenuProps={{ sx: { zIndex: 1400 } }}
-            sx={{
-              height: '32px',
-              fontFamily: 'Inter',
-              fontSize: '13px',
-              borderRadius: '8px',
-              backgroundColor: COLORS.WHITE,
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-              color: selectedVisitId ? COLORS.TEXT_PRIMARY : '#9aa3ae'
-            }}
-          >
-            <MenuItem value="" disabled sx={{ fontFamily: 'Inter', fontSize: '13px' }}>
-              {loadingVisits ? "Loading visits..." : (visits.length === 0 ? "No past visits found" : "Select a visit...")}
-            </MenuItem>
-            {visits.map(v => (
-              <MenuItem key={v._id || v.id} value={v._id || v.id} sx={{ fontFamily: 'Inter', fontSize: '13px' }}>
-                {dayjs(v.appointmentDate || v.date || v.createdAt).format('MM-DD-YYYY')} - {v.appointmentTypeId?.name || v.appointmentType?.name || v.appointmentType || 'Visit'}
-              </MenuItem>
-            ))}
-          </Select>
-        </Box>
-      </Box>
-
-      {selectedVisit && (
-        <Box>
-          <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '8px', textTransform: 'uppercase' }}>
-            Visit Procedures Preview
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {loadingVisits ? (
+          <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, py: 2, textAlign: 'center' }}>
+            Loading past visits...
           </Typography>
-          <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.md, mb: '12px' }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: COLORS.SURFACE_CARD }}>
-                  <TableCell sx={{ fontSize: '11px', fontWeight: 'bold', color: COLORS.TEXT_PRIMARY, py: '6px', width: '25%' }}>CODE</TableCell>
-                  <TableCell sx={{ fontSize: '11px', fontWeight: 'bold', color: COLORS.TEXT_PRIMARY, py: '6px' }}>TREATMENT</TableCell>
-                  <TableCell sx={{ py: '6px', width: '60px' }}></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {procedures.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ py: '12px', fontSize: '12px', color: COLORS.TEXT_SECONDARY }}>
-                      No procedures found for this visit.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  procedures.map((p, index) => (
-                    <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
-                      <TableCell sx={{ fontSize: '12px', py: '4px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>
-                        {p.code}
-                      </TableCell>
-                      <TableCell sx={{ fontSize: '12px', py: '4px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>
-                        {p.treatment || p.label || p.description} {p.tooth ? `(T${p.tooth})` : ''}
-                      </TableCell>
-                        <TableCell align="right" sx={{ py: '4px' }}>
-                          <Button
-                            variant="contained"
-                            onClick={() => handleAddProcedure(p)}
-                            sx={{
-                              backgroundColor: COLORS.PRIMARY,
-                              color: '#fff',
-                              borderRadius: '8px',
-                              height: '32px',
-                              fontSize: '12px',
-                              fontFamily: 'Inter',
-                              textTransform: 'none',
-                              px: 2,
-                              whiteSpace: 'nowrap',
-                              '&:hover': { backgroundColor: COLORS.PRIMARY_HOVER }
-                            }}
-                          >
-                            Add procedure to the procedure list
-                          </Button>
-                        </TableCell>
+        ) : visits.length === 0 ? (
+          <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, py: 2, textAlign: 'center' }}>
+            No past visits found for this patient.
+          </Typography>
+        ) : (
+          visits.map(v => {
+            const procedures = v?.customFields?.procedures || [];
+            return (
+              <Box key={v._id || v.id}>
+                <Typography sx={{ fontSize: '12px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, mb: '8px', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, pb: '4px' }}>
+                  {dayjs(v.appointmentDate || v.date || v.createdAt).format('MMM DD, YYYY')} - {v.appointmentTypeId?.name || v.appointmentType?.name || v.appointmentType || 'Visit'}
+                </Typography>
+                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.md }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: COLORS.SURFACE_CARD }}>
+                        <TableCell sx={{ fontSize: '11px', fontWeight: 'bold', color: COLORS.TEXT_PRIMARY, py: '6px', width: '25%' }}>CODE</TableCell>
+                        <TableCell sx={{ fontSize: '11px', fontWeight: 'bold', color: COLORS.TEXT_PRIMARY, py: '6px' }}>TREATMENT</TableCell>
+                        <TableCell sx={{ py: '6px', width: '60px' }}></TableCell>
                       </TableRow>
-                    ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
+                    </TableHead>
+                    <TableBody>
+                      {procedures.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center" sx={{ py: '12px', fontSize: '12px', color: COLORS.TEXT_SECONDARY }}>
+                            No procedures found for this visit.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        procedures.map((p, index) => (
+                          <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
+                            <TableCell sx={{ fontSize: '12px', py: '4px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>
+                              {p.code}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: '4px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>
+                              {p.treatment || p.label || p.description} {p.tooth ? `(T${p.tooth})` : ''}
+                            </TableCell>
+                            <TableCell align="right" sx={{ py: '4px' }}>
+                              <Button
+                                variant="contained"
+                                onClick={() => handleAddProcedure(p)}
+                                sx={{
+                                  backgroundColor: COLORS.PRIMARY,
+                                  color: '#fff',
+                                  borderRadius: '8px',
+                                  height: '28px',
+                                  fontSize: '11px',
+                                  fontFamily: 'Inter',
+                                  textTransform: 'none',
+                                  px: 1.5,
+                                  whiteSpace: 'nowrap',
+                                  '&:hover': { backgroundColor: COLORS.PRIMARY_HOVER }
+                                }}
+                              >
+                                Add procedure
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            );
+          })
+        )}
+      </Box>
     </Box>
   );
 };

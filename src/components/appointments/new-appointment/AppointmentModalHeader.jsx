@@ -1,7 +1,7 @@
 import { Box, Button, IconButton, Typography } from "@mui/material";
 import { CalendarMonthOutlined, AutoAwesome, Close } from "@mui/icons-material";
 
-const AppointmentModalHeader = ({ onCancel }) => (
+const AppointmentModalHeader = ({ onCancel, onConvertToShortlist }) => (
   <Box sx={{
     display: "flex", alignItems: "center", gap: "12px",
     px: "10px", py: "10px",
@@ -36,6 +36,7 @@ const AppointmentModalHeader = ({ onCancel }) => (
 
     <Button
       variant="outlined"
+      onClick={onConvertToShortlist}
       startIcon={<AutoAwesome sx={{ fontSize: "14px" }} />}
       sx={{
         display: "flex", alignItems: "center", justifyContent: "center",

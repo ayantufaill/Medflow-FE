@@ -40,6 +40,7 @@ const AgingReport = () => {
   const [selectedPatientForNotes, setSelectedPatientForNotes] = useState(null);
   const [showGenerateStatements, setShowGenerateStatements] = useState(false);
   const [showViewGeneratedStatements, setShowViewGeneratedStatements] = useState(false);
+  const [showAccountNotes, setShowAccountNotes] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hidePatientNames, setHidePatientNames] = useState(false);
   const [selectedNames, setSelectedNames] = useState([]);
@@ -821,6 +822,12 @@ const AgingReport = () => {
             />
           </Box>
         </Box>
+      )}
+      
+      {showAccountNotes && (
+        <AccountNotesDialog 
+          onClose={() => setShowAccountNotes(false)} 
+        />
       )}
     </Box>
   );

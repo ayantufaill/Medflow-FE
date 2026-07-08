@@ -1,6 +1,8 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useMemo } from "react";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import dayjs from "dayjs";
+import { useDroppable } from "@dnd-kit/core";
 import {
   HOURS,
   HOUR_HEIGHT,
@@ -230,7 +232,124 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick }) => {
+  const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
+  
+  // Create two droppable zones for the hour: top half (0 mins) and bottom half (30 mins)
+  const { setNodeRef: setNodeRefTop, isOver: isOverTop } = useDroppable({
+    id: `slot-${roomId}-${hour}-0`,
+  });
+  
+  const { setNodeRef: setNodeRefBottom, isOver: isOverBottom } = useDroppable({
+    id: `slot-${roomId}-${hour}-30`,
+  });
+
+  return (
+    <Box
+      onClick={(e) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const isBottomHalf = y > HOUR_HEIGHT / 2;
+        const mins = isBottomHalf ? 30 : 0;
+        setActiveCell({
+          hour,
+          mins,
+          roomId
+        });
+      }}
+      sx={{
+        width: COLUMN_MIN_WIDTH,
+        flexShrink: 0,
+        borderLeft: `1px solid ${COLORS.BORDER}`,
+        position: "relative",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        "&:hover": {
+          backgroundColor: "rgba(34, 98, 239, 0.04)",
+        },
+        "&::after": {
+          content: '""',
+          position: "absolute",
+          top: "50%",
+          left: 0,
+          right: 0,
+          borderTop: "1px dashed #e8ecf0",
+          pointerEvents: "none",
+        },
+      }}
+    >
+      <Box ref={setNodeRefTop} sx={{ flex: 1, backgroundColor: isOverTop ? "rgba(34, 98, 239, 0.1)" : "transparent" }} />
+      <Box ref={setNodeRefBottom} sx={{ flex: 1, backgroundColor: isOverBottom ? "rgba(34, 98, 239, 0.1)" : "transparent" }} />
+      {/* Active cell options popup */}
+      {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: activeCell.mins === 30 ? '50%' : 0,
+            height: '50%',
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            size="small"
+            variant="contained"
+            disableElevation
+            onClick={() => {
+              if (onSlotClick) onSlotClick(activeCell.hour, activeCell.mins, activeCell.roomId);
+              setActiveCell(null);
+            }}
+            sx={{ 
+              fontSize: '10px', 
+              fontWeight: fontWeight.semibold, 
+              textTransform: 'none', 
+              py: 0.5, 
+              minWidth: '80%', 
+              backgroundColor: COLORS.ACCENT, 
+              borderRadius: '6px',
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
+            }}
+          >
+            Schedule Appointment
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              if (onBlockClick) onBlockClick(activeCell.hour, activeCell.mins, activeCell.roomId);
+              setActiveCell(null);
+            }}
+            sx={{ 
+              fontSize: '10px', 
+              fontWeight: fontWeight.semibold, 
+              textTransform: 'none', 
+              py: 0.5, 
+              minWidth: '80%', 
+              color: COLORS.TEXT_PRIMARY, 
+              borderColor: COLORS.BORDER,
+              borderRadius: '6px',
+            }}
+          >
+            Block slot
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) => {
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate } = useScheduleState();
   
@@ -300,16 +419,46 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
   // then convert each API record to the AppointmentCard shape.
   const visibleAppointments = useMemo(() => {
     const targetDate = dayjsDate.format("YYYY-MM-DD");
-    return rawAppointments
+    const appts = rawAppointments
       .filter((appt) => {
         const apptDate = appt.appointmentDate
           ? String(appt.appointmentDate).slice(0, 10)
           : null;
-        return apptDate === targetDate;
+        const isTargetDate = apptDate === targetDate;
+        const isNotPending = String(appt.status).toLowerCase() !== 'pending';
+        return isTargetDate && isNotPending;
       })
       .map((appt) => mapApiAppointmentToGridItem(appt, providerMap))
       .filter(Boolean); // remove nulls from appointments outside the hour range
-  }, [rawAppointments, selectedDate, providerMap]);
+
+    const blocks = scheduleBlocks.map(block => {
+      if (!block.startTime || !block.endTime) return null;
+      
+      const startH = parseInt(block.startTime.split(':')[0], 10);
+      const startM = parseInt(block.startTime.split(':')[1], 10);
+      const endH = parseInt(block.endTime.split(':')[0], 10);
+      const endM = parseInt(block.endTime.split(':')[1], 10);
+      
+      if (startH >= END_HOUR || endH <= START_HOUR) return null;
+
+      const durationMinutes = (endH - startH) * 60 + (endM - startM);
+
+      return {
+        id: block._id || block.id,
+        roomId: block.roomId || "1",
+        startHour: startH,
+        startMinute: startM,
+        endHour: endH,
+        durationMinutes,
+        type: "block",
+        title: block.notes || "Blocked",
+        color: block.color,
+        ...block
+      };
+    }).filter(Boolean);
+
+    return [...appts, ...blocks];
+  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks]);
 
   // Total grid width grows with the number of rooms.
   const totalWidth = TIME_LABEL_WIDTH + (rooms.length || 1) * COLUMN_MIN_WIDTH;
@@ -355,106 +504,16 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
 
           {/* One cell per operatory column */}
           {rooms.map((room, idx) => (
-            <Box
+            <DroppableCell 
               key={room._id || room.id || idx}
-              
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                const y = e.clientY - rect.top;
-                const isBottomHalf = y > HOUR_HEIGHT / 2;
-                const mins = isBottomHalf ? 30 : 0;
-                setActiveCell({
-                  hour,
-                  mins,
-                  roomId: room._id || room.id || room.roomCode || `op${idx + 1}`
-                });
-              }}
-              onDragOver={(e) => handleDragOver(e, room._id || room.id || `op${idx + 1}`)}
-              sx={{
-                width: COLUMN_MIN_WIDTH,
-                flexShrink: 0,
-                borderLeft: `1px solid ${COLORS.BORDER}`,
-                position: "relative",
-                cursor: "pointer",
-                "&:hover": {
-                  backgroundColor: "rgba(34, 98, 239, 0.04)",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  top: "50%",
-                  left: 0,
-                  right: 0,
-                  borderTop: "1px dashed #e8ecf0",
-                  pointerEvents: "none",
-                },
-              }}
-            >
-              {/* Active cell options popup */}
-              {activeCell && activeCell.hour === hour && activeCell.roomId === (room._id || room.id || room.roomCode || `op${idx + 1}`) && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: activeCell.mins === 30 ? '50%' : 0,
-                    height: '50%',
-                    left: 0,
-                    right: 0,
-                    zIndex: 10,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disableElevation
-                    onClick={() => {
-                      if (onSlotClick) onSlotClick(activeCell.hour, activeCell.mins, activeCell.roomId);
-                      setActiveCell(null);
-                    }}
-                    sx={{ 
-                      fontSize: '10px', 
-                      fontWeight: fontWeight.semibold, 
-                      textTransform: 'none', 
-                      py: 0.5, 
-                      minWidth: '80%', 
-                      backgroundColor: COLORS.ACCENT, 
-                      borderRadius: '6px',
-                      '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
-                    }}
-                  >
-                    Schedule Appointment
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      // if (onBlockClick) onBlockClick(activeCell.hour, activeCell.mins, activeCell.roomId);
-                      setActiveCell(null);
-                    }}
-                    sx={{ 
-                      fontSize: '10px', 
-                      fontWeight: fontWeight.semibold, 
-                      textTransform: 'none', 
-                      py: 0.5, 
-                      minWidth: '80%', 
-                      color: COLORS.TEXT_PRIMARY, 
-                      borderColor: COLORS.BORDER,
-                      borderRadius: '6px',
-                    }}
-                  >
-                    Block Slot
-                  </Button>
-                </Box>
-              )}
-            </Box>
+              hour={hour}
+              room={room}
+              idx={idx}
+              activeCell={activeCell}
+              setActiveCell={setActiveCell}
+              onSlotClick={onSlotClick}
+              onBlockClick={onBlockClick}
+            />
           ))}
         </Box>
       ))}

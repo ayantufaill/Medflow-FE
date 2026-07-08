@@ -8,7 +8,7 @@ import ColorTagPicker from "./ColorTagPicker";
 
 const AppointmentRightPanel = ({
   status, onStatusChange,
-  roomId, onRoomChange, rooms,
+  roomId, onRoomChange, rooms, isRoomOccupied,
   durationMins, onDurationChange,
   providerRows, setProviderRows,
   preferredDentist, onPreferredDentistChange,
@@ -50,6 +50,11 @@ const AppointmentRightPanel = ({
           );
         })}
       </Select>
+      {isRoomOccupied && (
+        <Typography sx={{ color: '#ef4444', fontSize: '12px', mt: '4px', fontFamily: 'Inter' }}>
+          This operatory is occupied at the selected time.
+        </Typography>
+      )}
     </FieldBox>
 
     <DurationPicker value={durationMins} onChange={onDurationChange} />

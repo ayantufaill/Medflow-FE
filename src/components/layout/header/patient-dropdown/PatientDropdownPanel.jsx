@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { Search, PersonAdd, Add } from "@mui/icons-material";
 import { useDebounce } from "use-debounce";
@@ -105,6 +106,7 @@ const FooterAction = ({ icon, label, onClick }) => (
 // onClose is called after a patient is selected so the parent can hide the panel.
 
 const PatientDropdownPanel = ({ onClose }) => {
+  const navigate = useNavigate();
   const { patients, loading, fetch: searchPatients } = usePatients();
   // setPatient dispatches setCurrentPatient which atomically sets both
   // currentPatient and selectedPatientId — no need to call setPatientId separately.
@@ -237,6 +239,10 @@ const PatientDropdownPanel = ({ onClose }) => {
       <FooterAction
         icon={<PersonAdd sx={{ fontSize: "15px", color: "#2262ef" }} />}
         label="Add new patient"
+        onClick={() => {
+          onClose?.();
+          navigate("/patients/new");
+        }}
       />
       <FooterAction
         icon={<Add sx={{ fontSize: "15px", color: "#2262ef" }} />}

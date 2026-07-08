@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useDraggable } from "@dnd-kit/core";
+import { useDispatch } from "react-redux";
+import { fetchPatientById } from "../../../store/slices/patientSlice";
 import {
   Phone,
   OpenInNew,
@@ -57,30 +60,44 @@ const TagCircle = ({ icon, bg }) => (
   </Box>
 );
 
-const BlockCard = ({ title }) => (
-  <Box
-    sx={{
-      height: "70%",
-      border: "1.5px dashed #90caf9",
+const BlockCard = ({ title, blockId, block }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `block-${blockId}`,
+    data: {
+      isBlockSlot: true,
+      blockId,
+      block,
+    },
+  });
+
+  return (
+    <Box
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      sx={{
+        height: "100%",
+      border: `1.5px dashed ${block.color ? "rgba(0,0,0,0.2)" : "#90caf9"}`,
       borderRadius: radius.sm,
-      backgroundColor: "#eef4ff",
+      backgroundColor: block.color || "#eef4ff",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       px: "8px",
     }}
   >
-    <Typography
-      sx={{
-        fontSize: fontSize.xs,
-        fontWeight: fontWeight.medium,
-        color: COLORS.ACCENT,
-      }}
-    >
+      <Typography
+        sx={{
+          fontSize: '13px',
+          fontWeight: fontWeight.medium,
+          color: '#1f2937', // dark gray, readable on pastel backgrounds
+        }}
+      >
       {title}
     </Typography>
   </Box>
-);
+  );
+};
 
 // Returns a size tier based on appointment duration in minutes:
 //   'xs'     < 20 min  — header bar only
@@ -99,6 +116,34 @@ const AppointmentCard = ({ appointment }) => {
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // When an appointment is clicked, update the Redux patient so the left panel
+  // PatientCard and AppointmentChecklist react to the newly selected patient.
+  const handleCardClick = (e) => {
+    // Don't interfere with drag operations.
+    if (e.defaultPrevented) return;
+
+    // Always fire the custom event so LeftPanel shows the summary card
+    window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+      detail: { ...appointment },
+    }));
+
+    // Also fetch the full patient details into Redux so the dropdown and left panel
+    // PatientCard display the exact same comprehensive data as when searched.
+    if (appointment.patientId) {
+      dispatch(fetchPatientById(appointment.patientId));
+    }
+  };
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `appt-${appointment.id}`,
+    data: {
+      isAppointment: true,
+      appointmentId: appointment.id,
+      appointment,
+    },
+  });
 
   const handleMouseEnter = () => {
     clearTimeout(leaveTimer.current);
@@ -110,7 +155,7 @@ const AppointmentCard = ({ appointment }) => {
   };
 
   if (appointment.type === "block")
-    return <BlockCard title={appointment.title} />;
+    return <BlockCard title={appointment.title} blockId={appointment.id} block={appointment} />;
 
   const statusCfg =
     STATUS_CONFIG[appointment.status] ?? STATUS_CONFIG.CONFIRMED;
@@ -126,9 +171,15 @@ const AppointmentCard = ({ appointment }) => {
     return (
       <>
         <Box
-          ref={cardRef}
+          ref={(node) => {
+            setNodeRef(node);
+            cardRef.current = node;
+          }}
+          {...listeners}
+          {...attributes}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onClick={handleCardClick}
           sx={{
             height: "100%",
             borderRadius: radius.sm,
@@ -205,9 +256,15 @@ const AppointmentCard = ({ appointment }) => {
   return (
     <>
       <Box
-        ref={cardRef}
+        ref={(node) => {
+          setNodeRef(node);
+          cardRef.current = node;
+        }}
+        {...listeners}
+        {...attributes}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={handleCardClick}
         sx={{
           height: "100%",
           borderRadius: radius.md,

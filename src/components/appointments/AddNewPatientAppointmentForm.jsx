@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Box, Dialog } from "@mui/material";
 import dayjs from "dayjs";
+import { shortlistService } from "../../services/shortlist.service";
 
 import { INITIAL_PROCEDURES, TAG_DEFAULT_PROCEDURES, DEFAULT_PROCEDURE_TAGS } from "./new-appointment/constants";
 import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
@@ -14,6 +15,8 @@ const AddNewPatientAppointmentForm = ({
   onPatientSearch,
   providers = [],
   rooms = [],
+  appointments = [],
+  scheduleBlocks = [],
   // eslint-disable-next-line no-unused-vars
   appointmentTypes: _appointmentTypes = [],
   onSubmit,
@@ -23,7 +26,6 @@ const AddNewPatientAppointmentForm = ({
   initialDateTime = null,
   initialRoomId = "",
   open = true,
-  appointments = [],
 }) => {
   /* ── Left panel state ── */
   const [patient,           setPatient]           = useState(initialPatient || null);
@@ -51,7 +53,7 @@ const AddNewPatientAppointmentForm = ({
   const [notes,              setNotes]              = useState("");
   const [selectedColorTags,  setSelectedColorTags]  = useState(new Set(["#eab308"]));
 
-  const availableRooms = useMemo(() => {
+  const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
     const hour = amPm === "PM" ? h + 12 : h;
     const selectedStart = dayjs(apptDate).hour(hour).minute(parseInt(timeMins));
@@ -71,14 +73,23 @@ const AddNewPatientAppointmentForm = ({
         occupied.add(String(appt.roomId));
       }
     });
-    // Keep the already-selected room in the list even if it now reads as occupied,
-    // otherwise the Select can't match `roomId` to a MenuItem and silently shows
-    // "Select operatory" instead of the operatory the user actually picked.
-    return rooms.filter(r => {
-      const id = String(r._id || r.id);
-      return id === String(roomId) || !occupied.has(id);
+
+    scheduleBlocks.forEach(block => {
+      if (!block.date || !block.roomId || !block.startTime || !block.endTime) return;
+      if (block.date !== selectedStart.format("YYYY-MM-DD")) return;
+
+      const [startH, startM] = block.startTime.split(':').map(Number);
+      const [endH, endM] = block.endTime.split(':').map(Number);
+      const blockStart = dayjs(apptDate).hour(startH).minute(startM);
+      const blockEnd = dayjs(apptDate).hour(endH).minute(endM);
+
+      if (selectedStart.isBefore(blockEnd) && selectedEnd.isAfter(blockStart)) {
+        occupied.add(String(block.roomId));
+      }
     });
-  }, [rooms, appointments, apptDate, timeHours, timeMins, amPm, durationMins, roomId]);
+
+    return occupied;
+  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins]);
 
   useEffect(() => {
     if (open) {
@@ -104,8 +115,12 @@ const AddNewPatientAppointmentForm = ({
       setStatus("scheduled");
       setDurationMins(60);
       setProviderRows([{ id: Date.now(), providerId: "", time: 60 }]);
-      setPreferredDentist("");
-      setPreferredHygienist("");
+      
+      const dentist = initialPatient?.preferredDentistId || initialPatient?.preferredDentist || initialPatient?.preferredProviderId;
+      const hygienist = initialPatient?.preferredHygienistId || initialPatient?.preferredHygienist;
+      setPreferredDentist(dentist ? String(dentist) : "");
+      setPreferredHygienist(hygienist ? String(hygienist) : "");
+
       setNotes("");
       setSelectedColorTags(new Set(["#eab308"]));
     }
@@ -126,6 +141,19 @@ const AddNewPatientAppointmentForm = ({
       setSelectedTagLabels(new Set());
       setTagProcedureIds({});
     }
+
+    if (newPatient) {
+      // Auto-populate preferred providers from patient profile if available
+      const dentist = newPatient.preferredDentistId || newPatient.preferredDentist || newPatient.preferredProviderId;
+      if (dentist) setPreferredDentist(String(dentist));
+      
+      const hygienist = newPatient.preferredHygienistId || newPatient.preferredHygienist;
+      if (hygienist) setPreferredHygienist(String(hygienist));
+    } else {
+      setPreferredDentist("");
+      setPreferredHygienist("");
+    }
+
     setPatient(newPatient);
   };
 
@@ -190,8 +218,7 @@ const AddNewPatientAppointmentForm = ({
   }, [procedures, tagProcedureIds, selectedTagLabels]);
 
   /* ── Submit ── */
-  const handleSubmit = () => {
-    if (!onSubmit) return;
+  const getAppointmentPayload = () => {
     const end = dateTime.add(durationMins || 30, "minute");
     const selectedProcedureTags = [...selectedTagLabels]
       .map((key) => {
@@ -207,29 +234,23 @@ const AddNewPatientAppointmentForm = ({
       })
       .filter((tag) => tag.label);
 
-    // Calculate endTime from dateTime + durationMins
     const start = dateTime || dayjs();
     if (start.isBefore(dayjs().startOf('day'))) {
       alert("Appointment date cannot be in the past.");
-      return;
+      return null;
     }
 
-    onSubmit({
+    return {
       patientId:       patient?._id || patient?.id,
       patientName:     patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "",
       appointmentDate: dateTime.format("YYYY-MM-DD"),
       startTime:       dateTime.format("HH:mm"),
       endTime:         end.format("HH:mm"),
       durationMinutes: durationMins,
+      durationMins:    durationMins, // Added for backend compatibility
       status,
       notes,
       providerId: providerRows[0]?.providerId || undefined,
-      // Backend appointment schema expects `roomId` (see project notes), so that stays
-      // the top-level field. `operatoryId` is mirrored into customFields as the same
-      // value so the schedule grid (which maps appointments back to an operatory
-      // column via roomId/columnId) and any operatory-scoped consumers of the
-      // created appointment have an explicit, correctly-named field to read instead
-      // of having to know that "operatory" and "room" are the same concept here.
       roomId:     roomId || undefined,
       customFields: {
         visitType,
@@ -238,13 +259,31 @@ const AddNewPatientAppointmentForm = ({
         preferredHygienist,
         colorTags: [...selectedColorTags],
         procedureTags: selectedProcedureTags,
-        // operatoryId reflects the operatory chart column the appointment was created
-        // from (set via the initialRoomId prop when the user clicks a slot on the
-        // /appointments operatory grid), kept in sync with roomId if changed via the
-        // Room dropdown in the right panel.
         operatoryId: roomId || undefined,
       },
-    });
+    };
+  };
+
+  const handleSubmit = () => {
+    if (!onSubmit) return;
+    const payload = getAppointmentPayload();
+    if (payload) onSubmit(payload);
+  };
+
+  const handleConvertToShortlist = async () => {
+    if (!patient) {
+      alert("Please select a patient first.");
+      return;
+    }
+    const payload = getAppointmentPayload();
+    try {
+      await shortlistService.createShortlistItem(payload);
+      alert("Successfully converted to shortlist!");
+      if (onCancel) onCancel(); // Close modal
+    } catch (error) {
+      console.error("Failed to convert to shortlist:", error);
+      alert("Failed to convert to shortlist. See console for details.");
+    }
   };
 
   const patientDisplayName = patient
@@ -265,7 +304,7 @@ const AddNewPatientAppointmentForm = ({
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", backgroundColor: "#fff" }}>
-        <AppointmentModalHeader onCancel={onCancel} />
+        <AppointmentModalHeader onCancel={onCancel} onConvertToShortlist={handleConvertToShortlist} />
 
         <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
           <AppointmentLeftPanel
@@ -300,7 +339,8 @@ const AddNewPatientAppointmentForm = ({
             onStatusChange={setStatus}
             roomId={roomId}
             onRoomChange={setRoomId}
-            rooms={availableRooms}
+            rooms={rooms}
+            isRoomOccupied={roomId && occupiedRoomIds.has(String(roomId))}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
             providerRows={providerRows}

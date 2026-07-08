@@ -418,10 +418,31 @@ const appointmentSlice = createSlice({
       // ── updateAppointmentThunk ────────────────────────────────────────────
       .addCase(updateAppointmentThunk.fulfilled, (state, action) => {
         if (!action.payload) return;
-        const id = action.payload._id || action.payload.id;
-        const idx = state.list.findIndex(a => (a._id || a.id) === id);
+        const id = String(action.payload._id || action.payload.id);
+        const idx = state.list.findIndex(a => String(a._id || a.id) === id);
         // Update in the list so the grid card reflects the new time/status/room.
-        if (idx !== -1) state.list[idx] = action.payload;
+        if (idx !== -1) {
+          const existing = state.list[idx];
+          const payload = { ...action.payload };
+
+          // Preserve populated objects if the payload returned an unpopulated string ID
+          if (typeof payload.patientId === 'string' && typeof existing.patientId === 'object' && existing.patientId) {
+            payload.patientId = existing.patientId;
+          }
+          if (typeof payload.providerId === 'string' && typeof existing.providerId === 'object' && existing.providerId) {
+            payload.providerId = existing.providerId;
+          }
+          if (typeof payload.appointmentTypeId === 'string' && typeof existing.appointmentTypeId === 'object' && existing.appointmentTypeId) {
+            payload.appointmentTypeId = existing.appointmentTypeId;
+          }
+
+          // Preserve frontend-mapped names if backend didn't return them
+          if (!payload.patientName && existing.patientName) payload.patientName = existing.patientName;
+          if (!payload.patient && existing.patient) payload.patient = existing.patient;
+          if (!payload.appointmentType && existing.appointmentType) payload.appointmentType = existing.appointmentType;
+
+          state.list[idx] = { ...existing, ...payload };
+        }
         // Keep currentAppointment in sync if the details panel is open.
         if (state.currentAppointment?._id === id) state.currentAppointment = action.payload;
         // Evict the cache entry so the next fetchAppointmentById returns fresh data

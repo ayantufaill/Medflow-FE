@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, no-empty */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu } from '@mui/material';
 import dayjs from 'dayjs';
@@ -20,11 +21,22 @@ import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
 import LabCasesDialog from "../../components/appointments/LabCasesDialog";
-import BlockSlotDialog from "../../components/appointments/BlockSlotDialog";
+import BlockSlotModal from "../../components/appointments/schedule/BlockSlotModal";
 import { scheduleBlockService } from "../../services/schedule-block.service";
+import { shortlistService } from "../../services/shortlist.service";
 import {
   fetchPatients,
 } from '../../store/slices/patientSlice';
+
+import {
+  DndContext,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  pointerWithin,
+} from "@dnd-kit/core";
 
 // Constants
 const START_HOUR = 0;
@@ -95,6 +107,21 @@ const OperatorySchedulePage = () => {
   const { patients: formPatients } = usePatients();
   const { currentPatient } = usePatient();
 
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 5,
+    },
+  });
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5,
+    },
+  });
+  const sensors = useSensors(mouseSensor, touchSensor);
+  const [activeDragData, setActiveDragData] = useState(null);
+  const [pendingItems, setPendingItems] = useState([]);
+
   // Dynamically derive operatory columns from the rooms list.
   const OPERATORY_COLUMNS = useMemo(() => {
     if (!rooms || rooms.length === 0) {
@@ -132,21 +159,16 @@ const OperatorySchedulePage = () => {
 
 
 
-  const handleDropOnPending = (dragData) => {
+  const handleDropOnPending = async (dragData) => {
     if (dragData.isAppointment) {
       const appt = dragData.appointment;
       const apptId = dragData.appointmentId;
-      if (pendingItems.some(item => item.id === apptId)) {
-        showSnackbar("Appointment is already in the pending list", "info");
-        return;
+      try {
+        await updateAppointment(apptId, { status: "pending", roomId: null });
+        showSnackbar(`Moved ${appt.patientName}'s appointment to Pending`, "success");
+      } catch (err) {
+        showSnackbar("Failed to move appointment to pending", "error");
       }
-      setPendingItems(prev => [...prev, {
-        id: apptId,
-        type: "appointment",
-        data: appt
-      }]);
-      showSnackbar(`Moved ${appt.patientName}'s appointment to Pending`, "success");
-      setActiveTab(1);
     } else if (dragData.isBlockSlot) {
       const block = dragData.block;
       const blockId = dragData.blockId;
@@ -160,7 +182,6 @@ const OperatorySchedulePage = () => {
         data: block
       }]);
       showSnackbar(`Moved calendar block to Pending`, "success");
-      setActiveTab(1);
     }
   };
 
@@ -172,17 +193,18 @@ const OperatorySchedulePage = () => {
   const handleDropReschedule = async (columnId, minutesFromStart, dragData) => {
     const isAppt = dragData.isAppointment || (dragData.isPendingItem && dragData.type === "appointment");
     const isBlock = dragData.isBlockSlot || (dragData.isPendingItem && dragData.type === "block");
+    const isShortlist = dragData.isShortlistItem;
     
-    const itemData = dragData.isPendingItem ? dragData.originalData : (dragData.appointment || dragData.block);
-    const itemId = dragData.isPendingItem ? dragData.id : (dragData.appointmentId || dragData.blockId);
+    const itemData = dragData.isPendingItem || isShortlist ? dragData.originalData : (dragData.appointment || dragData.block);
+    const itemId = dragData.isPendingItem || isShortlist ? dragData.id : (dragData.appointmentId || dragData.blockId);
 
     const start = selectedDate
       .clone()
       .startOf("day")
       .add(minutesFromStart, "minute");
     
-    const duration = isAppt 
-      ? (itemData.durationMinutes || 60) 
+    const duration = isAppt || isShortlist
+      ? (itemData.durationMinutes || itemData.DurationMins || 60) 
       : 30;
     
     let blockDuration = 30;
@@ -192,9 +214,45 @@ const OperatorySchedulePage = () => {
       blockDuration = endMin - startMin;
     }
     
-    const end = start.clone().add(isAppt ? duration : blockDuration, "minute");
+    const end = start.clone().add(isAppt || isShortlist ? duration : blockDuration, "minute");
 
-    if (isAppt) {
+    if (isShortlist) {
+      try {
+        setFormSaving(true);
+        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+        const patientId = itemData.patientId || itemData.PatNum;
+        const providerId = itemData.providerId || itemData.ProvNum;
+
+        // Create new appointment from shortlist data
+        await reduxCreateAppointment({
+          patientId: String(patientId),
+          providerId: String(providerId || DUMMY_PROVIDER_ID),
+          appointmentDate: start.format('YYYY-MM-DD'),
+          startTime: start.format('HH:mm'),
+          endTime: end.format('HH:mm'),
+          durationMinutes: duration,
+          notes: itemData.notes || itemData.Notes || '',
+          status: 'scheduled',
+          roomId: roomId,
+          customFields: itemData.customFields || itemData.CustomFields || {},
+        });
+
+        // Optionally delete from shortlist
+        if (itemId) {
+          try { 
+            await shortlistService.deleteShortlistItem(itemId); 
+            window.dispatchEvent(new Event('shortlist-updated'));
+          } catch (e) {}
+        }
+
+        showSnackbar("Shortlist appointment scheduled successfully", "success");
+      } catch (err) {
+        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to schedule shortlist appointment";
+        showSnackbar(msg, "error");
+      } finally {
+        setFormSaving(false);
+      }
+    } else if (isAppt) {
       try {
         setFormSaving(true);
         const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
@@ -203,12 +261,11 @@ const OperatorySchedulePage = () => {
           appointmentDate: start.format("YYYY-MM-DD"),
           startTime: start.format("HH:mm"),
           endTime: end.format("HH:mm"),
-          roomId: roomId
-        }).unwrap();
+          roomId: roomId,
+          status: "scheduled"
+        });
 
         showSnackbar("Appointment rescheduled successfully", "success");
-        setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        await refreshAppointments();
       } catch (err) {
         const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
         showSnackbar(msg, "error");
@@ -477,7 +534,10 @@ const OperatorySchedulePage = () => {
   const mappedAppointments = useMemo(() => {
     if (!reduxAppointments) return [];
     console.log("Raw reduxAppointments:", reduxAppointments);
-    const mapped = reduxAppointments.map(mapAppointment).filter(Boolean);
+    const mapped = reduxAppointments
+      .filter(a => String(a.status).toLowerCase() !== 'pending')
+      .map(mapAppointment)
+      .filter(Boolean);
     console.log("Mapped appointments:", mapped);
     return mapped;
   }, [reduxAppointments]);
@@ -588,8 +648,41 @@ const OperatorySchedulePage = () => {
     }
   };
 
+  const handleDragStart = (event) => {
+    setActiveDragData(event.active.data.current);
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setActiveDragData(null);
+    if (!over) return;
+
+    const dragData = active.data.current;
+    if (!dragData) return;
+
+    // Dropped on Pending Reschedules
+    if (over.id === "pending-tab") {
+      handleDropOnPending(dragData);
+      return;
+    }
+
+    // Dropped on Schedule Grid Time Slot
+    // Expecting over.id format: `slot-${roomId}-${hour}-${mins}`
+    if (String(over.id).startsWith("slot-")) {
+      const parts = String(over.id).split('-');
+      if (parts.length >= 4) {
+        const roomId = parts[1];
+        const hour = parseInt(parts[2], 10);
+        const mins = parseInt(parts[3], 10);
+        const minutesFromStart = (hour - START_HOUR) * 60 + mins;
+        handleDropReschedule(roomId, minutesFromStart, dragData);
+      }
+    }
+  };
+
   return (
-    <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: COLORS.SURFACE_PAGE, boxSizing: 'border-box', overflow: 'hidden' }}>
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: COLORS.SURFACE_PAGE, boxSizing: 'border-box', overflow: 'hidden' }}>
 
       {/* LEFT PANEL — 1/5 */}
       <Box sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
@@ -599,10 +692,26 @@ const OperatorySchedulePage = () => {
       {/* CENTER PANEL — 3/5 */}
       <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} />
-        <ScheduleCalendar onSlotClick={(hour, mins, roomId) => {
-          const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-          handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
-        }} />
+        <ScheduleCalendar 
+          scheduleBlocks={scheduleBlocks}
+          onSlotClick={(hour, mins, roomId) => {
+            const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+            handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
+          }} 
+          onBlockClick={(hour, mins, roomId) => {
+            const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+            const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+            const end = start.clone().add(30, "minute");
+            
+            setBlockSlotDialogData({
+              roomId,
+              date: baseDate.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm")
+            });
+            setBlockSlotDialogOpen(true);
+          }}
+        />
       </Box>
 
       {/* RIGHT PANEL — 1/5 */}
@@ -623,6 +732,7 @@ const OperatorySchedulePage = () => {
         rooms={rooms || []}
         appointmentTypes={appointmentTypes || []}
         appointments={appointments || []}
+        scheduleBlocks={scheduleBlocks || []}
         patients={formPatients || []}
         loadingPatients={loadingFormPatients}
         onPatientSearch={searchFormPatients}
@@ -641,7 +751,7 @@ const OperatorySchedulePage = () => {
         providers={providers || []}
       />
 
-      <BlockSlotDialog
+      <BlockSlotModal
         open={blockSlotDialogOpen}
         onClose={() => setBlockSlotDialogOpen(false)}
         initialData={blockSlotDialogData}
@@ -921,7 +1031,31 @@ const OperatorySchedulePage = () => {
           Landscape
         </MenuItem>
       </Menu>
+
+      <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+        {activeDragData ? (
+          <Box sx={{ 
+            p: 1.5, 
+            backgroundColor: 'rgba(255,255,255,0.95)', 
+            border: `1px solid ${COLORS.BORDER}`, 
+            borderRadius: radius.md, 
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            width: '200px',
+            opacity: 0.9,
+            cursor: 'grabbing'
+          }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
+              {activeDragData.appointment?.patientName || activeDragData.originalData?.patientId?.firstName || "Dragging Item"}
+            </Typography>
+            <Typography sx={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY }}>
+              {activeDragData.appointment?.visitType || "Appointment"}
+            </Typography>
+          </Box>
+        ) : null}
+      </DragOverlay>
+
     </Box>
+    </DndContext>
   );
 };
 

@@ -4,11 +4,15 @@ import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight } from '../../../constants/styles';
 
 const LeftPanelTabs = ({ activeTab, onChange }) => {
-  const pendingCount = useSelector((state) => state.waitlist?.total || 0);
+  const pendingCount = useSelector((state) => {
+    const waitlistCount = state.waitlist?.total || 0;
+    const pendingApptsCount = (state.appointments?.list || []).filter(a => String(a.status).toLowerCase() === 'pending').length;
+    return waitlistCount + pendingApptsCount;
+  });
 
   const TABS = [
     { label: 'Patient' },
-    { label: 'Pending', count: pendingCount },
+    { label: 'Pending'},
     { label: 'Search' },
     { label: 'Productivity' },
   ];

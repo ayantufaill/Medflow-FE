@@ -86,7 +86,7 @@ const BlockSlotDialog = ({
         justifyContent: "space-between",
         alignItems: "center"
       }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography component="div" variant="h6" sx={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
           <AccessTimeIcon /> Block Slot
         </Typography>
         <IconButton
