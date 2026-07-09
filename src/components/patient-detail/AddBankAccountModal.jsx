@@ -1,17 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Dialog, Box, Typography, TextField, Button, IconButton, Switch, FormControlLabel, CircularProgress } from '@mui/material';
+import { Dialog, Box, Typography, TextField, MenuItem, Button, IconButton, Switch, FormControlLabel, CircularProgress } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
-import { formatCardNumber, expectedCardLength, tokenizeCard } from '../../utils/cardTokenization';
+import { isValidRoutingNumber, tokenizeBankAccount } from '../../utils/bankAccountTokenization';
 
 const ERROR_RED = '#ef4444'; // matches the app's existing error-red convention (see AppointmentRightPanel's "occupied" message)
-
-const formatExpiry = (value) => {
-  const digitsOnly = value.replace(/\D/g, '').slice(0, 4); // Limit to 4 digits (MMYY)
-  if (digitsOnly.length <= 2) return digitsOnly;
-  return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`; // Format as MM/YY
-};
 
 const errorFieldSx = {
   '& .MuiOutlinedInput-notchedOutline': { borderColor: ERROR_RED },
@@ -20,58 +14,49 @@ const errorFieldSx = {
 };
 
 /**
- * Add-card modal (a Dialog, not a page — patient context stays in place behind it).
- * Collects card details, calls the tokenizeCard() stub (see cardTokenization.js
- * for why it's a stub, not a real Stripe/Braintree call), and hands the parent
- * only the tokenized result — the raw card number/CVV never leave this component.
+ * Add-account modal (a Dialog, not a page — patient context stays in place behind
+ * it). Mirrors AddCreditCardModal.jsx exactly: collects account details, calls the
+ * tokenizeBankAccount() stub (see bankAccountTokenization.js for why it's a stub),
+ * and hands the parent only the tokenized result — the raw account/routing
+ * numbers never leave this component.
  */
-export default function AddCreditCardModal({ open, onClose, onSave, hasExistingCards }) {
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardholderName, setCardholderName] = useState('');
-  const [isDefault, setIsDefault] = useState(!hasExistingCards);
+export default function AddBankAccountModal({ open, onClose, onSave, hasExistingAccounts }) {
+  const [accountHolderName, setAccountHolderName] = useState('');
+  const [routingNumber, setRoutingNumber] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountType, setAccountType] = useState('checking');
+  const [isDefault, setIsDefault] = useState(!hasExistingAccounts);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Reset fresh every time the modal opens, using the *current* hasExistingCards —
+  // Reset fresh every time the modal opens, using the *current* hasExistingAccounts —
   // this component instance persists across multiple open/close cycles (only `open`
   // toggles, it never remounts), so a one-time useState initializer for isDefault
-  // goes stale after the first card is added (it incorrectly defaulted every
-  // subsequent card to "default" too).
+  // goes stale after the first account is added (see the identical fix/comment in
+  // AddCreditCardModal.jsx, which had this exact bug).
   useEffect(() => {
     if (open) {
-      setCardNumber('');
-      setExpiry('');
-      setCvv('');
-      setCardholderName('');
-      setIsDefault(!hasExistingCards);
+      setAccountHolderName('');
+      setRoutingNumber('');
+      setAccountNumber('');
+      setAccountType('checking');
+      setIsDefault(!hasExistingAccounts);
       setSubmitAttempted(false);
       setSaving(false);
     }
-  }, [open, hasExistingCards]);
+  }, [open, hasExistingAccounts]);
 
-  const digitsOnly = cardNumber.replace(/\D/g, '');
-  const [expMonthStr = '', expYearStr = ''] = expiry.split('/');
-  const expMonth = parseInt(expMonthStr, 10);
-  const expYear = expYearStr.length === 2 ? 2000 + parseInt(expYearStr, 10) : NaN;
-
-  const cardNumberValid = digitsOnly.length === expectedCardLength(digitsOnly);
-  const monthValid = expMonth >= 1 && expMonth <= 12;
-  const now = new Date();
-  const yearValid = !Number.isNaN(expYear)
-    && (expYear > now.getFullYear() || (expYear === now.getFullYear() && expMonth >= now.getMonth() + 1));
-  const expiryValid = monthValid && yearValid;
-  const cvvValid = /^\d{3,4}$/.test(cvv);
-  const nameValid = cardholderName.trim().length > 0;
+  const nameValid = accountHolderName.trim().length > 0;
+  const routingValid = isValidRoutingNumber(routingNumber);
+  const accountNumberValid = /^\d{4,17}$/.test(accountNumber.replace(/\D/g, ''));
 
   const handleSave = async () => {
     setSubmitAttempted(true);
-    if (!cardNumberValid || !expiryValid || !cvvValid || !nameValid) return;
+    if (!nameValid || !routingValid || !accountNumberValid) return;
 
     setSaving(true);
     try {
-      const tokenized = await tokenizeCard({ cardNumber, expMonth, expYear, cvv, cardholderName });
+      const tokenized = await tokenizeBankAccount({ accountHolderName, routingNumber, accountNumber, accountType });
       onSave(tokenized, isDefault);
       onClose();
     } finally {
@@ -85,7 +70,7 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
       onClose={onClose}
       PaperProps={{ sx: { width: '420px', maxWidth: '92vw', borderRadius: radius.lg, p: 0 } }}
     >
-      {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx */}
+      {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx / AddCreditCardModal.jsx */}
       <Box sx={{
         display: 'flex',
         alignItems: 'center',
@@ -98,7 +83,7 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
         borderTopRightRadius: radius.lg,
       }}>
         <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
-          Add Credit Card
+          Add Bank Account
         </Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: COLORS.TEXT_MUTED, p: '4px' }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -106,89 +91,19 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
       </Box>
 
       <Box sx={{ p: 2.5 }}>
-        {/* Card Number */}
+        {/* Account Holder Name */}
         <Box sx={{ mb: 2 }}>
           <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
-            Card Number
+            Account Holder Name
           </Typography>
           <TextField
             fullWidth
             size="small"
-            placeholder="4242 4242 4242 4242"
-            value={cardNumber}
-            onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-            inputProps={{ inputMode: 'numeric', maxLength: 19 }}
-            error={submitAttempted && !cardNumberValid}
-            helperText={submitAttempted && !cardNumberValid ? 'Enter a valid card number' : ' '}
-            FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
-            sx={{
-              '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
-              ...(submitAttempted && !cardNumberValid ? errorFieldSx : {}),
-            }}
-          />
-        </Box>
-
-        {/* Expiry + CVV */}
-        <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
-              Expiry (MM/YY)
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="MM/YY"
-              value={expiry}
-              onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-              inputProps={{ inputMode: 'numeric', maxLength: 5 }}
-              error={submitAttempted && !expiryValid}
-              helperText={
-                submitAttempted && !expiryValid
-                  ? (monthValid ? 'Card has expired' : 'Enter a valid expiry (MM/YY)')
-                  : ' '
-              }
-              FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
-              sx={{
-                '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
-                ...(submitAttempted && !expiryValid ? errorFieldSx : {}),
-              }}
-            />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
-              CVV
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="123"
-              value={cvv}
-              onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              inputProps={{ inputMode: 'numeric', maxLength: 4 }}
-              error={submitAttempted && !cvvValid}
-              helperText={submitAttempted && !cvvValid ? '3-4 digits' : ' '}
-              FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
-              sx={{
-                '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
-                ...(submitAttempted && !cvvValid ? errorFieldSx : {}),
-              }}
-            />
-          </Box>
-        </Box>
-
-        {/* Cardholder Name */}
-        <Box sx={{ mb: hasExistingCards ? 2 : 0.5 }}>
-          <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
-            Cardholder Name
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Name on card"
-            value={cardholderName}
-            onChange={(e) => setCardholderName(e.target.value)}
+            placeholder="Name on account"
+            value={accountHolderName}
+            onChange={(e) => setAccountHolderName(e.target.value)}
             error={submitAttempted && !nameValid}
-            helperText={submitAttempted && !nameValid ? 'Cardholder name is required' : ' '}
+            helperText={submitAttempted && !nameValid ? 'Account holder name is required' : ' '}
             FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
             sx={{
               '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
@@ -197,8 +112,70 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
           />
         </Box>
 
-        {/* Set as default — only meaningful once more than one card can exist */}
-        {hasExistingCards && (
+        {/* Routing + Account Type */}
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
+              Routing Number
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="021000021"
+              value={routingNumber}
+              onChange={(e) => setRoutingNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              inputProps={{ inputMode: 'numeric', maxLength: 9 }}
+              error={submitAttempted && !routingValid}
+              helperText={submitAttempted && !routingValid ? 'Enter a valid 9-digit routing number' : ' '}
+              FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
+              sx={{
+                '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
+                ...(submitAttempted && !routingValid ? errorFieldSx : {}),
+              }}
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
+              Account Type
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
+            >
+              <MenuItem value="checking">Checking</MenuItem>
+              <MenuItem value="savings">Savings</MenuItem>
+            </TextField>
+          </Box>
+        </Box>
+
+        {/* Account Number */}
+        <Box sx={{ mb: hasExistingAccounts ? 2 : 0.5 }}>
+          <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
+            Account Number
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="000123456789"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 17))}
+            inputProps={{ inputMode: 'numeric', maxLength: 17 }}
+            error={submitAttempted && !accountNumberValid}
+            helperText={submitAttempted && !accountNumberValid ? 'Enter a valid account number' : ' '}
+            FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
+            sx={{
+              '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
+              ...(submitAttempted && !accountNumberValid ? errorFieldSx : {}),
+            }}
+          />
+        </Box>
+
+        {/* Set as default — only meaningful once more than one account can exist */}
+        {hasExistingAccounts && (
           <FormControlLabel
             control={<Switch size="small" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />}
             label={<Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_BODY }}>Set as default</Typography>}
