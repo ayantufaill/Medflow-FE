@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
-import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, InputAdornment, IconButton, Radio, Checkbox, FormControlLabel, RadioGroup } from "@mui/material";
+import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, InputAdornment, IconButton, Radio, FormControlLabel } from "@mui/material";
 import {
   AssignmentOutlined as PersonalHistoryIcon,
   Edit as EditIcon,
   Check as CheckIcon,
-  InfoOutlined as InfoIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
 import SectionCard from "../shared/SectionCard";
@@ -24,6 +23,21 @@ const CONDITION_ANSWER_STYLES = {
   no: { label: "NO", color: COLORS.STATUS_SUCCESS, bg: "rgba(22, 163, 74, 0.10)" },
 };
 
+import { fontSize, fontWeight, radius } from "../../constants/styles";
+
+const SEVERITY_STYLES = {
+  low: { label: "Low", color: COLORS.STATUS_SUCCESS, bg: "rgba(22, 163, 74, 0.10)" },
+  moderate: { label: "Moderate", color: COLORS.STATUS_WARNING, bg: "rgba(234, 88, 12, 0.10)" },
+  high: { label: "High", color: COLORS.STATUS_ERROR, bg: "rgba(239, 68, 68
+};
+
+// Inverted from a typical "yes = good" pill — for a symptom/condition
+// questionnaire, YES (patient has the condition) is the concerning answer.
+const CONDITION_ANSWER_STYLES = {
+  yes: { label: "YES", color: COLORS.STATUS_ERROR, bg: "rgba(239, 68, 68,
+  no: { label: "NO", color: COLORS.STATUS_SUCCESS, bg: "rgba(22, 163, 74, 0.10)" },
+};
+
 const LegendDot = ({ color }) => (
   <Box sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
 );
@@ -32,9 +46,9 @@ const SeverityBadge = ({ severity }) => {
   const style = SEVERITY_STYLES[(severity || "").toLowerCase()];
   if (!style || style === SEVERITY_STYLES.low) return null;
   return (
-    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, backgroundColor: style.bg, borderRadius: radius.pill, px: 1, py: 0.25 }}>
+    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, bacrRadius: radius.pill, px: 1, py: 0.25 }}>
       <LegendDot color={style.color} />
-      <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: style.color }}>
+      <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWelor: style.color }}>
         {style.label}
       </Typography>
     </Box>
@@ -44,7 +58,7 @@ const SeverityBadge = ({ severity }) => {
 const AnswerPill = ({ answer }) => {
   const style = CONDITION_ANSWER_STYLES[(answer || "").toLowerCase()];
   if (!style) {
-    return <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, textAlign: "center" }}>—</Typography>;
+    return <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base,xtAlign: "center" }}>—</Typography>;
   }
   return (
     <Box
@@ -101,7 +115,7 @@ const SegmentedTabs = ({ value, onChange }) => (
             boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
           }}
         >
-          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: active ? COLORS.TEXT_PRIMARY : COLORS.TEXT_MUTED }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, ld, color: active ? COLORS.TEXT_PRIMARY : COLORS.TEXT_MUTED }}>
             {label}
           </Typography>
         </Box>
@@ -127,7 +141,7 @@ const MedicalSummarySection = ({
   const filteredSections = useMemo(() => {
     return summarySections.filter((section) => {
       if (flaggedOnly && (section.answer || "").toLowerCase() !== "yes") return false;
-      if (searchQuery && !(section.question || "").toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !(section.question || "").toLowerCase().includes(eturn false;
       return true;
     });
   }, [summarySections, flaggedOnly, searchQuery]);
@@ -190,17 +204,17 @@ const MedicalSummarySection = ({
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: COLORS.SURFACE_TINT }}>
-                <TableCell sx={{ width: "55%", borderColor: COLORS.BORDER }}>
+                <TableCell sx={{ width: "55%", borderColor: COLORS.BORDER
                   <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                     Condition
                   </Typography>
                 </TableCell>
-                <TableCell sx={{ width: "10%", borderColor: COLORS.BORDER }} align="center">
+                <TableCell sx={{ width: "10%", borderColor: COLORS.BORDER
                   <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                     Answer
                   </Typography>
                 </TableCell>
-                <TableCell sx={{ width: "35%", borderColor: COLORS.BORDER }}>
+                <TableCell sx={{ width: "35%", borderColor: COLORS.BORDER
                   <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                     Additional Information
                   </Typography>
@@ -209,13 +223,13 @@ const MedicalSummarySection = ({
             </TableHead>
             <TableBody>
               {filteredSections.map((section, index) => (
-                <TableRow key={section.number || index} sx={{ "&:last-child td": { borderBottom: "none" } }}>
-                  <TableCell sx={{ borderColor: COLORS.BORDER_LIGHT, verticalAlign: "top", py: 2 }}>
+                <TableRow key={section.number || index} sx={{ "&:last-chil } }}>
+                  <TableCell sx={{ borderColor: COLORS.BORDER_LIGHT, verti
                     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
                       <RowNumber number={section.number || index + 1} />
                       <Box>
-                        <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-                          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
+                        <Box sx={{ display: "flex", alignItems: "center",
+                          <Typography sx={{ fontFamily: "Inter", fontSize:tWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
                             {section.question || "No question available"}
                           </Typography>
                           <SeverityBadge severity={section.severity} />
@@ -239,7 +253,7 @@ const MedicalSummarySection = ({
                   <TableCell sx={{ borderColor: COLORS.BORDER_LIGHT, verticalAlign: "top", py: 2 }}>
                     {section.additionalInfo ? (
                       <Box sx={{ backgroundColor: "rgba(234, 88, 12, 0.06)", border: `1px solid rgba(234, 88, 12, 0.25)`, borderRadius: radius.md, px: 1.5, py: 1 }}>
-                        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>
+                        <Typography sx={{ fontFamily: "Inter", fontSize: fEXT_BODY }}>
                           {section.additionalInfo}
                         </Typography>
                       </Box>
@@ -267,73 +281,6 @@ const MedicalSummarySection = ({
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
           {filteredSections.length ? (
             filteredSections.map((section, index) => {
-              const isAllergyQuestion = section.number === 2;
-
-              if (isAllergyQuestion) {
-                return (
-                  <Paper
-                    key={`${section.number}-${section.question}`}
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      borderColor: "grey.300",
-                      bgcolor: '#f8fbff', // Light blue background for emphasis
-                      position: 'relative',
-                      mb: 1.5
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#333' }}>
-                          {section.number}.
-                        </Typography>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#4A90E2', mb: 1.5 }}>
-                            {section.question}
-                          </Typography>
-
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, ml: -1 }}>
-                            {['aspirin', 'ibuprofen', 'acetaminophen', 'codeine', 'penicillin'].map((item) => (
-                              <FormControlLabel
-                                key={item}
-                                control={<Checkbox size="small" sx={{ py: 0.25 }} />}
-                                label={<Typography sx={{ fontSize: '0.85rem', color: '#333' }}>{item}</Typography>}
-                                sx={{ mb: -0.5 }}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <InfoIcon sx={{ fontSize: '1rem', color: '#999' }} />
-                          <RadioGroup row defaultValue="no">
-                            <FormControlLabel
-                              value="yes"
-                              control={<Radio size="small" sx={{ p: 0.5 }} />}
-                              label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Yes</Typography>}
-                              labelPlacement="start"
-                              sx={{ ml: 0, mr: 1 }}
-                            />
-                            <FormControlLabel
-                              value="no"
-                              control={<Radio size="small" sx={{ p: 0.5 }} />}
-                              label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>No</Typography>}
-                              labelPlacement="start"
-                              sx={{ ml: 0 }}
-                            />
-                          </RadioGroup>
-                        </Box>
-                        <Typography sx={{ color: '#4A90E2', fontSize: '0.85rem', cursor: 'pointer', mt: 0.5 }}>
-                          Done
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Paper>
-                );
-              }
-
               const isEditing = editingSectionId === (section.id || section.number || index);
 
               return (
@@ -365,7 +312,7 @@ const MedicalSummarySection = ({
                   </IconButton>
 
                   <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1, mb: 1.5, pr: 4 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1a3353' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, col
                       {section.number ? `${section.number}. ` : ""}
                       {section.question}
                     </Typography>
@@ -377,7 +324,7 @@ const MedicalSummarySection = ({
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
                         {/* Answer Field */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: '150px' }}>
-                          <Typography sx={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Answer:</Typography>
+                          <Typography sx={{ fontSize: '11px', fontWeight: ansform: 'uppercase' }}>Answer:</Typography>
                           <TextField
                             variant="standard"
                             size="small"
@@ -425,7 +372,7 @@ const MedicalSummarySection = ({
 
                       {/* Doctor's Note Field */}
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-                        <Typography sx={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Doctor&apos;s Note:</Typography>
+                        <Typography sx={{ fontSize: '11px', fontWeight: 80sform: 'uppercase' }}>Doctor&apos;s Note:</Typography>
                         <TextField
                           variant="standard"
                           fullWidth
@@ -452,13 +399,13 @@ const MedicalSummarySection = ({
                         </Typography>
                         {section.comment && (
                           <Typography variant="caption" sx={{ color: '#64748b' }}>
-                            <span style={{ fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginRight: '4px' }}>Comment:</span>
+                            <span style={{ fontWeight: 700, color: '#94a3b', marginRight: '4px' }}>Comment:</span>
                             {section.comment}
                           </Typography>
                         )}
                       </Box>
                       {section.doctorNote && (
-                        <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#94a3b8', fontStyle: 'italic' }}>
+                        <Typography variant="caption" sx={{ display: 'blocfontStyle: 'italic' }}>
                           <span style={{ fontWeight: 700, textTransform: 'uppercase', marginRight: '4px' }}>Doctor&apos;s Note:</span>
                           {section.doctorNote}
                         </Typography>
