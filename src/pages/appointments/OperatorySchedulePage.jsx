@@ -22,6 +22,7 @@ import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog
 import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
 import LabCasesDialog from "../../components/appointments/LabCasesDialog";
 import BlockSlotModal from "../../components/appointments/schedule/BlockSlotModal";
+import AppointmentDetailModal from "../../components/appointments/schedule/appointment-detail-modal/AppointmentDetailModal";
 import { scheduleBlockService } from "../../services/schedule-block.service";
 import { shortlistService } from "../../services/shortlist.service";
 import {
@@ -247,8 +248,13 @@ const OperatorySchedulePage = () => {
 
         showSnackbar("Shortlist appointment scheduled successfully", "success");
       } catch (err) {
-        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to schedule shortlist appointment";
-        showSnackbar(msg, "error");
+        if (err.response?.status === 409) {
+          const conflictMsg = err.response.data?.error?.message;
+          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+        } else {
+          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to schedule shortlist appointment";
+          showSnackbar(msg, "error");
+        }
       } finally {
         setFormSaving(false);
       }
@@ -267,8 +273,13 @@ const OperatorySchedulePage = () => {
 
         showSnackbar("Appointment rescheduled successfully", "success");
       } catch (err) {
-        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
-        showSnackbar(msg, "error");
+        if (err.response?.status === 409) {
+          const conflictMsg = err.response.data?.error?.message;
+          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+        } else {
+          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+          showSnackbar(msg, "error");
+        }
       } finally {
         setFormSaving(false);
       }
@@ -314,6 +325,18 @@ const OperatorySchedulePage = () => {
   const [blockSlotDialogData, setBlockSlotDialogData] = useState(null);
   const [slotPopoverAnchorEl, setSlotPopoverAnchorEl] = useState(null);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState(null);
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+
+  useEffect(() => {
+    const handleApptClick = (e) => {
+      setEditingAppointment(e.detail);
+      setDetailModalOpen(true);
+    };
+    window.addEventListener('appointment-card-clicked', handleApptClick);
+    return () => window.removeEventListener('appointment-card-clicked', handleApptClick);
+  }, []);
 
   const fetchScheduleBlocks = useCallback(async () => {
     try {
@@ -507,6 +530,7 @@ const OperatorySchedulePage = () => {
         durationMinutes: a.durationMinutes || dayjs(endObj).diff(startObj, "minute"),
         customFields: a.customFields,
         checklists: a.checklists,
+        procedures: a.workspace?.procedures || a.procedures || [],
       };
     } catch {
       return null;
@@ -640,10 +664,13 @@ const OperatorySchedulePage = () => {
       showSnackbar('Appointment created successfully', 'success');
       setFormOpen(false);
     } catch (err) {
-      const msg = err.response?.data?.error?.message
-        || err.response?.data?.message
-        || 'Failed to create appointment.';
-      showSnackbar(msg, 'error');
+      if (err.status === 409 || err.response?.status === 409) {
+        const conflictMsg = err.message || err.response?.data?.error?.message;
+        showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+      } else {
+        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
+        showSnackbar(msg, 'error');
+      }
     } finally {
       setFormSaving(false);
     }
@@ -737,6 +764,29 @@ const OperatorySchedulePage = () => {
         patients={formPatients || []}
         loadingPatients={loadingFormPatients}
         onPatientSearch={searchFormPatients}
+      />
+
+      <AppointmentDetailModal 
+        open={detailModalOpen}
+        appointment={editingAppointment}
+        onClose={() => setDetailModalOpen(false)}
+        onSave={async (updatedData) => {
+          if (!editingAppointment) return;
+          try {
+            await updateAppointment(editingAppointment.id, updatedData);
+            showSnackbar("Appointment updated", "success");
+            setDetailModalOpen(false);
+          } catch (e) {
+            console.error("Failed to update appointment", e);
+            if (e.status === 409 || e.response?.status === 409) {
+              const conflictMsg = e.message || e.response?.data?.error?.message;
+              showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+            } else {
+              const msg = e.message || e.response?.data?.error?.message || e.response?.data?.message || 'Failed to update appointment';
+              showSnackbar(msg, "error");
+            }
+          }
+        }}
       />
 
       <SendBulkTextDialog
