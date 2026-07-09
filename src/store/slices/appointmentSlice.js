@@ -69,9 +69,10 @@ export const createAppointmentThunk = createAsyncThunk(
     try {
       return await appointmentService.createAppointment(payload);
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment',
-      );
+      return rejectWithValue({
+        message: err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment',
+        status: err.response?.status
+      });
     }
   }
 );
@@ -85,9 +86,10 @@ export const updateAppointmentThunk = createAsyncThunk(
     try {
       return await appointmentService.updateAppointment(appointmentId, payload);
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update appointment',
-      );
+      return rejectWithValue({
+        message: err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update appointment',
+        status: err.response?.status
+      });
     }
   }
 );

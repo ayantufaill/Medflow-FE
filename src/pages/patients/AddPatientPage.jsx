@@ -25,15 +25,19 @@ const AddPatientPage = () => {
       setSaving(true);
       setError("");
 
+      const returnToPatientId = location.state?.returnToPatientId;
+      if (returnToPatientId) {
+        data.guarantorId = returnToPatientId;
+      }
+
       await createPatient(data).unwrap();
 
       showSnackbar("Patient created successfully", "success");
       
-      const returnToPatientId = location.state?.returnToPatientId;
       if (returnToPatientId) {
-        navigate(`/patients/details/${returnToPatientId}?tab=details`, {
-          state: { openFamilyDialog: true }
-        });
+        // Family member created, navigate back to detail page.
+        // It's linked natively on backend now, so no need to open family dialog.
+        navigate(`/patients/details/${returnToPatientId}?tab=details`);
       } else {
         navigate("/patients");
       }

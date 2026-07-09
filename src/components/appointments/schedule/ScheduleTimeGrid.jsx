@@ -122,8 +122,11 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     "";
 
   // Convert 24-hr "09:30" → "9:30 AM" for display in the card header.
-  const displayTime = dayjs(`2000-01-01T${appt.startTime}`).format("h:mm A");
-  const displayEndTime = dayjs(`2000-01-01T${appt.endTime}`).format("h:mm A");
+  // Safari strict parsing fix: append seconds if missing
+  const safeStartTime = appt.startTime?.length === 5 ? `${appt.startTime}:00` : appt.startTime;
+  const safeEndTime = appt.endTime?.length === 5 ? `${appt.endTime}:00` : appt.endTime;
+  const displayTime = dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A");
+  const displayEndTime = dayjs(`2000-01-01T${safeEndTime}`).format("h:mm A");
   const displayDate = appt.appointmentDate
     ? dayjs(appt.appointmentDate).format("MMM D, YYYY")
     : "";

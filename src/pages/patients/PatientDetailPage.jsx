@@ -342,16 +342,7 @@ const PatientDetailPage = () => {
                 return;
               }
 
-              const newMember = {
-                id: selectedPatient._id || selectedPatient.id,
-                firstName: selectedPatient.firstName,
-                lastName: selectedPatient.lastName,
-                dateOfBirth: selectedPatient.dateOfBirth,
-                relationship: 'Family Member'
-              };
-
-              const updatedHousehold = [...currentHousehold, newMember];
-              await updatePatient(patientId, { household: updatedHousehold }).unwrap();
+              await updatePatient(selectedPatient._id || selectedPatient.id, { guarantorId: patientId }).unwrap();
               showSnackbar('Family member linked successfully', 'success');
             } catch (err) {
               showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');
