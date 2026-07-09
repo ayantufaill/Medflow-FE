@@ -10,7 +10,7 @@ const AppointmentRightPanel = ({
   status, onStatusChange,
   roomId, onRoomChange, rooms, isRoomOccupied,
   durationMins, onDurationChange,
-  providerRows, setProviderRows,
+  providerRows, setProviderRows, providerError,
   preferredDentist, onPreferredDentistChange,
   preferredHygienist, onPreferredHygienistChange,
   notes, onNotesChange,
@@ -59,7 +59,7 @@ const AppointmentRightPanel = ({
 
     <DurationPicker value={durationMins} onChange={onDurationChange} />
 
-    <ProviderTimesCard providerRows={providerRows} setProviderRows={setProviderRows} providers={providers} />
+    <ProviderTimesCard providerRows={providerRows} setProviderRows={setProviderRows} providers={providers} error={providerError} />
 
     <FieldBox label="Patient's preferred dentist">
       <Select MenuProps={{ sx: { zIndex: 1400 } }}

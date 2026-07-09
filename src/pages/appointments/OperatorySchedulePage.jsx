@@ -610,8 +610,9 @@ const OperatorySchedulePage = () => {
 
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
-    if (!patientId) {
-      showSnackbar("Please select a patient.", "warning");
+    const providerId = formData.providerId;
+    if (!patientId || !providerId) {
+      showSnackbar("Please select a patient and provider.", "warning");
       return;
     }
     const start = formData.appointmentDate && formData.startTime

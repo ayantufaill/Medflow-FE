@@ -14,7 +14,7 @@ import PastVisitProceduresSelector from "./PastVisitProceduresSelector";
 
 const AppointmentLeftPanel = ({
   // Patient
-  patients, loadingPatients, patient, onPatientChange, onPatientSearch,
+  patients, loadingPatients, patient, onPatientChange, onPatientSearch, patientError,
   // Date/time
   apptDate, onDateChange,
   timeHours, timeMins, amPm,
@@ -45,6 +45,7 @@ const AppointmentLeftPanel = ({
         value={patient}
         onChange={onPatientChange}
         onSearch={onPatientSearch}
+        error={patientError}
       />
 
       <FieldBox label="Date" sx={{ width: "165px", flexShrink: 0 }}>

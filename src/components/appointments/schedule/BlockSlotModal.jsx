@@ -5,14 +5,15 @@ import {
   Typography,
   TextField,
   Button,
+  IconButton,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import { AccessTime } from '@mui/icons-material';
+import { Close as CloseIcon, Check as CheckIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
-import { fontWeight } from '../../../constants/styles';
+import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 const BLOCK_COLORS = [
   '#94a3b8', '#fca5a5', '#fde047', '#86efac', '#5eead4', '#67e8f9', 
@@ -59,18 +60,38 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
       sx={{ zIndex: 9999 }}
       PaperProps={{
         sx: {
-          width: '400px',
+          width: '380px',
           maxWidth: '100%',
-          borderRadius: '12px',
+          borderRadius: radius.lg,
           p: 0,
         }
       }}
     >
-      <Box sx={{ p: 3 }}>
+      {/* Header — SURFACE_TINT + BORDER is the same header treatment SectionCard/RightPanelCard use across patient pages and the appointments sidebar, kept here for visual consistency */}
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        px: 2.5,
+        py: 1.25,
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        borderTopLeftRadius: radius.lg,
+        borderTopRightRadius: radius.lg,
+      }}>
+        <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
+          Block Slot
+        </Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: COLORS.TEXT_MUTED, p: '4px' }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </Box>
+
+      <Box sx={{ p: 2.5 }}>
         {/* Time Inputs */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY, mb: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5 }}>
+          <Box sx={{ flex: '0 0 auto' }}>
+            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
               Start Time
             </Typography>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -84,11 +105,11 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
                   textField: {
                     size: 'small',
                     sx: {
-                      width: '160px',
+                      width: '163px',
                       '& .MuiInputBase-root': {
-                        fontSize: '14px',
-                        borderRadius: '8px',
-                        height: '40px',
+                        fontSize: fontSize.md,
+                        borderRadius: radius.md,
+                        height: '36px',
                         paddingRight: '4px',
                       },
                       '& .MuiInputAdornment-positionStart': { display: 'none' },
@@ -98,8 +119,8 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
               />
             </LocalizationProvider>
           </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY, mb: 1 }}>
+          <Box sx={{ flex: '0 0 auto' }}>
+            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: COLORS.TEXT_SECONDARY, mb: 0.75 }}>
               End Time
             </Typography>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -113,11 +134,11 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
                   textField: {
                     size: 'small',
                     sx: {
-                      width: '160px',
+                      width: '163px',
                       '& .MuiInputBase-root': {
-                        fontSize: '14px',
-                        borderRadius: '8px',
-                        height: '40px',
+                        fontSize: fontSize.md,
+                        borderRadius: radius.md,
+                        height: '36px',
                         paddingRight: '4px',
                       },
                       '& .MuiInputAdornment-positionStart': { display: 'none' },
@@ -130,11 +151,11 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
         </Box>
 
         {/* Notes */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2.5 }}>
           <TextField
             fullWidth
             multiline
-            rows={4}
+            rows={3}
             placeholder="Notes"
             value={notes}
             onChange={(e) => {
@@ -143,36 +164,37 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
               }
             }}
             sx={{
-              '& .MuiOutlinedInput-root': { borderRadius: '8px' }
+              '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
             }}
           />
-          <Typography sx={{ fontSize: '11px', color: COLORS.TEXT_MUTED, textAlign: 'right', mt: 0.5 }}>
+          <Typography sx={{ fontSize: fontSize.xs, color: COLORS.TEXT_MUTED, textAlign: 'right', mt: 0.5 }}>
             {notes.length}/254 characters
           </Typography>
         </Box>
 
         {/* Color Selection */}
-        <Box sx={{ mb: 3 }}>
-          <Typography sx={{ fontSize: '14px', fontWeight: fontWeight.medium, mb: 1.5 }}>
+        <Box>
+          <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, mb: 1 }}>
             Select Color
           </Typography>
-          
-          <Box sx={{ 
-            width: '100%', 
-            height: '40px', 
-            backgroundColor: selectedColor, 
-            borderRadius: '6px',
+
+          <Box sx={{
+            width: '100%',
+            height: '30px',
+            backgroundColor: selectedColor,
+            borderRadius: radius.sm,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            mb: 2
+            mb: 1.5,
+            boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.06)',
           }}>
-            <Typography sx={{ fontSize: '13px', color: 'rgba(0,0,0,0.6)' }}>
+            <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: 'rgba(0,0,0,0.55)' }}>
               Selected Color Preview
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {BLOCK_COLORS.map(color => {
               const isSelected = selectedColor === color;
               return (
@@ -180,19 +202,23 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
                   key={color}
                   onClick={() => setSelectedColor(color)}
                   sx={{
-                    width: '28px',
-                    height: '28px',
+                    width: '20px',
+                    height: '20px',
                     borderRadius: '50%',
                     backgroundColor: color,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: isSelected ? '2px solid #2563eb' : '2px solid transparent',
+                    boxShadow: isSelected
+                      ? `0 0 0 2px ${COLORS.SURFACE_CARD}, 0 0 0 3.5px ${COLORS.ACCENT}`
+                      : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+                    transition: 'box-shadow 0.12s ease, transform 0.12s ease',
+                    '&:hover': { transform: 'scale(1.12)' },
                   }}
                 >
                   {isSelected && (
-                    <Box sx={{ width: '10px', height: '6px', border: '2px solid rgba(0,0,0,0.5)', borderTop: 'none', borderRight: 'none', transform: 'rotate(-45deg)', mt: '-2px' }} />
+                    <CheckIcon sx={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }} />
                   )}
                 </Box>
               )
@@ -202,37 +228,46 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
       </Box>
 
       {/* Actions */}
-      <Box sx={{ 
-        p: 2, 
-        borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, 
-        display: 'flex', 
-        justifyContent: 'flex-end', 
-        gap: 1.5,
-        backgroundColor: '#f8fafc'
+      <Box sx={{
+        px: 2.5,
+        py: 1.5,
+        borderTop: `1px solid ${COLORS.BORDER_LIGHT}`,
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: 1,
+        backgroundColor: COLORS.SURFACE_FOOTER,
       }}>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           onClick={onClose}
-          sx={{ 
-            borderRadius: '6px', 
-            textTransform: 'none', 
+          size="small"
+          sx={{
+            borderRadius: radius.sm,
+            textTransform: 'none',
+            fontSize: fontSize.md,
+            fontWeight: fontWeight.medium,
+            px: 2,
             borderColor: COLORS.BORDER,
             color: COLORS.TEXT_PRIMARY,
-            '&:hover': { borderColor: COLORS.TEXT_MUTED, backgroundColor: 'rgba(0,0,0,0.02)' }
+            '&:hover': { borderColor: COLORS.TEXT_MUTED, backgroundColor: 'rgba(0,0,0,0.02)' },
           }}
         >
           Cancel
         </Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={handleSave}
           disableElevation
-          sx={{ 
-            borderRadius: '6px', 
+          size="small"
+          sx={{
+            borderRadius: radius.sm,
             textTransform: 'none',
+            fontSize: fontSize.md,
+            fontWeight: fontWeight.medium,
+            px: 2,
             backgroundColor: COLORS.ACCENT,
             color: COLORS.WHITE,
-            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
           }}
         >
           Save

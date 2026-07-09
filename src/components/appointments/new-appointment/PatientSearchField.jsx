@@ -4,7 +4,7 @@ import { FieldBox } from "./helpers";
 import PatientListCard from "../../layout/header/patient-dropdown/PatientListCard";
 import { toCardShape } from "../../layout/header/patient-dropdown/PatientDropdownPanel";
 
-const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSearch }) => {
+const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSearch, error }) => {
   const getOptionLabel = (o) => {
     const name = o.name || o.fullName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
     const id = o.patientId || o.chartNumber || o.id || o._id || "";
@@ -45,6 +45,7 @@ const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSear
             <TextField
               {...params}
               placeholder="Search patient..."
+              error={!!error}
               InputProps={{
                 ...params.InputProps,
                 startAdornment: (
@@ -58,7 +59,15 @@ const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSear
                     {params.InputProps.startAdornment}
                   </>
                 ),
-                sx: { fontFamily: "Inter", fontWeight: 500, fontSize: "13px", borderRadius: "8px", height: "40px" },
+                sx: {
+                  fontFamily: "Inter", fontWeight: 500, fontSize: "13px", borderRadius: "8px", height: "40px",
+                  // Force the app's #ef4444 error red instead of MUI's default palette.error.main (#d32f2f, unset in theme.js)
+                  ...(error && {
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
+                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
+                  }),
+                },
               }}
             />
           );

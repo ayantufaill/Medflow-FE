@@ -53,6 +53,10 @@ const AddNewPatientAppointmentForm = ({
   const [notes,              setNotes]              = useState("");
   const [selectedColorTags,  setSelectedColorTags]  = useState(new Set(["#eab308"]));
 
+  // Tracks whether the user has tried to submit at least once — required-field
+  // borders only turn red after a failed attempt, not while the form is still empty on open.
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
   const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
     const hour = amPm === "PM" ? h + 12 : h;
@@ -123,6 +127,7 @@ const AddNewPatientAppointmentForm = ({
 
       setNotes("");
       setSelectedColorTags(new Set(["#eab308"]));
+      setSubmitAttempted(false);
     }
   }, [open, initialPatient, initialDateTime, initialRoomId]);
 
@@ -266,6 +271,10 @@ const AddNewPatientAppointmentForm = ({
 
   const handleSubmit = () => {
     if (!onSubmit) return;
+    setSubmitAttempted(true);
+    // Only providerRows[0] feeds the payload's providerId (see getAppointmentPayload),
+    // so that's the row that actually needs to be filled in to submit.
+    if (!patient || !providerRows[0]?.providerId) return;
     const payload = getAppointmentPayload();
     if (payload) onSubmit(payload);
   };
@@ -313,6 +322,7 @@ const AddNewPatientAppointmentForm = ({
             patient={patient}
             onPatientChange={handlePatientChange}
             onPatientSearch={onPatientSearch}
+            patientError={submitAttempted && !patient}
             apptDate={apptDate}
             onDateChange={setApptDate}
             timeHours={timeHours}
@@ -345,6 +355,7 @@ const AddNewPatientAppointmentForm = ({
             onDurationChange={setDurationMins}
             providerRows={providerRows}
             setProviderRows={setProviderRows}
+            providerError={submitAttempted && !providerRows[0]?.providerId}
             preferredDentist={preferredDentist}
             onPreferredDentistChange={setPreferredDentist}
             preferredHygienist={preferredHygienist}
