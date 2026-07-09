@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -29,8 +29,10 @@ import AddCreditCardModal from './AddCreditCardModal';
 import BankAccountThumbnail from './BankAccountThumbnail';
 import AddBankAccountModal from './AddBankAccountModal';
 import { COLORS } from '../../constants/colors';
-import { fontSize, fontWeight } from '../../constants/styles';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
 import { roundedSelectMenuProps } from '../../constants/styles';
+import { usePatient } from '../../hooks/redux/usePatient';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // ── Shared bits ────────────────────────────────────────────────────────────
 
@@ -282,7 +284,15 @@ function CreditCard({ patient, isEditMode, onPatientDataChange }) {
       }
     >
       {cards.length > 0 ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            // Scrolls instead of growing the card once there are more than 2 entries.
+            ...(cards.length > 2 && { maxHeight: 152, overflowY: 'auto', pr: 0.5 }),
+          }}
+        >
           {cards.map((card, idx) => (
             <CardThumbnail
               key={card.token || idx}
@@ -354,7 +364,15 @@ function BankAccountCard({ patient, isEditMode, onPatientDataChange }) {
       }
     >
       {accounts.length > 0 ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            // Scrolls instead of growing the card once there are more than 2 entries.
+            ...(accounts.length > 2 && { maxHeight: 152, overflowY: 'auto', pr: 0.5 }),
+          }}
+        >
           {accounts.map((account, idx) => (
             <BankAccountThumbnail
               key={account.token || idx}
@@ -381,31 +399,69 @@ function BankAccountCard({ patient, isEditMode, onPatientDataChange }) {
 
 // ── Release Information ─────────────────────────────────────────────────────
 
-function ReleaseInformationCard({ patient, isEditMode, onPatientDataChange }) {
+/**
+ * Who the practice is legally allowed to discuss this patient's health info with
+ * (a HIPAA disclosure-authorization record) — pills are multi-select toggles, not
+ * navigation, and every change here auto-saves immediately rather than staging
+ * behind the page's Edit/Save flow like the rest of this page's fields, since
+ * each one is an independent boolean that should never sit as an unsaved draft.
+ */
+function ReleaseInformationCard({ patient, onPatientDataChange }) {
   const options = [
     { label: 'Spouse / Common-law partner', field: 'releaseSpouse' },
     { label: 'Children', field: 'releaseChildren' },
     { label: 'Parents', field: 'releaseParents' },
   ];
 
+  const patientId = patient?._id || patient?.id;
+  const { updatePatient } = usePatient();
+  const { showSnackbar } = useSnackbar();
+  const [savingField, setSavingField] = useState(null);
+  const [otherText, setOtherText] = useState(patient?.customFields?.releaseOther || '');
+
+  useEffect(() => {
+    setOtherText(patient?.customFields?.releaseOther || '');
+  }, [patient?.customFields?.releaseOther]);
+
+  const persist = async (updatedCustomFields, fieldKey) => {
+    if (!patientId) return;
+    setSavingField(fieldKey);
+    try {
+      await updatePatient(patientId, { customFields: updatedCustomFields }).unwrap();
+      onPatientDataChange?.({ ...patient, customFields: updatedCustomFields });
+    } catch (err) {
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to save', 'error');
+    } finally {
+      setSavingField(null);
+    }
+  };
+
   const handleToggle = (field) => {
-    if (!isEditMode) return;
-    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, [field]: !patient?.customFields?.[field] } });
+    persist({ ...patient?.customFields, [field]: !patient?.customFields?.[field] }, field);
+  };
+
+  const handleOtherBlur = () => {
+    const current = patient?.customFields?.releaseOther || '';
+    if (otherText === current) return;
+    persist({ ...patient?.customFields, releaseOther: otherText }, 'releaseOther');
   };
 
   return (
     <SectionCard icon={ReleaseIcon} title="Release Information">
-      <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mb: 1 }}>
-        Can discuss information with:
+      <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 1 }}>
+        Can discuss information with
       </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
         {options.map((opt) => {
           const active = !!patient?.customFields?.[opt.field];
+          const isSaving = savingField === opt.field;
           return (
             <Chip
               key={opt.field}
               label={opt.label}
-              onClick={isEditMode ? () => handleToggle(opt.field) : undefined}
+              icon={active ? <CheckCircleIcon sx={{ fontSize: '14px', color: COLORS.ACCENT }} /> : undefined}
+              onClick={() => handleToggle(opt.field)}
+              disabled={isSaving}
               sx={{
                 fontFamily: 'Inter',
                 fontSize: fontSize.base,
@@ -414,15 +470,29 @@ function ReleaseInformationCard({ patient, isEditMode, onPatientDataChange }) {
                 backgroundColor: active ? COLORS.ACCENT_BG : 'transparent',
                 color: active ? COLORS.ACCENT : COLORS.TEXT_MUTED,
                 border: `1px solid ${active ? COLORS.ACCENT : COLORS.BORDER}`,
-                cursor: isEditMode ? 'pointer' : 'default',
+                cursor: 'pointer',
+                opacity: isSaving ? 0.6 : 1,
+                '&:hover': { backgroundColor: active ? COLORS.ACCENT_BG : COLORS.SURFACE_HOVER },
+                '&.Mui-disabled': { opacity: 0.6 },
               }}
             />
           );
         })}
       </Box>
-      <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY }}>
-        Other: {patient?.customFields?.releaseOther || 'None'}
+
+      <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}>
+        Other
       </Typography>
+      <TextField
+        fullWidth
+        size="small"
+        placeholder="Add another authorized contact"
+        value={otherText}
+        onChange={(e) => setOtherText(e.target.value)}
+        onBlur={handleOtherBlur}
+        disabled={savingField === 'releaseOther'}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
+      />
     </SectionCard>
   );
 }
@@ -444,7 +514,7 @@ export default function PatientPreferencesGrid({ patient, isEditMode = false, on
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
       <CreditCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
       <BankAccountCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
-      <ReleaseInformationCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
+      <ReleaseInformationCard patient={patient} onPatientDataChange={onPatientDataChange} />
     </Box>
   );
 }
