@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, Box, Typography, TextField, Button, IconButton, Switch, FormControlLabel, CircularProgress } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { COLORS } from '../../constants/colors';
@@ -8,9 +8,9 @@ import { formatCardNumber, expectedCardLength, tokenizeCard } from '../../utils/
 const ERROR_RED = '#ef4444'; // matches the app's existing error-red convention (see AppointmentRightPanel's "occupied" message)
 
 const formatExpiry = (value) => {
-  const digitsOnly = value.replace(/\D/g, '').slice(0, 4);
+  const digitsOnly = value.replace(/\D/g, '').slice(0, 4); // Limit to 4 digits (MMYY)
   if (digitsOnly.length <= 2) return digitsOnly;
-  return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`;
+  return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`; // Format as MM/YY
 };
 
 const errorFieldSx = {
@@ -34,16 +34,22 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const resetAndClose = () => {
-    setCardNumber('');
-    setExpiry('');
-    setCvv('');
-    setCardholderName('');
-    setIsDefault(!hasExistingCards);
-    setSubmitAttempted(false);
-    setSaving(false);
-    onClose();
-  };
+  // Reset fresh every time the modal opens, using the *current* hasExistingCards —
+  // this component instance persists across multiple open/close cycles (only `open`
+  // toggles, it never remounts), so a one-time useState initializer for isDefault
+  // goes stale after the first card is added (it incorrectly defaulted every
+  // subsequent card to "default" too).
+  useEffect(() => {
+    if (open) {
+      setCardNumber('');
+      setExpiry('');
+      setCvv('');
+      setCardholderName('');
+      setIsDefault(!hasExistingCards);
+      setSubmitAttempted(false);
+      setSaving(false);
+    }
+  }, [open, hasExistingCards]);
 
   const digitsOnly = cardNumber.replace(/\D/g, '');
   const [expMonthStr = '', expYearStr = ''] = expiry.split('/');
@@ -67,7 +73,7 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
     try {
       const tokenized = await tokenizeCard({ cardNumber, expMonth, expYear, cvv, cardholderName });
       onSave(tokenized, isDefault);
-      resetAndClose();
+      onClose();
     } finally {
       setSaving(false);
     }
@@ -76,7 +82,7 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
   return (
     <Dialog
       open={open}
-      onClose={resetAndClose}
+      onClose={onClose}
       PaperProps={{ sx: { width: '420px', maxWidth: '92vw', borderRadius: radius.lg, p: 0 } }}
     >
       {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx */}
@@ -94,7 +100,7 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
         <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
           Add Credit Card
         </Typography>
-        <IconButton size="small" onClick={resetAndClose} sx={{ color: COLORS.TEXT_MUTED, p: '4px' }}>
+        <IconButton size="small" onClick={onClose} sx={{ color: COLORS.TEXT_MUTED, p: '4px' }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </Box>
@@ -112,6 +118,9 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
             value={cardNumber}
             onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
             inputProps={{ inputMode: 'numeric', maxLength: 19 }}
+            error={submitAttempted && !cardNumberValid}
+            helperText={submitAttempted && !cardNumberValid ? 'Enter a valid card number' : ' '}
+            FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
             sx={{
               '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
               ...(submitAttempted && !cardNumberValid ? errorFieldSx : {}),
@@ -132,6 +141,13 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
               value={expiry}
               onChange={(e) => setExpiry(formatExpiry(e.target.value))}
               inputProps={{ inputMode: 'numeric', maxLength: 5 }}
+              error={submitAttempted && !expiryValid}
+              helperText={
+                submitAttempted && !expiryValid
+                  ? (monthValid ? 'Card has expired' : 'Enter a valid expiry (MM/YY)')
+                  : ' '
+              }
+              FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
               sx={{
                 '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
                 ...(submitAttempted && !expiryValid ? errorFieldSx : {}),
@@ -149,6 +165,9 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
               value={cvv}
               onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
               inputProps={{ inputMode: 'numeric', maxLength: 4 }}
+              error={submitAttempted && !cvvValid}
+              helperText={submitAttempted && !cvvValid ? '3-4 digits' : ' '}
+              FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
               sx={{
                 '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
                 ...(submitAttempted && !cvvValid ? errorFieldSx : {}),
@@ -168,6 +187,9 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
             placeholder="Name on card"
             value={cardholderName}
             onChange={(e) => setCardholderName(e.target.value)}
+            error={submitAttempted && !nameValid}
+            helperText={submitAttempted && !nameValid ? 'Cardholder name is required' : ' '}
+            FormHelperTextProps={{ sx: { color: ERROR_RED, fontSize: fontSize.xs, mx: 0, mt: 0.25 } }}
             sx={{
               '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md },
               ...(submitAttempted && !nameValid ? errorFieldSx : {}),
@@ -198,7 +220,7 @@ export default function AddCreditCardModal({ open, onClose, onSave, hasExistingC
         <Button
           variant="outlined"
           size="small"
-          onClick={resetAndClose}
+          onClick={onClose}
           disabled={saving}
           sx={{
             borderRadius: radius.sm,
