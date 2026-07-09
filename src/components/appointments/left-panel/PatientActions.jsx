@@ -1,7 +1,7 @@
 import { Box, Typography, Divider } from '@mui/material';
 import { KeyboardArrowUp } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
-import { PatientDetails, FamilyDetails } from './PatientDetails';
+import { PatientDetails, FamilyDetails } from './PatientDetailsCard';
 import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {

@@ -1,7 +1,9 @@
+// http://localhost:5173/patients/details/16 => PatientDetailPage
+
 import { useState, useEffect } from 'react';
-import { Box, Button, Divider, TextField, InputAdornment } from '@mui/material';
+import PhoneInput from 'react-phone-input-2';
+import { Box, Button, Divider, TextField } from '@mui/material';
 import {
-  KeyboardArrowDown as ArrowDownIcon,
   PersonOutlineOutlined as PersonOutlineIcon,
   Groups2Outlined as CareTeamIcon,
   PhoneOutlined as PhoneOutlinedIcon,
@@ -27,9 +29,10 @@ import HeadOfCommunicationSection from './HeadOfCommunicationSection';
 import EmergencyContactSection from './EmergencyContactSection';
 import PatientPreferencesGrid, { CommunicationPreferencesCard, ReferringCard, ConfirmationSettingsCard, AssignmentReleaseCard } from './PatientPreferencesGrid';
 import SectionCard from '../shared/SectionCard';
-import { InlineFieldRow, standardFieldSx } from './InlineField';
+import { InlineFieldRow } from './InlineField';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { ZIndexLayer } from 'recharts';
 
 function SpouseInformationSectionContent({ patient, isEditMode = false, onPatientDataChange }) {
   const [spouseInfo, setSpouseInfo] = useState(patient?.spouseInfo || {});
@@ -78,6 +81,24 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
     }
   };
 
+  // Only safe, non-geometric overrides — see the identical note in
+  // ContactInformationSection.jsx: overriding height/padding/width here fights the
+  // library's own absolute-positioned flag icon math and misaligns it.
+  const phoneInputWrapperSx = {
+    '& .react-tel-input': {
+      fontFamily: 'Inter',
+      width: '100%',
+    },
+    '& .react-tel-input .form-control': {
+      width: '100%',
+      fontFamily: 'Inter',
+      fontSize: fontSize.base,
+    },
+    '& .react-tel-input .country-list': {
+      fontFamily: 'Inter',
+    },
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -90,32 +111,21 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
         <InlineFieldRow
           label="Spouse Phone"
           input={
-            <TextField
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={spouseInfo?.phone ? (() => {
-                const digits = spouseInfo.phone.replace(/\D/g, '');
-                if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-                return spouseInfo.phone;
-              })() : ''}
-              onChange={handlePhoneChange}
-              inputProps={{
-                maxLength: isEditMode ? 16 : undefined,
-              }}
-              InputProps={{
-                readOnly: !isEditMode,
-                startAdornment: (
-                  <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
-                    <span style={{ fontSize: '1rem' }}>🇺🇸</span>
-                    <ArrowDownIcon sx={{ fontSize: 18, ml: 0.25, color: 'action.active' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={standardFieldSx}
-              placeholder="(XXX) XXX-XXXX"
-            />
+            <Box sx={phoneInputWrapperSx}>
+              <PhoneInput
+                country="us"
+                value={spouseInfo?.phone ? (() => {
+                  const digits = spouseInfo.phone.replace(/\D/g, '');
+                  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                  if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+                  return spouseInfo.phone;
+                })() : ''}
+                onChange={(rawValue) => handlePhoneChange({ target: { value: rawValue } })}
+                enableSearch
+                searchPlaceholder="Search"
+                specialLabel=""
+              />
+            </Box>
           }
         />
         <InlineFieldRow
@@ -278,14 +288,14 @@ export default function PatientDetailOverview({
 
         {/* Col 2 — 28% */}
         <Box>
-          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified">
+          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified" allowOverflow>
             <ContactInformationSection
               patient={patient}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
           </SectionCard>
-          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information">
+          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information" allowOverflow>
             <SpouseInformationSectionContent
               patient={patient}
               isEditMode={isEditMode}
