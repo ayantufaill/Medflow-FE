@@ -26,6 +26,8 @@ import SectionCard from '../shared/SectionCard';
 import { InlineFieldRow } from './InlineField';
 import CardThumbnail from './CardThumbnail';
 import AddCreditCardModal from './AddCreditCardModal';
+import BankAccountThumbnail from './BankAccountThumbnail';
+import AddBankAccountModal from './AddBankAccountModal';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight } from '../../constants/styles';
 import { roundedSelectMenuProps } from '../../constants/styles';
@@ -247,7 +249,15 @@ function CreditCard({ patient, isEditMode, onPatientDataChange }) {
   };
 
   const handleRemoveCard = (indexToRemove) => {
-    const updatedCards = cards.filter((_, idx) => idx !== indexToRemove);
+    const removedCard = cards[indexToRemove];
+    let updatedCards = cards.filter((_, idx) => idx !== indexToRemove);
+
+    // If the removed card was the default and at least one card remains, promote
+    // one of the others to default so there's never >1 card left with no default.
+    if (removedCard?.isDefault && updatedCards.length > 0 && !updatedCards.some((c) => c.isDefault)) {
+      updatedCards = updatedCards.map((c, idx) => (idx === 0 ? { ...c, isDefault: true } : c));
+    }
+
     onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, creditCards: updatedCards } });
   };
 
@@ -297,23 +307,74 @@ function CreditCard({ patient, isEditMode, onPatientDataChange }) {
   );
 }
 
-function BankAccountCard({ patient }) {
-  const info = patient?.customFields?.bankAccountInfo;
+function BankAccountCard({ patient, isEditMode, onPatientDataChange }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const accounts = patient?.customFields?.bankAccounts || [];
+
+  const handleSaveAccount = (tokenized, isDefault) => {
+    // Only one account can be default — clear the flag on the rest when a new default is set.
+    const updatedAccounts = [
+      ...(isDefault ? accounts.map((a) => ({ ...a, isDefault: false })) : accounts),
+      { ...tokenized, isDefault },
+    ];
+    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, bankAccounts: updatedAccounts } });
+  };
+
+  const handleRemoveAccount = (indexToRemove) => {
+    const removedAccount = accounts[indexToRemove];
+    let updatedAccounts = accounts.filter((_, idx) => idx !== indexToRemove);
+
+    // If the removed account was the default and at least one account remains, promote
+    // one of the others to default so there's never >1 account left with no default.
+    if (removedAccount?.isDefault && updatedAccounts.length > 0 && !updatedAccounts.some((a) => a.isDefault)) {
+      updatedAccounts = updatedAccounts.map((a, idx) => (idx === 0 ? { ...a, isDefault: true } : a));
+    }
+
+    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, bankAccounts: updatedAccounts } });
+  };
+
   return (
     <SectionCard
       icon={BankIcon}
       title="Bank Account"
       action={
-        <Button size="small" startIcon={<AddIcon />} sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}>
-          Add
-        </Button>
+        // Gated on isEditMode: saved accounts only persist via the page-level Save
+        // button (onPatientDataChange stages the change like every other field on
+        // this page), so adding an account outside edit mode would silently do nothing.
+        isEditMode && (
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setModalOpen(true)}
+            sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}
+          >
+            Add Account
+          </Button>
+        )
       }
     >
-      {info ? (
-        <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{info}</Typography>
+      {accounts.length > 0 ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {accounts.map((account, idx) => (
+            <BankAccountThumbnail
+              key={account.token || idx}
+              account={account}
+              isDefault={!!account.isDefault}
+              isEditMode={isEditMode}
+              onRemove={() => handleRemoveAccount(idx)}
+            />
+          ))}
+        </Box>
       ) : (
         <EmptyStateBox icon={BankIcon} text="No account on file" />
       )}
+
+      <AddBankAccountModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveAccount}
+        hasExistingAccounts={accounts.length > 0}
+      />
     </SectionCard>
   );
 }
@@ -382,7 +443,7 @@ export default function PatientPreferencesGrid({ patient, isEditMode = false, on
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
       <CreditCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
-      <BankAccountCard patient={patient} />
+      <BankAccountCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
       <ReleaseInformationCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
     </Box>
   );
