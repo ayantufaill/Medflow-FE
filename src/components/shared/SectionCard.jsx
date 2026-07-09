@@ -18,7 +18,7 @@ const BADGE_PRESETS = {
 // convention, see RightPanelCard.jsx/AppointmentModalHeader.jsx), optional
 // tone badge or a custom header action (e.g. an "Add" button), and a padded
 // body for the section's own content.
-const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx = {} }) => {
+const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx = {}, allowOverflow = false }) => {
   const badgeStyle = typeof badge === "string" ? BADGE_PRESETS[badge] : badge;
 
   return (
@@ -27,7 +27,11 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
         backgroundColor: COLORS.SURFACE_CARD,
         borderRadius: radius.xl,
         border: `0.8px solid ${COLORS.BORDER}`,
-        overflow: "hidden",
+        // Default clips the header's square corners to match the rounded card border.
+        // Cards with content that needs to escape the card bounds (e.g. a phone-input's
+        // country dropdown) pass allowOverflow — the header rounds its own top corners
+        // instead of relying on this clip, so the visual result is unchanged.
+        overflow: allowOverflow ? "visible" : "hidden",
         mb: 2,
         ...sx,
       }}
@@ -40,6 +44,7 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
           justifyContent: "space-between",
           backgroundColor: COLORS.SURFACE_TINT,
           borderBottom: `1px solid ${COLORS.BORDER}`,
+          ...(allowOverflow && { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }),
           px: { xs: 2, sm: 2.5 },
           py: 0.9,
         }}

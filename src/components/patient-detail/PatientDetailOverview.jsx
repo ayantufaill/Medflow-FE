@@ -1,7 +1,8 @@
+// http://localhost:5173/patients/details/16 => PatientDetailPage
+
 import { useState, useEffect } from 'react';
-import { Box, Button, Divider, TextField, InputAdornment } from '@mui/material';
+import { Box, Button, Divider, TextField } from '@mui/material';
 import {
-  KeyboardArrowDown as ArrowDownIcon,
   PersonOutlineOutlined as PersonOutlineIcon,
   Groups2Outlined as CareTeamIcon,
   PhoneOutlined as PhoneOutlinedIcon,
@@ -27,9 +28,11 @@ import HeadOfCommunicationSection from './HeadOfCommunicationSection';
 import EmergencyContactSection from './EmergencyContactSection';
 import PatientPreferencesGrid, { CommunicationPreferencesCard, ReferringCard, ConfirmationSettingsCard, AssignmentReleaseCard } from './PatientPreferencesGrid';
 import SectionCard from '../shared/SectionCard';
-import { InlineFieldRow, standardFieldSx } from './InlineField';
+import { InlineFieldRow } from './InlineField';
+import PhoneField from './PhoneField';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { ZIndexLayer } from 'recharts';
 
 function SpouseInformationSectionContent({ patient, isEditMode = false, onPatientDataChange }) {
   const [spouseInfo, setSpouseInfo] = useState(patient?.spouseInfo || {});
@@ -51,33 +54,6 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
     }
   };
 
-  const handlePhoneChange = (e) => {
-    const rawValue = e.target.value;
-
-    // Remove all non-digit characters
-    const digitsOnly = rawValue.replace(/\D/g, '');
-
-    // Limit to max 11 digits
-    let cleanedNumber = digitsOnly;
-    if (digitsOnly.length > 11) {
-      cleanedNumber = digitsOnly.slice(0, 11);
-    }
-
-    // If starts with 0 or 9 (invalid first digits), remove them
-    if (cleanedNumber.length > 0 && (cleanedNumber[0] === '0' || cleanedNumber[0] === '9')) {
-      cleanedNumber = cleanedNumber.slice(1);
-    }
-
-    // Update state with formatted value
-    const updatedSpouseInfo = { ...spouseInfo, phone: cleanedNumber };
-    setSpouseInfo(updatedSpouseInfo);
-
-    if (onPatientDataChange) {
-      const updatedData = { ...patient, spouseInfo: updatedSpouseInfo };
-      onPatientDataChange(updatedData);
-    }
-  };
-
   return (
     <Box>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -87,36 +63,11 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
           onChange={(e) => handleFieldChange('name', e.target.value)}
           InputProps={{ readOnly: !isEditMode }}
         />
-        <InlineFieldRow
+        <PhoneField
           label="Spouse Phone"
-          input={
-            <TextField
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={spouseInfo?.phone ? (() => {
-                const digits = spouseInfo.phone.replace(/\D/g, '');
-                if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-                return spouseInfo.phone;
-              })() : ''}
-              onChange={handlePhoneChange}
-              inputProps={{
-                maxLength: isEditMode ? 16 : undefined,
-              }}
-              InputProps={{
-                readOnly: !isEditMode,
-                startAdornment: (
-                  <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
-                    <span style={{ fontSize: '1rem' }}>🇺🇸</span>
-                    <ArrowDownIcon sx={{ fontSize: 18, ml: 0.25, color: 'action.active' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={standardFieldSx}
-              placeholder="(XXX) XXX-XXXX"
-            />
-          }
+          value={spouseInfo?.phone || ''}
+          isEditMode={isEditMode}
+          onChange={(e) => handleFieldChange('phone', e.target.value)}
         />
         <InlineFieldRow
           label="Email Address"
@@ -278,14 +229,14 @@ export default function PatientDetailOverview({
 
         {/* Col 2 — 28% */}
         <Box>
-          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified">
+          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified" allowOverflow>
             <ContactInformationSection
               patient={patient}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}
             />
           </SectionCard>
-          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information">
+          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information" allowOverflow>
             <SpouseInformationSectionContent
               patient={patient}
               isEditMode={isEditMode}
@@ -312,7 +263,7 @@ export default function PatientDetailOverview({
           <SectionCard icon={InsightsOutlinedIcon} title="Snapshot">
             <PatientSnapshotCard patient={patient} patientNumber={patientNumber} />
           </SectionCard>
-          <SectionCard icon={WarningAmberIcon} title="Emergency Contact">
+          <SectionCard icon={WarningAmberIcon} title="Emergency Contact" allowOverflow>
             <EmergencyContactSection
               patient={patient}
               isEditMode={isEditMode}

@@ -1,3 +1,5 @@
+// http://localhost:5173/patients/details/16 => PatientDetailPage
+
 import { useEffect, useState } from 'react';
 import {
   Box,

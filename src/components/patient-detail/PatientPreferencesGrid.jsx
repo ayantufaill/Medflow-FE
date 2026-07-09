@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -23,6 +24,8 @@ import {
 } from '@mui/icons-material';
 import SectionCard from '../shared/SectionCard';
 import { InlineFieldRow } from './InlineField';
+import CardThumbnail from './CardThumbnail';
+import AddCreditCardModal from './AddCreditCardModal';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight } from '../../constants/styles';
 import { roundedSelectMenuProps } from '../../constants/styles';
@@ -230,23 +233,66 @@ export function AssignmentReleaseCard({ patient, isEditMode, onPatientDataChange
 
 // ── Credit Card / Bank Account ──────────────────────────────────────────────
 
-function CreditCardCard({ patient }) {
-  const info = patient?.customFields?.creditCardInfo;
+function CreditCard({ patient, isEditMode, onPatientDataChange }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const cards = patient?.customFields?.creditCards || [];
+
+  const handleSaveCard = (tokenized, isDefault) => {
+    // Only one card can be default — clear the flag on the rest when a new default is set.
+    const updatedCards = [
+      ...(isDefault ? cards.map((c) => ({ ...c, isDefault: false })) : cards),
+      { ...tokenized, isDefault },
+    ];
+    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, creditCards: updatedCards } });
+  };
+
+  const handleRemoveCard = (indexToRemove) => {
+    const updatedCards = cards.filter((_, idx) => idx !== indexToRemove);
+    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, creditCards: updatedCards } });
+  };
+
   return (
     <SectionCard
       icon={CreditCardIcon}
       title="Credit Card"
       action={
-        <Button size="small" startIcon={<AddIcon />} sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}>
-          Add card
-        </Button>
+        // Gated on isEditMode: saved cards only persist via the page-level Save button
+        // (onPatientDataChange stages the change like every other field on this page),
+        // so adding a card outside edit mode would silently do nothing visible.
+        isEditMode && (
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setModalOpen(true)}
+            sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}
+          >
+            Add card
+          </Button>
+        )
       }
     >
-      {info ? (
-        <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{info}</Typography>
+      {cards.length > 0 ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {cards.map((card, idx) => (
+            <CardThumbnail
+              key={card.token || idx}
+              card={card}
+              isDefault={!!card.isDefault}
+              isEditMode={isEditMode}
+              onRemove={() => handleRemoveCard(idx)}
+            />
+          ))}
+        </Box>
       ) : (
         <EmptyStateBox icon={CreditCardIcon} text="No cards registered" />
       )}
+
+      <AddCreditCardModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveCard}
+        hasExistingCards={cards.length > 0}
+      />
     </SectionCard>
   );
 }
@@ -335,7 +381,7 @@ function ReleaseInformationCard({ patient, isEditMode, onPatientDataChange }) {
 export default function PatientPreferencesGrid({ patient, isEditMode = false, onPatientDataChange }) {
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-      <CreditCardCard patient={patient} />
+      <CreditCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
       <BankAccountCard patient={patient} />
       <ReleaseInformationCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
     </Box>
