@@ -36,6 +36,9 @@ import dayjs from "dayjs";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchFamilyAppointments, selectFamilyAppointmentsList, selectFamilyAppointmentsLoading, updateAppointmentThunk } from "../../store/slices/appointmentSlice";
 import { fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import PeopleIcon from '@mui/icons-material/People';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 /**
  * ChecklistItem Component
@@ -357,32 +360,32 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: "4px",
+          borderRadius: radius.md || '14px',
+          border: `1px solid ${COLORS.BORDER}`,
+          boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
           minHeight: "600px",
           maxHeight: "90vh",
         },
       }}
     >
       {/* HEADER */}
-      <DialogTitle
-        sx={{
-          bgcolor: "#5c7cbc",
-          p: 1.5,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-        }}
-      >
-        <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: "1rem" }}>
+      <DialogTitle sx={{ 
+        boxSizing: 'border-box', 
+        px: '25px', 
+        py: '16px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px', 
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        backgroundColor: COLORS.SURFACE_TINT,
+        m: 0
+      }}>
+        <PeopleIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Family Appointments of {patient?.firstName} {patient?.lastName}
         </Typography>
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{ position: "absolute", right: 8, top: 8, color: "#fff" }}
-        >
-          <CloseIcon />
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>
       </DialogTitle>
 
@@ -408,22 +411,25 @@ const FamilyAppointmentsDialog = ({ open, onClose, patient, familyMembers = [] }
           }}
         >
           <Tabs value={tabValue} onChange={handleTabChange} sx={{ minHeight: "unset" }}>
-            <Tab label="Scheduled" sx={{ textTransform: "none", py: 1.5, minHeight: "unset", fontWeight: 600 }} />
-            <Tab label="Due" sx={{ textTransform: "none", py: 1.5, minHeight: "unset", fontWeight: 600 }} />
+            <Tab label="Scheduled" sx={{ textTransform: "none", py: 1.5, minHeight: "unset", fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, '&.Mui-selected': { color: COLORS.ACCENT } }} />
+            <Tab label="Due" sx={{ textTransform: "none", py: 1.5, minHeight: "unset", fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, '&.Mui-selected': { color: COLORS.ACCENT } }} />
           </Tabs>
 
           <Button
-            variant="contained"
+            variant="outlined"
             size="small"
             onClick={() => window.print()}
             startIcon={<PrintIcon />}
             sx={{
-              bgcolor: "#1a3353",
-              "&:hover": { bgcolor: "#12263d" },
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_PRIMARY,
+              "&:hover": { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: "transparent" },
               textTransform: "none",
-              borderRadius: "20px",
-              px: 3,
+              borderRadius: radius.sm || '6px',
+              px: 2,
               height: 32,
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
             }}
           >
             Print

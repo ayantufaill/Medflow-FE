@@ -2,7 +2,7 @@ import { Box, Typography, Divider } from '@mui/material';
 import { KeyboardArrowUp } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
 import { PatientDetails, FamilyDetails } from './PatientDetails';
-import { usePatient } from '../../../hooks/redux';
+import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {
   fetchPatientHistory,
@@ -28,6 +28,7 @@ const PatientActions = ({ appointment }) => {
   const dispatch = useDispatch();
   const { selectedPatientId }  = usePatient();
   const { currentAppointment } = useAppointmentDetail();
+  const { setRouteSlipDialogOpen } = useScheduleState();
 
   // Use the passed appointment from the left panel if available, otherwise fallback to Redux
   const activeAppt = appointment || currentAppointment;
@@ -70,7 +71,7 @@ const PatientActions = ({ appointment }) => {
   // Route Slip and Purchase Products require a separate modal/drawer — they are
   // wired as stubs here; the page component will add the dialog trigger later.
   const handleRouteSlip = () => {
-    // TODO: dispatch openRouteSlipDialog() or navigate to route slip page
+    setRouteSlipDialogOpen(true);
   };
 
   const ACTION_BUTTONS = [

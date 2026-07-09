@@ -8,8 +8,7 @@ import LeftPanel from '../../components/appointments/left-panel/LeftPanel';
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
-import { usePatients, usePatient } from '../../hooks/redux/usePatient';
-import { useAppointmentList, useScheduleState } from '../../hooks/redux';
+import { usePatients, usePatient, useScheduleState, useAppointmentList } from '../../hooks/redux';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
@@ -19,8 +18,9 @@ import { useDispatch } from "react-redux";
 import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
-import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
-import LabCasesDialog from "../../components/appointments/LabCasesDialog";
+import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
+import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
+import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
 import BlockSlotModal from "../../components/appointments/schedule/BlockSlotModal";
 import AppointmentDetailModal from "../../components/appointments/schedule/appointment-detail-modal/AppointmentDetailModal";
 import { scheduleBlockService } from "../../services/schedule-block.service";
@@ -138,9 +138,8 @@ const OperatorySchedulePage = () => {
   const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
   const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
-  const [labAnchorEl, setLabAnchorEl] = useState(null);
-  const [labFilters, setLabFilters] = useState({ providerId: 'all', visitTypeId: 'all' });
-  const [labCasesDialogOpen, setLabCasesDialogOpen] = useState(false);
+  
+  const { frontendFilters } = useScheduleState();
 
   const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
     const key = `${dateStr}:${columnId}`;
@@ -155,7 +154,10 @@ const OperatorySchedulePage = () => {
 
   const handlePrint = (orientation) => {
     setPrintingOrientation(orientation);
-    setViewMode("day");
+    setTimeout(() => {
+      window.print();
+      setPrintingOrientation(null);
+    }, 100);
   };
 
 
@@ -557,14 +559,28 @@ const OperatorySchedulePage = () => {
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
     if (!reduxAppointments) return [];
-    console.log("Raw reduxAppointments:", reduxAppointments);
+    
+    const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
+
     const mapped = reduxAppointments
       .filter(a => String(a.status).toLowerCase() !== 'pending')
+      .filter(a => {
+        if (providerId !== 'All') {
+          const aProviderId = String(a.providerId && (a.providerId._id || a.providerId.id || a.providerId));
+          if (aProviderId !== String(providerId)) return false;
+        }
+        if (visitType !== 'All') {
+          const apptVisitType = String(a.visitType || a.customFields?.visitType || "").toLowerCase();
+          if (apptVisitType !== visitType.toLowerCase()) return false;
+        }
+        return true;
+      })
       .map(mapAppointment)
       .filter(Boolean);
-    console.log("Mapped appointments:", mapped);
+      
+    console.log("Filters applied:", { providerId, visitType }, "Resulting appointments:", mapped.length);
     return mapped;
-  }, [reduxAppointments]);
+  }, [reduxAppointments, frontendFilters]);
 
   const [appointments, setAppointments] = useState([]);
 
@@ -712,14 +728,54 @@ const OperatorySchedulePage = () => {
     <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: COLORS.SURFACE_PAGE, boxSizing: 'border-box', overflow: 'hidden' }}>
 
+      {printingOrientation && (
+        <style>
+          {`
+            @media print {
+              @page {
+                size: ${printingOrientation};
+                margin: 5mm;
+              }
+              body * {
+                visibility: hidden;
+              }
+              body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                background-color: white !important;
+              }
+              .no-print, .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+              }
+              /* Make the center panel take up the full printed page */
+              .print-container, .print-container * {
+                visibility: visible;
+              }
+              .print-container {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+            }
+          `}
+        </style>
+      )}
+
       {/* LEFT PANEL — 1/5 */}
-      <Box sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
+      <Box className="no-print" sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
         <LeftPanel />
       </Box>
 
       {/* CENTER PANEL — 3/5 */}
-      <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} />
+      <Box className="print-container" sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Box className="no-print">
+          <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} />
+        </Box>
         <ScheduleCalendar 
           scheduleBlocks={scheduleBlocks}
           onSlotClick={(hour, mins, roomId) => {
@@ -743,7 +799,7 @@ const OperatorySchedulePage = () => {
       </Box>
 
       {/* RIGHT PANEL — 1/5 */}
-      <Box sx={{ flex: 1, minWidth: 0, height: '100%', overflowY: 'auto' }}>
+      <Box className="no-print" sx={{ flex: 1, minWidth: 0, height: '100%', overflowY: 'auto' }}>
         <RightPanel />
       </Box>
 
@@ -884,136 +940,6 @@ const OperatorySchedulePage = () => {
         </List>
       </Popover>
 
-      {/* Lab Filters Popover (Matching Screenshot) */}
-      <Popover
-        open={Boolean(labAnchorEl)}
-        anchorEl={labAnchorEl}
-        onClose={() => setLabAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 0.5,
-            p: 2,
-            width: 170, // Further reduced width as requested
-            borderRadius: '4px',
-            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
-            border: '1px solid #e1e4e8'
-          }
-        }}
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Provider Section */}
-          <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
-              Provider:
-            </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={labFilters.providerId}
-              onChange={(e) => setLabFilters(prev => ({ ...prev, providerId: e.target.value }))}
-              sx={{
-                height: '32px',
-                fontSize: '0.85rem',
-                '& .MuiSelect-select': { py: 0.5 }
-              }}
-            >
-              <MenuItem value="all">All</MenuItem>
-              {providers && providers.length > 0 && providers.map(p => (
-                <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                  {/* Handling nested userId structure found in ProvidersListPage.jsx */}
-                  {p.userId?.firstName || p.firstName || ''} {p.userId?.lastName || p.lastName || ''}
-                </MenuItem>
-              ))}
-            </Select>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
-              <Link
-                component="button"
-                variant="body2"
-                sx={{
-                  color: '#1976d2',
-                  fontSize: '0.8rem',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' }
-                }}
-              >
-                +Add
-              </Link>
-            </Box>
-          </Box>
-
-          {/* Visit Type Section */}
-          <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
-              Visit Type:
-            </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={labFilters.visitTypeId}
-              onChange={(e) => setLabFilters(prev => ({ ...prev, visitTypeId: e.target.value }))}
-              sx={{
-                height: '32px',
-                fontSize: '0.85rem',
-                '& .MuiSelect-select': { py: 0.5 }
-              }}
-            >
-              <MenuItem value="all">All</MenuItem>
-              {appointmentTypes && appointmentTypes.length > 0 && appointmentTypes.map(at => (
-                <MenuItem key={at._id || at.id} value={at._id || at.id}>
-                  {at.name || at.title || 'Unknown'}
-                </MenuItem>
-              ))}
-            </Select>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
-              <Link
-                component="button"
-                variant="body2"
-                sx={{
-                  color: '#1976d2',
-                  fontSize: '0.8rem',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' }
-                }}
-              >
-                +Add
-              </Link>
-            </Box>
-          </Box>
-
-          {/* Bottom Actions */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-            <Link
-              component="button"
-              variant="body2"
-              onClick={() => {
-                setLabFilters({ providerId: 'all', visitTypeId: 'all' });
-                setLabAnchorEl(null);
-              }}
-              sx={{
-                color: '#f44336',
-                fontSize: '0.8rem',
-                textDecoration: 'none',
-                opacity: 0.8,
-                '&:hover': { opacity: 1, textDecoration: 'underline' }
-              }}
-            >
-              clear filter
-            </Link>
-          </Box>
-        </Box>
-      </Popover>
-      <LabCasesDialog
-        open={labCasesDialogOpen}
-        onClose={() => setLabCasesDialogOpen(false)}
-      />
 
       {/* More Options Menu */}
       <Menu
@@ -1106,6 +1032,9 @@ const OperatorySchedulePage = () => {
       </DragOverlay>
 
     </Box>
+      {/* Route Slip Modal */}
+      <RouteSlipDialog />
+
     </DndContext>
   );
 };

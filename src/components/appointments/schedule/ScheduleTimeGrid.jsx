@@ -354,7 +354,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
 
 const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) => {
   const [activeCell, setActiveCell] = useState(null);
-  const { calendarView, selectedDate } = useScheduleState();
+  const { calendarView, selectedDate, frontendFilters } = useScheduleState();
   
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -422,6 +422,8 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) =>
   // then convert each API record to the AppointmentCard shape.
   const visibleAppointments = useMemo(() => {
     const targetDate = dayjsDate.format("YYYY-MM-DD");
+    const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
+
     const appts = rawAppointments
       .filter((appt) => {
         const apptDate = appt.appointmentDate
@@ -429,7 +431,18 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) =>
           : null;
         const isTargetDate = apptDate === targetDate;
         const isNotPending = String(appt.status).toLowerCase() !== 'pending';
-        return isTargetDate && isNotPending;
+        if (!isTargetDate || !isNotPending) return false;
+
+        // Apply visual frontend filters
+        if (providerId !== 'All') {
+          const aProviderId = String(appt.providerId && (appt.providerId._id || appt.providerId.id || appt.providerId));
+          if (aProviderId !== String(providerId)) return false;
+        }
+        if (visitType !== 'All') {
+          const apptVisitType = String(appt.visitType || appt.customFields?.visitType || "").toLowerCase();
+          if (apptVisitType !== visitType.toLowerCase()) return false;
+        }
+        return true;
       })
       .map((appt) => mapApiAppointmentToGridItem(appt, providerMap))
       .filter(Boolean); // remove nulls from appointments outside the hour range
@@ -461,7 +474,7 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) =>
     }).filter(Boolean);
 
     return [...appts, ...blocks];
-  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks]);
+  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks, frontendFilters]);
 
   // Total grid width grows with the number of rooms.
   const totalWidth = TIME_LABEL_WIDTH + (rooms.length || 1) * COLUMN_MIN_WIDTH;

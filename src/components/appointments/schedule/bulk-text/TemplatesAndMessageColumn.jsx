@@ -6,7 +6,7 @@ import { radius, fontWeight } from '../../../../constants/styles';
 
 const TemplatesAndMessageColumn = ({ message, setMessage, templates, handleTemplateClick }) => {
   return (
-    <Box sx={{ width: '367px', height: '551px', flexShrink: 0, borderRadius: '12px', border: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ width: '367px', height: '100%', flexShrink: 0, borderRadius: '12px', border: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Right Header */}
       <Box sx={{ p: '16px', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE }}>
         <Typography sx={{ fontSize: '16px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>

@@ -51,8 +51,8 @@ import { useDispatch } from "react-redux";
 import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
-import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
-import LabCasesDialog from "../../components/appointments/LabCasesDialog";
+import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
+import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
 import BlockSlotDialog from "../../components/appointments/BlockSlotDialog";
 import { scheduleBlockService } from "../../services/schedule-block.service";
 

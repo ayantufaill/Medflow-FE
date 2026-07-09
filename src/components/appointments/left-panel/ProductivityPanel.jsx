@@ -100,23 +100,16 @@ const ProductivityPanel = () => {
               format="DD/MM/YYYY"
               value={date}
               onChange={(newDate) => setDate(newDate)}
+              views={['year', 'month', 'day']}
               slotProps={{
                 textField: {
                   size: 'small',
-                  placeholder: 'dd/mm/yyyy',
-                  sx: {
-                    width: "165px",
-                    backgroundColor: COLORS.WHITE,
-                    "& .MuiInputBase-root": { height: "40px", borderRadius: "8px", paddingRight: "4px" },
-                    "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "0", height: "40px", boxSizing: "border-box" }
+                  sx: { 
+                    width: "165px", 
+                    '& .MuiInputBase-root': { height: "40px", fontSize: "13px", fontFamily: "Inter", borderRadius: "8px", bgcolor: '#fff' } 
                   }
                 },
-                openPickerButton: {
-                  sx: { padding: '4px', color: '#9aa3ae' }
-                },
-                openPickerIcon: {
-                  sx: { fontSize: '18px' }
-                }
+                popper: { sx: { zIndex: 1600 } }
               }}
             />
           </LocalizationProvider>

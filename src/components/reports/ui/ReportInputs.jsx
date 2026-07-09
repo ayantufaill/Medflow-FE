@@ -11,13 +11,15 @@ export const ReportSelect = ({ label, prefix, options = [], value, defaultValue,
       value={value}
       defaultValue={defaultValue}
       onChange={onChange}
+      MenuProps={{ sx: { zIndex: 1600 } }}
       sx={{
         width: width || 'auto',
         minWidth: width ? 'auto' : 100,
         height: 36,
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        color: '#1e293b',
+        fontSize: '13px',
+        fontFamily: 'Inter',
+        fontWeight: 500,
+        color: '#09121f',
         backgroundColor: '#fff',
         borderRadius: '8px',
         '& .MuiSelect-select': {
@@ -42,7 +44,7 @@ export const ReportSelect = ({ label, prefix, options = [], value, defaultValue,
       {options.map((opt, idx) => {
         const optValue = typeof opt === 'object' ? opt.value : opt;
         const optLabel = typeof opt === 'object' ? opt.label : opt;
-        return <MenuItem key={idx} value={optValue}>{optLabel}</MenuItem>;
+        return <MenuItem key={idx} value={optValue} sx={{ fontFamily: 'Inter', fontSize: '13px' }}>{optLabel}</MenuItem>;
       })}
     </Select>
   );

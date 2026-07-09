@@ -13,7 +13,7 @@ import { COLORS } from '../../../constants/colors';
 // Redux (useScheduleState) so ScheduleTimeGrid responds to the same state
 // without prop-drilling through the page component.
 
-const ScheduleGridHeader = ({ onNewAppointment }) => {
+const ScheduleGridHeader = ({ onNewAppointment, onPrintClick }) => {
   const { calendarView, selectedDate, setCalendarView, setSelectedDate } = useScheduleState();
 
   // Redux stores selectedDate as an ISO string; DateNavigation expects a dayjs object.
@@ -58,7 +58,7 @@ const ScheduleGridHeader = ({ onNewAppointment }) => {
         {/* Flexible space to push icons and button to the right side if needed, or simply let ActionIconsBar handle alignment */}
         <Box sx={{ flex: 1 }} />
         
-        <ActionIconsBar />
+        <ActionIconsBar onPrintClick={onPrintClick} />
         <VerticalDivider height="36px" />
         <NewAppointmentButton onClick={onNewAppointment} />
       </Box>

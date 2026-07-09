@@ -6,6 +6,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { COLORS } from '../../../constants/colors';
 import { fontWeight, fontSize } from '../../../constants/styles';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
 
 const PRE_APPT_ITEMS = [
   { label: 'Import History' },
@@ -144,8 +145,15 @@ const AppointmentChecklist = () => {
   const [checkInState, setCheckInState] = useState({});
   const [checkOutState, setCheckOutState] = useState({});
 
+  const { showSnackbar } = useSnackbar();
+
   const setStatus = (setState) => (label, value) => {
     setState(prev => ({ ...prev, [label]: value }));
+    if (value === 'checked') {
+      showSnackbar(`Marked '${label}' as completed`, 'success', { vertical: 'top', horizontal: 'right' });
+    } else if (value === 'na') {
+      showSnackbar(`Marked '${label}' as N/A`, 'info', { vertical: 'top', horizontal: 'right' });
+    }
   };
 
   const allItems = [

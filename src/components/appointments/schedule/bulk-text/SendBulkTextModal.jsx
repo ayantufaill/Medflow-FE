@@ -179,24 +179,27 @@ const SendBulkTextModal = ({ open, onClose }) => {
         }
       }}
     >
-      <DialogTitle sx={{ height: '73px', boxSizing: 'border-box', p: '0 25px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
-        <Box sx={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: COLORS.ACCENT_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.ACCENT }}>
-          <ChatBubbleOutlineIcon sx={{ fontSize: '20px' }} />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: '16px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
-            Send Bulk Text
-          </Typography>
-          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>
-            Select patients and compose your message
-          </Typography>
-        </Box>
+      <DialogTitle sx={{ 
+        boxSizing: 'border-box', 
+        px: '25px', 
+        py: '16px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px', 
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        backgroundColor: COLORS.SURFACE_TINT,
+        m: 0
+      }}>
+        <ChatBubbleOutlineIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Send Bulk Text
+        </Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: '0 25px', pt: '14px', pb: '20px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#f8fafc', height: 'auto' }}>
+      <DialogContent sx={{ px: '25px', pt: '16px !important', pb: '20px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
         <PatientSelectionColumn
           displayPatients={displayPatients}
           selectedPatients={selectedPatients}

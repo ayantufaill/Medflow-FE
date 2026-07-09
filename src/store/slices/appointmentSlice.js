@@ -233,6 +233,10 @@ const initialState = {
   selectedDate: new Date().toISOString(),
   // Conflict windows detected during the booking flow — cleared on dialog close.
   conflicts: [],
+  // Client-side visual filters (e.g. from the Filter Labs popover)
+  frontendFilters: { providerId: 'All', visitType: 'All' },
+  // Route slip dialog visibility
+  routeSlipDialogOpen: false,
 
   // ── Operatory schedule pending tray ────────────────────────────────────────
   // Holds items the user has dragged off the grid into the "pending" holding area.
@@ -320,6 +324,10 @@ const appointmentSlice = createSlice({
       state.calendarView = action.payload; // 'day' | 'week' | 'month'
     },
 
+    setRouteSlipDialogOpen: (state, action) => {
+      state.routeSlipDialogOpen = action.payload;
+    },
+
     // Stores the date as an ISO string so it survives Redux serialization checks.
     // Components convert to/from dayjs at the boundary.
     setSelectedDate: (state, action) => {
@@ -366,6 +374,14 @@ const appointmentSlice = createSlice({
     // so stale pending items don't reappear on return.
     clearPendingItems: (state) => {
       state.pendingItems = [];
+    },
+
+    // Frontend visual filters reducers
+    setFrontendFilters: (state, action) => {
+      state.frontendFilters = { ...state.frontendFilters, ...action.payload };
+    },
+    clearFrontendFilters: (state) => {
+      state.frontendFilters = { providerId: 'All', visitType: 'All' };
     },
   },
 
@@ -536,6 +552,7 @@ export const {
   updateAppointmentInList,
   removeAppointmentFromList,
   setCalendarView,
+  setRouteSlipDialogOpen,
   setSelectedDate,
   setFilters,
   clearFilters,
@@ -544,6 +561,8 @@ export const {
   addPendingItem,
   removePendingItem,
   clearPendingItems,
+  setFrontendFilters,
+  clearFrontendFilters,
 } = appointmentSlice.actions;
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
@@ -576,5 +595,7 @@ export const selectConflicts                  = (state) => state.appointment.con
 
 // Operatory schedule selectors
 export const selectPendingItems               = (state) => state.appointment.pendingItems;
+export const selectFrontendFilters            = (state) => state.appointment.frontendFilters;
+export const selectRouteSlipDialogOpen        = (state) => state.appointment.routeSlipDialogOpen;
 
 export default appointmentSlice.reducer;
