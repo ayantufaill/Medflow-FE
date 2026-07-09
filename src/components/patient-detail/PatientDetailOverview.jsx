@@ -1,7 +1,6 @@
 // http://localhost:5173/patients/details/16 => PatientDetailPage
 
 import { useState, useEffect } from 'react';
-import PhoneInput from 'react-phone-input-2';
 import { Box, Button, Divider, TextField } from '@mui/material';
 import {
   PersonOutlineOutlined as PersonOutlineIcon,
@@ -30,6 +29,7 @@ import EmergencyContactSection from './EmergencyContactSection';
 import PatientPreferencesGrid, { CommunicationPreferencesCard, ReferringCard, ConfirmationSettingsCard, AssignmentReleaseCard } from './PatientPreferencesGrid';
 import SectionCard from '../shared/SectionCard';
 import { InlineFieldRow } from './InlineField';
+import PhoneField from './PhoneField';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
 import { ZIndexLayer } from 'recharts';
@@ -54,51 +54,6 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
     }
   };
 
-  const handlePhoneChange = (e) => {
-    const rawValue = e.target.value;
-
-    // Remove all non-digit characters
-    const digitsOnly = rawValue.replace(/\D/g, '');
-
-    // Limit to max 11 digits
-    let cleanedNumber = digitsOnly;
-    if (digitsOnly.length > 11) {
-      cleanedNumber = digitsOnly.slice(0, 11);
-    }
-
-    // If starts with 0 or 9 (invalid first digits), remove them
-    if (cleanedNumber.length > 0 && (cleanedNumber[0] === '0' || cleanedNumber[0] === '9')) {
-      cleanedNumber = cleanedNumber.slice(1);
-    }
-
-    // Update state with formatted value
-    const updatedSpouseInfo = { ...spouseInfo, phone: cleanedNumber };
-    setSpouseInfo(updatedSpouseInfo);
-
-    if (onPatientDataChange) {
-      const updatedData = { ...patient, spouseInfo: updatedSpouseInfo };
-      onPatientDataChange(updatedData);
-    }
-  };
-
-  // Only safe, non-geometric overrides — see the identical note in
-  // ContactInformationSection.jsx: overriding height/padding/width here fights the
-  // library's own absolute-positioned flag icon math and misaligns it.
-  const phoneInputWrapperSx = {
-    '& .react-tel-input': {
-      fontFamily: 'Inter',
-      width: '100%',
-    },
-    '& .react-tel-input .form-control': {
-      width: '100%',
-      fontFamily: 'Inter',
-      fontSize: fontSize.base,
-    },
-    '& .react-tel-input .country-list': {
-      fontFamily: 'Inter',
-    },
-  };
-
   return (
     <Box>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -108,25 +63,11 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
           onChange={(e) => handleFieldChange('name', e.target.value)}
           InputProps={{ readOnly: !isEditMode }}
         />
-        <InlineFieldRow
+        <PhoneField
           label="Spouse Phone"
-          input={
-            <Box sx={phoneInputWrapperSx}>
-              <PhoneInput
-                country="us"
-                value={spouseInfo?.phone ? (() => {
-                  const digits = spouseInfo.phone.replace(/\D/g, '');
-                  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                  if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-                  return spouseInfo.phone;
-                })() : ''}
-                onChange={(rawValue) => handlePhoneChange({ target: { value: rawValue } })}
-                enableSearch
-                searchPlaceholder="Search"
-                specialLabel=""
-              />
-            </Box>
-          }
+          value={spouseInfo?.phone || ''}
+          isEditMode={isEditMode}
+          onChange={(e) => handleFieldChange('phone', e.target.value)}
         />
         <InlineFieldRow
           label="Email Address"
@@ -322,7 +263,7 @@ export default function PatientDetailOverview({
           <SectionCard icon={InsightsOutlinedIcon} title="Snapshot">
             <PatientSnapshotCard patient={patient} patientNumber={patientNumber} />
           </SectionCard>
-          <SectionCard icon={WarningAmberIcon} title="Emergency Contact">
+          <SectionCard icon={WarningAmberIcon} title="Emergency Contact" allowOverflow>
             <EmergencyContactSection
               patient={patient}
               isEditMode={isEditMode}
