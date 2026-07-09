@@ -374,9 +374,6 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           search={search}
           onSearchChange={handleSearchChange}
           loading={loading}
-          allSelected={allSelected}
-          someSelected={someSelected}
-          onSelectAll={handleSelectAll}
           onAddPatient={() => navigate('/patients/new')}
           onImportPatient={handleImportPatient}
           onDeactivateSelected={handleDeactivateSelected}
