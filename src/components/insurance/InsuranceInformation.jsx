@@ -4,8 +4,7 @@ import { Business as BusinessIcon } from "@mui/icons-material";
 import FormInput from './FormInput';
 import CarrierSearchDropdown from './insurance-info/CarrierSearchDropdown';
 import PlanBillingTable from './insurance-info/PlanBillingTable';
-import { DUMMY_INSURANCE } from './utils/insuranceConstants';
-import { formatPhoneNumber } from './utils/insuranceHelpers';
+import PhoneNumberInput from '../shared/PhoneNumberInput';
 
 const InsuranceInformation = ({ 
   formData, 
@@ -75,10 +74,6 @@ const InsuranceInformation = ({
     handleInputChange('carrierSearch', '');
   };
 
-  const onPhoneChange = (e) => {
-    handleInputChange('phoneNumber', formatPhoneNumber(e.target.value));
-  };
-
   return (
     <Box sx={{ border: '1px solid #DFE5EC', borderRadius: '12px', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 2, borderBottom: '1px solid #DFE5EC' }}>
@@ -129,8 +124,22 @@ const InsuranceInformation = ({
             <Box sx={{ flex: 1 }}>
               <FormInput
                 label="Carrier Phone"
-                value={formData.carrierPhone || ''}
-                onChange={(e) => handleInputChange('carrierPhone', e.target.value)}
+                renderInput={() => (
+                  <PhoneNumberInput
+                    value={formData.carrierPhone}
+                    onChange={(e) => handleInputChange('carrierPhone', e.target.value)}
+                    sx={{
+                      '& .react-tel-input .form-control': {
+                        bgcolor: '#f8f9fc',
+                        fontSize: '14px',
+                        borderColor: '#DFE5EC',
+                        height: '30px',
+                        borderRadius: '4px',
+                        '&:hover': { borderColor: '#2563eb' },
+                      },
+                    }}
+                  />
+                )}
               />
             </Box>
           </Box>
@@ -153,10 +162,10 @@ const InsuranceInformation = ({
           />
         </Box>
 
-        <PlanBillingTable 
-          formData={{...formData, phoneNumber: formData.phoneNumber || ''}} 
-          handleInputChange={(f,v) => f === 'phoneNumber' ? onPhoneChange({target:{value:v}}) : handleInputChange(f, v)} 
-          benefits={benefits} 
+        <PlanBillingTable
+          formData={formData}
+          handleInputChange={handleInputChange}
+          benefits={benefits}
         />
 
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, mt: 2, px: 1 }}>

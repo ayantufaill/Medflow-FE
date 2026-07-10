@@ -39,8 +39,8 @@ const PlanFeeGuideSection = ({
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ bgcolor: '#eef2ff', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#3b82f6', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+        <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
         </Box>
       </Box>
 
