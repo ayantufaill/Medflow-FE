@@ -133,6 +133,9 @@ const InsuranceInformation = ({
                         bgcolor: '#f8f9fc',
                         fontSize: '14px',
                         borderColor: '#DFE5EC',
+                        height: '30px',
+                        borderRadius: '4px',
+                        '&:hover': { borderColor: '#2563eb' },
                       },
                     }}
                   />
