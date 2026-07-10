@@ -65,7 +65,7 @@ const toSliderShape = (patient) => {
     patient.mobilePhone ||
     "";
   const familyMembersCount =
-    patient.familyMembers?.length ?? patient.family?.length ?? 1;
+    patient.household?.length ?? patient.familyMembers?.length ?? patient.family?.length ?? 1;
 
   const familyBalanceRaw =
     patient.balanceBreakdown?.familyTotalOutstanding ??

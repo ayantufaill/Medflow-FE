@@ -8,7 +8,6 @@ import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {
   fetchPatientHistory,
-  fetchFamilyAppointments,
 } from '../../../store/slices/appointmentSlice';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
@@ -65,9 +64,6 @@ const PatientActions = ({ appointment }) => {
 
   const handleFamilyAppointments = () => {
     if (!selectedPatientId) return;
-    // fetchFamilyAppointments expects an array of IDs so it can batch-fetch
-    // appointments for all family members simultaneously.
-    dispatch(fetchFamilyAppointments([selectedPatientId]));
     setFamilyAppointmentsDialogOpen(true);
   };
 

@@ -127,15 +127,36 @@ function EmptyStateBox({ icon: EmptyIcon, text }) {
 // ── Communication Preferences ───────────────────────────────────────────────
 
 export function CommunicationPreferencesCard({ patient, isEditMode, onPatientDataChange }) {
+  const prefs = Array.isArray(patient?.communicationPreference) 
+    ? patient.communicationPreference 
+    : (typeof patient?.communicationPreference === 'string' ? [patient.communicationPreference] : []);
+
   const items = [
-    { text: 'Contact me on the phone numbers provided', field: 'communicationContactByPhone' },
-    { text: 'Leave voicemail at home', field: 'communicationLeaveVoicemailAtHome' },
-    { text: 'I agree that the dental practice may communicate with me electronically at the email address I provided.', field: 'communicationAgreeElectronicCommunications' },
-    { text: 'By opting in, I agree to receive SMS messages from the dental office regarding appointment reminders.', field: 'communicationAgreeSmsMessages' },
-  ].map((item) => ({ ...item, checked: !!patient?.customFields?.[item.field] }));
+    { text: 'Contact me on the phone numbers provided', field: 'phone' },
+    { text: 'Leave voicemail at home', field: 'voicemail' },
+    { text: 'I agree that the dental practice may communicate with me electronically at the email address I provided.', field: 'email' },
+    { text: 'By opting in, I agree to receive SMS messages from the dental office regarding appointment reminders.', field: 'sms' },
+  ].map((item) => ({ ...item, checked: prefs.includes(item.field) }));
 
   const handleToggle = (field, checked) => {
-    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, [field]: checked } });
+    let newPrefs = [...prefs];
+    if (checked && !newPrefs.includes(field)) {
+      newPrefs.push(field);
+    } else if (!checked) {
+      newPrefs = newPrefs.filter((p) => p !== field);
+    }
+
+    const newCustomFields = { ...patient?.customFields };
+    delete newCustomFields.communicationContactByPhone;
+    delete newCustomFields.communicationLeaveVoicemailAtHome;
+    delete newCustomFields.communicationAgreeElectronicCommunications;
+    delete newCustomFields.communicationAgreeSmsMessages;
+
+    onPatientDataChange({ 
+      ...patient, 
+      communicationPreference: newPrefs,
+      customFields: newCustomFields
+    });
   };
 
   return (
@@ -197,14 +218,26 @@ export function AssignmentReleaseCard({ patient, isEditMode, onPatientDataChange
   ];
 
   const handleChange = (field, value) => {
-    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, [field]: value } });
+    // Also remove from customFields to prevent duplicate data payload
+    const newCustomFields = { ...patient?.customFields };
+    delete newCustomFields[field];
+    
+    onPatientDataChange({ 
+      ...patient, 
+      customFields: newCustomFields,
+      assignmentAndRelease: { 
+        ...patient?.assignmentAndRelease, 
+        [field]: value 
+      } 
+    });
   };
 
   return (
     <SectionCard icon={AssignmentIcon} title="Assignment & Release">
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
         {fields.map((item) => {
-          const value = patient?.customFields?.[item.field] || '';
+          // Read from assignmentAndRelease, fallback to customFields for backwards compatibility if needed
+          const value = patient?.assignmentAndRelease?.[item.field] ?? patient?.customFields?.[item.field] ?? '';
           return (
             <Box key={item.field}>
               <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mb: 0.5 }}>

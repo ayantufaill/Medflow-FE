@@ -869,8 +869,8 @@ const OperatorySidebar = ({
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
                     <Box>
                       <Typography className="detail-label">Family members:</Typography>
-                      {(patientDetails?.familyMembers || []).length > 0 ? (
-                        patientDetails.familyMembers.map((member, idx) => (
+                      {(Array.isArray(patientDetails?.household) ? patientDetails.household : []).length > 0 ? (
+                        patientDetails.household.map((member, idx) => (
                           <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#333', pl: 1 }}>
                             {member.firstName} {member.lastName} ({member.relationship || 'Member'})
                           </Typography>
@@ -1315,12 +1315,6 @@ const OperatorySidebar = ({
         patient={selectedPatient}
         patientDetails={patientDetails}
         patientBalance={patientBalance}
-      />
-      <FamilyAppointmentsDialog
-        open={familyAppointmentsOpen}
-        onClose={handleCloseFamilyAppointments}
-        patient={selectedPatient}
-        familyMembers={patientDetails?.familyMembers || []}
       />
       <AppointmentHistoryDialog
         open={appointmentHistoryOpen}

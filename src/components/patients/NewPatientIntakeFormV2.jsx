@@ -191,7 +191,6 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
       referringSources: values.referringSources, referringPatient: trimValue(values.referringPatient),
       releaseSpouse: values.releaseSpouse, releaseChildren: values.releaseChildren, releaseParents: values.releaseParents, releaseOther: trimValue(values.releaseOther),
       reminderPreference: values.reminderPreference, stopReminderAfterConfirmation: values.stopReminderAfterConfirmation, dontRequestReview: values.dontRequestReview,
-      assignmentRelease: values.assignmentRelease, photographyRelease: values.photographyRelease, socialMediaRelease: values.socialMediaRelease,
       sendWelcome: values.sendWelcome, sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "", newPatientFlag: values.newPatientFlag,
     });
 
@@ -203,13 +202,25 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
       firstName: trimValue(values.firstName), lastName: trimValue(values.lastName), middleName: trimValue(values.middleName) || "", preferredName: trimValue(values.preferredName) || "",
       dateOfBirth: formatDateValue(values.dateOfBirth), gender: values.genderIdentity || values.sexAtBirth || "", ssn: (values.ssn || "").replace(/\D/g, ""),
       phonePrimary: normalizePhone(values.mobileNumber || values.homePhoneNumber), phoneSecondary: normalizePhone(values.homePhoneNumber || values.workPhoneNumber), email: trimValue(values.emailAddress) || "",
-      preferredLanguage: "en", communicationPreference: values.contactByPhone ? "phone" : values.agreeSmsMessages ? "sms" : values.sendWelcomeMethod === "text" ? "sms" : "email",
+      preferredLanguage: "en", communicationPreference: (() => {
+        const prefs = [];
+        if (values.contactByPhone) prefs.push("phone");
+        if (values.agreeSmsMessages || values.sendWelcomeMethod === "text") prefs.push("sms");
+        if (values.agreeElectronicCommunications) prefs.push("email");
+        return prefs.length > 0 ? prefs : [];
+      })(),
       portalAccessEnabled: false, referralSource: values.referringSources || trimValue(values.referringPatient) || "", isActive: true,
       address: Object.keys(address).length ? address : undefined, emergencyContact: Object.keys(emergencyContact).length ? emergencyContact : undefined, spouseInfo: Object.keys(spouseInfo).length ? spouseInfo : undefined,
       title: trimValue(values.title), sexAtBirth: values.sexAtBirth, genderIdentity: values.genderIdentity,
       preferredDentistId: values.preferredDentistId === "null" ? "" : values.preferredDentistId, preferredHygienistId: values.preferredHygienistId === "null" ? "" : values.preferredHygienistId,
       maritalStatus: values.maritalStatus, occupation: trimValue(values.occupation), employer: trimValue(values.employer) || trimValue(values.spouseEmployer), guardianEmployer: trimValue(values.guardianEmployer),
       customFields: Object.keys(customFields).length ? customFields : undefined,
+      assignmentAndRelease: removeEmptyCustomFields({
+        assignmentRelease: values.assignmentRelease,
+        photographyRelease: values.photographyRelease,
+        socialMediaRelease: values.socialMediaRelease,
+        aiRelease: values.aiRelease,
+      }),
     });
     onSubmit(payload);
   };

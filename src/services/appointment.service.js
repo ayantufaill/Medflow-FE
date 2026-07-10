@@ -221,4 +221,9 @@ export const appointmentService = {
     const response = await apiClient.get(`/patients/${patientId}/appointments?${params.toString()}`);
     return response.data.data.appointments;
   },
+
+  async getFamilyAppointments(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/family-appointments`);
+    return response.data.data;
+  },
 };

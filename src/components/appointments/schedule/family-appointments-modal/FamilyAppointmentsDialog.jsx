@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -23,6 +23,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchFamilyAppointments,
   selectFamilyAppointmentsList,
+  selectFamilyAppointmentsMembers,
 } from "../../../../store/slices/appointmentSlice";
 import { fetchCurrentPracticeInfo } from "../../../../store/slices/practiceInfoSlice";
 import { COLORS } from "../../../../constants/colors";
@@ -36,71 +37,21 @@ const FamilyAppointmentsDialog = () => {
   const [tabValue, setTabValue] = useState(0);
 
   const dispatch = useDispatch();
-  let allAppointments = useSelector(selectFamilyAppointmentsList);
+  const allAppointments = useSelector(selectFamilyAppointmentsList);
+  const familyMembers = useSelector(selectFamilyAppointmentsMembers);
 
-  const { currentPatient: patient, patientDetails } = usePatient();
-  const familyMembers = patientDetails?.familyMembers || [];
+  const { currentPatient: patient } = usePatient();
 
   const { familyAppointmentsDialogOpen: open, setFamilyAppointmentsDialogOpen } = useScheduleState();
   const onClose = () => setFamilyAppointmentsDialogOpen(false);
 
-  // Inject dummy data when no real data is loaded
-  if (allAppointments.length === 0 && patient) {
-    const members = [patient, ...familyMembers].filter(Boolean);
-    allAppointments = members.flatMap((member) => {
-      const memberId = member.id || member._id;
-      return [
-        {
-          _id: `dummy-1-${memberId}`,
-          patientId: member,
-          appointmentDate: dayjs().add(2, "day").toISOString(),
-          startTime: dayjs().add(2, "day").hour(10).minute(0).toISOString(),
-          time: dayjs().add(2, "day").hour(10).minute(0).format("hh:mm A"),
-          visitType: "Maintenance",
-          procedures: "Maintenance, fl",
-          provider: "Dr. Smith",
-          headerColor: "#6d5fc7",
-          status: "confirmed",
-          providerId: { firstName: "Dr.", lastName: "Smith" },
-        },
-        {
-          _id: `dummy-2-${memberId}`,
-          patientId: member,
-          appointmentDate: dayjs().add(1, "month").toISOString(),
-          startTime: dayjs().add(1, "month").hour(14).minute(30).toISOString(),
-          time: dayjs().add(1, "month").hour(14).minute(30).format("hh:mm A"),
-          visitType: "Exam",
-          procedures: "Comprehensive Exam",
-          provider: "Dr. Smith",
-          headerColor: "#2563eb",
-          status: "unconfirmed",
-          providerId: { firstName: "Dr.", lastName: "Smith" },
-        },
-        {
-          _id: `dummy-due-${memberId}`,
-          patientId: member,
-          appointmentDate: dayjs().subtract(2, "month").toISOString(),
-          startTime: dayjs().subtract(2, "month").hour(9).minute(0).toISOString(),
-          time: dayjs().subtract(2, "month").hour(9).minute(0).format("hh:mm A"),
-          visitType: "Follow Up",
-          procedures: "Follow up visit",
-          provider: "Dr. Smith",
-          headerColor: "#dc2626",
-          status: "no_show",
-          providerId: { firstName: "Dr.", lastName: "Smith" },
-        },
-      ];
-    });
-  }
+  // Stabilise the IDs so the callback reference doesn't change on every render
+  const patientId = patient?.id || patient?._id;
 
   const fetchFamilyAppointmentsData = useCallback(() => {
-    if (!patient) return;
-    const patientId = patient.id || patient._id;
-    const familyIds = familyMembers
-      .map((m) => m.id || m._id)
-      .filter((id) => id && id !== patientId);
-    dispatch(fetchFamilyAppointments([patientId, ...familyIds]));
-  }, [patient, familyMembers, dispatch]);
+    if (!patientId) return;
+    dispatch(fetchFamilyAppointments(patientId));
+  }, [patientId, dispatch]);
 
   useEffect(() => {
     if (open) {
@@ -111,6 +62,13 @@ const FamilyAppointmentsDialog = () => {
 
   const handleTabChange = (_, newValue) => setTabValue(newValue);
 
+  // Helper: extract a plain patient-id string from whatever shape the API returns
+  const getApptPatientId = (appt) => {
+    if (!appt.patientId) return null;
+    if (typeof appt.patientId === 'string') return appt.patientId;
+    return appt.patientId._id || appt.patientId.id || null;
+  };
+
   // Group scheduled appointments by family member
   const groupedAppointments = patient
     ? [patient, ...familyMembers].filter(Boolean).map((member) => {
@@ -119,7 +77,7 @@ const FamilyAppointmentsDialog = () => {
           name: `${member.firstName} ${member.lastName}`,
           appointments: allAppointments.filter(
             (appt) =>
-              (appt.patientId?._id || appt.patientId) === memberId &&
+              getApptPatientId(appt) === memberId &&
               dayjs(appt.appointmentDate).isAfter(dayjs().subtract(1, "day"), "day")
           ),
         };
@@ -133,7 +91,8 @@ const FamilyAppointmentsDialog = () => {
   const getPatientName = (appt) => {
     if (appt.patientId?.firstName) return `${appt.patientId.firstName} ${appt.patientId.lastName}`;
     const allMembers = [patient, ...familyMembers].filter(Boolean);
-    const found = allMembers.find((m) => (m.id || m._id) === (appt.patientId?._id || appt.patientId));
+    const apptPid = getApptPatientId(appt);
+    const found = allMembers.find((m) => (m.id || m._id) === apptPid);
     return found ? `${found.firstName} ${found.lastName}` : "Unknown Patient";
   };
 
