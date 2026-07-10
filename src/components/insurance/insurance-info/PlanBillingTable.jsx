@@ -18,6 +18,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import { InfoOutlined as InfoIcon } from "@mui/icons-material";
+import PhoneNumberInput from "../../shared/PhoneNumberInput";
 
 const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
   const [templateAnchorEl, setTemplateAnchorEl] = useState(null);
@@ -208,20 +209,17 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   color: "#333",
                 }}
               >
-                <TextField
-                  fullWidth
-                  InputProps={{
-                    sx: {
+                <PhoneNumberInput
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+                  sx={{
+                    '& .react-tel-input .form-control': {
+                      border: "none",
+                      bgcolor: "transparent",
                       fontSize: "0.85rem",
                       color: "#333",
-                      "& fieldset": { border: "none" },
                     },
                   }}
-                  value={formData.phoneNumber || ""}
-                  onChange={(e) =>
-                    handleInputChange("phoneNumber", e.target.value)
-                  }
-                  placeholder="(XXX) XXX-XXXX"
                 />
               </TableCell>
             </TableRow>
