@@ -137,7 +137,7 @@ const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen
 
 // Main AppointmentChecklist component
 const AppointmentChecklist = () => {
-  const [preApptOpen, setPreApptOpen] = useState(true);
+  const [preApptOpen, setPreApptOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
 

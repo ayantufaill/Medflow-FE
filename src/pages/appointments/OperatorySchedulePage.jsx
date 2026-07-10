@@ -20,6 +20,7 @@ import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
 import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
+import FamilyAppointmentsDialog from "../../components/appointments/schedule/family-appointments-modal/FamilyAppointmentsDialog";
 import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
 import BlockSlotModal from "../../components/appointments/schedule/BlockSlotModal";
 import AppointmentDetailModal from "../../components/appointments/schedule/appointment-detail-modal/AppointmentDetailModal";
@@ -1034,6 +1035,7 @@ const OperatorySchedulePage = () => {
     </Box>
       {/* Route Slip Modal */}
       <RouteSlipDialog />
+      <FamilyAppointmentsDialog />
 
     </DndContext>
   );

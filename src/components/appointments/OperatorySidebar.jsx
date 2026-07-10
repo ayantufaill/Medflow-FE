@@ -51,8 +51,8 @@ import PatientChat from "../shared/PatientChat";
 import AppointmentPage from "../shared/AppointmentPage";
 import { compactInputLabelSx, compactInputValueSx } from "../../constants/styles";
 import PatientRouteSlipDialog from "./PatientRouteSlipDialog";
-import FamilyAppointmentsDialog from "./FamilyAppointmentsDialog";
-import AppointmentHistoryDialog from "./AppointmentHistoryDialog";
+import FamilyAppointmentsDialog from "./schedule/family-appointments-modal/FamilyAppointmentsDialog";
+import AppointmentHistoryDialog from "./schedule/appointment-history-modal/AppointmentHistoryDialog";
 import { usePatient, usePatientBalance } from "../../hooks/redux/usePatient";
 
 const StyledDateCalendar = ({ value, onChange }) => (

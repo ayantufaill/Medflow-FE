@@ -235,8 +235,9 @@ const initialState = {
   conflicts: [],
   // Client-side visual filters (e.g. from the Filter Labs popover)
   frontendFilters: { providerId: 'All', visitType: 'All' },
-  // Route slip dialog visibility
+  // Modal visibility
   routeSlipDialogOpen: false,
+  familyAppointmentsDialogOpen: false,
 
   // ── Operatory schedule pending tray ────────────────────────────────────────
   // Holds items the user has dragged off the grid into the "pending" holding area.
@@ -326,6 +327,10 @@ const appointmentSlice = createSlice({
 
     setRouteSlipDialogOpen: (state, action) => {
       state.routeSlipDialogOpen = action.payload;
+    },
+
+    setFamilyAppointmentsDialogOpen(state, action) {
+      state.familyAppointmentsDialogOpen = action.payload;
     },
 
     // Stores the date as an ISO string so it survives Redux serialization checks.
@@ -553,6 +558,7 @@ export const {
   removeAppointmentFromList,
   setCalendarView,
   setRouteSlipDialogOpen,
+  setFamilyAppointmentsDialogOpen,
   setSelectedDate,
   setFilters,
   clearFilters,
@@ -597,5 +603,6 @@ export const selectConflicts                  = (state) => state.appointment.con
 export const selectPendingItems               = (state) => state.appointment.pendingItems;
 export const selectFrontendFilters            = (state) => state.appointment.frontendFilters;
 export const selectRouteSlipDialogOpen        = (state) => state.appointment.routeSlipDialogOpen;
+export const selectFamilyAppointmentsDialogOpen = (state) => state.appointment.familyAppointmentsDialogOpen;
 
 export default appointmentSlice.reducer;

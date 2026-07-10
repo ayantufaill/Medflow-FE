@@ -94,6 +94,7 @@ const AppointmentSummaryCard = ({ appointment }) => {
               PaperProps: { style: { maxHeight: 250 } },
               anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
               transformOrigin: { vertical: 'top', horizontal: 'left' },
+              sx: { zIndex: 1600 },
             }}
           >
             {STATUS_OPTIONS.map(opt => (

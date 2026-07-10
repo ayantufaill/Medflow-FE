@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
 import { KeyboardArrowUp } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
 import { PatientDetails, FamilyDetails } from './PatientDetailsCard';
+import AppointmentHistoryDialog from '../schedule/appointment-history-modal/AppointmentHistoryDialog';
 import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {
@@ -26,9 +28,9 @@ const DotGrid = ({ color = 'rgba(255,255,255,0.6)' }) => (
 
 const PatientActions = ({ appointment }) => {
   const dispatch = useDispatch();
-  const { selectedPatientId }  = usePatient();
+  const { selectedPatientId, currentPatient }  = usePatient();
   const { currentAppointment } = useAppointmentDetail();
-  const { setRouteSlipDialogOpen } = useScheduleState();
+  const { setRouteSlipDialogOpen, setFamilyAppointmentsDialogOpen } = useScheduleState();
 
   // Use the passed appointment from the left panel if available, otherwise fallback to Redux
   const activeAppt = appointment || currentAppointment;
@@ -51,14 +53,14 @@ const PatientActions = ({ appointment }) => {
   const apptDuration = activeAppt?.durationMinutes || activeAppt?.duration;
   const durationLabel = apptDuration ? `${apptDuration} min` : '__ min';
 
+  const [appointmentHistoryOpen, setAppointmentHistoryOpen] = useState(false);
+
   // ── Button handlers ──────────────────────────────────────────────────────────
 
   const handleAppointmentHistory = () => {
     if (!selectedPatientId) return;
-    // fetchPatientHistory expects a bare patientId string, not an object.
-    // Result lands in state.appointment.patientHistoryList — wire to a
-    // right-panel or modal in the parent page when that is implemented.
     dispatch(fetchPatientHistory(selectedPatientId));
+    setAppointmentHistoryOpen(true);
   };
 
   const handleFamilyAppointments = () => {
@@ -66,6 +68,7 @@ const PatientActions = ({ appointment }) => {
     // fetchFamilyAppointments expects an array of IDs so it can batch-fetch
     // appointments for all family members simultaneously.
     dispatch(fetchFamilyAppointments([selectedPatientId]));
+    setFamilyAppointmentsDialogOpen(true);
   };
 
   // Route Slip and Purchase Products require a separate modal/drawer — they are
@@ -156,6 +159,12 @@ const PatientActions = ({ appointment }) => {
       {/* ── Accordions ──────────────────────────────────────────────────────── */}
       <PatientDetails />
       <FamilyDetails />
+
+      <AppointmentHistoryDialog 
+        open={appointmentHistoryOpen} 
+        onClose={() => setAppointmentHistoryOpen(false)} 
+        patient={currentPatient} 
+      />
     </Box>
   );
 };

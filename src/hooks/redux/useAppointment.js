@@ -25,6 +25,7 @@ import {
   setConflicts,
   clearConflicts,
   setRouteSlipDialogOpen,
+  setFamilyAppointmentsDialogOpen,
   // Pending tray actions
   addPendingItem,
   removePendingItem,
@@ -47,6 +48,7 @@ import {
   selectPendingItems,
   selectFrontendFilters,
   selectRouteSlipDialogOpen,
+  selectFamilyAppointmentsDialogOpen,
   setFrontendFilters,
   clearFrontendFilters,
 } from '../../store/slices/appointmentSlice';
@@ -239,6 +241,7 @@ export const useScheduleState = () => {
   const pendingItems = useSelector(selectPendingItems);
   const frontendFilters = useSelector(selectFrontendFilters);
   const routeSlipDialogOpen = useSelector(selectRouteSlipDialogOpen);
+  const familyAppointmentsDialogOpen = useSelector(selectFamilyAppointmentsDialogOpen);
 
   return {
     // ── Calendar UI ──────────────────────────────────────────────────────────
@@ -271,5 +274,9 @@ export const useScheduleState = () => {
     // ── Route Slip ────────────────────────────────────────────────────────────
     routeSlipDialogOpen,
     setRouteSlipDialogOpen: useCallback((open) => dispatch(setRouteSlipDialogOpen(open)), [dispatch]),
+
+    // ── Family Appointments ───────────────────────────────────────────────────
+    familyAppointmentsDialogOpen,
+    setFamilyAppointmentsDialogOpen: useCallback((open) => dispatch(setFamilyAppointmentsDialogOpen(open)), [dispatch]),
   };
 };
