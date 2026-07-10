@@ -17,12 +17,12 @@ export const SectionHeader = ({ title }) => (
   </Box>
 );
 
-export const InfoRow = ({ label, value }) => (
-  <Box sx={{ display: 'flex', mb: '6px', fontSize: '13px' }}>
-    <Box sx={{ width: '150px', fontWeight: 600, color: '#334155' }}>
+export const InfoRow = ({ label, value, alignValue = 'left' }) => (
+  <Box sx={{ display: 'flex', mb: '6px', fontSize: '13px', justifyContent: 'space-between' }}>
+    <Box sx={{ fontWeight: 600, color: '#334155', minWidth: '150px' }}>
       {label}:
     </Box>
-    <Box sx={{ flex: 1, color: '#475569' }}>
+    <Box sx={{ flex: 1, color: '#475569', textAlign: alignValue }}>
       {value || '--'}
     </Box>
   </Box>

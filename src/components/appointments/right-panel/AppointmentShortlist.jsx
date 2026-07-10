@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import { Checklist } from '@mui/icons-material';
+import { Checklist, CalendarToday } from '@mui/icons-material';
 import { useDraggable } from '@dnd-kit/core';
 import RightPanelCard from './RightPanelCard';
 import AppointmentShortlistModal from './AppointmentShortlistModal';
@@ -113,7 +113,7 @@ const AppointmentShortlist = () => {
   return (
     <>
       <RightPanelCard
-        icon={<Checklist sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
+        icon={<CalendarToday sx={{ fontSize: '20px', color: COLORS.ACCENT }} />}
         title="Appointment Shortlist"
         count={items.length}
         headerAction="expand"

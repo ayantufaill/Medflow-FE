@@ -352,7 +352,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
   );
 };
 
-const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) => {
+const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode }) => {
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
   
@@ -573,7 +573,7 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) =>
               zIndex: 2,
             }}
           >
-            <AppointmentCard appointment={gridItem} />
+            <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
           </Box>
         );
       })}

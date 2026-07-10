@@ -6,7 +6,7 @@ import TaskListDrawer from './TaskListDrawer';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
-const TASKS = [
+export const TASKS = [
   { title: 'Procedure Followup Required', sub: '06/29/2022 · Front', dot: true },
   { title: 'Procedure Followup Required', sub: '06/29/2022 · Front', dot: false },
   { title: 'Procedure Followup Required', sub: '06/29/2022 · Front', dot: false },

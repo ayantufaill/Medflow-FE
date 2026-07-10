@@ -1,4 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
@@ -40,6 +41,7 @@ const ContactRow = ({ icon, text }) => (
 
 const PatientCard = () => {
   const { currentPatient } = usePatient();
+  const navigate = useNavigate();
 
   // Guard — should not render when no patient is selected (LeftPanel gates it),
   // but defensive early return prevents blank-card flash during Redux hydration.
@@ -148,12 +150,14 @@ const PatientCard = () => {
           wire to currentPatient.medicalAlerts when that field is available. */}
       <Box sx={{ display: 'flex' }}>
         <Box
+          onClick={() => navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`)}
           sx={{
             width: '22px', height: '22px',
             backgroundColor: '#fef08a',
             borderRadius: '4px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: '1px solid #fde047',
+            cursor: 'pointer',
           }}
         >
           <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#854d0e' }}>+</Typography>
