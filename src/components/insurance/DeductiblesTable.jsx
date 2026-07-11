@@ -9,7 +9,7 @@ const DEFAULT_DEDUCTIBLES = [
   { id: 2, type: 'Preventative', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
   { id: 3, type: 'Basic', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
   { id: 4, type: 'Major', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
-  { id: 5, type: '3 rthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
+  { id: 5, type: 'Orthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
 ];
 
 const inputSx = {
