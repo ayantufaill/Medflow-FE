@@ -15,27 +15,27 @@ const CoverageGroup = ({ title, rows, onDeleteItem, onChangeItem }) => (
     <Table size="small">
       <TableHead>
         <TableRow>
-          <TableCell sx={{ fontWeight: 700, fontSize: '0.65rem', color: '#777', textTransform: 'uppercase', width: '45%', borderRight: '1px solid #f0f0f0', py: 1, letterSpacing: '0.3px' }}>
+          <TableCell sx={{ fontWeight: 700, fontSize: '0.65rem', color: '#777', textTransform: 'uppercase', width: '40%', borderRight: '1px solid #f0f0f0', py: 1, px: 0.75, letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>
             CATEGORY / SUB-TYPE
           </TableCell>
-          <TableCell sx={{ fontWeight: 700, fontSize: '0.65rem', color: '#777', textTransform: 'uppercase', width: '25%', borderRight: '1px solid #f0f0f0', py: 1, letterSpacing: '0.3px', lineHeight: 1.3 }}>
+          <TableCell sx={{ fontWeight: 700, fontSize: '0.65rem', color: '#777', textTransform: 'uppercase', width: '22%', borderRight: '1px solid #f0f0f0', py: 1, px: 0.75, letterSpacing: '0.2px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
             COVERAGE %
           </TableCell>
-          <TableCell sx={{ fontWeight: 700, fontSize: '0.65rem', color: '#777', textTransform: 'uppercase', width: '30%', py: 1, letterSpacing: '0.3px', lineHeight: 1.3 }}>
-            WAITING PERIOD (MONTHS)
+          <TableCell sx={{ fontWeight: 700, fontSize: '0.65rem', color: '#777', textTransform: 'uppercase', width: '38%', py: 1, px: 0.75, letterSpacing: '0.2px', lineHeight: 1.3 }}>
+            WAITING PERIOD<br />(MONTHS)
           </TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {rows.map((row, index) => (
           <TableRow key={row.id || index} sx={{ '&:hover': { bgcolor: '#fafbfd' } }}>
-            <TableCell sx={{ fontSize: '0.75rem', color: '#555', borderRight: '1px solid #f0f0f0', py: 1.2, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+            <TableCell sx={{ fontSize: '0.75rem', color: '#555', borderRight: '1px solid #f0f0f0', py: 1.2, px: 0.75, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Typography sx={{ fontSize: '0.75rem', color: '#9e9e9e' }}>→</Typography>
                 {row.label}
               </Box>
             </TableCell>
-            <TableCell sx={{ fontSize: '0.75rem', color: '#1976d2', borderRight: '1px solid #f0f0f0', py: 1.2, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+            <TableCell sx={{ fontSize: '0.75rem', color: '#1976d2', borderRight: '1px solid #f0f0f0', py: 1.2, px: 0.75, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
               <TextField 
                 variant="standard"
                 size="small" 
@@ -56,7 +56,7 @@ const CoverageGroup = ({ title, rows, onDeleteItem, onChangeItem }) => (
                 }} 
               />%
             </TableCell>
-            <TableCell sx={{ fontSize: '0.75rem', color: '#1976d2', py: 1.2, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+            <TableCell sx={{ fontSize: '0.75rem', color: '#1976d2', py: 1.2, px: 0.75, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <TextField 
                   variant="standard"
