@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Paper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import FormInput from '../FormInput';
+import FormInput from '../components/FormInput';
 
 const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_INSURANCE, handleSelectResult }) => {
   const [searchResults, setSearchResults] = useState([]);

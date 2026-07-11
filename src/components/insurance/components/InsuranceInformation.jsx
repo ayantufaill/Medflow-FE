@@ -2,9 +2,9 @@ import React from 'react';
 import { Box, Typography, Checkbox, FormControlLabel } from "@mui/material";
 import { Business as BusinessIcon } from "@mui/icons-material";
 import FormInput from './FormInput';
-import CarrierSearchDropdown from './insurance-info/CarrierSearchDropdown';
-import PlanBillingTable from './insurance-info/PlanBillingTable';
-import PhoneNumberInput from '../shared/PhoneNumberInput';
+import CarrierSearchDropdown from '../insurance-info/CarrierSearchDropdown';
+import PlanBillingTable from '../insurance-info/PlanBillingTable';
+import PhoneNumberInput from '../../shared/PhoneNumberInput';
 
 const InsuranceInformation = ({ 
   formData, 

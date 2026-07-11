@@ -11,9 +11,9 @@ import {
   TableContainer,
 } from "@mui/material";
 import { Article as ArticleIcon } from "@mui/icons-material";
-import { headerCellSx } from "./styles/coverageStyles";
-import { DEFAULT_BOOK_ROW_DATA } from "./utils/insuranceConstants";
-import ToothSelectionDialog from "./shared/ToothSelectionDialog";
+import { headerCellSx } from "../styles/coverageStyles";
+import { DEFAULT_BOOK_ROW_DATA } from "../utils/insuranceConstants";
+import ToothSelectionDialog from "../shared/ToothSelectionDialog";
 import CoverageBookRow from "./CoverageBookRow";
 
 const CoverageBookSummary = ({

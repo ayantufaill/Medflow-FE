@@ -1,8 +1,8 @@
 import React from 'react';
 import { Box, Typography } from "@mui/material";
 import { InfoOutlined as InfoIcon, GppGood as GppGoodIcon } from "@mui/icons-material";
-import AnnualMaximumsTable from './coverage-table/AnnualMaximumsTable';
-import FinalCoverageSection from './coverage-table/FinalCoverageSection';
+import AnnualMaximumsTable from '../coverage-table/AnnualMaximumsTable';
+import FinalCoverageSection from '../coverage-table/FinalCoverageSection';
 
 const CoverageSection = ({
   formData,

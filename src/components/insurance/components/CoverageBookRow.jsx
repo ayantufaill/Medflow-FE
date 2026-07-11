@@ -1,7 +1,7 @@
 import React from 'react';
 import { TableRow, TableCell, TextField, InputAdornment, Typography, Select, MenuItem, Box, Checkbox } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { inputFieldSx, deliveryPatternSx, bodyCellSx } from './styles/coverageStyles';
+import { inputFieldSx, deliveryPatternSx, bodyCellSx } from '../styles/coverageStyles';
 
 const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelection }) => {
   return (

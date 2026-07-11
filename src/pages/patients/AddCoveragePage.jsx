@@ -22,7 +22,7 @@ import {
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import TaskList from '../../components/appointments/right-panel/TaskList';
 import Messages from '../../components/appointments/right-panel/Messages';
-import AddCoverageHeader from '../../components/insurance/AddCoverageHeader';
+import AddCoverageHeader from '../../components/insurance/components/AddCoverageHeader';
 
 import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
