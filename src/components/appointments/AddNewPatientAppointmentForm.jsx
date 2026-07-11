@@ -287,6 +287,8 @@ const AddNewPatientAppointmentForm = ({
     const payload = getAppointmentPayload();
     try {
       await shortlistService.createShortlistItem(payload);
+      // Dispatch event to instantly update the Shortlist panel
+      window.dispatchEvent(new Event('shortlist-updated'));
       alert("Successfully converted to shortlist!");
       if (onCancel) onCancel(); // Close modal
     } catch (error) {

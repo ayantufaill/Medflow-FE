@@ -574,6 +574,42 @@ const AppointmentCalendarPage = () => {
     return specialties.filter(Boolean).join(", ");
   };
 
+  const handleEventDrop = async (dropInfo) => {
+    const { event } = dropInfo;
+    const start = dayjs(event.start).format("YYYY-MM-DD");
+    const startTime = dayjs(event.start).format("HH:mm");
+    const endTime = event.end ? dayjs(event.end).format("HH:mm") : undefined;
+
+    try {
+      await appointmentService.updateAppointment(event.id, {
+        appointmentDate: start,
+        startTime: startTime,
+        ...(endTime && { endTime })
+      });
+      showSnackbar("Appointment rescheduled successfully", "success");
+      fetchCalendarData();
+    } catch (err) {
+      dropInfo.revert();
+      showSnackbar("Failed to reschedule appointment", "error");
+    }
+  };
+
+  const handleEventResize = async (resizeInfo) => {
+    const { event } = resizeInfo;
+    const endTime = event.end ? dayjs(event.end).format("HH:mm") : undefined;
+
+    try {
+      await appointmentService.updateAppointment(event.id, {
+        endTime: endTime
+      });
+      showSnackbar("Appointment duration updated", "success");
+      fetchCalendarData();
+    } catch (err) {
+      resizeInfo.revert();
+      showSnackbar("Failed to update duration", "error");
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
@@ -839,6 +875,10 @@ const AppointmentCalendarPage = () => {
                 right: "",
               }}
               events={formattedEvents}
+              editable={true}
+              droppable={true}
+              eventDrop={handleEventDrop}
+              eventResize={handleEventResize}
               selectable={true}
               selectMirror={true}
               dayMaxEvents={true}

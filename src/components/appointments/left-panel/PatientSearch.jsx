@@ -12,7 +12,7 @@ import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 const PatientSearch = () => {
   const { patients, loading, fetch: searchPatients } = usePatients();
-  const { setPatient, setPatientId, clear }          = usePatient();
+  const { setPatient, setPatientId, clear, fetchById } = usePatient();
 
   const [inputValue,  setInputValue]  = useState('');
   const [isOpen,      setIsOpen]      = useState(false);
@@ -46,8 +46,16 @@ const PatientSearch = () => {
 
   // Commit the selected patient to Redux and reset the search field.
   const handleSelectPatient = (patient) => {
-    setPatient(patient);                     // sets currentPatient in patientSlice
-    setPatientId(patient._id || patient.id); // sets selectedPatientId in patientSlice
+    const pId = patient._id || patient.id || patient.PatNum;
+    setPatientId(pId); // sets selectedPatientId in patientSlice
+    
+    // Fetch the full workspace data so family details and balances are populated
+    if (pId) {
+      fetchById(pId);
+    } else {
+      setPatient(patient); // Fallback if no ID (should never happen)
+    }
+    
     setInputValue('');
     setIsOpen(false);
   };
