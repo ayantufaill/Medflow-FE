@@ -529,12 +529,12 @@ const AddCoveragePage = () => {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', gap: '20px', p: 3, maxWidth: '1857px', margin: '0 auto' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', gap: '12px', p: 2, maxWidth: '1857px', margin: '0 auto' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minWidth: 0 }}>
           <AddCoverageHeader onSave={handleSave} onCancel={handleCancel} loading={loading || saving} />
 
-          <Box sx={{ display: 'flex', gap: '20px' }}>
-            <Box sx={{ width: '480px', minWidth: '480px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <Box sx={{ display: 'flex', gap: '12px' }}>
+            <Box sx={{ flex: 1, minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <InsuranceInformation
                 formData={{
                   ...formData,
@@ -575,7 +575,7 @@ const AddCoveragePage = () => {
               />
             </Box>
 
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: '620px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <PlanFeeGuideSection
                 formData={formData}
                 handleInputChange={handleInputChange}
@@ -611,9 +611,6 @@ const AddCoveragePage = () => {
               />
 
               <CoverageBookSummary
-                headerStyle={STYLE_CONSTANTS.headerStyle}
-                bodyCellStyle={STYLE_CONSTANTS.bodyCellStyle}
-                blueHeader={STYLE_CONSTANTS.blueHeader}
                 coverageData={coverageBookData}
                 onCoverageDataChange={setCoverageBookData}
                 onViewFullBook={handleViewFullBook}
