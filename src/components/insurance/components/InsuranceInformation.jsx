@@ -37,7 +37,7 @@ const InsuranceInformation = ({
     
     if (val) {
       filtered = searchPool.filter(item => 
-        (item.payerId || item.id?.toString() || '').toLowerCase().includes(val.toLowerCase()) ||
+        (item.payerId || '').toLowerCase().includes(val.toLowerCase()) ||
         (item.carrierName || item.name || '').toLowerCase().includes(val.toLowerCase()) ||
         (item.groupName || '').toLowerCase().includes(val.toLowerCase()) ||
         (item.groupNumber || '').toLowerCase().includes(val.toLowerCase()) ||
@@ -62,7 +62,7 @@ const InsuranceInformation = ({
   const handleSelectResult = (item) => {
     handleInputChange('insuranceCompanyId', item._id || item.id || 1);
     handleInputChange('carrierName', item.carrierName || item.name || '');
-    handleInputChange('payerId', item.payerId || item.id || '');
+    handleInputChange('payerId', item.payerId || '');
     handleInputChange('carrierPhone', item.carrierPhone || item.phone || '');
     handleInputChange('payerAddress', item.payerAddress || item.address || item.city || '');
     handleInputChange('groupName', item.groupName || '');
@@ -96,11 +96,11 @@ const InsuranceInformation = ({
       </Box>
       <Box sx={{ p: 1.5 }}>
         <CarrierSearchDropdown 
-          formData={formData} 
-          handleInputChange={handleInputChange} 
-          companies={companies} 
-          DUMMY_INSURANCE={DUMMY_INSURANCE} 
-          handleSelectResult={handleSelectResult} 
+          formData={formData}
+          handleInputChange={handleInputChange}
+          companies={companies}
+          DUMMY_INSURANCE={DUMMY_INSURANCE}
+          handleSelectResult={handleSelectResult}
         />
 
         <Box sx={{ mt: 1, mb: 1.5 }}>

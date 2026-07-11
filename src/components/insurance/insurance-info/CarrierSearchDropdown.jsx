@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Paper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import { Box, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import FormInput from '../components/FormInput';
 
 const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_INSURANCE, handleSelectResult }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   const handleSearch = (val) => {
     handleInputChange('carrierSearch', val);
@@ -40,7 +41,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
 
   return (
     <>
-      <Box sx={{ position: 'relative', mt: 1 }}>
+      <Box ref={setAnchorEl} sx={{ position: 'relative', mt: 1 }}>
         <FormInput
           label="Search Carrier"
           placeholder="Search by Payer Id, Carrier..."
@@ -52,13 +53,18 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
 
-        {showDropdown && searchResults.length > 0 && (
-          <Paper 
-            elevation={8} 
-            sx={{ 
-              position: 'absolute', top: '100%', left: 0, zIndex: 9999, 
+        <Popper
+          open={showDropdown && searchResults.length > 0}
+          anchorEl={anchorEl}
+          placement="bottom-start"
+          sx={{ zIndex: 1300 }}
+          modifiers={[{ name: 'offset', options: { offset: [0, 4] } }]}
+        >
+          <Paper
+            elevation={8}
+            sx={{
               maxHeight: '400px', overflowY: 'auto', border: '1px solid #ddd',
-              width: { xs: '300px', sm: '500px', md: '700px' }, mt: 0.5,
+              width: { xs: '300px', sm: '500px', md: '700px' },
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}
           >
@@ -83,7 +89,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
               </TableBody>
             </Table>
           </Paper>
-        )}
+        </Popper>
       </Box>
       <FormControlLabel 
         control={

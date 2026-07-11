@@ -27,6 +27,7 @@ import AddCoverageHeader from '../../components/insurance/components/AddCoverage
 import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
+import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
@@ -358,10 +359,12 @@ const AddCoveragePage = () => {
   const applyTemplate = (template) => {
     setFormData(prev => ({
       ...prev,
-      insurancePlan: template.name || prev.insurancePlan,
-      groupName: template.name || prev.groupName,
-      // Just a mock representation of filling data from a template
-      notes: template.description || prev.notes,
+      insurancePlan: template.insurancePlan || template.name || prev.insurancePlan,
+      groupName: template.groupName || prev.groupName,
+      groupNumber: template.groupNumber || prev.groupNumber,
+      phoneNumber: template.phoneNumber || prev.phoneNumber,
+      healthPlan: template.healthPlan ?? prev.healthPlan,
+      assignmentOfBenefits: template.assignmentOfBenefits || prev.assignmentOfBenefits,
     }));
   };
 
@@ -538,7 +541,7 @@ const AddCoveragePage = () => {
               <InsuranceInformation
                 formData={{
                   ...formData,
-                  coverageTemplates,
+                  coverageTemplates: coverageTemplates?.length > 0 ? coverageTemplates : MOCK_COVERAGE_TEMPLATES,
                   handleApplyTemplate: (t) => handleApplyTemplate(t)
                 }}
                 handleInputChange={handleInputChange}
