@@ -529,12 +529,12 @@ const AddCoveragePage = () => {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', gap: '12px', p: 2, maxWidth: '1857px', margin: '0 auto' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', gap: '8px', p: 1.5, maxWidth: '1857px', margin: '0 auto' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: 0 }}>
           <AddCoverageHeader onSave={handleSave} onCancel={handleCancel} loading={loading || saving} />
 
-          <Box sx={{ display: 'flex', gap: '12px' }}>
-            <Box sx={{ flex: 1, minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <Box sx={{ display: 'flex', gap: '8px' }}>
+            <Box sx={{ flex: 1, minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <InsuranceInformation
                 formData={{
                   ...formData,
@@ -575,7 +575,7 @@ const AddCoveragePage = () => {
               />
             </Box>
 
-            <Box sx={{ flex: 1, minWidth: '620px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Box sx={{ flex: 1, minWidth: '620px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <PlanFeeGuideSection
                 formData={formData}
                 handleInputChange={handleInputChange}

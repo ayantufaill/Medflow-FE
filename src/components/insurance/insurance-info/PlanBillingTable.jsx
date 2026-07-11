@@ -31,7 +31,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -46,7 +46,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -56,7 +56,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   fullWidth
                   InputProps={{
                     sx: {
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                       "& fieldset": { border: "none" },
                     },
@@ -75,7 +75,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -90,7 +90,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -100,7 +100,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   fullWidth
                   InputProps={{
                     sx: {
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                       "& fieldset": { border: "none" },
                     },
@@ -119,7 +119,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -137,7 +137,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -147,7 +147,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   fullWidth
                   InputProps={{
                     sx: {
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                       "& fieldset": { border: "none" },
                     },
@@ -171,7 +171,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -186,7 +186,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -199,7 +199,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     '& .react-tel-input .form-control': {
                       border: "none",
                       bgcolor: "transparent",
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                     },
                   }}
@@ -212,7 +212,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -223,7 +223,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                 }}
@@ -239,7 +239,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                    <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
                       Health Plan
                     </Typography>
                   }
@@ -252,7 +252,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -271,7 +271,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -284,13 +284,13 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   onChange={(e) =>
                     handleInputChange("assignmentOfBenefits", e.target.value)
                   }
-                  sx={{ fontSize: "0.85rem" }}
+                  sx={{ fontSize: "0.8rem" }}
                 >
                   {benefits.map((option) => (
                     <MenuItem
                       key={option.value}
                       value={option.value}
-                      sx={{ fontSize: "0.85rem" }}
+                      sx={{ fontSize: "0.8rem" }}
                     >
                       {option.label}
                     </MenuItem>
@@ -304,7 +304,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   borderBottom: "none",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
                   bgcolor: "#f8f9fc",
                   width: "40%",
@@ -315,7 +315,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 sx={{
                   borderBottom: "none",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                 }}
@@ -331,7 +331,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                    <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
                       Save as Template
                     </Typography>
                   }
@@ -351,7 +351,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
             textTransform: "none",
             fontWeight: 600,
             py: 1,
-            fontSize: "0.85rem",
+            fontSize: "0.8rem",
             boxShadow: "none",
             "&:hover": { bgcolor: "#1d4ed8" },
           }}
@@ -380,10 +380,10 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 primary={template.name || "Unnamed Template"}
                 secondary={template.description || "No description available"}
                 primaryTypographyProps={{
-                  fontSize: "0.85rem",
+                  fontSize: "0.8rem",
                   fontWeight: 600,
                 }}
-                secondaryTypographyProps={{ fontSize: "0.75rem" }}
+                secondaryTypographyProps={{ fontSize: "0.7rem" }}
               />
             </MenuItem>
           ))

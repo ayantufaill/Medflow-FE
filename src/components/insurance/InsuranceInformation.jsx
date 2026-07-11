@@ -76,25 +76,25 @@ const InsuranceInformation = ({
 
   return (
     <Box sx={{ border: '1px solid #DFE5EC', borderRadius: '12px', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 2, borderBottom: '1px solid #DFE5EC' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 1.5, borderBottom: '1px solid #DFE5EC' }}>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
-             <BusinessIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
+             <BusinessIcon sx={{ fontSize: 16, color: '#2563eb' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "1rem", mb: 0.1, letterSpacing: '-0.3px' }}>
+            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "0.9rem", mb: 0.1, letterSpacing: '-0.3px' }}>
               Insurance Information
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+            <Typography sx={{ fontSize: '0.7rem', color: '#6b7280' }}>
               Carrier, payer and plan billing details
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+        <Box sx={{ bgcolor: '#f3f4f6', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+          <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
         </Box>
       </Box>
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 1.5 }}>
         <CarrierSearchDropdown 
           formData={formData} 
           handleInputChange={handleInputChange} 
@@ -169,10 +169,10 @@ const InsuranceInformation = ({
         />
 
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, mt: 2, px: 1 }}>
-          <Typography sx={{ color: '#2563eb', fontSize: '0.75rem', fontWeight: 600 }}>
+          <Typography sx={{ color: '#2563eb', fontSize: '0.7rem', fontWeight: 600 }}>
             Patients covered: {formData.patientsCovered || 1}
           </Typography>
-          <Typography variant="caption" sx={{ color: '#666', fontSize: '0.7rem' }}>
+          <Typography variant="caption" sx={{ color: '#666', fontSize: '0.65rem' }}>
             Editing this plan will result in changes to all patients covered under it
           </Typography>
         </Box>

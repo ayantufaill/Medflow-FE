@@ -3,9 +3,8 @@ import { Box, Typography } from "@mui/material";
 import { InfoOutlined as InfoIcon, GppGood as GppGoodIcon } from "@mui/icons-material";
 import AnnualMaximumsTable from './coverage-table/AnnualMaximumsTable';
 import FinalCoverageSection from './coverage-table/FinalCoverageSection';
-import CoverageSection from './CoverageSection';
 
-const CoverageTable = ({
+const CoverageSection = ({
   formData,
   handleCoverageChange,
   handleInputChange,
@@ -15,8 +14,7 @@ const CoverageTable = ({
 }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <CoverageSection formData={formData} handleCoverageChange={handleCoverageChange} handleInputChange={handleInputChange} headerStyle={headerStyle} coverageCategoryData={coverageCategoryData} setCoverageCategoryData={setCoverageCategoryData} />
-      {/* Card 2: Coverage Table */}
+      {/* Card 1: Coverage */}
       <Box sx={{
         border: '1px solid #DFE5EC',
         borderRadius: '12px',
@@ -30,14 +28,14 @@ const CoverageTable = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', px: 3, py: 2, borderBottom: '1px solid #DFE5EC' }}>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
-              <InfoIcon sx={{ fontSize: 16, color: '#2563eb' }} />
+              <GppGoodIcon sx={{ fontSize: 16, color: '#2563eb' }} />
             </Box>
             <Box>
               <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "0.9rem", mb: 0.1, letterSpacing: '-0.3px' }}>
-                Coverage Table
+                Coverage
               </Typography>
               <Typography sx={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                Per-category coverage % and waiting periods
+                Annual maximums and usage to date
               </Typography>
             </Box>
           </Box>
@@ -45,12 +43,15 @@ const CoverageTable = ({
             <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
           </Box>
         </Box>
-        <Box sx={{ py: 2.5, px: 3 }}>
-          <FinalCoverageSection coverageData={coverageCategoryData} setCoverageData={setCoverageCategoryData} />
-        </Box>
+        <AnnualMaximumsTable
+          formData={formData}
+          handleCoverageChange={handleCoverageChange}
+          handleInputChange={handleInputChange}
+          headerStyle={headerStyle}
+        />
       </Box>
     </Box>
   );
 };
 
-export default CoverageTable;
+export default CoverageSection;

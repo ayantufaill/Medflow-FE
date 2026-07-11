@@ -27,14 +27,14 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
     <Box sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Typography 
-          sx={{ color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}
+          sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}
         >
           <AddIconNew sx={{ fontSize: 16 }} /> Add Coverage
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.5 }}>COVERAGE BOOK SHORTCUTS</Typography>
+            <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.5 }}>COVERAGE BOOK SHORTCUTS</Typography>
             <Select 
               size="small" 
               displayEmpty 
@@ -44,14 +44,14 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
                   setCoverageData(COVERAGE_DATA);
                 }
               }}
-              sx={{ bgcolor: '#fff', fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.8, px: 1.5 }, minWidth: '180px', '& fieldset': { borderColor: '#DFE5EC' } }}
+              sx={{ bgcolor: '#fff', fontSize: '0.7rem', '& .MuiSelect-select': { py: 0.8, px: 1.5 }, minWidth: '180px', '& fieldset': { borderColor: '#DFE5EC' } }}
             >
               <MenuItem value=""><em>Select template</em></MenuItem>
-              <MenuItem value="standard_ppo" sx={{ fontSize: '0.75rem' }}>Standard PPO</MenuItem>
-              <MenuItem value="custom" sx={{ fontSize: '0.75rem' }}>Custom Template</MenuItem>
+              <MenuItem value="standard_ppo" sx={{ fontSize: '0.7rem' }}>Standard PPO</MenuItem>
+              <MenuItem value="custom" sx={{ fontSize: '0.7rem' }}>Custom Template</MenuItem>
             </Select>
           </Box>
-          <Typography sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', mt: 2.5 }}>+ Add Group</Typography>
+          <Typography sx={{ color: '#2563eb', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', mt: 2.5 }}>+ Add Group</Typography>
         </Box>
       </Box>
 

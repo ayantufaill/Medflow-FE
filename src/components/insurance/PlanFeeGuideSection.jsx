@@ -25,27 +25,27 @@ const PlanFeeGuideSection = ({
       overflow: 'hidden'
     }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 2, borderBottom: '1px solid #DFE5EC' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 1.5, borderBottom: '1px solid #DFE5EC' }}>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
-            <RequestQuoteIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
+            <RequestQuoteIcon sx={{ fontSize: 16, color: '#2563eb' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "1rem", mb: 0.1, letterSpacing: '-0.3px' }}>
+            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "0.9rem", mb: 0.1, letterSpacing: '-0.3px' }}>
               Plan Fee Guide & Coverage Type
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+            <Typography sx={{ fontSize: '0.7rem', color: '#6b7280' }}>
               Choose fee schedule and coverage model
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+        <Box sx={{ bgcolor: '#f3f4f6', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+          <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
         </Box>
       </Box>
 
       {/* Single row: PLAN FEE GUIDE + View Fee Guide + COVERAGE TYPE */}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 1.5 }}>
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* Plan Fee Guide */}
         <Box sx={{ flex: 1 }}>
@@ -81,7 +81,7 @@ const PlanFeeGuideSection = ({
               sx={{ 
                 textTransform: 'none', 
                 fontWeight: 600,
-                fontSize: '0.75rem', 
+                fontSize: '0.7rem', 
                 height: '36px', 
                 borderRadius: '8px',
                 borderColor: '#DFE5EC', 
@@ -121,7 +121,7 @@ const PlanFeeGuideSection = ({
       </Box>
 
       {/* Providers Plan Fee Guides */}
-      <Typography sx={{ color: '#000', fontSize: '0.8rem', mt: 2.5, fontWeight: 600 }}>
+      <Typography sx={{ color: '#000', fontSize: '0.75rem', mt: 2.5, fontWeight: 600 }}>
         Providers Plan Fee Guides
       </Typography>
       {formData.providersPlanFeeGuides?.map((guide, index) => (
@@ -154,7 +154,7 @@ const PlanFeeGuideSection = ({
       ))}
       <Typography 
         onClick={handleAddProviderFeeGuide}
-        sx={{ color: '#2563eb', fontSize: '0.75rem', mt: 1, cursor: 'pointer', display: 'inline-block', fontWeight: 600 }}
+        sx={{ color: '#2563eb', fontSize: '0.7rem', mt: 1, cursor: 'pointer', display: 'inline-block', fontWeight: 600 }}
       >
         + Add
       </Typography>

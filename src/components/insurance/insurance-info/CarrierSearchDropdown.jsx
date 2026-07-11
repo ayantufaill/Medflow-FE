@@ -65,19 +65,19 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
             <Table size="small" stickyHeader>
               <TableBody>
                 <TableRow sx={{ bgcolor: '#eef4ff' }}>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer ID</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group Name</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer ID</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group Name</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
                 </TableRow>
                 {searchResults.map((item, idx) => (
                   <TableRow key={idx} hover sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }} onClick={() => onSelect(item)}>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupName || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -96,7 +96,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
             }} 
           />
         } 
-        label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Exclude System Carriers</Typography>} 
+        label={<Typography variant="caption" sx={{ fontSize: '0.65rem' }}>Exclude System Carriers</Typography>} 
         sx={{ ml: 0 }} 
       />
     </>

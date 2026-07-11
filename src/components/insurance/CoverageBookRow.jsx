@@ -6,10 +6,10 @@ import { inputFieldSx, deliveryPatternSx, bodyCellSx } from './styles/coverageSt
 const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelection }) => {
   return (
     <TableRow sx={{ '&:hover': { bgcolor: '#fafbfd' } }}>
-      <TableCell sx={{ ...bodyCellSx, fontWeight: 700, fontSize: '0.8rem', color: '#333', minWidth: '80px' }}>
+      <TableCell sx={{ ...bodyCellSx, fontWeight: 700, fontSize: '0.75rem', color: '#333', minWidth: '80px' }}>
         {row.code}
       </TableCell>
-      <TableCell sx={{ ...bodyCellSx, fontSize: '0.75rem', color: '#555', minWidth: '150px', maxWidth: '180px' }}>
+      <TableCell sx={{ ...bodyCellSx, fontSize: '0.7rem', color: '#555', minWidth: '150px', maxWidth: '180px' }}>
         {row.name}
       </TableCell>
       <TableCell sx={{ ...bodyCellSx, minWidth: '90px' }}>
@@ -18,7 +18,7 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
           value={row.maxAllowed || ''}
           onChange={(e) => handleFieldChange(index, 'maxAllowed', e.target.value)}
           InputProps={{
-            startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+            startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#999' }}>$</Typography></InputAdornment>,
           }}
           sx={inputFieldSx}
         />
@@ -30,18 +30,18 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
           value={row.deliveryPattern || ''}
           onChange={(e) => handleFieldChange(index, 'deliveryPattern', e.target.value)}
           renderValue={(selected) => {
-            if (!selected) return <Typography sx={{ color: '#999', fontSize: '0.75rem' }}>__ / __ M</Typography>;
+            if (!selected) return <Typography sx={{ color: '#999', fontSize: '0.7rem' }}>__ / __ M</Typography>;
             return selected;
           }}
           sx={deliveryPatternSx}
         >
           <MenuItem value="" disabled><em>Select</em></MenuItem>
-          <MenuItem value="1/1 M" sx={{ fontSize: '0.75rem' }}>1/1 M</MenuItem>
-          <MenuItem value="1/6 M" sx={{ fontSize: '0.75rem' }}>1/6 M</MenuItem>
-          <MenuItem value="1/12 M" sx={{ fontSize: '0.75rem' }}>1/12 M</MenuItem>
-          <MenuItem value="2/12 M" sx={{ fontSize: '0.75rem' }}>2/12 M</MenuItem>
-          <MenuItem value="1/1 Y" sx={{ fontSize: '0.75rem' }}>1/1 Y</MenuItem>
-          <MenuItem value="1/5 Y" sx={{ fontSize: '0.75rem' }}>1/5 Y</MenuItem>
+          <MenuItem value="1/1 M" sx={{ fontSize: '0.7rem' }}>1/1 M</MenuItem>
+          <MenuItem value="1/6 M" sx={{ fontSize: '0.7rem' }}>1/6 M</MenuItem>
+          <MenuItem value="1/12 M" sx={{ fontSize: '0.7rem' }}>1/12 M</MenuItem>
+          <MenuItem value="2/12 M" sx={{ fontSize: '0.7rem' }}>2/12 M</MenuItem>
+          <MenuItem value="1/1 Y" sx={{ fontSize: '0.7rem' }}>1/1 Y</MenuItem>
+          <MenuItem value="1/5 Y" sx={{ fontSize: '0.7rem' }}>1/5 Y</MenuItem>
         </Select>
       </TableCell>
       <TableCell sx={{ ...bodyCellSx, minWidth: '90px' }}>
@@ -50,12 +50,12 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
           value={row.lifetimeLimit || ''}
           onChange={(e) => handleFieldChange(index, 'lifetimeLimit', e.target.value)}
           InputProps={{
-            startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+            startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#999' }}>$</Typography></InputAdornment>,
           }}
           sx={inputFieldSx}
         />
       </TableCell>
-      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px', fontSize: '0.85rem', fontWeight: 500, color: '#333' }}>
+      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px', fontSize: '0.8rem', fontWeight: 500, color: '#333' }}>
         {row.age || '—'}
       </TableCell>
       <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px' }}>
@@ -88,7 +88,7 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
           value={row.flatPlanPortion || ''}
           onChange={(e) => handleFieldChange(index, 'flatPlanPortion', e.target.value)}
           InputProps={{
-            startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+            startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#999' }}>$</Typography></InputAdornment>,
           }}
           sx={inputFieldSx}
         />
