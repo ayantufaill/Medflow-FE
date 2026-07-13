@@ -22,6 +22,18 @@ import { useSnackbar } from "../../contexts/SnackbarContext";
 import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
 import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, radius } from "../../constants/styles";
+
+const shareButtonSx = {
+  textTransform: "none",
+  borderRadius: radius.md,
+  bgcolor: COLORS.ACCENT,
+  fontWeight: fontWeight.semibold,
+  fontSize: fontSize.base,
+  boxShadow: "none",
+  "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: "none" },
+};
 
 const isHipaDocument = (doc) => {
   const combined =
@@ -162,17 +174,22 @@ const PatientSignedDocumentsPage = () => {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 2,
+          bgcolor: COLORS.SURFACE_CARD,
+          border: `1px solid ${COLORS.BORDER}`,
+          borderRadius: radius.lg,
+          px: 2.5,
+          py: 2,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ fontFamily: "Inter", display: "flex", fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: COLORS.TEXT_PRIMARY, alignItems: "center", gap: 2 }}>
           <Box>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 700, color: "#424242", fontSize: "1.05rem" }}
+              sx={{ fontWeight: 700, color: COLORS.TEXT_PRIMARY, fontSize: "1.05rem" }}
             >
               Signed Documents
             </Typography>
-            <Typography variant="body2" sx={{ color: "#757575", mt: 0.25 }}>
+            <Typography variant="body2" sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
               {getPatientName()}
             </Typography>
           </Box>
@@ -182,24 +199,14 @@ const PatientSignedDocumentsPage = () => {
           <Button
             variant="contained"
             size="small"
-            sx={{
-              textTransform: "none",
-              borderRadius: 1,
-              bgcolor: "#1976d2",
-              "&:hover": { bgcolor: "#1565c0" },
-            }}
+            sx={shareButtonSx}
           >
             Share Via Email
           </Button>
           <Button
             variant="contained"
             size="small"
-            sx={{
-              textTransform: "none",
-              borderRadius: 1,
-              bgcolor: "#1976d2",
-              "&:hover": { bgcolor: "#1565c0" },
-            }}
+            sx={shareButtonSx}
           >
             Share Via Text
           </Button>
@@ -269,7 +276,7 @@ const PatientSignedDocumentsPage = () => {
                       sx={{
                         whiteSpace: "pre-line",
                         fontWeight: 600,
-                        color: "#424242",
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                     >
                       {truncateLabel(doc.documentName || "Document")}
@@ -338,7 +345,7 @@ const PatientSignedDocumentsPage = () => {
                       sx={{
                         whiteSpace: "pre-line",
                         fontWeight: 600,
-                        color: "#424242",
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                     >
                       {truncateLabel(doc.documentName || "Document")}

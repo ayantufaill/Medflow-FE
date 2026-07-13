@@ -1,96 +1,83 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Typography,
   Button,
   CircularProgress,
-  Alert,
-  ToggleButton,
-  ToggleButtonGroup,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
   FormControl,
   Select,
   MenuItem,
-  Paper,
 } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import {
+  Add as AddIcon,
+  Assignment as CustomFormsIcon,
+  FolderOutlined as AdditionalDocsIcon,
+} from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { documentService } from "../../services/document.service";
 import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
 import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
+import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
-import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, FloatingActions } from "../../components/patients";
+import SectionCard from "../../components/shared/SectionCard";
+import TaskList from "../../components/appointments/right-panel/TaskList";
+import Messages from "../../components/appointments/right-panel/Messages";
+import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog } from "../../components/patients";
+import { MOCK_ADDITIONAL_DOCUMENTS } from "../../components/patients/utils/mockAdditionalDocuments";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, radius } from "../../constants/styles";
 
-// Utility functions
-const formatDate = (dateVal) => {
-  if (!dateVal) return "";
-  const d = new Date(dateVal);
-  return d.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
+const shareButtonSx = {
+  textTransform: "none",
+  borderRadius: radius.md,
+  bgcolor: COLORS.ACCENT,
+  fontWeight: fontWeight.semibold,
+  fontSize: fontSize.base,
+  boxShadow: "none",
+  "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: "none" },
 };
 
-// Styled components
-const PageContainer = (props) => (
-  <Box
-    {...props}
-    sx={{
-      bgcolor: "#f5f5f5",
-      minHeight: "100%",
-      pb: 4,
-      position: "relative",
-      ...(props.sx || {}),
-    }}
-  />
-);
-
-const Card = (props) => (
-  <Paper
-    elevation={0}
-    {...props}
-    sx={{
-      p: 3,
-      mb: 2,
-      borderRadius: 1,
-      border: "1px solid #e0e0e0",
-      bgcolor: "#ffffff",
-      ...(props.sx || {}),
-    }}
-  />
-);
+const radioSx = {
+  p: 0.5,
+  color: COLORS.BORDER,
+  "&.Mui-checked": { color: COLORS.ACCENT },
+};
 
 const PatientAdditionalDocumentsPage = () => {
-  const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
-  
-  // State management
-  // Redux hooks
+
   const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
-  const { 
-    documents: reduxDocuments, 
-    loading: docsLoading, 
+  const {
+    documents: reduxDocuments,
+    loading: docsLoading,
     fetch: fetchDocuments,
     refresh: refreshDocuments,
-    remove: deleteDocumentThunk 
+    remove: deleteDocumentThunk,
   } = usePatientDocuments(patientId);
 
-  // Local state for demo data
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState("thumbnails");
   const [sortMode, setSortMode] = useState("category");
-  
-  console.log("Documents:", documents);
+  const [signature, setSignature] = useState(null);
+
   const claimAttachments = documents.filter(d => d.category.includes('claim') || d.category === 'attachment');
   const consents = documents.filter(d => d.category.includes('consent'));
   const forms = documents.filter(d => d.category.includes('form') || d.category === 'custom_form');
   const otherDocs = documents.filter(d => !d.category.includes('claim') && d.category !== 'attachment' && !d.category.includes('consent') && !d.category.includes('form') && d.category !== 'custom_form');
 
-  // Dialog states
+  // No real documents uploaded yet — show dummy attachments so the section
+  // reads as designed instead of an empty state.
+  const additionalDocs = [...claimAttachments, ...consents, ...otherDocs];
+  const displayDocs = additionalDocs.length > 0 ? additionalDocs : MOCK_ADDITIONAL_DOCUMENTS;
+  const usingMockDocs = additionalDocs.length === 0;
+
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     documentId: null,
@@ -111,8 +98,6 @@ const PatientAdditionalDocumentsPage = () => {
     category: "",
   });
 
-  // Fetch patient and documents on mount
-  // Fetch data on mount using Redux thunks
   useEffect(() => {
     if (patientId) {
       fetchPatient(patientId);
@@ -120,7 +105,6 @@ const PatientAdditionalDocumentsPage = () => {
     }
   }, [patientId, fetchPatient, fetchDocuments]);
 
-  // Sync documents from Redux to local state for filtering
   useEffect(() => {
     if (reduxDocuments) {
       const nonHipaaDocs = reduxDocuments
@@ -145,16 +129,8 @@ const PatientAdditionalDocumentsPage = () => {
     }
   }, [reduxDocuments]);
 
-  // Loading state (only show loading if we don't have data in cache yet)
   const isActuallyLoading = docsLoading && documents.length === 0;
 
-  const getPatientName = () => {
-    if (patient?.firstName && patient?.lastName)
-      return `${patient.firstName} ${patient.lastName}`;
-    return "Patient";
-  };
-
-  // Upload document handler
   const handleUploadAdditionalDocument = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -165,33 +141,16 @@ const PatientAdditionalDocumentsPage = () => {
       if (!files?.length || !patientId) return;
       try {
         setUploading(true);
-        const now = new Date();
-        const uploadedBy = patient?.lastName?.[0]
-          ? `${patient.lastName[0]}.`
-          : "U";
-        const uploadedDate = now.toLocaleDateString("en-US", {
-          month: "2-digit",
-          day: "2-digit",
-          year: "numeric",
-        });
-
-        const newRows = [];
-
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           const formData = new FormData();
           formData.append("file", file);
           formData.append("patientId", patientId);
           formData.append("documentType", "other");
-          const displayName = file.name || `Additional document ${i + 1}`;
-          formData.append("documentName", displayName);
-          
+          formData.append("documentName", file.name || `Additional document ${i + 1}`);
           await documentService.uploadDocument(formData);
         }
-
-        // Fetch documents to refresh UI instead of locally mocking
         await refreshDocuments();
-
         showSnackbar(`Uploaded ${files.length} document(s)`, "success");
       } catch (err) {
         showSnackbar(
@@ -207,7 +166,6 @@ const PatientAdditionalDocumentsPage = () => {
     input.click();
   };
 
-  // Document action handlers
   const handleOpenDocument = (row) => {
     if (row.id.startsWith("demo-")) {
       showSnackbar(`Opening ${row.name}...`, "info");
@@ -280,7 +238,6 @@ const PatientAdditionalDocumentsPage = () => {
       if (!files?.length || !patientId) return;
       try {
         setUploading(true);
-        const newForms = [];
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           const formData = new FormData();
@@ -288,17 +245,10 @@ const PatientAdditionalDocumentsPage = () => {
           formData.append("patientId", patientId);
           formData.append("documentType", "custom_form");
           formData.append("documentName", file.name || `Custom form ${i + 1}`);
-          
           await documentService.uploadDocument(formData);
         }
-
-        // Fetch documents to refresh UI instead of locally mocking
         await refreshDocuments();
-
-        showSnackbar(
-          `Uploaded ${files.length} custom form document(s)`,
-          "success",
-        );
+        showSnackbar(`Uploaded ${files.length} custom form document(s)`, "success");
       } catch (err) {
         showSnackbar(
           err?.response?.data?.error?.message ||
@@ -330,7 +280,6 @@ const PatientAdditionalDocumentsPage = () => {
       setEditDialog((prev) => ({ ...prev, open: false }));
       return;
     }
-
     try {
       await documentService.updateDocument(docId, {
         documentName: name,
@@ -338,21 +287,19 @@ const PatientAdditionalDocumentsPage = () => {
       });
       await refreshDocuments();
       showSnackbar("Document details updated", "success");
-    } catch (err) {
+    } catch {
       showSnackbar("Failed to update document details", "error");
     } finally {
       setEditDialog((prev) => ({ ...prev, open: false }));
     }
   };
 
-  // Delete document handler
   const handleDelete = async () => {
     const { documentId } = deleteDialog;
     if (!documentId) {
       setDeleteDialog({ open: false, documentId: null, documentName: "" });
       return;
     }
-
     try {
       setDeleteLoading(true);
       await deleteDocumentThunk(documentId).unwrap();
@@ -380,11 +327,10 @@ const PatientAdditionalDocumentsPage = () => {
   }
 
   return (
-    <PageContainer>
+    <Box sx={{ bgcolor: COLORS.SURFACE_PAGE, minHeight: "100%", pb: 4 }}>
       <PatientSectionTabs activeTab="additional_docs" patientId={patientId} />
 
-      {/* <FloatingActions onUploadCustomForm={handleUploadCustomFormDocument} /> */}
-
+      {/* Page header */}
       <Box
         sx={{
           mt: 1.5,
@@ -394,263 +340,217 @@ const PatientAdditionalDocumentsPage = () => {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 2,
+          bgcolor: COLORS.SURFACE_CARD,
+          border: `1px solid ${COLORS.BORDER}`,
+          borderRadius: radius.lg,
+          px: 2.5,
+          py: 2,
         }}
       >
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 700, color: "#424242", fontSize: "1.05rem" }}
-        >
-          Additional Documents
-        </Typography>
+        <Box>
+          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: COLORS.TEXT_PRIMARY }}>
+            Additional Docs
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
+            Check the custom forms and additional documents
+          </Typography>
+        </Box>
 
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{
-              textTransform: "none",
-              borderRadius: 1,
-              bgcolor: "#1976d2",
-              "&:hover": { bgcolor: "#1565c0" },
-            }}
-          >
-            Share Via Email
+          <Button variant="contained" size="small" sx={shareButtonSx}>
+            Share via Text
           </Button>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{
-              textTransform: "none",
-              borderRadius: 1,
-              bgcolor: "#1976d2",
-              "&:hover": { bgcolor: "#1565c0" },
-            }}
-          >
-            Share Via Text
+          <Button variant="contained" size="small" sx={shareButtonSx}>
+            Share via email
           </Button>
         </Box>
       </Box>
 
-      {/* Custom Forms Section */}
-      <CustomFormsSection
-        customForms={forms}
-        selectedFormId={customFormDeleteDialog.formId}
-        onFormClick={(f) =>
-          showSnackbar(
-            `Opening form: ${(f.title || f.name || "Unknown Form").replace(/\n/g, " ")}`,
-            "info",
-          )
-        }
-        onFormDeleteClick={(f) =>
-          setCustomFormDeleteDialog({
-            open: true,
-            formId: f.id,
-            formTitle: (f.title || f.name || "Unknown Form").replace(/\n/g, " "),
-          })
-        }
-      />
-
-      {/* Additional Documents Section */}
-      <Card>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
-          Additional Documents:
-        </Typography>
-
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
-            flexWrap: "wrap",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              flexWrap: "wrap",
-            }}
+      {/* Main column + sidebar */}
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
+        <Box>
+          <SectionCard
+            icon={CustomFormsIcon}
+            title="Custom Forms"
+            action={
+              <AddIcon
+                onClick={uploading ? undefined : handleUploadCustomFormDocument}
+                sx={{ fontSize: "20px", color: COLORS.TEXT_MUTED, cursor: uploading ? "default" : "pointer", "&:hover": uploading ? undefined : { color: COLORS.ACCENT } }}
+              />
+            }
           >
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, v) => v && setViewMode(v)}
-              size="small"
+            <CustomFormsSection
+              customForms={forms}
+              selectedFormId={customFormDeleteDialog.formId}
+              onFormClick={(f) =>
+                showSnackbar(
+                  `Opening form: ${(f.title || f.name || "Unknown Form").replace(/\n/g, " ")}`,
+                  "info",
+                )
+              }
+              onFormDeleteClick={(f) =>
+                setCustomFormDeleteDialog({
+                  open: true,
+                  formId: f.id,
+                  formTitle: (f.title || f.name || "Unknown Form").replace(/\n/g, " "),
+                })
+              }
+            />
+          </SectionCard>
+
+          <SectionCard icon={AdditionalDocsIcon} title="Additional Docs" sx={{ minHeight: 560 }}>
+            <Box
               sx={{
-                "& .MuiToggleButton-root": {
-                  textTransform: "none",
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: 1,
-                  borderColor: "grey.200",
-                  bgcolor: "grey.100",
-                },
-                "& .MuiToggleButton-root.Mui-selected": {
-                  bgcolor: "primary.main",
-                  color: "primary.contrastText",
-                  "&:hover": { bgcolor: "primary.dark" },
-                },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+                flexWrap: "wrap",
+                mb: 2,
               }}
             >
-              <ToggleButton value="thumbnails">Thumbnails</ToggleButton>
-              <ToggleButton value="list">List View</ToggleButton>
-            </ToggleButtonGroup>
-
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 700, color: "#616161", fontSize: "0.8rem" }}
-              >
-                Sort By:
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: 140 }}>
-                <Select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value)}
-                  sx={{
-                    height: 32,
-                    fontSize: "0.8rem",
-                    bgcolor: "grey.100",
-                    "& .MuiSelect-select": {
-                      py: 0.75,
-                      display: "flex",
-                      alignItems: "center",
-                    },
-                    "& fieldset": { borderColor: "grey.300" },
-                    "&:hover fieldset": { borderColor: "grey.400" },
-                  }}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                <RadioGroup
+                  row
+                  value={viewMode}
+                  onChange={(_, v) => setViewMode(v)}
+                  sx={{ gap: 0.5 }}
                 >
-                  <MenuItem value="category">Category</MenuItem>
-                  <MenuItem value="date">Date</MenuItem>
-                  <MenuItem value="name">Name</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
+                  <FormControlLabel
+                    value="thumbnails"
+                    control={<Radio size="small" sx={radioSx} />}
+                    label={<Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>Thumbnails</Typography>}
+                  />
+                  <FormControlLabel
+                    value="list"
+                    control={<Radio size="small" sx={radioSx} />}
+                    label={<Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>List View</Typography>}
+                  />
+                </RadioGroup>
 
-          <Paper
-            variant="outlined"
-            onClick={uploading ? undefined : handleUploadAdditionalDocument}
-            sx={{
-              cursor: uploading ? "not-allowed" : "pointer",
-              py: 1.25,
-              px: 2,
-              minWidth: 220,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 1,
-              bgcolor: "#fff",
-              "&:hover": uploading ? undefined : { bgcolor: "grey.50" },
-            }}
-          >
-            <AddIcon fontSize="small" />
-            <Typography
-              variant="body2"
-              fontWeight={700}
-              sx={{ fontSize: "0.8rem" }}
-            >
-              Upload new document
-            </Typography>
-          </Paper>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY }}>
+                    Sort by:
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 130 }}>
+                    <Select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value)}
+                      sx={{
+                        height: 32,
+                        fontFamily: "Inter",
+                        fontSize: fontSize.base,
+                        bgcolor: COLORS.SURFACE_CARD,
+                        "& fieldset": { borderColor: COLORS.BORDER },
+                        "&:hover fieldset": { borderColor: COLORS.ACCENT },
+                      }}
+                    >
+                      <MenuItem value="category">Category</MenuItem>
+                      <MenuItem value="date">Date</MenuItem>
+                      <MenuItem value="name">Name</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
+
+              <Button
+                variant="contained"
+                startIcon={<AddIcon fontSize="small" />}
+                onClick={uploading ? undefined : handleUploadAdditionalDocument}
+                disabled={uploading}
+                sx={shareButtonSx}
+              >
+                Upload New Document
+              </Button>
+            </Box>
+
+            {isActuallyLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : viewMode === "thumbnails" ? (
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+                {displayDocs.map((doc) => (
+                  <DocumentThumbnail key={doc.id} document={doc} onOpen={handleOpenDocument} />
+                ))}
+              </Box>
+            ) : usingMockDocs ? (
+              <DocumentTable
+                title="Other Documents"
+                tooltipTitle="Additional uncategorized documents"
+                documents={displayDocs}
+                sortMode={sortMode}
+                onEdit={() => {}}
+                onOpen={handleOpenDocument}
+                onDownload={handleDownloadDocument}
+                onShare={handleShareWithPatient}
+                onDelete={() => {}}
+              />
+            ) : (
+              <Box>
+                {claimAttachments.length > 0 && (
+                  <DocumentTable
+                    title="Claim Attachment"
+                    tooltipTitle="Uploaded claim-related attachments"
+                    documents={claimAttachments}
+                    sortMode={sortMode}
+                    onEdit={(row) => handleEditDocument("claim", row)}
+                    onOpen={handleOpenDocument}
+                    onDownload={handleDownloadDocument}
+                    onShare={handleShareWithPatient}
+                    onDelete={(row) =>
+                      setDeleteDialog({ open: true, documentId: row.id, documentName: row.name })
+                    }
+                  />
+                )}
+
+                {consents.length > 0 && (
+                  <DocumentTable
+                    title="Consent"
+                    tooltipTitle="Uploaded consent documents"
+                    documents={consents}
+                    sortMode={sortMode}
+                    onEdit={(row) => handleEditDocument("consent", row)}
+                    onOpen={handleOpenDocument}
+                    onDownload={handleDownloadDocument}
+                    onShare={handleShareWithPatient}
+                    onDelete={(row) =>
+                      setDeleteDialog({ open: true, documentId: row.id, documentName: row.name })
+                    }
+                  />
+                )}
+
+                {otherDocs.length > 0 && (
+                  <DocumentTable
+                    title="Other Documents"
+                    tooltipTitle="Additional uncategorized documents"
+                    documents={otherDocs}
+                    sortMode={sortMode}
+                    onEdit={(row) => handleEditDocument("other", row)}
+                    onOpen={handleOpenDocument}
+                    onDownload={handleDownloadDocument}
+                    onShare={handleShareWithPatient}
+                    onDelete={(row) =>
+                      setDeleteDialog({ open: true, documentId: row.id, documentName: row.name })
+                    }
+                  />
+                )}
+              </Box>
+            )}
+          </SectionCard>
         </Box>
 
-        <Box sx={{ mt: 2 }}>
-          {isActuallyLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : documents.length === 0 ? (
-            <Alert severity="info">
-              No additional documents for this patient. Click "Upload new
-              document" to add one.
-            </Alert>
-          ) : viewMode === "thumbnails" ? (
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {[...claimAttachments, ...consents, ...otherDocs].map((doc) => (
-                <DocumentThumbnail
-                  key={doc.id}
-                  document={doc}
-                  onOpen={handleOpenDocument}
-                  onDownload={handleDownloadDocument}
-                  onShare={handleShareWithPatient}
-                />
-              ))}
-            </Box>
-          ) : (
-            <Box>
-              {/* Claim Attachment section */}
-              {claimAttachments.length > 0 && (
-                <DocumentTable
-                  title="Claim Attachment"
-                  tooltipTitle="Uploaded claim-related attachments"
-                  documents={claimAttachments}
-                  sortMode={sortMode}
-                  onEdit={(row) => handleEditDocument("claim", row)}
-                  onOpen={handleOpenDocument}
-                  onDownload={handleDownloadDocument}
-                  onShare={handleShareWithPatient}
-                  onDelete={(row) =>
-                    setDeleteDialog({
-                      open: true,
-                      documentId: row.id,
-                      documentName: row.name,
-                    })
-                  }
-                />
-              )}
+        {/* Sidebar — same Task List / Messages / Signature cards used across
+            the other patient tabs, so this column reads as one consistent
+            shell rather than a one-off for Additional Docs. */}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TaskList />
+          <Messages />
+          <PatientSignatureCard value={signature} onChange={setSignature} reviewedWithPatient />
 
-              {/* Consent section */}
-              {consents.length > 0 && (
-                <DocumentTable
-                  title="Consent"
-                  tooltipTitle="Uploaded consent documents"
-                  documents={consents}
-                  sortMode={sortMode}
-                  onEdit={(row) => handleEditDocument("consent", row)}
-                  onOpen={handleOpenDocument}
-                  onDownload={handleDownloadDocument}
-                  onShare={handleShareWithPatient}
-                  onDelete={(row) =>
-                    setDeleteDialog({
-                      open: true,
-                      documentId: row.id,
-                      documentName: row.name,
-                    })
-                  }
-                />
-              )}
-
-              {/* Other Documents section */}
-              {otherDocs.length > 0 && (
-                <DocumentTable
-                  title="Other Documents"
-                  tooltipTitle="Additional uncategorized documents"
-                  documents={otherDocs}
-                  sortMode={sortMode}
-                  onEdit={(row) => handleEditDocument("other", row)}
-                  onOpen={handleOpenDocument}
-                  onDownload={handleDownloadDocument}
-                  onShare={handleShareWithPatient}
-                  onDelete={(row) =>
-                    setDeleteDialog({
-                      open: true,
-                      documentId: row.id,
-                      documentName: row.name,
-                    })
-                  }
-                />
-              )}
-            </Box>
-          )}
         </Box>
-      </Card>
+      </Box>
 
-      {/* Edit Document Dialog */}
       <EditDocumentDialog
         open={editDialog.open}
         section={editDialog.section}
@@ -662,12 +562,9 @@ const PatientAdditionalDocumentsPage = () => {
         onSave={handleSaveEditDialog}
       />
 
-      {/* Delete Confirmation Dialogs */}
       <ConfirmationDialog
         open={deleteDialog.open}
-        onClose={() =>
-          setDeleteDialog({ open: false, documentId: null, documentName: "" })
-        }
+        onClose={() => setDeleteDialog({ open: false, documentId: null, documentName: "" })}
         onConfirm={handleDelete}
         title="Delete Document"
         message={`Are you sure you want to delete "${deleteDialog.documentName}"? This action cannot be undone.`}
@@ -678,13 +575,7 @@ const PatientAdditionalDocumentsPage = () => {
       />
       <ConfirmationDialog
         open={customFormDeleteDialog.open}
-        onClose={() =>
-          setCustomFormDeleteDialog({
-            open: false,
-            formId: null,
-            formTitle: "",
-          })
-        }
+        onClose={() => setCustomFormDeleteDialog({ open: false, formId: null, formTitle: "" })}
         onConfirm={handleConfirmDeleteCustomForm}
         title="Remove Custom Form"
         message={`Are you sure you want to remove "${customFormDeleteDialog.formTitle}" from this list?`}
@@ -693,7 +584,7 @@ const PatientAdditionalDocumentsPage = () => {
         confirmColor="error"
         loading={false}
       />
-    </PageContainer>
+    </Box>
   );
 };
 
