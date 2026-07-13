@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { usePatient, useDropdownData } from '../../../hooks/redux';
 import { providerLabel } from '../new-appointment/helpers';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Tooltip } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp, Assignment, PeopleAlt } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
+import { getFlagColor } from '../../patient-flags/constants';
 import { fontSize, fontWeight, radius, spacing, headingPrimarySx, headingSecondarySx, avatarSize } from '../../../constants/styles';
 
 /* ── Reusable sub-section row ────────────────────────────────────── */
@@ -183,11 +184,26 @@ export const PatientDetails = () => {
       {/* Patient Flags */}
       <SubSection label="Patient Flags" open>
         {flagsList.length > 0 ? (
-          flagsList.map((flag, i) => (
-            <Typography key={i} sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, pl: '8px' }}>
-              {typeof flag === 'string' ? flag : (flag.name || 'Unknown Flag')}
-            </Typography>
-          ))
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: '8px' }}>
+            {flagsList.map((flag, i) => {
+              const flagName = typeof flag === 'string' ? flag : (flag.name || 'Unknown Flag');
+              const displayTitle = flagName === 'appointment_reminder' ? 'Appt Reminder' : flagName;
+              return (
+                <Tooltip key={i} title={displayTitle} arrow placement="top">
+                  <Box 
+                    sx={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: '2px', 
+                      bgcolor: getFlagColor(flagName), 
+                      flexShrink: 0,
+                      cursor: 'pointer'
+                    }} 
+                  />
+                </Tooltip>
+              );
+            })}
+          </Box>
         ) : (
           <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, pl: '8px' }}>No flags</Typography>
         )}

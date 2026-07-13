@@ -40,8 +40,12 @@ const getProviderTypeString = (provider) => {
   return String(raw).toLowerCase();
 };
 
+const getProviderId = (provider) => String(provider._id || provider.id || "");
+
 const HygienistPanel = ({ pt }) => {
-  const [selectedHygienist, setSelectedHygienist] = useState("");
+  const [selectedHygienist, setSelectedHygienist] = useState(() =>
+    pt.preferredHygienistId ? String(pt.preferredHygienistId) : "",
+  );
   const { providers = [] } = useDropdownData({ providers: true });
 
   const hygienistOptions = useMemo(() => {
@@ -49,8 +53,24 @@ const HygienistPanel = ({ pt }) => {
       const type = getProviderTypeString(provider);
       return type.includes("hygien");
     });
-    return hygienists.length > 0 ? hygienists : providers;
-  }, [providers]);
+    const options = hygienists.length > 0 ? hygienists : providers;
+    const selectedProvider = providers.find(
+      (provider) => getProviderId(provider) === selectedHygienist,
+    );
+
+    if (
+      selectedProvider &&
+      !options.some((provider) => getProviderId(provider) === selectedHygienist)
+    ) {
+      return [selectedProvider, ...options];
+    }
+
+    return options;
+  }, [providers, selectedHygienist]);
+
+  const selectedHygienistInOptions = hygienistOptions.some(
+    (provider) => getProviderId(provider) === selectedHygienist,
+  );
 
   return (
     <Box
@@ -86,10 +106,18 @@ const HygienistPanel = ({ pt }) => {
         >
           Select a preferred hygienist
         </MenuItem>
+        {selectedHygienist && !selectedHygienistInOptions && (
+          <MenuItem
+            value={selectedHygienist}
+            sx={{ fontFamily: "Inter", fontSize: "11px" }}
+          >
+            Preferred hygienist
+          </MenuItem>
+        )}
         {hygienistOptions.map((provider) => (
           <MenuItem
-            key={provider._id || provider.id}
-            value={provider._id || provider.id}
+            key={getProviderId(provider)}
+            value={getProviderId(provider)}
             sx={{ fontFamily: "Inter", fontSize: "11px" }}
           >
             {getProviderName(provider)}

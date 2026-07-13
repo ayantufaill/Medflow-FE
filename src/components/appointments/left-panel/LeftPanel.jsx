@@ -35,7 +35,10 @@ const LeftPanel = () => {
       setSelectedAppointment(appt);
       
       if (appt && appt.patientId) {
-        fetchById(appt.patientId);
+        const pId = typeof appt.patientId === 'object' 
+          ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
+          : appt.patientId;
+        if (pId) fetchById(pId);
       }
     };
     window.addEventListener('appointment-card-clicked', handleApptClick);

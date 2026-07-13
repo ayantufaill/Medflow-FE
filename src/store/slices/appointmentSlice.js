@@ -163,13 +163,52 @@ export const fetchFamilyAppointments = createAsyncThunk(
   }
 );
 
-// Fetches past appointments for a single patient (used in appointment history dialog
-// and the operatory sidebar's patient history panel).
+// Fetches all appointments for a single patient (used in appointment history dialog
+// and the operatory sidebar's patient history panel). Uses the dedicated
+// /patients/:id/appointments endpoint which returns all records sorted newest-first.
 export const fetchPatientHistory = createAsyncThunk(
   'appointment/fetchPatientHistory',
   async (patientId, { rejectWithValue }) => {
     try {
-      return await appointmentService.getAppointmentsByPatient(patientId);
+      const result = await appointmentService.getPatientAppointments(patientId, 500);
+      // Normalize: the patient-appointments endpoint returns { appointments: [...] }
+      // or a flat array depending on the FE service implementation.
+      const raw = Array.isArray(result) ? result : (result?.appointments || []);
+      // Ensure consistent field names the table uses: appointmentDate, startTime, etc.
+      return raw.map(a => ({
+        ...a,
+        appointmentDate: a.appointmentDate || a.date || a.AptDateTime || null,
+        startTime: a.startTime || null,
+        endTime: a.endTime || null,
+        status: a.status || null,
+        duration: a.durationMinutes || a.duration || 60,
+        appointmentType: a.appointmentType || null,
+        appointmentTypeId: a.appointmentTypeId || null,
+        visitType:
+          a.visitType ||
+          a.customFields?.visitType ||
+          a.workspace?.visitType ||
+          a.appointmentTypeName ||
+          null,
+        providerId:
+          a.providerId ||
+          a.provider ||
+          a.customFields?.providerRows?.[0]?.providerId ||
+          a.customFields?.providers?.[0]?.providerId ||
+          a.customFields?.providers?.[0] ||
+          a.ProvNum ||
+          null,
+        provider: a.provider || null,
+        procedures:
+          a.workspace?.procedures ||
+          a.customFields?.procedures ||
+          a.procedures ||
+          a.appointmentProcedures ||
+          a.procedureCodes ||
+          a.customFields?.procedureTags ||
+          a.note ||
+          null,
+      }));
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointment history');
     }
