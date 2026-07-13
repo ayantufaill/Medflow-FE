@@ -103,6 +103,7 @@ const AddCoveragePage = () => {
     feeGuides,
     allCompanies,
     coverageTemplates,
+    createTemplate,
     handleCancel
   } = useCoverageData(
     patientId, 
@@ -298,7 +299,28 @@ const AddCoveragePage = () => {
         await createInsurance(payload).unwrap();
         showSnackbar('Coverage saved successfully. Any unbilled procedures have been converted to unsent claims.', 'success');
       }
-      
+
+      if (formData.saveAsTemplate) {
+        try {
+          await createTemplate({
+            name: formData.insurancePlan,
+            description: [formData.carrierName, formData.groupName].filter(Boolean).join(' — ') || undefined,
+            benefits: [{
+              insurancePlan: formData.insurancePlan,
+              groupName: formData.groupName,
+              groupNumber: formData.groupNumber,
+              phoneNumber: formData.phoneNumber,
+              healthPlan: formData.healthPlan,
+              assignmentOfBenefits: formData.assignmentOfBenefits
+            }]
+          }).unwrap();
+          showSnackbar('Plan billing info saved as a reusable template', 'success');
+        } catch (templateErr) {
+          console.error('Failed to save coverage template', templateErr);
+          showSnackbar('Coverage saved, but saving it as a template failed', 'warning');
+        }
+      }
+
       navigate(`/patients/details/${patientId}?tab=insurance`);
     } catch (err) {
       console.error('Failed to save coverage', err);
@@ -357,14 +379,18 @@ const AddCoveragePage = () => {
   };
 
   const applyTemplate = (template) => {
+    // Mock templates carry these fields flat; real saved templates (created via
+    // "Save as Template") nest them inside benefits[0] since the backend's
+    // coverage-template model only stores { name, description, benefits }.
+    const source = template.benefits?.[0] || template;
     setFormData(prev => ({
       ...prev,
-      insurancePlan: template.insurancePlan || template.name || prev.insurancePlan,
-      groupName: template.groupName || prev.groupName,
-      groupNumber: template.groupNumber || prev.groupNumber,
-      phoneNumber: template.phoneNumber || prev.phoneNumber,
-      healthPlan: template.healthPlan ?? prev.healthPlan,
-      assignmentOfBenefits: template.assignmentOfBenefits || prev.assignmentOfBenefits,
+      insurancePlan: source.insurancePlan || template.name || prev.insurancePlan,
+      groupName: source.groupName || prev.groupName,
+      groupNumber: source.groupNumber || prev.groupNumber,
+      phoneNumber: source.phoneNumber || prev.phoneNumber,
+      healthPlan: source.healthPlan ?? prev.healthPlan,
+      assignmentOfBenefits: source.assignmentOfBenefits || prev.assignmentOfBenefits,
     }));
   };
 

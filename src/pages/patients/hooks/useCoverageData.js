@@ -36,6 +36,7 @@ export const useCoverageData = (
     templatesLoading,
     fetchCompanies,
     fetchTemplates,
+    createTemplate,
   } = useInsuranceCatalog();
   const {
     insurances,
@@ -294,6 +295,7 @@ export const useCoverageData = (
     feeGuides,
     allCompanies,
     coverageTemplates,
+    createTemplate,
     handleSave,
     handleCancel,
   };
