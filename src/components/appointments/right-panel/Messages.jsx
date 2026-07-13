@@ -4,7 +4,7 @@ import RightPanelCard from './RightPanelCard';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
 
-const MESSAGE_ROWS = [
+export const MESSAGE_ROWS = [
   { title: 'Recare reminders', sub: '34 delivered today', icon: <ChatBubbleOutline sx={{ fontSize: '18px', color: '#4b5563' }} /> },
   { title: 'Confirmations',    sub: '12 received',        icon: <CheckCircleOutline sx={{ fontSize: '18px', color: '#4b5563' }} /> },
   { title: 'Voicemails',       sub: '6 transcribed',      icon: <PhoneOutlined sx={{ fontSize: '18px', color: '#4b5563' }} /> },

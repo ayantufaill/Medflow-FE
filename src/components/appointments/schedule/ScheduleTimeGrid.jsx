@@ -85,9 +85,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     appt.patient && typeof appt.patient === "object" ? appt.patient : null;
   const patientData = patientObj || topLevelPatientObj;
   const patientId = patientData
-    ? patientData._id || patientData.id
-    : typeof appt.patientId === "string"
-      ? appt.patientId
+    ? patientData._id || patientData.id || patientData.PatNum
+    : typeof appt.patientId === "string" || typeof appt.patientId === "number" || typeof appt.patientId === "bigint"
+      ? String(appt.patientId)
       : null;
   const patientName = patientObj
     ? `${patientObj.firstName || ""} ${patientObj.lastName || ""}`.trim() ||
@@ -352,7 +352,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
   );
 };
 
-const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) => {
+const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode }) => {
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
   
@@ -573,7 +573,7 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks = [] }) =>
               zIndex: 2,
             }}
           >
-            <AppointmentCard appointment={gridItem} />
+            <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
           </Box>
         );
       })}

@@ -1,4 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
@@ -26,13 +27,20 @@ const ACTION_BUTTONS = [
 ];
 
 // Renders one contact-info row with an icon, text, and copy button.
-const ContactRow = ({ icon, text }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
-    <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
-    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{text}</Typography>
-    <ContentCopyOutlined sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
-  </Box>
-);
+const ContactRow = ({ icon, text }) => {
+  const handleCopy = () => {
+    const textToCopy = text.replace('DOB: ', '');
+    navigator.clipboard.writeText(textToCopy);
+  };
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+      <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
+      <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{text}</Typography>
+      <ContentCopyOutlined onClick={handleCopy} sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
+    </Box>
+  );
+};
 
 // PatientCard reads currentPatient from Redux (set by PatientSearch).
 // When no patient is selected, it renders nothing — LeftPanel conditionally
@@ -40,6 +48,7 @@ const ContactRow = ({ icon, text }) => (
 
 const PatientCard = () => {
   const { currentPatient } = usePatient();
+  const navigate = useNavigate();
 
   // Guard — should not render when no patient is selected (LeftPanel gates it),
   // but defensive early return prevents blank-card flash during Redux hydration.
@@ -148,12 +157,14 @@ const PatientCard = () => {
           wire to currentPatient.medicalAlerts when that field is available. */}
       <Box sx={{ display: 'flex' }}>
         <Box
+          onClick={() => navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`)}
           sx={{
             width: '22px', height: '22px',
             backgroundColor: '#fef08a',
             borderRadius: '4px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: '1px solid #fde047',
+            cursor: 'pointer',
           }}
         >
           <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#854d0e' }}>+</Typography>

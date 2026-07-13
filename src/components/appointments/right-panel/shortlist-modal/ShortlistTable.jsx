@@ -50,7 +50,7 @@ const TableHeader = ({ allChecked, onToggleAll }) => (
 );
 
 /* ── single data row ───────────────────────────────────────── */
-const TableRow = ({ patient, checked, onToggle, providersList = [] }) => {
+const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) => {
   const name = patient.PatientName || patient.patientName || patient.name || `Patient #${patient.PatNum || ''}`;
   
   // Find provider initials
@@ -175,7 +175,7 @@ const TableRow = ({ patient, checked, onToggle, providersList = [] }) => {
           <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#0d9488", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
             +add to schedule
           </Typography>
-          <IconButton size="small" sx={{ p: "2px", "&:hover": { backgroundColor: "#fef2f2" } }}>
+          <IconButton onClick={() => onDelete(patient._id || patient.id || patient.ShortlistNum || patient.PatNum)} size="small" sx={{ p: "2px", "&:hover": { backgroundColor: "#fef2f2" } }}>
             <Box component="img" src={DeleteIconImg} sx={{ width: "14px", height: "14px", objectFit: "contain" }} />
           </IconButton>
         </Box>
@@ -185,7 +185,7 @@ const TableRow = ({ patient, checked, onToggle, providersList = [] }) => {
 };
 
 /* ── table container ───────────────────────────────────────── */
-const ShortlistTable = ({ patients, selected, onToggleAll, onToggleRow }) => {
+const ShortlistTable = ({ patients, selected, onToggleAll, onToggleRow, onDelete }) => {
   const allChecked = selected.length === patients.length;
   const { providers: providersList } = useDropdownData({ providers: true });
 
@@ -200,6 +200,7 @@ const ShortlistTable = ({ patients, selected, onToggleAll, onToggleRow }) => {
             checked={selected.includes(patient.ShortlistNum || patient.id)}
             onToggle={() => onToggleRow(patient.ShortlistNum || patient.id)}
             providersList={providersList}
+            onDelete={onDelete}
           />
         ))}
       </Box>

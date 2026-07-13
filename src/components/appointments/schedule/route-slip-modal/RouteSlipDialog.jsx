@@ -13,6 +13,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
 import dayjs from 'dayjs';
+import { COLORS } from '../../../../constants/colors';
 
 import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail } from '../../../../hooks/redux';
 import { useSelector, useDispatch } from 'react-redux';
@@ -165,7 +166,9 @@ const RouteSlipDialog = () => {
       sx={{ zIndex: 1500 }}
       PaperProps={{
         sx: {
-          borderRadius: 1,
+          borderRadius: "14px",
+          border: `1px solid ${COLORS.BORDER}`,
+          boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
           minHeight: '60vh'
         }
       }}
@@ -189,21 +192,28 @@ const RouteSlipDialog = () => {
         </style>
       )}
 
-      {/* STANDARD MEDFLOW MODAL HEADER */}
-      <DialogTitle className="no-print-in-modal" sx={{ height: '73px', boxSizing: 'border-box', p: '0 25px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `1px solid #e2e8f0` }}>
-        <Box sx={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ea5e9' }}>
-          <PrintIcon sx={{ fontSize: '20px' }} />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: '16px', fontWeight: 600, color: '#1e293b' }}>
-            Print Patient Route Slip
-          </Typography>
-          <Typography sx={{ fontSize: '13px', color: '#64748b' }}>
-            View and print route slip details
-          </Typography>
-        </Box>
-        <IconButton onClick={handleClose} size="small" sx={{ color: '#64748b' }}>
-          <CloseIcon fontSize="small" />
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+      <DialogTitle
+        className="no-print-in-modal"
+        sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <PrintIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Patient Route Slip{patientName !== 'No patient selected' ? ` — ${patientName}` : ""}
+        </Typography>
+        <IconButton onClick={handleClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
 
@@ -252,9 +262,9 @@ const RouteSlipDialog = () => {
           <Box sx={{ flex: 1 }}>
             <SectionHeader title="ACCOUNT" />
             <SectionContainer sx={{ height: '100px' }}>
-              <InfoRow label="Total Outstanding" value="$0.00" />
-              <InfoRow label="Individual Outstanding" value="$0.00" />
-              <InfoRow label="Insurance Outstanding" value="$0.00" />
+              <InfoRow label="Total Outstanding" value="$0.00" alignValue="right" />
+              <InfoRow label="Individual Outstanding" value="$0.00" alignValue="right" />
+              <InfoRow label="Insurance Outstanding" value="$0.00" alignValue="right" />
             </SectionContainer>
           </Box>
           <Box sx={{ flex: 1 }}>
@@ -310,7 +320,7 @@ const RouteSlipDialog = () => {
 
       </DialogContent>
 
-      <DialogActions className="no-print-in-modal" sx={{ p: '16px 25px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', justifyContent: 'flex-end', gap: 1 }}>
+      <DialogActions className="no-print-in-modal" sx={{ p: '12px 24px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE, justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>
         <Button 
           variant="outlined" 
           size="small"

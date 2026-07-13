@@ -48,7 +48,7 @@ const ProgressNotesTables = ({
       
       {/* 1. COMPLETED PROCEDURES WITH MISSING NOTES */}
       <Box>
-        <Typography sx={{ fontWeight: 600, color: '#3b82f6', fontSize: '0.9rem', mb: 1 }}>
+        <Typography sx={{ fontWeight: 600, color: 'black', fontSize: '0.9rem', mb: 1 }}>
           Completed Procedures with Missing Progress Notes
         </Typography>
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '4px' }}>
@@ -66,7 +66,7 @@ const ProgressNotesTables = ({
             <TableBody>
               {missingNotes.length > 0 ? missingNotes.map((a, i) => (
                 <TableRow key={a._id || i}>
-                  <TableCell sx={{ ...cellSx, color: "#3b82f6", fontWeight: 500 }}>{a.patientName || `${a.patientId?.firstName || ''} ${a.patientId?.lastName || ''}`}</TableCell>
+                  <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500 }}>{a.patientName || `${a.patientId?.firstName || ''} ${a.patientId?.lastName || ''}`}</TableCell>
                   <TableCell sx={cellSx}>{dayjs(a.appointmentDate).format("MM/DD/YYYY")}</TableCell>
                   <TableCell sx={cellSx}>{a.toothNumber || "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.surface || "—"}</TableCell>
@@ -83,7 +83,7 @@ const ProgressNotesTables = ({
 
       {/* 2. UNSIGNED NOTES */}
       <Box>
-        <Typography sx={{ fontWeight: 600, color: '#3b82f6', fontSize: '0.9rem', mb: 1 }}>
+        <Typography sx={{ fontWeight: 600, color: 'black', fontSize: '0.9rem', mb: 1 }}>
           Unsigned Progress Notes
         </Typography>
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '4px' }}>
@@ -103,7 +103,7 @@ const ProgressNotesTables = ({
                 return (
                   <React.Fragment key={n._id || n.id || i}>
                     <TableRow onClick={() => toggleNoteExpansion(n._id || n.id)} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
-                      <TableCell sx={{ ...cellSx, color: "#3b82f6", fontWeight: 500, cursor: "pointer" }}>{n.patientId?.firstName} {n.patientId?.lastName}</TableCell>
+                      <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500, cursor: "pointer" }}>{n.patientId?.firstName} {n.patientId?.lastName}</TableCell>
                       <TableCell sx={cellSx}>{dayjs(n.createdAt).format("MM/DD/YYYY")}</TableCell>
                       <TableCell sx={cellSx}>{n.noteType || "Treatment"}</TableCell>
                       <TableCell sx={cellSx}>{getProviderName(n.providerId)}</TableCell>
@@ -167,7 +167,7 @@ const ProgressNotesTables = ({
 
       {/* 3. SIGNED NOTES */}
       <Box>
-        <Typography sx={{ fontWeight: 600, color: '#3b82f6', fontSize: '0.9rem', mb: 1 }}>
+        <Typography sx={{ fontWeight: 600, color: 'black', fontSize: '0.9rem', mb: 1 }}>
           Signed Progress Notes
         </Typography>
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '4px' }}>
@@ -187,7 +187,7 @@ const ProgressNotesTables = ({
                 return (
                   <React.Fragment key={n._id || n.id || i}>
                     <TableRow onClick={() => toggleNoteExpansion(n._id || n.id)} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
-                      <TableCell sx={{ ...cellSx, color: "#3b82f6", fontWeight: 500, cursor: "pointer" }}>{n.patientId?.firstName} {n.patientId?.lastName}</TableCell>
+                      <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500, cursor: "pointer" }}>{n.patientId?.firstName} {n.patientId?.lastName}</TableCell>
                       <TableCell sx={cellSx}>{dayjs(n.createdAt).format("MM/DD/YYYY")}</TableCell>
                       <TableCell sx={cellSx}>{n.noteType || "Recare"}</TableCell>
                       <TableCell sx={cellSx}>{getProviderName(n.providerId)}</TableCell>

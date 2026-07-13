@@ -111,7 +111,7 @@ const getSizeTier = (durationMinutes = 60) => {
   return "lg";
 };
 
-const AppointmentCard = ({ appointment }) => {
+const AppointmentCard = ({ appointment, privacyMode }) => {
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
@@ -211,7 +211,7 @@ const AppointmentCard = ({ appointment }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              {appointment.patientName}
+              {privacyMode ? "•••• ••••" : appointment.patientName}
             </Typography>
             <Typography
               sx={{
@@ -245,6 +245,7 @@ const AppointmentCard = ({ appointment }) => {
           <AppointmentHoverCard
             appointment={appointment}
             anchorRect={anchorRect}
+            privacyMode={privacyMode}
             onMouseEnter={() => clearTimeout(leaveTimer.current)}
             onMouseLeave={handleMouseLeave}
           />
@@ -308,7 +309,7 @@ const AppointmentCard = ({ appointment }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              {appointment.patientName}
+              {privacyMode ? "•••• ••••" : appointment.patientName}
             </Typography>
             <Typography
               sx={{
@@ -692,6 +693,7 @@ const AppointmentCard = ({ appointment }) => {
         <AppointmentHoverCard
           appointment={appointment}
           anchorRect={anchorRect}
+          privacyMode={privacyMode}
           onMouseEnter={() => clearTimeout(leaveTimer.current)}
           onMouseLeave={handleMouseLeave}
         />
