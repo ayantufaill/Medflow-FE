@@ -67,6 +67,18 @@ export const fetchCoverageTemplatesThunk = createAsyncThunk(
   }
 );
 
+export const createCoverageTemplateThunk = createAsyncThunk(
+  'insurance/createCoverageTemplate',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const data = await insurancePlanService.createCoverageTemplate(payload);
+      return data?.templates || [];
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save coverage template');
+    }
+  }
+);
+
 // ─── ADMIN MANAGEMENT THUNKS ────────────────────────────────────────────────────────
 
 export const fetchCarriersList = createAsyncThunk(
@@ -372,6 +384,9 @@ const insuranceSlice = createSlice({
       .addCase(fetchCoverageTemplatesThunk.rejected, (state, action) => {
         state.templatesLoading = false;
         state.templatesError = action.payload;
+      })
+      .addCase(createCoverageTemplateThunk.fulfilled, (state, action) => {
+        state.templates = action.payload;
       })
       // Admin Carriers List
       .addCase(fetchCarriersList.pending, (state) => {

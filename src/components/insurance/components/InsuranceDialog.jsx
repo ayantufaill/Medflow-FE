@@ -25,9 +25,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Controller, useForm } from 'react-hook-form';
 import dayjs from 'dayjs';
-import { useSnackbar } from '../../contexts/SnackbarContext';
-import { patientService } from '../../services/patient.service';
-import { extractTextFromImage, parseInsuranceCard } from '../../services/ocr.service';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
+import { patientService } from '../../../services/patient.service';
+import { extractTextFromImage, parseInsuranceCard } from '../../../services/ocr.service';
 
 export default function InsuranceDialog({
   open,

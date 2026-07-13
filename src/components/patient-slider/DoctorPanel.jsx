@@ -12,8 +12,10 @@ import {
 } from "@mui/icons-material";
 import { ApptBlock, selectSx } from "./helpers";
 import { useDropdownData } from "../../hooks/redux/useDropdownData";
+import AppointmentHistoryDialog from "../appointments/schedule/appointment-history-modal/AppointmentHistoryDialog";
 
 const getProviderName = (provider) => {
+  if (!provider) return "Unknown";
   const first =
     provider.userId?.firstName || provider.firstName || provider.FName || "";
   const last =
@@ -39,9 +41,39 @@ const getProviderTypeString = (provider) => {
   return String(raw).toLowerCase();
 };
 
+const getProviderId = (provider) => String(provider._id || provider.id || "");
+
 const DoctorPanel = ({ pt }) => {
-  const [selectedDentist, setSelectedDentist] = useState("");
+  const [selectedDentist, setSelectedDentist] = useState(() =>
+    pt.preferredDentistId ? String(pt.preferredDentistId) : "",
+  );
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { providers = [] } = useDropdownData({ providers: true });
+
+  const patientForHistory = pt.rawId ? { _id: pt.rawId, id: pt.rawId } : null;
+
+  // 1. Find and format the provider name for the next appointment block
+  const nextApptProviderName = useMemo(() => {
+    const rawProvider = pt.nextTxAppt?.provider;
+    if (!rawProvider) return "Unknown";
+
+    // If it's an object with a name already, pass it to the helper
+    if (typeof rawProvider === "object") {
+      return getProviderName(rawProvider);
+    }
+
+    // If it's a string ID or code, find the matching full provider object from Redux data
+    const matchedProvider = providers.find(
+      (p) =>
+        getProviderId(p) === String(rawProvider) ||
+        p.providerCode === String(rawProvider),
+    );
+
+    // Fallback to the raw value (like the number/ID) if no match is found in dropdown data
+    return matchedProvider
+      ? getProviderName(matchedProvider)
+      : String(rawProvider);
+  }, [providers, pt.nextTxAppt?.provider]);
 
   const dentistOptions = useMemo(() => {
     const dentists = providers.filter((provider) => {
@@ -53,8 +85,24 @@ const DoctorPanel = ({ pt }) => {
         type.includes("doctor")
       );
     });
-    return dentists.length > 0 ? dentists : providers;
-  }, [providers]);
+    const options = dentists.length > 0 ? dentists : providers;
+    const selectedProvider = providers.find(
+      (provider) => getProviderId(provider) === selectedDentist,
+    );
+
+    if (
+      selectedProvider &&
+      !options.some((provider) => getProviderId(provider) === selectedDentist)
+    ) {
+      return [selectedProvider, ...options];
+    }
+
+    return options;
+  }, [providers, selectedDentist]);
+
+  const selectedDentistInOptions = dentistOptions.some(
+    (provider) => getProviderId(provider) === selectedDentist,
+  );
 
   return (
     <Box
@@ -93,10 +141,18 @@ const DoctorPanel = ({ pt }) => {
         >
           Select a preferred dentist
         </MenuItem>
+        {selectedDentist && !selectedDentistInOptions && (
+          <MenuItem
+            value={selectedDentist}
+            sx={{ fontFamily: "Inter", fontSize: "11px" }}
+          >
+            Preferred dentist
+          </MenuItem>
+        )}
         {dentistOptions.map((provider) => (
           <MenuItem
-            key={provider._id || provider.id}
-            value={provider._id || provider.id}
+            key={getProviderId(provider)}
+            value={getProviderId(provider)}
             sx={{ fontFamily: "Inter", fontSize: "11px" }}
           >
             {getProviderName(provider)}
@@ -104,26 +160,34 @@ const DoctorPanel = ({ pt }) => {
         ))}
       </Select>
 
+      {/* 2. Pass the formatted name here */}
       <ApptBlock
         label="NEXT TX APPT"
         date={pt.nextTxAppt.date}
         time={pt.nextTxAppt.time}
-        provider={pt.nextTxAppt.provider}
+        provider={nextApptProviderName}
         icon={<CalendarTodayOutlined sx={{ fontSize: "12px" }} />}
       />
 
       <Typography
+        onClick={() => patientForHistory && setHistoryOpen(true)}
         sx={{
           fontFamily: "Inter",
           fontSize: "11px",
-          color: "#2262ef",
-          cursor: "pointer",
+          color: patientForHistory ? "#2262ef" : "#9aa3ae",
+          cursor: patientForHistory ? "pointer" : "default",
           mt: "auto",
-          "&:hover": { textDecoration: "underline" },
+          "&:hover": patientForHistory ? { textDecoration: "underline" } : {},
         }}
       >
         View Appt History →
       </Typography>
+
+      <AppointmentHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        patient={patientForHistory}
+      />
     </Box>
   );
 };

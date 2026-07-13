@@ -132,7 +132,10 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
     // Also fetch the full patient details into Redux so the dropdown and left panel
     // PatientCard display the exact same comprehensive data as when searched.
     if (appointment.patientId) {
-      dispatch(fetchPatientById(appointment.patientId));
+      const pId = typeof appointment.patientId === 'object' 
+        ? appointment.patientId._id || appointment.patientId.id || appointment.patientId.PatNum 
+        : appointment.patientId;
+      if (pId) dispatch(fetchPatientById(pId));
     }
   };
 

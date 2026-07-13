@@ -20,7 +20,7 @@ import {
   InputAdornment
 } from '@mui/material';
 import { Close as CloseIcon, Search as SearchIcon } from '@mui/icons-material';
-import { feeService } from '../../services/fee.service';
+import { feeService } from '../../../services/fee.service';
 
 const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
   const [loading, setLoading] = useState(false);

@@ -17,6 +17,7 @@ import {
 import dayjs from "dayjs";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../../../store/slices/appointmentSlice";
+import { selectCurrentPatient } from "../../../../store/slices/patientSlice";
 import { COLORS } from "../../../../constants/colors";
 
 import AppointmentHistoryFilters from './AppointmentHistoryFilters';
@@ -26,17 +27,20 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const dispatch = useDispatch();
   const appointments = useSelector(selectPatientHistoryList);
   const loading = useSelector(selectPatientHistoryLoading);
+  const currentPatient = useSelector(selectCurrentPatient);
+
+  // Enrich patient name: if caller only passed { _id, id }, pull name from Redux
+  const patientName = patient?.firstName
+    ? `${patient.firstName} ${patient.lastName}`
+    : currentPatient
+      ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim()
+      : '';
 
   const [filterType, setFilterType] = useState("all"); // all, past, future
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date"); // date, lastStatusChange
 
   const [selected, setSelected] = useState([]);
-
-  // Reset selection when filters or modal changes
-  useEffect(() => {
-    setSelected([]);
-  }, [filterType, statusFilter, sortBy, open]);
 
   const fetchHistoryData = useCallback(() => {
     if (!patient) return;
@@ -87,7 +91,7 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelected(filteredAndSortedAppointments.map((appt, idx) => appt._id || idx));
+      setSelected(filteredAndSortedAppointments.map(getAppointmentRowKey));
     } else {
       setSelected([]);
     }
@@ -131,7 +135,7 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
       >
         <HistoryIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Appointment History{patient ? ` — ${patient.firstName} ${patient.lastName}` : ""}
+          Appointment History{patientName ? ` — ${patientName}` : ""}
         </Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: "18px" }} />

@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
 import { Box } from "@mui/material";
 import dayjs from "dayjs";
 import SliderHeader from "./SliderHeader";
@@ -10,6 +11,7 @@ import DoctorPanel from "./DoctorPanel";
 import HygienistPanel from "./HygienistPanel";
 import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
+import { appointmentService } from "../../services/appointment.service";
 
 const DEFAULT_PATIENT = {
   name: "Ali Tariq",
@@ -32,6 +34,119 @@ const DEFAULT_PATIENT = {
     { label: "Hyg", bg: "#dcfce7", color: "#15803d", border: "#86efac" },
     { label: "Tx", bg: "#eff6ff", color: "#2262ef", border: "#bfdbfe" },
   ],
+};
+
+const EMPTY_APPT = { date: "", time: "", provider: "" };
+
+const getAppointmentDateTime = (appointment) => {
+  const rawDate =
+    appointment.appointmentDate ||
+    appointment.date ||
+    appointment.AptDateTime ||
+    appointment.start ||
+    appointment.startDate;
+  if (!rawDate) return null;
+
+  const dateOnly = String(rawDate).split("T")[0];
+  const rawTime =
+    appointment.startTime ||
+    appointment.time ||
+    appointment.AptTime ||
+    appointment.startTimeLocal;
+  const dateTime = rawTime ? dayjs(`${dateOnly}T${rawTime}`) : dayjs(rawDate);
+
+  return dateTime.isValid() ? dateTime : null;
+};
+
+const getProviderLabel = (provider) => {
+  if (!provider) return "";
+  if (typeof provider === "string") return provider;
+
+  const first =
+    provider.userId?.firstName ||
+    provider.firstName ||
+    provider.FName ||
+    provider.name ||
+    "";
+  const last =
+    provider.userId?.lastName || provider.lastName || provider.LName || "";
+
+  return (
+    `${first} ${last}`.trim() ||
+    provider.providerCode ||
+    provider._id ||
+    provider.id ||
+    ""
+  );
+};
+
+const getAppointmentText = (appointment) => {
+  const procedures = Array.isArray(appointment.procedures)
+    ? appointment.procedures
+        .map((procedure) =>
+          typeof procedure === "string"
+            ? procedure
+            : procedure.treatment || procedure.name || procedure.code || "",
+        )
+        .join(" ")
+    : appointment.procedures || "";
+
+  return [
+    appointment.appointmentType,
+    appointment.appointmentTypeId?.name,
+    appointment.appointmentTypeId?.code,
+    appointment.chiefComplaint,
+    appointment.note,
+    procedures,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+};
+
+const isHygieneAppointment = (appointment) => {
+  const text = getAppointmentText(appointment);
+  return (
+    text.includes("hyg") ||
+    text.includes("recare") ||
+    text.includes("recall") ||
+    text.includes("prophy") ||
+    text.includes("cleaning")
+  );
+};
+
+const toAppointmentBlock = (appointment) => {
+  const dateTime = getAppointmentDateTime(appointment);
+  if (!dateTime) return EMPTY_APPT;
+
+  return {
+    date: dateTime.format("MM/DD/YYYY"),
+    time: dateTime.format("hh:mm A"),
+    provider: getProviderLabel(appointment.providerId || appointment.provider),
+  };
+};
+
+const getUpcomingAppointments = (appointments = []) =>
+  appointments
+    .map((appointment) => ({
+      appointment,
+      dateTime: getAppointmentDateTime(appointment),
+    }))
+    .filter(({ dateTime }) => dateTime && dateTime.isAfter(dayjs()))
+    .sort((a, b) => a.dateTime.valueOf() - b.dateTime.valueOf())
+    .map(({ appointment }) => appointment);
+
+const deriveNextAppointments = (appointments = []) => {
+  const upcoming = getUpcomingAppointments(appointments);
+  const nextHyg = upcoming.find(isHygieneAppointment);
+  const nextTx =
+    upcoming.find((appointment) => !isHygieneAppointment(appointment)) ||
+    upcoming[0];
+
+  return {
+    nextTxAppt: nextTx ? toAppointmentBlock(nextTx) : EMPTY_APPT,
+    nextHygAppt: nextHyg ? toAppointmentBlock(nextHyg) : EMPTY_APPT,
+  };
 };
 
 const toSliderShape = (patient) => {
@@ -64,8 +179,12 @@ const toSliderShape = (patient) => {
     patient.phonePrimary ||
     patient.mobilePhone ||
     "";
+
   const familyMembersCount =
-    patient.household?.length ?? patient.familyMembers?.length ?? patient.family?.length ?? 1;
+    patient.familyMembers?.length ??
+    patient.family?.length ??
+    patient.household?.length ??
+    0;
 
   const familyBalanceRaw =
     patient.balanceBreakdown?.familyTotalOutstanding ??
@@ -94,12 +213,23 @@ const toSliderShape = (patient) => {
     patient.insuranceName;
   const hasCoverage = Boolean(paidBy && paidBy !== "Self Pay");
   const coverage = hasCoverage ? paidBy : "No active coverage";
+  const appointments =
+    patient.appointments ||
+    patient.patientAppointments ||
+    patient.appointmentHistory ||
+    [];
+  const derivedAppointments = deriveNextAppointments(appointments);
 
   return {
     name,
     id,
     rawId: patient._id || patient.id || null,
-    insuranceId: patient.primaryInsurance?._id || patient.primaryInsurance?.id || patient.insurances?.[0]?._id || patient.insurances?.[0]?.id || null,
+    insuranceId:
+      patient.primaryInsurance?._id ||
+      patient.primaryInsurance?.id ||
+      patient.insurances?.[0]?._id ||
+      patient.insurances?.[0]?.id ||
+      null,
     dob,
     age,
     email,
@@ -111,20 +241,85 @@ const toSliderShape = (patient) => {
     lastPatientPay: patient.lastPatientPay || "No payment",
     lastInsPay: patient.lastInsPay || "No payment",
     location: patient.location || "Riverside Dental · Operatory 2",
-    nextTxAppt: patient.nextTxAppt || { date: "", time: "", provider: "" },
-    nextHygAppt: patient.nextHygAppt || { date: "", time: "", provider: "" },
+    preferredDentistId: patient.preferredDentistId || "",
+    preferredHygienistId: patient.preferredHygienistId || "",
+    nextTxAppt: patient.nextTxAppt || derivedAppointments.nextTxAppt,
+    nextHygAppt: patient.nextHygAppt || derivedAppointments.nextHygAppt,
     hygQueDate: patient.hygQueDate || "",
     badges: patient.badges || ["P", "H", "T", "F", "D"],
     tags: patient.tags || [
       { label: "Hyg", bg: "#dcfce7", color: "#15803d", border: "#86efac" },
       { label: "Tx", bg: "#eff6ff", color: "#2262ef", border: "#bfdbfe" },
     ],
+    _raw: patient,
   };
 };
 
 const PatientSlider = ({ open, onClose, patient }) => {
   const { currentPatient } = usePatient();
-  const pt = toSliderShape(patient || currentPatient) || DEFAULT_PATIENT;
+  const sourcePatient = patient || currentPatient;
+  const basePt = useMemo(() => toSliderShape(sourcePatient), [sourcePatient]);
+  const [fetchedAppointments, setFetchedAppointments] = useState({
+    patientId: null,
+    appointments: [],
+  });
+
+  const fetchAppointmentsData = (patientId) => {
+    appointmentService
+      .getPatientAppointments(patientId, 50)
+      .then((appointments) => {
+        setFetchedAppointments({
+          patientId,
+          appointments: Array.isArray(appointments) ? appointments : [],
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to fetch player appointments:", err);
+        setFetchedAppointments({ patientId, appointments: [] });
+      });
+  };
+
+  useEffect(() => {
+    const patientId = sourcePatient?._id || sourcePatient?.id;
+    const hasAppointments =
+      sourcePatient?.appointments ||
+      sourcePatient?.patientAppointments ||
+      sourcePatient?.appointmentHistory;
+
+    if (!open || !patientId || hasAppointments) {
+      return;
+    }
+
+    fetchAppointmentsData(patientId);
+  }, [open, sourcePatient]);
+
+  // Action function sent down to SliderHeader for execution
+  const handleRefresh = () => {
+    const patientId = sourcePatient?._id || sourcePatient?.id;
+    if (patientId) {
+      fetchAppointmentsData(patientId);
+    }
+  };
+
+  const pt = useMemo(() => {
+    if (!basePt) return DEFAULT_PATIENT;
+    if (
+      !fetchedAppointments.appointments.length ||
+      String(fetchedAppointments.patientId) !== String(basePt.rawId)
+    ) {
+      return basePt;
+    }
+
+    const derivedAppointments = deriveNextAppointments(
+      fetchedAppointments.appointments,
+    );
+
+    return {
+      ...basePt,
+      nextTxAppt: derivedAppointments.nextTxAppt,
+      nextHygAppt: derivedAppointments.nextHygAppt,
+    };
+  }, [basePt, fetchedAppointments]);
 
   return createPortal(
     <>
@@ -166,15 +361,21 @@ const PatientSlider = ({ open, onClose, patient }) => {
           overflowX: "auto",
         }}
       >
-        <SliderHeader pt={pt} onClose={onClose} />
+        <SliderHeader pt={pt} onClose={onClose} onRefresh={handleRefresh} />
 
         <Box sx={{ display: "flex", backgroundColor: "#fff" }}>
           <DemographicsPanel pt={pt} />
           <ContactPanel pt={pt} />
           <CoveragePanel pt={pt} />
           <BalancePanel pt={pt} />
-          <DoctorPanel pt={pt} />
-          <HygienistPanel pt={pt} />
+          <DoctorPanel
+            key={`${pt.rawId || pt.id}-dentist-${pt.preferredDentistId || ""}`}
+            pt={pt}
+          />
+          <HygienistPanel
+            key={`${pt.rawId || pt.id}-hygienist-${pt.preferredHygienistId || ""}`}
+            pt={pt}
+          />
         </Box>
 
         <SliderFooter pt={pt} />

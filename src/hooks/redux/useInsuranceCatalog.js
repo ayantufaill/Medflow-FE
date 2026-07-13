@@ -4,6 +4,7 @@ import {
   fetchAllInsuranceCompaniesThunk,
   fetchInsurancePlansThunk,
   fetchCoverageTemplatesThunk,
+  createCoverageTemplateThunk,
   selectAllCompanies,
   selectCompaniesLoading,
   selectAllPlans,
@@ -36,6 +37,10 @@ export const useInsuranceCatalog = () => {
     return dispatch(fetchCoverageTemplatesThunk());
   }, [dispatch]);
 
+  const createTemplate = useCallback((payload) => {
+    return dispatch(createCoverageTemplateThunk(payload));
+  }, [dispatch]);
+
   const fetchAllCatalog = useCallback(async () => {
     await Promise.all([
       dispatch(fetchAllInsuranceCompaniesThunk()),
@@ -54,6 +59,7 @@ export const useInsuranceCatalog = () => {
     fetchCompanies,
     fetchPlans,
     fetchTemplates,
+    createTemplate,
     fetchAllCatalog
   };
 };

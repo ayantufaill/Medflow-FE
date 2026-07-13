@@ -24,30 +24,30 @@ export const monthMap = {
 
 export const STYLE_CONSTANTS = {
   blueHeader: "#f0f4f8",
-  sectionTitle: { fontWeight: 700, mb: 1, color: "#333", fontSize: "0.85rem" },
-  tinyText: { fontSize: '0.7rem' },
+  sectionTitle: { fontWeight: 700, mb: 0.5, color: "#333", fontSize: "0.75rem" },
+  tinyText: { fontSize: '0.6rem' },
   tableHeaderStyle: {
-    fontSize: '0.65rem',
+    fontSize: '0.58rem',
     fontWeight: 700,
     color: "#555",
     borderRight: '1px solid #e0e0e0',
-    py: 0.5,
+    py: 0.25,
     lineHeight: 1.1,
     whiteSpace: 'normal',
     wordWrap: 'break-word'
   },
   inputBg: "#f9fafb",
   headerStyle: {
-    fontSize: '0.65rem',
+    fontSize: '0.58rem',
     fontWeight: 700,
     color: "#555",
     borderRight: '1px solid #e0e0e0',
-    py: 0.5
+    py: 0.1
   },
   bodyCellStyle: {
-    fontSize: '0.75rem',
+    fontSize: '0.65rem',
     borderRight: '1px solid #eee',
-    py: 0.2,
-    height: '35px'
+    py: 0.05,
+    height: '26px'
   }
 };
