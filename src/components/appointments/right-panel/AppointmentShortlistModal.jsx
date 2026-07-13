@@ -97,6 +97,21 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
   const toggleRow = (id) =>
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to remove this item from the shortlist?")) return;
+    try {
+      setLoading(true);
+      await shortlistService.deleteShortlistItem(id);
+      setPatients(prev => prev.filter(p => (p.ShortlistNum || p.id || p._id) !== id));
+      window.dispatchEvent(new Event('shortlist-updated'));
+    } catch (err) {
+      console.error("Failed to delete shortlist item:", err);
+      alert("Failed to delete. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -133,6 +148,7 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
           selected={selected}
           onToggleAll={toggleAll}
           onToggleRow={toggleRow}
+          onDelete={handleDelete}
         />
       )}
       <ShortlistFooter total={filteredPatients.length} selectedCount={selected.length} />

@@ -85,9 +85,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     appt.patient && typeof appt.patient === "object" ? appt.patient : null;
   const patientData = patientObj || topLevelPatientObj;
   const patientId = patientData
-    ? patientData._id || patientData.id
-    : typeof appt.patientId === "string"
-      ? appt.patientId
+    ? patientData._id || patientData.id || patientData.PatNum
+    : typeof appt.patientId === "string" || typeof appt.patientId === "number" || typeof appt.patientId === "bigint"
+      ? String(appt.patientId)
       : null;
   const patientName = patientObj
     ? `${patientObj.firstName || ""} ${patientObj.lastName || ""}`.trim() ||

@@ -17,7 +17,7 @@ import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
 import { useDispatch } from "react-redux";
-import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
+import { setSelectedAppointmentId, fetchAppointments } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
@@ -143,7 +143,7 @@ const OperatorySchedulePage = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters } = useScheduleState();
+  const { frontendFilters, calendarView } = useScheduleState();
 
   const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
     const key = `${dateStr}:${columnId}`;
@@ -251,6 +251,12 @@ const OperatorySchedulePage = () => {
             window.dispatchEvent(new Event('shortlist-updated'));
           } catch (e) { }
         }
+
+        // Refresh calendar appointments with correct dates and limit
+        const viewUnit = calendarView === "day" ? "day" : calendarView;
+        const sDate = selectedDate.startOf(viewUnit).format("YYYY-MM-DD");
+        const eDate = selectedDate.endOf(viewUnit).format("YYYY-MM-DD");
+        dispatch(fetchAppointments({ startDate: sDate, endDate: eDate, limit: 200 }));
 
         showSnackbar("Shortlist appointment scheduled successfully", "success");
       } catch (err) {
@@ -517,7 +523,7 @@ const OperatorySchedulePage = () => {
         id: a._id || a.id,
         appointmentDate: a.appointmentDate,
         date: dateOnly,
-        patientId: (a.patientId && (a.patientId._id || a.patientId.id)) || "",
+        patientId: String((a.patientId && typeof a.patientId === 'object' ? (a.patientId._id || a.patientId.id || a.patientId.PatNum) : a.patientId) || ""),
         columnId,
         roomId: a.roomId || "",
         startTime: a.startTime || "",

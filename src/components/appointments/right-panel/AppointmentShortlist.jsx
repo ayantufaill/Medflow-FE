@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { Checklist, CalendarToday } from '@mui/icons-material';
 import { useDraggable } from '@dnd-kit/core';
 import RightPanelCard from './RightPanelCard';
@@ -25,12 +25,14 @@ const DraggableShortlistItem = ({ item }) => {
   const slotStr = `${slotDay} · ${slotTime}${slotDuration ? ` · ${slotDuration}` : ''}`;
   const dateStr = apptDate ? dayjs(apptDate).format("MMM DD, YYYY") : "No Date";
 
+  // Implementing drag functionality
+  const itemId = item._id || item.id || item.ShortlistNum || item.PatNum;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `shortlist-item-${item._id || item.id || item.ShortlistNum || item.PatNum}`,
+    id: `shortlist-item-${itemId}`,
     data: {
       isShortlistItem: true,
       type: "shortlist",
-      id: item._id || item.id || item.ShortlistNum || item.PatNum,
+      id: itemId,
       originalData: item
     }
   });
@@ -50,6 +52,7 @@ const DraggableShortlistItem = ({ item }) => {
         cursor: 'grab',
         opacity: isDragging ? 0.5 : 1,
         '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
+        touchAction: 'none' // Ensures touch drag works correctly for dnd-kit
       }}
     >
       {/* Avatar */}
@@ -120,9 +123,21 @@ const AppointmentShortlist = () => {
         onExpand={() => setModalOpen(true)}
         footerLabel="View all & filter →"
       >
-        {items.slice(0, 4).map((item) => (
-          <DraggableShortlistItem key={item._id || item.id || item.ShortlistNum || item.PatNum || item.name} item={item} />
-        ))}
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : items.length === 0 ? (
+          <Box sx={{ py: 2, textAlign: 'center' }}>
+            <Typography sx={{ fontSize: fontSize.base, color: '#6b7280' }}>
+              No patients in shortlist.
+            </Typography>
+          </Box>
+        ) : (
+          items.slice(0, 4).map((item) => (
+            <DraggableShortlistItem key={item._id || item.id || item.ShortlistNum || item.PatNum || item.name} item={item} />
+          ))
+        )}
       </RightPanelCard>
 
       <AppointmentShortlistModal open={modalOpen} onClose={() => setModalOpen(false)} />
