@@ -45,12 +45,20 @@ const ExamNavbar = () => {
   console.log('ExamNavbar - Rendering with activeTabIndex:', activeTabIndex, 'pathname:', location.pathname);
 
   return (
-    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, px: 4 }}>
+    <Box sx={{ borderBottom: '1.11px solid #e5e7eb', mb: 2, px: 2, height: '45px' }}>
       <Tabs 
         value={activeTabIndex}
         onChange={(e, newValue) => navigate(examSubsections[newValue].path)}
         variant="scrollable"
         scrollButtons="auto"
+        sx={{
+          minHeight: '45px',
+          height: '45px',
+          '& .MuiTabs-indicator': {
+            backgroundColor: '#2563eb',
+            height: '3px',
+          }
+        }}
       >
         {examSubsections.map((subsection) => (
           <Tab 
@@ -58,9 +66,15 @@ const ExamNavbar = () => {
             label={subsection.label}
             sx={{ 
               textTransform: 'none',
-              fontWeight: 500,
+              fontWeight: 600,
               fontSize: '0.875rem',
-              minHeight: '48px'
+              minHeight: '45px',
+              height: '45px',
+              py: 0,
+              color: '#6b7280',
+              '&.Mui-selected': {
+                color: '#2563eb',
+              }
             }} 
           />
         ))}

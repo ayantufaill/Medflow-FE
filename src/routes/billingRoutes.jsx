@@ -33,9 +33,9 @@ import AuthorizationsListPage from '../pages/authorizations/AuthorizationsListPa
 import CreateAuthorizationPage from '../pages/authorizations/CreateAuthorizationPage';
 import ViewAuthorizationPage from '../pages/authorizations/ViewAuthorizationPage';
 
-const adminBilling = (children) => (
+const adminBilling = (children, hideSidebar = false) => (
   <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
-    <Layout>{children}</Layout>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
@@ -81,7 +81,7 @@ const billingRoutes = [
   <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={adminBillingDoctor(<EditEstimatePage />)} />,
   <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingDoctor(<ViewEstimatePage />)} />,
 
-  <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />)} />,
+  <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />, true)} />,
   <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />)} />,
   <Route key="/claims/denied" path="/claims/denied" element={adminBilling(<DeniedClaimsPage />)} />,
   <Route key="/claims/secondary" path="/claims/secondary" element={adminBilling(<SecondaryClaimsPage />)} />,
