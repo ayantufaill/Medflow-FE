@@ -1,5 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { Description as DocIcon, Assignment as ChecklistIcon, Check as CheckIcon } from "@mui/icons-material";
+import { COLORS } from "../../constants/colors";
+import { fontSize } from "../../constants/styles";
 
 const truncateLabel = (value, max = 30) => {
   if (!value) return "";
@@ -7,24 +9,19 @@ const truncateLabel = (value, max = 30) => {
   return `${value.slice(0, max - 3)}...`;
 };
 
-export const CustomFormsSection = ({ 
-  customForms, 
-  selectedFormId, 
-  onFormClick, 
-  onFormDeleteClick 
+export const CustomFormsSection = ({
+  customForms,
+  selectedFormId,
+  onFormClick,
+  onFormDeleteClick
 }) => {
   return (
-    <Box sx={{ p: 3, mb: 2, borderRadius: 1, border: "1px solid #e0e0e0", bgcolor: "#ffffff" }}>
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-        Custom Forms:
-      </Typography>
-
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {customForms.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-            No custom forms uploaded yet. Click the upload button to add one.
-          </Typography>
-        ) : (
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      {customForms.length === 0 ? (
+        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY }}>
+          No custom form uploaded yet. Click the upload button to add one.
+        </Typography>
+      ) : (
           customForms.map((f) => (
             <Box
               key={f.id}
@@ -88,7 +85,6 @@ export const CustomFormsSection = ({
             </Typography>
           </Box>
         )))}
-      </Box>
     </Box>
   );
 };

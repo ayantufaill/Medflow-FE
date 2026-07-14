@@ -1,33 +1,47 @@
-import { Box, Typography, Paper, IconButton, Tooltip } from "@mui/material";
-import { Description as DocIcon } from "@mui/icons-material";
+import { Box, Typography, Paper } from "@mui/material";
+import { InsertDriveFileOutlined as DocIcon } from "@mui/icons-material";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight } from "../../constants/styles";
 
-export const DocumentThumbnail = ({ document, onOpen, onDownload, onShare }) => {
+export const DocumentThumbnail = ({ document, onOpen }) => {
   return (
-    <Box key={document.id} sx={{ minWidth: 280, maxWidth: 360 }}>
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 2,
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 2,
-        }}
-      >
-        <Box sx={{ color: "primary.main", mt: 0.25 }}>
-          <DocIcon sx={{ fontSize: 28 }} />
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="subtitle1" fontWeight={600}>
-            {document.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Uploaded by {document.uploadedBy} — {document.uploadedDate}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {document.type}
-          </Typography>
-        </Box>
-      </Paper>
-    </Box>
+    <Paper
+      key={document.id}
+      variant="outlined"
+      onClick={onOpen ? () => onOpen(document) : undefined}
+      sx={{
+        width: 180,
+        p: 1.25,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 0.75,
+        borderColor: COLORS.BORDER,
+        borderRadius: "8px",
+        cursor: onOpen ? "pointer" : "default",
+        "&:hover": onOpen ? { borderColor: COLORS.ACCENT } : undefined,
+      }}
+    >
+      <DocIcon sx={{ fontSize: 16, color: COLORS.ACCENT, mt: "2px", flexShrink: 0 }} />
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          sx={{
+            fontFamily: "Inter",
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            color: COLORS.TEXT_PRIMARY,
+            lineHeight: 1.35,
+            wordBreak: "break-word",
+          }}
+        >
+          {document.name}
+        </Typography>
+        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, lineHeight: 1.4 }}>
+          Uploaded by {document.uploadedBy}
+        </Typography>
+        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, lineHeight: 1.4 }}>
+          {document.type}
+        </Typography>
+      </Box>
+    </Paper>
   );
 };

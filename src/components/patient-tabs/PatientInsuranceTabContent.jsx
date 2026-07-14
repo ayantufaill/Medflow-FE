@@ -35,6 +35,8 @@ import ImportedCoverageModal from '../insurance/components/ImportedCoverageModal
 import EditCoverageModal from '../insurance/components/EditCoverageModal';
 import ViewCoverage from '../insurance/components/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, radius } from "../../constants/styles";
 
 const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate }) => {
   const [expanded, setExpanded] = useState(false);
@@ -346,8 +348,10 @@ export default function PatientInsuranceTabContent({ patientId }) {
                   onClick={() => setImportedCoverageModalOpen(true)}
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
+                    fontWeight: fontWeight.semibold,
+                    bgcolor: COLORS.ACCENT,
+                    fontSize: fontSize.base,
+                    boxShadow: "none",
                     textTransform: 'uppercase',
                     py: 1,
                     px: 1.5,
@@ -362,7 +366,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
-                    fontWeight: 600,
+                    bgcolor: COLORS.ACCENT,
+                    fontWeight: fontWeight.semibold,
                     textTransform: 'uppercase',
                     py: 1,
                     px: 1.5,
@@ -383,7 +388,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
-                    fontWeight: 600,
+                    fontWeight: fontWeight.semibold,
                     textTransform: 'uppercase',
                     py: 1,
                     px: 1.5,
@@ -398,7 +403,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                   sx={{
                     fontFamily: '"Manrope", "Segoe UI", sans-serif',
                     fontSize: '0.8125rem',
-                    fontWeight: 600,
+                    fontWeight: fontWeight.semibold,
                     textTransform: 'uppercase',
                     py: 1,
                     px: 1.5,
