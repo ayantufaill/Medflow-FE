@@ -21,29 +21,40 @@ const DataTag = ({ label }) => (
   </Box>
 );
 
-const SupportingStructure = ({ expanded, onToggle }) => {
+const SupportingStructure = ({ expanded, onToggle, noFindings = false, onToggleNoFindings }) => {
   return (
-    <Card variant="outlined" sx={{ mb: 1, borderRadius: 0, border: '1px solid #6b7cb4' }}>
+    <Card sx={{ mb: 2, borderRadius: 2, border: '1px solid #e5e7eb', bgcolor: 'white', boxShadow: 'none', overflow: 'hidden' }}>
       {/* Header */}
       <Box sx={{ 
-        bgcolor: '#6b7cb4', color: 'white', px: 1.5, py: 0.5, 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
-      }}>
+        bgcolor: '#2563eb', color: 'white', px: 2, py: 1, 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        cursor: 'pointer'
+      }} onClick={onToggle}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Supporting Structure</Typography>
-          <HeaderBadge label="MM" color="#ef9a9a" />
-          <HeaderBadge label="DH" color="#ef9a9a" />
+          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Supporting Structure</Typography>
+          <Box sx={{ bgcolor: '#ef4444', px: 0.5, borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>MM</Box>
+          <Box sx={{ bgcolor: '#ef4444', px: 0.5, borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>DH</Box>
         </Stack>
-        <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: 0.25, color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-          label={<Typography sx={{ fontSize: fontSize.xs, fontStyle: 'italic' }}>no findings</Typography>}
-          labelPlacement="start"
-          sx={{ ml: 0 }}
-        />
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography sx={{ fontSize: '0.75rem', color: '#e0e7ff', fontWeight: 500 }}>no findings</Typography>
+          <Box
+            onClick={(e) => { e.stopPropagation(); onToggleNoFindings?.(); }}
+            sx={{
+              width: 14, height: 14, borderRadius: '50%',
+              border: '1.5px solid #e0e7ff',
+              bgcolor: noFindings ? '#e0e7ff' : 'transparent',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+          >
+            {noFindings && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#fff' }} />}
+          </Box>
+        </Stack>
       </Box>
       
       {expanded && (
-        <Box sx={{ p: 1.5 }}>
+        <Box sx={{ p: 1.5, ...(noFindings && { opacity: 0.4, pointerEvents: 'none', userSelect: 'none' }) }}>
           {/* Generalized Horizontal Bone Loss */}
           <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Generalized Horizontal</Typography>
           <Typography sx={{ fontSize: fontSize.xs, mb: 1 }}>Bone Loss <Box component="span" sx={{ fontSize: fontSize.xs }}>Relative to CEJ</Box></Typography>

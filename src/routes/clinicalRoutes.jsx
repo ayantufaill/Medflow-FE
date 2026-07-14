@@ -35,9 +35,9 @@ import EditVitalSignPage from '../pages/vital-signs/EditVitalSignPage';
 import ViewVitalSignPage from '../pages/vital-signs/ViewVitalSignPage';
 import PatientVitalHistoryPage from '../pages/vital-signs/PatientVitalHistoryPage';
 
-const adminDoctor = (children) => (
+const adminDoctor = (children, hideSidebar = true) => (
   <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
-    <Layout>{children}</Layout>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 

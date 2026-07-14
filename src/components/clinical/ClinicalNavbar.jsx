@@ -21,6 +21,16 @@ import {
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 
+import examIcon from '../../assets/clinicalicons/examicon.svg';
+import diagnosticOpinionIcon from '../../assets/clinicalicons/diagnosticopinionicon.svg';
+import treatmentPlanIcon from '../../assets/clinicalicons/treatmentplanicon.svg';
+import adjunctiveTherapyIcon from '../../assets/clinicalicons/adjunctivetherapyicon.svg';
+import rxIcon from '../../assets/clinicalicons/RX icon.svg';
+import referralIcon from '../../assets/clinicalicons/referralicon.svg';
+import progressNoteIcon from '../../assets/clinicalicons/progressnoteicon.svg';
+import labCaseIcon from '../../assets/clinicalicons/labcaseicon.svg';
+import aiConversationIcon from '../../assets/clinicalicons/AIconversationicon.svg';
+
 const ClinicalNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,15 +84,15 @@ const ClinicalNavbar = () => {
 
   // Navigation sections for the clinical page
   const clinicalSections = [
-    { id: 'exam', label: 'EXAM', path: '/clinical/exam/radiographic' },
-    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion/biomechanical', disabled: true },
-    { id: 'treatment', label: 'TREATMENT PLAN', path: '/clinical/treatment-plan' },
-    { id: 'adjunctive', label: 'ADJUNCTIVE THERAPY', path: '/clinical/adjunctive-therapy', disabled: true },
-    { id: 'rx', label: 'RX', path: '/clinical/rx', disabled: true },
-    { id: 'referral', label: 'REFERRAL', path: '/clinical/referral', disabled: true },
-    { id: 'progress', label: 'PROGRESS NOTES', path: '/clinical/progress-notes' },
-    { id: 'lab', label: 'LAB CASE', path: '/clinical/lab-case', disabled: true },
-    { id: 'ai', label: 'AI CONVERSATION', path: '/clinical/ai-conversation', disabled: true },
+    { id: 'exam', label: 'EXAM', path: '/clinical/exam/radiographic', icon: examIcon },
+    { id: 'diagnostic', label: 'DIAGNOSTIC OPINION', path: '/clinical/diagnostic-opinion/biomechanical', disabled: true, icon: diagnosticOpinionIcon },
+    { id: 'treatment', label: 'TREATMENT PLAN', path: '/clinical/treatment-plan', icon: treatmentPlanIcon },
+    { id: 'adjunctive', label: 'ADJUNCTIVE THERAPY', path: '/clinical/adjunctive-therapy', disabled: true, icon: adjunctiveTherapyIcon },
+    { id: 'rx', label: 'RX', path: '/clinical/rx', disabled: true, icon: rxIcon },
+    { id: 'referral', label: 'REFERRAL', path: '/clinical/referral', disabled: true, icon: referralIcon },
+    { id: 'progress', label: 'PROGRESS NOTES', path: '/clinical/progress-notes', icon: progressNoteIcon },
+    { id: 'lab', label: 'LAB CASE', path: '/clinical/lab-case', disabled: true, icon: labCaseIcon },
+    { id: 'ai', label: 'AI CONVERSATIONS', path: '/clinical/ai-conversation', disabled: true, icon: aiConversationIcon },
   ];
 
   const getInitials = (patient) => {
@@ -274,41 +284,46 @@ const ClinicalNavbar = () => {
   };
 
   return (
-    <Box>
-      {renderContextBanner()}
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-        {clinicalSections.map((section) => (
-          <Button
-            key={section.id}
-            variant="text"
-            size="small"
-            disabled={section.disabled}
-            onClick={() => !section.disabled && navigate(section.path)}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              letterSpacing: '0.02em',
-              py: 1,
-              px: 1.5,
-              borderRadius: 1,
-              bgcolor: activeSection === section.id ? 'primary.main' : 'grey.100',
-              color: activeSection === section.id ? 'primary.contrastText' : 'text.primary',
-              minWidth: 'auto',
-              '&:hover': {
-                bgcolor: activeSection === section.id ? 'primary.dark' : 'grey.200',
-              },
-              '&.Mui-disabled': {
-                bgcolor: 'grey.100',
-                color: 'grey.400',
-                opacity: 0.7
-              }
-            }}
-          >
-            {section.label}
-          </Button>
-        ))}
-      </Box>
+    <Box sx={{ width: '100%', borderBottom: '1px solid #e0e0e0', mb: 2 }}>
+      {/* {renderContextBanner()} */}
+      <Stack direction="row" sx={{ px: 2, overflowX: 'auto', gap: 4 }}>
+        {clinicalSections.map((section) => {
+          const isActive = activeSection === section.id;
+          return (
+            <Box
+              key={section.id}
+              onClick={() => !section.disabled && navigate(section.path)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                py: 1.5,
+                cursor: section.disabled ? 'default' : 'pointer',
+                opacity: section.disabled ? 0.5 : 1,
+                borderBottom: isActive ? '3px solid #2563eb' : '3px solid transparent',
+                color: isActive ? '#2563eb' : '#6b7280',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  color: section.disabled ? '#6b7280' : '#2563eb'
+                }
+              }}
+            >
+              <img 
+                src={section.icon} 
+                alt={section.label} 
+                style={{ 
+                  width: 18, 
+                  height: 18,
+                  filter: isActive ? 'invert(27%) sepia(85%) saturate(2462%) hue-rotate(212deg) brightness(96%) contrast(92%)' : 'grayscale(100%) opacity(0.6)' 
+                }} 
+              />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                {section.label}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Stack>
     </Box>
   );
 };
