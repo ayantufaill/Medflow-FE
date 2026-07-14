@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars, no-empty */
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton } from '@mui/material';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import dayjs from 'dayjs';
@@ -432,14 +432,21 @@ const OperatorySchedulePage = () => {
   const [initialFormDateTime, setInitialFormDateTime] = useState(null);
   const [initialFormRoomId, setInitialFormRoomId] = useState(null);
   const [initialShortlistData, setInitialShortlistData] = useState(null);
+  const [showExtendedOptions, setShowExtendedOptions] = useState(false);
 
-  const handleOpenForm = (dateTime, roomId) => {
+  const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
     setInitialFormDateTime(dateTime || baseDate.hour(9).minute(0));
     setInitialFormRoomId(roomId || null);
     setInitialShortlistData(null);
+    setShowExtendedOptions(extendedOptions);
     setFormOpen(true);
   };
+
+  const handleOpenFormRef = useRef(handleOpenForm);
+  useEffect(() => {
+    handleOpenFormRef.current = handleOpenForm;
+  }, [handleOpenForm]);
 
   useEffect(() => {
     const handleEditShortlistItem = (e) => {
@@ -447,8 +454,18 @@ const OperatorySchedulePage = () => {
       setInitialShortlistData(data);
       setFormOpen(true);
     };
+    const handleOpenNewAppointmentModal = (e) => {
+      const isFromPatientCard = e?.detail?.isFromPatientCard || false;
+      handleOpenFormRef.current(null, null, isFromPatientCard);
+    };
+    
     window.addEventListener('edit-shortlist-item', handleEditShortlistItem);
-    return () => window.removeEventListener('edit-shortlist-item', handleEditShortlistItem);
+    window.addEventListener('open-new-appointment-modal', handleOpenNewAppointmentModal);
+    
+    return () => {
+      window.removeEventListener('edit-shortlist-item', handleEditShortlistItem);
+      window.removeEventListener('open-new-appointment-modal', handleOpenNewAppointmentModal);
+    };
   }, []);
 
   // ── Appointments (for conflict detection inside the form) ─────────
@@ -977,7 +994,7 @@ const OperatorySchedulePage = () => {
         {/* Add New Appointment Modal */}
         <AddNewPatientAppointmentForm
           open={formOpen}
-          onCancel={() => setFormOpen(false)}
+          onCancel={() => { setFormOpen(false); setShowExtendedOptions(false); }}
           onSubmit={handleAddAppointmentSubmit}
           loading={formSaving}
           initialDateTime={initialFormDateTime}
@@ -992,6 +1009,7 @@ const OperatorySchedulePage = () => {
           patients={formPatients || []}
           loadingPatients={loadingFormPatients}
           onPatientSearch={searchFormPatients}
+          showExtendedOptions={showExtendedOptions}
         />
 
         <AppointmentDetailModal

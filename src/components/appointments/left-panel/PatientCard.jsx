@@ -255,6 +255,11 @@ const PatientCard = () => {
         {ACTION_BUTTONS.map(({ label, icon, dot }) => (
           <Box
             key={label}
+            onClick={() => {
+              if (label === 'Book') {
+                window.dispatchEvent(new CustomEvent('open-new-appointment-modal', { detail: { isFromPatientCard: true } }));
+              }
+            }}
             sx={{
               flex: 1,
               display: 'flex',

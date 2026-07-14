@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, FormControlLabel, Radio, RadioGroup, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, FormControlLabel, RadioGroup, FormControlLabel as MuiFormControlLabel, Radio, TextField, Typography } from "@mui/material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -27,6 +27,7 @@ const AppointmentLeftPanel = ({
   onProcedureInputChange, onAddingProcedureToggle, onSelectProcedure,
   // Procedure table
   procedures, setProcedures, providers,
+  showExtendedOptions,
 }) => {
   const [showPastVisits, setShowPastVisits] = useState(false);
 
@@ -136,11 +137,94 @@ const AppointmentLeftPanel = ({
       onSelectProcedure={onSelectProcedure}
     />
 
+    {showExtendedOptions && (
+      <>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px' }}>
+          <Button
+            variant="contained"
+            disableElevation
+            sx={{
+              fontFamily: 'Inter', fontSize: '12px', fontWeight: 600,
+              textTransform: 'none', borderRadius: '6px',
+              backgroundColor: '#2262ef', color: '#fff',
+              px: '12px', py: '5px',
+              '&:hover': { backgroundColor: '#1a50cc' },
+            }}
+          >
+            Compute next visit
+          </Button>
+          <Button
+            variant="outlined"
+            sx={{
+              fontFamily: 'Inter', fontSize: '12px', fontWeight: 500,
+              textTransform: 'none', borderRadius: '6px',
+              border: '1px solid #f97316', color: '#f97316',
+              px: '12px', py: '5px',
+              '&:hover': { backgroundColor: '#fff7ed' },
+            }}
+          >
+            Re-estimate
+          </Button>
+        </Box>
+        
+      </>
+    )}
+
     {/* Procedure table */}
-    <ProcedureTable procedures={procedures} setProcedures={setProcedures} providers={providers} />
+    <ProcedureTable procedures={procedures} setProcedures={setProcedures} providers={providers} showExtendedOptions={showExtendedOptions} />
+
+    {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
+    {showExtendedOptions && (
+      <>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: '10px' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#2262ef' } }}
+              />
+            }
+            label={
+              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#374151' }}>
+                check out appointment
+              </Typography>
+            }
+            sx={{ m: 0 }}
+          />
+          <Box sx={{ display: 'flex', gap: '8px' }}>
+            <Button
+              variant="contained"
+              disableElevation
+              sx={{
+                fontFamily: 'Inter', fontSize: '12px', fontWeight: 600,
+                textTransform: 'none', borderRadius: '6px',
+                backgroundColor: '#2262ef', color: '#fff',
+                px: '12px', py: '5px',
+                '&:hover': { backgroundColor: '#1a50cc' },
+              }}
+            >
+              Complete All
+            </Button>
+            <Button
+              variant="contained"
+              disableElevation
+              sx={{
+                fontFamily: 'Inter', fontSize: '12px', fontWeight: 600,
+                textTransform: 'none', borderRadius: '6px',
+                backgroundColor: '#f97316', color: '#fff',
+                px: '12px', py: '5px',
+                '&:hover': { backgroundColor: '#ea6c00' },
+              }}
+            >
+              Collect Payments
+            </Button>
+          </Box>
+        </Box>
+      </>
+    )}
 
     {/* Recare hint */}
-    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px" }}>
+    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px", mt: 2 }}>
       Patient doesn't have a recare plan.{" "}
       <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
       {" "}or{" "}

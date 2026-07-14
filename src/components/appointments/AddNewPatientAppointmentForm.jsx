@@ -27,6 +27,7 @@ const AddNewPatientAppointmentForm = ({
   initialRoomId = "",
   initialShortlistData = null,
   open = true,
+  showExtendedOptions = false,
 }) => {
   /* ── Left panel state ── */
   const [patient,           setPatient]           = useState(initialShortlistData ? initialShortlistData.patient : initialPatient || null);
@@ -68,8 +69,11 @@ const AddNewPatientAppointmentForm = ({
   
   const [preferredDentist,   setPreferredDentist]   = useState("");
   const [preferredHygienist, setPreferredHygienist] = useState("");
-  const [notes,              setNotes]              = useState(initialShortlistData?.Notes || "");
+  const [notes,              setNotes]              = useState(initialShortlistData?.Notes || '');
   const [selectedColorTags,  setSelectedColorTags]  = useState(new Set());
+  const [referredBy,         setReferredBy]         = useState('');
+  const [noReminders,        setNoReminders]        = useState(false);
+  const [tags,               setTags]               = useState([]);
 
   // Tracks whether the user has tried to submit at least once — required-field
   // borders only turn red after a failed attempt, not while the form is still empty on open.
@@ -499,6 +503,7 @@ const AddNewPatientAppointmentForm = ({
             procedures={procedures}
             setProcedures={setProcedures}
             providers={providers}
+            showExtendedOptions={showExtendedOptions}
           />
 
           <AppointmentRightPanel
@@ -522,6 +527,13 @@ const AddNewPatientAppointmentForm = ({
             selectedColorTags={selectedColorTags}
             onColorTagsChange={setSelectedColorTags}
             providers={providers}
+            referredBy={referredBy}
+            onReferredByChange={setReferredBy}
+            noReminders={noReminders}
+            onNoRemindersChange={setNoReminders}
+            tags={tags}
+            onTagsChange={setTags}
+            showExtendedOptions={showExtendedOptions}
           />
         </Box>
 
@@ -532,6 +544,7 @@ const AddNewPatientAppointmentForm = ({
           onCancel={onCancel}
           onSubmit={handleSubmit}
           loading={loading}
+          showExtendedOptions={showExtendedOptions}
         />
       </Box>
     </Dialog>

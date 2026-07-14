@@ -57,12 +57,20 @@ const AppointmentSummaryCard = ({ appointment }) => {
   
   let formattedTime = appointment.time || appointment.startTime || '';
   if (formattedTime && typeof formattedTime === 'string' && formattedTime.includes(':')) {
-    const [h, m] = formattedTime.split(':');
-    let hour = parseInt(h, 10);
-    if (!isNaN(hour)) {
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      hour = hour % 12 || 12;
-      formattedTime = `${hour}:${m || '00'} ${ampm}`;
+    const timeRegex = /^(\d{1,2}):(\d{2})(?:\s?(AM|PM|am|pm))?/;
+    const match = formattedTime.match(timeRegex);
+    if (match) {
+      let hour = parseInt(match[1], 10);
+      const min = match[2];
+      const existingAmpm = match[3];
+      
+      if (!existingAmpm) {
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        formattedTime = `${hour}:${min} ${ampm}`;
+      } else {
+        formattedTime = `${hour}:${min} ${existingAmpm.toUpperCase()}`;
+      }
     }
   }
 
