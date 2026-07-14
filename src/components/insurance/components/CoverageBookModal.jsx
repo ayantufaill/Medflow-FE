@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -16,6 +17,7 @@ import {
   CircularProgress,
   Select,
   MenuItem,
+  IconButton,
 } from "@mui/material";
 import SelectToothDialog from "./SelectToothDialog";
 import {
@@ -24,8 +26,11 @@ import {
   HelpOutline as HelpOutlineIcon,
   AutoFixNormal as ToothIcon,
 } from "@mui/icons-material";
+import CloseIcon from '@mui/icons-material/Close';
 import { useCoverageBook } from "../hooks/useCoverageBook";
 import ToothSelectionDialog from "../shared/ToothSelectionDialog";
+import { COLORS } from "../../../constants/colors";
+import { radius, fontWeight } from "../../../constants/styles";
 
 const CoverageBookModal = ({
   open,
@@ -34,6 +39,20 @@ const CoverageBookModal = ({
   setCoverageData,
   feeGuideId,
 }) => {
+  const [localCoverageData, setLocalCoverageData] = React.useState([]);
+  const hasLoadedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (open) {
+      if (!hasLoadedRef.current) {
+        setLocalCoverageData(coverageData || []);
+        hasLoadedRef.current = true;
+      }
+    } else {
+      hasLoadedRef.current = false;
+    }
+  }, [open, coverageData]);
+
   const {
     loading,
     treeData,
@@ -46,17 +65,17 @@ const CoverageBookModal = ({
     handleFieldChange,
     handleToothToggle,
     isToothSelected,
-  } = useCoverageBook(open, feeGuideId, coverageData, setCoverageData);
+  } = useCoverageBook(open, feeGuideId, localCoverageData, setLocalCoverageData);
 
   const headerCellStyle = {
     fontWeight: 600,
-    color: "#fff",
-    backgroundColor: "#4A75B4",
-    fontSize: "0.65rem",
+    color: "#64748b",
+    backgroundColor: "#f8fafc",
+    fontSize: "0.75rem",
     lineHeight: 1.2,
-    py: 1,
+    py: 1.5,
     px: 0.5,
-    border: "none",
+    borderBottom: "1px solid #e2e8f0",
     whiteSpace: "normal",
     wordWrap: "break-word",
     textAlign: "center",
@@ -65,11 +84,11 @@ const CoverageBookModal = ({
 
   const cellStyle = {
     fontSize: "0.75rem",
-    color: "#444",
-    py: 0.8,
+    color: "#1e293b",
+    py: 1.5,
     px: 0.5,
-    border: "none",
-    borderBottom: "1px solid #f0f0f0",
+    borderBottom: "1px solid #e2e8f0",
+    verticalAlign: "middle",
   };
 
   const inputStyle = {
@@ -116,34 +135,21 @@ const CoverageBookModal = ({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 0.2,
+              gap: 0.5,
               flexWrap: "nowrap",
             }}
           >
             <input
-              style={{ ...inputStyle, width: "15px" }}
+              style={{ ...inputStyle, width: "20px" }}
               value={proc.frequency1 || ""}
               onChange={(e) => onChange("frequency1", e.target.value)}
             />
             <span>/</span>
             <input
-              style={{ ...inputStyle, width: "15px", borderBottom: "none" }}
+              style={{ ...inputStyle, width: "20px" }}
               value={proc.frequency2 || ""}
               onChange={(e) => onChange("frequency2", e.target.value)}
             />
-            <Select
-              variant="standard"
-              value={proc.period || "M"}
-              onChange={(e) => onChange("period", e.target.value)}
-              sx={{
-                fontSize: "0.6rem",
-                "& .MuiSelect-select": { py: 0.05 },
-                minWidth: "20px",
-              }}
-            >
-              <MenuItem value="M">M</MenuItem>
-              <MenuItem value="Y">Y</MenuItem>
-            </Select>
           </Box>
         </TableCell>
 
@@ -277,15 +283,39 @@ const CoverageBookModal = ({
         onClose={onClose}
         maxWidth={false}
         PaperProps={{
-          sx: { width: "95vw", height: "90vh", m: 0, borderRadius: 1 },
+          sx: { width: "95vw", height: "90vh", m: 0, borderRadius: radius.sm },
         }}
+        sx={{ zIndex: 1400 }}
       >
+        <DialogTitle sx={{ 
+          boxSizing: 'border-box', 
+          px: '25px', 
+          py: '16px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0
+        }}>
+          <HelpOutlineIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+          <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+            Coverage Book
+          </Typography>
+          <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: '18px' }} />
+          </IconButton>
+        </DialogTitle>
+
         <DialogContent
           sx={{
-            p: 0,
+            px: '25px',
+            pt: '16px !important',
+            pb: '20px',
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
+            backgroundColor: '#f8fafc',
           }}
         >
           {loading ? (
@@ -315,12 +345,13 @@ const CoverageBookModal = ({
               </Typography>
             </Box>
           ) : (
-            <TableContainer sx={{ flex: 1, overflow: "auto", bgcolor: "#fff" }}>
-              <Table
-                size="small"
-                stickyHeader
-                sx={{ minWidth: 1300, tableLayout: "fixed" }}
-              >
+            <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', bgcolor: '#fff' }}>
+              <TableContainer sx={{ flex: 1, overflow: "auto" }}>
+                <Table
+                  size="small"
+                  stickyHeader
+                  sx={{ minWidth: 1300, tableLayout: "fixed" }}
+                >
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ ...headerCellStyle, width: "10%" }}>
@@ -349,7 +380,7 @@ const CoverageBookModal = ({
                     >
                       Delivery Pattern
                       <br />
-                      (Frequency,M,Y)
+                      (unit/month)
                     </TableCell>
                     <TableCell
                       sx={{ ...headerCellStyle, width: "7%" }}
@@ -544,25 +575,38 @@ const CoverageBookModal = ({
                 </TableBody>
               </Table>
             </TableContainer>
+          </Box>
           )}
         </DialogContent>
-        <DialogActions
-          sx={{ p: 2, bgcolor: "#f5f5f5", borderTop: "1px solid #e0e0e0" }}
-        >
+        <DialogActions sx={{ p: '16px 20px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: '8px', backgroundColor: '#ffffff' }}>
           <Button
-            onClick={onClose}
             variant="outlined"
-            sx={{ textTransform: "none", color: "#555", borderColor: "#ccc" }}
+            onClick={onClose}
+            sx={{
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_PRIMARY,
+              textTransform: 'none',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
+            }}
           >
             Cancel
           </Button>
           <Button
-            onClick={handleSaveClick}
             variant="contained"
+            onClick={handleSaveClick}
             sx={{
-              textTransform: "none",
-              bgcolor: "#4A75B4",
-              "&:hover": { bgcolor: "#3b5f94" },
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              textTransform: 'none',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
             }}
           >
             Save Changes

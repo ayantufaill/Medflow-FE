@@ -48,6 +48,8 @@ const RenewalSection = ({
               InputLabelProps={{ shrink: true }}
               value={formData.policyStarted || ''}
               onChange={(e) => handleRenewalChange('policyStarted', e.target.value)}
+              error={!!errors.policyStarted}
+              helperText={errors.policyStarted}
             />
           </Box>
           <Box sx={{ flex: 1 }}>
@@ -57,6 +59,8 @@ const RenewalSection = ({
               InputLabelProps={{ shrink: true }}
               value={formData.policyEnds || ''}
               onChange={(e) => handleRenewalChange('policyEnds', e.target.value)}
+              error={!!errors.policyEnds}
+              helperText={errors.policyEnds}
             />
           </Box>
         </Box>

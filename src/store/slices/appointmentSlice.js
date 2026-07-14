@@ -151,12 +151,9 @@ export const fetchCheckoutAppointments = createAsyncThunk(
 // doesn't block the rest from rendering.
 export const fetchFamilyAppointments = createAsyncThunk(
   'appointment/fetchFamilyAppointments',
-  async (patientIds, { rejectWithValue }) => {
+  async (patientId, { rejectWithValue }) => {
     try {
-      const results = await Promise.all(
-        patientIds.map(id => appointmentService.getAppointmentsByPatient(id).catch(() => [])),
-      );
-      return results.flat();
+      return await appointmentService.getFamilyAppointments(patientId);
     } catch (err) {
       return rejectWithValue(err.message || 'Failed to fetch family appointments');
     }
@@ -251,6 +248,7 @@ const initialState = {
   checkoutCompleteList: [],   // Used by ProgressNotesDialog
   checkoutLoading: false,
   familyAppointmentsList: [], // Used by FamilyAppointmentsDialog
+  familyAppointmentsMembers: [], // Used by FamilyAppointmentsDialog
   familyAppointmentsLoading: false,
   patientHistoryList: [],     // Used by AppointmentHistoryDialog and OperatorySidebar
   patientHistoryLoading: false,
@@ -565,7 +563,8 @@ const appointmentSlice = createSlice({
         state.familyAppointmentsLoading = true;
       })
       .addCase(fetchFamilyAppointments.fulfilled, (state, action) => {
-        state.familyAppointmentsList = action.payload || [];
+        state.familyAppointmentsList = action.payload?.appointments || [];
+        state.familyAppointmentsMembers = action.payload?.familyMembers || [];
         state.familyAppointmentsLoading = false;
       })
       .addCase(fetchFamilyAppointments.rejected, (state) => {
@@ -629,6 +628,7 @@ export const selectAppointmentLastFetched     = (state) => state.appointment.las
 export const selectCheckoutCompleteList       = (state) => state.appointment.checkoutCompleteList;
 export const selectCheckoutLoading            = (state) => state.appointment.checkoutLoading;
 export const selectFamilyAppointmentsList     = (state) => state.appointment.familyAppointmentsList;
+export const selectFamilyAppointmentsMembers  = (state) => state.appointment.familyAppointmentsMembers;
 export const selectFamilyAppointmentsLoading  = (state) => state.appointment.familyAppointmentsLoading;
 export const selectPatientHistoryList         = (state) => state.appointment.patientHistoryList;
 export const selectPatientHistoryLoading      = (state) => state.appointment.patientHistoryLoading;

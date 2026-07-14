@@ -18,7 +18,7 @@ import {
 import { InfoOutlined as InfoIcon } from "@mui/icons-material";
 import PhoneNumberInput from "../../shared/PhoneNumberInput";
 
-const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
+const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }) => {
   const [templateAnchorEl, setTemplateAnchorEl] = useState(null);
 
   return (
@@ -66,6 +66,8 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     handleInputChange("insurancePlan", e.target.value)
                   }
                   required
+                  error={!!errors.insurancePlan}
+                  helperText={errors.insurancePlan}
                 />
               </TableCell>
             </TableRow>
@@ -110,6 +112,8 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     handleInputChange("groupName", e.target.value)
                   }
                   required
+                  error={!!errors.groupName}
+                  helperText={errors.groupName}
                 />
               </TableCell>
             </TableRow>
@@ -155,13 +159,15 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   value={formData.groupNumber || ""}
                   onChange={(e) => {
                     const alphanumericValue = e.target.value.replace(
-                      /[^a-zA-Z0-9]/g,
+                      /[^a-zA-Z0-9\s-]/g,
                       "",
                     );
                     handleInputChange("groupNumber", alphanumericValue);
                   }}
-                  placeholder="e.g. 300871"
+                  placeholder="e.g. GRP-300871"
                   required
+                  error={!!errors.groupNumber}
+                  helperText={errors.groupNumber}
                 />
               </TableCell>
             </TableRow>

@@ -118,10 +118,18 @@ const AddCoveragePage = () => {
     coverageCategoryData
   );
 
-  const planFeeGuideOptions = feeGuides.map(fg => ({
-    value: fg._id || fg.FeeSchedNum || fg.feeSchedNum || fg.id,
-    label: fg.Description || fg.description || fg.name || 'Unknown Fee Guide'
-  }));
+  const seenLabels = new Set();
+  const planFeeGuideOptions = feeGuides
+    .filter(fg => !fg.isHidden)
+    .map(fg => ({
+      value: fg._id || fg.FeeSchedNum || fg.feeSchedNum || fg.id,
+      label: fg.Description || fg.description || fg.name || 'Unknown Fee Guide'
+    }))
+    .filter(option => {
+      if (seenLabels.has(option.label)) return false;
+      seenLabels.add(option.label);
+      return true;
+    });
 
   // Style constants
   const blueHeader = "#f0f4f8";
@@ -180,8 +188,8 @@ const AddCoveragePage = () => {
 
       const newErrors = {};
 
-      if (!formData.insuranceCompanyId || !formData.payerId) {
-        newErrors.insuranceCompanyId = 'Please search and select a carrier';
+      if ((!formData.insuranceCompanyId && !formData.carrierName?.trim()) || !formData.payerId?.trim()) {
+        newErrors.insuranceCompanyId = 'Carrier Name and Payer ID are required';
       }
 
       if (!formData.insurancePlan?.trim()) {
@@ -194,8 +202,8 @@ const AddCoveragePage = () => {
 
       if (!formData.groupNumber?.trim()) {
         newErrors.groupNumber = 'Group Number is required';
-      } else if (!/^[A-Za-z0-9]+$/.test(formData.groupNumber)) {
-        newErrors.groupNumber = 'Group Number must be alphanumeric only';
+      } else if (!/^[A-Za-z0-9\s-]+$/.test(formData.groupNumber)) {
+        newErrors.groupNumber = 'Group Number must be alphanumeric, and can contain spaces or hyphens';
       }
 
       if (!formData.subscriber.name?.trim()) {
@@ -208,8 +216,8 @@ const AddCoveragePage = () => {
         newErrors.subscriberId = 'Subscriber ID is required';
       } else if (formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
         newErrors.subscriberId = 'Subscriber ID must be between 5 and 30 characters';
-      } else if (!/^[A-Za-z0-9]+$/.test(formData.subscriber.subscriberId)) {
-        newErrors.subscriberId = 'Subscriber ID must be alphanumeric only';
+      } else if (!/^[A-Za-z0-9\s-]+$/.test(formData.subscriber.subscriberId)) {
+        newErrors.subscriberId = 'Subscriber ID must be alphanumeric, and can contain spaces or hyphens';
       }
 
       if (!formData.subscriber.dateOfBirth) {
@@ -243,9 +251,39 @@ const AddCoveragePage = () => {
         }
       }
 
+      const isValidDeductibleDate = (dateStr) => {
+        if (!dateStr) return true;
+        if (dateStr.length < 10) return false;
+        const parts = dateStr.split('/');
+        if (parts.length !== 3) return false;
+        const month = parseInt(parts[0], 10);
+        const day = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        if (isNaN(month) || isNaN(day) || isNaN(year)) return false;
+        if (month < 1 || month > 12) return false;
+        if (day < 1 || day > 31) return false;
+        if (year < 1900 || year > 2100) return false;
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+      };
+
+      let hasInvalidDeductibleDate = false;
+      formData.deductibles?.forEach((ded) => {
+        if (ded.metDate && !isValidDeductibleDate(ded.metDate)) {
+          hasInvalidDeductibleDate = true;
+        }
+      });
+
+      if (hasInvalidDeductibleDate) {
+        showSnackbar('Please enter valid dates (MM/DD/YYYY) in the deductibles table', 'error');
+        return;
+      }
+
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
-        showSnackbar('Please correct the highlighted errors', 'error');
+        const errorFields = Object.keys(newErrors).join(', ');
+        showSnackbar(`Please correct the highlighted errors: ${errorFields}`, 'error');
+        console.error('Validation errors:', newErrors);
         return;
       }
 
@@ -258,6 +296,7 @@ const AddCoveragePage = () => {
 
       const payload = {
         insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
+        payerId: formData.payerId || undefined,
         policyNumber: formData.subscriber.subscriberId,
         groupNumber: formData.groupNumber || undefined,
         groupName: formData.groupName || undefined,
@@ -576,6 +615,7 @@ const AddCoveragePage = () => {
                 tinyText={STYLE_CONSTANTS.tinyText}
                 blueHeader={STYLE_CONSTANTS.blueHeader}
                 inputBg={STYLE_CONSTANTS.inputBg}
+                errors={errors}
               />
 
               <SubscriberInformation
@@ -584,12 +624,14 @@ const AddCoveragePage = () => {
                 handleInputChange={handleInputChange}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 inputBg={STYLE_CONSTANTS.inputBg}
+                errors={errors}
               />
 
               <RenewalSection
                 formData={formData}
                 handleRenewalChange={handleRenewalChange}
                 inputBg={STYLE_CONSTANTS.inputBg}
+                errors={errors}
               />
 
               <AdvancedSection

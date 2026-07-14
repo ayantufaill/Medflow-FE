@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,16 @@ const CoverageBookSummary = ({
   const [activeToothSelection, setActiveToothSelection] = useState(null);
 
   const rowData = DEFAULT_BOOK_ROW_DATA || [];
+
+  const displayRows = useMemo(() => {
+    const list = [...rowData];
+    (coverageData || []).forEach((item) => {
+      if (item.code && !list.some((r) => r.code === item.code)) {
+        list.push(item);
+      }
+    });
+    return list;
+  }, [rowData, coverageData]);
 
   const getRowData = (code) => {
     return (
@@ -168,7 +178,7 @@ const CoverageBookSummary = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {rowData.map((templateRow, index) => {
+              {displayRows.map((templateRow, index) => {
                 const row = { ...templateRow, ...getRowData(templateRow.code) };
                 return (
                   <CoverageBookRow

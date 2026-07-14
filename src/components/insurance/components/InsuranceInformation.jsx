@@ -10,7 +10,8 @@ const InsuranceInformation = ({
   formData, 
   handleInputChange, 
   insuranceCompanies = [],
-  assignmentOptions = []
+  assignmentOptions = [],
+  errors = {}
 }) => {
   const companies = insuranceCompanies.length > 0 ? insuranceCompanies : [];
   const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
@@ -109,6 +110,8 @@ const InsuranceInformation = ({
             required
             value={formData.carrierName || ''}
             onChange={(e) => handleInputChange('carrierName', e.target.value)}
+            error={!!errors.insuranceCompanyId}
+            helperText={errors.insuranceCompanyId}
             sx={{ mb: 1.5 }}
           />
 
@@ -119,6 +122,7 @@ const InsuranceInformation = ({
                 required
                 value={formData.payerId || ''}
                 onChange={(e) => handleInputChange('payerId', e.target.value)}
+                error={!!errors.insuranceCompanyId}
               />
             </Box>
             <Box sx={{ flex: 1 }}>
@@ -166,6 +170,7 @@ const InsuranceInformation = ({
           formData={formData}
           handleInputChange={handleInputChange}
           benefits={benefits}
+          errors={errors}
         />
 
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, mt: 2, px: 1 }}>

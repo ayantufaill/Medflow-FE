@@ -235,6 +235,34 @@ const MemberPage = () => {
 
   const handleSave = async () => {
     try {
+      const isValidDeductibleDate = (dateStr) => {
+        if (!dateStr) return true;
+        if (dateStr.length < 10) return false;
+        const parts = dateStr.split('/');
+        if (parts.length !== 3) return false;
+        const month = parseInt(parts[0], 10);
+        const day = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        if (isNaN(month) || isNaN(day) || isNaN(year)) return false;
+        if (month < 1 || month > 12) return false;
+        if (day < 1 || day > 31) return false;
+        if (year < 1900 || year > 2100) return false;
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+      };
+
+      let hasInvalidDeductibleDate = false;
+      formData.deductibles?.forEach((ded) => {
+        if (ded.metDate && !isValidDeductibleDate(ded.metDate)) {
+          hasInvalidDeductibleDate = true;
+        }
+      });
+
+      if (hasInvalidDeductibleDate) {
+        showSnackbar('Please enter valid dates (MM/DD/YYYY) in the deductibles table', 'error');
+        return;
+      }
+
       setLoading(true);
       // TODO: Replace with actual API call
       // await insuranceService.addMember(patientId, formData);

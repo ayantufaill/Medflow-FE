@@ -78,7 +78,15 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
                   <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
                 </TableRow>
                 {searchResults.map((item, idx) => (
-                  <TableRow key={idx} hover sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }} onClick={() => onSelect(item)}>
+                  <TableRow 
+                    key={idx} 
+                    hover 
+                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }} 
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onSelect(item);
+                    }}
+                  >
                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>

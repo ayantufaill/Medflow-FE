@@ -63,7 +63,7 @@ const ToothSelectionDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm">
+    <Dialog open={open} onClose={onClose} maxWidth="sm" sx={{ zIndex: 1500 }}>
       <Box sx={{ position: "relative", p: 2, minWidth: "400px" }}>
         <Typography
           variant="subtitle1"
