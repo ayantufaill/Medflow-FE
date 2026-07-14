@@ -346,7 +346,21 @@ const OperatorySchedulePage = () => {
       setDetailModalOpen(true);
     };
     window.addEventListener('appointment-card-clicked', handleApptClick);
-    return () => window.removeEventListener('appointment-card-clicked', handleApptClick);
+
+    const handleBlockClick = (e) => {
+      const { block } = e.detail;
+      setBlockSlotDialogData({
+        ...block,
+        roomId: block.roomId ? String(block.roomId).replace(/^op/, "") : undefined
+      });
+      setBlockSlotDialogOpen(true);
+    };
+    window.addEventListener('block-card-clicked', handleBlockClick);
+
+    return () => {
+      window.removeEventListener('appointment-card-clicked', handleApptClick);
+      window.removeEventListener('block-card-clicked', handleBlockClick);
+    };
   }, []);
 
   const fetchScheduleBlocks = useCallback(async () => {
@@ -379,6 +393,7 @@ const OperatorySchedulePage = () => {
     try {
       await scheduleBlockService.deleteBlock(blockId);
       showSnackbar("Block deleted successfully", "success");
+      setBlockSlotDialogOpen(false);
       fetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
@@ -914,7 +929,7 @@ const OperatorySchedulePage = () => {
                 const end = start.clone().add(30, "minute");
 
                 setBlockSlotDialogData({
-                  roomId,
+                  roomId: String(roomId).replace(/^op/, ""),
                   date: baseDate.format("YYYY-MM-DD"),
                   startTime: start.format("HH:mm"),
                   endTime: end.format("HH:mm")
@@ -1015,12 +1030,16 @@ const OperatorySchedulePage = () => {
           providers={providers || []}
         />
 
-        <BlockSlotModal
-          open={blockSlotDialogOpen}
-          onClose={() => setBlockSlotDialogOpen(false)}
-          initialData={blockSlotDialogData}
-          onSave={handleSaveBlock}
-        />
+        {/* Block Slot Modal */}
+        {blockSlotDialogOpen && (
+          <BlockSlotModal
+            open={blockSlotDialogOpen}
+            onClose={() => setBlockSlotDialogOpen(false)}
+            initialData={blockSlotDialogData}
+            onSave={handleSaveBlock}
+            onDelete={handleDeleteBlock}
+          />
+        )}
 
         <Popover
           open={Boolean(slotPopoverAnchorEl)}

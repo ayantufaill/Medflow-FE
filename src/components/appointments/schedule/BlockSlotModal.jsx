@@ -26,7 +26,7 @@ const getDayjsTime = (timeStr) => {
   return dayjs().hour(parseInt(h, 10)).minute(parseInt(m, 10)).second(0);
 };
 
-const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
+const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('08:30');
   const [notes, setNotes] = useState('');
@@ -237,6 +237,23 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
         gap: 1,
         backgroundColor: COLORS.SURFACE_FOOTER,
       }}>
+        {(initialData?.id || initialData?._id) && onDelete && (
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => onDelete(initialData.id || initialData._id)}
+            size="small"
+            sx={{
+              borderRadius: radius.sm,
+              textTransform: 'none',
+              fontSize: fontSize.md,
+              fontWeight: fontWeight.medium,
+              px: 2,
+            }}
+          >
+            Delete
+          </Button>
+        )}
         <Button
           variant="outlined"
           onClick={onClose}
@@ -254,24 +271,26 @@ const BlockSlotModal = ({ open, onClose, onSave, initialData }) => {
         >
           Cancel
         </Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disableElevation
-          size="small"
-          sx={{
-            borderRadius: radius.sm,
-            textTransform: 'none',
-            fontSize: fontSize.md,
-            fontWeight: fontWeight.medium,
-            px: 2,
-            backgroundColor: COLORS.ACCENT,
-            color: COLORS.WHITE,
-            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
-          }}
-        >
-          Save
-        </Button>
+        {!(initialData?.id || initialData?._id) && (
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disableElevation
+            size="small"
+            sx={{
+              borderRadius: radius.sm,
+              textTransform: 'none',
+              fontSize: fontSize.md,
+              fontWeight: fontWeight.medium,
+              px: 2,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+            }}
+          >
+            Save
+          </Button>
+        )}
       </Box>
     </Dialog>
   );

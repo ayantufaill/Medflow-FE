@@ -70,11 +70,19 @@ const BlockCard = ({ title, blockId, block }) => {
     },
   });
 
+  const handleBlockClick = (e) => {
+    if (e.defaultPrevented) return;
+    window.dispatchEvent(new CustomEvent('block-card-clicked', {
+      detail: { blockId, block },
+    }));
+  };
+
   return (
     <Box
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={handleBlockClick}
       sx={{
         height: "100%",
       border: `1.5px dashed ${block.color ? "rgba(0,0,0,0.2)" : "#90caf9"}`,
@@ -84,6 +92,7 @@ const BlockCard = ({ title, blockId, block }) => {
       alignItems: "center",
       justifyContent: "center",
       px: "8px",
+      cursor: "pointer"
     }}
   >
       <Typography
