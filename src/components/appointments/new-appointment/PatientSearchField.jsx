@@ -1,4 +1,4 @@
-import { Autocomplete, Box, TextField, Typography } from "@mui/material";
+import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@mui/material"; // 1. Added createFilterOptions
 import { Search } from "@mui/icons-material";
 import { FieldBox } from "./helpers";
 import PatientListCard from "../../layout/header/patient-dropdown/PatientListCard";
@@ -11,6 +11,26 @@ const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSear
     return id ? `${name}  pt #${id}` : name;
   };
 
+  // 2. Define a clean, case-insensitive filter method targeting patient properties directly
+  const filterOptions = (options, { inputValue }) => {
+    const search = inputValue.trim().toLowerCase();
+    if (!search) return options;
+
+    return options.filter((o) => {
+      const first = (o.firstName || "").toLowerCase();
+      const last = (o.lastName || "").toLowerCase();
+      const full = (o.name || o.fullName || "").toLowerCase();
+      const id = String(o.patientId || o.chartNumber || o.id || o._id || "").toLowerCase();
+
+      return (
+        first.includes(search) ||
+        last.includes(search) ||
+        full.includes(search) ||
+        id.includes(search)
+      );
+    });
+  };
+
   return (
     <FieldBox label="For Patient" sx={{ flex: 1 }}>
       <Autocomplete
@@ -18,11 +38,15 @@ const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSear
         options={patients}
         loading={loadingPatients}
         getOptionLabel={getOptionLabel}
+        filterOptions={filterOptions} // 3. Attached the case-insensitive filter override
         value={value}
         componentsProps={{ popper: { sx: { zIndex: 1400 } } }}
         onChange={(_, v) => onChange(v)}
-        onInputChange={(_, v, reason) => { if (reason === "input" && onSearch) onSearch(v); }}
-        renderOption={(props, o) => {
+        onInputChange={(_, v, reason) => { 
+          if (reason === "input" && onSearch) {
+            onSearch(v.toLowerCase()); // <-- FORCE LOWERCASE HERE before calling API
+          }
+        }}        renderOption={(props, o) => {
           const cardData = toCardShape(o);
           if (!cardData) return null;
           
@@ -61,7 +85,6 @@ const PatientSearchField = ({ patients, loadingPatients, value, onChange, onSear
                 ),
                 sx: {
                   fontFamily: "Inter", fontWeight: 500, fontSize: "13px", borderRadius: "8px", height: "40px",
-                  // Force the app's #ef4444 error red instead of MUI's default palette.error.main (#d32f2f, unset in theme.js)
                   ...(error && {
                     "& .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
                     "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },

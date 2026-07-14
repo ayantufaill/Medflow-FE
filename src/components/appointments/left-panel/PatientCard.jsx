@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -7,6 +8,7 @@ import {
 } from '@mui/icons-material';
 import { usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
+import { Tooltip } from '@mui/material';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
 
 // Patient flag tags shown in the footer row of the card.
@@ -28,16 +30,58 @@ const ACTION_BUTTONS = [
 
 // Renders one contact-info row with an icon, text, and copy button.
 const ContactRow = ({ icon, text }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   const handleCopy = () => {
     const textToCopy = text.replace('DOB: ', '');
-    navigator.clipboard.writeText(textToCopy);
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      // Open tooltip message toast popup on success
+      setShowTooltip(true);
+      
+      // Clear popup context bubble visibility after 1.5 seconds
+      setTimeout(() => {
+        setShowTooltip(false);
+      }, 1500);
+    });
   };
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
-      <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
-      <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{text}</Typography>
-      <ContentCopyOutlined onClick={handleCopy} sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
+      <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        {icon}
+      </Box>
+      <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+        {text}
+      </Typography>
+      
+      {/* Wrap copy icon in standard floating tooltip overlay container */}
+      <Tooltip 
+        title="Copied!" 
+        open={showTooltip} 
+        placement="top"
+        arrow
+        slotProps={{
+          popper: {
+            sx: {
+              '& .MuiTooltip-tooltip': {
+                fontFamily: 'Inter',
+                fontSize: '10px',
+                backgroundColor: '#1e293b', // Muted slate look matching app design constants
+                px: '8px',
+                py: '4px'
+              },
+              '& .MuiTooltip-arrow': {
+                color: '#1e293b'
+              }
+            }
+          }
+        }}
+      >
+        <ContentCopyOutlined 
+          onClick={handleCopy} 
+          sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} 
+        />
+      </Tooltip>
     </Box>
   );
 };
