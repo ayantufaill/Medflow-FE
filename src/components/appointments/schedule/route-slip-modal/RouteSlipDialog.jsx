@@ -191,14 +191,15 @@ const RouteSlipDialog = () => {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 100% !important;
+                width: 900px !important; /* Force desktop width to maintain grid alignment */
+                max-width: 900px !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 30px !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
 
-              .MuiDialog-root, .MuiDialog-container, .MuiDialog-paper {
+              .MuiDialog-root, .MuiDialog-container, .MuiDialog-paper, .MuiDialogContent-root {
                 position: absolute !important;
                 top: 0 !important;
                 left: 0 !important;
@@ -214,6 +215,11 @@ const RouteSlipDialog = () => {
                 background-color: transparent !important;
                 max-width: none !important;
                 max-height: none !important;
+              }
+
+              /* Also specifically ensure DialogContent doesn't have internal scrolling */
+              #route-slip-print-content {
+                overflow: visible !important;
               }
 
               .MuiDialogActions-root, .no-print-in-modal { display: none !important; }
@@ -318,7 +324,7 @@ const RouteSlipDialog = () => {
           <SectionHeader title={primaryApptTitle} />
           <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
             {routeSlipAppt ? (
-              <Box sx={{ width: '100%' }}>
+              <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
                 <RouteSlipApptDisplay 
                   appt={routeSlipAppt} 
                   OPERATORY_COLUMNS={OPERATORY_COLUMNS} 
@@ -338,8 +344,8 @@ const RouteSlipDialog = () => {
           <SectionHeader title="NEXT APPOINTMENT" />
           <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
             {nextAppt ? (
-              <Box sx={{ width: '100%' }}>
-                <Box sx={{ px: 2 }}>
+              <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
+                <Box sx={{ px: 2, boxSizing: 'border-box', width: '100%' }}>
                   <InfoRow label="Date" value={dayjs(nextAppt.appointmentDate || nextAppt.start).format('MM/DD/YYYY')} />
                 </Box>
                 <RouteSlipApptDisplay 
@@ -362,6 +368,22 @@ const RouteSlipDialog = () => {
         <Button 
           variant="outlined" 
           size="small"
+          onClick={handleClose}
+          sx={{ 
+            color: '#64748b', 
+            borderColor: '#cbd5e1', 
+            borderRadius: '8px',
+            '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+            textTransform: 'none',
+            px: 2,
+            fontWeight: 600
+          }}
+        >
+          Cancel
+        </Button>
+          <Button 
+          variant="outlined" 
+          size="small"
           startIcon={<PrintIcon />} 
           onClick={handlePrint}
           sx={{ 
@@ -375,22 +397,6 @@ const RouteSlipDialog = () => {
           }}
         >
           Print
-        </Button>
-        <Button 
-          variant="outlined" 
-          size="small"
-          onClick={handleClose}
-          sx={{ 
-            color: '#64748b', 
-            borderColor: '#cbd5e1', 
-            borderRadius: '8px',
-            '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
-            textTransform: 'none',
-            px: 2,
-            fontWeight: 600
-          }}
-        >
-          Cancel
         </Button>
       </DialogActions>
 

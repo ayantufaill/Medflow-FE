@@ -45,6 +45,13 @@ export const FilterInput = ({ placeholder, endAdornment, value, onChange, type =
         fontFamily: "Inter", fontSize: "13px", color: "#374151",
         backgroundColor: "transparent",
         "&::placeholder": { color: "#9aa3ae" },
+        "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+          WebkitAppearance: "none",
+          margin: 0,
+        },
+        "&[type=number]": {
+          MozAppearance: "textfield",
+        },
       }}
     />
     {endAdornment}

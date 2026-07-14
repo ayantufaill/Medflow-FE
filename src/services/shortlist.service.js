@@ -26,6 +26,17 @@ export const shortlistService = {
   },
 
   /**
+   * Update a shortlist item
+   * @param {string} id - Shortlist item ID
+   * @param {Object} itemData - Shortlist item data
+   * @returns {Promise<Object>} Updated shortlist item
+   */
+  updateShortlistItem: async (id, itemData) => {
+    const response = await apiClient.put(`/shortlist/${id}`, itemData);
+    return response.data;
+  },
+
+  /**
    * Delete a shortlist item
    * @param {string} id - Shortlist item ID
    * @returns {Promise<Object>} Response data

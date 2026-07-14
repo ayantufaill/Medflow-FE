@@ -1,15 +1,26 @@
 import { useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Button, Tooltip } from "@mui/material";
 import { Search, Print } from "@mui/icons-material";
 import { FilterLabel, FilterInput, FilterSelect } from "./helpers";
+import PatientFlagsDialog from "../../../patient-flags/PatientFlagsDialog";
+import { getFlagColor } from "../../../patient-flags/constants";
 
-const ShortlistFilters = ({ filters, onChange, providersList = [], onClear }) => {
+const ShortlistFilters = ({ filters, onChange, providersList = [], onClear, onPrint }) => {
+  const [flagsDialogOpen, setFlagsDialogOpen] = useState(false);
   const handleSearchChange = (e) => onChange("searchName", e.target.value);
   const handleProviderChange = (e) => onChange("providerId", e.target.value);
   const handleMaxDurChange = (e) => onChange("maxDuration", e.target.value);
   const handleMinDurChange = (e) => onChange("minDuration", e.target.value);
   const handlePrefDayChange = (e) => onChange("prefDay", e.target.value);
-  const handlePrefTimeHourChange = (e) => onChange("prefTimeHour", e.target.value);
+  const handlePrefTimeHourChange = (e) => {
+    let val = e.target.value.replace(/[^0-9]/g, '');
+    if (val !== "") {
+      const num = parseInt(val, 10);
+      if (num > 12) val = "12";
+      else if (num < 1) val = "1";
+    }
+    onChange("prefTimeHour", val);
+  };
   const handlePrefTimeAmpmChange = (val) => onChange("prefTimeAmpm", val);
 
   const providerOptions = providersList.map(p => {
@@ -71,6 +82,7 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear }) =>
           <FilterLabel>Max Appt. Duration</FilterLabel>
           <FilterInput
             type="number"
+            placeholder="e.g. 60"
             value={filters.maxDuration}
             onChange={handleMaxDurChange}
             endAdornment={
@@ -83,6 +95,7 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear }) =>
           <FilterLabel>Min Appt. Duration</FilterLabel>
           <FilterInput
             type="number"
+            placeholder="e.g. 30"
             value={filters.minDuration}
             onChange={handleMinDurChange}
             endAdornment={
@@ -110,7 +123,7 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear }) =>
                 component="input"
                 type="number"
                 min="1" max="12"
-                placeholder="--"
+                placeholder="1"
                 value={filters.prefTimeHour}
                 onChange={handlePrefTimeHourChange}
                 sx={{
@@ -149,10 +162,54 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear }) =>
         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae", mb: "5px" }}>
           Patient Flags
         </Typography>
-        <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#2262ef", cursor: "pointer", fontWeight: 500 }}>
-          + Select Flags
-        </Typography>
+        {filters.flags?.length > 0 ? (
+          <Box 
+            onClick={() => setFlagsDialogOpen(true)} 
+            sx={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', cursor: 'pointer' }}
+          >
+            {filters.flags.map((flag, idx) => (
+              <Tooltip 
+                key={idx} 
+                title={flag === 'appointment_reminder' ? 'Appt Reminder' : flag} 
+                arrow 
+                placement="top"
+                PopperProps={{ sx: { zIndex: 1700 } }}
+              >
+                <Box 
+                  sx={{ 
+                    width: 12, 
+                    height: 12, 
+                    borderRadius: '2px', 
+                    bgcolor: getFlagColor(flag), 
+                    flexShrink: 0,
+                    cursor: 'pointer'
+                  }} 
+                />
+              </Tooltip>
+            ))}
+            <Typography 
+            onClick={() => setFlagsDialogOpen(true)}
+            sx={{ fontFamily: "Inter", fontSize: "13px", color: "#2262ef", cursor: "pointer", fontWeight: 500 }}
+        >
+            + Select Flags
+          </Typography>
+          </Box>
+        ) : (
+          <Typography 
+            onClick={() => setFlagsDialogOpen(true)}
+            sx={{ fontFamily: "Inter", fontSize: "13px", color: "#2262ef", cursor: "pointer", fontWeight: 500 }}
+          >
+            + Select Flags
+          </Typography>
+        )}
       </Box>
+
+      <PatientFlagsDialog
+        open={flagsDialogOpen}
+        onClose={() => setFlagsDialogOpen(false)}
+        initialFlags={filters.flags || []}
+        onSave={(selectedFlags) => onChange("flags", selectedFlags)}
+      />
 
       {/* Action buttons — right-aligned */}
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
@@ -180,17 +237,24 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear }) =>
           </Typography>
         </Box>
 
-        <Box sx={{
-          border: "1px solid #d1d5db", borderRadius: "8px",
-          px: "16px", height: "38px",
-          display: "flex", alignItems: "center", gap: "7px",
-          cursor: "pointer", "&:hover": { backgroundColor: "#f5f7fa" },
-        }}>
-          <Print sx={{ fontSize: "15px", color: "#374151" }} />
-          <Typography sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 500, color: "#374151" }}>
-            Print
-          </Typography>
-        </Box>
+        <Button 
+          variant="outlined" 
+          size="small"
+          startIcon={<Print />} 
+          onClick={onPrint}
+          sx={{ 
+            textTransform: 'none',
+            borderColor: '#3b82f6', 
+            color: '#3b82f6', 
+            borderRadius: '8px', 
+            px: 2, 
+            height: "38px",
+            fontWeight: 600,
+            '&:hover': { backgroundColor: '#eff6ff', borderColor: '#2563eb' }
+          }}
+        >
+          Print
+        </Button>
       </Box>
     </Box>
   );

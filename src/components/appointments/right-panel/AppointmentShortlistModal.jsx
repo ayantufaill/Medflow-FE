@@ -25,18 +25,34 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
     prefDay: "",
     prefTimeHour: "",
     prefTimeAmpm: "AM",
+    flags: [],
   };
   const [filters, setFilters] = useState(initialFilters);
 
+  // Fetch data when modal opens
   useEffect(() => {
     if (open) {
+      setFilters(initialFilters);
+      setSelected([]);
       setLoading(true);
       shortlistService.getShortlistItems()
         .then(res => setPatients(res?.data || []))
         .catch(err => console.error("Failed to load shortlist:", err))
         .finally(() => setLoading(false));
     }
+    // We intentionally omit initialFilters from deps since it's recreated every render,
+    // and we only want to fetch when 'open' changes.
   }, [open]);
+
+  // Handle edit event to close modal
+  useEffect(() => {
+    const handleEditShortlistItem = () => {
+      if (open) onClose();
+    };
+    
+    window.addEventListener('edit-shortlist-item', handleEditShortlistItem);
+    return () => window.removeEventListener('edit-shortlist-item', handleEditShortlistItem);
+  }, [open, onClose]);
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -87,6 +103,31 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
         }
       }
 
+      // 6. Flags
+      if (filters.flags && filters.flags.length > 0) {
+        let pFlags = [];
+        const customFields = p.CustomFields || p.customFields || {};
+        const patientData = p.Patient || p.patient || {};
+        
+        if (customFields.flags && Array.isArray(customFields.flags)) {
+          pFlags = [...pFlags, ...customFields.flags];
+        }
+        if (p.flags && Array.isArray(p.flags)) {
+          pFlags = [...pFlags, ...p.flags];
+        }
+        if (patientData.flags && Array.isArray(patientData.flags)) {
+          pFlags = [...pFlags, ...patientData.flags];
+        }
+        
+        // Extract label strings if they are objects and lowercase them
+        pFlags = pFlags.map(f => typeof f === 'string' ? f.toLowerCase() : (f?.label || f?.name || '').toLowerCase()).filter(Boolean);
+
+        console.log(`Checking Patient ${p.PatientName || p.PatNum}. pFlags:`, pFlags, `filters.flags:`, filters.flags);
+
+        const hasFlag = filters.flags.some(f => pFlags.includes(f.toLowerCase()));
+        if (!hasFlag) return false;
+      }
+
       return true;
     });
   }, [patients, filters]);
@@ -112,12 +153,24 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
       maxWidth={false}
-      sx={{ zIndex: 1600 }}
+      sx={{ 
+        zIndex: 1600,
+        "@media print": {
+          position: "absolute", top: 0, left: 0,
+          width: "100%", height: "auto",
+          overflow: "visible",
+        }
+      }}
+      BackdropProps={{ sx: { "@media print": { display: "none" } } }}
       PaperProps={{
         sx: {
           width: "min(1180px, calc(100vw - 48px))",
@@ -127,31 +180,97 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
           display: "flex",
           flexDirection: "column",
           m: 0,
+          "@media print": {
+            width: "100%", maxWidth: "100%",
+            maxHeight: "none",
+            height: "auto",
+            overflow: "visible",
+            boxShadow: "none",
+            borderRadius: 0,
+          }
         },
       }}
     >
-      <ShortlistModalHeader onClose={onClose} />
-      <ShortlistTabs activeTab={tab} onChange={setTab} />
-      <ShortlistFilters 
-        filters={filters} 
-        onChange={handleFilterChange} 
-        providersList={providersList}
-        onClear={clearFilters}
-      />
+      <Box sx={{ "@media print": { display: "none" } }}>
+        <ShortlistModalHeader onClose={onClose} />
+        <ShortlistTabs activeTab={tab} onChange={setTab} />
+      </Box>
+      
+      <Box sx={{ "@media print": { display: "none" } }}>
+        <ShortlistFilters 
+          filters={filters} 
+          onChange={handleFilterChange} 
+          providersList={providersList}
+          onClear={clearFilters}
+          onPrint={handlePrint}
+        />
+      </Box>
+
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
           <CircularProgress />
         </Box>
       ) : (
-        <ShortlistTable
-          patients={filteredPatients}
-          selected={selected}
-          onToggleAll={toggleAll}
-          onToggleRow={toggleRow}
-          onDelete={handleDelete}
-        />
+        <Box 
+          className="print-section"
+          sx={{ 
+          flex: 1, 
+          overflow: "hidden", 
+          display: "flex", 
+          flexDirection: "column",
+          "@media print": {
+            overflow: "visible",
+            display: "block",
+            height: "auto",
+          }
+        }}>
+          <ShortlistTable
+            patients={filteredPatients}
+            selected={selected}
+            onToggleAll={toggleAll}
+            onToggleRow={toggleRow}
+            onDelete={handleDelete}
+          />
+        </Box>
       )}
-      <ShortlistFooter total={filteredPatients.length} selectedCount={selected.length} />
+
+      <Box sx={{ "@media print": { display: "none" } }}>
+        <ShortlistFooter total={filteredPatients.length} selectedCount={selected.length} />
+      </Box>
+      
+      <style>
+        {`
+          @media print {
+            body {
+              background: white !important;
+              overflow: visible !important;
+            }
+            #root {
+              display: none !important;
+            }
+            .MuiDialog-root, .MuiDialog-container {
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              display: block !important;
+              overflow: visible !important;
+              background: white !important;
+            }
+            .MuiPaper-root {
+              box-shadow: none !important;
+              max-height: none !important;
+              overflow: visible !important;
+              background: white !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+            .MuiBackdrop-root {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
     </Dialog>
   );
 };

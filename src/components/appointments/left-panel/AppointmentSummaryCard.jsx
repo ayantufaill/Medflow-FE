@@ -45,10 +45,67 @@ const AppointmentSummaryCard = ({ appointment }) => {
 
   if (!appointment) return null;
 
-  const visitType = appointment.visitType || appointment.appointmentTypeName || appointment.appointmentType || 'APPOINTMENT';
-  const time = appointment.time || appointment.startTime || '';
-  const procedures = appointment.procedures || appointment.description || '';
-  const provider = appointment.provider || appointment.providerName || '';
+  const visitType = 
+    appointment.visitType || 
+    appointment.customFields?.visitType ||
+    appointment.workspace?.visitType ||
+    appointment.appointmentTypeId?.name || 
+    (typeof appointment.appointmentType === 'object' ? appointment.appointmentType?.name : null) ||
+    appointment.appointmentTypeName || 
+    (typeof appointment.appointmentType === 'string' && appointment.appointmentType !== 'consultation' ? appointment.appointmentType : null) || 
+    'APPOINTMENT';
+  
+  let formattedTime = appointment.time || appointment.startTime || '';
+  if (formattedTime && typeof formattedTime === 'string' && formattedTime.includes(':')) {
+    const [h, m] = formattedTime.split(':');
+    let hour = parseInt(h, 10);
+    if (!isNaN(hour)) {
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      hour = hour % 12 || 12;
+      formattedTime = `${hour}:${m || '00'} ${ampm}`;
+    }
+  }
+
+  const time = formattedTime;
+  let rawProcedures = 
+    appointment.chiefComplaint || 
+    appointment.workspace?.procedures ||
+    appointment.customFields?.procedures ||
+    appointment.procedures || 
+    appointment.appointmentProcedures ||
+    appointment.procedureCodes ||
+    appointment.customFields?.procedureTags ||
+    appointment.description || 
+    appointment.note ||
+    '';
+    
+  if (Array.isArray(rawProcedures)) {
+    rawProcedures = rawProcedures.map(p => typeof p === 'string' ? p : (p.name || p.treatment || p.code)).filter(Boolean).join(', ');
+  } else if (typeof rawProcedures === 'string' && rawProcedures.includes(',')) {
+    rawProcedures = rawProcedures.split(',').map(p => p.trim()).join(', ');
+  } else if (typeof rawProcedures !== 'string') {
+    rawProcedures = '';
+  }
+  const procedures = rawProcedures;
+
+  let rawProvider = 
+    appointment.provider || 
+    appointment.providerId || 
+    appointment.providerName || 
+    appointment.customFields?.providerRows?.[0]?.providerId ||
+    appointment.customFields?.providers?.[0]?.providerId ||
+    appointment.customFields?.providers?.[0] ||
+    appointment.ProvNum ||
+    '';
+    
+  if (typeof rawProvider === 'object' && rawProvider !== null) {
+    rawProvider = rawProvider.name || 
+                  `${rawProvider.firstName || ''} ${rawProvider.lastName || ''}`.trim() || 
+                  `${rawProvider.userId?.firstName || ''} ${rawProvider.userId?.lastName || ''}`.trim() ||
+                  rawProvider.providerCode ||
+                  '';
+  }
+  const provider = typeof rawProvider === 'string' ? rawProvider : '';
 
   // Provider initials for the blue avatar
   const initials = provider

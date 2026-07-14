@@ -21,7 +21,7 @@ import { selectCurrentPatient } from "../../../../store/slices/patientSlice";
 import { COLORS } from "../../../../constants/colors";
 
 import AppointmentHistoryFilters from './AppointmentHistoryFilters';
-import AppointmentHistoryTable from './AppointmentHistoryTable';
+import AppointmentHistoryTable, { getAppointmentRowKey } from './AppointmentHistoryTable';
 
 const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const dispatch = useDispatch();
@@ -59,9 +59,17 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
 
     // Filter by type
     if (filterType === "past") {
-      result = result.filter(a => dayjs(a.appointmentDate).isBefore(dayjs(), 'day'));
+      result = result.filter(a => {
+        const d = dayjs(a.date || a.appointmentDate);
+        const time = a.startTime ? a.startTime.split(':') : [0,0];
+        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isBefore(dayjs());
+      });
     } else if (filterType === "future") {
-      result = result.filter(a => dayjs(a.appointmentDate).isAfter(dayjs().subtract(1, 'day'), 'day'));
+      result = result.filter(a => {
+        const d = dayjs(a.date || a.appointmentDate);
+        const time = a.startTime ? a.startTime.split(':') : [0,0];
+        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isAfter(dayjs());
+      });
     }
 
     // Filter by Status
@@ -72,12 +80,11 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
     // Sort
     result.sort((a, b) => {
       if (sortBy === "date") {
-        return dayjs(b.appointmentDate).diff(dayjs(a.appointmentDate)); // Newest first by default for history
+        return dayjs(b.appointmentDate || b.date).diff(dayjs(a.appointmentDate || a.date));
       } else {
-        // Last status change - using updatedAt as fallback if no specific field exists
-        const dateA = a.updatedAt || a.createdAt;
-        const dateB = b.updatedAt || b.createdAt;
-        return dayjs(dateB).diff(dayjs(dateA));
+        const timeA = a.updatedAt || a.createdAt || a.date;
+        const timeB = b.updatedAt || b.createdAt || b.date;
+        return dayjs(timeB).diff(dayjs(timeA));
       }
     });
 

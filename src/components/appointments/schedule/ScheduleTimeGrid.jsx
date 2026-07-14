@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import dayjs from "dayjs";
 import { useDroppable } from "@dnd-kit/core";
+import { useDispatch } from "react-redux";
+import { fetchPatientById } from "../../../store/slices/patientSlice";
 import {
   HOURS,
   HOUR_HEIGHT,
@@ -21,6 +23,7 @@ import {
 } from "../../../hooks/redux";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight } from "../../../constants/styles";
+import CompactAppointmentPoint from "./CompactAppointmentPoint";
 
 // Total height of the scrollable grid area — never changes.
 const TOTAL_HEIGHT = HOURS.length * HOUR_HEIGHT;
@@ -353,6 +356,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
 };
 
 const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode }) => {
+  const dispatch = useDispatch();
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
   
@@ -393,15 +397,30 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
     fetchAppts({ startDate, endDate, limit: 200 });
   }, [startDate, endDate]); // fetchAppts is a stable useCallback; startDate/endDate are strings
 
-  // Build a roomId → column-index lookup for fast position calculation.
-  const roomIndexMap = useMemo(() => {
+  const isWeek = calendarView === 'week';
+
+  const weekColumns = useMemo(() => {
+    if (!isWeek) return [];
+    const cols = [];
+    const baseDate = dayjsDate.startOf('week');
+    for (let i = 0; i < 7; i++) {
+      const d = baseDate.add(i, 'day');
+      cols.push({ id: d.format('YYYY-MM-DD'), label: d.format('ddd') });
+    }
+    return cols;
+  }, [isWeek, selectedDate]);
+
+  const activeColumns = isWeek ? weekColumns : rooms;
+
+  // Build a column-index lookup for fast position calculation.
+  const colIndexMap = useMemo(() => {
     const map = {};
-    rooms.forEach((room, idx) => {
-      const id = room._id || room.id;
+    activeColumns.forEach((col, idx) => {
+      const id = col._id || col.id;
       if (id) map[id] = idx;
     });
     return map;
-  }, [rooms]);
+  }, [activeColumns]);
 
   const providerMap = useMemo(() => {
     const map = {};
@@ -422,6 +441,8 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
   // then convert each API record to the AppointmentCard shape.
   const visibleAppointments = useMemo(() => {
     const targetDate = dayjsDate.format("YYYY-MM-DD");
+    const weekStart = dayjsDate.startOf('week').format("YYYY-MM-DD");
+    const weekEnd = dayjsDate.endOf('week').format("YYYY-MM-DD");
     const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
 
     const appts = rawAppointments
@@ -429,9 +450,13 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
         const apptDate = appt.appointmentDate
           ? String(appt.appointmentDate).slice(0, 10)
           : null;
-        const isTargetDate = apptDate === targetDate;
+        
+        const isDateValid = isWeek 
+          ? (apptDate >= weekStart && apptDate <= weekEnd)
+          : (apptDate === targetDate);
+
         const isNotPending = String(appt.status).toLowerCase() !== 'pending';
-        if (!isTargetDate || !isNotPending) return false;
+        if (!isDateValid || !isNotPending) return false;
 
         // Apply visual frontend filters
         if (providerId !== 'All') {
@@ -459,9 +484,14 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
 
       const durationMinutes = (endH - startH) * 60 + (endM - startM);
 
+      // In week view, blocks should probably only apply to the current target date if they are one-off?
+      // For now, if block date doesn't match week days, we could ignore. 
+      // But blocks usually don't have a specific date in this simple mock. We'll leave them on all columns or column 0 for week view.
+
       return {
         id: block._id || block.id,
         roomId: block.roomId || "1",
+        date: block.date || targetDate, // use targetDate if no date specified
         startHour: startH,
         startMinute: startM,
         endHour: endH,
@@ -474,10 +504,10 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
     }).filter(Boolean);
 
     return [...appts, ...blocks];
-  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks, frontendFilters]);
+  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks, frontendFilters, isWeek]);
 
-  // Total grid width grows with the number of rooms.
-  const totalWidth = TIME_LABEL_WIDTH + (rooms.length || 1) * COLUMN_MIN_WIDTH;
+  // Total grid width grows with the number of active columns.
+  const totalWidth = TIME_LABEL_WIDTH + (activeColumns.length || 1) * COLUMN_MIN_WIDTH;
 
   return (
     <Box sx={{ position: "relative", height: TOTAL_HEIGHT, width: totalWidth }}>
@@ -518,12 +548,12 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
             </Typography>
           </Box>
 
-          {/* One cell per operatory column */}
-          {rooms.map((room, idx) => (
+          {/* One cell per column */}
+          {activeColumns.map((col, idx) => (
             <DroppableCell 
-              key={room._id || room.id || idx}
+              key={col._id || col.id || idx}
               hour={hour}
-              room={room}
+              room={col}
               idx={idx}
               activeCell={activeCell}
               setActiveCell={setActiveCell}
@@ -556,14 +586,30 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
       )}
 
       {/* ── Appointment cards — absolutely positioned in the grid ──────────── */}
-      {visibleAppointments.map((gridItem) => {
-        // Resolve column index from the roomId; unmatched rooms fall to column 0.
-        const colIndex = roomIndexMap[gridItem.roomId] ?? 0;
+      {visibleAppointments.map((gridItem, i) => {
+        // Resolve column index
+        let colIndex = 0;
+        if (isWeek) {
+          // gridItem.date format is "MMM D, YYYY", need YYYY-MM-DD
+          const apptDateStr = dayjs(gridItem.date).format('YYYY-MM-DD');
+          colIndex = colIndexMap[apptDateStr] ?? 0;
+        } else {
+          colIndex = colIndexMap[gridItem.roomId] ?? 0;
+        }
+
         const pos = getGridPosition(gridItem, colIndex);
+
+        if (isWeek) {
+          // For week view, we render them as fixed height points, but we can stack them using their index i to avoid overlap if we want.
+          // Or just render them at the top position.
+          // Let's adjust pos.height for compact view.
+          pos.height = 24; 
+          // to prevent perfect overlap if same time, we could add a slight offset but it's okay for now.
+        }
 
         return (
           <Box
-            key={gridItem.id}
+            key={gridItem.id + i}
             sx={{
               position: "absolute",
               top: pos.top,
@@ -573,7 +619,22 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
               zIndex: 2,
             }}
           >
-            <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
+            {isWeek ? (
+              <CompactAppointmentPoint appointment={gridItem} onSlotClick={(e) => {
+                const appt = e.detail;
+                window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+                  detail: { ...appt },
+                }));
+                if (appt.patientId) {
+                  const pId = typeof appt.patientId === 'object' 
+                    ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
+                    : appt.patientId;
+                  if (pId) dispatch(fetchPatientById(pId));
+                }
+              }} />
+            ) : (
+              <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
+            )}
           </Box>
         );
       })}

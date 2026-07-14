@@ -8,7 +8,7 @@ const ScheduleLayout = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <Header onOpenPatientSlider={() => setSliderOpen(true)} />
+      <Header onOpenPatientSlider={() => setSliderOpen(prev => !prev)} sliderOpen={sliderOpen} />
       <Box sx={{ flex: 1, paddingTop: '65px' }}>
         {children}
       </Box>

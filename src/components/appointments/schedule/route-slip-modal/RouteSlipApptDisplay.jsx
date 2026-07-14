@@ -58,7 +58,7 @@ export const RouteSlipApptDisplay = ({ appt, OPERATORY_COLUMNS, getProviderName 
   if (!roomName) roomName = '--';
   
   return (
-    <Box sx={{ width: '100%', px: 2 }}>
+    <Box sx={{ width: '100%', px: 2, boxSizing: 'border-box' }}>
       <InfoRow label="Time" value={time} />
       <InfoRow label="Type/Procedure" value={typeLabel} />
       <InfoRow label="Provider" value={providerName} />

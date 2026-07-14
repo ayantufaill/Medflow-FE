@@ -14,7 +14,7 @@ const TableHeader = ({ allChecked, onToggleAll }) => (
     backgroundColor: "#fafbfc",
     borderBottom: "1px solid #e0e5eb",
   }}>
-    <Cell col="check">
+    <Cell col="check" sx={{ "@media print": { display: "none" } }}>
       <Checkbox
         size="small"
         checked={allChecked}
@@ -45,7 +45,7 @@ const TableHeader = ({ allChecked, onToggleAll }) => (
     </Cell>
 
     <Cell col="nextApt"><ColLabel>Next Apt. Date</ColLabel></Cell>
-    <Cell col="actions" />
+    <Cell col="actions" sx={{ "@media print": { display: "none" } }} />
   </Box>
 );
 
@@ -94,31 +94,16 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
   const aptDate = apptDate || patient.aptDate || "-";
   const nextAptDate = patient.nextAptDate || "-";
 
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `shortlist-modal-item-${patient._id || patient.id || patient.ShortlistNum || patient.PatNum}`,
-    data: {
-      isShortlistItem: true,
-      type: "shortlist",
-      id: patient._id || patient.id || patient.ShortlistNum || patient.PatNum,
-      originalData: patient
-    }
-  });
-
   return (
     <Box 
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
       sx={{
       display: "flex", alignItems: "center",
       px: "14px", py: "12px",
       borderBottom: "1px solid #f0f2f5",
-      opacity: isDragging ? 0.5 : 1,
-      cursor: "grab",
       "&:last-child": { borderBottom: "none" },
       "&:hover": { backgroundColor: "#fafbfc" },
     }}>
-      <Cell col="check">
+      <Cell col="check" sx={{ "@media print": { display: "none" } }}>
         <Checkbox
           size="small"
           checked={checked}
@@ -167,12 +152,18 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151" }}>{nextAptDate}</Typography>
       </Cell>
 
-      <Cell col="actions">
+      <Cell col="actions" sx={{ "@media print": { display: "none" } }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
+          <Typography 
+            onClick={() => window.dispatchEvent(new CustomEvent('edit-shortlist-item', { detail: patient }))}
+            sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+          >
             edit
           </Typography>
-          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#0d9488", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
+          <Typography 
+            onClick={() => window.dispatchEvent(new CustomEvent('add-shortlist-to-schedule', { detail: patient }))}
+            sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#0d9488", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+          >
             +add to schedule
           </Typography>
           <IconButton onClick={() => onDelete(patient._id || patient.id || patient.ShortlistNum || patient.PatNum)} size="small" sx={{ p: "2px", "&:hover": { backgroundColor: "#fef2f2" } }}>

@@ -3,6 +3,7 @@ import {
   Dialog, Box, Typography, Button, IconButton, Avatar,
   Select, MenuItem, TextField, Divider
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../../../services/appointment.service';
 
@@ -13,6 +14,7 @@ import AppointmentDetailStatus from './AppointmentDetailStatus';
 import AppointmentDetailFooter from './AppointmentDetailFooter';
 
 const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
+  const navigate = useNavigate();
   const [status, setStatus] = useState(appointment?.status?.toLowerCase() || 'scheduled');
   const [notes, setNotes] = useState(appointment?.description || appointment?.notes || appointment?.note || '');
   const [procedures, setProcedures] = useState([]);
@@ -46,6 +48,7 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
   const [editDate, setEditDate] = useState(defaultDate);
   const [editTime, setEditTime] = useState(defaultTime);
   const [editAmPm, setEditAmPm] = useState(defaultAmPm);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Keep state in sync if appointment changes
   useEffect(() => {
@@ -55,6 +58,7 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
       setEditDate(defaultDate);
       setEditTime(defaultTime);
       setEditAmPm(defaultAmPm);
+      setIsRescheduling(false);
       
       const loadProcedures = async () => {
         try {
@@ -141,6 +145,7 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
           setEditAmPm={setEditAmPm}
           roomId={appointment.roomId}
           scheduledBy={appointment.scheduledBy}
+          isRescheduling={isRescheduling}
         />
 
         {/* Bottom Area: Procedures and Status */}
@@ -152,6 +157,7 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
             durationMinutes={appointment.durationMinutes}
             provider={appointment.provider}
             notes={notes}
+            isRescheduling={isRescheduling}
           />
         </Box>
       </Box>
@@ -164,6 +170,19 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
         editDate={editDate}
         editTime={editTime}
         editAmPm={editAmPm}
+        isRescheduling={isRescheduling}
+        onCancelReschedule={() => {
+          setIsRescheduling(false);
+          setStatus(appointment?.status?.toLowerCase() || 'scheduled');
+          setEditDate(defaultDate);
+          setEditTime(defaultTime);
+          setEditAmPm(defaultAmPm);
+        }}
+        onStartReschedule={() => setIsRescheduling(true)}
+        onClinicalExam={() => {
+          onClose();
+          navigate('/clinical');
+        }}
       />
     </Dialog>
   );

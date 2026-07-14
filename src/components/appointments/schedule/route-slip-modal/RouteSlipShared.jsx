@@ -18,11 +18,11 @@ export const SectionHeader = ({ title }) => (
 );
 
 export const InfoRow = ({ label, value, alignValue = 'left' }) => (
-  <Box sx={{ display: 'flex', mb: '6px', fontSize: '13px', alignItems: 'flex-start' }}>
-    <Box sx={{ fontWeight: 600, color: '#334155', width: '150px', flexShrink: 0 }}>
+  <Box sx={{ display: 'flex', width: '100%', mb: '6px', fontSize: '13px', justifyContent: 'space-between' }}>
+    <Box sx={{ fontWeight: 600, color: '#334155', minWidth: '150px' }}>
       {label}:
     </Box>
-    <Box sx={{ flex: 1, color: '#475569', textAlign: alignValue, minWidth: 0, wordBreak: 'break-word' }}>
+    <Box sx={{ flex: 1, color: '#475569', textAlign: alignValue }}>
       {value || '--'}
     </Box>
   </Box>
@@ -31,6 +31,7 @@ export const InfoRow = ({ label, value, alignValue = 'left' }) => (
 export const SectionContainer = ({ children, sx = {} }) => (
   <Box
     sx={{
+      boxSizing: 'border-box',
       border: '1px solid #e2e8f0',
       borderTop: 'none',
       padding: '12px',

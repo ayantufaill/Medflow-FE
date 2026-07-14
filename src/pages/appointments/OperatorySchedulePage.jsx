@@ -5,12 +5,14 @@ import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArro
 import dayjs from 'dayjs';
 import ScheduleGridHeader from '../../components/appointments/schedule/ScheduleGridHeader';
 import ScheduleCalendar from '../../components/appointments/schedule/ScheduleCalendar';
+import WeekMonthCalendarView from '../../components/appointments/schedule/WeekMonthCalendarView';
 import LeftPanel from '../../components/appointments/left-panel/LeftPanel';
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
 import RightPanelCollapsed from '../../components/appointments/right-panel/RightPanelCollapsed';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { usePatients, usePatient, useScheduleState, useAppointmentList } from '../../hooks/redux';
+import { fetchPatientById, fetchPatients } from '../../store/slices/patientSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
@@ -28,9 +30,6 @@ import BlockSlotModal from "../../components/appointments/schedule/BlockSlotModa
 import AppointmentDetailModal from "../../components/appointments/schedule/appointment-detail-modal/AppointmentDetailModal";
 import { scheduleBlockService } from "../../services/schedule-block.service";
 import { shortlistService } from "../../services/shortlist.service";
-import {
-  fetchPatients,
-} from '../../store/slices/patientSlice';
 
 import {
   DndContext,
@@ -417,13 +416,25 @@ const OperatorySchedulePage = () => {
 
   const [initialFormDateTime, setInitialFormDateTime] = useState(null);
   const [initialFormRoomId, setInitialFormRoomId] = useState(null);
+  const [initialShortlistData, setInitialShortlistData] = useState(null);
 
   const handleOpenForm = (dateTime, roomId) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
     setInitialFormDateTime(dateTime || baseDate.hour(9).minute(0));
     setInitialFormRoomId(roomId || null);
+    setInitialShortlistData(null);
     setFormOpen(true);
   };
+
+  useEffect(() => {
+    const handleEditShortlistItem = (e) => {
+      const data = e.detail;
+      setInitialShortlistData(data);
+      setFormOpen(true);
+    };
+    window.addEventListener('edit-shortlist-item', handleEditShortlistItem);
+    return () => window.removeEventListener('edit-shortlist-item', handleEditShortlistItem);
+  }, []);
 
   // ── Appointments (for conflict detection inside the form) ─────────
   const { createAppointment } = useAppointmentList();
@@ -519,6 +530,28 @@ const OperatorySchedulePage = () => {
       const operatoryLabel =
         OPERATORY_COLUMNS?.find((c) => c.id === columnId)?.label || columnId || "—";
 
+      const patientData = (a.patientId && typeof a.patientId === 'object') ? a.patientId : (a.patient && typeof a.patient === 'object' ? a.patient : null);
+      const patientNumber = patientData?.patientCode || patientData?.patientId || patientData?.chartNumber || "";
+      const patientPhone = patientData?.phonePrimary || patientData?.phone || patientData?.mobilePhone || "";
+      const patientEmail = patientData?.email || "";
+      const cf = a.customFields || {};
+      const visitType = cf.visitType || a.visitType || a.appointmentTypeName || a.type || "";
+      const scheduledBy = a.createdBy?.name || a.scheduledBy?.name || a.createdByName || "";
+      
+      const safeStartTime = a.startTime?.length === 5 ? `${a.startTime}:00` : a.startTime;
+      const displayTime = safeStartTime ? dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A") : "";
+
+      let rawProcs = cf.procedures && Array.isArray(cf.procedures) && cf.procedures.length > 0
+        ? cf.procedures 
+        : (a.workspace?.procedures || a.procedures || a.procedureCodes || []);
+      let procString = "";
+      if (Array.isArray(rawProcs) && rawProcs.length > 0) {
+        procString = rawProcs.map(p => typeof p === 'string' ? p : (p.treatment || p.name || p.code || p.ProcCode || p.Descript || "")).filter(Boolean).join(", ");
+      }
+      if (!procString) {
+        procString = a.chiefComplaint || a.appointmentTypeName || a.type || "EXAM, PROPHY";
+      }
+
       return {
         id: a._id || a.id,
         appointmentDate: a.appointmentDate,
@@ -528,21 +561,29 @@ const OperatorySchedulePage = () => {
         roomId: a.roomId || "",
         startTime: a.startTime || "",
         endTime: a.endTime || "",
+        time: displayTime,
         title: a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "Appointment",
         patientName: fullName || "Patient",
         patientInitials: initials,
+        patientNumber,
+        patientPhone,
+        patientEmail,
+        visitType,
+        scheduledBy,
         start: startObj.toISOString(),
         end: endObj.toISOString(),
         status: a.status || "scheduled",
         note: a.notes || "",
+        description: a.notes || a.reason || "",
         color: "#1976d2",
         providerName,
+        provider: providerName,
         providerId: (a.providerId && (a.providerId._id || a.providerId.id || a.providerId)) || "",
         operatoryLabel,
         durationMinutes: a.durationMinutes || dayjs(endObj).diff(startObj, "minute"),
         customFields: a.customFields,
         checklists: a.checklists,
-        procedures: a.workspace?.procedures || a.procedures || [],
+        procedures: procString,
       };
     } catch {
       return null;
@@ -557,13 +598,13 @@ const OperatorySchedulePage = () => {
   const {
     appointments: reduxAppointments,
     refresh: refreshAppointments,
-    createAppointment: reduxCreateAppointment,
+    loading: apptsLoading,
     updateAppointment,
   } = useAppointmentList({
-    patientId: selectedPatientId || "", // Filter by selected patient, otherwise show all
+    patientId: selectedPatientId || "",
     startDate: fetchStartDate,
     endDate: fetchEndDate,
-    limit: 100, // required to see a full day's or week's schedule
+    limit: 200,
   });
 
   // Derived state to map Redux appointments to the Grid format
@@ -669,20 +710,20 @@ const OperatorySchedulePage = () => {
       ? dayjs(`${formData.appointmentDate}T${formData.startTime}`)
       : dayjs();
     const duration = formData.durationMinutes || 30;
-    const end = start.add(duration, 'minute');
+    const end = start.clone().add(duration, "minute");
 
     try {
       setFormSaving(true);
       await createAppointment({
         patientId: formData.patientId,
         providerId: formData.providerId,
-        appointmentDate: start.format('YYYY-MM-DD'),
-        startTime: start.format('HH:mm'),
-        endTime: end.format('HH:mm'),
+        appointmentDate: start.format("YYYY-MM-DD"),
+        startTime: start.format("HH:mm"),
+        endTime: end.format("HH:mm"),
         durationMinutes: duration,
         chiefComplaint: formData.chiefComplaint || '',
-        notes: formData.notes || '',
-        status: formData.status || 'scheduled',
+        notes: formData.notes || "",
+        status: formData.status || "scheduled",
         ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
         ...(formData.roomId && { roomId: formData.roomId }),
         ...(formData.customFields && { customFields: formData.customFields }),
@@ -691,7 +732,7 @@ const OperatorySchedulePage = () => {
       setFormOpen(false);
     } catch (err) {
       if (err.status === 409 || err.response?.status === 409) {
-        const conflictMsg = err.message || err.response?.data?.error?.message;
+        const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
         showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
       } else {
         const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
@@ -701,6 +742,79 @@ const OperatorySchedulePage = () => {
       setFormSaving(false);
     }
   };
+
+  useEffect(() => {
+    const handleAddShortlistToSchedule = async (e) => {
+      const data = e.detail;
+      const apptDateStr = data.AppointmentDate || data.appointmentDate;
+      const startTimeStr = data.StartTime || data.startTime;
+      const roomIdStr = data.RoomId || data.roomId;
+      
+      if (!apptDateStr || !startTimeStr || !roomIdStr) {
+        showSnackbar("Please edit this shortlist item to specify an exact Date, Time, and Operatory first.", "warning");
+        return;
+      }
+      
+      const startObj = dayjs(`${apptDateStr}T${startTimeStr}`);
+      const duration = data.DurationMins || data.durationMinutes || 60;
+      const endObj = startObj.clone().add(duration, 'minute');
+      
+      if (startObj.isBefore(dayjs())) {
+        showSnackbar("The specified time for this shortlist item has already passed.", "error");
+        return;
+      }
+      
+      const patientId = data.PatNum || data.patientId;
+      const providerId = data.ProvNum || data.providerId;
+      
+      if (!patientId || !providerId) {
+        showSnackbar("Please edit this shortlist item to specify a Provider first.", "warning");
+        return;
+      }
+      
+      try {
+        setFormSaving(true);
+        await createAppointment({
+          patientId: String(patientId),
+          providerId: String(providerId),
+          appointmentDate: apptDateStr,
+          startTime: startTimeStr,
+          endTime: endObj.format('HH:mm'),
+          durationMinutes: duration,
+          chiefComplaint: '',
+          notes: data.Notes || data.notes || '',
+          status: 'scheduled',
+          roomId: roomIdStr,
+          customFields: data.CustomFields || data.customFields || {},
+        });
+        
+        // Delete from shortlist
+        const shortlistId = data.ShortlistNum || data.id || data._id;
+        if (shortlistId) {
+          try {
+            await shortlistService.deleteShortlistItem(shortlistId);
+            window.dispatchEvent(new Event('shortlist-updated'));
+          } catch (deleteErr) {
+            console.error("Failed to delete shortlist item:", deleteErr);
+          }
+        }
+        showSnackbar('Shortlist item successfully added to schedule!', 'success');
+      } catch (err) {
+        if (err.status === 409 || err.response?.status === 409) {
+          const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+        } else {
+          const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add to schedule.';
+          showSnackbar(msg, 'error');
+        }
+      } finally {
+        setFormSaving(false);
+      }
+    };
+
+    window.addEventListener('add-shortlist-to-schedule', handleAddShortlistToSchedule);
+    return () => window.removeEventListener('add-shortlist-to-schedule', handleAddShortlistToSchedule);
+  }, [createAppointment]);
 
   const handleDragStart = (event) => {
     setActiveDragData(event.active.data.current);
@@ -786,27 +900,47 @@ const OperatorySchedulePage = () => {
           <Box className="no-print">
             <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} />
           </Box>
-          <ScheduleCalendar
-            scheduleBlocks={scheduleBlocks}
-            privacyMode={privacyMode}
-            onSlotClick={(hour, mins, roomId) => {
-              const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-              handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
-            }}
-            onBlockClick={(hour, mins, roomId) => {
-              const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-              const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
-              const end = start.clone().add(30, "minute");
+          {calendarView === 'day' || calendarView === 'week' ? (
+            <ScheduleCalendar
+              scheduleBlocks={scheduleBlocks}
+              privacyMode={privacyMode}
+              onSlotClick={(hour, mins, roomId) => {
+                const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+                handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
+              }}
+              onBlockClick={(hour, mins, roomId) => {
+                const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+                const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+                const end = start.clone().add(30, "minute");
 
-              setBlockSlotDialogData({
-                roomId,
-                date: baseDate.format("YYYY-MM-DD"),
-                startTime: start.format("HH:mm"),
-                endTime: end.format("HH:mm")
-              });
-              setBlockSlotDialogOpen(true);
-            }}
-          />
+                setBlockSlotDialogData({
+                  roomId,
+                  date: baseDate.format("YYYY-MM-DD"),
+                  startTime: start.format("HH:mm"),
+                  endTime: end.format("HH:mm")
+                });
+                setBlockSlotDialogOpen(true);
+              }}
+            />
+          ) : (
+            <WeekMonthCalendarView
+              calendarView={calendarView}
+              selectedDate={selectedDate}
+              appointments={mappedAppointments}
+              onSlotClick={(e) => {
+                const appt = e.detail;
+                window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+                  detail: { ...appt },
+                }));
+                if (appt.patientId) {
+                  const pId = typeof appt.patientId === 'object' 
+                    ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
+                    : appt.patientId;
+                  if (pId) dispatch(fetchPatientById(pId));
+                }
+              }}
+            />
+          )}
         </Box>
 
         {/* RIGHT PANEL — Static Width */}
@@ -834,6 +968,7 @@ const OperatorySchedulePage = () => {
           initialDateTime={initialFormDateTime}
           initialRoomId={initialFormRoomId}
           initialPatient={currentPatient || null}
+          initialShortlistData={initialShortlistData}
           providers={providers || []}
           rooms={rooms || []}
           appointmentTypes={appointmentTypes || []}
@@ -857,7 +992,7 @@ const OperatorySchedulePage = () => {
             } catch (e) {
               console.error("Failed to update appointment", e);
               if (e.status === 409 || e.response?.status === 409) {
-                const conflictMsg = e.message || e.response?.data?.error?.message;
+                const conflictMsg = e.response?.data?.error?.message || e.response?.data?.message;
                 showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
               } else {
                 const msg = e.message || e.response?.data?.error?.message || e.response?.data?.message || 'Failed to update appointment';

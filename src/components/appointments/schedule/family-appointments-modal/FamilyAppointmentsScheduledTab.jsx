@@ -60,7 +60,16 @@ const FamilyAppointmentsScheduledTab = ({ allAppointments, groupedAppointments, 
                     : "Date TBD"}
                 </Typography>
                 <Typography sx={{ fontSize: "11px", color: COLORS.TEXT_MUTED }}>
-                  @ {appt.time || (dayjs(appt.startTime).isValid() ? dayjs(appt.startTime).format("hh:mm A") : "--:--")}
+                  @ {appt.time || (() => {
+                    if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
+                      const [h, m] = appt.startTime.split(':');
+                      let hour = parseInt(h, 10);
+                      const ampm = hour >= 12 ? 'PM' : 'AM';
+                      hour = hour % 12 || 12;
+                      return `${hour}:${m || '00'} ${ampm}`;
+                    }
+                    return dayjs(appt.startTime).isValid() ? dayjs(appt.startTime).format("h:mm A") : "--:--";
+                  })()}
                 </Typography>
               </Box>
             ))}

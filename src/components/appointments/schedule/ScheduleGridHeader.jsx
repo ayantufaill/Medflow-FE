@@ -53,6 +53,7 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, privacyMode, setPr
           date={dayjsDate}
           onPrev={handlePrev}
           onNext={handleNext}
+          onDateSelect={(newDate) => setSelectedDate(newDate.toISOString())}
         />
 
         {/* Flexible space to push icons and button to the right side if needed, or simply let ActionIconsBar handle alignment */}

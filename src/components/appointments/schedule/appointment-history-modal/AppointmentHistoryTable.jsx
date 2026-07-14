@@ -31,7 +31,7 @@ const getProviderId = (provider) => {
   );
 };
 
-const getAppointmentIdCandidates = (appointment) =>
+export const getAppointmentIdCandidates = (appointment) =>
   [
     appointment.id,
     appointment._id,
@@ -39,7 +39,7 @@ const getAppointmentIdCandidates = (appointment) =>
     appointment.AptNum,
   ].filter(Boolean);
 
-const getAppointmentRowKey = (appointment, index) =>
+export const getAppointmentRowKey = (appointment, index) =>
   getAppointmentIdCandidates(appointment)[0] || index;
 
 const getProviderName = (provider, providers = []) => {
@@ -63,42 +63,26 @@ const getProviderName = (provider, providers = []) => {
 
   return fullName || provider.providerName || provider.providerCode || "---";
 };
-
-const findProviderById = (providerId, providers = []) => {
-  if (!providerId) return null;
-  return providers.find((provider) => {
-    const ids = [
-      provider._id,
-      provider.id,
-      provider.providerId,
-      provider.ProvNum,
-      provider.userId?._id,
-      provider.userId?.id,
-    ]
-      .filter(Boolean)
-      .map(String);
-
-    return ids.includes(String(providerId));
-  });
+const findProviderById = (id, providers = []) => {
+  if (!id) return null;
+  const actualId = typeof id === "object" ? getProviderId(id) : String(id);
+  return providers.find((p) => getProviderId(p) === actualId);
 };
 
 const getAppointmentProvider = (appointment, providers = []) => {
-  const cf = appointment.customFields || {};
   const provider =
     appointment.provider ||
     appointment.providerId ||
     appointment.providerName ||
-    cf.providerRows?.[0]?.providerId ||
-    cf.providers?.[0]?.providerId ||
-    cf.providers?.[0] ||
+    appointment.customFields?.providerRows?.[0]?.providerId ||
+    appointment.customFields?.providers?.[0]?.providerId ||
+    appointment.customFields?.providers?.[0] ||
     appointment.ProvNum;
-
-  if (provider && typeof provider === "object") {
-    return getProviderName(provider, providers);
-  }
 
   const matchedProvider = findProviderById(provider, providers);
   if (matchedProvider) return getProviderName(matchedProvider, providers);
+  
+  if (typeof provider === "object" && provider !== null && provider.name) return provider.name;
   if (appointment.providerName) return appointment.providerName;
   if (typeof provider === "string" && /[a-z]/i.test(provider)) return provider;
 
@@ -109,7 +93,10 @@ const getVisitType = (appointment) =>
   appointment.visitType ||
   appointment.customFields?.visitType ||
   appointment.workspace?.visitType ||
+  appointment.appointmentTypeId?.name ||
+  (typeof appointment.appointmentType === 'object' ? appointment.appointmentType?.name : null) ||
   appointment.appointmentTypeName ||
+  (typeof appointment.appointmentType === 'string' && appointment.appointmentType !== 'consultation' ? appointment.appointmentType : null) ||
   appointment.type ||
   "---";
 
@@ -132,27 +119,29 @@ const formatProcedure = (procedure) => {
 };
 
 const getProceduresText = (appointment, fetchedProcedures = []) => {
-  const cf = appointment.customFields || {};
-  const procedures =
-    (Array.isArray(fetchedProcedures) && fetchedProcedures.length > 0
-      ? fetchedProcedures
-      : null) ||
+  let rawProcedures = 
+    (Array.isArray(fetchedProcedures) && fetchedProcedures.length > 0 ? fetchedProcedures : null) ||
+    appointment.chiefComplaint || 
     appointment.workspace?.procedures ||
-    cf.procedures ||
-    appointment.procedures ||
+    appointment.customFields?.procedures ||
+    appointment.procedures || 
     appointment.appointmentProcedures ||
     appointment.procedureCodes ||
-    cf.procedureTags ||
-    appointment.tags;
+    appointment.customFields?.procedureTags ||
+    appointment.tags ||
+    appointment.description || 
+    appointment.note ||
+    '';
 
-  if (Array.isArray(procedures)) {
-    const text = procedures.map(formatProcedure).filter(Boolean).join(", ");
-    if (text) return text;
+  if (Array.isArray(rawProcedures)) {
+    rawProcedures = rawProcedures.map(formatProcedure).filter(Boolean).join(", ");
+  } else if (typeof rawProcedures === "string" && rawProcedures.includes(",")) {
+    rawProcedures = rawProcedures.split(",").map(p => p.trim()).join(", ");
+  } else if (typeof rawProcedures !== "string") {
+    rawProcedures = "";
   }
 
-  if (procedures && typeof procedures !== "object") return String(procedures);
-
-  return appointment.chiefComplaint || appointment.note || "---";
+  return rawProcedures || "---";
 };
 
 const AppointmentHistoryTable = ({

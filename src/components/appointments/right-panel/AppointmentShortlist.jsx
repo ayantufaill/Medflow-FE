@@ -122,6 +122,7 @@ const AppointmentShortlist = () => {
         headerAction="expand"
         onExpand={() => setModalOpen(true)}
         footerLabel="View all & filter →"
+        onFooterClick={() => setModalOpen(true)}
       >
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>

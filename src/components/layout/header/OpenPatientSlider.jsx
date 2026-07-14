@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { TableChart } from '@mui/icons-material';
 
-const OpenPatientSlider = ({ onClick }) => (
+const OpenPatientSlider = ({ onClick, isOpen }) => (
   <Box
     onClick={onClick}
     sx={{
@@ -21,7 +21,7 @@ const OpenPatientSlider = ({ onClick }) => (
   >
     <TableChart sx={{ fontSize: '14px', color: '#7a8a9a' }} />
     <Typography sx={{ fontSize: '12px', color: '#4a5568', fontWeight: 500, whiteSpace: 'nowrap' }}>
-      Open patient slider
+      {isOpen ? "Close patient slider" : "Open patient slider"}
     </Typography>
   </Box>
 );

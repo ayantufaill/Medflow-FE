@@ -125,7 +125,11 @@ const PatientRow = memo(function PatientRow({
         editor={
           <TextField
             size="small" type="date" autoFocus fullWidth
-            value={editValue ? new Date(editValue).toISOString().split('T')[0] : ''}
+            value={(() => {
+              if (!editValue) return '';
+              const d = new Date(editValue);
+              return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+            })()}
             onChange={(e) => setEditValue(e.target.value)}
             onClick={(e) => e.stopPropagation()}
             inputProps={{ max: todayIsoDate(), ...editorInputPropsSx }}

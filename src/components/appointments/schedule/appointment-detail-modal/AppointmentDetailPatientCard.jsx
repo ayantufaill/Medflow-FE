@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Avatar, Divider } from '@mui/material';
-import { PhoneOutlined, EmailOutlined, VerifiedUserOutlined, Timeline, LocationOnOutlined, PersonOutline } from '@mui/icons-material';
+import { PhoneOutlined, EmailOutlined, VerifiedUserOutlined, Timeline, LocationOnOutlined, PersonOutline, CalendarTodayOutlined, AccessTimeOutlined } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -10,7 +10,7 @@ import dayjs from 'dayjs';
 const AppointmentDetailPatientCard = ({ 
   initials, patientName, patientCode, phone, email, insurance, visitType,
   editDate, setEditDate, editTime, setEditTime, editAmPm, setEditAmPm,
-  roomId, scheduledBy
+  roomId, scheduledBy, isRescheduling
 }) => {
   return (
     <Box sx={{ width: '835px', height: '188px', border: '1px solid #e2e8f0', borderRadius: '12px', p: '20px', flexShrink: 0, boxSizing: 'border-box', position: 'relative' }}>
@@ -30,17 +30,6 @@ const AppointmentDetailPatientCard = ({
             </Typography>
             <Typography sx={{ fontFamily: 'Inter', fontSize: '14px', color: '#64748b', lineHeight: 1 }}>
               {patientCode}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', width: '395.83px', height: '18px', color: '#64748b' }}>
-            <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', lineHeight: 1, whiteSpace: 'nowrap' }}>
-              <PhoneOutlined sx={{ fontSize: '16px', color: '#10b981' }} /> {phone}
-            </Typography>
-            <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', lineHeight: 1, whiteSpace: 'nowrap' }}>
-              <EmailOutlined sx={{ fontSize: '16px', color: '#3b82f6' }} /> {email}
-            </Typography>
-            <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', lineHeight: 1, whiteSpace: 'nowrap' }}>
-              <VerifiedUserOutlined sx={{ fontSize: '16px', color: '#0ea5e9' }} /> {insurance}
             </Typography>
           </Box>
         </Box>
@@ -71,57 +60,75 @@ const AppointmentDetailPatientCard = ({
           {/* Date */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2.8px', pt: '5.2px', width: '160px', boxSizing: 'border-box' }}>
             <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: '#0f172a', lineHeight: 1 }}>Date</Typography>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker 
-                value={editDate}
-                onChange={(newValue) => setEditDate(newValue)}
-                views={['year', 'month', 'day']}
-                slotProps={{
-                  popper: { sx: { zIndex: 10000 } },
-                  textField: {
-                    size: "small",
-                    fullWidth: true,
-                    sx: {
-                      '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px' },
-                      '& .MuiInputBase-input': { fontSize: '14px', fontFamily: 'Inter', color: '#0f172a' }
+            {!isRescheduling ? (
+              <Box sx={{ height: '36px', display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter', fontSize: '14px', fontWeight: 500, color: '#0f172a' }}>
+                  <CalendarTodayOutlined sx={{ fontSize: '16px', color: '#64748b' }} />
+                  {editDate ? editDate.format('MMM D, YYYY') : dayjs().format('MMM D, YYYY')}
+                </Typography>
+              </Box>
+            ) : (
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker 
+                  value={editDate}
+                  onChange={(newValue) => setEditDate(newValue)}
+                  views={['year', 'month', 'day']}
+                  slotProps={{
+                    popper: { sx: { zIndex: 10000 } },
+                    textField: {
+                      size: "small",
+                      fullWidth: true,
+                      sx: {
+                        '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px' },
+                        '& .MuiInputBase-input': { fontSize: '14px', fontFamily: 'Inter', color: '#0f172a' }
+                      }
                     }
-                  }
-                }}
-              />
-            </LocalizationProvider>
+                  }}
+                />
+              </LocalizationProvider>
+            )}
           </Box>
 
           {/* Time */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2.8px', pt: '5.2px', width: '160px', boxSizing: 'border-box' }}>
             <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: '#0f172a', lineHeight: 1 }}>Time</Typography>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <TimePicker
-                value={(() => {
-                  const [hStr, mStr] = editTime.split(':');
-                  let hr = parseInt(hStr || '9', 10);
-                  const min = parseInt(mStr || '0', 10);
-                  if (editAmPm === 'PM' && hr < 12) hr += 12;
-                  if (editAmPm === 'AM' && hr === 12) hr = 0;
-                  return dayjs().hour(hr).minute(min).second(0);
-                })()}
-                onChange={(v) => {
-                  if (!v) return;
-                  setEditTime(v.format('hh:mm'));
-                  setEditAmPm(v.format('A'));
-                }}
-                slotProps={{
-                  popper: { sx: { zIndex: 10000 } },
-                  textField: {
-                    size: "small",
-                    fullWidth: true,
-                    sx: {
-                      '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px' },
-                      '& .MuiInputBase-input': { fontSize: '14px', fontFamily: 'Inter', color: '#0f172a' }
+            {!isRescheduling ? (
+              <Box sx={{ height: '36px', display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter', fontSize: '14px', fontWeight: 500, color: '#0f172a' }}>
+                  <AccessTimeOutlined sx={{ fontSize: '16px', color: '#64748b' }} />
+                  {`${editTime} ${editAmPm}`}
+                </Typography>
+              </Box>
+            ) : (
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <TimePicker
+                  value={(() => {
+                    const [hStr, mStr] = editTime.split(':');
+                    let hr = parseInt(hStr || '9', 10);
+                    const min = parseInt(mStr || '0', 10);
+                    if (editAmPm === 'PM' && hr < 12) hr += 12;
+                    if (editAmPm === 'AM' && hr === 12) hr = 0;
+                    return dayjs().hour(hr).minute(min).second(0);
+                  })()}
+                  onChange={(v) => {
+                    if (!v) return;
+                    setEditTime(v.format('hh:mm'));
+                    setEditAmPm(v.format('A'));
+                  }}
+                  slotProps={{
+                    popper: { sx: { zIndex: 10000 } },
+                    textField: {
+                      size: "small",
+                      fullWidth: true,
+                      sx: {
+                        '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px' },
+                        '& .MuiInputBase-input': { fontSize: '14px', fontFamily: 'Inter', color: '#0f172a' }
+                      }
                     }
-                  }
-                }}
-              />
-            </LocalizationProvider>
+                  }}
+                />
+              </LocalizationProvider>
+            )}
           </Box>
         </Box>
 
