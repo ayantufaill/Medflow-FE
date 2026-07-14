@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { InfoRow } from './RouteSlipShared';
 import { providerLabel } from '../../new-appointment/helpers';
 
-export const RouteSlipApptDisplay = ({ appt, OPERATORY_COLUMNS }) => {
+export const RouteSlipApptDisplay = ({ appt, OPERATORY_COLUMNS, getProviderName }) => {
   if (!appt) return null;
   
   const formatTime = (a) => {
@@ -36,12 +36,19 @@ export const RouteSlipApptDisplay = ({ appt, OPERATORY_COLUMNS }) => {
     typeLabel = appt.title || appt.appointmentType?.name || '--';
   }
 
-  const providerName = providerLabel(appt.provider || appt.providerId) || '--';
+  // Use the passed getProviderName if available, fallback to providerLabel
+  let providerName = '--';
+  if (getProviderName) {
+    providerName = getProviderName(appt.provider || appt.providerId);
+  } else {
+    providerName = providerLabel(appt.provider || appt.providerId) || '--';
+  }
   
   // Attempt to match the room using OPERATORY_COLUMNS logic
-  const resolvedRoom = OPERATORY_COLUMNS.find(c => c.id === appt.columnId || c.id === `op${appt.roomId}`);
+  const rawRoomId = appt.columnId || appt.roomId || appt.room || appt.Op || appt.opId;
+  const resolvedRoom = OPERATORY_COLUMNS.find(c => String(c.id) === String(rawRoomId) || String(c.id) === `op${rawRoomId}`);
   
-  let roomName = resolvedRoom?.label || appt.room?.name || appt.columnId;
+  let roomName = resolvedRoom?.label || appt.room?.name || rawRoomId;
   
   // If it's a raw string like "op1", format it cleanly
   if (typeof roomName === 'string' && /^op\s*\d+$/i.test(roomName)) {

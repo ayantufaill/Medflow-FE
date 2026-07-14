@@ -180,12 +180,42 @@ const RouteSlipDialog = () => {
             @media print {
               body * { visibility: hidden; }
               #route-slip-print-content, #route-slip-print-content * { visibility: visible; }
+              
+              body {
+                margin: 0;
+                padding: 0;
+                background-color: white;
+              }
+
               #route-slip-print-content {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
+
+              .MuiDialog-root, .MuiDialog-container, .MuiDialog-paper {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                transform: none !important;
+                box-shadow: none !important;
+                border: none !important;
+                background-color: transparent !important;
+                max-width: none !important;
+                max-height: none !important;
+              }
+
               .MuiDialogActions-root, .no-print-in-modal { display: none !important; }
             }
           `}
@@ -289,7 +319,11 @@ const RouteSlipDialog = () => {
           <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
             {routeSlipAppt ? (
               <Box sx={{ width: '100%' }}>
-                <RouteSlipApptDisplay appt={routeSlipAppt} OPERATORY_COLUMNS={OPERATORY_COLUMNS} />
+                <RouteSlipApptDisplay 
+                  appt={routeSlipAppt} 
+                  OPERATORY_COLUMNS={OPERATORY_COLUMNS} 
+                  getProviderName={getProviderName} 
+                />
               </Box>
             ) : (
               <Typography sx={{ color: '#475569', fontSize: '13px', alignSelf: 'center' }}>
@@ -308,7 +342,11 @@ const RouteSlipDialog = () => {
                 <Box sx={{ px: 2 }}>
                   <InfoRow label="Date" value={dayjs(nextAppt.appointmentDate || nextAppt.start).format('MM/DD/YYYY')} />
                 </Box>
-                <RouteSlipApptDisplay appt={nextAppt} OPERATORY_COLUMNS={OPERATORY_COLUMNS} />
+                <RouteSlipApptDisplay 
+                  appt={nextAppt} 
+                  OPERATORY_COLUMNS={OPERATORY_COLUMNS} 
+                  getProviderName={getProviderName} 
+                />
               </Box>
             ) : (
               <Typography sx={{ color: '#475569', fontSize: '13px', alignSelf: 'center' }}>

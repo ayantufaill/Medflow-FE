@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
-import { Box } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import dayjs from "dayjs";
 import SliderHeader from "./SliderHeader";
 import DemographicsPanel from "./DemographicsPanel";
@@ -263,8 +263,10 @@ const PatientSlider = ({ open, onClose, patient }) => {
     patientId: null,
     appointments: [],
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchAppointmentsData = (patientId) => {
+    setIsRefreshing(true);
     appointmentService
       .getPatientAppointments(patientId, 50)
       .then((appointments) => {
@@ -276,6 +278,9 @@ const PatientSlider = ({ open, onClose, patient }) => {
       .catch((err) => {
         console.error("Failed to fetch player appointments:", err);
         setFetchedAppointments({ patientId, appointments: [] });
+      })
+      .finally(() => {
+        setIsRefreshing(false);
       });
   };
 
@@ -361,9 +366,27 @@ const PatientSlider = ({ open, onClose, patient }) => {
           overflowX: "auto",
         }}
       >
-        <SliderHeader pt={pt} onClose={onClose} onRefresh={handleRefresh} />
+        <SliderHeader pt={pt} onClose={onClose} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
 
-        <Box sx={{ display: "flex", backgroundColor: "#fff" }}>
+        <Box sx={{ position: "relative", display: "flex", backgroundColor: "#fff", minHeight: "150px" }}>
+          {isRefreshing && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                zIndex: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CircularProgress size={32} thickness={4} sx={{ color: "#2262ef" }} />
+            </Box>
+          )}
           <DemographicsPanel pt={pt} />
           <ContactPanel pt={pt} />
           <CoveragePanel pt={pt} />

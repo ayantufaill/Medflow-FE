@@ -16,7 +16,7 @@ import PremmedIcon from "../../assets/operatory icons/premmed.png";
 import PeopleIcon from "../../assets/operatory icons/people.png";
 
 // 1. Add onRefresh to the component props
-const SliderHeader = ({ pt, onClose, onRefresh }) => (
+const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
   <Box
     sx={{
       display: "flex",
@@ -128,11 +128,17 @@ const SliderHeader = ({ pt, onClose, onRefresh }) => (
         borderRadius: "6px",
         px: "8px",
         py: "5px",
-        cursor: "pointer",
-        "&:hover": { backgroundColor: "rgba(0,0,0,0.05)" },
+        cursor: isRefreshing ? "default" : "pointer",
+        opacity: isRefreshing ? 0.7 : 1,
+        "&:hover": { backgroundColor: isRefreshing ? "transparent" : "rgba(0,0,0,0.05)" },
       }}
     >
-      <Refresh sx={{ fontSize: "14px", color: "#6b7280" }} />
+      <Refresh 
+        sx={{ 
+          fontSize: "14px", 
+          color: "#6b7280",
+        }} 
+      />
       <Typography
         sx={{
           fontFamily: "Inter",

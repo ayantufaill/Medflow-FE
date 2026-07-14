@@ -208,6 +208,11 @@ export const fetchPatientHistory = createAsyncThunk(
           a.customFields?.procedureTags ||
           a.note ||
           null,
+        room: a.room || null,
+        roomId: a.roomId || null,
+        columnId: a.columnId || null,
+        Op: a.Op || null,
+        opId: a.opId || null,
       }));
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointment history');
