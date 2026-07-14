@@ -1,0 +1,48 @@
+// Mock coverage templates used to populate "Copy Plan Billing Info From Template"
+// when the backend has no saved templates yet (GET /coverage-templates returns empty).
+export const MOCK_COVERAGE_TEMPLATES = [
+  {
+    id: 'tmpl-bcbs-ppo-standard',
+    name: 'Standard PPO - BCBS Illinois',
+    description: 'Blue Cross Blue Shield of Illinois, standard PPO group plan',
+    insurancePlan: 'BCBS IL Standard PPO',
+    groupName: 'VIVID SEATS, LLC',
+    groupNumber: '300871',
+    phoneNumber: '800-123-4567',
+    healthPlan: false,
+    assignmentOfBenefits: 1,
+  },
+  {
+    id: 'tmpl-uhc-doxim',
+    name: 'UHC Dental - DOXIM Group',
+    description: 'United Healthcare Dental, DOXIM corporate group plan',
+    insurancePlan: 'UHC Dental (DOXIM)',
+    groupName: 'DOXIM',
+    groupNumber: '1602187',
+    phoneNumber: '800-987-6543',
+    healthPlan: false,
+    assignmentOfBenefits: 1,
+  },
+  {
+    id: 'tmpl-aetna-premium',
+    name: 'Aetna Premium PPO',
+    description: 'Aetna Dental Plans, Texas Health Resources premium PPO',
+    insurancePlan: 'Aetna Dental Plans',
+    groupName: 'Texas Health Resources',
+    groupNumber: '087639801300001',
+    phoneNumber: '800-111-2222',
+    healthPlan: true,
+    assignmentOfBenefits: 1,
+  },
+  {
+    id: 'tmpl-basic-hmo',
+    name: 'Basic HMO - Self Pay Benefit',
+    description: 'Basic HMO plan, benefits paid directly to patient',
+    insurancePlan: 'Basic HMO',
+    groupName: 'Individual Enrollee',
+    groupNumber: '450219',
+    phoneNumber: '800-555-0199',
+    healthPlan: false,
+    assignmentOfBenefits: 2,
+  },
+];

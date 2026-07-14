@@ -22,11 +22,12 @@ import {
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import TaskList from '../../components/appointments/right-panel/TaskList';
 import Messages from '../../components/appointments/right-panel/Messages';
-import AddCoverageHeader from '../../components/insurance/AddCoverageHeader';
+import AddCoverageHeader from '../../components/insurance/components/AddCoverageHeader';
 
 import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
+import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
@@ -102,6 +103,7 @@ const AddCoveragePage = () => {
     feeGuides,
     allCompanies,
     coverageTemplates,
+    createTemplate,
     handleCancel
   } = useCoverageData(
     patientId, 
@@ -297,7 +299,28 @@ const AddCoveragePage = () => {
         await createInsurance(payload).unwrap();
         showSnackbar('Coverage saved successfully. Any unbilled procedures have been converted to unsent claims.', 'success');
       }
-      
+
+      if (formData.saveAsTemplate) {
+        try {
+          await createTemplate({
+            name: formData.insurancePlan,
+            description: [formData.carrierName, formData.groupName].filter(Boolean).join(' — ') || undefined,
+            benefits: [{
+              insurancePlan: formData.insurancePlan,
+              groupName: formData.groupName,
+              groupNumber: formData.groupNumber,
+              phoneNumber: formData.phoneNumber,
+              healthPlan: formData.healthPlan,
+              assignmentOfBenefits: formData.assignmentOfBenefits
+            }]
+          }).unwrap();
+          showSnackbar('Plan billing info saved as a reusable template', 'success');
+        } catch (templateErr) {
+          console.error('Failed to save coverage template', templateErr);
+          showSnackbar('Coverage saved, but saving it as a template failed', 'warning');
+        }
+      }
+
       navigate(`/patients/details/${patientId}?tab=insurance`);
     } catch (err) {
       console.error('Failed to save coverage', err);
@@ -356,12 +379,18 @@ const AddCoveragePage = () => {
   };
 
   const applyTemplate = (template) => {
+    // Mock templates carry these fields flat; real saved templates (created via
+    // "Save as Template") nest them inside benefits[0] since the backend's
+    // coverage-template model only stores { name, description, benefits }.
+    const source = template.benefits?.[0] || template;
     setFormData(prev => ({
       ...prev,
-      insurancePlan: template.name || prev.insurancePlan,
-      groupName: template.name || prev.groupName,
-      // Just a mock representation of filling data from a template
-      notes: template.description || prev.notes,
+      insurancePlan: source.insurancePlan || template.name || prev.insurancePlan,
+      groupName: source.groupName || prev.groupName,
+      groupNumber: source.groupNumber || prev.groupNumber,
+      phoneNumber: source.phoneNumber || prev.phoneNumber,
+      healthPlan: source.healthPlan ?? prev.healthPlan,
+      assignmentOfBenefits: source.assignmentOfBenefits || prev.assignmentOfBenefits,
     }));
   };
 
@@ -529,16 +558,16 @@ const AddCoveragePage = () => {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', gap: '20px', p: 3, maxWidth: '1857px', margin: '0 auto' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', gap: '8px', p: 1.5, maxWidth: '1857px', margin: '0 auto' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: 0 }}>
           <AddCoverageHeader onSave={handleSave} onCancel={handleCancel} loading={loading || saving} />
 
-          <Box sx={{ display: 'flex', gap: '20px' }}>
-            <Box sx={{ width: '480px', minWidth: '480px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <Box sx={{ display: 'flex', gap: '8px' }}>
+            <Box sx={{ flex: 1, minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <InsuranceInformation
                 formData={{
                   ...formData,
-                  coverageTemplates,
+                  coverageTemplates: coverageTemplates?.length > 0 ? coverageTemplates : MOCK_COVERAGE_TEMPLATES,
                   handleApplyTemplate: (t) => handleApplyTemplate(t)
                 }}
                 handleInputChange={handleInputChange}
@@ -575,7 +604,7 @@ const AddCoveragePage = () => {
               />
             </Box>
 
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: '620px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <PlanFeeGuideSection
                 formData={formData}
                 handleInputChange={handleInputChange}
@@ -611,9 +640,6 @@ const AddCoveragePage = () => {
               />
 
               <CoverageBookSummary
-                headerStyle={STYLE_CONSTANTS.headerStyle}
-                bodyCellStyle={STYLE_CONSTANTS.bodyCellStyle}
-                blueHeader={STYLE_CONSTANTS.blueHeader}
                 coverageData={coverageBookData}
                 onCoverageDataChange={setCoverageBookData}
                 onViewFullBook={handleViewFullBook}

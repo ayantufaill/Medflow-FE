@@ -30,10 +30,10 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
 import { useInsuranceCatalog } from '../../hooks/redux/useInsuranceCatalog';
-import InsuranceDialog from '../insurance/InsuranceDialog';
-import ImportedCoverageModal from '../insurance/ImportedCoverageModal';
-import EditCoverageModal from '../insurance/EditCoverageModal';
-import ViewCoverage from '../insurance/ViewCoverage';
+import InsuranceDialog from '../insurance/components/InsuranceDialog';
+import ImportedCoverageModal from '../insurance/components/ImportedCoverageModal';
+import EditCoverageModal from '../insurance/components/EditCoverageModal';
+import ViewCoverage from '../insurance/components/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 
 const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate }) => {

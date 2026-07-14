@@ -24,8 +24,8 @@ import {
   HelpOutline as HelpOutlineIcon,
   AutoFixNormal as ToothIcon,
 } from "@mui/icons-material";
-import { useCoverageBook } from "./hooks/useCoverageBook";
-import ToothSelectionDialog from "./shared/ToothSelectionDialog";
+import { useCoverageBook } from "../hooks/useCoverageBook";
+import ToothSelectionDialog from "../shared/ToothSelectionDialog";
 
 const CoverageBookModal = ({
   open,

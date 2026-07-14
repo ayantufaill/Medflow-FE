@@ -9,18 +9,18 @@ const DEFAULT_DEDUCTIBLES = [
   { id: 2, type: 'Preventative', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
   { id: 3, type: 'Basic', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
   { id: 4, type: 'Major', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' },
-  { id: 5, type: '3 rthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
+  { id: 5, type: 'Orthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
 ];
 
 const inputSx = {
   bgcolor: '#f8f9fc',
   borderRadius: '6px',
-  '& .MuiInputBase-root': { fontSize: '0.75rem', height: '36px', color: '#555' },
+  '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#555' },
   '& fieldset': { borderColor: '#DFE5EC' }
 };
 
 const headerCellSx = {
-  fontSize: '0.65rem',
+  fontSize: '0.6rem',
   fontWeight: 700,
   color: '#777',
   textTransform: 'uppercase',
@@ -51,26 +51,26 @@ const DeductiblesTable = ({
       boxSizing: 'border-box',
       overflow: 'hidden'
     }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 2, borderBottom: '1px solid #DFE5EC' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: '#f8f9fc', p: 1.5, borderBottom: '1px solid #DFE5EC' }}>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
-            <LayersIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+          <Box sx={{ bgcolor: '#e6f0fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
+            <LayersIcon sx={{ fontSize: 16, color: '#2563eb' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "1rem", mb: 0.1, letterSpacing: '-0.3px' }}>
+            <Typography sx={{ fontWeight: 600, color: "#111827", fontSize: "0.9rem", mb: 0.1, letterSpacing: '-0.3px' }}>
               Deductibles
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
+            <Typography sx={{ fontSize: '0.7rem', color: '#6b7280' }}>
               Per-type lifetime, standard and met amounts
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ bgcolor: '#e6f0fd', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
+        <Box sx={{ bgcolor: '#f3f4f6', px: 1.5, py: 0.5, borderRadius: '50px', height: 'fit-content' }}>
+          <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#2563eb', letterSpacing: '0.8px', textTransform: 'uppercase' }}>REQUIRED</Typography>
         </Box>
       </Box>
 
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 1.5 }}>
       <TableContainer sx={{ overflowX: 'auto' }}>
         <Table size="small" sx={{ minWidth: 800 }}>
           <TableHead>
@@ -87,7 +87,7 @@ const DeductiblesTable = ({
           <TableBody>
             {deductibles.map((row, index) => (
               <TableRow key={index} sx={{ '&:hover': { bgcolor: '#fafbfd' } }}>
-                <TableCell sx={{ fontSize: '0.8rem', fontWeight: 500, color: '#333', borderBottom: '1px solid #f0f0f0', py: 2 }}>
+                <TableCell sx={{ fontSize: '0.75rem', fontWeight: 500, color: '#333', borderBottom: '1px solid #f0f0f0', py: 2 }}>
                   {row.isCodeRow ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <TextField 
@@ -128,7 +128,7 @@ const DeductiblesTable = ({
                     value={row.individual}
                     onChange={(e) => handleDeductibleChange(index, 'individual', e.target.value)}
                     InputProps={{
-                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#999' }}>$</Typography></InputAdornment>,
                     }}
                     sx={inputSx}
                   />
@@ -140,7 +140,7 @@ const DeductiblesTable = ({
                     value={row.family}
                     onChange={(e) => handleDeductibleChange(index, 'family', e.target.value)}
                     InputProps={{
-                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#999' }}>$</Typography></InputAdornment>,
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#999' }}>$</Typography></InputAdornment>,
                     }}
                     sx={inputSx}
                   />
@@ -153,7 +153,7 @@ const DeductiblesTable = ({
                     disabled
                     placeholder="Auto-calc"
                     InputProps={{
-                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.75rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>$</Typography></InputAdornment>,
                     }}
                     sx={{ ...inputSx, '& .MuiInputBase-root.Mui-disabled': { bgcolor: '#f8f9fc', color: '#aaa' } }}
                   />
@@ -175,7 +175,7 @@ const DeductiblesTable = ({
               <TableCell colSpan={7} sx={{ py: 2, borderBottom: 'none' }}>
                 <Typography 
                   onClick={() => handleAddDeductibleRow && handleAddDeductibleRow()}
-                  sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, display: 'inline-block' }}
+                  sx={{ color: '#2563eb', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, display: 'inline-block' }}
                 >
                   + Add Deductible by Procedure Code
                 </Typography>

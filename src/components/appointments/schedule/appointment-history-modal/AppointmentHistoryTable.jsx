@@ -1,5 +1,5 @@
 import React from 'react';
-import { 
+import {
   Box, 
   Table, 
   TableBody, 
@@ -12,14 +12,159 @@ import {
   Typography 
 } from '@mui/material';
 import dayjs from 'dayjs';
+import { useDropdownData } from '../../../../hooks/redux/useDropdownData';
+
+const getProviderId = (provider) => {
+  if (!provider) return "";
+  if (typeof provider === "string" || typeof provider === "number") {
+    return String(provider);
+  }
+
+  return String(
+    provider._id ||
+      provider.id ||
+      provider.providerId ||
+      provider.ProvNum ||
+      provider.userId?._id ||
+      provider.userId?.id ||
+      "",
+  );
+};
+
+const getAppointmentIdCandidates = (appointment) =>
+  [
+    appointment.id,
+    appointment._id,
+    appointment.appointmentId,
+    appointment.AptNum,
+  ].filter(Boolean);
+
+const getAppointmentRowKey = (appointment, index) =>
+  getAppointmentIdCandidates(appointment)[0] || index;
+
+const getProviderName = (provider, providers = []) => {
+  if (!provider) return "---";
+  if (typeof provider === "string" || typeof provider === "number") {
+    const matchedProvider = providers.find(
+      (item) => getProviderId(item) === String(provider),
+    );
+    return matchedProvider ? getProviderName(matchedProvider, providers) : "---";
+  }
+
+  const first =
+    provider.userId?.firstName ||
+    provider.firstName ||
+    provider.FName ||
+    provider.name ||
+    "";
+  const last =
+    provider.userId?.lastName || provider.lastName || provider.LName || "";
+  const fullName = `${first} ${last}`.trim();
+
+  return fullName || provider.providerName || provider.providerCode || "---";
+};
+
+const findProviderById = (providerId, providers = []) => {
+  if (!providerId) return null;
+  return providers.find((provider) => {
+    const ids = [
+      provider._id,
+      provider.id,
+      provider.providerId,
+      provider.ProvNum,
+      provider.userId?._id,
+      provider.userId?.id,
+    ]
+      .filter(Boolean)
+      .map(String);
+
+    return ids.includes(String(providerId));
+  });
+};
+
+const getAppointmentProvider = (appointment, providers = []) => {
+  const cf = appointment.customFields || {};
+  const provider =
+    appointment.provider ||
+    appointment.providerId ||
+    appointment.providerName ||
+    cf.providerRows?.[0]?.providerId ||
+    cf.providers?.[0]?.providerId ||
+    cf.providers?.[0] ||
+    appointment.ProvNum;
+
+  if (provider && typeof provider === "object") {
+    return getProviderName(provider, providers);
+  }
+
+  const matchedProvider = findProviderById(provider, providers);
+  if (matchedProvider) return getProviderName(matchedProvider, providers);
+  if (appointment.providerName) return appointment.providerName;
+  if (typeof provider === "string" && /[a-z]/i.test(provider)) return provider;
+
+  return "---";
+};
+
+const getVisitType = (appointment) =>
+  appointment.visitType ||
+  appointment.customFields?.visitType ||
+  appointment.workspace?.visitType ||
+  appointment.appointmentTypeName ||
+  appointment.type ||
+  "---";
+
+const formatProcedure = (procedure) => {
+  if (!procedure) return "";
+  if (typeof procedure === "string") return procedure;
+
+  return (
+    procedure.treatment ||
+    procedure.name ||
+    procedure.treatmentName ||
+    procedure.description ||
+    procedure.Descript ||
+    procedure.code ||
+    procedure.procedureCode ||
+    procedure.ProcCode ||
+    procedure.procCode ||
+    ""
+  );
+};
+
+const getProceduresText = (appointment, fetchedProcedures = []) => {
+  const cf = appointment.customFields || {};
+  const procedures =
+    (Array.isArray(fetchedProcedures) && fetchedProcedures.length > 0
+      ? fetchedProcedures
+      : null) ||
+    appointment.workspace?.procedures ||
+    cf.procedures ||
+    appointment.procedures ||
+    appointment.appointmentProcedures ||
+    appointment.procedureCodes ||
+    cf.procedureTags ||
+    appointment.tags;
+
+  if (Array.isArray(procedures)) {
+    const text = procedures.map(formatProcedure).filter(Boolean).join(", ");
+    if (text) return text;
+  }
+
+  if (procedures && typeof procedures !== "object") return String(procedures);
+
+  return appointment.chiefComplaint || appointment.note || "---";
+};
 
 const AppointmentHistoryTable = ({
   loading,
   appointments,
+  procedureMap = {},
   selected,
   handleSelectAll,
   handleSelectOne
 }) => {
+  const { providers = [] } = useDropdownData({ providers: true });
+
   return (
     <Box sx={{ flex: 1, overflow: "auto", p: 0 }}>
       {loading ? (
@@ -53,8 +198,12 @@ const AppointmentHistoryTable = ({
             <TableBody>
               {appointments.length > 0 ? (
                 appointments.map((appt, idx) => {
-                  const providerName = appt.providerId?.providerCode || appt.providerId?.firstName?.charAt(0) + appt.providerId?.lastName?.charAt(0) || "SAB";
-                  const rowId = appt._id || idx;
+                  const rowId = getAppointmentRowKey(appt, idx);
+                  const providerName = getAppointmentProvider(appt, providers);
+                  const proceduresText = getProceduresText(
+                    appt,
+                    procedureMap[rowId],
+                  );
                   return (
                     <TableRow 
                       key={rowId} 
@@ -73,9 +222,9 @@ const AppointmentHistoryTable = ({
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>{dayjs(appt.appointmentDate).format("MM/DD/YYYY")}</TableCell>
                       <TableCell>{appt.startTime ? dayjs(`2000-01-01 ${appt.startTime}`).format("hh:mm A") : dayjs(appt.appointmentDate).format("hh:mm A")}</TableCell>
-                      <TableCell>{appt.appointmentType?.name || "Recare"}</TableCell>
+                      <TableCell>{getVisitType(appt)}</TableCell>
                       <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {appt.procedures || appt.note || "---"}
+                        {proceduresText}
                       </TableCell>
                       <TableCell>{appt.duration || 60} mins</TableCell>
                       <TableCell>
