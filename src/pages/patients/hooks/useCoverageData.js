@@ -153,7 +153,7 @@ export const useCoverageData = (
                 editTarget.insuranceCompanyId?.name ||
                 "",
               insuranceType: editTarget.insuranceType || "primary",
-              planFeeGuide: editTarget.planFeeGuide || "",
+              planFeeGuide: editTarget.planFeeGuide ? String(editTarget.planFeeGuide) : "",
               coverageType: editTarget.coverageType || "ppo",
               assignmentOfBenefits:
                 parseInt(editTarget.assignmentOfBenefits) || 1,

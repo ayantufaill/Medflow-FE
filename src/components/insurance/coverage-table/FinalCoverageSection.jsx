@@ -6,19 +6,21 @@ import { COVERAGE_DATA } from '../utils/insuranceConstants';
 
 const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
   const handleDeleteCoverageItem = (itemId) => {
-    if (!coverageData || !setCoverageData) return;
+    if (!setCoverageData) return;
+    const currentData = { ...COVERAGE_DATA, ...coverageData };
     const updatedData = {};
-    Object.keys(coverageData).forEach(key => {
-      updatedData[key] = coverageData[key].filter(item => item.id !== itemId);
+    Object.keys(currentData).forEach(key => {
+      updatedData[key] = (currentData[key] || []).filter(item => item.id !== itemId);
     });
     setCoverageData(updatedData);
   };
 
   const handleChangeCoverageItem = (itemId, field, value) => {
-    if (!coverageData || !setCoverageData) return;
+    if (!setCoverageData) return;
+    const currentData = { ...COVERAGE_DATA, ...coverageData };
     const updatedData = {};
-    Object.keys(coverageData).forEach(key => {
-      updatedData[key] = coverageData[key].map(item => item.id === itemId ? { ...item, [field]: value } : item);
+    Object.keys(currentData).forEach(key => {
+      updatedData[key] = (currentData[key] || []).map(item => item.id === itemId ? { ...item, [field]: value } : item);
     });
     setCoverageData(updatedData);
   };

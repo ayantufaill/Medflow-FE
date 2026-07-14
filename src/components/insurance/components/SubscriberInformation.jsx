@@ -87,6 +87,8 @@ const SubscriberInformation = ({
               value={formData.subscriber?.name || ''}
               onChange={(e) => handleSubscriberChange('name', e.target.value)}
               disabled={formData.subscriber?.relationship === 'Self'}
+              error={!!errors.subscriberName}
+              helperText={errors.subscriberName}
             />
           </Box>
           <Box sx={{ flex: 1 }}>
@@ -95,9 +97,11 @@ const SubscriberInformation = ({
               required
               value={formData.subscriber?.subscriberId || ''}
               onChange={(e) => {
-                const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9\s-]/g, '');
                 handleSubscriberChange('subscriberId', alphanumericValue);
               }}
+              error={!!errors.subscriberId}
+              helperText={errors.subscriberId}
             />
           </Box>
         </Box>
@@ -120,6 +124,8 @@ const SubscriberInformation = ({
           InputLabelProps={{ shrink: true }}
           value={formData.subscriber?.dateOfBirth || ''}
           onChange={(e) => handleSubscriberChange('dateOfBirth', e.target.value)}
+          error={!!errors.dateOfBirth}
+          helperText={errors.dateOfBirth}
         />
       </Stack>
 

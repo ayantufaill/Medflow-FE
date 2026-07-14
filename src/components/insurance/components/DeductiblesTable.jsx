@@ -12,6 +12,46 @@ const DEFAULT_DEDUCTIBLES = [
   { id: 5, type: 'Orthodontics', lifetime: false, standard: false, individual: '', family: '', metAmount: '', metDate: '' }
 ];
 
+const formatDateInput = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+};
+
+const isValidDate = (dateStr) => {
+  if (!dateStr) return true;
+  if (dateStr.length < 10) return false;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return false;
+  const month = parseInt(parts[0], 10);
+  const day = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
+  
+  if (isNaN(month) || isNaN(day) || isNaN(year)) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  if (year < 1900 || year > 2100) return false;
+  
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+};
+
+const isInvalidDate = (dateStr) => {
+  if (!dateStr) return false;
+  if (dateStr.length === 10) return !isValidDate(dateStr);
+  
+  const parts = dateStr.split('/');
+  if (parts[0] && parseInt(parts[0], 10) > 12) return true;
+  if (parts[1] && parseInt(parts[1], 10) > 31) return true;
+  
+  return false;
+};
+
 const inputSx = {
   bgcolor: '#f8f9fc',
   borderRadius: '6px',
@@ -40,6 +80,20 @@ const DeductiblesTable = ({
 }) => {
   // Use formData.deductibles if available, otherwise use default structure
   const deductibles = formData.deductibles?.length > 0 ? formData.deductibles : DEFAULT_DEDUCTIBLES;
+
+  const handleDateChange = (e, index) => {
+    const rawValue = e.target.value;
+    const formatted = formatDateInput(rawValue);
+    handleDeductibleChange(index, 'metDate', formatted);
+
+    if (formatted.length === 10) {
+      const nextInput = document.getElementById(`metDate-input-${index + 1}`);
+      if (nextInput) {
+        nextInput.focus();
+      }
+    }
+  };
+
   return (
     <Box sx={{ 
       border: '1px solid #DFE5EC', 
@@ -160,11 +214,13 @@ const DeductiblesTable = ({
                 </TableCell>
                 <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
                   <TextField 
+                    id={`metDate-input-${index}`}
                     fullWidth
                     size="small" 
                     placeholder="mm / dd / yyyy"
                     value={row.metDate || ''}
-                    onChange={(e) => handleDeductibleChange(index, 'metDate', e.target.value)}
+                    onChange={(e) => handleDateChange(e, index)}
+                    error={isInvalidDate(row.metDate)}
                     sx={inputSx}
                   />
                 </TableCell>
