@@ -43,6 +43,16 @@ import { useSnackbar }        from '../../contexts/SnackbarContext';
 import { useDispatch } from 'react-redux';
 import { createUser } from '../../store/slices/userSlice';
 
+import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
+import personalInfoIcon from '../../assets/usermanagement icons/personalinformation.svg';
+import assignRolesIcon from '../../assets/usermanagement icons/assignroles.svg';
+
+import CardWrapper from '../../components/admin/AddUserDrawer/CardWrapper';
+import PersonalInformationForm from '../../components/admin/AddUserDrawer/PersonalInformationForm';
+import AssignRoles from '../../components/admin/AddUserDrawer/AssignRoles';
+import ProviderProfileForm from '../../components/admin/AddUserDrawer/ProviderProfileForm';
+import PatientProfileForm from '../../components/admin/AddUserDrawer/PatientProfileForm';
+
 // ─── Role mapping ─────────────────────────────────────────────────────────────
 
 const PROVIDER_ROLE_NAMES = ['dentist', 'hygienist', 'assistant'];
@@ -99,15 +109,7 @@ const getInitials = (first, last) => {
   return (f + l).toUpperCase() || '?';
 };
 
-const SectionLabel = ({ children }) => (
-  <Typography
-    variant="overline"
-    color="text.secondary"
-    sx={{ letterSpacing: 1, fontWeight: 600, display: 'block', mb: 1.5 }}
-  >
-    {children}
-  </Typography>
-);
+
 
 // ─── Default form values ──────────────────────────────────────────────────────
 
@@ -355,22 +357,30 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
           <Box sx={{
             px: 3, py: 2, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            backgroundColor: '#1a3a6b', color: '#fff',
+            backgroundColor: '#F1F5FD',
             borderBottom: 1, borderColor: 'divider',
           }}>
-            <Box>
-              <Typography variant="h6" fontWeight={600}>Add New User</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.75 }}>
-                Core fields for everyone — role-specific fields appear below
-              </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ 
+                width: 40, height: 40, borderRadius: '50%', backgroundColor: '#e2ebfc', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              }}>
+                <img src={adduserIcon} alt="Add User" style={{ width: 20, height: 20 }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px', lineHeight: '24px', letterSpacing: '-0.4px', color: '#111' }}>Add User</Typography>
+                <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: '11.5px', lineHeight: '17.25px', color: 'text.secondary' }}>
+                  Core fields for everyone-role specific fields appear below
+                </Typography>
+              </Box>
             </Box>
-            <IconButton onClick={handleClose} disabled={saving} sx={{ color: '#fff' }}>
+            <IconButton onClick={handleClose} disabled={saving} sx={{ color: 'text.secondary' }}>
               <CloseIcon />
             </IconButton>
           </Box>
 
           {/* ── Scrollable body ── */}
-          <Box ref={scrollBodyRef} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3 }}>
+          <Box ref={scrollBodyRef} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3, backgroundColor: '#f9fafb' }}>
 
             {formError && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setFormError('')}>
@@ -379,503 +389,73 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
             )}
 
             {/* Avatar preview */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-              <Avatar sx={{ width: 56, height: 56, bgcolor: '#1a3a6b', fontSize: '1.25rem', fontWeight: 700 }}>
-                {getInitials(firstName, lastName)}
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  {[firstName, lastName].filter(Boolean).join(' ') || 'New User'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">Preview</Typography>
+            <CardWrapper>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ width: 56, height: 56, bgcolor: '#2262EF', fontSize: '1.25rem', fontWeight: 700 }}>
+                  {getInitials(firstName, lastName)}
+                </Avatar>
+                <Box>
+                  <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '15.5px', lineHeight: '23.25px', color: '#111' }}>
+                    {[firstName, lastName].filter(Boolean).join(' ') || 'New User'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">Preview</Typography>
+                </Box>
               </Box>
-            </Box>
-
-            <Divider sx={{ mb: 3 }} />
+            </CardWrapper>
 
             {/* ══ SECTION 1 — Core User ══ */}
-            <SectionLabel>Core Information</SectionLabel>
-            <Grid container spacing={2}>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="First Name" fullWidth size="small"
-                  {...register('firstName', { required: 'Required', minLength: { value: 2, message: 'Min 2 chars' }, maxLength: { value: 50, message: 'Max 50 chars' } })}
-                  error={!!errors.firstName} helperText={errors.firstName?.message} />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="Last Name" fullWidth size="small"
-                  {...register('lastName', { required: 'Required', minLength: { value: 2, message: 'Min 2 chars' }, maxLength: { value: 50, message: 'Max 50 chars' } })}
-                  error={!!errors.lastName} helperText={errors.lastName?.message} />
-              </Grid>
-
-              <Grid size={12}>
-                <TextField label="Email Address" type="email" fullWidth size="small"
-                  {...register('email', { required: 'Required', pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email' } })}
-                  error={!!errors.email} helperText={errors.email?.message} />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="Password" fullWidth size="small"
-                  type={showPassword ? 'text' : 'password'}
-                  {...register('password', {
-                    required: 'Required',
-                    minLength: { value: 8, message: 'Min 8 characters' },
-                    pattern: { value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, message: 'Needs uppercase, lowercase and a number' },
-                  })}
-                  error={!!errors.password} helperText={errors.password?.message}
-                  InputProps={{ endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton size="small" tabIndex={-1} onClick={() => setShowPassword((v) => !v)}>
-                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                      </IconButton>
-                    </InputAdornment>
-                  )}} />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="Confirm Password" fullWidth size="small"
-                  type={showConfirm ? 'text' : 'password'}
-                  {...register('confirmPassword', { required: 'Required', validate: (v) => v === password || 'Passwords do not match' })}
-                  error={!!errors.confirmPassword} helperText={errors.confirmPassword?.message}
-                  InputProps={{ endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton size="small" tabIndex={-1} onClick={() => setShowConfirm((v) => !v)}>
-                        {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                      </IconButton>
-                    </InputAdornment>
-                  )}} />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="Phone" fullWidth size="small" placeholder="+1 (555) 000-0000"
-                  {...register('phone')} helperText="International format" />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Preferred Language</InputLabel>
-                  <Select label="Preferred Language" defaultValue="en" {...register('preferredLanguage')}>
-                    {LANGUAGES.map((l) => <MenuItem key={l.code} value={l.code}>{l.label}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid size={12}>
-                <Controller name="isActive" control={control} render={({ field }) => (
-                  <FormControlLabel
-                    label={<Typography variant="body2">Active account</Typography>}
-                    control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} size="small" />}
-                  />
-                )} />
-              </Grid>
-
-            </Grid>
-
-            <Divider sx={{ my: 3 }} />
+            <CardWrapper title="Personal Information" icon={personalInfoIcon}>
+              <PersonalInformationForm 
+                register={register} 
+                errors={errors} 
+                control={control} 
+                showPassword={showPassword} 
+                setShowPassword={setShowPassword} 
+                showConfirm={showConfirm} 
+                setShowConfirm={setShowConfirm} 
+                password={password} 
+                LANGUAGES={LANGUAGES} 
+              />
+            </CardWrapper>
 
             {/* ══ SECTION 2 — Role Assignment ══ */}
-            <SectionLabel>Assign Role</SectionLabel>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
-              Dentist / Hygienist / Assistant → provider fields.&nbsp; Patient → patient profile fields.
-            </Typography>
-
-            {roles.length === 0 ? (
-              <Alert severity="info">No roles available</Alert>
-            ) : (
-              <Stack direction="row" flexWrap="wrap" gap={1}>
-                {roles.map((role) => {
-                  const id       = role._id || role.id;
-                  const selected = selectedRoleIds.includes(id);
-                  return (
-                    <Chip
-                      key={id}
-                      label={role.name}
-                      onClick={() => toggleRole(id)}
-                      color={selected ? 'primary' : 'default'}
-                      variant={selected ? 'filled' : 'outlined'}
-                      icon={selected ? <CheckCircleIcon /> : undefined}
-                      disabled={saving}
-                      sx={{ cursor: 'pointer' }}
-                    />
-                  );
-                })}
-              </Stack>
-            )}
+            <CardWrapper title="Assign Roles" icon={assignRolesIcon}>
+              <AssignRoles 
+                roles={roles} 
+                selectedRoleIds={selectedRoleIds} 
+                toggleRole={toggleRole} 
+                saving={saving} 
+              />
+            </CardWrapper>
 
             {/* ══ SECTION 3 — Provider Profile ══ */}
             {showProviderSection && (
               <Box ref={providerSectionRef}>
-                <Divider sx={{ my: 3 }} />
-                <SectionLabel>Provider Profile</SectionLabel>
-                <Grid container spacing={2}>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="NPI Number" fullWidth size="small" placeholder="National Provider ID"
-                      {...register('npiNumber')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="License Number" fullWidth size="small" placeholder="State license"
-                      {...register('licenseNumber')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Title</InputLabel>
-                      <Select label="Title" defaultValue="" {...register('providerTitle')}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {PROVIDER_TITLES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Specialty" fullWidth size="small" placeholder="e.g. General Dentistry"
-                      {...register('specialty')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Buffer (mins)" fullWidth size="small" type="number"
-                      inputProps={{ min: 0 }} helperText="Appointment buffer"
-                      {...register('appointmentBufferMinutes', { min: 0 })} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Max Daily Appts" fullWidth size="small" type="number"
-                      inputProps={{ min: 0 }}
-                      {...register('maxDailyAppointments', { min: 0 })} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Consultation Fee ($)" fullWidth size="small" type="number"
-                      inputProps={{ min: 0, step: '0.01' }}
-                      {...register('consultationFee', { min: 0 })} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Controller name="isAcceptingNewPatients" control={control} render={({ field }) => (
-                      <FormControlLabel
-                        label={<Typography variant="body2">Accepting new patients</Typography>}
-                        control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} size="small" />}
-                      />
-                    )} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Controller name="telehealthEnabled" control={control} render={({ field }) => (
-                      <FormControlLabel
-                        label={<Typography variant="body2">Telehealth enabled</Typography>}
-                        control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} size="small" />}
-                      />
-                    )} />
-                  </Grid>
-
-                </Grid>
-
-                {/* Working Hours / Schedule */}
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mt: 3, mb: 1 }}>
-                  Working Hours
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
-                  Toggle a day off to mark it as unavailable. Mon–Fri default to 9 AM – 5 PM.
-                </Typography>
-
-                <Paper variant="outlined" sx={{ borderRadius: 1, overflow: 'hidden' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', width: 110 }}>Day</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', width: 80 }}>Available</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Start</TableCell>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>End</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {workingHours.map((row) => (
-                        <TableRow key={row.dayOfWeek} sx={{ '&:last-child td': { border: 0 } }}>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={row.isAvailable ? 600 : 400} color={row.isAvailable ? 'text.primary' : 'text.disabled'}>
-                              {row.label}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              size="small"
-                              checked={row.isAvailable}
-                              onChange={(e) => updateDay(row.dayOfWeek, 'isAvailable', e.target.checked)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {row.isAvailable ? (
-                              <TimePicker
-                                value={row.startTime}
-                                onChange={(v) => updateDay(row.dayOfWeek, 'startTime', v)}
-                                slotProps={{ textField: { size: 'small', sx: { width: 130 } } }}
-                              />
-                            ) : (
-                              <Typography variant="caption" color="text.disabled">—</Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {row.isAvailable ? (
-                              <TimePicker
-                                value={row.endTime}
-                                onChange={(v) => updateDay(row.dayOfWeek, 'endTime', v)}
-                                slotProps={{ textField: { size: 'small', sx: { width: 130 } } }}
-                              />
-                            ) : (
-                              <Typography variant="caption" color="text.disabled">—</Typography>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </Paper>
+              <CardWrapper title="Provider Profile">
+                <ProviderProfileForm 
+                  register={register} 
+                  control={control} 
+                  workingHours={workingHours} 
+                  updateDay={updateDay} 
+                  PROVIDER_TITLES={PROVIDER_TITLES} 
+                />
+              </CardWrapper>
               </Box>
             )}
-
             {/* ══ SECTIONS 4–7 — Patient Profile ══ */}
             {showPatientSection && (
               <Box ref={patientSectionRef}>
-
-                {/* 4. Demographics */}
-                <Divider sx={{ my: 3 }} />
-                <SectionLabel>Patient — Demographics</SectionLabel>
-                <Grid container spacing={2}>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Title</InputLabel>
-                      <Select label="Title" defaultValue="" {...register('patientTitle')}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {PATIENT_TITLES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Middle Initial" fullWidth size="small"
-                      inputProps={{ maxLength: 1 }} {...register('middleInitial')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Preferred Name" fullWidth size="small"
-                      {...register('preferredName')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Controller name="dateOfBirth" control={control} render={({ field }) => (
-                      <DatePicker label="Date of Birth" value={field.value} onChange={field.onChange}
-                        disableFuture slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-                    )} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Gender</InputLabel>
-                      <Select label="Gender" defaultValue="" {...register('gender')}>
-                        <MenuItem value=""><em>Prefer not to say</em></MenuItem>
-                        {GENDERS.map((g) => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Sex at Birth" fullWidth size="small" {...register('sexAtBirth')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Gender Identity" fullWidth size="small" {...register('genderIdentity')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Marital Status</InputLabel>
-                      <Select label="Marital Status" defaultValue="" {...register('maritalStatus')}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {MARITAL_STATUSES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="SSN" fullWidth size="small" placeholder="XXX-XX-XXXX"
-                      {...register('ssn')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Occupation" fullWidth size="small" {...register('occupation')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Employer" fullWidth size="small" {...register('employer')} />
-                  </Grid>
-
-                </Grid>
-
-                {/* 5. Contact */}
-                <Divider sx={{ my: 3 }} />
-                <SectionLabel>Patient — Contact</SectionLabel>
-                <Grid container spacing={2}>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Mobile Phone" fullWidth size="small"
-                      placeholder="+1 (555) 000-0000" {...register('mobilePhone')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Home Phone" fullWidth size="small" {...register('homePhone')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Work Phone" fullWidth size="small" {...register('workPhone')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Preferred Contact Method</InputLabel>
-                      <Select label="Preferred Contact Method" defaultValue=""
-                        {...register('preferredContactMethod')}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {CONTACT_METHODS.map((m) => <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                </Grid>
-
-                {/* 6. Address */}
-                <Divider sx={{ my: 3 }} />
-                <SectionLabel>Patient — Address</SectionLabel>
-                <Grid container spacing={2}>
-
-                  <Grid size={12}>
-                    <TextField label="Address Line 1" fullWidth size="small" {...register('address')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Address Line 2" fullWidth size="small" {...register('address2')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="City" fullWidth size="small" {...register('city')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <TextField label="State" fullWidth size="small" {...register('state')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <TextField label="ZIP" fullWidth size="small" {...register('zip')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Country" fullWidth size="small" {...register('country')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <Typography variant="caption" color="text.secondary">Work Address (optional)</Typography>
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Work Line 1" fullWidth size="small" {...register('workAddress.line1')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Work Line 2" fullWidth size="small" {...register('workAddress.line2')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Work City" fullWidth size="small" {...register('workAddress.city')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <TextField label="Work State" fullWidth size="small" {...register('workAddress.state')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <TextField label="Postal Code" fullWidth size="small" {...register('workAddress.postalCode')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Work Country" fullWidth size="small" {...register('workAddress.country')} />
-                  </Grid>
-
-                </Grid>
-
-                {/* 7. Clinical / Admin */}
-                <Divider sx={{ my: 3 }} />
-                <SectionLabel>Patient — Clinical / Admin</SectionLabel>
-                <Grid container spacing={2}>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Chart Number" fullWidth size="small" {...register('chartNumber')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Medicaid ID" fullWidth size="small" {...register('medicaidId')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Preferred Dentist ID" fullWidth size="small" {...register('preferredDentistId')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Preferred Hygienist ID" fullWidth size="small" {...register('preferredHygienistId')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Referral Source" fullWidth size="small" {...register('referralSource')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Patient Profile Type</InputLabel>
-                      <Select label="Patient Profile Type" defaultValue="" {...register('patientProfileType')}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {PROFILE_TYPES.map((t) => (
-                          <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>{t}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={12}>
-                    <TextField label="Patient Flags" fullWidth size="small"
-                      placeholder="e.g. VIP, Allergy, Special needs"
-                      helperText="Comma-separated"
-                      {...register('patientFlags')} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <Controller name="portalAccessEnabled" control={control} render={({ field }) => (
-                      <FormControlLabel
-                        label={<Typography variant="body2">Portal access enabled</Typography>}
-                        control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} size="small" />}
-                      />
-                    )} />
-                  </Grid>
-
-                  <Grid size={12}>
-                    <Typography variant="caption" color="text.secondary">Emergency Contact (optional)</Typography>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Name" fullWidth size="small" {...register('emergencyContact.name')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Relationship" fullWidth size="small" {...register('emergencyContact.relationship')} />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField label="Phone" fullWidth size="small" {...register('emergencyContact.phone')} />
-                  </Grid>
-
-                </Grid>
-
+              <CardWrapper title="Patient Profile">
+                <PatientProfileForm 
+                  register={register} 
+                  control={control} 
+                  PATIENT_TITLES={PATIENT_TITLES} 
+                  GENDERS={GENDERS} 
+                  MARITAL_STATUSES={MARITAL_STATUSES} 
+                  CONTACT_METHODS={CONTACT_METHODS} 
+                  PROFILE_TYPES={PROFILE_TYPES} 
+                />
+              </CardWrapper>
               </Box>
             )}
 
@@ -886,17 +466,17 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
             px: 3, py: 2, flexShrink: 0,
             borderTop: 1, borderColor: 'divider',
             display: 'flex', justifyContent: 'flex-end', gap: 1.5,
-            backgroundColor: 'background.paper',
+            backgroundColor: '#F0F4F9',
           }}>
-            <Button variant="outlined" onClick={handleClose} disabled={saving}>Cancel</Button>
+            <Button variant="outlined" onClick={handleClose} disabled={saving} sx={{ borderRadius: 2, borderColor: '#d1d5db', color: '#4b5563', '&:hover': { borderColor: '#9ca3af', backgroundColor: 'transparent' } }}>Cancel</Button>
             <Button
               type="submit"
               variant="contained"
               disabled={saving || selectedRoleIds.length === 0}
               startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
-              sx={{ backgroundColor: '#1a3a6b', '&:hover': { backgroundColor: '#142d54' } }}
+              sx={{ backgroundColor: '#2262EF', borderRadius: 2, '&:hover': { backgroundColor: '#1d4ed8' }, boxShadow: 'none' }}
             >
-              {saving ? 'Creating...' : 'Create User'}
+              Save
             </Button>
           </Box>
 

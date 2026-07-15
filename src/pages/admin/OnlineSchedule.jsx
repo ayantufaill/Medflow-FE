@@ -29,7 +29,7 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 const deepMerge = (target, source) => {
   if (typeof target !== 'object' || target === null) return source;
   if (typeof source !== 'object' || source === null) return source;
-  
+
   const output = { ...target };
   Object.keys(source).forEach(key => {
     if (source[key] instanceof Array) {
@@ -57,9 +57,9 @@ const defaultSettings = {
 };
 
 const appointmentTypes = [
-  'Exam', 'Emergency', 'Cleaning', 'Treatment', 'Other', 
-  'Online Consult', 'Custom1', 'Custom2', 'Custom3', 
-  'Custom4', 'Custom5', 'Custom6', 'Custom7', 
+  'Exam', 'Emergency', 'Cleaning', 'Treatment', 'Other',
+  'Online Consult', 'Custom1', 'Custom2', 'Custom3',
+  'Custom4', 'Custom5', 'Custom6', 'Custom7',
   'Custom8', 'Custom9', 'Custom10'
 ];
 
@@ -106,7 +106,7 @@ const OnlineScheduleConfiguration = () => {
       const isEnabled = prev.enabledAppointmentTypes.includes(type);
       return {
         ...prev,
-        enabledAppointmentTypes: isEnabled 
+        enabledAppointmentTypes: isEnabled
           ? prev.enabledAppointmentTypes.filter(t => t !== type)
           : [...prev.enabledAppointmentTypes, type]
       };
@@ -131,7 +131,7 @@ const OnlineScheduleConfiguration = () => {
         })).unwrap();
         id = newPractice._id || newPractice.id;
       }
-      
+
       await dispatch(updateOnlineSchedule({
         practiceInfoId: id,
         onlineScheduleData: settings
@@ -177,9 +177,9 @@ const OnlineScheduleConfiguration = () => {
           <Typography variant="caption" color="textSecondary">{'>'}</Typography>
           <Typography variant="caption" color="textSecondary">Online Schedule</Typography>
         </Box>
-        <Button 
-          variant="contained" 
-          color="success" 
+        <Button
+          variant="contained"
+          color="success"
           startIcon={<SaveIcon />}
           onClick={handleSave}
           sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
@@ -191,81 +191,81 @@ const OnlineScheduleConfiguration = () => {
       {/* --- 1. SCHEDULING DETAILS --- */}
       <Box>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>1. Scheduling Details</Typography>
-        <FormControlLabel 
+        <FormControlLabel
           control={
-            <Checkbox 
-              size="small" 
+            <Checkbox
+              size="small"
               checked={settings.enableOnlineScheduling}
               onChange={(e) => handleChange('enableOnlineScheduling', e.target.checked)}
             />
-          } 
-          label={<Typography variant="body2" fontWeight={500}>Enable online scheduling</Typography>} 
-          sx={{ mb: 1, display: 'flex', alignItems: 'center' }} 
+          }
+          label={<Typography variant="body2" fontWeight={500}>Enable online scheduling</Typography>}
+          sx={{ mb: 1, display: 'flex', alignItems: 'center' }}
         />
 
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Typography variant="body2">Do not allow patients to book less than:</Typography>
-          <TextField 
-            variant="standard" 
-            value={settings.bookLessThanHours} 
+          <TextField
+            variant="standard"
+            value={settings.bookLessThanHours}
             onChange={(e) => handleChange('bookLessThanHours', e.target.value)}
-            sx={{ width: 35, input: { textAlign: 'center' } }} 
+            sx={{ width: 35, input: { textAlign: 'center' } }}
           />
           <Typography variant="body2">Hours before an appointment</Typography>
         </Box>
 
         <Box display="flex" alignItems="center" gap={1} mb={3}>
           <Typography variant="body2">Do not allow patients to book appointments more than:</Typography>
-          <TextField 
-            variant="standard" 
-            value={settings.bookMoreThanDays} 
+          <TextField
+            variant="standard"
+            value={settings.bookMoreThanDays}
             onChange={(e) => handleChange('bookMoreThanDays', e.target.value)}
-            sx={{ width: 35, input: { textAlign: 'center' } }} 
+            sx={{ width: 35, input: { textAlign: 'center' } }}
           />
           <Typography variant="body2">Days in advance</Typography>
         </Box>
 
         <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Card on File</Typography>
-        <FormControlLabel 
+        <FormControlLabel
           control={
-            <Checkbox 
-              size="small" 
+            <Checkbox
+              size="small"
               checked={settings.requireCreditCard}
               onChange={(e) => handleChange('requireCreditCard', e.target.checked)}
             />
-          } 
-          label={<Typography variant="body2">Require Credit Card for New Patients (for Online Booking)</Typography>} 
-          sx={{ mb: 3, display: 'flex', alignItems: 'center' }} 
+          }
+          label={<Typography variant="body2">Require Credit Card for New Patients (for Online Booking)</Typography>}
+          sx={{ mb: 3, display: 'flex', alignItems: 'center' }}
         />
 
         <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Rules & Restrictions:</Typography>
         {settings.rules.map((rule, i) => (
           <Box key={i} sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            <FormControlLabel 
+            <FormControlLabel
               control={
-                <Checkbox 
-                  size="small" 
+                <Checkbox
+                  size="small"
                   checked={rule.enabled}
                   onChange={(e) => handleRuleChange(i, 'enabled', e.target.checked)}
                 />
-              } 
-              label={<Typography variant="caption" fontWeight="bold">Show Rule</Typography>} 
-              sx={{ mt: 0.5 }} 
+              }
+              label={<Typography variant="caption" fontWeight="bold">Show Rule</Typography>}
+              sx={{ mt: 0.5 }}
             />
             <Box flex={1}>
               <Box display="flex" alignItems="center" gap={2} mb={1}>
                 <Typography variant="caption" sx={{ width: 40 }}>Title</Typography>
-                <TextField 
-                  fullWidth size="small" 
-                  value={rule.title} 
+                <TextField
+                  fullWidth size="small"
+                  value={rule.title}
                   onChange={(e) => handleRuleChange(i, 'title', e.target.value)}
                 />
               </Box>
               <Box display="flex" alignItems="flex-start" gap={2}>
                 <Typography variant="caption" sx={{ width: 40, mt: 1 }}>Body</Typography>
-                <TextField 
-                  fullWidth multiline rows={2} size="small" 
-                  value={rule.body} 
+                <TextField
+                  fullWidth multiline rows={2} size="small"
+                  value={rule.body}
                   onChange={(e) => handleRuleChange(i, 'body', e.target.value)}
                 />
               </Box>
@@ -281,17 +281,17 @@ const OnlineScheduleConfiguration = () => {
           <Grid item xs={6}>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {appointmentTypes.slice(0, 8).map((type) => (
-                <FormControlLabel 
+                <FormControlLabel
                   key={type}
                   control={
-                    <Checkbox 
-                      size="small" 
+                    <Checkbox
+                      size="small"
                       checked={settings.enabledAppointmentTypes.includes(type)}
                       onChange={() => handleApptTypeToggle(type)}
                     />
-                  } 
-                  label={<Typography variant="body2">{type}</Typography>} 
-                  sx={{ my: -0.2 }} 
+                  }
+                  label={<Typography variant="body2">{type}</Typography>}
+                  sx={{ my: -0.2 }}
                 />
               ))}
             </Box>
@@ -299,17 +299,17 @@ const OnlineScheduleConfiguration = () => {
           <Grid item xs={6}>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {appointmentTypes.slice(8).map((type) => (
-                <FormControlLabel 
+                <FormControlLabel
                   key={type}
                   control={
-                    <Checkbox 
-                      size="small" 
+                    <Checkbox
+                      size="small"
                       checked={settings.enabledAppointmentTypes.includes(type)}
                       onChange={() => handleApptTypeToggle(type)}
                     />
-                  } 
-                  label={<Typography variant="body2">{type}</Typography>} 
-                  sx={{ my: -0.2 }} 
+                  }
+                  label={<Typography variant="body2">{type}</Typography>}
+                  sx={{ my: -0.2 }}
                 />
               ))}
             </Box>
@@ -328,24 +328,24 @@ const OnlineScheduleConfiguration = () => {
             <Tab label="Active Providers" sx={{ textTransform: 'none', fontWeight: 'bold' }} />
           </Tabs>
 
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>In Office Providers:</Typography>
+          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>InOffice Providers:</Typography>
 
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} gap={2}>
             <Box display="flex" gap={1} flex={1}>
-              <TextField 
-                placeholder="Search by provider name" 
-                size="small" 
+              <TextField
+                placeholder="Search by provider name"
+                size="small"
                 value={providerSearch}
                 onChange={(e) => setProviderSearch(e.target.value)}
-                sx={{ width: 250 }} 
-                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }} 
+                sx={{ width: 250 }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
               />
-              <TextField 
-                select 
+              <TextField
+                select
                 value={providerSpecialty}
                 onChange={(e) => setProviderSpecialty(e.target.value)}
-                size="small" 
-                sx={{ width: 200 }} 
+                size="small"
+                sx={{ width: 200 }}
                 SelectProps={{ displayEmpty: true }}
               >
                 <MenuItem value="">Filter by Specialty</MenuItem>
@@ -357,7 +357,7 @@ const OnlineScheduleConfiguration = () => {
             <Box display="flex" alignItems="center" gap={1.5}>
               <Box display="flex" alignItems="center">
                 <Checkbox size="small" />
-                <Typography variant="caption" color="textSecondary" sx={{ lineHeight: 1.1 }}>Drag and drop table<br/>rows to reorder</Typography>
+                <Typography variant="caption" color="textSecondary" sx={{ lineHeight: 1.1 }}>Drag and drop table<br />rows to reorder</Typography>
               </Box>
               <Button variant="contained" sx={{ bgcolor: '#003366', textTransform: 'none', borderRadius: 5, px: 3 }}>Add Provider +</Button>
               <Button variant="contained" sx={{ bgcolor: '#e0e0e0', color: 'text.primary', textTransform: 'none', borderRadius: 5, '&:hover': { bgcolor: '#d5d5d5' } }}>Reset Providers Order</Button>
@@ -378,37 +378,37 @@ const OnlineScheduleConfiguration = () => {
                   .filter(p => {
                     const name = p.userId ? `${p.userId.firstName || ''} ${p.userId.lastName || ''}` : `${p.firstName || ''} ${p.lastName || ''}`;
                     const specialty = p.specialty?.length ? p.specialty.join(', ') : '';
-                    
+
                     const matchesSearch = name.toLowerCase().includes(providerSearch.toLowerCase());
                     const matchesSpecialty = !providerSpecialty || specialty.includes(providerSpecialty);
-                    
+
                     return matchesSearch && matchesSpecialty;
                   })
                   .map((p, i) => {
-                  const name = p.userId ? `${p.userId.firstName || ''} ${p.userId.lastName || ''}` : `${p.firstName || ''} ${p.lastName || ''}`;
-                  const specialty = p.specialty?.length ? p.specialty.join(', ') : '';
-                  const type = p.providerClass || 'Dentist';
-                  const email = p.userId?.email || p.email || '';
-                  const phone = p.phone || '';
-                  const tax = p.npiNumber || '';
-                  const license = p.licenseNumber || '';
+                    const name = p.userId ? `${p.userId.firstName || ''} ${p.userId.lastName || ''}` : `${p.firstName || ''} ${p.lastName || ''}`;
+                    const specialty = p.specialty?.length ? p.specialty.join(', ') : '';
+                    const type = p.providerClass || 'Dentist';
+                    const email = p.userId?.email || p.email || '';
+                    const phone = p.phone || '';
+                    const tax = p.npiNumber || '';
+                    const license = p.licenseNumber || '';
 
-                  return (
-                    <TableRow key={p._id || i}>
-                      <TableCell sx={{ color: '#1976d2', fontSize: '0.8rem', fontWeight: 500 }}>{name}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem' }}>{specialty}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem' }}>{type}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem' }}>{email}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem' }}>{phone}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem' }}>{tax}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem' }}>{license}</TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small"><VisibilityIcon fontSize="inherit" /></IconButton>
-                        <IconButton size="small"><EditIcon fontSize="inherit" /></IconButton>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    return (
+                      <TableRow key={p._id || i}>
+                        <TableCell sx={{ color: '#1976d2', fontSize: '0.8rem', fontWeight: 500 }}>{name}</TableCell>
+                        <TableCell sx={{ fontSize: '0.8rem' }}>{specialty}</TableCell>
+                        <TableCell sx={{ fontSize: '0.8rem' }}>{type}</TableCell>
+                        <TableCell sx={{ fontSize: '0.8rem' }}>{email}</TableCell>
+                        <TableCell sx={{ fontSize: '0.8rem' }}>{phone}</TableCell>
+                        <TableCell sx={{ fontSize: '0.8rem' }}>{tax}</TableCell>
+                        <TableCell sx={{ fontSize: '0.8rem' }}>{license}</TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small"><VisibilityIcon fontSize="inherit" /></IconButton>
+                          <IconButton size="small"><EditIcon fontSize="inherit" /></IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -423,9 +423,9 @@ const OnlineScheduleConfiguration = () => {
             <Typography variant="h6" fontSize="1rem" fontWeight="bold">Operatories</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
               <Button variant="contained" sx={{ bgcolor: '#003366', textTransform: 'none', borderRadius: 5 }}>Add Operatory</Button>
-              <FormControlLabel 
-                control={<Checkbox size="small" sx={{ p: 0.5 }} />} 
-                label={<Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Show Deleted Operatories</Typography>} 
+              <FormControlLabel
+                control={<Checkbox size="small" sx={{ p: 0.5 }} />}
+                label={<Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Show Deleted Operatories</Typography>}
                 sx={{ mr: 0 }}
               />
             </Box>
