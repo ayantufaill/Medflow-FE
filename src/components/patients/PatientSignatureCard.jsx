@@ -13,7 +13,7 @@ const PatientSignatureCard = ({ value, onChange, reviewedWithPatient }) => (
     <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mb: 1 }}>
       Patient / Guardian Signature
     </Typography>
-    <SignaturePad width={228} height={72} value={value} onChange={onChange} showClearButton={!reviewedWithPatient} />
+    <SignaturePad width={228} height={72} value={value} onChange={onChange} showClearButton={true} />
     {reviewedWithPatient && (
       <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, fontWeight: fontWeight.medium, color: COLORS.STATUS_SUCCESS, mt: 1 }}>
         ✓ Reviewed with patient

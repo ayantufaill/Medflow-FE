@@ -29,6 +29,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
+import apiClient from '../../config/api';
 import { useInsuranceCatalog } from '../../hooks/redux/useInsuranceCatalog';
 import InsuranceDialog from '../insurance/components/InsuranceDialog';
 import ImportedCoverageModal from '../insurance/components/ImportedCoverageModal';
@@ -38,7 +39,21 @@ import ConfirmationDialog from '../shared/ConfirmationDialog';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
-const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate }) => {
+const CoverageRow = ({ 
+  ins, 
+  companies, 
+  getInsuranceCompanyName, 
+  handleViewPlan, 
+  handleInsuranceEdit, 
+  handleInsuranceDeactivate, 
+  isInactive, 
+  handleInsuranceActivate,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+  patient
+}) => {
   const [expanded, setExpanded] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
   const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
@@ -54,95 +69,116 @@ const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, 
   const address = company?.address ? `${company.address.street || ''} ${company.address.city || ''}, ${company.address.state || ''} ${company.address.zipCode || ''}` : '-';
 
   return (
-    <Paper variant="outlined" sx={{ borderColor: '#b0c4de', borderRadius: '6px', overflow: 'hidden' }}>
-      <Box sx={{ py: 0.8, px: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ p: 0.2, color: '#5c6b89' }}>
+    <Paper variant="outlined" sx={{ borderColor: COLORS.BORDER, borderRadius: radius.xl, overflow: 'hidden' }}>
+      <Box sx={{ py: 1.5, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ p: 0.2, color: COLORS.TEXT_MUTED }}>
             {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
           </IconButton>
-          <Typography sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.8125rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <Box component="span" sx={{ color: '#4a6da7' }}>{(ins.insuranceType || 'Primary').charAt(0).toUpperCase() + (ins.insuranceType || 'primary').slice(1)}:</Box>{' '}
-            <Box component="span" sx={{ fontWeight: 600, color: '#333' }}>{ins.employerName || ins.planName?.split(' by ')[0] || companyName}</Box>{' '}
-            <Box component="span" sx={{ color: '#5c6b89' }}>by {companyName}</Box>
+          <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Box component="span" sx={{ color: COLORS.ACCENT }}>{(ins.insuranceType || 'Primary').charAt(0).toUpperCase() + (ins.insuranceType || 'primary').slice(1)}:</Box>{' '}
+            <Box component="span" sx={{ fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>{ins.employerName || ins.planName?.split(' by ')[0] || companyName}</Box>{' '}
+            <Box component="span" sx={{ color: COLORS.TEXT_MUTED }}>by {companyName}</Box>
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
-          <Typography sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-            <Box component="span" sx={{ color: '#5c6b89' }}>Used up-to-date: </Box>
-            <Box component="span" sx={{ color: '#4a6da7', fontWeight: 600 }}>${Number(usedAmount).toFixed(2)} / ${Number(maxAmount).toFixed(2)}</Box>
+          <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, whiteSpace: 'nowrap' }}>
+            <Box component="span" sx={{ color: COLORS.TEXT_MUTED }}>Used up-to-date: </Box>
+            <Box component="span" sx={{ color: COLORS.ACCENT, fontWeight: fontWeight.semibold }}>${Number(usedAmount).toFixed(2)} / ${Number(maxAmount).toFixed(2)}</Box>
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {isInactive ? (
-            <Button size="small" variant="contained" color="success" onClick={() => handleInsuranceActivate(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1 }}>Activate</Button>
+            <Button size="small" variant="contained" onClick={() => handleInsuranceActivate(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 }, boxShadow: 'none' }}>Activate</Button>
           ) : (
             <>
-              <Button size="small" variant="contained" onClick={() => handleViewPlan(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#4a6da7', '&:hover': { bgcolor: '#3b588c' } }}>View Plan</Button>
-              <Button size="small" variant="contained" onClick={() => handleInsuranceEdit(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#4a6da7', '&:hover': { bgcolor: '#3b588c' } }}>Edit Policy</Button>
-              <Button size="small" variant="contained" color="error" onClick={() => handleInsuranceDeactivate(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#e55353', '&:hover': { bgcolor: '#c94141' } }}>Deactivate</Button>
+              <Button size="small" variant="contained" onClick={() => handleViewPlan(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: 'none' }}>View Plan</Button>
+              <Button size="small" variant="contained" onClick={() => handleInsuranceEdit(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: 'none' }}>Edit Policy</Button>
+              <Button size="small" variant="contained" onClick={() => handleInsuranceDeactivate(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.STATUS_ERROR, '&:hover': { backgroundColor: COLORS.STATUS_ERROR, opacity: 0.9 }, boxShadow: 'none' }}>Deactivate</Button>
             </>
           )}
-          <Box sx={{ display: 'flex', flexDirection: 'column', color: '#5c6b89', ml: 0.5, cursor: 'pointer' }}>
-            <KeyboardArrowUpIcon sx={{ fontSize: '0.85rem', mb: -0.5 }} />
-            <KeyboardArrowDownIcon sx={{ fontSize: '0.85rem' }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', color: COLORS.TEXT_MUTED, ml: 0.5 }}>
+            <KeyboardArrowUpIcon 
+              onClick={isFirst ? undefined : onMoveUp}
+              sx={{ 
+                fontSize: '1.25rem', 
+                mb: -0.5, 
+                cursor: isFirst ? 'default' : 'pointer',
+                opacity: isFirst ? 0.3 : 1,
+                '&:hover': { color: isFirst ? undefined : COLORS.TEXT_PRIMARY }
+              }} 
+            />
+            <KeyboardArrowDownIcon 
+              onClick={isLast ? undefined : onMoveDown}
+              sx={{ 
+                fontSize: '1.25rem', 
+                cursor: isLast ? 'default' : 'pointer',
+                opacity: isLast ? 0.3 : 1,
+                '&:hover': { color: isLast ? undefined : COLORS.TEXT_PRIMARY }
+              }} 
+            />
           </Box>
         </Box>
       </Box>
       <Collapse in={expanded} timeout="auto" unmountOnExit>
-        <Box sx={{ p: 2, pt: 0, borderTop: '1px solid #f0f0f0', bgcolor: '#fafafa' }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, gap: 4, mt: 0 }}>
+        <Box sx={{ p: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_CARD }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, gap: 4 }}>
             <Box sx={{ width: 340, justifySelf: 'start' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Name:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{companyName}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer Name:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{companyName}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer ID:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{payerId}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer ID:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{payerId}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Group Name:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.groupName || ins.planName || '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Group Name:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.groupName || ins.planName || '-'}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Group Number:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.groupNumber || '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Group Number:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.groupNumber || '-'}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Notes:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.notes || ''}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Notes:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.notes || ''}</Typography>
               </Box>
             </Box>
             <Box sx={{ width: 340, justifySelf: 'center' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Patient's Relationship to Subscriber:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.relationshipToPatient || 'Self'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Patient's Relationship to Subscriber:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.relationshipToPatient || 'Self'}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Subscriber's Name:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.subscriberName || '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's Name:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>
+                  {ins.subscriberName || ((!ins.relationshipToPatient || ins.relationshipToPatient.toLowerCase() === 'self') && patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : '-')}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Subscriber's Birthday:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.subscriberDateOfBirth ? dayjs(ins.subscriberDateOfBirth).format('MM/DD/YYYY') : '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's Birthday:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>
+                  {ins.subscriberDateOfBirth ? dayjs(ins.subscriberDateOfBirth).format('MM/DD/YYYY') : (((!ins.relationshipToPatient || ins.relationshipToPatient.toLowerCase() === 'self') && patient?.dateOfBirth) ? dayjs(patient.dateOfBirth).format('MM/DD/YYYY') : '-')}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Subscriber's ID:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.subscriberId || ins.policyNumber || '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's ID:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.subscriberId || ins.policyNumber || '-'}</Typography>
               </Box>
             </Box>
             <Box sx={{ width: 340, justifySelf: 'end' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Employer Name:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{ins.employerName || '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Employer Name:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.employerName || '-'}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Address:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#333', fontWeight: 500, textAlign: 'right' }}>{address}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer Address:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{address}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Payer Contact Info:</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 500, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer Contact Info:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.ACCENT, fontWeight: fontWeight.medium, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}>
                   {ins.payerContactInfo || 'View Contact Info'}
                 </Typography>
               </Box>
@@ -154,9 +190,14 @@ const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, 
   );
 };
 
-export default function PatientInsuranceTabContent({ patientId }) {
+export default function PatientInsuranceTabContent({ patientId, patient }) {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+
+  const patientName = patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "Patient";
+  const dobText = patient?.dateOfBirth 
+    ? `DOB: ${dayjs(patient.dateOfBirth).format('MMM D, YYYY')}`
+    : "DOB: N/A";
   const {
     insurances,
     fetch: fetchInsurances,
@@ -182,6 +223,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
   const [viewCoverageModal, setViewCoverageModal] = useState({ open: false, insurance: null });
   const [creatingPolicy, setCreatingPolicy] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [localInsurances, setLocalInsurances] = useState([]);
 
   const fetchInsurancesAndCompanies = async () => {
     try {
@@ -199,9 +241,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
   }, [patientId]);
 
   useEffect(() => {
-    console.log('InsuranceDialog state:', insuranceDialog);
-    console.log('patientId:', patientId);
-  }, [insuranceDialog, patientId]);
+    setLocalInsurances(insurances || []);
+  }, [insurances]);
 
   const getInsuranceCompanyName = (insuranceCompanyId) => {
     if (insuranceCompanyId && typeof insuranceCompanyId === 'object') {
@@ -214,12 +255,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
     return 'Unknown';
   };
 
-  const displayInsurances = insurances;
+  const displayInsurances = localInsurances;
   const hasActiveCoverage = displayInsurances.some((i) => i.isActive);
-  const inactiveInsurances = insurances.filter((i) => !i.isActive);
+  const inactiveInsurances = localInsurances.filter((i) => !i.isActive);
 
   const handleInsuranceAdd = () => {
-    console.log('Navigating to Add Coverage page...', patientId);
     navigate(`/patients/${patientId}/insurance/new`);
   };
   const handleInsuranceEdit = (insurance) => {
@@ -251,6 +291,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate', 'error');
     }
   };
+
   const handleInsuranceMenuOpen = (event, insurance) => setInsuranceMenu({ anchorEl: event.currentTarget, insurance });
   const handleInsuranceMenuClose = () => setInsuranceMenu((prev) => ({ ...prev, anchorEl: null }));
   const handleInsuranceMenuExited = () => setInsuranceMenu({ anchorEl: null, insurance: null });
@@ -313,9 +354,119 @@ export default function PatientInsuranceTabContent({ patientId }) {
     }
   };
 
+  const handleReorder = async (ins1, ins2, activeArray) => {
+    // Optimistic UI Update
+    const newLocalInsurances = [...localInsurances];
+    const localIdx1 = newLocalInsurances.findIndex(i => (i.id || i._id) === (ins1.id || ins1._id));
+    const localIdx2 = newLocalInsurances.findIndex(i => (i.id || i._id) === (ins2.id || ins2._id));
+    
+    if (localIdx1 !== -1 && localIdx2 !== -1) {
+      [newLocalInsurances[localIdx1], newLocalInsurances[localIdx2]] = [newLocalInsurances[localIdx2], newLocalInsurances[localIdx1]];
+      setLocalInsurances(newLocalInsurances);
+    }
+
+    const newOrderIds = activeArray.map(i => i.id || i._id);
+    const idx1 = newOrderIds.indexOf(ins1.id || ins1._id);
+    const idx2 = newOrderIds.indexOf(ins2.id || ins2._id);
+    
+    [newOrderIds[idx1], newOrderIds[idx2]] = [newOrderIds[idx2], newOrderIds[idx1]];
+
+    try {
+      await apiClient.post(`/patients/${patientId}/insurance/reorder`, {
+        insuranceIds: newOrderIds
+      });
+      showSnackbar('Insurances reordered successfully', 'success');
+      fetchInsurances();
+    } catch (err) {
+      console.error(err);
+      // Revert optimistic update on failure
+      setLocalInsurances(insurances || []);
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to reorder insurances', 'error');
+    }
+  };
+
+  const handleMoveUp = (index, activeArray) => {
+    if (index === 0) return;
+    handleReorder(activeArray[index], activeArray[index - 1], activeArray);
+  };
+
+  const handleMoveDown = (index, activeArray) => {
+    if (index === activeArray.length - 1) return;
+    handleReorder(activeArray[index], activeArray[index + 1], activeArray);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ p: 3, display: 'flex', gap: 2 }}>
+      <Box
+        sx={{
+          mt: 0,
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+          px: 2.5,
+          py: 2,
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `0.8px solid ${COLORS.BORDER}`,
+        }}
+      >
+        <Box>
+          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
+            Insurance
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
+            {patientName} · {dobText}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setImportedCoverageModalOpen(true)}
+            sx={{
+              fontFamily: 'Inter',
+              fontWeight: fontWeight.semibold,
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_BODY,
+              bgcolor: COLORS.SURFACE_CARD,
+              fontSize: fontSize.sm,
+              boxShadow: "none",
+              textTransform: 'none',
+              py: 0.8,
+              px: 1.5,
+              borderRadius: radius.md,
+              "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
+            }}
+          >
+            Imported Coverage
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleInsuranceAdd}
+            sx={{
+              fontFamily: 'Inter',
+              fontSize: fontSize.sm,
+              bgcolor: COLORS.ACCENT,
+              fontWeight: fontWeight.semibold,
+              textTransform: 'none',
+              py: 0.8,
+              px: 1.5,
+              borderRadius: radius.md,
+              boxShadow: "none",
+              "&:hover": { backgroundColor: COLORS.ACCENT_HOVER },
+            }}
+          >
+            New Coverage
+          </Button>
+        </Box>
+      </Box>
+
+      <Box sx={{ pt: 0, display: 'flex', gap: 2 }}>
         <Box sx={{ flex: 1 }}>
           {!hasActiveCoverage ? (
             <Box
@@ -324,100 +475,30 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: 320,
+                minHeight: 200,
                 textAlign: 'center',
-                fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                bgcolor: 'white',
+                bgcolor: 'transparent',
               }}
             >
               <Typography
                 sx={{
-                  fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '#c62828',
-                  mb: 2.5,
+                  fontFamily: 'Inter',
+                  fontSize: fontSize.md,
+                  fontWeight: fontWeight.semibold,
+                  color: COLORS.STATUS_ERROR,
                 }}
               >
                 Patient has no active coverage.
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'center', alignItems: 'center' }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => setImportedCoverageModalOpen(true)}
-                  sx={{
-                    fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontWeight: fontWeight.semibold,
-                    bgcolor: COLORS.ACCENT,
-                    fontSize: fontSize.base,
-                    boxShadow: "none",
-                    textTransform: 'uppercase',
-                    py: 1,
-                    px: 1.5,
-                  }}
-                >
-                  Imported Coverage
-                </Button>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleInsuranceAdd}
-                  sx={{
-                    fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontSize: '0.8125rem',
-                    bgcolor: COLORS.ACCENT,
-                    fontWeight: fontWeight.semibold,
-                    textTransform: 'uppercase',
-                    py: 1,
-                    px: 1.5,
-                  }}
-                >
-                  New Coverage
-                </Button>
-              </Box>
-
             </Box>
           ) : (
             <>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => setImportedCoverageModalOpen(true)}
-                  sx={{
-                    fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontSize: '0.8125rem',
-                    fontWeight: fontWeight.semibold,
-                    textTransform: 'uppercase',
-                    py: 1,
-                    px: 1.5,
-                  }}
-                >
-                  Imported Coverage
-                </Button>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleInsuranceAdd}
-                  sx={{
-                    fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                    fontSize: '0.8125rem',
-                    fontWeight: fontWeight.semibold,
-                    textTransform: 'uppercase',
-                    py: 1,
-                    px: 1.5,
-                  }}
-                >
-                  New Coverage
-                </Button>
-              </Box>
               <Typography
                 sx={{
-                  fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  color: '#616161',
+                  fontFamily: 'Inter',
+                  fontSize: fontSize.md,
+                  fontWeight: fontWeight.semibold,
+                  color: COLORS.TEXT_SECONDARY,
                   mb: 1.5,
                   textAlign: 'left',
                 }}
@@ -425,7 +506,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 Active Insurance Coverages
               </Typography>
               <Stack spacing={1.5} sx={{ mb: 3 }}>
-                {displayInsurances.filter((i) => i.isActive).map((ins) => (
+                {displayInsurances.filter((i) => i.isActive).map((ins, index, array) => (
                   <CoverageRow
                     key={ins._id || ins.id}
                     ins={ins}
@@ -434,6 +515,11 @@ export default function PatientInsuranceTabContent({ patientId }) {
                     handleViewPlan={handleViewPlan}
                     handleInsuranceEdit={handleInsuranceEdit}
                     handleInsuranceDeactivate={handleInsuranceDeactivate}
+                    isFirst={index === 0}
+                    isLast={index === array.length - 1}
+                    onMoveUp={() => handleMoveUp(index, array)}
+                    onMoveDown={() => handleMoveDown(index, array)}
+                    patient={patient}
                   />
                 ))}
               </Stack>
@@ -444,10 +530,10 @@ export default function PatientInsuranceTabContent({ patientId }) {
             <Box id="imported-coverage-list" sx={{ mt: 4, width: '100%' }}>
               <Typography
                 sx={{
-                  fontFamily: '"Manrope", "Segoe UI", sans-serif',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  color: '#616161',
+                  fontFamily: 'Inter',
+                  fontSize: fontSize.md,
+                  fontWeight: fontWeight.semibold,
+                  color: COLORS.TEXT_SECONDARY,
                   mb: 1.5,
                   textAlign: 'left',
                 }}
@@ -466,6 +552,9 @@ export default function PatientInsuranceTabContent({ patientId }) {
                     handleInsuranceDeactivate={handleInsuranceDeactivate}
                     isInactive={true}
                     handleInsuranceActivate={handleInsuranceActivate}
+                    isFirst={true}
+                    isLast={true}
+                    patient={patient}
                   />
                 ))}
               </Stack>

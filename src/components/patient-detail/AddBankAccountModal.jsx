@@ -68,6 +68,7 @@ export default function AddBankAccountModal({ open, onClose, onSave, hasExisting
     <Dialog
       open={open}
       onClose={onClose}
+      sx={{ zIndex: 1400 }}
       PaperProps={{ sx: { width: '420px', maxWidth: '92vw', borderRadius: radius.lg, p: 0 } }}
     >
       {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx / AddCreditCardModal.jsx */}

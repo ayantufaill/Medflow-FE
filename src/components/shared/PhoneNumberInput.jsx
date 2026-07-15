@@ -1,7 +1,7 @@
-import { Box, TextField } from '@mui/material';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/material.css';
-import { fontSize } from '../../constants/styles';
+import { Box, TextField, Typography, MenuItem } from '@mui/material';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, roundedSelectMenuProps } from '../../constants/styles';
+import { formatPhoneInput } from '../patients/form-components/formatters';
 
 /**
  * Format a raw digit string (as stored/passed around, e.g. "12065551234") for
@@ -25,25 +25,7 @@ export const formatPhoneNumber = (value) => {
   }
 };
 
-// Only safe, non-geometric overrides. The library positions the flag icon with
-// `position: absolute` + a fixed `margin-top`/`left` tuned to its own default height and
-// padding — overriding height/padding/width on .form-control, .selected-flag,
-// .flag-dropdown, or .country-list .country reintroduces the misaligned-flag bug this
-// was fixed for (see the Contact Information / Emergency Contact dropdown fixes).
-const baseWrapperSx = {
-  '& .react-tel-input': {
-    fontFamily: 'Inter',
-    width: '100%',
-  },
-  '& .react-tel-input .form-control': {
-    width: '100%',
-    fontFamily: 'Inter',
-    fontSize: fontSize.base,
-  },
-  '& .react-tel-input .country-list': {
-    fontFamily: 'Inter',
-  },
-};
+
 
 /**
  * Shared low-level phone input: a read-only formatted box, or
@@ -70,17 +52,50 @@ const PhoneNumberInput = ({ value, onChange, readOnly, placeholder, sx }) => {
     );
   }
 
+  // Edit mode - "US" prefix UI
+  let currentVal = value || '';
+  const digitsOnly = currentVal.replace(/\D/g, '');
+  if (digitsOnly.length >= 11 && digitsOnly.startsWith('1')) {
+    currentVal = digitsOnly.slice(1);
+  }
+
   return (
-    <Box sx={{ ...baseWrapperSx, ...sx }}>
-      <PhoneInput
-        country="us"
-        value={value || ''}
-        onChange={(rawValue) => onChange({ target: { value: rawValue } })}
-        enableSearch
-        searchPlaceholder="Search"
-        specialLabel=""
-      />
-    </Box>
+    <TextField
+      variant="outlined"
+      size="small"
+      fullWidth
+      value={formatPhoneInput(currentVal)}
+      placeholder={placeholder || '(XXX) XXX-XXXX'}
+      onChange={(e) => {
+        const formatted = formatPhoneInput(e.target.value);
+        onChange({ target: { value: formatted } });
+      }}
+      InputProps={{
+        startAdornment: (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 1, pr: 1, borderRight: `1px solid ${COLORS.BORDER}` }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={COLORS.TEXT_SECONDARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <TextField
+              select
+              variant="standard"
+              defaultValue="US"
+              InputProps={{ disableUnderline: true }}
+              SelectProps={{ IconComponent: () => null, MenuProps: roundedSelectMenuProps }}
+              sx={{
+                "& .MuiSelect-select": {
+                  py: 0, pl: 0, pr: "0 !important",
+                  fontFamily: "Inter", fontSize: fontSize.md, fontWeight: fontWeight.medium, color: COLORS.TEXT_BODY
+                }
+              }}
+            >
+              <MenuItem value="US">US</MenuItem>
+            </TextField>
+          </Box>
+        ),
+      }}
+      sx={sx}
+    />
   );
 };
 

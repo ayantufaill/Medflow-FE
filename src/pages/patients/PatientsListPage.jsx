@@ -112,6 +112,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       providerId: providerFilter,
       dobStart: '',
       dobEnd: '',
+      sortBy: sortByName ? 'name' : '',
+      sortOrder: sortByName ? 'asc' : '',
     };
   };
   const fetchParamsRef = useRef();
@@ -126,7 +128,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     return () => {
       if (promise && promise.abort) promise.abort();
     };
-  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, fetchPatientsRedux]);
+  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, sortByName, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
@@ -347,17 +349,13 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
 
   const handleImportPatient = () => navigate('/patients/import');
 
-  const displayPatients = useMemo(() => {
-    const list = [...patients];
-    if (sortByName) {
-      list.sort((a, b) => {
-        const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
-        const nb = `${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase();
-        return na.localeCompare(nb);
-      });
-    }
-    return list;
-  }, [patients, sortByName]);
+  const displayPatients = useMemo(() => patients, [patients]);
+
+  // Reset to page 0 and re-fetch when sort changes
+  const handleSortByNameChange = useCallback((checked) => {
+    setSortByName(checked);
+    setPage(0);
+  }, []);
 
   const totalPatients = pagination?.total || 0;
   const allSelected = displayPatients.length > 0 && selectedIds.length === displayPatients.length;
@@ -389,7 +387,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           onProviderFilterChange={(v) => { setProviderFilter(v); setPage(0); }}
           providerList={providerList}
           sortByName={sortByName}
-          onSortByNameChange={setSortByName}
+          onSortByNameChange={handleSortByNameChange}
           loading={loading}
           onRefresh={handleRefresh}
           onResetFilters={handleResetFilters}

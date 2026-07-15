@@ -16,8 +16,10 @@ import {
   CircularProgress,
   Paper,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, GroupAdd as GroupAddIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { COLORS } from '../../constants/colors';
+import { radius, fontSize, fontWeight } from '../../constants/styles';
 import { patientService } from '../../services/patient.service';
 import dayjs from 'dayjs';
 
@@ -70,52 +72,54 @@ const AddFamilyMemberDialog = ({ open, onClose, onConfirm, currentPatientId }) =
       onClose={onClose} 
       maxWidth="md" 
       fullWidth 
-      PaperProps={{ 
-        sx: { 
-          borderRadius: '4px',
-          width: '900px', // Widening to match the screenshot's aspect ratio
-          maxWidth: '100%'
-        } 
-      }}
+      sx={{ zIndex: 1400 }}
+      PaperProps={{ sx: { width: '900px', maxWidth: '92vw', borderRadius: radius.lg, p: 0 } }}
     >
-      {/* HEADER - Solid Blue */}
-      <DialogTitle sx={{ 
-        bgcolor: '#5c7cbc', 
-        p: 1.2, 
-        textAlign: 'center', 
-        position: 'relative',
-        minHeight: '45px'
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        px: 2.5,
+        py: 1.25,
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        borderTopLeftRadius: radius.lg,
+        borderTopRightRadius: radius.lg,
       }}>
-        <Typography sx={{ color: '#fff', fontWeight: 500, fontSize: '1.1rem' }}>
-          Add Family Member
-        </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ position: 'absolute', right: 8, top: 8, color: '#fff' }}>
-          <CloseIcon fontSize="small" />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+          <GroupAddIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+          <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY }}>
+            Add Family Member
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>
-      </DialogTitle>
+      </Box>
 
       <DialogContent sx={{ p: 3, pt: 1.5 }}>
         {/* RADIO OPTIONS - Left Aligned */}
         <RadioGroup value={mode} onChange={(e) => setMode(e.target.value)} row sx={{ mb: 2 }}>
           <FormControlLabel 
             value="search" 
-            control={<Radio size="small" sx={{ color: '#666', '&.Mui-checked': { color: '#666' } }} />} 
-            label={<Typography sx={{ fontSize: '0.85rem', color: '#333' }}>Search for a patient</Typography>} 
+            control={<Radio size="small" sx={{ color: COLORS.TEXT_MUTED, '&.Mui-checked': { color: COLORS.ACCENT } }} />} 
+            label={<Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Search for a patient</Typography>} 
           />
           <FormControlLabel 
             value="add_new" 
-            control={<Radio size="small" sx={{ color: '#666', '&.Mui-checked': { color: '#666' } }} />} 
-            label={<Typography sx={{ fontSize: '0.85rem', color: '#333' }}>Add new profile</Typography>} 
+            control={<Radio size="small" sx={{ color: COLORS.TEXT_MUTED, '&.Mui-checked': { color: COLORS.ACCENT } }} />} 
+            label={<Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Add new profile</Typography>} 
           />
         </RadioGroup>
 
         {mode === 'search' && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem', color: '#333', fontWeight: 400, whiteSpace: 'nowrap' }}>
+            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>
               Search Patients:
             </Typography>
             <Autocomplete
-              sx={{ width: '220px' }} // Matching the narrow look in screenshot
+              sx={{ width: '250px' }}
+              slotProps={{ popper: { sx: { zIndex: 1500 } } }}
               options={options}
               loading={loading}
               autoHighlight
@@ -137,7 +141,7 @@ const AddFamilyMemberDialog = ({ open, onClose, onConfirm, currentPatientId }) =
                   size="small"
                   InputProps={{
                     ...params.InputProps,
-                    sx: { height: '32px', fontSize: '0.85rem', bgcolor: '#fff' },
+                    sx: { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE },
                     endAdornment: (
                       <React.Fragment>
                         {loading ? <CircularProgress color="inherit" size={16} /> : null}
@@ -147,83 +151,86 @@ const AddFamilyMemberDialog = ({ open, onClose, onConfirm, currentPatientId }) =
                   }}
                 />
               )}
-              // BLUE DROPDOWN MATCHING SCREENSHOT
               PaperComponent={({ children }) => (
-                <Paper sx={{ bgcolor: '#517ab0', color: '#fff', mt: 0.5, borderRadius: '4px' }}>
+                <Paper sx={{ bgcolor: COLORS.SURFACE, border: `1px solid ${COLORS.BORDER}`, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', mt: 0.5, borderRadius: radius.sm }}>
                   {children}
                 </Paper>
               )}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option._id || option.id} sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'flex-start', 
-                  textAlign: 'left',
-                  py: 1, 
-                  px: 2, 
-                  borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.1) !important' }
+                  fontSize: '13px', 
+                  color: COLORS.TEXT_PRIMARY,
+                  py: 1.5, 
+                  px: 2,
+                  borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`,
+                  '&:last-child': { borderBottom: 'none' },
+                  '&:hover, &.Mui-focused': { bgcolor: COLORS.SURFACE_TINT + ' !important' }
                 }}>
-                  <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#fff', textAlign: 'left', width: '100%' }}>
-                    {option.firstName} {option.lastName}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.9)', textAlign: 'left', width: '100%' }}>
-                    {option.dateOfBirth ? dayjs(option.dateOfBirth).format('MM/DD/YYYY') : 'N/A'}
-                  </Typography>
-                  {option.patientCode && (
-                    <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', textAlign: 'left', width: '100%' }}>
-                      {option.patientCode}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'flex-start' }}>
+                    <Typography sx={{ fontWeight: 600, fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>
+                      {option.firstName} {option.lastName}
                     </Typography>
-                  )}
+                    <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, mt: 0.5 }}>
+                      {option.dateOfBirth ? `DOB: ${dayjs(option.dateOfBirth).format('MM/DD/YYYY')} • ` : ''} 
+                      {option.phoneNumbers?.[0]?.number || option.email || 'No contact info'}
+                    </Typography>
+                    {option.patientCode && (
+                      <Typography sx={{ fontSize: '11px', color: COLORS.TEXT_MUTED, mt: 0.25 }}>
+                        {option.patientCode}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               )}
-              noOptionsText={<Typography sx={{ p: 1, fontSize: '0.85rem', color: '#fff' }}>{loading ? 'Searching...' : 'No results'}</Typography>}
+              noOptionsText={<Typography sx={{ p: 1, fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>{loading ? 'Searching...' : 'No results'}</Typography>}
             />
           </Box>
         )}
 
         {mode === 'add_new' && (
-          <Box sx={{ p: 3, bgcolor: '#f1f5f9', borderRadius: 1, ml: 1 }}>
-            <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-              Click "{mode === 'search' ? 'Link to Profile' : 'Create Profile'}" to proceed to the Add Patient form.
+          <Box sx={{ p: 2, bgcolor: COLORS.SURFACE_TINT, borderRadius: radius.sm, mt: 1 }}>
+            <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '0.85rem' }}>
+              Click "Confirm" to proceed to the Add Patient form.
             </Typography>
           </Box>
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 0, gap: 1.5 }}>
-        <Button 
-          onClick={handleConfirm} 
-          disabled={mode === 'search' && !selectedPatient}
-          sx={{ 
-            bgcolor: '#d8b16b', 
-            '&:hover': { bgcolor: '#c49c56' }, 
-            color: '#fff', 
-            textTransform: 'none', 
-            px: 3.5, 
-            py: 0.8,
-            fontWeight: 500,
-            fontSize: '0.95rem',
-            '&.Mui-disabled': { bgcolor: '#e2e8f0', color: '#94a3b8' }
-          }}
-        >
-          {mode === 'search' ? 'Link to Profile' : 'Create Profile'}
-        </Button>
+      <DialogActions sx={{ p: '16px 20px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: '8px' }}>
         <Button 
           onClick={onClose} 
+          variant="outlined"
           sx={{ 
-            bgcolor: '#a0a0a0', 
-            '&:hover': { bgcolor: '#8e8e8e' }, 
-            color: '#fff', 
-            textTransform: 'none', 
-            px: 3.5, 
-            py: 0.8,
-            fontWeight: 500, 
-            borderRadius: '6px',
-            fontSize: '0.95rem'
+            borderColor: COLORS.BORDER,
+            color: COLORS.TEXT_PRIMARY,
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
           }}
         >
           Cancel
+        </Button>
+        <Button 
+          onClick={handleConfirm} 
+          variant="contained" 
+          disabled={mode === 'search' && !selectedPatient}
+          sx={{ 
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
+            '&.Mui-disabled': { backgroundColor: COLORS.SURFACE_DISABLED, color: COLORS.TEXT_MUTED }
+          }}
+        >
+          Confirm
         </Button>
       </DialogActions>
     </Dialog>

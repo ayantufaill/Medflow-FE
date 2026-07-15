@@ -5,7 +5,7 @@ import { OutlinedInput, OutlinedSelect } from "./formInputs";
 import { formatPostalCodeInput, withFormattedOnChange } from "./formatters";
 import { US_STATES, STATE_CITIES } from "../../../constants/usAddressData";
 import { COLORS } from "../../../constants/colors";
-import { fontSize, fontWeight, radius } from "../../../constants/styles";
+import { fontSize, fontWeight, radius, roundedAutocompletePaperSx } from "../../../constants/styles";
 
 const COUNTRY_OPTIONS = ["United States"];
 
@@ -78,6 +78,7 @@ const AddressFieldsSection = ({
                   onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
                   disabled={disabled || !selectedState}
                   freeSolo
+                  slotProps={{ paper: { sx: roundedAutocompletePaperSx } }}
                   renderInput={(params) => (
                     <OutlinedInput
                       {...params}

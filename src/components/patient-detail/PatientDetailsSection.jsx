@@ -11,9 +11,12 @@ import {
   FormControl,
 } from '@mui/material';
 import { CalendarToday as CalendarIcon } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { formatDate } from './utils';
 import { InlineFieldRow, standardFieldSx, labelWidth } from './InlineField';
 import { labelSx, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 // Radio option text (Male/Female, Male/Man/Female/Woman) had no fontFamily/size set,
 // so it fell back to the theme default (Manrope, 1rem) instead of matching the
@@ -82,6 +85,7 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
           placeholder="First name"
           onChange={(e) => handleFieldChange('firstName', e.target.value)}
           InputProps={{ readOnly: !isEditMode }}
+          required={isEditMode}
         />
         <InlineFieldRow 
           label="Middle Name" 
@@ -96,6 +100,7 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
           placeholder="Last name"
           onChange={(e) => handleFieldChange('lastName', e.target.value)}
           InputProps={{ readOnly: !isEditMode }}
+          required={isEditMode}
         />
         <InlineFieldRow 
           label="Preferred Name" 
@@ -108,10 +113,25 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
         {isEditMode ? (
           <InlineFieldRow 
             label="Date of Birth" 
-            value={localPatientData?.dateOfBirth ? localPatientData.dateOfBirth.split('T')[0] : ''}
-            onChange={(e) => handleFieldChange('dateOfBirth', e.target.value)}
-            InputProps={{ readOnly: !isEditMode }}
-            type="date"
+            required={true}
+            input={
+              <DatePicker
+                views={['year', 'month', 'day']}
+                disableFuture
+                minDate={dayjs().subtract(150, 'year')}
+                value={localPatientData?.dateOfBirth ? dayjs(localPatientData.dateOfBirth) : null}
+                onChange={(newValue) => {
+                  handleFieldChange('dateOfBirth', newValue ? newValue.format('YYYY-MM-DD') : '');
+                }}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    sx: standardFieldSx,
+                  }
+                }}
+              />
+            }
           />
         ) : (
           <InlineFieldRow
@@ -150,6 +170,11 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
         >
           <Typography sx={{ ...labelSx, fontFamily: 'Inter' }}>
             Sex at Birth:
+            {isEditMode && (
+              <Box component="span" sx={{ color: COLORS.ACCENT, ml: 0.5, fontWeight: "bold" }}>
+                *
+              </Box>
+            )}
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
             <RadioGroup

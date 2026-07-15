@@ -9,6 +9,7 @@ import {
   TextField,
   MenuItem,
   Chip,
+  Autocomplete,
 } from '@mui/material';
 import {
   ChatBubbleOutlineOutlined as CommunicationIcon,
@@ -30,9 +31,10 @@ import BankAccountThumbnail from './BankAccountThumbnail';
 import AddBankAccountModal from './AddBankAccountModal';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
-import { roundedSelectMenuProps } from '../../constants/styles';
-import { usePatient } from '../../hooks/redux/usePatient';
+import { roundedSelectMenuProps, roundedAutocompletePaperSx, standardFieldSx } from '../../constants/styles';
+import { usePatient, usePatients } from '../../hooks/redux/usePatient';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { patientService } from '../../services/patient.service';
 
 // ── Shared bits ────────────────────────────────────────────────────────────
 
@@ -171,17 +173,95 @@ export function CommunicationPreferencesCard({ patient, isEditMode, onPatientDat
 
 // ── Referring ────────────────────────────────────────────────────────────
 
-export function ReferringCard({ patient }) {
+const REFERRING_SOURCE_OPTIONS = ["Google", "Website", "Walk In", "Social Media", "Existing Patient", "Insurance Directory", "Provider Referral"];
+
+const patientLabel = (p) => {
+  if (!p) return "";
+  const name = `${p.firstName || ""} ${p.lastName || ""}`.trim();
+  return name ? `${name} (PAT${p.id})` : `(PAT${p.id})`;
+};
+
+export function ReferringCard({ patient, isEditMode, onPatientDataChange }) {
   const stripPatientId = (value) => (value ? value.replace(/\s*\(PAT\d+\)/, '').trim() : value);
+  const isReferringPatientEnabled = patient?.referralSource === "Walk In" || patient?.referralSource === "Existing Patient";
+
+  const [patients, setPatients] = useState([]);
+  const [patientSearchText, setPatientSearchText] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const timer = setTimeout(async () => {
+      if (!isEditMode || !isReferringPatientEnabled) return;
+      try {
+        const result = await patientService.getAllPatients(1, 20, patientSearchText, "active");
+        if (!isMounted) return;
+        setPatients(result?.patients || result?.items || []);
+      } catch {
+        if (!isMounted) return;
+        setPatients([]);
+      }
+    }, 300);
+    return () => { isMounted = false; clearTimeout(timer); };
+  }, [patientSearchText, isEditMode, isReferringPatientEnabled]);
+
+  const handleSourceChange = (e) => {
+    onPatientDataChange({ ...patient, referralSource: e.target.value });
+  };
+
+  const handlePatientChange = (e, newValue) => {
+    const val = typeof newValue === 'string' ? newValue : patientLabel(newValue);
+    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, referringPatient: val } });
+  };
+
   return (
     <SectionCard icon={ReferringIcon} title="Referring">
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <InlineFieldRow label="Referring Sources" value={patient?.referralSource || 'None'} InputProps={{ readOnly: true }} />
-        <InlineFieldRow
-          label="Referring Patient"
-          value={stripPatientId(patient?.customFields?.referringPatient) || 'None'}
-          InputProps={{ readOnly: true }}
+        <InlineFieldRow 
+          label="Referring Sources" 
+          value={patient?.referralSource || 'None'} 
+          input={isEditMode ? (
+            <TextField
+              select
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={patient?.referralSource || ''}
+              onChange={handleSourceChange}
+              SelectProps={{ MenuProps: roundedSelectMenuProps }}
+              sx={standardFieldSx}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              {REFERRING_SOURCE_OPTIONS.map((opt) => (
+                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+              ))}
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }} 
         />
+        
+        {(!isEditMode && patient?.customFields?.referringPatient) || isReferringPatientEnabled ? (
+          <InlineFieldRow
+            label="Referring Patient"
+            value={stripPatientId(patient?.customFields?.referringPatient) || 'None'}
+            input={isEditMode ? (
+              <Autocomplete
+                freeSolo
+                options={patients}
+                getOptionLabel={(opt) => typeof opt === "string" ? opt : patientLabel(opt)}
+                value={patient?.customFields?.referringPatient || ''}
+                onChange={handlePatientChange}
+                onInputChange={(e, newInputValue) => {
+                  setPatientSearchText(newInputValue);
+                }}
+                slotProps={{ paper: { sx: roundedAutocompletePaperSx } }}
+                renderInput={(params) => (
+                  <TextField {...params} variant="outlined" size="small" placeholder="Search patient..." sx={standardFieldSx} />
+                )}
+              />
+            ) : undefined}
+            InputProps={{ readOnly: !isEditMode }}
+          />
+        ) : null}
       </Box>
     </SectionCard>
   );
@@ -439,7 +519,7 @@ function BankAccountCard({ patient, isEditMode, onPatientDataChange }) {
  * behind the page's Edit/Save flow like the rest of this page's fields, since
  * each one is an independent boolean that should never sit as an unsaved draft.
  */
-function ReleaseInformationCard({ patient, onPatientDataChange }) {
+function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChange }) {
   const options = [
     { label: 'Spouse / Common-law partner', field: 'releaseSpouse' },
     { label: 'Children', field: 'releaseChildren' },
@@ -511,21 +591,40 @@ function ReleaseInformationCard({ patient, onPatientDataChange }) {
             />
           );
         })}
+        {otherText && !isEditMode && (
+          <Chip
+            label={otherText}
+            icon={<CheckCircleIcon sx={{ fontSize: '14px', color: COLORS.ACCENT }} />}
+            sx={{
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.medium,
+              height: 28,
+              backgroundColor: COLORS.ACCENT_BG,
+              color: COLORS.ACCENT,
+              border: `1px solid ${COLORS.ACCENT}`,
+            }}
+          />
+        )}
       </Box>
 
-      <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}>
-        Other
-      </Typography>
-      <TextField
-        fullWidth
-        size="small"
-        placeholder="Add another authorized contact"
-        value={otherText}
-        onChange={(e) => setOtherText(e.target.value)}
-        onBlur={handleOtherBlur}
-        disabled={savingField === 'releaseOther'}
-        sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
-      />
+      {isEditMode && (
+        <>
+          <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}>
+            Other
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Add another authorized contact"
+            value={otherText}
+            onChange={(e) => setOtherText(e.target.value)}
+            onBlur={handleOtherBlur}
+            disabled={savingField === 'releaseOther'}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
+          />
+        </>
+      )}
     </SectionCard>
   );
 }
@@ -547,7 +646,7 @@ export default function PatientPreferencesGrid({ patient, isEditMode = false, on
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
       <CreditCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
       <BankAccountCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
-      <ReleaseInformationCard patient={patient} onPatientDataChange={onPatientDataChange} />
+      <ReleaseInformationCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
     </Box>
   );
 }

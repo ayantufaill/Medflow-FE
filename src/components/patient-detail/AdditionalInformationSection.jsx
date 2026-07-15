@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 import { formatDate } from './utils';
-import { InlineFieldRow, labelWidth } from './InlineField';
+import { InlineFieldRow, labelWidth, standardFieldSx } from './InlineField';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { sectionTitleSx } from '../../constants/styles';
+import { patientValidations } from '../../validations/patientValidations';
 
 /**
  * Additional Information (and optionally Spouse Information).
  */
 export default function AdditionalInformationSection({ patient, showSpouse = true, isEditMode = false, onPatientDataChange }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
+  const [spouseEmailError, setSpouseEmailError] = useState('');
 
   useEffect(() => {
     if (patient) {
@@ -40,6 +44,24 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
     }
   };
 
+  const handleSpouseEmailChange = (e) => {
+    const value = e.target.value;
+    handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, email: value });
+    
+    if (isEditMode) {
+      if (!value) {
+        setSpouseEmailError('');
+        return;
+      }
+      const validationResult = patientValidations.email.validate(value, localPatientData);
+      if (validationResult !== true && validationResult !== 'Either phone number or email is required') {
+        setSpouseEmailError(validationResult);
+      } else {
+        setSpouseEmailError('');
+      }
+    }
+  };
+
   const stripPatientId = (name) => {
     return name ? name.replace(/\s*\(PAT\d+\)/, '').trim() : name;
   };
@@ -62,10 +84,23 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
         {isEditMode ? (
           <InlineFieldRow 
             label="Last Visit Date" 
-            value={localPatientData?.lastVisitDate ? localPatientData.lastVisitDate.split('T')[0] : ''}
-            onChange={(e) => handleFieldChange('lastVisitDate', e.target.value)}
-            InputProps={{ readOnly: !isEditMode }}
-            type="date"
+            input={
+              <DatePicker
+                views={['year', 'month', 'day']}
+                disableFuture
+                value={localPatientData?.lastVisitDate ? dayjs(localPatientData.lastVisitDate) : null}
+                onChange={(newValue) => {
+                  handleFieldChange('lastVisitDate', newValue ? newValue.format('YYYY-MM-DD') : '');
+                }}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    sx: standardFieldSx,
+                  }
+                }}
+              />
+            }
           />
         ) : (
           <InlineFieldRow 
@@ -103,8 +138,10 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
             <InlineFieldRow 
               label="Email Address" 
               value={localPatientData?.spouseInfo?.email || ''}
-              onChange={(e) => handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, email: e.target.value })}
+              onChange={handleSpouseEmailChange}
               InputProps={{ readOnly: !isEditMode }}
+              error={!!spouseEmailError}
+              helperText={spouseEmailError}
             />
           </Box>
         </>
