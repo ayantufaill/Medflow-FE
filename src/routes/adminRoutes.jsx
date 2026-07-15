@@ -26,7 +26,7 @@ import PrePostOps from '../pages/admin/PrePostOps';
 import ReportsDashboard from '../pages/admin/ReportsDashboard';
 import AdvancedReporting from '../pages/admin/AdvancedReporting';
 
-const adminOnly = (children, hideSidebar = false) => (
+const adminOnly = (children, hideSidebar = true) => (
   <ProtectedRoute requiredRoles={['Admin']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
