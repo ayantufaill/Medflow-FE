@@ -38,7 +38,7 @@ import ConfirmationDialog from '../shared/ConfirmationDialog';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
-const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate }) => {
+const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, handleInsuranceEdit, handleInsuranceDeactivate, isInactive, handleInsuranceActivate, onMoveUp, onMoveDown }) => {
   const [expanded, setExpanded] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
   const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
@@ -82,9 +82,24 @@ const CoverageRow = ({ ins, companies, getInsuranceCompanyName, handleViewPlan, 
               <Button size="small" variant="contained" color="error" onClick={() => handleInsuranceDeactivate(ins)} sx={{ fontFamily: '"Manrope", "Segoe UI", sans-serif', fontSize: '0.7rem', textTransform: 'none', minWidth: 'auto', py: 0.2, px: 1, bgcolor: '#e55353', '&:hover': { bgcolor: '#c94141' } }}>Deactivate</Button>
             </>
           )}
-          <Box sx={{ display: 'flex', flexDirection: 'column', color: '#5c6b89', ml: 0.5, cursor: 'pointer' }}>
-            <KeyboardArrowUpIcon sx={{ fontSize: '0.85rem', mb: -0.5 }} />
-            <KeyboardArrowDownIcon sx={{ fontSize: '0.85rem' }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', color: '#5c6b89', ml: 0.5 }}>
+            <KeyboardArrowUpIcon 
+              sx={{ 
+                fontSize: '0.85rem', 
+                mb: -0.5, 
+                cursor: onMoveUp ? 'pointer' : 'default',
+                opacity: onMoveUp ? 1 : 0.3 
+              }} 
+              onClick={onMoveUp ? (e) => { e.stopPropagation(); onMoveUp(); } : undefined}
+            />
+            <KeyboardArrowDownIcon 
+              sx={{ 
+                fontSize: '0.85rem', 
+                cursor: onMoveDown ? 'pointer' : 'default',
+                opacity: onMoveDown ? 1 : 0.3 
+              }} 
+              onClick={onMoveDown ? (e) => { e.stopPropagation(); onMoveDown(); } : undefined}
+            />
           </Box>
         </Box>
       </Box>
@@ -163,6 +178,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
     create: createInsurance,
     update: updateInsurance,
     remove: removeInsurance,
+    reorder: reorderInsurances,
   } = usePatientInsurance(patientId);
 
   const {
@@ -251,6 +267,43 @@ export default function PatientInsuranceTabContent({ patientId }) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate', 'error');
     }
   };
+
+  const handleMoveUp = async (index) => {
+    const activeInsurances = displayInsurances.filter((i) => i.isActive);
+    if (index <= 0 || index >= activeInsurances.length) return;
+
+    const reordered = [...activeInsurances];
+    const temp = reordered[index];
+    reordered[index] = reordered[index - 1];
+    reordered[index - 1] = temp;
+
+    const orderedIds = reordered.map((ins) => ins._id || ins.id);
+    try {
+      await reorderInsurances(orderedIds);
+      showSnackbar('Insurances reordered successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to reorder insurances', 'error');
+    }
+  };
+
+  const handleMoveDown = async (index) => {
+    const activeInsurances = displayInsurances.filter((i) => i.isActive);
+    if (index < 0 || index >= activeInsurances.length - 1) return;
+
+    const reordered = [...activeInsurances];
+    const temp = reordered[index];
+    reordered[index] = reordered[index + 1];
+    reordered[index + 1] = temp;
+
+    const orderedIds = reordered.map((ins) => ins._id || ins.id);
+    try {
+      await reorderInsurances(orderedIds);
+      showSnackbar('Insurances reordered successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to reorder insurances', 'error');
+    }
+  };
+
   const handleInsuranceMenuOpen = (event, insurance) => setInsuranceMenu({ anchorEl: event.currentTarget, insurance });
   const handleInsuranceMenuClose = () => setInsuranceMenu((prev) => ({ ...prev, anchorEl: null }));
   const handleInsuranceMenuExited = () => setInsuranceMenu({ anchorEl: null, insurance: null });
@@ -425,7 +478,7 @@ export default function PatientInsuranceTabContent({ patientId }) {
                 Active Insurance Coverages
               </Typography>
               <Stack spacing={1.5} sx={{ mb: 3 }}>
-                {displayInsurances.filter((i) => i.isActive).map((ins) => (
+                {displayInsurances.filter((i) => i.isActive).map((ins, index, arr) => (
                   <CoverageRow
                     key={ins._id || ins.id}
                     ins={ins}
@@ -434,6 +487,8 @@ export default function PatientInsuranceTabContent({ patientId }) {
                     handleViewPlan={handleViewPlan}
                     handleInsuranceEdit={handleInsuranceEdit}
                     handleInsuranceDeactivate={handleInsuranceDeactivate}
+                    onMoveUp={index > 0 ? () => handleMoveUp(index) : null}
+                    onMoveDown={index < arr.length - 1 ? () => handleMoveDown(index) : null}
                   />
                 ))}
               </Stack>

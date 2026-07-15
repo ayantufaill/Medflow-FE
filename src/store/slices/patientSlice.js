@@ -31,6 +31,10 @@ export const fetchPatientById = createAsyncThunk(
   {
     condition: (patientId, { getState }) => {
       const { patient } = getState();
+      // Block redundant requests if a request is already in progress for the same patient
+      if (patient.detailLoading && patient.detailLoadingId === patientId) {
+        return false;
+      }
       // prevent double dispatch if it was fetched in the last second
       if (patient.cache && patient.cache[patientId]) {
         if (Date.now() - patient.cache[patientId].timestamp < 1000) {
@@ -283,6 +287,7 @@ const initialState = {
   currentPatient: null,
   selectedPatientId: typeof window !== 'undefined' ? localStorage.getItem('selectedPatientId') : null,
   detailLoading: false,
+  detailLoadingId: null,
   detailError: null,
 
   // Medical History
@@ -394,8 +399,9 @@ const patientSlice = createSlice({
         state.listError = action.payload;
       })
       // fetchPatientById
-      .addCase(fetchPatientById.pending, (state) => {
+      .addCase(fetchPatientById.pending, (state, action) => {
         state.detailLoading = true;
+        state.detailLoadingId = action.meta.arg;
         state.detailError = null;
       })
       .addCase(fetchPatientById.fulfilled, (state, action) => {
@@ -407,11 +413,13 @@ const patientSlice = createSlice({
           localStorage.removeItem('selectedPatientId');
         }
         state.detailLoading = false;
+        state.detailLoadingId = null;
         // Cache it
         state.cache[action.payload._id] = { data: action.payload, timestamp: Date.now() };
       })
       .addCase(fetchPatientById.rejected, (state, action) => {
         state.detailLoading = false;
+        state.detailLoadingId = null;
         state.detailError = action.payload;
       })
       // fetchPatientInsurances

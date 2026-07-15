@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, Typography, InputBase, CircularProgress } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import { useDebounce } from 'use-debounce';
+import dayjs from 'dayjs';
 import { usePatients, usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
@@ -25,12 +26,7 @@ const PatientSearch = () => {
 
   // Trigger a server-side search whenever the debounced value changes.
   useEffect(() => {
-    if (debouncedValue.trim().length >= 1) {
-      searchPatients({ search: debouncedValue.trim(), limit: 20, page: 1 });
-      setIsOpen(true);
-    } else {
-      setIsOpen(false);
-    }
+    searchPatients({ search: debouncedValue.trim(), limit: 20, page: 1 });
   }, [debouncedValue]); // searchPatients is a stable useCallback
 
   // Close dropdown when user clicks outside the component.
@@ -90,6 +86,8 @@ const PatientSearch = () => {
         <InputBase
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          onFocus={() => setIsOpen(true)}
+          onClick={() => setIsOpen(true)}
           placeholder="Search patient..."
           autoComplete="off"
           sx={{
@@ -132,7 +130,10 @@ const PatientSearch = () => {
         >
           {patients.map((patient) => {
             const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim();
-            const patientId = patient.patientNumber || patient._id?.slice(-6);
+            const patientId = patient.patientCode || patient.patientNumber || patient._id?.slice(-6);
+            const dobStr = patient.dateOfBirth ? dayjs(patient.dateOfBirth).format('MM/DD/YYYY') : '';
+            const emailStr = patient.email || '';
+            const infoLine = [dobStr ? `DOB: ${dobStr}` : '', emailStr].filter(Boolean).join(' • ');
 
             return (
               <Box
@@ -140,7 +141,7 @@ const PatientSearch = () => {
                 onClick={() => handleSelectPatient(patient)}
                 sx={{
                   px: '12px',
-                  py: '8px',
+                  py: '10px',
                   cursor: 'pointer',
                   borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`,
                   '&:last-child': { borderBottom: 'none' },
@@ -150,9 +151,14 @@ const PatientSearch = () => {
                 <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.medium, color: COLORS.TEXT_PRIMARY }}>
                   {fullName || 'Unknown Patient'}
                 </Typography>
+                {infoLine && (
+                  <Typography sx={{ fontSize: '12px', color: '#5c646f', mt: '2px' }}>
+                    {infoLine}
+                  </Typography>
+                )}
                 {patientId && (
-                  <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
-                    #{patientId}
+                  <Typography sx={{ fontSize: '11px', color: '#94a3b8', mt: '2px' }}>
+                    {patientId}
                   </Typography>
                 )}
               </Box>

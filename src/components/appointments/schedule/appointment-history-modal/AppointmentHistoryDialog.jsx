@@ -51,6 +51,11 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   useEffect(() => {
     if (open) {
       fetchHistoryData();
+    } else {
+      setSelected([]);
+      setFilterType("all");
+      setStatusFilter("all");
+      setSortBy("date");
     }
   }, [open, fetchHistoryData]);
 
