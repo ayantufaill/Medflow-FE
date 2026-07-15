@@ -288,6 +288,7 @@ const initialState = {
   currentPatient: null,
   selectedPatientId: typeof window !== 'undefined' ? localStorage.getItem('selectedPatientId') : null,
   detailLoading: false,
+  detailLoadingId: null,
   detailError: null,
 
   // Medical History
@@ -399,8 +400,9 @@ const patientSlice = createSlice({
         state.listError = action.payload;
       })
       // fetchPatientById
-      .addCase(fetchPatientById.pending, (state) => {
+      .addCase(fetchPatientById.pending, (state, action) => {
         state.detailLoading = true;
+        state.detailLoadingId = action.meta.arg;
         state.detailError = null;
       })
       .addCase(fetchPatientById.fulfilled, (state, action) => {
@@ -412,11 +414,13 @@ const patientSlice = createSlice({
           localStorage.removeItem('selectedPatientId');
         }
         state.detailLoading = false;
+        state.detailLoadingId = null;
         // Cache it
         state.cache[action.payload._id] = { data: action.payload, timestamp: Date.now() };
       })
       .addCase(fetchPatientById.rejected, (state, action) => {
         state.detailLoading = false;
+        state.detailLoadingId = null;
         state.detailError = action.payload;
       })
       // fetchPatientInsurances

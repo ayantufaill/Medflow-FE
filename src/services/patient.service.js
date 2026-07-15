@@ -259,6 +259,21 @@ export const patientService = {
     return response.data.data;
   },
 
+  /**
+   * Reorder patient insurances
+   * @param {string} patientId - Patient ID
+   * @param {Array<string>} insuranceIds - Array of insurance IDs in new order
+   * @returns {Promise<Array>} Reordered insurances
+   */
+  async reorderPatientInsurances(patientId, insuranceIds) {
+    const response = await apiClient.post(
+      `/patients/${patientId}/insurance/reorder`,
+      { insuranceIds }
+    );
+    const result = response.data?.data?.insurances || response.data?.data?.coverages || response.data?.data?.plans || response.data?.data;
+    return Array.isArray(result) ? result : [];
+  },
+
   // ---------------- Patient Allergies ----------------
 
   /**

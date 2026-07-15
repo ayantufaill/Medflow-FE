@@ -204,6 +204,7 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     create: createInsurance,
     update: updateInsurance,
     remove: removeInsurance,
+    reorder: reorderInsurances,
   } = usePatientInsurance(patientId);
 
   const {

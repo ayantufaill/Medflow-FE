@@ -17,8 +17,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
-import { usePatients } from '../../hooks/redux/usePatient';
-import { useProviders } from '../../hooks/queries/useProviders';
+import { usePatients, useDropdownData } from '../../hooks/redux';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSearchActionsBar from '../../components/patients/list/PatientSearchActionsBar';
 import PatientFiltersBar from '../../components/patients/list/PatientFiltersBar';
@@ -45,11 +44,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     updateInList,
   } = usePatients();
 
-  const { data: providersData } = useProviders({ activeOnly: true });
-  // useMemo (rather than `providersData?.providers || []`) keeps a stable array
-  // reference across renders while the query hasn't changed, so PatientFiltersBar
-  // doesn't see a "new" providerList prop on every unrelated re-render.
-  const providerList = useMemo(() => providersData?.providers || EMPTY_PROVIDER_LIST, [providersData]);
+  const { providers: providerList = EMPTY_PROVIDER_LIST } = useDropdownData({ providers: true });
 
   // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
