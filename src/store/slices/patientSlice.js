@@ -7,10 +7,10 @@ import { invoiceService } from '../../services/invoice.service';
 
 export const fetchPatients = createAsyncThunk(
   'patient/fetchPatients',
-  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '' } = {}, { rejectWithValue, signal }) => {
+  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '', sortBy = '', sortOrder = '' } = {}, { rejectWithValue, signal }) => {
     try {
-      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, gender, providerId, signal);
-      return { ...result, params: { page, limit, search, status, dobStart, dobEnd, gender, providerId } };
+      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, gender, providerId, signal, sortBy, sortOrder);
+      return { ...result, params: { page, limit, search, status, dobStart, dobEnd, gender, providerId, sortBy, sortOrder } };
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'CanceledError') throw err;
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch patients');
@@ -31,9 +31,10 @@ export const fetchPatientById = createAsyncThunk(
   {
     condition: (patientId, { getState }) => {
       const { patient } = getState();
-      // Block redundant requests if a request is already in progress for the same patient
-      if (patient.detailLoading && patient.detailLoadingId === patientId) {
-        return false;
+      // If there's no current patient or it's a different patient, we MUST fetch
+      // so that .fulfilled sets the state.
+      if (!patient.currentPatient || (patient.currentPatient._id !== patientId && patient.currentPatient.id !== patientId)) {
+        return true;
       }
       // prevent double dispatch if it was fetched in the last second
       if (patient.cache && patient.cache[patientId]) {

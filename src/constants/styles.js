@@ -135,6 +135,9 @@ export const standardFieldSx = {
     '& fieldset': { borderWidth: '1.2px', borderColor: COLORS.BORDER },
     '&:hover fieldset': { borderColor: COLORS.TEXT_MUTED },
     '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT, borderWidth: '1.2px' },
+    '&.Mui-error fieldset': { borderColor: COLORS.STATUS_ERROR },
+    '&.Mui-error:hover fieldset': { borderColor: COLORS.STATUS_ERROR },
+    '&.Mui-error.Mui-focused fieldset': { borderColor: COLORS.STATUS_ERROR },
   },
   '& .MuiOutlinedInput-input': { padding: '8px 12px', fontSize: fontSize.base, minWidth: 0 },
   '& .MuiOutlinedInput-input::placeholder': { opacity: 0.6, color: COLORS.TEXT_MUTED },
@@ -181,5 +184,25 @@ export const roundedSelectMenuProps = {
         '&:hover': { backgroundColor: COLORS.SURFACE_HOVER },
       },
     },
+  },
+};
+
+/**
+ * Matching dropdown popup styling for Autocomplete components.
+ */
+export const roundedAutocompletePaperSx = {
+  mt: '4px',
+  borderRadius: radius.md,
+  border: `1px solid ${COLORS.BORDER}`,
+  boxShadow: '0px 4px 20px rgba(0,0,0,0.12)',
+  '& .MuiAutocomplete-option': {
+    fontFamily: 'Inter',
+    fontSize: fontSize.md,
+    color: COLORS.TEXT_BODY,
+    '&[aria-selected="true"]': {
+      backgroundColor: COLORS.ACCENT_BG,
+      '&.Mui-focused': { backgroundColor: COLORS.ACCENT_BG },
+    },
+    '&.Mui-focused': { backgroundColor: COLORS.SURFACE_HOVER },
   },
 };

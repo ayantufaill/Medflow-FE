@@ -17,7 +17,8 @@ import { useNavigate } from 'react-router-dom';
 import MyChartFileDialog from './MyChartFileDialog';
 import AuditPatientHistoryDialog from './AuditPatientHistoryDialog';
 import PatientChat from '../shared/PatientChat';
-import PatientRouteSlipDialog from '../appointments/PatientRouteSlipDialog';
+import RouteSlipDialog from '../appointments/schedule/route-slip-modal/RouteSlipDialog';
+import { useScheduleState } from '../../hooks/redux';
 import { COLORS } from '../../constants/colors';
 import { radius, fontSize, fontWeight } from '../../constants/styles';
 
@@ -62,7 +63,7 @@ export default function PatientDetailActions({
   const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [patientChatOpen, setPatientChatOpen] = useState(false);
-  const [routeSlipOpen, setRouteSlipOpen] = useState(false);
+  const { setRouteSlipDialogOpen } = useScheduleState();
   const navigate = useNavigate();
 
   const handleRequestOpen = (e) => setRequestMenuAnchor(e.currentTarget);
@@ -73,8 +74,6 @@ export default function PatientDetailActions({
   const handleAuditDialogClose = () => setAuditDialogOpen(false);
   const handlePatientChatOpen = () => setPatientChatOpen(true);
   const handlePatientChatClose = () => setPatientChatOpen(false);
-  const handleRouteSlipOpen = () => setRouteSlipOpen(true);
-  const handleRouteSlipClose = () => setRouteSlipOpen(false);
 
   const patientId = patient?._id || patient?.id;
   const patientName = patient
@@ -200,7 +199,7 @@ export default function PatientDetailActions({
 
             {/* Print Icon */}
             <Tooltip title="Print route slip">
-              <IconButton size="small" sx={iconButtonSx} onClick={handleRouteSlipOpen}>
+              <IconButton size="small" sx={iconButtonSx} onClick={() => setRouteSlipDialogOpen(true)}>
                 <PrintIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
@@ -381,13 +380,8 @@ export default function PatientDetailActions({
         patientName={patientName}
       />
 
-      {/* Route Slip — reuses the same printable dialog OperatorySidebar.jsx opens */}
-      <PatientRouteSlipDialog
-        open={routeSlipOpen}
-        onClose={handleRouteSlipClose}
-        patient={patient}
-        patientDetails={patient}
-      />
+      {/* Route Slip — uses the new modernized RouteSlipDialog that handles its own Redux state */}
+      <RouteSlipDialog />
     </>
   );
 }

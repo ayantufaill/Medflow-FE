@@ -1,4 +1,6 @@
 import { Box, Typography, TextField } from "@mui/material";
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { MedicalServicesOutlined as GeneralInfoIcon } from "@mui/icons-material";
 import SectionCard from "../shared/SectionCard";
 import { COLORS } from "../../constants/colors";
@@ -17,6 +19,27 @@ const FieldBox = ({ label, value, onChange }) => (
   <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
     <Typography sx={fieldLabelSx}>{label}</Typography>
     <TextField variant="outlined" size="small" fullWidth value={value || ""} onChange={onChange} sx={standardFieldSx} />
+  </Box>
+);
+
+const DateFieldBox = ({ label, value, onChange }) => (
+  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+    <Typography sx={fieldLabelSx}>{label}</Typography>
+    <DatePicker
+      views={['year', 'month', 'day']}
+      disableFuture
+      value={value ? dayjs(value) : null}
+      onChange={(newValue) => {
+        onChange(newValue ? newValue.format('YYYY-MM-DD') : '');
+      }}
+      slotProps={{
+        textField: {
+          size: 'small',
+          fullWidth: true,
+          sx: standardFieldSx,
+        }
+      }}
+    />
   </Box>
 );
 
@@ -66,21 +89,21 @@ const DentalGeneralInfo = ({ info, onChange }) => {
           value={info.previousDentist}
           onChange={(e) => onChange("previousDentist", e.target.value)}
         />
-        <FieldBox
+        <DateFieldBox
           label="Date of most recent X-rays"
           value={info.recentXrayDate}
-          onChange={(e) => onChange("recentXrayDate", e.target.value)}
+          onChange={(val) => onChange("recentXrayDate", val)}
         />
 
-        <FieldBox
+        <DateFieldBox
           label="Date of most recent dental exam"
           value={info.recentExamDate}
-          onChange={(e) => onChange("recentExamDate", e.target.value)}
+          onChange={(val) => onChange("recentExamDate", val)}
         />
-        <FieldBox
+        <DateFieldBox
           label="Date of most recent treatment (other than cleaning)"
           value={info.recentTreatmentDate}
-          onChange={(e) => onChange("recentTreatmentDate", e.target.value)}
+          onChange={(val) => onChange("recentTreatmentDate", val)}
         />
       </Box>
 

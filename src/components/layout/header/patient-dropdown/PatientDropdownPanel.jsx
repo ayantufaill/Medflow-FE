@@ -4,6 +4,8 @@ import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { Search, PersonAdd, Add } from "@mui/icons-material";
 import { useDebounce } from "use-debounce";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 import CurrentPatientCard from "./CurrentPatientCard";
 import PatientListCard from "./PatientListCard";
 import { usePatients, usePatient } from "../../../../hooks/redux";
@@ -48,9 +50,9 @@ export const toCardShape = (patient) => {
     // Appt formatting logic
     let apptString = null;
     if (patient.nextAppointmentDate) {
-      const aptDate = dayjs(patient.nextAppointmentDate);
-      const today = dayjs().startOf('day');
-      const tomorrow = dayjs().add(1, 'day').startOf('day');
+      const aptDate = dayjs.utc(patient.nextAppointmentDate);
+      const today = dayjs.utc().startOf('day');
+      const tomorrow = dayjs.utc().add(1, 'day').startOf('day');
       const target = aptDate.startOf('day');
       
       if (target.isSame(today)) {

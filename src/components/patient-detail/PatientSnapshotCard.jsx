@@ -41,10 +41,16 @@ export default function PatientSnapshotCard({ patient, patientNumber }) {
   const balanceAmount = readBalanceAmount(balanceData);
   const balanceText = balanceAmount != null ? `$${Number(balanceAmount).toFixed(2)}` : '—';
 
+  const stripPatientId = (name) => {
+    return name ? name.replace(/\s*\(PAT\d+\)/, '').trim() : name;
+  };
+
   const lastVisit = patient?.lastVisitDate ? formatDate(patient.lastVisitDate) : '—';
   const nextAppt = patient?.nextAppointmentDate ? formatDate(patient.nextAppointmentDate) : '—';
-  const insurance = patient?.primaryInsurance?.name || patient?.insuranceName || 'No active';
-  const referredBy = patient?.customFields?.referringPatient || patient?.referralSource || '—';
+  const insurance = patient?.paymentMethod?.paidBy && patient.paymentMethod.paidBy !== 'Self Pay' 
+    ? patient.paymentMethod.paidBy 
+    : 'No active';
+  const referredBy = stripPatientId(patient?.customFields?.referringPatient) || patient?.referralSource || '—';
 
   return (
     <Box>

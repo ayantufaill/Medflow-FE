@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, TextField, MenuItem } from '@mui/material';
+import { standardFieldSx, roundedSelectMenuProps } from '../../constants/styles';
 import { InlineFieldRow } from './InlineField';
 import PhoneField from './PhoneField';
+
+const RELATIONSHIP_OPTIONS = ["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"];
 
 /**
  * Emergency Contact – underlined input style.
@@ -46,12 +49,30 @@ export default function EmergencyContactSection({ patient, isEditMode = false, o
           value={ec?.name}
           onChange={(e) => handleFieldChange('emergencyContact', { ...ec, name: e.target.value })}
           InputProps={{ readOnly: !isEditMode }}
+          required={isEditMode}
         />
         <InlineFieldRow 
           label="Relationship" 
           value={ec?.relationship}
-          onChange={(e) => handleFieldChange('emergencyContact', { ...ec, relationship: e.target.value })}
+          input={isEditMode ? (
+            <TextField
+              select
+              SelectProps={{ MenuProps: roundedSelectMenuProps }}
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={ec?.relationship || ''}
+              onChange={(e) => handleFieldChange('emergencyContact', { ...ec, relationship: e.target.value })}
+              sx={standardFieldSx}
+            >
+              <MenuItem value="" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Select relationship</MenuItem>
+              {RELATIONSHIP_OPTIONS.map((r) => (
+                <MenuItem key={r} value={r}>{r}</MenuItem>
+              ))}
+            </TextField>
+          ) : undefined}
           InputProps={{ readOnly: !isEditMode }}
+          required={isEditMode}
         />
         <PhoneField
           label="Phone"

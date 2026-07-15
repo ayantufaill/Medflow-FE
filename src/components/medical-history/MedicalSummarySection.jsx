@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, InputAdornment, IconButton, Radio, FormControlLabel } from "@mui/material";
+
+const capitalizeFirstLetter = (string) => {
+  if (!string) return string;
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};
+import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, InputAdornment, IconButton, Radio, FormControlLabel, MenuItem } from "@mui/material";
 import {
   AssignmentOutlined as PersonalHistoryIcon,
   Edit as EditIcon,
@@ -8,7 +13,7 @@ import {
 } from "@mui/icons-material";
 import SectionCard from "../shared/SectionCard";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { fontSize, fontWeight, radius, standardFieldSx, roundedSelectMenuProps } from "../../constants/styles";
 
 const SEVERITY_STYLES = {
   low: { label: "Low", color: COLORS.STATUS_SUCCESS, bg: "rgba(22, 163, 74, 0.10)" },
@@ -29,7 +34,7 @@ const LegendDot = ({ color }) => (
 
 const SeverityBadge = ({ severity }) => {
   const style = SEVERITY_STYLES[(severity || "").toLowerCase()];
-  if (!style || style === SEVERITY_STYLES.low) return null;
+  if (!style) return null;
   return (
     <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, borderRadius: radius.pill, px: 1, py: 0.25 }}>
       <LegendDot color={style.color} />
@@ -215,7 +220,7 @@ const MedicalSummarySection = ({
                       <Box>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
-                            {section.question || "No question available"}
+                            {capitalizeFirstLetter(section.question) || "No question available"}
                           </Typography>
                           <SeverityBadge severity={section.severity} />
                         </Box>
@@ -236,11 +241,22 @@ const MedicalSummarySection = ({
                     <AnswerPill answer={section.answer} />
                   </TableCell>
                   <TableCell sx={{ borderColor: COLORS.BORDER_LIGHT, verticalAlign: "top", py: 2 }}>
-                    {section.additionalInfo ? (
-                      <Box sx={{ backgroundColor: "rgba(234, 88, 12, 0.06)", border: `1px solid rgba(234, 88, 12, 0.25)`, borderRadius: radius.md, px: 1.5, py: 1 }}>
-                        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>
-                          {section.additionalInfo}
-                        </Typography>
+                    {section.additionalInfo || section.comment ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {section.additionalInfo && (
+                          <Box sx={{ backgroundColor: "rgba(234, 88, 12, 0.06)", border: `1px solid rgba(234, 88, 12, 0.25)`, borderRadius: radius.md, px: 1.5, py: 1 }}>
+                            <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>
+                              {section.additionalInfo}
+                            </Typography>
+                          </Box>
+                        )}
+                        {section.comment && (
+                          <Box sx={{ backgroundColor: "rgba(59, 130, 246, 0.06)", border: `1px solid rgba(59, 130, 246, 0.25)`, borderRadius: radius.md, px: 1.5, py: 1 }}>
+                            <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>
+                              {section.comment}
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     ) : (
                       <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>—</Typography>
@@ -299,7 +315,7 @@ const MedicalSummarySection = ({
                   <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1, mb: 1.5, pr: 4 }}>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#334155' }}>
                       {section.number ? `${section.number}. ` : ""}
-                      {section.question}
+                      {capitalizeFirstLetter(section.question)}
                     </Typography>
                     <SeverityBadge severity={section.severity} />
                   </Box>
@@ -311,10 +327,14 @@ const MedicalSummarySection = ({
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: '150px' }}>
                           <Typography sx={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Answer:</Typography>
                           <TextField
-                            variant="standard"
+                            select
+                            variant="outlined"
                             size="small"
-                            autoFocus
-                            value={section.answer || ""}
+                            value={
+                              section.answer 
+                                ? (section.answer.toLowerCase() === 'yes' ? 'Yes' : 'No') 
+                                : 'No'
+                            }
                             onChange={(e) =>
                               onSectionChange(
                                 section.id || section.number || index,
@@ -322,17 +342,43 @@ const MedicalSummarySection = ({
                                 e.target.value,
                               )
                             }
-                            InputProps={{
-                              disableUnderline: true,
-                              sx: { fontSize: '13px', fontWeight: 600, color: '#334155' }
-                            }}
-                            sx={{
-                              borderBottom: '1px solid #e2e8f0',
-                              '&:hover': { borderBottomColor: '#94a3b8' },
-                              minWidth: 80
-                            }}
-                          />
+                            SelectProps={{ MenuProps: roundedSelectMenuProps }}
+                            sx={{ ...standardFieldSx, width: 80 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
                         </Box>
+
+                        {/* Severity Field */}
+                        {(section.answer && section.answer.toLowerCase() === 'yes') && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: '150px' }}>
+                            <Typography sx={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Severity:</Typography>
+                            <TextField
+                              select
+                              variant="outlined"
+                              size="small"
+                              value={
+                                section.severity
+                                  ? capitalizeFirstLetter(section.severity.toLowerCase())
+                                  : "Low"
+                              }
+                              onChange={(e) => {
+                                onSectionChange(
+                                  section.id || section.number || index,
+                                  "severity",
+                                  e.target.value.toLowerCase()
+                                );
+                              }}
+                              SelectProps={{ MenuProps: roundedSelectMenuProps }}
+                              sx={{ ...standardFieldSx, width: 110 }}
+                            >
+                              <MenuItem value="Low">Low</MenuItem>
+                              <MenuItem value="Moderate">Moderate</MenuItem>
+                              <MenuItem value="High">High</MenuItem>
+                            </TextField>
+                          </Box>
+                        )}
 
                         {/* Comment Field */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: '250px' }}>

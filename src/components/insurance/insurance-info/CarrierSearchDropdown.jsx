@@ -8,7 +8,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
   const [showDropdown, setShowDropdown] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
 
-  const handleSearch = (val) => {
+  const handleSearch = (val, openDropdown = true) => {
     handleInputChange('carrierSearch', val);
 
     const searchPool = companies.length > 0 ? companies : DUMMY_INSURANCE;
@@ -31,7 +31,9 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
     }
 
     setSearchResults(filtered);
-    setShowDropdown(true);
+    if (openDropdown) {
+      setShowDropdown(true);
+    }
   };
 
   const onSelect = (item) => {
@@ -106,7 +108,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
             checked={formData.excludeSystemCarriers || false} 
             onChange={(e) => {
               handleInputChange('excludeSystemCarriers', e.target.checked);
-              setTimeout(() => handleSearch(formData.carrierSearch || ''), 0);
+              setTimeout(() => handleSearch(formData.carrierSearch || '', false), 0);
             }} 
           />
         } 

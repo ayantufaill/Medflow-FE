@@ -6,6 +6,8 @@ import { store } from './store';
 import { queryClient } from './lib/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import theme from './theme';
 import allRoutes from './routes';
 
@@ -18,15 +20,17 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <AuthProvider>
-            <SnackbarProvider>
-              <BrowserRouter>
-                <Routes>
-                  {allRoutes}
-                </Routes>
-              </BrowserRouter>
-            </SnackbarProvider>
-          </AuthProvider>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <AuthProvider>
+              <SnackbarProvider>
+                <BrowserRouter>
+                  <Routes>
+                    {allRoutes}
+                  </Routes>
+                </BrowserRouter>
+              </SnackbarProvider>
+            </AuthProvider>
+          </LocalizationProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ReduxProvider>

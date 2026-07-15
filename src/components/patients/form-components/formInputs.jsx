@@ -15,6 +15,9 @@ export const OutlinedInput = (props) => (
         "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER },
         "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED },
         "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" },
+        "&.Mui-error fieldset": { borderColor: COLORS.STATUS_ERROR },
+        "&.Mui-error:hover fieldset": { borderColor: COLORS.STATUS_ERROR },
+        "&.Mui-error.Mui-focused fieldset": { borderColor: COLORS.STATUS_ERROR },
       },
       "& .MuiOutlinedInput-input": { padding: "8px 12px", fontSize: fontSize.md },
       ...props.sx
@@ -33,6 +36,9 @@ export const OutlinedSelect = ({ children, ...props }) => (
         "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER },
         "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED },
         "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" },
+        "&.Mui-error fieldset": { borderColor: COLORS.STATUS_ERROR },
+        "&.Mui-error:hover fieldset": { borderColor: COLORS.STATUS_ERROR },
+        "&.Mui-error.Mui-focused fieldset": { borderColor: COLORS.STATUS_ERROR },
       },
       "& .MuiSelect-select": { padding: "8px 12px", fontSize: fontSize.md },
       ...props.sx

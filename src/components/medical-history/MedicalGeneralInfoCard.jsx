@@ -1,8 +1,10 @@
 import { Box, Typography, TextField, Select, MenuItem } from "@mui/material";
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { MedicalServicesOutlined as GeneralInfoIcon, MonitorWeightOutlined as WeightIcon, StraightenOutlined as HeightIcon } from "@mui/icons-material";
 import SectionCard from "../shared/SectionCard";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight, standardFieldSx } from "../../constants/styles";
+import { fontSize, fontWeight, standardFieldSx, roundedSelectMenuProps } from "../../constants/styles";
 
 const fieldLabelSx = {
   fontFamily: "Inter",
@@ -49,11 +51,24 @@ const MedicalGeneralInfoCard = ({ generalInfo, onChangeField }) => {
       </Box>
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 2 }}>
-        <FieldBox
-          label="Last Physical Exam"
-          value={generalInfo.lastExamDate}
-          onChange={(e) => onChangeField("lastExamDate", e.target.value)}
-        />
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Typography sx={fieldLabelSx}>Last Physical Exam</Typography>
+          <DatePicker
+            views={['year', 'month', 'day']}
+            disableFuture
+            value={generalInfo.lastExamDate ? dayjs(generalInfo.lastExamDate) : null}
+            onChange={(newValue) => {
+              onChangeField("lastExamDate", newValue ? newValue.format('YYYY-MM-DD') : '');
+            }}
+            slotProps={{
+              textField: {
+                size: 'small',
+                fullWidth: true,
+                sx: standardFieldSx,
+              }
+            }}
+          />
+        </Box>
         <FieldBox
           label="Illness / Medical Issues"
           value={generalInfo.healthEstimate}
@@ -68,25 +83,33 @@ const MedicalGeneralInfoCard = ({ generalInfo, onChangeField }) => {
               <WeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
               <Typography sx={fieldLabelSx}>Weight</Typography>
             </Box>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <TextField
                 variant="outlined"
                 size="small"
+                placeholder={generalInfo.weightUnit === "KG" ? "72" : "160"}
                 fullWidth
                 value={generalInfo.weight || ""}
-                onChange={(e) => onChangeField("weight", e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^[0-9.]+$/.test(val)) {
+                    onChangeField("weight", val);
+                  }
+                }}
                 sx={{ ...standardFieldSx, minWidth: 0 }}
               />
-              <Select
-                variant="standard"
+              <TextField
+                select
+                SelectProps={{ MenuProps: roundedSelectMenuProps }}
+                variant="outlined"
+                size="small"
                 value={generalInfo.weightUnit || "LBS"}
                 onChange={(e) => onChangeField("weightUnit", e.target.value)}
-                sx={unitSelectSx}
-                IconComponent={() => null}
+                sx={{ ...standardFieldSx, width: 90 }}
               >
                 <MenuItem value="LBS">LBS</MenuItem>
                 <MenuItem value="KG">KG</MenuItem>
-              </Select>
+              </TextField>
             </Box>
           </Box>
 
@@ -95,25 +118,33 @@ const MedicalGeneralInfoCard = ({ generalInfo, onChangeField }) => {
               <HeightIcon sx={{ fontSize: 16, color: COLORS.TEXT_SECONDARY }} />
               <Typography sx={fieldLabelSx}>Height</Typography>
             </Box>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <TextField
                 variant="outlined"
                 size="small"
+                placeholder={generalInfo.heightUnit === "CM" ? "160" : "5'3"}
                 fullWidth
                 value={generalInfo.height || ""}
-                onChange={(e) => onChangeField("height", e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^[0-9.,'" ]+$/.test(val)) {
+                    onChangeField("height", val);
+                  }
+                }}
                 sx={{ ...standardFieldSx, minWidth: 0 }}
               />
-              <Select
-                variant="standard"
+              <TextField
+                select
+                SelectProps={{ MenuProps: roundedSelectMenuProps }}
+                variant="outlined"
+                size="small"
                 value={generalInfo.heightUnit || "FT/IN"}
                 onChange={(e) => onChangeField("heightUnit", e.target.value)}
-                sx={unitSelectSx}
-                IconComponent={() => null}
+                sx={{ ...standardFieldSx, width: 90 }}
               >
                 <MenuItem value="FT/IN">FT/IN</MenuItem>
                 <MenuItem value="CM">CM</MenuItem>
-              </Select>
+              </TextField>
             </Box>
           </Box>
         </Box>

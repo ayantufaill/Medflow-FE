@@ -33,9 +33,13 @@ import PhoneField from './PhoneField';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
 import { ZIndexLayer } from 'recharts';
+import { patientValidations } from '../../validations/patientValidations';
 
 function SpouseInformationSectionContent({ patient, isEditMode = false, onPatientDataChange }) {
   const [spouseInfo, setSpouseInfo] = useState(patient?.spouseInfo || {});
+  const [emailError, setEmailError] = useState('');
+  
+  const isSingle = patient?.maritalStatus?.toLowerCase() === 'single';
 
   useEffect(() => {
     setSpouseInfo(patient?.spouseInfo || {});
@@ -54,27 +58,47 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
     }
   };
 
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    handleFieldChange('email', value);
+    
+    if (isEditMode) {
+      if (!value) {
+        setEmailError('');
+        return;
+      }
+      const validationResult = patientValidations.email.validate(value, patient || {});
+      if (validationResult !== true && validationResult !== 'Either phone number or email is required') {
+        setEmailError(validationResult);
+      } else {
+        setEmailError('');
+      }
+    }
+  };
+
   return (
-    <Box>
+    <Box sx={{ opacity: isSingle ? 0.5 : 1, pointerEvents: isSingle ? 'none' : 'auto', transition: 'opacity 0.2s ease' }}>
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <InlineFieldRow
           label="Spouse Name"
           value={spouseInfo?.name || ''}
           onChange={(e) => handleFieldChange('name', e.target.value)}
-          InputProps={{ readOnly: !isEditMode }}
+          InputProps={{ readOnly: !isEditMode || isSingle }}
         />
         <PhoneField
           label="Spouse Phone"
           value={spouseInfo?.phone || ''}
-          isEditMode={isEditMode}
+          isEditMode={isEditMode && !isSingle}
           onChange={(e) => handleFieldChange('phone', e.target.value)}
         />
         <InlineFieldRow
           label="Email Address"
           value={spouseInfo?.email || ''}
           placeholder="email@example.com"
-          onChange={(e) => handleFieldChange('email', e.target.value)}
-          InputProps={{ readOnly: !isEditMode }}
+          onChange={handleEmailChange}
+          InputProps={{ readOnly: !isEditMode || isSingle }}
+          error={!!emailError}
+          helperText={emailError}
         />
       </Box>
     </Box>
@@ -209,14 +233,16 @@ export default function PatientDetailOverview({
             title="Family Members"
             subtitle="One HOH per family"
             action={
-              <Button
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={onAddFamilyMember}
-                sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}
-              >
-                Add member
-              </Button>
+              isEditMode && (
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={onAddFamilyMember}
+                  sx={{ textTransform: 'none', fontFamily: 'Inter', fontWeight: fontWeight.semibold, fontSize: fontSize.base, color: COLORS.ACCENT }}
+                >
+                  Add member
+                </Button>
+              )
             }
           >
             <FamilyMembersSection
@@ -270,7 +296,11 @@ export default function PatientDetailOverview({
               onPatientDataChange={onPatientDataChange}
             />
           </SectionCard>
-          <ReferringCard patient={patient} />
+          <ReferringCard
+            patient={patient}
+            isEditMode={isEditMode}
+            onPatientDataChange={onPatientDataChange}
+          />
           <ConfirmationSettingsCard
             patient={patient}
             isEditMode={isEditMode}
