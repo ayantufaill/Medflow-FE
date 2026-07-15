@@ -7,6 +7,7 @@ import {
   deletePatientInsuranceThunk,
   selectPatientInsurancesCache,
 } from '../../store/slices/patientSlice';
+import { patientService } from '../../services/patient.service';
 
 export const usePatientInsurance = (patientId) => {
   const dispatch = useDispatch();
@@ -34,11 +35,20 @@ export const usePatientInsurance = (patientId) => {
     return dispatch(deletePatientInsuranceThunk({ patientId, insuranceId }));
   }, [dispatch, patientId]);
 
+  const reorder = useCallback(async (insuranceIds) => {
+    if (!patientId) return;
+    const response = await patientService.reorderPatientInsurances(patientId, insuranceIds);
+    dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
+    dispatch(fetchPatientInsurances({ patientId, force: true }));
+    return response;
+  }, [dispatch, patientId]);
+
   return {
     insurances,
     fetch,
     create,
     update,
     remove,
+    reorder,
   };
 };
