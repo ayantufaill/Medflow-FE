@@ -354,7 +354,7 @@ const PatientDentalHistoryPage = () => {
               Medical History, there's no Premedication card to share the
               row with. */}
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
-            <Box>
+            <Box sx={{ minWidth: 0 }}>
               <SectionCard icon={HistoryTimelineIcon} title="History Timeline">
                 {visitDates.length ? (
                   <VisitDatesTimeline visitDates={visitDates} />
@@ -388,7 +388,7 @@ const PatientDentalHistoryPage = () => {
 
             {/* Sidebar — same Task List / Messages cards as the schedule
                 operatory pages and the Medical History page, unmodified. */}
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
               <TaskList />
               <Messages />
             </Box>

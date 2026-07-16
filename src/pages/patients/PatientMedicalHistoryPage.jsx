@@ -517,7 +517,7 @@ const PatientMedicalHistoryPage = () => {
           ~69:31 Timeline:Premedication) and the same ~4:1 split the
           Task List/Messages cards use on the schedule operatory page. */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "7fr 3fr" }, gap: 2, mb: 2, alignItems: "start" }}>
             <SectionCard icon={HistoryTimelineIcon} title="History Timeline" sx={{ mb: 0 }}>
               {visitDates.length ? (
@@ -638,7 +638,7 @@ const PatientMedicalHistoryPage = () => {
         {/* Sidebar — same Task List / Messages cards as the schedule
             operatory pages, plus a Signature card in the same card shell.
             One column spanning both rows above, not re-declared per row. */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
           <TaskList />
           <Messages />
           <PatientSignatureCard
