@@ -31,6 +31,10 @@ export const fetchPatientById = createAsyncThunk(
   {
     condition: (patientId, { getState }) => {
       const { patient } = getState();
+      // prevent double fetching if the request for this specific patient is already in-flight
+      if (patient.detailLoading && patient.detailLoadingId === patientId) {
+        return false;
+      }
       // If there's no current patient or it's a different patient, we MUST fetch
       // so that .fulfilled sets the state.
       if (!patient.currentPatient || (patient.currentPatient._id !== patientId && patient.currentPatient.id !== patientId)) {
