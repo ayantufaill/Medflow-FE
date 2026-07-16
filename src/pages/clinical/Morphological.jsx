@@ -255,7 +255,7 @@ const Morphological = () => {
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
       <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <RightPanel />
+        <RightPanel hideAppointmentShortlist />
       </Box>
 
       <ConfirmationDialog

@@ -336,7 +336,7 @@ const Radiographic = () => {
           </Box>
         </Box>
         <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', pt: 1 }}>
-          <RightPanel />
+          <RightPanel hideAppointmentShortlist />
         </Box>
       </Box>
     );
@@ -466,7 +466,7 @@ const Radiographic = () => {
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
       <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <RightPanel />
+        <RightPanel hideAppointmentShortlist />
       </Box>
 
       {/* Tooth Details Modal */}
