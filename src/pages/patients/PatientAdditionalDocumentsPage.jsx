@@ -322,7 +322,7 @@ const PatientAdditionalDocumentsPage = () => {
   }
 
   return (
-    <Box sx={{ bgcolor: COLORS.SURFACE_PAGE, minHeight: "100%", pb: 4 }}>
+    <Box sx={{ bgcolor: "#f5f5f5", minHeight: "100%", pb: 4 }}>
       <PatientSectionTabs activeTab="additional_docs" patientId={patientId} />
 
       {/* Page header */}

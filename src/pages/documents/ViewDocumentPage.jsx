@@ -1,58 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  Button,
-  Alert,
-  CircularProgress,
-  Chip,
-  Divider,
-  Card,
-  CardContent,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  ArrowBack as ArrowBackIcon,
-  Download as DownloadIcon,
-  AttachFile as AttachIcon,
-  Person as PersonIcon,
-  Event as EventIcon,
-  Description as DocIcon,
-  Lock as LockIcon,
-} from '@mui/icons-material';
+import { Box, CircularProgress, Alert } from '@mui/material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { documentService } from '../../services/document.service';
 import { clinicalNoteService } from '../../services/clinical-note.service';
-import {
-  getDocumentTypeLabel,
-  getDocumentTypeColor,
-  formatFileSize,
-} from '../../validations/documentValidations';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
+import { COLORS } from '../../constants/colors';
+import {
+  DocumentHeader,
+  DocumentMetadataPanel,
+  DocumentPreviewPanel,
+  AttachToNoteDialog,
+} from '../../components/documents';
 
 const ViewDocumentPage = () => {
   const navigate = useNavigate();
   const { documentId, patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [document, setDocument] = useState(null);
+  
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  
   const [attachDialog, setAttachDialog] = useState(false);
   const [attachLoading, setAttachLoading] = useState(false);
   const [clinicalNotes, setClinicalNotes] = useState([]);
@@ -65,9 +38,11 @@ const ViewDocumentPage = () => {
         const data = await documentService.getDocumentById(documentId);
         setDocument(data);
 
-        if (data.patientId?._id) {
+        // Fetch unsigned clinical notes for attaching
+        const pId = data.patientId?._id || data.patientId;
+        if (pId) {
           const notesResult = await clinicalNoteService.getClinicalNotesByPatient(
-            data.patientId._id,
+            pId,
             1,
             50
           );
@@ -152,256 +127,68 @@ const ViewDocumentPage = () => {
     return 'Unknown';
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const backPath = patientId ? `/patients/${patientId}/signed-documents` : '/documents';
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
         <CircularProgress />
       </Box>
     );
   }
 
   if (error || !document) {
-    const backPath = patientId ? `/patients/${patientId}/signed-documents` : '/documents';
     return (
-      <Box sx={patientId ? { bgcolor: '#f5f5f5', minHeight: '100%', pb: 4 } : {}}>
+      <Box sx={patientId ? { bgcolor: '#f5f5f5', minHeight: '100vh', pb: 4 } : {}}>
         {patientId && <PatientSectionTabs activeTab="signed_docs" patientId={patientId} />}
-        <Box sx={patientId ? { p: 3 } : {}}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(backPath)}
-            sx={{ mb: 2 }}
-          >
-            Back to Documents
-          </Button>
+        <Box sx={{ p: patientId ? 3 : 0 }}>
           <Alert severity="error">{error || 'Document not found'}</Alert>
         </Box>
       </Box>
     );
   }
 
-  const backPath = patientId ? `/patients/${patientId}/signed-documents` : '/documents';
-
   return (
-    <Box sx={patientId ? { bgcolor: '#f5f5f5', minHeight: '100%', pb: 4 } : {}}>
+    <Box sx={patientId ? { bgcolor: '#f5f5f5', minHeight: '100vh', pb: 4 } : {}}>
       {patientId && <PatientSectionTabs activeTab="signed_docs" patientId={patientId} />}
-      <Box sx={patientId ? { p: 3 } : {}}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate(backPath)}
-            >
-              Back
-            </Button>
-          <Box>
-            <Typography variant="h4" fontWeight="bold">
-              {document.documentName}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
-              <Chip
-                label={getDocumentTypeLabel(document.documentType)}
-                color={getDocumentTypeColor(document.documentType)}
-              />
-              {document.isConfidential && (
-                <Chip icon={<LockIcon />} label="Confidential" color="error" />
-              )}
-            </Box>
+      <Box sx={{ p: patientId ? 3 : 0 }}>
+        <DocumentHeader
+          document={document}
+          patientName={getPatientName()}
+          onAttach={() => setAttachDialog(true)}
+          onDelete={() => setDeleteDialog(true)}
+          hasNotes={clinicalNotes.length > 0}
+        />
+
+        {/* Two-column body — mirrors BulkText modal DialogContent */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: '16px',
+            alignItems: 'stretch',
+            bgcolor: '#f8fafc',
+            borderRadius: '12px',
+            border: `1px solid #e2e8f0`,
+            p: '16px',
+            minHeight: 560,
+          }}
+        >
+          {/* Left — Document Information (~340px fixed) */}
+          <Box sx={{ width: '320px', flexShrink: 0 }}>
+            <DocumentMetadataPanel
+              document={document}
+              patientName={getPatientName()}
+              uploadedByName={getUploadedByName()}
+            />
+          </Box>
+
+          {/* Right — Document Preview (fills remaining space) */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <DocumentPreviewPanel document={document} />
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {document.storagePath && (
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              component="a"
-              href={document.storagePath}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download
-            </Button>
-          )}
-          <Button
-            variant="outlined"
-            startIcon={<AttachIcon />}
-            onClick={() => setAttachDialog(true)}
-            disabled={clinicalNotes.length === 0}
-          >
-            Attach to Note
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteDialog(true)}
-          >
-            Delete
-          </Button>
-        </Box>
       </Box>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Document Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <PersonIcon color="action" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Patient
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium">
-                    {getPatientName()}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <DocIcon color="action" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    File Size
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatFileSize(document.fileSizeInBytes)}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <EventIcon color="action" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Uploaded On
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDateTime(document.createdAt)}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <PersonIcon color="action" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Uploaded By
-                  </Typography>
-                  <Typography variant="body1">
-                    {getUploadedByName()}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {document.expirationDate && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Expiration Date
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDate(document.expirationDate)}
-                  </Typography>
-                </Box>
-              )}
-
-              {document.mimeType && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    File Type
-                  </Typography>
-                  <Typography variant="body1">
-                    {document.mimeType}
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={8}>
-          {document.description && (
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Description
-              </Typography>
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                {document.description}
-              </Typography>
-            </Paper>
-          )}
-
-          {document.tags?.length > 0 && (
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Tags
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {document.tags.map((tag, index) => (
-                  <Chip key={index} label={tag} variant="outlined" />
-                ))}
-              </Box>
-            </Paper>
-          )}
-
-          {document.storagePath && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Preview
-              </Typography>
-              {document.mimeType?.startsWith('image/') ? (
-                <Box
-                  component="img"
-                  src={document.storagePath}
-                  alt={document.documentName}
-                  sx={{
-                    maxWidth: '100%',
-                    maxHeight: 500,
-                    objectFit: 'contain',
-                  }}
-                />
-              ) : document.mimeType === 'application/pdf' ? (
-                <Box
-                  component="iframe"
-                  src={document.storagePath}
-                  sx={{
-                    width: '100%',
-                    height: 500,
-                    border: 'none',
-                  }}
-                />
-              ) : (
-                <Alert severity="info">
-                  Preview not available for this file type. Please download to view.
-                </Alert>
-              )}
-            </Paper>
-          )}
-        </Grid>
-      </Grid>
 
       <ConfirmationDialog
         open={deleteDialog}
@@ -415,44 +202,15 @@ const ViewDocumentPage = () => {
         severity="error"
       />
 
-      <Dialog open={attachDialog} onClose={() => setAttachDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Attach Document to Clinical Note</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {clinicalNotes.length === 0 ? (
-              <Alert severity="info">
-                No unsigned clinical notes available for this patient.
-              </Alert>
-            ) : (
-              <FormControl fullWidth>
-                <InputLabel>Select Clinical Note</InputLabel>
-                <Select
-                  value={selectedNoteId}
-                  onChange={(e) => setSelectedNoteId(e.target.value)}
-                  label="Select Clinical Note"
-                >
-                  {clinicalNotes.map((note) => (
-                    <MenuItem key={note._id} value={note._id}>
-                      {formatDate(note.createdAt)} - {note.chiefComplaint || 'No Chief Complaint'}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAttachDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleAttachToNote}
-            variant="contained"
-            disabled={attachLoading || !selectedNoteId}
-          >
-            {attachLoading ? <CircularProgress size={20} /> : 'Attach'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      </Box>
+      <AttachToNoteDialog
+        open={attachDialog}
+        onClose={() => setAttachDialog(false)}
+        clinicalNotes={clinicalNotes}
+        selectedNoteId={selectedNoteId}
+        onChangeNote={setSelectedNoteId}
+        onConfirm={handleAttachToNote}
+        loading={attachLoading}
+      />
     </Box>
   );
 };
