@@ -21,7 +21,7 @@ import { useDentalHistory } from "../../hooks/redux/useDentalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
 import { usePatientAppointments } from "../../hooks/queries/usePatientAppointments";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
-import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
+import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { DentalGeneralInfo, DentalHistorySummary, DentalHistoryFullView } from "../../components/dental-history";
 import TaskList from "../../components/appointments/right-panel/TaskList";
@@ -377,13 +377,7 @@ const PatientDentalHistoryPage = () => {
                 onUpdateItem={handleUpdateItem}
               />
 
-              <Box sx={{ mt: 2 }}>
-                <PatientSignatureSection
-                  value={signature}
-                  onChange={setSignature}
-                  reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
-                />
-              </Box>
+
             </Box>
 
             {/* Sidebar — same Task List / Messages cards as the schedule
@@ -391,6 +385,12 @@ const PatientDentalHistoryPage = () => {
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
               <TaskList />
               <Messages />
+              <PatientSignatureCard
+                patient={patient}
+                value={signature}
+                onChange={setSignature}
+                reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
+              />
             </Box>
           </Box>
         </>
