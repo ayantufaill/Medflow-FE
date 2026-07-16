@@ -28,7 +28,6 @@ import SectionCard from "../../components/shared/SectionCard";
 import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
 import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog } from "../../components/patients";
-import { MOCK_ADDITIONAL_DOCUMENTS } from "../../components/patients/utils/mockAdditionalDocuments";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -72,11 +71,7 @@ const PatientAdditionalDocumentsPage = () => {
   const forms = documents.filter(d => d.category.includes('form') || d.category === 'custom_form');
   const otherDocs = documents.filter(d => !d.category.includes('claim') && d.category !== 'attachment' && !d.category.includes('consent') && !d.category.includes('form') && d.category !== 'custom_form');
 
-  // No real documents uploaded yet — show dummy attachments so the section
-  // reads as designed instead of an empty state.
   const additionalDocs = [...claimAttachments, ...consents, ...otherDocs];
-  const displayDocs = additionalDocs.length > 0 ? additionalDocs : MOCK_ADDITIONAL_DOCUMENTS;
-  const usingMockDocs = additionalDocs.length === 0;
 
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
@@ -468,24 +463,16 @@ const PatientAdditionalDocumentsPage = () => {
               <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                 <CircularProgress />
               </Box>
+            ) : additionalDocs.length === 0 ? (
+              <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, py: 2 }}>
+                No document uploaded yet. Click the upload button to add one.
+              </Typography>
             ) : viewMode === "thumbnails" ? (
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-                {displayDocs.map((doc) => (
+                {additionalDocs.map((doc) => (
                   <DocumentThumbnail key={doc.id} document={doc} onOpen={handleOpenDocument} />
                 ))}
               </Box>
-            ) : usingMockDocs ? (
-              <DocumentTable
-                title="Other Documents"
-                tooltipTitle="Additional uncategorized documents"
-                documents={displayDocs}
-                sortMode={sortMode}
-                onEdit={() => {}}
-                onOpen={handleOpenDocument}
-                onDownload={handleDownloadDocument}
-                onShare={handleShareWithPatient}
-                onDelete={() => {}}
-              />
             ) : (
               <Box>
                 {claimAttachments.length > 0 && (

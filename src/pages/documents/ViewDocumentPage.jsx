@@ -132,15 +132,21 @@ const ViewDocumentPage = () => {
   };
 
   const getPatientName = () => {
-    if (document?.patientId?.firstName && document?.patientId?.lastName) {
-      return `${document.patientId.firstName} ${document.patientId.lastName}`;
+    if (document?.patientId?.firstName) {
+      return `${document.patientId.firstName} ${document.patientId.lastName || ''}`.trim();
+    }
+    if (typeof document?.patientId === 'string') {
+      return `Patient ID: ${document.patientId}`;
     }
     return 'Unknown Patient';
   };
 
   const getUploadedByName = () => {
-    if (document?.uploadedBy?.firstName && document?.uploadedBy?.lastName) {
-      return `${document.uploadedBy.firstName} ${document.uploadedBy.lastName}`;
+    if (document?.uploadedBy?.firstName) {
+      return `${document.uploadedBy.firstName} ${document.uploadedBy.lastName || ''}`.trim();
+    }
+    if (typeof document?.uploadedBy === 'string') {
+      return document.uploadedBy;
     }
     return 'Unknown';
   };
