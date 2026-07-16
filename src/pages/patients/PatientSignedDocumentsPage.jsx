@@ -241,7 +241,7 @@ const PatientSignedDocumentsPage = () => {
                       textAlign: "center",
                       cursor: "pointer",
                     }}
-                    onClick={() => navigate(`/documents/${doc._id}`)}
+                    onClick={() => navigate(`/patients/${patientId}/signed-documents/${doc._id}`)}
                   >
                     <Box
                       sx={{ height: 92, display: "grid", placeItems: "center" }}
@@ -310,7 +310,7 @@ const PatientSignedDocumentsPage = () => {
                       textAlign: "center",
                       cursor: "pointer",
                     }}
-                    onClick={() => navigate(`/documents/${doc._id}`)}
+                    onClick={() => navigate(`/patients/${patientId}/signed-documents/${doc._id}`)}
                   >
                     <Box
                       sx={{ height: 92, display: "grid", placeItems: "center" }}

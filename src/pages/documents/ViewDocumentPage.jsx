@@ -42,10 +42,11 @@ import {
   formatFileSize,
 } from '../../validations/documentValidations';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
 
 const ViewDocumentPage = () => {
   const navigate = useNavigate();
-  const { documentId } = useParams();
+  const { documentId, patientId } = useParams();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -93,7 +94,7 @@ const ViewDocumentPage = () => {
       setDeleteLoading(true);
       await documentService.deleteDocument(documentId);
       showSnackbar('Document deleted successfully', 'success');
-      navigate('/documents');
+      navigate(patientId ? `/patients/${patientId}/signed-documents` : '/documents');
     } catch (err) {
       showSnackbar(
         err.response?.data?.error?.message ||
@@ -180,30 +181,38 @@ const ViewDocumentPage = () => {
   }
 
   if (error || !document) {
+    const backPath = patientId ? `/patients/${patientId}/signed-documents` : '/documents';
     return (
-      <Box>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/documents')}
-          sx={{ mb: 2 }}
-        >
-          Back to Documents
-        </Button>
-        <Alert severity="error">{error || 'Document not found'}</Alert>
+      <Box sx={patientId ? { bgcolor: '#f5f5f5', minHeight: '100%', pb: 4 } : {}}>
+        {patientId && <PatientSectionTabs activeTab="signed_docs" patientId={patientId} />}
+        <Box sx={patientId ? { p: 3 } : {}}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(backPath)}
+            sx={{ mb: 2 }}
+          >
+            Back to Documents
+          </Button>
+          <Alert severity="error">{error || 'Document not found'}</Alert>
+        </Box>
       </Box>
     );
   }
 
+  const backPath = patientId ? `/patients/${patientId}/signed-documents` : '/documents';
+
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/documents')}
-          >
-            Back
-          </Button>
+    <Box sx={patientId ? { bgcolor: '#f5f5f5', minHeight: '100%', pb: 4 } : {}}>
+      {patientId && <PatientSectionTabs activeTab="signed_docs" patientId={patientId} />}
+      <Box sx={patientId ? { p: 3 } : {}}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate(backPath)}
+            >
+              Back
+            </Button>
           <Box>
             <Typography variant="h4" fontWeight="bold">
               {document.documentName}
@@ -443,6 +452,7 @@ const ViewDocumentPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      </Box>
     </Box>
   );
 };

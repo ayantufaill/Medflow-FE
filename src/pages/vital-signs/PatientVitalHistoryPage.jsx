@@ -51,7 +51,7 @@ import {
   ReferenceArea,
 } from 'recharts';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { patientService } from '../../services/patient.service';
+import { usePatient } from '../../hooks/redux/usePatient';
 import {
   usePatientVitalSigns,
   usePatientVitalsTrend,
@@ -69,9 +69,7 @@ const PatientVitalHistoryPage = () => {
   const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
   
-  const [patient, setPatient] = useState(null);
-  const [patientLoading, setPatientLoading] = useState(true);
-  const [patientError, setPatientError] = useState('');
+  const { currentPatient: patient, loading: patientLoading, error: patientError, fetchById: fetchPatient } = usePatient();
   const [viewMode, setViewMode] = useState('chart');
   const [trendDays, setTrendDays] = useState(30);
   const [pagination, setPagination] = useState({
@@ -79,32 +77,12 @@ const PatientVitalHistoryPage = () => {
     limit: 10,
   });
 
-  // Fetch patient info (not a vital-sign query, stays manual)
+  // Fetch patient info using Redux with caching/in-flight checks
   useEffect(() => {
-    const fetchPatient = async () => {
-      try {
-        setPatientLoading(true);
-        const patientData = await patientService.getPatientById(patientId);
-        setPatient(patientData);
-      } catch (err) {
-        const errorMessage = err.response?.data?.error?.message || 
-          err.response?.data?.message || 
-          'Failed to load patient';
-        
-        if (err.response?.status === 403) {
-          setPatientError('You do not have permission to view this patient\'s vital signs history. Please contact your administrator.');
-        } else if (err.response?.status === 401) {
-          setPatientError('Your session has expired. Please log in again.');
-        } else {
-          setPatientError(errorMessage);
-        }
-        showSnackbar(errorMessage, 'error');
-      } finally {
-        setPatientLoading(false);
-      }
-    };
-    fetchPatient();
-  }, [patientId, showSnackbar]);
+    if (patientId) {
+      fetchPatient(patientId);
+    }
+  }, [patientId, fetchPatient]);
 
   // React Query hooks for vitals data
   const {

@@ -17,6 +17,7 @@ import PatientMedicalHistoryPage from '../pages/patients/PatientMedicalHistoryPa
 import PatientSignedDocumentsPage from '../pages/patients/PatientSignedDocumentsPage';
 import PatientDentalHistoryPage from '../pages/patients/PatientDentalHistoryPage';
 import PatientAdditionalDocumentsPage from '../pages/patients/PatientAdditionalDocumentsPage';
+import ViewDocumentPage from '../pages/documents/ViewDocumentPage';
 import PatientReportPage from '../pages/patient-reports/PatientReportPage';
 import PatientReportsPage from '../pages/patient-reports/PatientReportsPage';
 import RiskAssessmentPage from '../pages/patient-reports/RiskAssessmentPage';
@@ -61,6 +62,7 @@ const patientRoutes = [
   <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={adminDoctorReception(<PatientMedicalHistoryPage />)} />,
   <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={adminDoctorReception(<PatientDentalHistoryPage />)} />,
   <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={adminDoctorReception(<PatientAdditionalDocumentsPage />)} />,
+  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={adminDoctorReception(<ViewDocumentPage />)} />,
   <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={adminDoctorReception(<PatientReportPage />)} />,
   <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={adminDoctorReception(<RiskAssessmentPage />)} />,
   <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={adminDoctorReception(<HomeCarePage />)} />,
