@@ -51,11 +51,11 @@ const VitalCard = ({ icon, topText, label, value, unit, badge }) => (
     </Typography>
     
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: badge ? 1 : 0 }}>
-      <Typography sx={{ fontFamily: 'Inter', fontWeight: fontWeight.bold, fontSize: '15px', color: COLORS.TEXT_PRIMARY }}>
+      <Typography sx={{ fontFamily: 'Inter', fontWeight: fontWeight.bold, fontSize: '24px', color: COLORS.TEXT_PRIMARY }}>
         {value}
       </Typography>
       {unit && (
-        <Typography sx={{ fontFamily: 'Inter', fontSize: '11px', color: COLORS.TEXT_MUTED }}>
+        <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: COLORS.TEXT_MUTED }}>
           {unit}
         </Typography>
       )}

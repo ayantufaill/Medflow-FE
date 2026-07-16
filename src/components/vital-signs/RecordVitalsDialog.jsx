@@ -654,7 +654,7 @@ const RecordVitalsDialog = ({ open, onClose, patientId, onSaved, editingVitalSig
                       control={control}
                       rules={{ min: vitalSignValidations.bloodPressureDiastolic.min, max: vitalSignValidations.bloodPressureDiastolic.max }}
                       render={({ field }) => (
-                        <Box>
+                        <Box sx={{ position: 'relative' }}>
                           <Label>Diastolic BP</Label>
                           <TextField
                             {...field}
@@ -665,6 +665,22 @@ const RecordVitalsDialog = ({ open, onClose, patientId, onSaved, editingVitalSig
                             error={!!errors.bloodPressureDiastolic}
                             helperText={errors.bloodPressureDiastolic?.message}
                           />
+                          {(isBPInvalid || bpCategory) && (
+                            <Box sx={{ 
+                              position: { xs: 'relative', md: 'absolute' }, 
+                              top: { md: '100%' }, 
+                              left: { md: 0 }, 
+                              mt: 1, 
+                              zIndex: 1 
+                            }}>
+                              {isBPInvalid && (
+                                <Alert severity="error" sx={{ mb: 1, py: 0 }}>Systolic must be higher than Diastolic</Alert>
+                              )}
+                              {bpCategory && (
+                                <Chip label={bpCategory.label} color={bpCategory.color} size="small" />
+                              )}
+                            </Box>
+                          )}
                         </Box>
                       )}
                     />
@@ -689,16 +705,6 @@ const RecordVitalsDialog = ({ open, onClose, patientId, onSaved, editingVitalSig
                         </Box>
                       )}
                     />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Box>
-                      {isBPInvalid && (
-                        <Alert severity="error" sx={{ mb: 1, py: 0 }}>Systolic must be higher than Diastolic</Alert>
-                      )}
-                      {bpCategory && (
-                        <Chip label={bpCategory.label} color={bpCategory.color} size="small" />
-                      )}
-                    </Box>
                   </Grid>
                 </Grid>
               </SectionContainer>
