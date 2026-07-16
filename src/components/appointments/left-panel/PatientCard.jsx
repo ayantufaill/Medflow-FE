@@ -22,10 +22,10 @@ const TAGS = [
 ];
 
 const ACTION_BUTTONS = [
-  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false },
-  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true  },
-  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false },
-  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false },
+  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
+  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
+  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
+  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
 ];
 
 // Renders one contact-info row with an icon, text, and copy button.
@@ -252,10 +252,11 @@ const PatientCard = () => {
 
       {/* ── Quick-action buttons ─────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', gap: '6px' }}>
-        {ACTION_BUTTONS.map(({ label, icon, dot }) => (
+        {ACTION_BUTTONS.map(({ label, icon, dot, disabled }) => (
           <Box
             key={label}
             onClick={() => {
+              if (disabled) return;
               if (label === 'Book') {
                 window.dispatchEvent(new CustomEvent('open-new-appointment-modal', { detail: { isFromPatientCard: true } }));
               }
@@ -271,13 +272,14 @@ const PatientCard = () => {
               backgroundColor: COLORS.SURFACE_CARD,
               border: `1px solid ${COLORS.BORDER}`,
               borderRadius: radius.md,
-              cursor: 'pointer',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.45 : 1,
               position: 'relative',
-              '&:hover': { backgroundColor: COLORS.SURFACE_INPUT },
+              '&:hover': disabled ? {} : { backgroundColor: COLORS.SURFACE_INPUT },
             }}
           >
             {/* Notification dot for Email button */}
-            {dot && (
+            {dot && !disabled && (
               <Box
                 sx={{
                   position: 'absolute', top: '6px', right: '10px',

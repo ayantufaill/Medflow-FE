@@ -43,6 +43,7 @@ import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
 import Card from "../../components/shared/Card";
 import SectionCard from "../../components/shared/SectionCard";
+import UnsavedChangesPrompt from "../../components/shared/UnsavedChangesPrompt";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -138,7 +139,10 @@ const PatientMedicalHistoryPage = () => {
   const [signature, setSignature] = useState(null);
   const [isStartingNewHistory, setIsStartingNewHistory] = useState(false);
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   const addMedication = () => {
+    setHasUnsavedChanges(true);
     const nextId = Math.max(0, ...medications.map((m) => m.id)) + 1;
     setMedications((prev) => [
       ...prev,
@@ -147,16 +151,19 @@ const PatientMedicalHistoryPage = () => {
   };
 
   const updateMedication = (id, field, value) => {
+    setHasUnsavedChanges(true);
     setMedications((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)),
     );
   };
 
   const removeMedication = (id) => {
+    setHasUnsavedChanges(true);
     setMedications((prev) => prev.filter((m) => m.id !== id));
   };
 
   const addSupplement = () => {
+    setHasUnsavedChanges(true);
     const nextId = Math.max(0, ...supplements.map((s) => s.id)) + 1;
     setSupplements((prev) => [
       ...prev,
@@ -165,12 +172,14 @@ const PatientMedicalHistoryPage = () => {
   };
 
   const updateSupplement = (id, field, value) => {
+    setHasUnsavedChanges(true);
     setSupplements((prev) =>
       prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
     );
   };
 
   const removeSupplement = (id) => {
+    setHasUnsavedChanges(true);
     setSupplements((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -235,6 +244,7 @@ const PatientMedicalHistoryPage = () => {
   }));
 
   const handleSummarySectionChange = (sectionId, field, value) => {
+    setHasUnsavedChanges(true);
     setLocalSections((prev) => {
       const currentSections = Array.isArray(prev) ? prev : [];
       return currentSections.map((section) =>
@@ -244,6 +254,7 @@ const PatientMedicalHistoryPage = () => {
   };
 
   const handleGeneralInfoChange = (field, value) => {
+    setHasUnsavedChanges(true);
     setLocalGeneralInfo((prev) => ({
       ...prev,
       [field]: value,
@@ -251,6 +262,7 @@ const PatientMedicalHistoryPage = () => {
   };
 
   const handlePremedChange = (requiresPremed) => {
+    setHasUnsavedChanges(true);
     setLocalPremed((prev) => ({
       ...prev,
       requiresPremed,
@@ -292,9 +304,7 @@ const PatientMedicalHistoryPage = () => {
         ? localSections
         : summarySections;
 
-      const data = await update(
-        patientId,
-        {
+      const payload = {
           generalInfo: localGeneralInfo || {},
           premed: localPremed || {},
           risk: medicalHistory.risk,
@@ -309,18 +319,20 @@ const PatientMedicalHistoryPage = () => {
           medications,
           supplements,
           review,
-        }
-      ).unwrap();
+        };
 
+      const data = await update(patientId, payload).unwrap();
+      setHasUnsavedChanges(false);
       setMedications(Array.isArray(data?.medications) ? data.medications : []);
       setSupplements(Array.isArray(data?.supplements) ? data.supplements : []);
       setSignature(data?.review?.signatureDataUrl || signature || null);
       showSnackbar(
         reviewedWithPatient
           ? "Medical history reviewed"
-          : "Medical history updated",
+          : "Medical history saved successfully",
         "success",
       );
+      setHistoryTab(0);
     } catch (err) {
       showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to update medical history", "error");
     }
@@ -384,6 +396,7 @@ const PatientMedicalHistoryPage = () => {
 
   return (
     <PageContainer>
+      <UnsavedChangesPrompt when={hasUnsavedChanges} onSave={() => saveMedicalHistory(false)} />
       <PatientSectionTabs activeTab="medical" patientId={patientId} />
 
       {/* <FloatingActions
@@ -433,11 +446,21 @@ const PatientMedicalHistoryPage = () => {
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
           <Button
-            variant="outlined"
+            variant={hasUnsavedChanges ? "contained" : "outlined"}
             size="small"
             startIcon={<RefreshIcon fontSize="small" />}
             onClick={() => saveMedicalHistory(false)}
-            sx={{
+            sx={hasUnsavedChanges ? {
+              textTransform: "none",
+              fontFamily: "Inter",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.base,
+              borderRadius: radius.md,
+              backgroundColor: '#1d4ed8',
+              color: COLORS.WHITE,
+              boxShadow: "none",
+              "&:hover": { backgroundColor: '#1e40af' },
+            } : {
               textTransform: "none",
               fontFamily: "Inter",
               fontWeight: fontWeight.semibold,
