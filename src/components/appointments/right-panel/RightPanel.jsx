@@ -3,7 +3,7 @@ import AppointmentShortlist from './AppointmentShortlist';
 import TaskList from './TaskList';
 import Messages from './Messages';
 
-const RightPanel = () => (
+const RightPanel = ({ hideAppointmentShortlist = false }) => (
   <Box
     sx={{
       display: 'flex',
@@ -12,7 +12,7 @@ const RightPanel = () => (
       gap: '8px',
     }}
   >
-    <AppointmentShortlist />
+    {!hideAppointmentShortlist && <AppointmentShortlist />}
     <TaskList />
     <Messages />
   </Box>
