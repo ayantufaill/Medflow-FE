@@ -32,7 +32,6 @@ import ViewClinicalNotePage from '../pages/clinical-notes/ViewClinicalNotePage';
 import VitalSignsListPage from '../pages/vital-signs/VitalSignsListPage';
 import CreateVitalSignPage from '../pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from '../pages/vital-signs/EditVitalSignPage';
-import ViewVitalSignPage from '../pages/vital-signs/ViewVitalSignPage';
 import PatientVitalHistoryPage from '../pages/vital-signs/PatientVitalHistoryPage';
 
 const adminDoctor = (children, hideSidebar = true) => (
@@ -79,9 +78,8 @@ const clinicalRoutes = [
   <Route key="/clinical-notes/:clinicalNoteId" path="/clinical-notes/:clinicalNoteId" element={adminDoctor(<ViewClinicalNotePage />)} />,
   <Route key="/clinical-notes/:clinicalNoteId/edit" path="/clinical-notes/:clinicalNoteId/edit" element={adminDoctor(<EditClinicalNotePage />)} />,
   <Route key="/vital-signs" path="/vital-signs" element={adminDoctor(wrapWithBoundary(<VitalSignsListPage />))} />,
-  <Route key="/vital-signs/create" path="/vital-signs/create" element={adminDoctor(wrapWithBoundary(<CreateVitalSignPage />))} />,
-  <Route key="/vital-signs/patient/:patientId" path="/vital-signs/patient/:patientId" element={adminDoctor(wrapWithBoundary(<PatientVitalHistoryPage />))} />,
-  <Route key="/vital-signs/:vitalSignId" path="/vital-signs/:vitalSignId" element={adminDoctor(wrapWithBoundary(<ViewVitalSignPage />))} />,
+  <Route key="/vital-signs/create" path="/vital-signs/create" element={adminDoctor(wrapWithBoundary(<CreateVitalSignPage />), false)} />,
+  <Route key="/vital-signs/patient/:patientId" path="/vital-signs/patient/:patientId" element={adminDoctor(wrapWithBoundary(<PatientVitalHistoryPage />), false)} />,
   <Route key="/vital-signs/:vitalSignId/edit" path="/vital-signs/:vitalSignId/edit" element={adminDoctor(wrapWithBoundary(<EditVitalSignPage />))} />,
 ];
 

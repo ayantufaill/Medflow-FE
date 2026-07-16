@@ -12,7 +12,8 @@ export const vitalSignKeys = {
     { page, limit, ...filters },
   ],
   latest: (patientId) => [...vitalSignKeys.all, 'latest', patientId],
-  trend: (patientId, days) => [...vitalSignKeys.all, 'trend', patientId, { days }],
+  trends: (patientId) => [...vitalSignKeys.all, 'trend', patientId],
+  trend: (patientId, days) => [...vitalSignKeys.trends(patientId), { days }],
   details: () => [...vitalSignKeys.all, 'detail'],
   detail: (id) => [...vitalSignKeys.details(), id],
   normalRanges: () => [...vitalSignKeys.all, 'normalRanges'],
@@ -84,7 +85,7 @@ export const useCreateVitalSign = () => {
           queryKey: vitalSignKeys.latest(variables.patientId),
         });
         queryClient.invalidateQueries({
-          queryKey: vitalSignKeys.trend(variables.patientId),
+          queryKey: vitalSignKeys.trends(variables.patientId),
         });
       }
     },
@@ -95,8 +96,31 @@ export const useDeleteVitalSign = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (vitalSignId) => vitalSignService.deleteVitalSign(vitalSignId),
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: vitalSignKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: vitalSignKeys.all }); // Brute force to clear trends and latest since we don't have patientId here directly
+    },
+  });
+};
+
+export const useUpdateVitalSign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => vitalSignService.updateVitalSign(id, data),
+    onSuccess: (updatedData) => {
+      queryClient.invalidateQueries({ queryKey: vitalSignKeys.lists() });
+      if (updatedData && updatedData._id) {
+        queryClient.invalidateQueries({ queryKey: vitalSignKeys.detail(updatedData._id) });
+      }
+      if (updatedData && updatedData.patientId) {
+        const patientId = typeof updatedData.patientId === 'object' ? updatedData.patientId._id : updatedData.patientId;
+        queryClient.invalidateQueries({
+          queryKey: vitalSignKeys.latest(patientId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: vitalSignKeys.trends(patientId),
+        });
+      }
     },
   });
 };
