@@ -21,12 +21,13 @@ import { useDentalHistory } from "../../hooks/redux/useDentalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
 import { usePatientAppointments } from "../../hooks/queries/usePatientAppointments";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
-import PatientSignatureSection from "../../components/patients/PatientSignatureSection";
+import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { DentalGeneralInfo, DentalHistorySummary, DentalHistoryFullView } from "../../components/dental-history";
 import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
 import SectionCard from "../../components/shared/SectionCard";
+import UnsavedChangesPrompt from "../../components/shared/UnsavedChangesPrompt";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -131,6 +132,8 @@ const PatientDentalHistoryPage = () => {
   const [localGumAndBone, setLocalGumAndBone] = useState([]);
   const [localBiteAndJawJoint, setLocalBiteAndJawJoint] = useState([]);
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   // isActuallyLoading flag like Medical History
   const isActuallyLoading = loading || (!dentalHistory && !error);
 
@@ -159,22 +162,26 @@ const PatientDentalHistoryPage = () => {
   }, [patientId, fetchById, fetch, showSnackbar]);
 
   const updateGeneralInfo = (field, value) => {
+    setHasUnsavedChanges(true);
     setLocalGeneralInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const updatePersonalHistory = (id, field, value) => {
+    setHasUnsavedChanges(true);
     setLocalPersonalHistory((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     );
   };
 
   const updateGumAndBone = (id, field, value) => {
+    setHasUnsavedChanges(true);
     setLocalGumAndBone((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     );
   };
 
   const updateBiteAndJawJoint = (id, field, value) => {
+    setHasUnsavedChanges(true);
     setLocalBiteAndJawJoint((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     );
@@ -215,6 +222,7 @@ const PatientDentalHistoryPage = () => {
       setLocalBiteAndJawJoint(Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : []);
       
       setSignature(data?.review?.signatureDataUrl || signature || null);
+      setHasUnsavedChanges(false);
       showSnackbar(reviewedWithPatient ? "Dental history reviewed" : "Dental history updated", "success");
     } catch (err) {
       showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to update dental history", "error");
@@ -249,6 +257,7 @@ const PatientDentalHistoryPage = () => {
       }}
     >
       <PatientSectionTabs activeTab="dental" patientId={patientId} />
+      <UnsavedChangesPrompt when={hasUnsavedChanges} onSave={() => saveDentalHistory(false)} />
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
       {!showContent ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
@@ -285,27 +294,36 @@ const PatientDentalHistoryPage = () => {
             </Box>
 
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={saving}
-                startIcon={<RefreshIcon fontSize="small" />}
-                onClick={() => saveDentalHistory(false)}
-                sx={{
-                  textTransform: "none",
-                  fontFamily: "Inter",
-                  fontWeight: fontWeight.semibold,
-                  fontSize: fontSize.base,
-                  borderRadius: radius.md,
-                  borderColor: COLORS.BORDER,
-                  color: COLORS.TEXT_BODY,
-                  backgroundColor: COLORS.SURFACE_CARD,
-                  boxShadow: "none",
-                  "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
-                }}
-              >
-                Update Hx
-              </Button>
+                <Button
+                  variant={hasUnsavedChanges ? "contained" : "outlined"}
+                  size="small"
+                  startIcon={<RefreshIcon fontSize="small" />}
+                  onClick={() => saveDentalHistory(false)}
+                  sx={hasUnsavedChanges ? {
+                    textTransform: "none",
+                    fontFamily: "Inter",
+                    fontWeight: fontWeight.semibold,
+                    fontSize: fontSize.base,
+                    borderRadius: radius.md,
+                    backgroundColor: '#1d4ed8',
+                    color: COLORS.WHITE,
+                    boxShadow: "none",
+                    "&:hover": { backgroundColor: '#1e40af' },
+                  } : {
+                    textTransform: "none",
+                    fontFamily: "Inter",
+                    fontWeight: fontWeight.semibold,
+                    fontSize: fontSize.base,
+                    borderRadius: radius.md,
+                    borderColor: COLORS.BORDER,
+                    color: COLORS.TEXT_BODY,
+                    backgroundColor: COLORS.SURFACE_CARD,
+                    boxShadow: "none",
+                    "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
+                  }}
+                >
+                  Update Hx
+                </Button>
               <Button
                 variant="contained"
                 size="small"
@@ -354,7 +372,7 @@ const PatientDentalHistoryPage = () => {
               Medical History, there's no Premedication card to share the
               row with. */}
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
-            <Box>
+            <Box sx={{ minWidth: 0 }}>
               <SectionCard icon={HistoryTimelineIcon} title="History Timeline">
                 {visitDates.length ? (
                   <VisitDatesTimeline visitDates={visitDates} />
@@ -377,20 +395,20 @@ const PatientDentalHistoryPage = () => {
                 onUpdateItem={handleUpdateItem}
               />
 
-              <Box sx={{ mt: 2 }}>
-                <PatientSignatureSection
-                  value={signature}
-                  onChange={setSignature}
-                  reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
-                />
-              </Box>
+
             </Box>
 
             {/* Sidebar — same Task List / Messages cards as the schedule
                 operatory pages and the Medical History page, unmodified. */}
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
               <TaskList />
               <Messages />
+              <PatientSignatureCard
+                patient={patient}
+                value={signature}
+                onChange={setSignature}
+                reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
+              />
             </Box>
           </Box>
         </>

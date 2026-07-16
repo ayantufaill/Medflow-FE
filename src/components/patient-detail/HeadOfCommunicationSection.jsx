@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Avatar, Select, MenuItem, FormControl } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import dayjs from 'dayjs';
 import { getInitials } from './utils';
 import { COLORS } from '../../constants/colors';
-import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from '../../constants/styles';
 
 export default function HeadOfCommunicationSection({ patient, isEditMode = false, onPatientDataChange }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
@@ -32,6 +33,7 @@ export default function HeadOfCommunicationSection({ patient, isEditMode = false
     ? patient.household
     : [{ name: displayName }];
   const relationLabel = displayName === patientFullName ? 'Self' : 'Household member';
+  const isUnder16 = patient?.dateOfBirth ? dayjs().diff(dayjs(patient.dateOfBirth), 'year') < 16 : false;
 
   return (
     <Box>
@@ -58,17 +60,22 @@ export default function HeadOfCommunicationSection({ patient, isEditMode = false
             fontSize: '0.75rem',
           }}
         >
-          {getInitials(head?.firstName || patient?.firstName, head?.lastName || patient?.lastName)}
+          {(() => {
+            const parts = displayName.split(' ');
+            const first = parts[0];
+            const last = parts.length > 1 ? parts[parts.length - 1] : '';
+            return getInitials(first, last);
+          })()}
         </Avatar>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {isEditMode ? (
+          {isEditMode && isUnder16 ? (
             <FormControl size="small" fullWidth>
               <Select
                 value={displayName}
                 onChange={(e) => handleFieldChange('headOfCommunication', { name: e.target.value })}
-                variant="standard"
-                disableUnderline
-                sx={{ fontFamily: 'Inter', fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}
+                variant="outlined"
+                MenuProps={roundedSelectMenuProps}
+                sx={{ fontFamily: 'Inter', fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, borderRadius: radius.md }}
               >
                 {options.map((option) => {
                   const optionName =

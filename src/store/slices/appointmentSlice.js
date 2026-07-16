@@ -271,7 +271,7 @@ const initialState = {
   // ── Schedule UI state ───────────────────────────────────────────────────────
   // Stored in Redux (not local component state) so ScheduleGridHeader, ScheduleCalendar,
   // and LeftPanel can all read and update the same date/view without prop drilling.
-  calendarView: 'week', // 'day' | 'week' | 'month'
+  calendarView: 'day', // 'day' | 'week' | 'month'
   selectedDate: new Date().toISOString(),
   // Conflict windows detected during the booking flow — cleared on dialog close.
   conflicts: [],

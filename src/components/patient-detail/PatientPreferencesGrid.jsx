@@ -643,7 +643,7 @@ function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChan
  */
 export default function PatientPreferencesGrid({ patient, isEditMode = false, onPatientDataChange }) {
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '32fr 28fr 30fr' }, gap: 2, mt: 2 }}>
       <CreditCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
       <BankAccountCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />
       <ReleaseInformationCard patient={patient} isEditMode={isEditMode} onPatientDataChange={onPatientDataChange} />

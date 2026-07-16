@@ -40,6 +40,7 @@ const RightPanelCollapsed = ({ onExpand }) => {
         height: '100%',
         backgroundColor: COLORS.WHITE,
         display: 'flex',
+        borderRadius: radius.lg,
         flexDirection: 'column',
         alignItems: 'center',
         py: '16px',
