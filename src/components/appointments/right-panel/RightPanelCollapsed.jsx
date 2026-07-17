@@ -13,7 +13,7 @@ import { shortlistService } from '../../../services/shortlist.service';
 import { TASKS } from './TaskList';
 import { MESSAGE_ROWS } from './Messages';
 
-const RightPanelCollapsed = ({ onExpand }) => {
+const RightPanelCollapsed = ({ onExpand, hideAppointmentShortlist = false }) => {
   const [shortlistCount, setShortlistCount] = useState(0);
 
   useEffect(() => {
@@ -57,27 +57,29 @@ const RightPanelCollapsed = ({ onExpand }) => {
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center' }}>
         {/* Calendar */}
-        <Badge 
-          badgeContent={shortlistCount} 
-          color="error"
-          sx={{ '& .MuiBadge-badge': { fontWeight: 600, fontSize: '10px', minWidth: '16px', height: '16px', px: '4px' } }}
-        >
-          <Box
-            onClick={onExpand}
-            sx={{
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: COLORS.TEXT_SECONDARY,
-              '&:hover': { color: COLORS.ACCENT, backgroundColor: COLORS.SURFACE_TINT, borderRadius: '12px' }
-            }}
+        {!hideAppointmentShortlist && (
+          <Badge 
+            badgeContent={shortlistCount} 
+            color="error"
+            sx={{ '& .MuiBadge-badge': { fontWeight: 600, fontSize: '10px', minWidth: '16px', height: '16px', px: '4px' } }}
           >
-            <CalendarTodayIcon sx={{ fontSize: '22px' }} />
-          </Box>
-        </Badge>
+            <Box
+              onClick={onExpand}
+              sx={{
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: COLORS.TEXT_SECONDARY,
+                '&:hover': { color: COLORS.ACCENT, backgroundColor: COLORS.SURFACE_TINT, borderRadius: '12px' }
+              }}
+            >
+              <CalendarTodayIcon sx={{ fontSize: '22px' }} />
+            </Box>
+          </Badge>
+        )}
 
         {/* Checklist */}
         <Badge 

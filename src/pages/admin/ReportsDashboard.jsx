@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Box, Tabs, Tab, useTheme, Typography, Grid } from '@mui/material';
+import { Box, Tabs, Tab, useTheme, Typography, Grid, IconButton } from '@mui/material';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import PatientInsuranceCoverage from './reports/patient/PatientInsuranceCoverage';
 import PatientMembershipPlan from './reports/patient/PatientMembershipPlan';
 import OnlineSchedulingReferral from './reports/patient/OnlineSchedulingReferral';
@@ -60,14 +61,15 @@ import ClinicalReportsSubNav from '../../components/admin/reports/ClinicalReport
 import OthersReportsSubNav from '../../components/admin/reports/OthersReportsSubNav';
 import SavingReportsSubNav from '../../components/admin/reports/SavingReportsSubNav';
 import FinancialReportsSubNav from '../../components/admin/reports/FinancialReportsSubNav';
-import TaskList from '../../components/appointments/right-panel/TaskList';
-import Messages from '../../components/appointments/right-panel/Messages';
+import RightPanel from '../../components/appointments/right-panel/RightPanel';
+import RightPanelCollapsed from '../../components/appointments/right-panel/RightPanelCollapsed';
 
 const ReportsDashboard = () => {
   const theme = useTheme();
   const location = useLocation();
   console.log("ReportsDashboard mounted/rendered. Pathname:", location.pathname);
   const [hoveredTab, setHoveredTab] = useState(null);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
   const activeTab = TABS.findIndex((tab) => location.pathname.startsWith(tab.path));
 
@@ -89,7 +91,7 @@ const ReportsDashboard = () => {
   };
 
   return (
-    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ display: 'flex', width: '100%', gap: 3, p: 3, backgroundColor: '#f8f9fa', minHeight: 'calc(100vh - 65px)' }}>
+    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
       {/* Main Reports Area */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden' }}>
@@ -252,11 +254,21 @@ const ReportsDashboard = () => {
         </Box>
       </Box>
       
-      {/* Right Panel: Tasks and Messages */}
-      <Box sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <TaskList />
-        <Messages />
-      </Box>
+      {/* Right Panel */}
+      {rightPanelOpen ? (
+        <Box sx={{ flex: '0 0 320px', width: '320px', minWidth: '320px', maxWidth: '320px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+            <IconButton onClick={() => setRightPanelOpen(false)} sx={{ color: 'text.secondary', p: 0, '&:hover': { color: 'primary.main' } }}>
+              <KeyboardDoubleArrowRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          <RightPanel hideAppointmentShortlist={true} />
+        </Box>
+      ) : (
+        <Box sx={{ height: '100%', flexShrink: 0 }}>
+          <RightPanelCollapsed onExpand={() => setRightPanelOpen(true)} hideAppointmentShortlist={true} />
+        </Box>
+      )}
     </Box>
   );
 };
