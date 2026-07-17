@@ -15,10 +15,10 @@ const TMJSectionContainer = ({ title, isExpanded, onToggle, children, statusColo
           alignItems: 'center',
           p: 2, 
           px: 3,
-          backgroundColor: '#f8fafc',
+          backgroundColor: '#F3F8FD',
           cursor: 'pointer', 
           userSelect: 'none',
-          borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none'
+          borderBottom: isExpanded ? '1px solid #E0E5EB' : 'none'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>

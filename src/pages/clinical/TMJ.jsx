@@ -8,7 +8,8 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrowDown';
-import { RadioExamHeader, ExamToolbar } from "../../components/radiographic";
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { RadioExamHeader, ExamToolbar, ExamActionBar } from "../../components/radiographic";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { fontSize, fontWeight } from "../../constants/styles";
 import { selectSelectedPatientId } from '../../store/slices/patientSlice';
@@ -357,35 +358,17 @@ const DentalTmdExamPage = () => {
   );
 
   const jointEvaluationSummary = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-        <Box sx={getStatusIconStyle(formData.jointSounds === 'no' ? '#2ecc71' : '#e74c3c')} />
-        <Typography variant="body2" sx={{ mr: 2, minWidth: 220 }}>Joint Sounds:</Typography>
-        <RadioGroup
-          row
-          value={formData.jointSounds}
-          onChange={(e) => handleFieldChange('jointSounds', e.target.value)}
-          sx={{ gap: 1 }}
-        >
-          <FormControlLabel value="no" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>No</Typography>} sx={{ mr: 1 }} />
-          <FormControlLabel value="yes" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Yes</Typography>} />
-        </RadioGroup>
+    <Box sx={{ display: 'flex', gap: 6, mb: 3 }}>
+      <Box>
+        <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', letterSpacing: '0.5px', mb: 1, textTransform: 'uppercase' }}>Joint Sounds</Typography>
+        <PillToggle value={formData.jointSounds} onChange={(val) => handleFieldChange('jointSounds', val)} options={[{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }]} />
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-        <Box sx={getStatusIconStyle(formData.loadTest === 'neg' ? '#2ecc71' : '#e74c3c')} />
-        <Typography variant="body2" sx={{ mr: 2, minWidth: 220 }}>Load Test:</Typography>
-        <RadioGroup
-          row
-          value={formData.loadTest}
-          onChange={(e) => handleFieldChange('loadTest', e.target.value)}
-          sx={{ gap: 1 }}
-        >
-          <FormControlLabel value="neg" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Negative</Typography>} sx={{ mr: 1 }} />
-          <FormControlLabel value="pos" control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 18 }, padding: '4px' }} />} label={<Typography sx={{ fontSize: '13px' }}>Positive</Typography>} />
-        </RadioGroup>
+      <Box>
+        <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', letterSpacing: '0.5px', mb: 1, textTransform: 'uppercase' }}>Load Test</Typography>
+        <PillToggle value={formData.loadTest} onChange={(val) => handleFieldChange('loadTest', val)} options={[{ value: 'neg', label: 'Negative' }, { value: 'pos', label: 'Positive' }]} />
       </Box>
-    </>
+    </Box>
   );
 
   return (
@@ -498,44 +481,33 @@ const DentalTmdExamPage = () => {
                 />
               </TMJSectionContainer>
 
-              {/* Footer section */}
-              <Box sx={{ ml: 1, mb: 3, mt: 4 }}>
-                <Typography variant="body2" sx={{ display: 'inline', mr: 2, fontSize: '13px' }}>Additional Imaging required:</Typography>
-                <Typography variant="body2" sx={{ display: 'inline', color: '#555', fontStyle: 'italic', mr: 1, fontSize: '13px' }}>MRI:</Typography>
-                <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '13px', color: '#888' }}>Left</Typography>} sx={{ mr: 1 }} />
-                <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '13px', color: '#888' }}>Right</Typography>} sx={{ mr: 4 }} />
-                <FormControlLabel control={<Checkbox size="small" />} label={<Typography sx={{ fontSize: '13px', color: '#888' }}>CBCT</Typography>} />
-              </Box>
-
             </fieldset>
 
-            <Box sx={{ ml: 1, mt: 3, display: 'flex', gap: 2 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSaveExam}
-                disabled={isSigned}
-                sx={{ textTransform: 'none', px: 3 }}
-              >
-                Save Exam
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleSignExam}
-                disabled={isSigned}
-                sx={{ textTransform: 'none', px: 3 }}
-              >
-                Sign & Finalize
-              </Button>
-              <Button
-                variant="contained"
-                disabled={isSigned}
-                sx={{ bgcolor: '#e74c3c', textTransform: 'none', px: 2, '&:hover': { bgcolor: '#c0392b' } }}
-                onClick={handleDeleteExam}
-              >
-                Delete Exam
-              </Button>
+            {/* Footer section */}
+            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                <Typography variant="body2" sx={{ display: 'inline', mr: 2, fontSize: '13px', color: '#0d477a', fontWeight: 500 }}>Additional Imaging required:</Typography>
+                <Typography variant="body2" sx={{ display: 'inline', color: '#0d477a', fontStyle: 'italic', mr: 1, fontSize: '13px', fontWeight: 500 }}>MRI:</Typography>
+                <FormControlLabel control={<Checkbox size="small" sx={{ color: '#8fa8c0', '&.Mui-checked': { color: '#0d477a' } }} />} label={<Typography sx={{ fontSize: '13px', color: '#6388a8' }}>Left</Typography>} sx={{ mr: 2 }} />
+                <FormControlLabel control={<Checkbox size="small" sx={{ color: '#8fa8c0', '&.Mui-checked': { color: '#0d477a' } }} />} label={<Typography sx={{ fontSize: '13px', color: '#6388a8' }}>Right</Typography>} sx={{ mr: 2 }} />
+                <FormControlLabel control={<Checkbox size="small" sx={{ color: '#8fa8c0', '&.Mui-checked': { color: '#0d477a' } }} />} label={<Typography sx={{ fontSize: '13px', color: '#6388a8' }}>CBCT</Typography>} />
+              </Box>
+
+              <Box sx={{ mt: -4, mr: -1 }}>
+                <ExamActionBar
+                  isSigned={isSigned}
+                  onSave={handleSaveExam}
+                  onSign={handleSignExam}
+                  onDelete={handleDeleteExam}
+                  signDialogOpen={signDialogOpen}
+                  onSignDialogClose={() => setSignDialogOpen(false)}
+                  onConfirmSign={handleConfirmSign}
+                  signLoading={signMutation.isPending}
+                  deleteDialogOpen={deleteDialogOpen}
+                  onDeleteDialogClose={() => setDeleteDialogOpen(false)}
+                  onConfirmDelete={handleConfirmDelete}
+                />
+              </Box>
             </Box>
           </Box>
         </Box>
@@ -545,27 +517,6 @@ const DentalTmdExamPage = () => {
       <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
-
-      <ConfirmationDialog
-        open={signDialogOpen}
-        onClose={() => setSignDialogOpen(false)}
-        onConfirm={handleConfirmSign}
-        title="Sign & Lock Exam"
-        message="Are you sure you want to sign and lock this exam? This action cannot be undone."
-        confirmText="Sign & Lock"
-        confirmColor="#0f766e"
-        loading={signMutation.isPending}
-      />
-
-      <ConfirmationDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Exam Record"
-        message="Are you sure you want to delete this exam? This action cannot be undone."
-        confirmText="Delete"
-        confirmColor="error"
-      />
     </Box>
   );
 };

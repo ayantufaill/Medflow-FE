@@ -8,7 +8,7 @@ const MuscleEvaluationSection = ({ formData, handleFieldChange, handleCheckboxCh
       <Grid item xs={9} sx={{ pr: 3 }}>
         {summaryContent}
 
-        <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', p: 2, pt: 2.5, backgroundColor: '#f8fafc', mb: 3 }}>
+        <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', p: 2, pt: 2.5, backgroundColor: '#F0F4F9', mb: 3 }}>
           {/* Row 1: Temporalis / Masseter Only */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.5px' }}>TEMPORALIS / MASSETER ONLY</Typography>
@@ -89,7 +89,7 @@ const MuscleEvaluationSection = ({ formData, handleFieldChange, handleCheckboxCh
           </Box>
 
           {/* Myofascial Pain */}
-          <Box sx={{ flex: 1, backgroundColor: '#fefce8', border: '1px solid #fef08a', borderRadius: '8px', p: 2 }}>
+          <Box sx={{ flex: 1, backgroundColor: '#FFFBEB', border: '1px solid #FEE685', borderRadius: '8px', p: 2 }}>
             <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#b45309', fontStyle: 'italic', mb: 1.5, letterSpacing: '0.5px' }}>POSSIBLE CONCERN - MYOFASCIAL PAIN</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
               <Box sx={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: '#b45309', mr: 1.5 }} />
