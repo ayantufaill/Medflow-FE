@@ -57,7 +57,7 @@ const PatientAdditionalDocumentsPage = () => {
     loading: docsLoading,
     fetch: fetchDocuments,
     refresh: refreshDocuments,
-    remove: deleteDocumentThunk,
+    remove,
   } = usePatientDocuments(patientId);
 
   const [documents, setDocuments] = useState([]);
@@ -208,8 +208,7 @@ const PatientAdditionalDocumentsPage = () => {
       return;
     }
     try {
-      await deleteDocumentThunk(customFormDeleteDialog.formId).unwrap();
-      await refreshDocuments();
+      await remove(customFormDeleteDialog.formId).unwrap();
       showSnackbar("Custom form removed", "success");
     } catch (err) {
       showSnackbar(
@@ -297,8 +296,7 @@ const PatientAdditionalDocumentsPage = () => {
     }
     try {
       setDeleteLoading(true);
-      await deleteDocumentThunk(documentId).unwrap();
-      await refreshDocuments();
+      await remove(documentId).unwrap();
       showSnackbar("Document deleted successfully", "success");
     } catch (err) {
       showSnackbar(

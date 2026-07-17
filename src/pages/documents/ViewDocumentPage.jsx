@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { Box, CircularProgress, Alert } from '@mui/material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { documentService } from '../../services/document.service';
 import { clinicalNoteService } from '../../services/clinical-note.service';
+import { deleteDocumentThunk } from '../../store/slices/documentSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
 import { COLORS } from '../../constants/colors';
@@ -18,6 +20,7 @@ const ViewDocumentPage = () => {
   const navigate = useNavigate();
   const { documentId, patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -82,7 +85,9 @@ const ViewDocumentPage = () => {
   const handleDelete = async () => {
     try {
       setDeleteLoading(true);
-      await documentService.deleteDocument(documentId);
+      // Use the Redux thunk so the patientDocumentsCache is invalidated
+      // and refreshed automatically — no stale data on the list page.
+      await dispatch(deleteDocumentThunk({ documentId, patientId })).unwrap();
       showSnackbar('Document deleted successfully', 'success');
       navigate(patientId ? `/patients/${patientId}/signed-documents` : '/documents');
     } catch (err) {
