@@ -130,22 +130,25 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
   // When an appointment is clicked, update the Redux patient so the left panel
   // PatientCard and AppointmentChecklist react to the newly selected patient.
   const handleCardClick = (e) => {
-    // Don't interfere with drag operations.
+    console.log("AppointmentCard: SINGLE CLICK FIRED");
     if (e.defaultPrevented) return;
-
-    // Always fire the custom event so LeftPanel shows the summary card
     window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
       detail: { ...appointment },
     }));
-
-    // Also fetch the full patient details into Redux so the dropdown and left panel
-    // PatientCard display the exact same comprehensive data as when searched.
     if (appointment.patientId) {
       const pId = typeof appointment.patientId === 'object' 
         ? appointment.patientId._id || appointment.patientId.id || appointment.patientId.PatNum 
         : appointment.patientId;
       if (pId) dispatch(fetchPatientById(pId));
     }
+  };
+
+  const handleCardDoubleClick = (e) => {
+    console.log("AppointmentCard: DOUBLE CLICK FIRED");
+    if (e.defaultPrevented) return;
+    window.dispatchEvent(new CustomEvent('appointment-card-double-clicked', {
+      detail: { ...appointment },
+    }));
   };
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -192,6 +195,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleCardClick}
+          onDoubleClick={handleCardDoubleClick}
           sx={{
             height: "100%",
             borderRadius: radius.sm,
@@ -278,6 +282,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
+        onDoubleClick={handleCardDoubleClick}
         sx={{
           height: "100%",
           borderRadius: radius.md,

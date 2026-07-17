@@ -16,10 +16,21 @@ import {
   TextField,
   Button,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
   Checkbox,
-  FormControlLabel,
 } from '@mui/material';
-import { Mic as MicIcon, Edit as EditIcon } from '@mui/icons-material';
+import CloseIcon from '@mui/icons-material/Close';
+import LaunchIcon from '@mui/icons-material/Launch';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import { COLORS } from '../../constants/colors';
+import { fontWeight } from '../../constants/styles';
 
 const AccountNotesDialog = ({ patient, onClose }) => {
   const dispatch = useDispatch();
@@ -30,6 +41,7 @@ const AccountNotesDialog = ({ patient, onClose }) => {
   const [noteText, setNoteText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [speechRecognition, setSpeechRecognition] = useState(null);
+  const [remindMeNewNote, setRemindMeNewNote] = useState(false);
   
   const [editingNoteId, setEditingNoteId] = useState(null);
 
@@ -59,12 +71,14 @@ const AccountNotesDialog = ({ patient, onClose }) => {
         // Create new note
         dispatch(createPatientAccountNote({
           patient,
-          text: noteText
+          text: noteText,
+          remindMe: remindMeNewNote
         })).then(() => {
           dispatch(fetchPatientAccountNotes(patient));
         });
       }
       setNoteText('');
+      setRemindMeNewNote(false);
     }
   };
 
@@ -90,6 +104,7 @@ const AccountNotesDialog = ({ patient, onClose }) => {
   const handleCancel = () => {
     setNoteText('');
     setEditingNoteId(null);
+    setRemindMeNewNote(false);
     onClose();
   };
 
@@ -158,177 +173,198 @@ const AccountNotesDialog = ({ patient, onClose }) => {
   const displayedNotes = activeTab === 0 ? activeNotesList : archivedNotesList;
 
   return (
-    <Box sx={{ width: '100%', bgcolor: 'white', borderRadius: '4px', overflow: 'hidden' }}>
-      {/* Tab Header */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, pt: 1 }}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label={`Account Notes (${activeNotesList.length})`} sx={{ textTransform: 'none', fontWeight: 500 }} />
-          <Tab label={`Archived (${archivedNotesList.length})`} sx={{ textTransform: 'none', fontWeight: 500 }} />
-        </Tabs>
-      </Box>
-
-      {/* Body Section */}
-      <Box sx={{ p: 3 }}>
-        {/* Notes List */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3, maxH: '200px', overflowY: 'auto' }}>
-          {displayedNotes.map((note) => (
-            <Box
-              key={note.id}
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                py: 0.5,
-              }}
-            >
-              {/* Note Details */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#555' }}>
-                  {dayjs(note.createdAt || note.date || new Date()).format('MM/DD/YYYY')} -
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', color: '#4a70b0', cursor: 'pointer' }} onClick={() => handleEditNote(note)}>
-                  <Typography sx={{ fontSize: '0.85rem', fontStyle: 'italic', mr: 0.25, fontWeight: 500 }}>
-                    {note.source}
-                  </Typography>
-                  <EditIcon sx={{ fontSize: 13 }} />
-                </Box>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#111', ml: 1 }}>
-                  {note.text}
-                </Typography>
-              </Box>
-
-              {/* Remind Me Checkbox */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '0.72rem', color: '#555', lineHeight: 1 }}>
-                  remind me
-                </Typography>
-                <Checkbox
-                  size="small"
-                  checked={note.remindMe}
-                  onChange={() => handleToggleRemindMe(note.id)}
-                  sx={{ p: 0.25 }}
-                />
-              </Box>
-            </Box>
-          ))}
-
-          {loading ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 1, fontStyle: 'italic' }}>
-              Loading notes...
-            </Typography>
-          ) : displayedNotes.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 1, fontStyle: 'italic' }}>
-              No notes in this category.
-            </Typography>
-          )}
+    <Dialog 
+      open={Boolean(patient)} 
+      onClose={handleCancel}
+      maxWidth="sm"
+      fullWidth
+      sx={{ zIndex: 1500 }}
+      PaperProps={{
+        sx: {
+          borderRadius: '14px',
+          border: `1px solid ${COLORS.BORDER}`,
+          boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <DialogTitle 
+        sx={{ 
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex", 
+          alignItems: "center", 
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+         <ReceiptLongIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+            <span style={{ fontWeight: 700 }}>Account Notes</span>
+            <span style={{ color: COLORS.TEXT_SECONDARY, fontWeight: 400, marginLeft: '8px' }}>
+              — {patient?.name || (patient?.firstName ? `${patient.firstName} ${patient.lastName}` : 'Unknown')}
+            </span>
+         </Typography>
+         <IconButton onClick={handleCancel} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+           <CloseIcon sx={{ fontSize: "18px" }} />
+         </IconButton>
+      </DialogTitle>
+      
+      <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Tab Header */}
+        <Box sx={{ 
+          display: "flex",
+          alignItems: "center",
+          borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`,
+          px: "24px",
+          backgroundColor: COLORS.WHITE,
+          flexShrink: 0,
+        }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            sx={{
+              minHeight: "unset",
+              "& .MuiTabs-indicator": { backgroundColor: COLORS.ACCENT }
+            }}
+          >
+            <Tab label={`Account Notes (${activeNotesList.length})`} sx={{ textTransform: 'none', fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, fontSize: '13px', minHeight: 'unset', py: 1.5, "&.Mui-selected": { color: COLORS.ACCENT } }} />
+            <Tab label={`Archived (${archivedNotesList.length})`} sx={{ textTransform: 'none', fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, fontSize: '13px', minHeight: 'unset', py: 1.5, "&.Mui-selected": { color: COLORS.ACCENT } }} />
+          </Tabs>
         </Box>
 
-        {/* Textfield Input */}
-        <Box sx={{ position: 'relative' }}>
+        {/* Body Section */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', backgroundColor: COLORS.SURFACE_CARD }}>
+          
+          {/* Notes List */}
+          <List sx={{ flex: 1, overflow: "auto", pt: 2, pb: 0 }}>
+            {displayedNotes.map((note) => (
+              <ListItem
+                key={note.id}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  py: 2,
+                  px: 2,
+                  mx: 2,
+                  mb: 2,
+                  width: 'calc(100% - 32px)',
+                  border: `1px solid ${COLORS.BORDER_LIGHT}`,
+                  borderRadius: '8px',
+                  bgcolor: COLORS.WHITE,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_MUTED }}>
+                      {dayjs(note.createdAt || note.date || new Date()).format('MM/DD/YYYY')} —
+                    </Typography>
+                    <Typography sx={{ fontSize: '13px', color: COLORS.ACCENT, display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => handleEditNote(note)}>
+                      {note.source || 'agingReport'} <LaunchIcon sx={{ fontSize: 14 }} />
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={() => handleToggleRemindMe(note.id)}>
+                    <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>remind me</Typography>
+                    <Checkbox 
+                      size="small" 
+                      checked={note.remindMe || false} 
+                      onChange={() => handleToggleRemindMe(note.id)} 
+                      sx={{ p: 0 }} 
+                      icon={<RadioButtonUncheckedIcon sx={{ fontSize: 18, color: COLORS.ACCENT }} />}
+                      checkedIcon={<CheckCircleIcon sx={{ fontSize: 18, color: COLORS.ACCENT }} />}
+                    />
+                  </Box>
+                </Box>
+                <Typography sx={{ fontSize: '14px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>
+                  {note.text}
+                </Typography>
+              </ListItem>
+            ))}
+
+            {displayedNotes.length === 0 && (
+              <Box sx={{ textAlign: 'center', p: 4 }}>
+                <Typography variant="body2" sx={{ color: COLORS.TEXT_MUTED, fontStyle: 'italic' }}>
+                  {loading ? 'Loading notes...' : 'No notes in this category.'}
+                </Typography>
+              </Box>
+            )}
+          </List>
+        </Box>
+
+        {/* Textfield Input Section */}
+        <Box sx={{ px: "24px", pb: "24px", pt: "12px", borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.SURFACE_CARD }}>
           <TextField
             fullWidth
             multiline
             rows={4}
+            placeholder="Write a new account note..."
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '4px',
-                borderColor: '#ccc',
-                bgcolor: '#fff',
-                '&:hover': {
-                  borderColor: 'grey.500',
-                },
-                '&.Mui-focused': {
-                  borderColor: 'primary.main',
-                },
-              },
+            sx={{ 
+              "& .MuiOutlinedInput-root": { 
+                borderRadius: '8px', 
+                bgcolor: COLORS.WHITE,
+                fontSize: '14px',
+                '& fieldset': { borderColor: COLORS.BORDER_LIGHT },
+                '&:hover fieldset': { borderColor: COLORS.BORDER },
+                '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT, borderWidth: '1px' },
+              } 
             }}
           />
-          
-          {/* Voice Icon */}
-          <IconButton
-            size="small"
-            onClick={handleMicClick}
-            sx={{
-              position: 'absolute',
-              bottom: 12,
-              right: 12,
-              color: isListening ? 'error.main' : 'primary.light',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              bgcolor: isListening ? 'rgba(255, 0, 0, 0.1)' : 'transparent',
-              '&:hover': {
-                bgcolor: isListening ? 'rgba(255, 0, 0, 0.2)' : 'grey.50',
-              },
-            }}
-          >
-            <MicIcon fontSize="small" />
-          </IconButton>
-          {isListening && (
-            <Typography
-              sx={{
-                position: 'absolute',
-                bottom: 16,
-                right: 50,
-                fontSize: '0.75rem',
-                color: 'error.main',
-                fontWeight: 'bold',
-              }}
-            >
-              Listening...
-            </Typography>
-          )}
         </Box>
+      </DialogContent>
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 2 }}>
+      <DialogActions sx={{ p: "16px", px: "24px", justifyContent: 'space-between', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE }}>
+        <Box 
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+          onClick={() => setRemindMeNewNote(!remindMeNewNote)}
+        >
+          <Checkbox 
+            size="small" 
+            checked={remindMeNewNote} 
+            sx={{ p: 0 }} 
+            icon={<RadioButtonUncheckedIcon sx={{ fontSize: 20, color: COLORS.ACCENT }} />}
+            checkedIcon={<CheckCircleIcon sx={{ fontSize: 20, color: COLORS.ACCENT }} />}
+          />
+          <Typography sx={{ fontSize: '14px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>Remind me</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button 
+            onClick={handleCancel}
+            disableRipple
+            sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semibold, textTransform: 'none', px: 2, '&:hover': { bgcolor: 'transparent' } }}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleAddNote}
             disabled={!noteText.trim()}
-            sx={{
-              bgcolor: '#d4c197',
-              color: '#fff',
-              boxShadow: 'none',
-              px: 3.5,
-              py: 0.75,
-              fontSize: '0.825rem',
-              '&:hover': {
-                bgcolor: '#c5b396',
-              },
-              '&:disabled': {
-                bgcolor: '#e2d2b5',
-                color: '#fff',
-              },
-              textTransform: 'none',
-              fontWeight: 500,
+            disableElevation
+            sx={{ 
+              textTransform: 'none', 
+              px: 3, 
+              py: 1, 
+              borderRadius: '6px', 
+              bgcolor: COLORS.ACCENT, 
+              color: COLORS.WHITE, 
+              fontWeight: fontWeight.semibold, 
+              '&:hover': { bgcolor: COLORS.ACCENT_HOVER }, 
+              '&.Mui-disabled': { bgcolor: COLORS.SURFACE_DISABLED, color: COLORS.TEXT_MUTED } 
             }}
           >
             {editingNoteId ? 'Save' : 'Add'}
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleCancel}
-            sx={{
-              bgcolor: '#a9a9a9',
-              color: '#fff',
-              boxShadow: 'none',
-              px: 3.5,
-              py: 0.75,
-              fontSize: '0.825rem',
-              '&:hover': {
-                bgcolor: '#999',
-              },
-              textTransform: 'none',
-              fontWeight: 500,
-            }}
-          >
-            Cancel
-          </Button>
         </Box>
-      </Box>
-    </Box>
+      </DialogActions>
+    </Dialog>
   );
 };
 

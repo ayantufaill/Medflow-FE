@@ -24,7 +24,7 @@ const LeftPanel = () => {
   const selectedApptRef = useRef(null);
 
   // Read currentPatient from Redux to conditionally show patient sub-components.
-  const { currentPatient, fetchById } = usePatient();
+  const { currentPatient, fetchById, loading } = usePatient();
 
   // Listen for appointment-clicked custom events fired by AppointmentCard.
   // Using a ref to avoid re-subscribing on every render.
@@ -47,7 +47,7 @@ const LeftPanel = () => {
 
   // Clear selected appointment if the user manually selects a different patient
   useEffect(() => {
-    if (selectedAppointment && currentPatient) {
+    if (selectedAppointment && currentPatient && !loading) {
       const apptPatientId = selectedAppointment.patientId;
       const currentId = currentPatient._id || currentPatient.id;
       if (apptPatientId && currentId && String(apptPatientId) !== String(currentId)) {
@@ -55,7 +55,7 @@ const LeftPanel = () => {
         setSelectedAppointment(null);
       }
     }
-  }, [currentPatient, selectedAppointment]);
+  }, [currentPatient, selectedAppointment, loading]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden' }}>
