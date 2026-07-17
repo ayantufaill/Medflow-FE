@@ -4,6 +4,9 @@ import {
   Select, MenuItem, TextField, Divider
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setSelectedAppointmentId } from '../../../../store/slices/appointmentSlice';
+import { setSelectedPatientId } from '../../../../store/slices/patientSlice';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../../../services/appointment.service';
 
@@ -15,6 +18,7 @@ import AppointmentDetailFooter from './AppointmentDetailFooter';
 
 const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [status, setStatus] = useState(appointment?.status?.toLowerCase() || 'scheduled');
   const [notes, setNotes] = useState(appointment?.description || appointment?.notes || appointment?.note || '');
   const [procedures, setProcedures] = useState([]);
@@ -180,6 +184,13 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
         }}
         onStartReschedule={() => setIsRescheduling(true)}
         onClinicalExam={() => {
+          if (appointment) {
+            dispatch(setSelectedAppointmentId(appointment._id || appointment.id));
+            const patientId = appointment.patientId?._id || appointment.patientId?.id || appointment.patientId;
+            if (patientId) {
+              dispatch(setSelectedPatientId(patientId));
+            }
+          }
           onClose();
           navigate('/clinical');
         }}

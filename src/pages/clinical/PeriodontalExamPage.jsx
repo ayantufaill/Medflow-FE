@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
   Button, Select, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
-  Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogContent, TextField, Stack,
+  Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent, TextField, Stack,
   CircularProgress, Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -13,10 +13,15 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PrintIcon from '@mui/icons-material/Print';
 import MicIcon from '@mui/icons-material/Mic';
 import AddIcon from '@mui/icons-material/Add';
+import settingIcon from "../../assets/clinicalicons/setting icon.svg";
+import printIcon from "../../assets/clinicalicons/print icon.svg";
+import compareIcon from "../../assets/clinicalicons/compare icon.svg";
+import voiceIcon from "../../assets/clinicalicons/voice.svg";
 import ClinicalNavbar from "../../components/clinical/ClinicalNavbar";
 import ExamNavbar from "../../components/clinical/ExamNavbar";
 import PerioChartGrid from "../../components/clinical/PerioChartGrid";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
+import ExamActionBar from "../../components/radiographic/ExamActionBar";
 import { fontSize, fontWeight } from "../../constants/styles";
 import { selectSelectedPatientId } from '../../store/slices/patientSlice';
 import { selectSelectedAppointmentId } from '../../store/slices/appointmentSlice';
@@ -29,151 +34,45 @@ import {
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 import { useAppointmentDetail } from '../../hooks/redux/useAppointment';
+import DiagnosisCard from "../../components/clinical/periodontal/DiagnosisCard";
+import SummaryCard from "../../components/clinical/periodontal/SummaryCard";
+import PeriographTab from "../../components/clinical/periodontal/PeriographTab";
+import RightPanel from '../../components/appointments/right-panel/RightPanel';
 
-const SummaryData = [
-  { label: '# of sites', bleeding: '50', p4: '150', p5: '0', p6: '0', recession: '43' },
-  { label: '% of sites', bleeding: '33%', p4: '100%', p5: '0%', p6: '0%', recession: '28%' },
-  { label: '# of teeth', bleeding: '15', p4: '25', p5: '0', p6: '0', recession: '14' },
-  { label: '% of teeth', bleeding: '60%', p4: '100%', p5: '0%', p6: '0%', recession: '56%' },
-];
 
-const DiagnosticHeader = () => (
-  <Box sx={{ p: 2, bgcolor: '#fff', borderTop: '1px solid #e0e0e0' }}>
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-      {/* 3. MH/DH Badges */}
-            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-              <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>MH</Typography>
-              <Typography variant="caption" sx={{ bgcolor: '#e74c3c', color: 'white', px: 0.5, fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>DH</Typography>
-            </Box>
-      <IconButton size="small"><PrintIcon sx={{ fontSize: 18, color: '#999' }} /></IconButton>
-    </Box>
-
-    <Grid container spacing={4}>
-      {/* Classification Column */}
-      <Grid item xs={12} md={5}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Healthy</Typography>} />
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Gingivitis</Typography>} />
-        </Box>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs }}>Periodontitis:</Typography>
-          <Select 
-            size="small" 
-            value="stage2" 
-            sx={{ 
-              height: 24, 
-              fontSize: fontSize.xs, 
-              minWidth: 100,
-              '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              borderBottom: '1px solid #9ca3af',
-              borderRadius: 0,
-              '& .MuiSvgIcon-root': { fontSize: '1rem' }
-            }} 
-          >
-            <MenuItem value="stage2" sx={{ fontSize: fontSize.xs }}>stage II</MenuItem>
-          </Select>
-        </Box>
-
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 1 }}>
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Localized (&lt; 30% of teeth)</Typography>} />
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Generalized</Typography>} />
-          <FormControlLabel control={<Radio size="small" />} label={<Typography variant="caption" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Molar/Incisor</Typography>} />
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.xs }}>Periodontal Grading:</Typography>
-          <Select 
-            size="small" 
-            value="gradeB" 
-            sx={{ 
-              height: 24, 
-              fontSize: fontSize.xs, 
-              minWidth: 100,
-              '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              borderBottom: '1px solid #9ca3af',
-              borderRadius: 0,
-              '& .MuiSvgIcon-root': { fontSize: '1rem' }
-            }} 
-          >
-            <MenuItem value="gradeB" sx={{ fontSize: fontSize.xs }}>grade B</MenuItem>
-          </Select>
-        </Box>
-      </Grid>
-
-      {/* Summary Table Column */}
-      <Grid item xs={12} md={7}>
-        <Typography variant="caption" sx={{ fontWeight: fontWeight.semibold, display: 'block', mb: 1, fontSize: fontSize.xs }}>Summary</Typography>
-        <Table size="small" sx={{ '& .MuiTableCell-root': { fontSize: fontSize.xs, py: 0.5, borderBottom: 'none' } }}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }} />
-              <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Bleeding</TableCell>
-              <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Probing ≤ 4mm</TableCell>
-              <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Probing 5mm</TableCell>
-              <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Probing ≥ 6mm</TableCell>
-              <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>Recession</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {SummaryData.map((row, idx) => (
-              <TableRow key={idx} sx={{ borderTop: (idx === 0 || idx === 2) ? '1px solid #f0f0f0' : 'none' }}>
-                <TableCell sx={{ color: '#999', fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>{row.label}</TableCell>
-                <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>{row.bleeding}</TableCell>
-                <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>{row.p4}</TableCell>
-                <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>{row.p5}</TableCell>
-                <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>{row.p6}</TableCell>
-                <TableCell sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular }}>{row.recession}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Grid>
-    </Grid>
-  </Box>
-);
-
-const MISSING_TEETH = [1, 12, 16, 17, 32];
-
-const initialToothData = () => {
+const initialToothData = (missingTeeth = []) => {
   const data = {};
   for (let i = 1; i <= 32; i++) {
-    const isMissing = MISSING_TEETH.includes(i);
+    const isMissing = missingTeeth.includes(i);
     data[i] = {
       facial: {
-        mobility: isMissing ? 'none' : (i % 5 === 0 ? '1' : 'none'),
-        furcation: isMissing ? 'none' : (i % 7 === 0 ? '1' : 'none'),
-        bleeding: isMissing ? [] : (i % 3 === 0 ? [0] : []),
-        pcs: isMissing ? [] : (i % 2 === 0 ? ['P', 'S'] : ['C']),
-        recession: isMissing ? ['', '', ''] : (i % 4 === 0 ? ['2', '3', '2'] : ['', '', '']),
-        probe: isMissing ? ['', '', ''] : [String((i % 3) + 2), String((i % 2) + 2), String((i % 4) + 2)],
-        attachment: isMissing ? ['', '', ''] : ['', '', '']
+        mobility: 'none',
+        furcation: 'none',
+        bleeding: [0, 2],
+        pcs: ['P', 'C', 'S'],
+        recession: ['', '1', ''],
+        probe: ['3', '2', '3'],
+        attachment: ['3', '3', '3']
       },
       lingual: {
-        mobility: isMissing ? 'none' : (i % 5 === 0 ? '1' : 'none'),
-        furcation: isMissing ? 'none' : (i % 7 === 0 ? '1' : 'none'),
-        bleeding: isMissing ? [] : (i % 3 === 0 ? [0] : []),
-        pcs: isMissing ? [] : (i % 2 === 0 ? ['P', 'S'] : ['C']),
-        recession: isMissing ? ['', '', ''] : (i % 4 === 0 ? ['2', '3', '2'] : ['', '', '']),
-        probe: isMissing ? ['', '', ''] : [String((i % 3) + 2), String((i % 2) + 2), String((i % 4) + 2)],
-        attachment: isMissing ? ['', '', ''] : ['', '', '']
+        mobility: 'none',
+        furcation: 'none',
+        bleeding: [0, 2],
+        pcs: ['P', 'C', 'S'],
+        recession: ['', '1', ''],
+        probe: ['3', '2', '3'],
+        attachment: ['3', '3', '3']
       }
     };
     
     // Calculate attachment loss
-    if (!isMissing) {
-      for (const side of ['facial', 'lingual']) {
-        const sideData = data[i][side];
-        sideData.attachment = sideData.probe.map((pVal, idx) => {
-          const rVal = sideData.recession[idx] || '0';
-          if (!pVal) return '';
-          return String(parseInt(pVal) + parseInt(rVal));
-        });
-      }
+    for (const side of ['facial', 'lingual']) {
+      const sideData = data[i][side];
+      sideData.attachment = sideData.probe.map((pVal, idx) => {
+        const rVal = sideData.recession[idx] || '0';
+        if (!pVal) return '';
+        return String(parseInt(pVal) + parseInt(rVal));
+      });
     }
   }
   return data;
@@ -185,15 +84,20 @@ const PeriodontalExamPage = () => {
   const appointmentId = useSelector(selectSelectedAppointmentId);
   const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('periodontal', appointmentId);
   const upsertMutation = useUpsertClinicalExam('periodontal', appointmentId);
+  const radiographicUpsertMutation = useUpsertClinicalExam('radiographic', appointmentId);
   const signMutation = useSignClinicalExam('periodontal', appointmentId);
 
   const isSigned = !!examRecord?.isSigned;
 
   const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
   const dispatch = useDispatch();
+
+  const { data: radiographicRecord } = useClinicalExamQuery('radiographic', appointmentId);
+  const missingTeeth = (radiographicRecord?.examData?.missingTeeth || []).map(Number);
 
   const { currentAppointment } = useAppointmentDetail();
 
@@ -219,6 +123,8 @@ const PeriodontalExamPage = () => {
   }, [historicalDates, currentAppointment]);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [talkBackEnabled, setTalkBackEnabled] = useState(false);
+  const [perioTab, setPerioTab] = useState(0);
   
   const defaultSettings = {
     probing: ['3', '2', '3'],
@@ -232,15 +138,27 @@ const PeriodontalExamPage = () => {
   };
   
   const settings = sessionState?.settings || defaultSettings;
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
   const setSettings = (val) => {
-    const newVal = typeof val === 'function' ? val(settings) : val;
+    const newVal = typeof val === 'function' ? val(settingsRef.current) : val;
+    settingsRef.current = newVal;
     dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { settings: newVal } } });
   };
 
-  const defaultChartData = initialToothData();
+  const defaultChartData = useMemo(() => initialToothData(missingTeeth), [missingTeeth]);
   const chartData = sessionState?.chartData || defaultChartData;
+  const chartDataRef = useRef(chartData);
+  useEffect(() => {
+    chartDataRef.current = chartData;
+  }, [chartData]);
+
   const setChartData = (val) => {
-    const newVal = typeof val === 'function' ? val(chartData) : val;
+    const newVal = typeof val === 'function' ? val(chartDataRef.current) : val;
+    chartDataRef.current = newVal;
     dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { chartData: newVal } } });
   };
 
@@ -291,6 +209,15 @@ const PeriodontalExamPage = () => {
     }
   };
 
+  const handleDeleteExam = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogOpen(false);
+    showSnackbar('Periodontal exam deleted', 'info');
+  };
+
   const handleRemoveDate = (indexToRemove) => {
     // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
@@ -300,223 +227,294 @@ const PeriodontalExamPage = () => {
     // setVisitDates([...visitDates, today]);
   };
 
-  const handleSetProbing = () => {
+  const handleApplyAll = () => {
     setChartData(prev => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
+        if (missingTeeth.includes(i)) continue;
         updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
         for (const side of ['facial', 'lingual']) {
-          updated[i][side].probe = [...settings.probing];
-          updated[i][side].attachment = settings.probing.map((p, idx) => {
-            const r = updated[i][side].recession[idx] || '0';
-            if (!p) return '';
-            return String(parseInt(p) + parseInt(r));
-          });
+          const sideData = updated[i][side];
+          
+          if (settings.probing.some(p => p !== '')) sideData.probe = [...settings.probing];
+          if (settings.recession.some(r => r !== '')) sideData.recession = [...settings.recession];
+          if (settings.mobility !== 'none') sideData.mobility = settings.mobility;
+          if (settings.bleeding.length > 0) sideData.bleeding = [...settings.bleeding];
+          if (settings.pcs.length > 0) sideData.pcs = [...settings.pcs];
+
+          // Calculate attachment based on new probe and recession
+          if (settings.probing.some(p => p !== '') || settings.recession.some(r => r !== '')) {
+            sideData.attachment = sideData.probe.map((p, idx) => {
+              const r = sideData.recession[idx] || '0';
+              if (!p) return '';
+              return String(parseInt(p) + parseInt(r));
+            });
+          }
+
+          // If attachedGingiva is explicitly provided, it overwrites the attachment field (matching original logic)
+          if (settings.attachedGingiva.some(a => a !== '')) {
+            sideData.attachment = [...settings.attachedGingiva];
+          }
+        }
+      }
+      return updated;
+    });
+    setShowSettings(false);
+  };
+
+  const handleResetToDefault = async () => {
+    setSettings(defaultSettings);
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { missingTeeth: [] } } });
+    if (radiographicRecord) {
+      await radiographicUpsertMutation.mutateAsync({
+        examData: {
+          ...radiographicRecord.examData,
+          missingTeeth: []
+        }
+      });
+    }
+
+    setChartData(prev => {
+      const updated = { ...prev };
+      for (let i = 1; i <= 32; i++) {
+        updated[i] = { 
+          facial: { ...(prev[i]?.facial || {}) }, 
+          lingual: { ...(prev[i]?.lingual || {}) } 
+        };
+        for (const side of ['facial', 'lingual']) {
+          updated[i][side] = {
+            ...updated[i][side],
+            probe: ['3', '2', '3'],
+            recession: ['', '1', ''],
+            attachment: ['3', '3', '3'], // (probe + recession)
+            mobility: 'none',
+            furcation: 'none',
+            bleeding: [0, 2],
+            pcs: ['P', 'C', 'S']
+          };
         }
       }
       return updated;
     });
   };
 
-  const handleClearProbing = () => {
+  const handleClearAll = () => {
+    setSettings({
+      probing: ['', '', ''],
+      recession: ['', '', ''],
+      recessionPresent: false,
+      attachedGingiva: ['', '', ''],
+      mobility: 'none',
+      bleeding: [],
+      bleedingPresent: false,
+      pcs: []
+    });
     setChartData(prev => {
       const updated = { ...prev };
       for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
+        if (missingTeeth.includes(i)) continue;
+        updated[i] = { 
+          facial: { ...(prev[i]?.facial || {}) }, 
+          lingual: { ...(prev[i]?.lingual || {}) } 
+        };
         for (const side of ['facial', 'lingual']) {
-          updated[i][side].probe = ['', '', ''];
-          updated[i][side].attachment = ['', '', ''];
+          updated[i][side] = {
+            ...updated[i][side],
+            probe: ['', '', ''],
+            recession: ['', '', ''],
+            attachment: ['', '', ''],
+            mobility: 'none',
+            furcation: 'none',
+            bleeding: [],
+            pcs: []
+          };
         }
       }
       return updated;
     });
   };
 
-  const handleSetRecession = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].recession = [...settings.recession];
-          updated[i][side].attachment = updated[i][side].probe.map((p, idx) => {
-            const r = settings.recession[idx] || '0';
-            if (!p) return '';
-            return String(parseInt(p) + parseInt(r));
-          });
-        }
-      }
-      return updated;
-    });
-  };
+  const dynamicSummaryData = useMemo(() => {
+    let validTeethCount = 0;
+    
+    let bleedingSites = 0;
+    let p4Sites = 0;
+    let p5Sites = 0;
+    let p6Sites = 0;
+    let recessionSites = 0;
 
-  const handleClearRecession = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].recession = ['', '', ''];
-          updated[i][side].attachment = updated[i][side].probe.map((p, idx) => {
-            if (!p) return '';
-            return p;
-          });
-        }
-      }
-      return updated;
-    });
-  };
+    let bleedingTeeth = 0;
+    let p4Teeth = 0;
+    let p5Teeth = 0;
+    let p6Teeth = 0;
+    let recessionTeeth = 0;
 
-  const handleSetBleeding = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].bleeding = [...settings.bleeding];
-        }
-      }
-      return updated;
-    });
-  };
+    for (let i = 1; i <= 32; i++) {
+      if (missingTeeth.includes(i)) continue;
+      validTeethCount++;
+      
+      const tooth = chartData[i];
+      if (!tooth) continue;
 
-  const handleClearBleeding = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].bleeding = [];
-        }
-      }
-      return updated;
-    });
-  };
+      let hasBleeding = false;
+      let hasP4 = false;
+      let hasP5 = false;
+      let hasP6 = false;
+      let hasRecession = false;
 
-  const handleSetPCS = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].pcs = [...settings.pcs];
-        }
-      }
-      return updated;
-    });
-  };
+      ['facial', 'lingual'].forEach(side => {
+        const sideData = tooth[side];
+        if (!sideData) return;
 
-  const handleClearPCS = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].pcs = [];
+        if (sideData.bleeding && sideData.bleeding.length > 0) {
+          bleedingSites += sideData.bleeding.length;
+          hasBleeding = true;
         }
-      }
-      return updated;
-    });
-  };
 
-  const handleSetMobility = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].mobility = settings.mobility;
-        }
-      }
-      return updated;
-    });
-  };
+        for (let j = 0; j < 3; j++) {
+          const pVal = parseInt(sideData.probe?.[j], 10);
+          if (!isNaN(pVal)) {
+            if (pVal <= 4) {
+              p4Sites++;
+              hasP4 = true;
+            } else if (pVal === 5) {
+              p5Sites++;
+              hasP5 = true;
+            } else if (pVal >= 6) {
+              p6Sites++;
+              hasP6 = true;
+            }
+          }
 
-  const handleClearMobility = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].mobility = 'none';
+          const rVal = parseInt(sideData.recession?.[j], 10);
+          if (!isNaN(rVal) && rVal > 0) {
+            recessionSites++;
+            hasRecession = true;
+          }
         }
-      }
-      return updated;
-    });
-  };
+      });
 
-  const handleSetAttachedGingiva = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          // Setting 'attachment' field in the chart based on attachedGingiva defaults
-          updated[i][side].attachment = [...settings.attachedGingiva];
-        }
-      }
-      return updated;
-    });
-  };
+      if (hasBleeding) bleedingTeeth++;
+      if (hasP4) p4Teeth++;
+      if (hasP5) p5Teeth++;
+      if (hasP6) p6Teeth++;
+      if (hasRecession) recessionTeeth++;
+    }
 
-  const handleClearAttachedGingiva = () => {
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        if (MISSING_TEETH.includes(i)) continue;
-        updated[i] = { facial: { ...prev[i].facial }, lingual: { ...prev[i].lingual } };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side].attachment = ['', '', ''];
-        }
-      }
-      return updated;
-    });
-  };
+    const totalSites = validTeethCount * 6;
+    const calcPercent = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
+
+    return [
+      { 
+        label: '# of sites', 
+        bleeding: String(bleedingSites), 
+        p4: String(p4Sites), 
+        p5: String(p5Sites), 
+        p6: String(p6Sites), 
+        recession: String(recessionSites) 
+      },
+      { 
+        label: '% of sites', 
+        bleeding: `${calcPercent(bleedingSites, totalSites)}%`, 
+        p4: `${calcPercent(p4Sites, totalSites)}%`, 
+        p5: `${calcPercent(p5Sites, totalSites)}%`, 
+        p6: `${calcPercent(p6Sites, totalSites)}%`, 
+        recession: `${calcPercent(recessionSites, totalSites)}%` 
+      },
+      { 
+        label: '# of teeth', 
+        bleeding: String(bleedingTeeth), 
+        p4: String(p4Teeth), 
+        p5: String(p5Teeth), 
+        p6: String(p6Teeth), 
+        recession: String(recessionTeeth) 
+      },
+      { 
+        label: '% of teeth', 
+        bleeding: `${calcPercent(bleedingTeeth, validTeethCount)}%`, 
+        p4: `${calcPercent(p4Teeth, validTeethCount)}%`, 
+        p5: `${calcPercent(p5Teeth, validTeethCount)}%`, 
+        p6: `${calcPercent(p6Teeth, validTeethCount)}%`, 
+        recession: `${calcPercent(recessionTeeth, validTeethCount)}%` 
+      },
+    ];
+  }, [chartData]);
 
   if (examLoading) {
     return (
-      <Box>
-        <ClinicalNavbar />
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
-            Exam
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-            Patient examination records and clinical findings
-          </Typography>
+      <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          <Box>
+            <ClinicalNavbar />
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 2, mb: 0 }}>
+              <Typography sx={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700, 
+                fontSize: '24px', 
+                lineHeight: '29.04px',
+                color: '#111827' 
+              }}>
+                Exam
+              </Typography>
+              <Typography sx={{ fontSize: '0.9rem', color: '#6b7280', pt: 0.5 }}>
+                Patient examination records and clinical findings
+              </Typography>
+            </Stack>
+            <Box sx={{ px: 0 }}>
+              <ExamNavbar />
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+            <CircularProgress />
+          </Box>
         </Box>
-        <ExamNavbar />
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-          <CircularProgress />
+        <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <RightPanel hideAppointmentShortlist />
         </Box>
       </Box>
     );
   }
 
   return (
-    <Box>
-      <ClinicalNavbar />
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: '1.5rem', color: '#1a2735' }} gutterBottom>
-          Exam
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
-          Patient examination records and clinical findings
-        </Typography>
-      </Box>
-      <ExamNavbar />
-      <Box sx={{ p: 3, bgcolor: '#fff', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
+      
+      {/* LEFT + CENTER COLUMN — Main Exam Content */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        <Box sx={{ 
+          backgroundColor: '#ffffff', 
+          flex: 1, 
+          overflowY: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box>
+            <ClinicalNavbar />
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Typography sx={{ 
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 700, 
+                  fontSize: '24px', 
+                  lineHeight: '29.04px',
+                  color: '#111827' 
+                }}>
+                  Exam
+                </Typography>
+                <Typography sx={{ fontSize: '0.9rem', color: '#6b7280', pt: 0.5 }}>
+                  Patient examination records and clinical findings
+                </Typography>
+              </Stack>
+              
+
+            </Stack>
+            <Box sx={{ px: 0 }}>
+              <ExamNavbar />
+            </Box>
+          </Box>
+          <Box sx={{ px: 3, pb: 3, flex: 1 }}>
         {isSigned && (
           <Alert severity="info" sx={{ mb: 3 }}>
             This exam has been signed and locked. It is now read-only.
@@ -524,44 +522,108 @@ const PeriodontalExamPage = () => {
         )}
         
         {/* 1. TIMELINE HEADER */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, px: 2, overflowX: 'auto' }}>
-          <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowBackIosNewIcon sx={{ fontSize: 16 }} /></IconButton>
-          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
-            <VisitDatesTimeline
-              visitDates={visitDates}
-            />
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          mb: 3, 
+          border: '1px solid #e2e8f0', 
+          borderRadius: '10px', 
+          p: 1, 
+          px: 2,
+          bgcolor: '#ffffff'
+        }}>
+          {/* Left: Visit dates timeline + New Exam */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', flex: 1 }}>
+            <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowBackIosNewIcon sx={{ fontSize: 16 }} /></IconButton>
+            <VisitDatesTimeline visitDates={visitDates} />
+            <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowForwardIosIcon sx={{ fontSize: 16 }} /></IconButton>
             <Button 
-              startIcon={<AddIcon />} 
-              sx={{ textTransform: 'none', color: '#777', fontSize: fontSize.xs, whiteSpace: 'nowrap', flexShrink: 0 }}
+              startIcon={<AddIcon sx={{ fontSize: 18 }} />} 
+              sx={{ 
+                textTransform: 'none', 
+                color: '#2563eb', 
+                fontWeight: 600, 
+                fontSize: '0.8rem', 
+                whiteSpace: 'nowrap', 
+                flexShrink: 0,
+                border: '1.5px dashed #d1d5db',
+                borderRadius: '20px',
+                px: 2,
+                py: 0.5,
+                bgcolor: '#fff',
+                '&:hover': { bgcolor: '#f9fafb', borderColor: '#9ca3af' },
+                ml: 2
+              }}
             >
               New Exam
             </Button>
           </Box>
-          <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowForwardIosIcon sx={{ fontSize: 16 }} /></IconButton>
           
-          <Box sx={{ ml: 4, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+
+          {/* Right: Actions */}
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexShrink: 0 }}>
             <IconButton 
               onClick={() => setShowSettings(true)}
               sx={{ 
-                p: 0.5, 
-                border: '1px solid #ccc', 
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#f5f5f5' }
+                width: 32,
+                height: 32,
+                p: 0, 
+                border: '1px solid #e2e8f0', 
+                borderRadius: '8px',
+                bgcolor: '#FBFDFE',
+                '&:hover': { bgcolor: '#f0f4f8' }
               }}
             >
-              <SettingsIcon sx={{ fontSize: 20, color: '#555' }} />
+              <img src={settingIcon} alt="Settings" style={{ width: 16, height: 16 }} />
+            </IconButton>
+            <IconButton 
+              sx={{ 
+                width: 32,
+                height: 32,
+                p: 0, 
+                border: '1px solid #e2e8f0', 
+                borderRadius: '8px',
+                bgcolor: '#FBFDFE',
+                '&:hover': { bgcolor: '#f0f4f8' }
+              }}
+            >
+              <img src={printIcon} alt="Print" style={{ width: 16, height: 16 }} />
             </IconButton>
             <Button 
-              variant="contained" 
-              sx={{ bgcolor: '#003366', textTransform: 'none', fontSize: fontSize.sm, px: 3, fontWeight: fontWeight.semibold }}
+              variant="outlined" 
+              startIcon={<img src={compareIcon} alt="Compare" style={{ width: 16, height: 16 }} />}
+              sx={{ 
+                color: '#334155', 
+                bgcolor: '#FBFDFE',
+                borderColor: '#e2e8f0',
+                textTransform: 'none', 
+                fontSize: fontSize.sm, 
+                height: 32,
+                px: 2, 
+                fontWeight: fontWeight.semibold,
+                borderRadius: '8px',
+                '&:hover': { backgroundColor: '#f0f4f8', borderColor: '#cbd5e1' }
+              }}
             >
               Compare
             </Button>
             <Button 
               variant="contained" 
-              sx={{ bgcolor: '#d4a373', textTransform: 'none', borderRadius: 2, fontSize: fontSize.sm, px: 3, fontWeight: fontWeight.semibold }}
+              onClick={handleResetToDefault}
+              sx={{ 
+                bgcolor: '#00BBAB', 
+                color: '#fff',
+                textTransform: 'none', 
+                borderRadius: '8px', 
+                fontSize: fontSize.sm, 
+                height: 32,
+                px: 2, 
+                fontWeight: fontWeight.semibold,
+                '&:hover': { bgcolor: '#00a093' }
+              }}
             >
-              New Perio Chart ▾
+              New Period Chart &gt;
             </Button>
           </Box>
         </Box>
@@ -569,50 +631,127 @@ const PeriodontalExamPage = () => {
         <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
 
         {/* 2. DIAGNOSTIC SECTION */}
-        <DiagnosticHeader />
+        <Grid container spacing={3} sx={{ mt: 1, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+          <Grid item xs={12} sx={{ flexBasis: { md: '42.5%' }, maxWidth: { md: '42.5%' } }}>
+            <DiagnosisCard />
+          </Grid>
+          <Grid item xs={12} sx={{ flexBasis: { md: '57.5%' }, maxWidth: { md: '57.5%' } }}>
+            <SummaryCard summaryData={dynamicSummaryData} />
+          </Grid>
+        </Grid>
 
         {/* 3. TABS HEADER */}
-        <Box sx={{ mt: 4, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <Tabs value={0} sx={{ minHeight: 0 }}>
-            <Tab label="PERIO CHART" sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.bold, minWidth: 100 }} />
-            <Tab label="PERIO GRAPH" sx={{ fontSize: fontSize.xs, color: '#ccc', minWidth: 100 }} />
-          </Tabs>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: 1 }}>
-            <FormControlLabel 
-              control={<Checkbox size="small" />} 
-              label={<Typography variant="caption" color="textSecondary" sx={{ fontSize: fontSize.xs }}>Enable System Talk Back</Typography>} 
+        <Box sx={{ mt: 4, borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <Tabs 
+            value={perioTab} 
+            onChange={(e, v) => setPerioTab(v)}
+            sx={{ 
+              minHeight: 0,
+              '& .MuiTabs-indicator': { backgroundColor: '#4379EE', height: '2px' }
+            }}
+          >
+            <Tab 
+              label="PERIO CHART" 
+              sx={{ 
+                fontSize: '13px', 
+                fontWeight: perioTab === 0 ? 700 : 600, 
+                minWidth: 'auto', 
+                p: 0, 
+                pb: 1, 
+                mr: 4, 
+                color: perioTab === 0 ? '#4379EE !important' : '#1E293B !important' 
+              }} 
             />
-            <Typography variant="caption" sx={{ color: '#4472c4', textDecoration: 'underline', cursor: 'pointer', fontSize: fontSize.xs }}>Voice Commands Guide</Typography>
-            <Box sx={{ bgcolor: '#e3d5ca', p: 0.5, borderRadius: '50%' }}><MicIcon sx={{ color: 'white', fontSize: 20 }} /></Box>
+            <Tab 
+              label="PERIO GRAPH" 
+              sx={{ 
+                fontSize: '13px', 
+                fontWeight: perioTab === 1 ? 700 : 600, 
+                minWidth: 'auto', 
+                p: 0, 
+                pb: 1, 
+                color: perioTab === 1 ? '#4379EE !important' : '#1E293B !important' 
+              }} 
+            />
+          </Tabs>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, pb: 1 }}>
+            <Box 
+              onClick={() => setTalkBackEnabled(!talkBackEnabled)}
+              sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+            >
+              <Box sx={{ 
+                width: 16, 
+                height: 16, 
+                borderRadius: '50%', 
+                border: '1.5px solid #4379EE',
+                backgroundColor: talkBackEnabled ? '#4379EE' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease'
+              }}>
+                {talkBackEnabled && (
+                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#fff' }} />
+                )}
+              </Box>
+              <Typography sx={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
+                Enable System Talk Back
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: '13px', color: '#4379EE', textDecoration: 'underline', cursor: 'pointer', fontWeight: 500 }}>
+              Voice Commands Guide
+            </Typography>
+            <IconButton 
+              sx={{ 
+                bgcolor: '#EBF0FE', 
+                width: 32, 
+                height: 32, 
+                '&:hover': { bgcolor: '#dbe4fe' }
+              }}
+            >
+              <img src={voiceIcon} alt="Voice" style={{ width: 16, height: 16 }} />
+            </IconButton>
           </Box>
         </Box>
 
         {/* 4. PERIO CHART GRID */}
-        <PerioChartGrid chartData={chartData} setChartData={setChartData} missingTeeth={MISSING_TEETH} />
+        {perioTab === 0 ? (
+          <PerioChartGrid chartData={chartData} setChartData={setChartData} missingTeeth={missingTeeth} />
+        ) : (
+          <PeriographTab chartData={chartData} missingTeeth={missingTeeth} />
+        )}
 
         </fieldset>
 
-        <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSaveExam}
-            disabled={isSigned}
-            sx={{ textTransform: 'none', px: 3 }}
-          >
-            Save Exam
-          </Button>
-          <Button
-            variant="contained"
-            color="success"
-            onClick={handleSignExam}
-            disabled={isSigned}
-            sx={{ textTransform: 'none', px: 3 }}
-          >
-            Sign & Finalize
-          </Button>
+        <Box sx={{ 
+          mt: 4, 
+          border: '1px solid #e2e8f0', 
+          borderRadius: '10px', 
+          bgcolor: '#ffffff',
+        }}>
+          <Box sx={{ mt: -2.5, pb: 1.5, mr: 1 }}>
+            <ExamActionBar
+              isSigned={isSigned}
+              onSave={handleSaveExam}
+              onSign={handleSignExam}
+              onDelete={handleDeleteExam}
+              signDialogOpen={signDialogOpen}
+              onSignDialogClose={() => setSignDialogOpen(false)}
+              onConfirmSign={handleConfirmSign}
+              signLoading={signMutation.isPending}
+              deleteDialogOpen={deleteDialogOpen}
+              onDeleteDialogClose={() => setDeleteDialogOpen(false)}
+              onConfirmDelete={handleConfirmDelete}
+            />
+          </Box>
         </Box>
+        </Box>
+        </Box>
+      </Box>
 
+      {/* RIGHT COLUMN — Task List + Messages Panel */}
+      <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <RightPanel hideAppointmentShortlist />
       </Box>
 
       {/* Perio Defaults Dialog */}
@@ -623,249 +762,270 @@ const PeriodontalExamPage = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: '8px',
+            borderRadius: '12px',
+            boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.08)',
             overflow: 'hidden'
           }
         }}
       >
         {/* Title Bar */}
-        <Box sx={{ bgcolor: '#4a70bc', py: 1.5, px: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>
-            Perio Defaults
-          </Typography>
-          <IconButton 
-            onClick={() => setShowSettings(false)}
-            sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'white' }}
-          >
-            <CloseIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Box>
-
-        <DialogContent sx={{ p: 4 }}>
-          {/* Section Header */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#333', fontSize: '0.9rem', mb: 0.5 }}>
-              Set defaults
-            </Typography>
-            <Divider sx={{ borderBottomWidth: 1.5, borderColor: '#ccc', width: '150px' }} />
+        <DialogTitle
+          sx={{
+            backgroundColor: '#F1F5FD',
+            color: '#111',
+            py: 2,
+            px: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #E5E7EB',
+            m: 0
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ 
+              width: 40, height: 40, borderRadius: '50%', backgroundColor: '#e2ebfc', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center' 
+            }}>
+              <SettingsIcon sx={{ color: '#2563EB', fontSize: 20 }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', lineHeight: '24px', letterSpacing: '-0.4px', color: '#111' }}>
+                Perio Defaults
+              </Typography>
+              <Typography sx={{ fontFamily: 'Inter', fontWeight: 400, fontSize: '11.5px', lineHeight: '17.25px', color: '#6B7280' }}>
+                Set your clinical defaults for periodontal measurements
+              </Typography>
+            </Box>
           </Box>
+          <IconButton size="small" onClick={() => setShowSettings(false)} sx={{ color: '#6B7280' }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
 
-          <Stack spacing={3.5}>
-            {/* Probing Row */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography sx={{ width: 140, fontSize: '0.85rem', color: '#333' }}>Probing</Typography>
-              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-                {[0, 1, 2].map(idx => (
-                  <TextField
-                    key={idx}
-                    value={settings.probing[idx]}
-                    onChange={(e) => {
-                      const val = e.target.value.slice(-1).replace(/[^0-9]/g, '');
-                      setSettings(prev => {
-                        const nextProbing = [...prev.probing];
-                        nextProbing[idx] = val;
-                        return { ...prev, probing: nextProbing };
-                      });
-                    }}
-                    inputProps={{ style: { textAlign: 'center', padding: '4px', fontSize: '0.85rem' } }}
-                    sx={{ width: 32, '& .MuiOutlinedInput-root': { borderRadius: '2px', bgcolor: '#fff' } }}
-                  />
-                ))}
-              </Stack>
-              <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography onClick={handleSetProbing} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography onClick={handleClearProbing} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
-              </Stack>
-            </Stack>
+        <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2.5, bgcolor: '#FFFFFF' }}>
+          <Box sx={{ mb: 0 }}>
 
-            {/* Recession Row */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography sx={{ width: 140, fontSize: '0.85rem', color: '#333' }}>Recession</Typography>
-              <Stack direction="row" spacing={3} alignItems="center" sx={{ flex: 1 }}>
-                <TextField
-                  value={settings.recession[1]}
-                  onChange={(e) => {
-                    const val = e.target.value.slice(-1).replace(/[^0-9]/g, '');
-                    setSettings(prev => {
-                      const nextRec = [...prev.recession];
-                      nextRec[1] = val;
-                      return { ...prev, recession: nextRec };
-                    });
-                  }}
-                  inputProps={{ style: { textAlign: 'center', padding: '4px', fontSize: '0.85rem' } }}
-                  sx={{ width: 32, '& .MuiOutlinedInput-root': { borderRadius: '2px', bgcolor: '#fff' } }}
-                />
-                <FormControlLabel
-                  control={
-                    <Radio 
-                      size="small" 
-                      checked={settings.recessionPresent} 
-                      onClick={() => setSettings(prev => ({ ...prev, recessionPresent: !prev.recessionPresent }))} 
+            <Stack spacing={2}>
+              {/* Probing Row */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', p: 2 }}>
+                <Typography sx={{ width: 140, fontSize: '0.875rem', fontWeight: 500, color: '#334155' }}>Probing</Typography>
+                <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+                  {[0, 1, 2].map(idx => (
+                    <TextField
+                      key={idx}
+                      value={settings.probing[idx]}
+                      onChange={(e) => {
+                        const val = e.target.value.slice(-1).replace(/[^0-9]/g, '');
+                        setSettings(prev => {
+                          const nextProbing = [...prev.probing];
+                          nextProbing[idx] = val;
+                          return { ...prev, probing: nextProbing };
+                        });
+                      }}
+                      inputProps={{ style: { textAlign: 'center', padding: '0', fontSize: '0.875rem' } }}
+                      sx={{ width: 36, '& .MuiOutlinedInput-root': { borderRadius: '6px', height: 36, bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } } }}
                     />
-                  }
-                  label={<Typography sx={{ fontSize: '0.85rem', color: '#555' }}>Present</Typography>}
-                />
-              </Stack>
-              <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography onClick={handleSetRecession} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography onClick={handleClearRecession} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
-              </Stack>
-            </Stack>
+                  ))}
+                </Stack>
+              </Box>
 
-            {/* Attached Gingiva Row */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography sx={{ width: 140, fontSize: '0.85rem', color: '#333' }}>Attached Gingiva</Typography>
-              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-                {[0, 1, 2].map(idx => (
+              {/* Recession Row */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', p: 2 }}>
+                <Typography sx={{ width: 140, fontSize: '0.875rem', fontWeight: 500, color: '#334155' }}>Recession</Typography>
+                <Stack direction="row" spacing={3} alignItems="center" sx={{ flex: 1 }}>
                   <TextField
-                    key={idx}
-                    value={settings.attachedGingiva[idx]}
+                    value={settings.recession[1]}
                     onChange={(e) => {
                       const val = e.target.value.slice(-1).replace(/[^0-9]/g, '');
                       setSettings(prev => {
-                        const nextGing = [...prev.attachedGingiva];
-                        nextGing[idx] = val;
-                        return { ...prev, attachedGingiva: nextGing };
+                        const nextRec = [...prev.recession];
+                        nextRec[1] = val;
+                        return { ...prev, recession: nextRec };
                       });
                     }}
-                    inputProps={{ style: { textAlign: 'center', padding: '4px', fontSize: '0.85rem' } }}
-                    sx={{ width: 32, '& .MuiOutlinedInput-root': { borderRadius: '2px', bgcolor: '#fff' } }}
+                    inputProps={{ style: { textAlign: 'center', padding: '0', fontSize: '0.875rem' } }}
+                    sx={{ width: 36, '& .MuiOutlinedInput-root': { borderRadius: '6px', height: 36, bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } } }}
                   />
-                ))}
-              </Stack>
-              <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography onClick={handleSetAttachedGingiva} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography onClick={handleClearAttachedGingiva} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
-              </Stack>
-            </Stack>
-
-            {/* Mobility Row */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography sx={{ width: 140, fontSize: '0.85rem', color: '#333' }}>Mobility</Typography>
-              <Box sx={{ flex: 1 }}>
-                <Select
-                  size="small"
-                  value={settings.mobility}
-                  onChange={(e) => setSettings(prev => ({ ...prev, mobility: e.target.value }))}
-                  sx={{ height: 28, fontSize: '0.8rem', minWidth: 80, borderRadius: '2px' }}
-                >
-                  <MenuItem value="none">none</MenuItem>
-                  <MenuItem value="1">1</MenuItem>
-                  <MenuItem value="2">2</MenuItem>
-                  <MenuItem value="3">3</MenuItem>
-                </Select>
+                  <FormControlLabel
+                    control={
+                      <Radio 
+                        size="small" 
+                        checked={settings.recessionPresent} 
+                        onClick={() => setSettings(prev => ({ ...prev, recessionPresent: !prev.recessionPresent }))}
+                        sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#4379EE' } }}
+                      />
+                    }
+                    label={<Typography sx={{ fontSize: '0.875rem', color: '#475569', fontWeight: 500 }}>Present</Typography>}
+                  />
+                </Stack>
               </Box>
-              <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography onClick={handleSetMobility} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography onClick={handleClearMobility} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
-              </Stack>
-            </Stack>
 
-            {/* Bleeding Row */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography sx={{ width: 140, fontSize: '0.85rem', color: '#333' }}>Bleeding</Typography>
-              <Stack direction="row" spacing={3} alignItems="center" sx={{ flex: 1 }}>
-                <Stack direction="row" spacing={1}>
-                  {[0, 1, 2].map(idx => {
-                    const isRed = settings.bleeding.includes(idx);
+              {/* Attached Gingiva Row */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', p: 2 }}>
+                <Typography sx={{ width: 140, fontSize: '0.875rem', fontWeight: 500, color: '#334155' }}>Attached Gingiva</Typography>
+                <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+                  {[0, 1, 2].map(idx => (
+                    <TextField
+                      key={idx}
+                      value={settings.attachedGingiva[idx]}
+                      onChange={(e) => {
+                        const val = e.target.value.slice(-1).replace(/[^0-9]/g, '');
+                        setSettings(prev => {
+                          const nextGing = [...prev.attachedGingiva];
+                          nextGing[idx] = val;
+                          return { ...prev, attachedGingiva: nextGing };
+                        });
+                      }}
+                      inputProps={{ style: { textAlign: 'center', padding: '0', fontSize: '0.875rem' } }}
+                      sx={{ width: 36, '& .MuiOutlinedInput-root': { borderRadius: '6px', height: 36, bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } } }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+
+              {/* Mobility Row */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', p: 2 }}>
+                <Typography sx={{ width: 140, fontSize: '0.875rem', fontWeight: 500, color: '#334155' }}>Mobility</Typography>
+                <Box sx={{ flex: 1 }}>
+                  <Select
+                    size="small"
+                    value={settings.mobility}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mobility: e.target.value }))}
+                    sx={{ height: 36, fontSize: '0.875rem', minWidth: 100, borderRadius: '6px', bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } }}
+                  >
+                    <MenuItem value="none">none</MenuItem>
+                    <MenuItem value="1">1</MenuItem>
+                    <MenuItem value="2">2</MenuItem>
+                    <MenuItem value="3">3</MenuItem>
+                  </Select>
+                </Box>
+              </Box>
+
+              {/* Bleeding Row */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', p: 2 }}>
+                <Typography sx={{ width: 140, fontSize: '0.875rem', fontWeight: 500, color: '#334155' }}>Bleeding</Typography>
+                <Stack direction="row" spacing={3} alignItems="center" sx={{ flex: 1 }}>
+                  <Stack direction="row" spacing={1.5}>
+                    {[0, 1, 2].map(idx => {
+                      const isRed = settings.bleeding.includes(idx);
+                      return (
+                        <Box
+                          key={idx}
+                          onClick={() => {
+                            setSettings(prev => {
+                              const nextBleeding = prev.bleeding.includes(idx)
+                                ? prev.bleeding.filter(i => i !== idx)
+                                : [...prev.bleeding, idx];
+                              return { ...prev, bleeding: nextBleeding };
+                            });
+                          }}
+                          sx={{
+                            width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: isRed ? '#FEE2E2' : '#F8FAFC',
+                            border: '1px solid', borderColor: isRed ? '#EF4444' : '#E2E8F0',
+                            borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s'
+                          }}
+                        >
+                          {isRed && <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#EF4444' }} />}
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                  <FormControlLabel
+                    control={
+                      <Radio 
+                        size="small" 
+                        checked={settings.bleedingPresent} 
+                        onClick={() => setSettings(prev => ({ ...prev, bleedingPresent: !prev.bleedingPresent }))} 
+                        sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#4379EE' } }}
+                      />
+                    }
+                    label={<Typography sx={{ fontSize: '0.875rem', color: '#475569', fontWeight: 500 }}>Present</Typography>}
+                  />
+                </Stack>
+              </Box>
+
+              {/* PCS Row */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', p: 2 }}>
+                <Typography sx={{ width: 140, fontSize: '0.875rem', fontWeight: 500, color: '#334155' }}>PCS</Typography>
+                <Stack direction="row" spacing={1.5} sx={{ flex: 1 }}>
+                  {['P', 'C', 'S'].map(char => {
+                    const isActive = settings.pcs.includes(char);
                     return (
                       <Box
-                        key={idx}
+                        key={char}
                         onClick={() => {
                           setSettings(prev => {
-                            const nextBleeding = prev.bleeding.includes(idx)
-                              ? prev.bleeding.filter(i => i !== idx)
-                              : [...prev.bleeding, idx];
-                            return { ...prev, bleeding: nextBleeding };
+                            const nextPCS = prev.pcs.includes(char)
+                              ? prev.pcs.filter(c => c !== char)
+                              : [...prev.pcs, char];
+                            return { ...prev, pcs: nextPCS };
                           });
                         }}
                         sx={{
-                          width: 16,
-                          height: 16,
-                          bgcolor: isRed ? '#e74c3c' : 'transparent',
-                          border: '1px solid #ccc',
-                          borderRadius: '2px',
-                          cursor: 'pointer'
+                          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          bgcolor: isActive ? '#F59E0B' : '#F8FAFC',
+                          border: '1px solid', borderColor: isActive ? '#F59E0B' : '#E2E8F0',
+                          borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
+                          color: isActive ? '#fff' : '#64748B', fontSize: '0.875rem', fontWeight: 600
                         }}
-                      />
+                      >
+                        {char}
+                      </Box>
                     );
                   })}
                 </Stack>
-                <FormControlLabel
-                  control={
-                    <Radio 
-                      size="small" 
-                      checked={settings.bleedingPresent} 
-                      onClick={() => setSettings(prev => ({ ...prev, bleedingPresent: !prev.bleedingPresent }))} 
-                    />
-                  }
-                  label={<Typography sx={{ fontSize: '0.85rem', color: '#555' }}>Present</Typography>}
-                />
-              </Stack>
-              <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography onClick={handleSetBleeding} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography onClick={handleClearBleeding} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
-              </Stack>
+              </Box>
             </Stack>
+          </Box>
 
-            {/* PCS Row */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography sx={{ width: 140, fontSize: '0.85rem', color: '#333' }}>PCS</Typography>
-              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-                {['P', 'C', 'S'].map(char => {
-                  const isActive = settings.pcs.includes(char);
-                  return (
-                    <Box
-                      key={char}
-                      onClick={() => {
-                        setSettings(prev => {
-                          const nextPCS = prev.pcs.includes(char)
-                            ? prev.pcs.filter(c => c !== char)
-                            : [...prev.pcs, char];
-                          return { ...prev, pcs: nextPCS };
-                        });
-                      }}
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: isActive ? '#f39c12' : 'transparent',
-                        border: '1px solid #ccc',
-                        borderRadius: '2px',
-                        cursor: 'pointer',
-                        color: isActive ? 'white' : '#999',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {char}
-                    </Box>
-                  );
-                })}
-              </Stack>
-              <Stack direction="row" spacing={2} sx={{ width: 150, justifyContent: 'flex-end' }}>
-                <Typography onClick={handleSetPCS} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Set</Typography>
-                <Typography onClick={handleClearPCS} sx={{ fontSize: '0.85rem', color: '#e74c3c', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Clear all</Typography>
-              </Stack>
-            </Stack>
-          </Stack>
-
-          {/* Dialog Footer Close Button */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+          {/* Dialog Footer Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 3, py: 2, borderTop: '1px solid #E2E8F0', bgcolor: '#fff', mt: 3, mx: -3, mb: -2.5 }}>
             <Button
               onClick={() => setShowSettings(false)}
-              variant="contained"
+              variant="outlined"
               sx={{
-                bgcolor: '#888',
-                '&:hover': { bgcolor: '#777' },
+                color: '#334155',
+                borderColor: '#E2E8F0',
                 textTransform: 'none',
-                borderRadius: '4px',
-                px: 3
+                borderRadius: '8px',
+                px: 2.5,
+                fontWeight: 600,
+                '&:hover': { bgcolor: '#F8FAFC', borderColor: '#CBD5E1' }
               }}
             >
-              Close
+              Cancel
+            </Button>
+            <Button
+              onClick={handleClearAll}
+              variant="outlined"
+              color="error"
+              sx={{
+                textTransform: 'none',
+                borderRadius: '8px',
+                px: 2.5,
+                fontWeight: 600,
+                borderColor: '#FCA5A5',
+                '&:hover': { bgcolor: '#FEF2F2', borderColor: '#EF4444' }
+              }}
+            >
+              Clear Grid
+            </Button>
+            <Button
+              onClick={handleApplyAll}
+              variant="contained"
+              sx={{
+                bgcolor: '#4379EE',
+                textTransform: 'none',
+                borderRadius: '8px',
+                px: 3,
+                fontWeight: 600,
+                boxShadow: 'none',
+                '&:hover': { bgcolor: '#3b6be0', boxShadow: 'none' }
+              }}
+            >
+              Apply Defaults
             </Button>
           </Box>
         </DialogContent>
