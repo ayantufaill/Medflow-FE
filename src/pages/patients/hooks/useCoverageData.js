@@ -36,6 +36,7 @@ export const useCoverageData = (
     templatesLoading,
     fetchCompanies,
     fetchTemplates,
+    createTemplate,
   } = useInsuranceCatalog();
   const {
     insurances,
@@ -152,7 +153,7 @@ export const useCoverageData = (
                 editTarget.insuranceCompanyId?.name ||
                 "",
               insuranceType: editTarget.insuranceType || "primary",
-              planFeeGuide: editTarget.planFeeGuide || "",
+              planFeeGuide: editTarget.planFeeGuide ? String(editTarget.planFeeGuide) : "",
               coverageType: editTarget.coverageType || "ppo",
               assignmentOfBenefits:
                 parseInt(editTarget.assignmentOfBenefits) || 1,
@@ -294,6 +295,7 @@ export const useCoverageData = (
     feeGuides,
     allCompanies,
     coverageTemplates,
+    createTemplate,
     handleSave,
     handleCancel,
   };

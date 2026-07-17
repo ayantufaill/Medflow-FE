@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Box, Paper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import { Box, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import FormInput from '../FormInput';
+import FormInput from '../components/FormInput';
 
 const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_INSURANCE, handleSelectResult }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
 
-  const handleSearch = (val) => {
+  const handleSearch = (val, openDropdown = true) => {
     handleInputChange('carrierSearch', val);
 
     const searchPool = companies.length > 0 ? companies : DUMMY_INSURANCE;
@@ -30,7 +31,9 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
     }
 
     setSearchResults(filtered);
-    setShowDropdown(true);
+    if (openDropdown) {
+      setShowDropdown(true);
+    }
   };
 
   const onSelect = (item) => {
@@ -40,7 +43,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
 
   return (
     <>
-      <Box sx={{ position: 'relative', mt: 1 }}>
+      <Box ref={setAnchorEl} sx={{ position: 'relative', mt: 1 }}>
         <FormInput
           label="Search Carrier"
           placeholder="Search by Payer Id, Carrier..."
@@ -52,38 +55,51 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
 
-        {showDropdown && searchResults.length > 0 && (
-          <Paper 
-            elevation={8} 
-            sx={{ 
-              position: 'absolute', top: '100%', left: 0, zIndex: 9999, 
+        <Popper
+          open={showDropdown && searchResults.length > 0}
+          anchorEl={anchorEl}
+          placement="bottom-start"
+          sx={{ zIndex: 1300 }}
+          modifiers={[{ name: 'offset', options: { offset: [0, 4] } }]}
+        >
+          <Paper
+            elevation={8}
+            sx={{
               maxHeight: '400px', overflowY: 'auto', border: '1px solid #ddd',
-              width: { xs: '300px', sm: '500px', md: '700px' }, mt: 0.5,
+              width: { xs: '300px', sm: '500px', md: '700px' },
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}
           >
             <Table size="small" stickyHeader>
               <TableBody>
                 <TableRow sx={{ bgcolor: '#eef4ff' }}>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer ID</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group Name</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
-                  <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer ID</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group Name</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
+                  <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
                 </TableRow>
                 {searchResults.map((item, idx) => (
-                  <TableRow key={idx} hover sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }} onClick={() => onSelect(item)}>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupName || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
+                  <TableRow 
+                    key={idx} 
+                    hover 
+                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }} 
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onSelect(item);
+                    }}
+                  >
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </Paper>
-        )}
+        </Popper>
       </Box>
       <FormControlLabel 
         control={
@@ -92,11 +108,11 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
             checked={formData.excludeSystemCarriers || false} 
             onChange={(e) => {
               handleInputChange('excludeSystemCarriers', e.target.checked);
-              setTimeout(() => handleSearch(formData.carrierSearch || ''), 0);
+              setTimeout(() => handleSearch(formData.carrierSearch || '', false), 0);
             }} 
           />
         } 
-        label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Exclude System Carriers</Typography>} 
+        label={<Typography variant="caption" sx={{ fontSize: '0.65rem' }}>Exclude System Carriers</Typography>} 
         sx={{ ml: 0 }} 
       />
     </>

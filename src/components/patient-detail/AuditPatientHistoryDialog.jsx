@@ -1,55 +1,42 @@
 import {
+  Dialog, Box, Typography, IconButton, Button,
+  Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Typography, Box, Select, MenuItem, Dialog, DialogContent
 } from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
+import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from "../../constants/styles";
 
-// Style constants for table cells
-const headerStyle = {
-  fontSize: "0.75rem",
-  fontWeight: 700,
-  color: "#333",
-  borderRight: "1px solid #e0e0e0",
-  textAlign: "center",
-  py: 1,
-};
-
-const subHeaderStyle = {
-  fontSize: "0.7rem",
-  fontWeight: 700,
-  color: "#555",
-  borderBottom: "1px solid #e0e0e0",
-  borderRight: "1px solid #e0e0e0",
-  textAlign: "center",
+// Nested Key/Old/New sub-header for the "Difference" column group — same idea as
+// before, restyled to match the table header convention (see below) instead of
+// hardcoded hex colors.
+const diffSubHeaderSx = {
+  fontFamily: "Inter",
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.semibold,
+  color: COLORS.TEXT_MUTED,
+  letterSpacing: "0.3px",
+  textTransform: "uppercase",
   py: 0.5,
-  bgcolor: "#fff"
+  borderBottom: `1px solid ${COLORS.BORDER}`,
 };
 
-const bodyCellStyle = {
-  fontSize: "0.75rem",
-  borderRight: "1px solid #e0e0e0",
-  verticalAlign: "top",
-  py: 1,
+const diffCellSx = {
+  fontFamily: "Inter",
+  fontSize: fontSize.sm,
+  color: COLORS.TEXT_BODY,
+  py: 0.75,
   px: 1,
-};
-
-const differenceCellStyle = {
-  fontSize: "0.7rem",
-  borderRight: "1px solid #f0f0f0",
-  borderBottom: "1px solid #f0f0f0",
-  py: 0.8,
-  px: 1,
-  wordBreak: "break-all"
+  wordBreak: "break-word",
 };
 
 /**
- * AuditPatientHistoryDialog Component
- * Displays audit history of patient updates in a modal dialog
- * 
+ * AuditPatientHistoryDialog — audit log of patient-record changes.
  * @param {Object} props
- * @param {boolean} props.open - Dialog open state
- * @param {Function} props.onClose - Close dialog handler
- * @param {Array} props.auditData - Array of audit records (optional, uses sample data if not provided)
- * @param {String} props.patientId - Patient ID for fetching audit data (optional)
+ * @param {boolean} props.open
+ * @param {Function} props.onClose
+ * @param {Array} [props.auditData] - defaults to sample data when not provided
+ * @param {String} [props.patientId]
  */
 const AuditPatientHistoryDialog = ({ open, onClose, auditData: propAuditData, patientId }) => {
   // Sample data - will be replaced with actual API data when available
@@ -233,83 +220,154 @@ const AuditPatientHistoryDialog = ({ open, onClose, auditData: propAuditData, pa
   const auditData = propAuditData || defaultAuditData;
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      sx={{
-        '& .MuiDialog-paper': {
-          borderRadius: 2,
-        }
-      }}
+      PaperProps={{ sx: { borderRadius: radius.lg, p: 0, maxHeight: "calc(80vh - 96px)" } }}
     >
-      <DialogContent sx={{ p: 0, maxHeight: 'calc(100vh - 96px)' }}>
-        <Box sx={{ width: "100%", bgcolor: "#fff" }}>
-          {/* Top Banner */}
-          <Box sx={{ bgcolor: "#5c7cba", color: "#fff", py: 0.5, textAlign: "center", mb: 1 }}>
-            <Typography sx={{ fontSize: "0.85rem", fontWeight: 500 }}>Audit Patient History</Typography>
-          </Box>
+      {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx / AddCreditCardModal.jsx */}
+      <Box sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        px: 2.5,
+        py: 1.25,
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        borderTopLeftRadius: radius.lg,
+        borderTopRightRadius: radius.lg,
+      }}>
+        <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
+          Audit Patient History
+        </Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: COLORS.TEXT_MUTED, p: "4px" }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </Box>
 
-          {/* Filter Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', px: 2, mb: 2, gap: 1 }}>
-            <Typography sx={{ fontSize: "0.75rem", color: "#1976d2", fontWeight: 600 }}>Filter list by:</Typography>
-            <Typography sx={{ fontSize: "0.75rem",color: "#1976d2", ml: 2 }}>Action:</Typography>
-            <Select size="small" defaultValue="Update" sx={{ height: 25, fontSize: "0.75rem", minWidth: 100 }}>
-              <MenuItem value="Update">Update</MenuItem>
-            </Select>
-          </Box>
+      <Box sx={{ p: 2.5, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {/* Filter row */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+          <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY }}>
+            Filter list by:
+          </Typography>
+          <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY }}>
+            Action:
+          </Typography>
+          <Select
+            size="small"
+            defaultValue="Update"
+            MenuProps={roundedSelectMenuProps.PaperProps ? roundedSelectMenuProps : undefined}
+            sx={{
+              minWidth: 120,
+              fontFamily: "Inter",
+              fontSize: fontSize.md,
+              "& .MuiSelect-select": { py: "6px" },
+              borderRadius: radius.md,
+            }}
+          >
+            <MenuItem value="Update" sx={{ fontFamily: "Inter", fontSize: fontSize.md }}>Update</MenuItem>
+          </Select>
+        </Box>
 
-          {auditData.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 8 }}>
-              <Typography sx={{ fontSize: "0.875rem", color: "text.secondary" }}>
-                No audit history available
-              </Typography>
-            </Box>
-          ) : (
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #e0e0e0", borderRadius: 0, maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
-              <Table size="small" sx={{ tableLayout: 'fixed' }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ ...headerStyle, width: "100px" }}>Date</TableCell>
-                    <TableCell sx={{ ...headerStyle, width: "60px" }}>User</TableCell>
-                    <TableCell sx={{ ...headerStyle, width: "100px" }}>Name</TableCell>
-                    <TableCell sx={{ ...headerStyle, width: "60px" }}>Action</TableCell>
-                    <TableCell colSpan={3} sx={{ ...headerStyle, borderRight: 0, p: 0 }}>
-                      <Box sx={{ py: 1 }}>Difference</Box>
-                      <Box sx={{ display: 'flex' }}>
-                        <Box sx={{ ...subHeaderStyle, flex: 1 }}>Key</Box>
-                        <Box sx={{ ...subHeaderStyle, flex: 1 }}>Old</Box>
-                        <Box sx={{ ...subHeaderStyle, flex: 1, borderRight: 0 }}>New</Box>
-                      </Box>
+        {auditData.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.md, color: COLORS.TEXT_MUTED }}>
+              No audit history available
+            </Typography>
+          </Box>
+        ) : (
+          <TableContainer sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.lg, maxHeight: "calc(100vh - 280px)", overflow: "auto" }}>
+            <Table size="small" stickyHeader sx={{ tableLayout: "fixed" }}>
+              <TableHead>
+                <TableRow sx={{
+                  "& .MuiTableCell-head": {
+                    fontFamily: "Inter",
+                    fontSize: fontSize.sm,
+                    fontWeight: fontWeight.semibold,
+                    color: COLORS.TEXT_MUTED,
+                    letterSpacing: "0.4px",
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                    backgroundColor: COLORS.SURFACE_CARD,
+                    borderBottom: `1px solid ${COLORS.BORDER}`,
+                  },
+                }}>
+                  <TableCell sx={{ width: 130 }}>Date</TableCell>
+                  <TableCell sx={{ width: 90 }}>User</TableCell>
+                  <TableCell sx={{ width: 110 }}>Name</TableCell>
+                  <TableCell sx={{ width: 80 }}>Action</TableCell>
+                  <TableCell colSpan={3} sx={{ p: 0 }}>
+                    <Box sx={{ py: 1, px: 1.5 }}>Difference</Box>
+                    <Box sx={{ display: "flex", borderTop: `1px solid ${COLORS.BORDER}` }}>
+                      <Box sx={{ ...diffSubHeaderSx, flex: 1, px: 1.5 }}>Key</Box>
+                      <Box sx={{ ...diffSubHeaderSx, flex: 1, px: 1.5, borderLeft: `1px solid ${COLORS.BORDER}` }}>Old</Box>
+                      <Box sx={{ ...diffSubHeaderSx, flex: 1, px: 1.5, borderLeft: `1px solid ${COLORS.BORDER}` }}>New</Box>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {auditData.map((row, rowIndex) => (
+                  <TableRow key={rowIndex} hover>
+                    <TableCell sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_BODY, verticalAlign: "top", borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>
+                      {row.date}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_BODY, verticalAlign: "top", borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>
+                      {row.user}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_BODY, verticalAlign: "top", borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>
+                      {row.name}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_BODY, verticalAlign: "top", borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>
+                      {row.action}
+                    </TableCell>
+                    <TableCell colSpan={3} sx={{ p: 0, verticalAlign: "top", borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>
+                      {row.differences.map((diff, diffIndex) => (
+                        <Box key={diffIndex} sx={{ display: "flex", width: "100%", borderTop: diffIndex > 0 ? `1px solid ${COLORS.BORDER_VERY_LIGHT}` : "none" }}>
+                          <Box sx={{ ...diffCellSx, flex: 1 }}>{diff.key}</Box>
+                          <Box sx={{ ...diffCellSx, flex: 1, borderLeft: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>{diff.old}</Box>
+                          <Box sx={{ ...diffCellSx, flex: 1, borderLeft: `1px solid ${COLORS.BORDER_VERY_LIGHT}` }}>{diff.new}</Box>
+                        </Box>
+                      ))}
                     </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {auditData.map((row, rowIndex) => (
-                    <TableRow key={rowIndex} sx={{ "&:last-child td": { borderBottom: 0 } }}>
-                      <TableCell sx={bodyCellStyle}>{row.date}</TableCell>
-                      <TableCell sx={bodyCellStyle}>{row.user}</TableCell>
-                      <TableCell sx={bodyCellStyle}>{row.name}</TableCell>
-                      <TableCell sx={bodyCellStyle}>{row.action}</TableCell>
-                      {/* Nested Difference Content */}
-                      <TableCell colSpan={3} sx={{ p: 0, borderRight: 0, verticalAlign: 'top' }}>
-                        {row.differences.map((diff, diffIndex) => (
-                          <Box key={diffIndex} sx={{ display: 'flex', width: '100%' }}>
-                            <Box sx={{ ...differenceCellStyle, flex: 1 }}>{diff.key}</Box>
-                            <Box sx={{ ...differenceCellStyle, flex: 1 }}>{diff.old}</Box>
-                            <Box sx={{ ...differenceCellStyle, flex: 1, borderRight: 0 }}>{diff.new}</Box>
-                          </Box>
-                        ))}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Box>
-      </DialogContent>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Box>
+
+      {/* Footer — same treatment as AddCreditCardModal.jsx / AddBankAccountModal.jsx */}
+      <Box sx={{
+        px: 2.5,
+        py: 1.5,
+        borderTop: `1px solid ${COLORS.BORDER}`,
+        display: "flex",
+        justifyContent: "flex-end",
+        backgroundColor: COLORS.SURFACE_FOOTER,
+      }}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={onClose}
+          sx={{
+            borderRadius: radius.sm,
+            textTransform: "none",
+            fontSize: fontSize.md,
+            fontWeight: fontWeight.medium,
+            px: 2,
+            borderColor: COLORS.BORDER,
+            color: COLORS.TEXT_PRIMARY,
+            "&:hover": { borderColor: COLORS.TEXT_MUTED, backgroundColor: "rgba(0,0,0,0.02)" },
+          }}
+        >
+          Close
+        </Button>
+      </Box>
     </Dialog>
   );
 };

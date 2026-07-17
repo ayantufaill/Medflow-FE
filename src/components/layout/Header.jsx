@@ -7,7 +7,7 @@ import ActionIcons from './header/ActionIcons';
 import DoctorProfile from './header/DoctorProfile';
 import VerticalDivider from './header/VerticalDivider';
 
-const Header = ({ onOpenPatientSlider }) => (
+const Header = ({ onOpenPatientSlider, sliderOpen }) => (
   <Box
     sx={{
       position: 'fixed',
@@ -43,7 +43,7 @@ const Header = ({ onOpenPatientSlider }) => (
         <VerticalDivider />
         <PatientDropdown />
         <VerticalDivider />
-        <OpenPatientSlider onClick={onOpenPatientSlider} />
+        <OpenPatientSlider onClick={onOpenPatientSlider} isOpen={sliderOpen} />
       </Box>
 
       {/* CENTER */}

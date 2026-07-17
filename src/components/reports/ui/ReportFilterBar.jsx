@@ -5,6 +5,7 @@ import PrintIcon from '@mui/icons-material/Print';
 
 export const ReportFilterBar = ({
   topRowFilters,
+  middleRowFilters,
   topRowActions,
   bottomRowFilters,
   bottomRowLeftActions,
@@ -15,6 +16,7 @@ export const ReportFilterBar = ({
   onExportCsv,
 }) => {
   const hasTopRow = topRowFilters || topRowActions;
+  const hasMiddleRow = !!middleRowFilters;
   const hasBottomRow = bottomRowFilters || bottomRowLeftActions || onApplyFilters || onClearAll || onCreateTemplate || onPrint || onExportCsv;
 
   return (
@@ -27,7 +29,7 @@ export const ReportFilterBar = ({
           flexWrap: 'nowrap', 
           gap: 1.5, 
           p: 2, 
-          pb: hasBottomRow ? 1.5 : 2, 
+          pb: (hasMiddleRow || hasBottomRow) ? 1.5 : 2, 
           backgroundColor: '#fff',
           overflowX: 'auto',
           '&::-webkit-scrollbar': { height: 0, display: 'none' } 
@@ -48,7 +50,27 @@ export const ReportFilterBar = ({
         </Box>
       )}
 
-      {/* Second Filter Row */}
+      {/* Middle Filter Row */}
+      {hasMiddleRow && (
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          flexWrap: 'nowrap', 
+          gap: 1.5, 
+          px: 2, 
+          py: 1.5,
+          backgroundColor: '#fff',
+          borderTop: hasTopRow ? '1px solid #e2e8f0' : 'none',
+          overflowX: 'auto',
+          '&::-webkit-scrollbar': { height: 0, display: 'none' } 
+        }}>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'nowrap' }}>
+            {middleRowFilters}
+          </Box>
+        </Box>
+      )}
+
+      {/* Bottom Filter Row */}
       {hasBottomRow && (
         <Box sx={{ 
           display: 'flex', 

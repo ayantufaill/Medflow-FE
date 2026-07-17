@@ -16,13 +16,15 @@ export const SnackbarProvider = ({ children }) => {
     open: false,
     message: '',
     severity: 'success', // 'success', 'info', 'warning', 'error'
+    position: { vertical: 'bottom', horizontal: 'right' }
   });
 
-  const showSnackbar = useCallback((message, severity = 'success') => {
+  const showSnackbar = useCallback((message, severity = 'success', position = { vertical: 'bottom', horizontal: 'right' }) => {
     setSnackbar({
       open: true,
       message,
       severity,
+      position
     });
   }, []);
 
@@ -45,7 +47,7 @@ export const SnackbarProvider = ({ children }) => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={hideSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={snackbar.position || { vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
           onClose={hideSnackbar}

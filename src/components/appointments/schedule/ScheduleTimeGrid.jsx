@@ -1,6 +1,10 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useMemo } from "react";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import dayjs from "dayjs";
+import { useDroppable } from "@dnd-kit/core";
+import { useDispatch } from "react-redux";
+import { fetchPatientById } from "../../../store/slices/patientSlice";
 import {
   HOURS,
   HOUR_HEIGHT,
@@ -19,6 +23,7 @@ import {
 } from "../../../hooks/redux";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight } from "../../../constants/styles";
+import CompactAppointmentPoint from "./CompactAppointmentPoint";
 
 // Total height of the scrollable grid area — never changes.
 const TOTAL_HEIGHT = HOURS.length * HOUR_HEIGHT;
@@ -83,9 +88,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     appt.patient && typeof appt.patient === "object" ? appt.patient : null;
   const patientData = patientObj || topLevelPatientObj;
   const patientId = patientData
-    ? patientData._id || patientData.id
-    : typeof appt.patientId === "string"
-      ? appt.patientId
+    ? patientData._id || patientData.id || patientData.PatNum
+    : typeof appt.patientId === "string" || typeof appt.patientId === "number" || typeof appt.patientId === "bigint"
+      ? String(appt.patientId)
       : null;
   const patientName = patientObj
     ? `${patientObj.firstName || ""} ${patientObj.lastName || ""}`.trim() ||
@@ -120,8 +125,11 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     "";
 
   // Convert 24-hr "09:30" → "9:30 AM" for display in the card header.
-  const displayTime = dayjs(`2000-01-01T${appt.startTime}`).format("h:mm A");
-  const displayEndTime = dayjs(`2000-01-01T${appt.endTime}`).format("h:mm A");
+  // Safari strict parsing fix: append seconds if missing
+  const safeStartTime = appt.startTime?.length === 5 ? `${appt.startTime}:00` : appt.startTime;
+  const safeEndTime = appt.endTime?.length === 5 ? `${appt.endTime}:00` : appt.endTime;
+  const displayTime = dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A");
+  const displayEndTime = dayjs(`2000-01-01T${safeEndTime}`).format("h:mm A");
   const displayDate = appt.appointmentDate
     ? dayjs(appt.appointmentDate).format("MMM D, YYYY")
     : "";
@@ -230,9 +238,127 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick }) => {
+  const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
+  
+  // Create two droppable zones for the hour: top half (0 mins) and bottom half (30 mins)
+  const { setNodeRef: setNodeRefTop, isOver: isOverTop } = useDroppable({
+    id: `slot-${roomId}-${hour}-0`,
+  });
+  
+  const { setNodeRef: setNodeRefBottom, isOver: isOverBottom } = useDroppable({
+    id: `slot-${roomId}-${hour}-30`,
+  });
+
+  return (
+    <Box
+      onClick={(e) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const isBottomHalf = y > HOUR_HEIGHT / 2;
+        const mins = isBottomHalf ? 30 : 0;
+        setActiveCell({
+          hour,
+          mins,
+          roomId
+        });
+      }}
+      sx={{
+        width: COLUMN_MIN_WIDTH,
+        flexShrink: 0,
+        borderLeft: `1px solid ${COLORS.BORDER}`,
+        position: "relative",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        "&:hover": {
+          backgroundColor: "rgba(34, 98, 239, 0.04)",
+        },
+        "&::after": {
+          content: '""',
+          position: "absolute",
+          top: "50%",
+          left: 0,
+          right: 0,
+          borderTop: "1px dashed #e8ecf0",
+          pointerEvents: "none",
+        },
+      }}
+    >
+      <Box ref={setNodeRefTop} sx={{ flex: 1, backgroundColor: isOverTop ? "rgba(34, 98, 239, 0.1)" : "transparent" }} />
+      <Box ref={setNodeRefBottom} sx={{ flex: 1, backgroundColor: isOverBottom ? "rgba(34, 98, 239, 0.1)" : "transparent" }} />
+      {/* Active cell options popup */}
+      {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: activeCell.mins === 30 ? '50%' : 0,
+            height: '50%',
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            size="small"
+            variant="contained"
+            disableElevation
+            onClick={() => {
+              if (onSlotClick) onSlotClick(activeCell.hour, activeCell.mins, activeCell.roomId);
+              setActiveCell(null);
+            }}
+            sx={{ 
+              fontSize: '10px', 
+              fontWeight: fontWeight.semibold, 
+              textTransform: 'none', 
+              py: 0.5, 
+              minWidth: '80%', 
+              backgroundColor: COLORS.ACCENT, 
+              borderRadius: '6px',
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
+            }}
+          >
+            Schedule Appointment
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              if (onBlockClick) onBlockClick(activeCell.hour, activeCell.mins, activeCell.roomId);
+              setActiveCell(null);
+            }}
+            sx={{ 
+              fontSize: '10px', 
+              fontWeight: fontWeight.semibold, 
+              textTransform: 'none', 
+              py: 0.5, 
+              minWidth: '80%', 
+              color: COLORS.TEXT_PRIMARY, 
+              borderColor: COLORS.BORDER,
+              borderRadius: '6px',
+            }}
+          >
+            Block slot
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode }) => {
+  const dispatch = useDispatch();
   const [activeCell, setActiveCell] = useState(null);
-  const { calendarView, selectedDate } = useScheduleState();
+  const { calendarView, selectedDate, frontendFilters } = useScheduleState();
   
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -271,15 +397,30 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
     fetchAppts({ startDate, endDate, limit: 200 });
   }, [startDate, endDate]); // fetchAppts is a stable useCallback; startDate/endDate are strings
 
-  // Build a roomId → column-index lookup for fast position calculation.
-  const roomIndexMap = useMemo(() => {
+  const isWeek = calendarView === 'week';
+
+  const weekColumns = useMemo(() => {
+    if (!isWeek) return [];
+    const cols = [];
+    const baseDate = dayjsDate.startOf('week');
+    for (let i = 0; i < 7; i++) {
+      const d = baseDate.add(i, 'day');
+      cols.push({ id: d.format('YYYY-MM-DD'), label: d.format('ddd') });
+    }
+    return cols;
+  }, [isWeek, selectedDate]);
+
+  const activeColumns = isWeek ? weekColumns : rooms;
+
+  // Build a column-index lookup for fast position calculation.
+  const colIndexMap = useMemo(() => {
     const map = {};
-    rooms.forEach((room, idx) => {
-      const id = room._id || room.id;
+    activeColumns.forEach((col, idx) => {
+      const id = col._id || col.id;
       if (id) map[id] = idx;
     });
     return map;
-  }, [rooms]);
+  }, [activeColumns]);
 
   const providerMap = useMemo(() => {
     const map = {};
@@ -300,19 +441,73 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
   // then convert each API record to the AppointmentCard shape.
   const visibleAppointments = useMemo(() => {
     const targetDate = dayjsDate.format("YYYY-MM-DD");
-    return rawAppointments
+    const weekStart = dayjsDate.startOf('week').format("YYYY-MM-DD");
+    const weekEnd = dayjsDate.endOf('week').format("YYYY-MM-DD");
+    const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
+
+    const appts = rawAppointments
       .filter((appt) => {
         const apptDate = appt.appointmentDate
           ? String(appt.appointmentDate).slice(0, 10)
           : null;
-        return apptDate === targetDate;
+        
+        const isDateValid = isWeek 
+          ? (apptDate >= weekStart && apptDate <= weekEnd)
+          : (apptDate === targetDate);
+
+        const isNotPending = String(appt.status).toLowerCase() !== 'pending';
+        if (!isDateValid || !isNotPending) return false;
+
+        // Apply visual frontend filters
+        if (providerId !== 'All') {
+          const aProviderId = String(appt.providerId && (appt.providerId._id || appt.providerId.id || appt.providerId));
+          if (aProviderId !== String(providerId)) return false;
+        }
+        if (visitType !== 'All') {
+          const apptVisitType = String(appt.visitType || appt.customFields?.visitType || "").toLowerCase();
+          if (apptVisitType !== visitType.toLowerCase()) return false;
+        }
+        return true;
       })
       .map((appt) => mapApiAppointmentToGridItem(appt, providerMap))
       .filter(Boolean); // remove nulls from appointments outside the hour range
-  }, [rawAppointments, selectedDate, providerMap]);
 
-  // Total grid width grows with the number of rooms.
-  const totalWidth = TIME_LABEL_WIDTH + (rooms.length || 1) * COLUMN_MIN_WIDTH;
+    const blocks = scheduleBlocks.map(block => {
+      if (!block.startTime || !block.endTime) return null;
+      
+      const startH = parseInt(block.startTime.split(':')[0], 10);
+      const startM = parseInt(block.startTime.split(':')[1], 10);
+      const endH = parseInt(block.endTime.split(':')[0], 10);
+      const endM = parseInt(block.endTime.split(':')[1], 10);
+      
+      if (startH >= END_HOUR || endH <= START_HOUR) return null;
+
+      const durationMinutes = (endH - startH) * 60 + (endM - startM);
+
+      // In week view, blocks should probably only apply to the current target date if they are one-off?
+      // For now, if block date doesn't match week days, we could ignore. 
+      // But blocks usually don't have a specific date in this simple mock. We'll leave them on all columns or column 0 for week view.
+
+      return {
+        id: block._id || block.id,
+        roomId: block.roomId || "1",
+        date: block.date || targetDate, // use targetDate if no date specified
+        startHour: startH,
+        startMinute: startM,
+        endHour: endH,
+        durationMinutes,
+        type: "block",
+        title: block.notes || "Blocked",
+        color: block.color,
+        ...block
+      };
+    }).filter(Boolean);
+
+    return [...appts, ...blocks];
+  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks, frontendFilters, isWeek]);
+
+  // Total grid width grows with the number of active columns.
+  const totalWidth = TIME_LABEL_WIDTH + (activeColumns.length || 1) * COLUMN_MIN_WIDTH;
 
   return (
     <Box sx={{ position: "relative", height: TOTAL_HEIGHT, width: totalWidth }}>
@@ -353,108 +548,18 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
             </Typography>
           </Box>
 
-          {/* One cell per operatory column */}
-          {rooms.map((room, idx) => (
-            <Box
-              key={room._id || room.id || idx}
-              
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                const y = e.clientY - rect.top;
-                const isBottomHalf = y > HOUR_HEIGHT / 2;
-                const mins = isBottomHalf ? 30 : 0;
-                setActiveCell({
-                  hour,
-                  mins,
-                  roomId: room._id || room.id || room.roomCode || `op${idx + 1}`
-                });
-              }}
-              onDragOver={(e) => handleDragOver(e, room._id || room.id || `op${idx + 1}`)}
-              sx={{
-                width: COLUMN_MIN_WIDTH,
-                flexShrink: 0,
-                borderLeft: `1px solid ${COLORS.BORDER}`,
-                position: "relative",
-                cursor: "pointer",
-                "&:hover": {
-                  backgroundColor: "rgba(34, 98, 239, 0.04)",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  top: "50%",
-                  left: 0,
-                  right: 0,
-                  borderTop: "1px dashed #e8ecf0",
-                  pointerEvents: "none",
-                },
-              }}
-            >
-              {/* Active cell options popup */}
-              {activeCell && activeCell.hour === hour && activeCell.roomId === (room._id || room.id || room.roomCode || `op${idx + 1}`) && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: activeCell.mins === 30 ? '50%' : 0,
-                    height: '50%',
-                    left: 0,
-                    right: 0,
-                    zIndex: 10,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disableElevation
-                    onClick={() => {
-                      if (onSlotClick) onSlotClick(activeCell.hour, activeCell.mins, activeCell.roomId);
-                      setActiveCell(null);
-                    }}
-                    sx={{ 
-                      fontSize: '10px', 
-                      fontWeight: fontWeight.semibold, 
-                      textTransform: 'none', 
-                      py: 0.5, 
-                      minWidth: '80%', 
-                      backgroundColor: COLORS.ACCENT, 
-                      borderRadius: '6px',
-                      '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
-                    }}
-                  >
-                    Schedule Appointment
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      // if (onBlockClick) onBlockClick(activeCell.hour, activeCell.mins, activeCell.roomId);
-                      setActiveCell(null);
-                    }}
-                    sx={{ 
-                      fontSize: '10px', 
-                      fontWeight: fontWeight.semibold, 
-                      textTransform: 'none', 
-                      py: 0.5, 
-                      minWidth: '80%', 
-                      color: COLORS.TEXT_PRIMARY, 
-                      borderColor: COLORS.BORDER,
-                      borderRadius: '6px',
-                    }}
-                  >
-                    Block Slot
-                  </Button>
-                </Box>
-              )}
-            </Box>
+          {/* One cell per column */}
+          {activeColumns.map((col, idx) => (
+            <DroppableCell 
+              key={col._id || col.id || idx}
+              hour={hour}
+              room={col}
+              idx={idx}
+              activeCell={activeCell}
+              setActiveCell={setActiveCell}
+              onSlotClick={onSlotClick}
+              onBlockClick={onBlockClick}
+            />
           ))}
         </Box>
       ))}
@@ -481,14 +586,30 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
       )}
 
       {/* ── Appointment cards — absolutely positioned in the grid ──────────── */}
-      {visibleAppointments.map((gridItem) => {
-        // Resolve column index from the roomId; unmatched rooms fall to column 0.
-        const colIndex = roomIndexMap[gridItem.roomId] ?? 0;
+      {visibleAppointments.map((gridItem, i) => {
+        // Resolve column index
+        let colIndex = 0;
+        if (isWeek) {
+          // gridItem.date format is "MMM D, YYYY", need YYYY-MM-DD
+          const apptDateStr = dayjs(gridItem.date).format('YYYY-MM-DD');
+          colIndex = colIndexMap[apptDateStr] ?? 0;
+        } else {
+          colIndex = colIndexMap[gridItem.roomId] ?? 0;
+        }
+
         const pos = getGridPosition(gridItem, colIndex);
+
+        if (isWeek) {
+          // For week view, we render them as fixed height points, but we can stack them using their index i to avoid overlap if we want.
+          // Or just render them at the top position.
+          // Let's adjust pos.height for compact view.
+          pos.height = 24; 
+          // to prevent perfect overlap if same time, we could add a slight offset but it's okay for now.
+        }
 
         return (
           <Box
-            key={gridItem.id}
+            key={gridItem.id + i}
             sx={{
               position: "absolute",
               top: pos.top,
@@ -498,7 +619,22 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick }) => {
               zIndex: 2,
             }}
           >
-            <AppointmentCard appointment={gridItem} />
+            {isWeek ? (
+              <CompactAppointmentPoint appointment={gridItem} onSlotClick={(e) => {
+                const appt = e.detail;
+                window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+                  detail: { ...appt },
+                }));
+                if (appt.patientId) {
+                  const pId = typeof appt.patientId === 'object' 
+                    ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
+                    : appt.patientId;
+                  if (pId) dispatch(fetchPatientById(pId));
+                }
+              }} />
+            ) : (
+              <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
+            )}
           </Box>
         );
       })}

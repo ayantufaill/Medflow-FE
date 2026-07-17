@@ -24,6 +24,8 @@ import {
   setSelectedDate,
   setConflicts,
   clearConflicts,
+  setRouteSlipDialogOpen,
+  setFamilyAppointmentsDialogOpen,
   // Pending tray actions
   addPendingItem,
   removePendingItem,
@@ -44,6 +46,11 @@ import {
   selectSelectedDate,
   selectConflicts,
   selectPendingItems,
+  selectFrontendFilters,
+  selectRouteSlipDialogOpen,
+  selectFamilyAppointmentsDialogOpen,
+  setFrontendFilters,
+  clearFrontendFilters,
 } from '../../store/slices/appointmentSlice';
 
 // ─── useAppointmentList ───────────────────────────────────────────────────────
@@ -232,6 +239,9 @@ export const useScheduleState = () => {
   const selectedDate = useSelector(selectSelectedDate);
   const conflicts    = useSelector(selectConflicts);
   const pendingItems = useSelector(selectPendingItems);
+  const frontendFilters = useSelector(selectFrontendFilters);
+  const routeSlipDialogOpen = useSelector(selectRouteSlipDialogOpen);
+  const familyAppointmentsDialogOpen = useSelector(selectFamilyAppointmentsDialogOpen);
 
   return {
     // ── Calendar UI ──────────────────────────────────────────────────────────
@@ -255,5 +265,18 @@ export const useScheduleState = () => {
     addPendingItem:    useCallback((item) => dispatch(addPendingItem(item)), [dispatch]),
     removePendingItem: useCallback((id) => dispatch(removePendingItem(id)), [dispatch]),
     clearPendingItems: useCallback(() => dispatch(clearPendingItems()), [dispatch]),
+
+    // ── Client-side Visual Filters ───────────────────────────────────────────
+    frontendFilters,
+    setFrontendFilters:   useCallback((f) => dispatch(setFrontendFilters(f)), [dispatch]),
+    clearFrontendFilters: useCallback(() => dispatch(clearFrontendFilters()), [dispatch]),
+
+    // ── Route Slip ────────────────────────────────────────────────────────────
+    routeSlipDialogOpen,
+    setRouteSlipDialogOpen: useCallback((open) => dispatch(setRouteSlipDialogOpen(open)), [dispatch]),
+
+    // ── Family Appointments ───────────────────────────────────────────────────
+    familyAppointmentsDialogOpen,
+    setFamilyAppointmentsDialogOpen: useCallback((open) => dispatch(setFamilyAppointmentsDialogOpen(open)), [dispatch]),
   };
 };

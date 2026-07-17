@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchAllProvidersForDropdown } from '../../store/slices/providerSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import ErrorBoundary from '../../components/shared/ErrorBoundary';
-import { validateUSPhoneNumber } from '../../validations/patientValidations';
+import { validateUSPhoneNumber, patientValidations } from '../../validations/patientValidations';
 
 const PatientDetailOverview = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.PatientDetailOverview })));
 const AddFamilyMemberDialog = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.AddFamilyMemberDialog })));
@@ -43,6 +43,13 @@ const PatientDetailPage = () => {
     if (!patientId) return;
     fetchById(patientId);
     dispatch(fetchAllProvidersForDropdown());
+
+    return () => {
+      // Clear the patient when unmounting to prevent sparse data
+      // from showing if we navigate back from another page that
+      // set the currentPatient to a sparse object.
+      dispatch({ type: 'patient/clearCurrentPatient' });
+    };
   }, [patientId, fetchById, dispatch]);
 
   useEffect(() => {
@@ -136,14 +143,29 @@ const PatientDetailPage = () => {
         delete dataToSave.workAddress.postalCode;
       }
       
-      // Validate US phone numbers before saving
-      const phoneValidationErrors = [];
+      // Validate US phone numbers and Dates before saving
+      const validationErrors = [];
       
+      // Validate dates
+      if (dataToSave.dateOfBirth) {
+        const dobValidation = patientValidations.dateOfBirth.validate(dataToSave.dateOfBirth);
+        if (dobValidation !== true) {
+          validationErrors.push(dobValidation);
+        }
+      }
+
+      if (dataToSave.lastVisitDate) {
+        const lastVisitValidation = patientValidations.lastVisitDate.validate(dataToSave.lastVisitDate);
+        if (lastVisitValidation !== true) {
+          validationErrors.push(lastVisitValidation);
+        }
+      }
+
       // Validate primary phone
       if (dataToSave.phonePrimary) {
         const primaryValidation = validateUSPhoneNumber(dataToSave.phonePrimary);
         if (!primaryValidation.valid) {
-          phoneValidationErrors.push(`Mobile Number: ${primaryValidation.message}`);
+          validationErrors.push(`Mobile Number: ${primaryValidation.message}`);
         }
       }
       
@@ -151,7 +173,7 @@ const PatientDetailPage = () => {
       if (dataToSave.phoneSecondary) {
         const secondaryValidation = validateUSPhoneNumber(dataToSave.phoneSecondary);
         if (!secondaryValidation.valid) {
-          phoneValidationErrors.push(`Home Phone Number: ${secondaryValidation.message}`);
+          validationErrors.push(`Home Phone Number: ${secondaryValidation.message}`);
         }
       }
       
@@ -159,13 +181,13 @@ const PatientDetailPage = () => {
       if (dataToSave.emergencyContact?.phone) {
         const emergencyValidation = validateUSPhoneNumber(dataToSave.emergencyContact.phone);
         if (!emergencyValidation.valid) {
-          phoneValidationErrors.push(`Emergency Contact Phone: ${emergencyValidation.message}`);
+          validationErrors.push(`Emergency Contact Phone: ${emergencyValidation.message}`);
         }
       }
       
       // If there are validation errors, show them and stop
-      if (phoneValidationErrors.length > 0) {
-        showSnackbar(phoneValidationErrors.join(', '), 'error');
+      if (validationErrors.length > 0) {
+        showSnackbar(validationErrors.join(', '), 'error');
         return;
       }
       
@@ -261,7 +283,7 @@ const PatientDetailPage = () => {
   return (
     <Box>
       <PatientSectionTabs activeTab={tabParam} patientId={patientId} />
-      <Box sx={{ pt: 1.5, px: 2, pb: 2.5, minHeight: '100%' }}>
+      <Box sx={{ pt: 1.5, pb: 2.5, minHeight: '100%' }}>
         <ErrorBoundary>
           <Suspense fallback={
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -269,7 +291,7 @@ const PatientDetailPage = () => {
             </Box>
           }>
             {tabParam === 'insurance' ? (
-              <PatientInsuranceTabContent patientId={patientId} />
+              <PatientInsuranceTabContent patientId={patientId} patient={patient} />
             ) : (
               <PatientDetailOverview
                 patient={editedPatientData ? { ...patient, ...editedPatientData } : patient}
@@ -342,16 +364,7 @@ const PatientDetailPage = () => {
                 return;
               }
 
-              const newMember = {
-                id: selectedPatient._id || selectedPatient.id,
-                firstName: selectedPatient.firstName,
-                lastName: selectedPatient.lastName,
-                dateOfBirth: selectedPatient.dateOfBirth,
-                relationship: 'Family Member'
-              };
-
-              const updatedHousehold = [...currentHousehold, newMember];
-              await updatePatient(patientId, { household: updatedHousehold }).unwrap();
+              await updatePatient(selectedPatient._id || selectedPatient.id, { guarantorId: patientId }).unwrap();
               showSnackbar('Family member linked successfully', 'success');
             } catch (err) {
               showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');

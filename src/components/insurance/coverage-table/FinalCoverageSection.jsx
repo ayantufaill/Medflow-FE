@@ -1,24 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Select, MenuItem } from "@mui/material";
 import { Add as AddIconNew } from "@mui/icons-material";
 import CoverageGroup from './CoverageGroup';
 import { COVERAGE_DATA } from '../utils/insuranceConstants';
+import AddCoverageItemDialog from '../components/AddCoverageItemDialog';
 
 const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
+  const [isAddCoverageOpen, setIsAddCoverageOpen] = useState(false);
+
   const handleDeleteCoverageItem = (itemId) => {
-    if (!coverageData || !setCoverageData) return;
+    if (!setCoverageData) return;
+    const currentData = { ...COVERAGE_DATA, ...coverageData };
     const updatedData = {};
-    Object.keys(coverageData).forEach(key => {
-      updatedData[key] = coverageData[key].filter(item => item.id !== itemId);
+    Object.keys(currentData).forEach(key => {
+      updatedData[key] = (currentData[key] || []).filter(item => item.id !== itemId);
     });
     setCoverageData(updatedData);
   };
 
   const handleChangeCoverageItem = (itemId, field, value) => {
-    if (!coverageData || !setCoverageData) return;
+    if (!setCoverageData) return;
+    const currentData = { ...COVERAGE_DATA, ...coverageData };
     const updatedData = {};
-    Object.keys(coverageData).forEach(key => {
-      updatedData[key] = coverageData[key].map(item => item.id === itemId ? { ...item, [field]: value } : item);
+    Object.keys(currentData).forEach(key => {
+      updatedData[key] = (currentData[key] || []).map(item => item.id === itemId ? { ...item, [field]: value } : item);
     });
     setCoverageData(updatedData);
   };
@@ -27,14 +32,15 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
     <Box sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Typography 
-          sx={{ color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}
+          onClick={() => setIsAddCoverageOpen(true)}
+          sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}
         >
           <AddIconNew sx={{ fontSize: 16 }} /> Add Coverage
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.5 }}>COVERAGE BOOK SHORTCUTS</Typography>
+            <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.5 }}>COVERAGE BOOK SHORTCUTS</Typography>
             <Select 
               size="small" 
               displayEmpty 
@@ -44,14 +50,14 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
                   setCoverageData(COVERAGE_DATA);
                 }
               }}
-              sx={{ bgcolor: '#fff', fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.8, px: 1.5 }, minWidth: '180px', '& fieldset': { borderColor: '#DFE5EC' } }}
+              sx={{ bgcolor: '#fff', fontSize: '0.7rem', '& .MuiSelect-select': { py: 0.8, px: 1.5 }, minWidth: '180px', '& fieldset': { borderColor: '#DFE5EC' } }}
             >
               <MenuItem value=""><em>Select template</em></MenuItem>
-              <MenuItem value="standard_ppo" sx={{ fontSize: '0.75rem' }}>Standard PPO</MenuItem>
-              <MenuItem value="custom" sx={{ fontSize: '0.75rem' }}>Custom Template</MenuItem>
+              <MenuItem value="standard_ppo" sx={{ fontSize: '0.7rem' }}>Standard PPO</MenuItem>
+              <MenuItem value="custom" sx={{ fontSize: '0.7rem' }}>Custom Template</MenuItem>
             </Select>
           </Box>
-          <Typography sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', mt: 2.5 }}>+ Add Group</Typography>
+          <Typography sx={{ color: '#2563eb', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', mt: 2.5 }}>+ Add Group</Typography>
         </Box>
       </Box>
 
@@ -73,6 +79,24 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
           <CoverageGroup title="Maxillofacial Prosthetics" rows={coverageData?.maxillofacialProsthetics || COVERAGE_DATA.maxillofacialProsthetics} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
         </Box>
       </Box>
+
+      <AddCoverageItemDialog
+        open={isAddCoverageOpen}
+        onClose={() => setIsAddCoverageOpen(false)}
+        onSave={(newItem) => {
+          if (setCoverageData) {
+             const currentData = { ...COVERAGE_DATA, ...coverageData };
+             const updatedData = { ...currentData };
+             // Default to preventative for now until category selection is added
+             updatedData.preventative = [...(updatedData.preventative || []), { 
+               ...newItem, 
+               description: newItem.procedure || newItem.code || 'Custom Item', 
+               noCoverage: false 
+             }];
+             setCoverageData(updatedData);
+          }
+        }}
+      />
     </Box>
   );
 };

@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useDraggable } from "@dnd-kit/core";
+import { useDispatch } from "react-redux";
+import { fetchPatientById } from "../../../store/slices/patientSlice";
 import {
   Phone,
   OpenInNew,
@@ -57,30 +60,53 @@ const TagCircle = ({ icon, bg }) => (
   </Box>
 );
 
-const BlockCard = ({ title }) => (
-  <Box
-    sx={{
-      height: "70%",
-      border: "1.5px dashed #90caf9",
+const BlockCard = ({ title, blockId, block }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `block-${blockId}`,
+    data: {
+      isBlockSlot: true,
+      blockId,
+      block,
+    },
+  });
+
+  const handleBlockClick = (e) => {
+    if (e.defaultPrevented) return;
+    window.dispatchEvent(new CustomEvent('block-card-clicked', {
+      detail: { blockId, block },
+    }));
+  };
+
+  return (
+    <Box
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={handleBlockClick}
+      sx={{
+        height: "100%",
+      border: `1.5px dashed ${block.color ? "rgba(0,0,0,0.2)" : "#90caf9"}`,
       borderRadius: radius.sm,
-      backgroundColor: "#eef4ff",
+      backgroundColor: block.color || "#eef4ff",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       px: "8px",
+      cursor: "pointer"
     }}
   >
-    <Typography
-      sx={{
-        fontSize: fontSize.xs,
-        fontWeight: fontWeight.medium,
-        color: COLORS.ACCENT,
-      }}
-    >
+      <Typography
+        sx={{
+          fontSize: '13px',
+          fontWeight: fontWeight.medium,
+          color: '#1f2937', // dark gray, readable on pastel backgrounds
+        }}
+      >
       {title}
     </Typography>
   </Box>
-);
+  );
+};
 
 // Returns a size tier based on appointment duration in minutes:
 //   'xs'     < 20 min  — header bar only
@@ -94,11 +120,45 @@ const getSizeTier = (durationMinutes = 60) => {
   return "lg";
 };
 
-const AppointmentCard = ({ appointment }) => {
+const AppointmentCard = ({ appointment, privacyMode }) => {
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // When an appointment is clicked, update the Redux patient so the left panel
+  // PatientCard and AppointmentChecklist react to the newly selected patient.
+  const handleCardClick = (e) => {
+    console.log("AppointmentCard: SINGLE CLICK FIRED");
+    if (e.defaultPrevented) return;
+    window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+      detail: { ...appointment },
+    }));
+    if (appointment.patientId) {
+      const pId = typeof appointment.patientId === 'object' 
+        ? appointment.patientId._id || appointment.patientId.id || appointment.patientId.PatNum 
+        : appointment.patientId;
+      if (pId) dispatch(fetchPatientById(pId));
+    }
+  };
+
+  const handleCardDoubleClick = (e) => {
+    console.log("AppointmentCard: DOUBLE CLICK FIRED");
+    if (e.defaultPrevented) return;
+    window.dispatchEvent(new CustomEvent('appointment-card-double-clicked', {
+      detail: { ...appointment },
+    }));
+  };
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `appt-${appointment.id}`,
+    data: {
+      isAppointment: true,
+      appointmentId: appointment.id,
+      appointment,
+    },
+  });
 
   const handleMouseEnter = () => {
     clearTimeout(leaveTimer.current);
@@ -110,7 +170,7 @@ const AppointmentCard = ({ appointment }) => {
   };
 
   if (appointment.type === "block")
-    return <BlockCard title={appointment.title} />;
+    return <BlockCard title={appointment.title} blockId={appointment.id} block={appointment} />;
 
   const statusCfg =
     STATUS_CONFIG[appointment.status] ?? STATUS_CONFIG.CONFIRMED;
@@ -126,9 +186,16 @@ const AppointmentCard = ({ appointment }) => {
     return (
       <>
         <Box
-          ref={cardRef}
+          ref={(node) => {
+            setNodeRef(node);
+            cardRef.current = node;
+          }}
+          {...listeners}
+          {...attributes}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onClick={handleCardClick}
+          onDoubleClick={handleCardDoubleClick}
           sx={{
             height: "100%",
             borderRadius: radius.sm,
@@ -160,7 +227,7 @@ const AppointmentCard = ({ appointment }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              {appointment.patientName}
+              {privacyMode ? "•••• ••••" : appointment.patientName}
             </Typography>
             <Typography
               sx={{
@@ -194,6 +261,7 @@ const AppointmentCard = ({ appointment }) => {
           <AppointmentHoverCard
             appointment={appointment}
             anchorRect={anchorRect}
+            privacyMode={privacyMode}
             onMouseEnter={() => clearTimeout(leaveTimer.current)}
             onMouseLeave={handleMouseLeave}
           />
@@ -205,9 +273,16 @@ const AppointmentCard = ({ appointment }) => {
   return (
     <>
       <Box
-        ref={cardRef}
+        ref={(node) => {
+          setNodeRef(node);
+          cardRef.current = node;
+        }}
+        {...listeners}
+        {...attributes}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={handleCardClick}
+        onDoubleClick={handleCardDoubleClick}
         sx={{
           height: "100%",
           borderRadius: radius.md,
@@ -251,7 +326,7 @@ const AppointmentCard = ({ appointment }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              {appointment.patientName}
+              {privacyMode ? "•••• ••••" : appointment.patientName}
             </Typography>
             <Typography
               sx={{
@@ -635,6 +710,7 @@ const AppointmentCard = ({ appointment }) => {
         <AppointmentHoverCard
           appointment={appointment}
           anchorRect={anchorRect}
+          privacyMode={privacyMode}
           onMouseEnter={() => clearTimeout(leaveTimer.current)}
           onMouseLeave={handleMouseLeave}
         />

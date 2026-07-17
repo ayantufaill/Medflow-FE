@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Select, MenuItem } from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
 import { COL } from "./tableConfig";
 
@@ -24,7 +24,7 @@ export const FilterLabel = ({ children }) => (
 );
 
 /* ── plain bordered input with optional right adornment ─────── */
-export const FilterInput = ({ placeholder, endAdornment }) => (
+export const FilterInput = ({ placeholder, endAdornment, value, onChange, type = "text" }) => (
   <Box sx={{
     display: "flex", alignItems: "center",
     width: "100%",
@@ -36,32 +36,77 @@ export const FilterInput = ({ placeholder, endAdornment }) => (
   }}>
     <Box
       component="input"
+      type={type}
       placeholder={placeholder}
+      value={value}
+      onChange={onChange}
       sx={{
         flex: 1, border: "none", outline: "none",
         fontFamily: "Inter", fontSize: "13px", color: "#374151",
         backgroundColor: "transparent",
         "&::placeholder": { color: "#9aa3ae" },
+        "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+          WebkitAppearance: "none",
+          margin: 0,
+        },
+        "&[type=number]": {
+          MozAppearance: "textfield",
+        },
       }}
     />
     {endAdornment}
   </Box>
 );
 
-/* ── select lookalike ──────────────────────────────────────── */
-export const FilterSelect = ({ value = "All" }) => (
-  <Box sx={{
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    width: "100%",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    px: "10px", height: "36px",
-    backgroundColor: "#fff",
-    cursor: "pointer",
-  }}>
-    <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>{value}</Typography>
-    <KeyboardArrowDown sx={{ fontSize: "16px", color: "#9aa3ae" }} />
-  </Box>
+/* ── MUI select lookalike ──────────────────────────────────────── */
+export const FilterSelect = ({ value, onChange, options = [] }) => (
+  <Select 
+    MenuProps={{ sx: { zIndex: 1700 } }}
+    size="small" 
+    fullWidth 
+    displayEmpty
+    value={value || ""}
+    onChange={onChange}
+    IconComponent={KeyboardArrowDown}
+    sx={{ 
+      fontFamily: "Inter", 
+      fontSize: "13px", 
+      borderRadius: "6px", 
+      height: "36px",
+      backgroundColor: "#fff",
+      color: value ? "#374151" : "#9aa3ae",
+      "& .MuiSelect-select": {
+        paddingTop: "0",
+        paddingBottom: "0",
+        display: "flex",
+        alignItems: "center",
+        height: "100%",
+        px: "10px",
+      },
+      "& .MuiSelect-icon": {
+        color: "#9aa3ae",
+        fontSize: "16px",
+        right: "8px",
+      },
+      "& .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#d1d5db",
+      },
+      "&:hover .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#d1d5db",
+      },
+      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#2262ef",
+        borderWidth: "1px",
+      }
+    }}
+  >
+    <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>All</MenuItem>
+    {options.map(opt => (
+      <MenuItem key={opt.value || opt} value={opt.value || opt} sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>
+        {opt.label || opt}
+      </MenuItem>
+    ))}
+  </Select>
 );
 
 /* ── procedure chip ────────────────────────────────────────── */

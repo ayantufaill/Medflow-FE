@@ -68,15 +68,8 @@ export const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [
-          'appointment/setSelectedDate',
-          'patient/setFilters',
-          'billing/setDateRange',
-        ],
-        ignoredActionPaths: ['payload.date', 'payload.callback'],
-        ignoredPaths: ['appointment.selectedDate', 'patient.filters.dateRange'],
-      },
+      serializableCheck: false,
+      immutableCheck: false,
     }),
   devTools: import.meta.env.MODE !== 'production',
 });

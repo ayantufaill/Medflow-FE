@@ -5,8 +5,8 @@ import { getProcedureType } from '../utils/insuranceHelpers';
 export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData) => {
   const [loading, setLoading] = useState(false);
   const [procedures, setProcedures] = useState([]);
-  const [expandedTypes, setExpandedTypes] = useState({'Diagnostic': true});
-  const [expandedGroups, setExpandedGroups] = useState({'Diagnostic_Oral evaluation': true});
+  const [expandedTypes, setExpandedTypes] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState({});
   const [activeToothSelection, setActiveToothSelection] = useState(null);
 
   useEffect(() => {

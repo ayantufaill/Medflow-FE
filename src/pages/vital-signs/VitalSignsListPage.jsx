@@ -36,6 +36,8 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import { useVitalSigns, useDeleteVitalSign } from '../../hooks/queries/useVitalSigns';
+import ViewVitalsDialog from '../../components/vital-signs/ViewVitalsDialog';
+import RecordVitalsDialog from '../../components/vital-signs/RecordVitalsDialog';
 
 const VitalSignsListPage = () => {
   const navigate = useNavigate();
@@ -52,6 +54,11 @@ const VitalSignsListPage = () => {
     endDate: '',
   });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, vitalSignId: null });
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedVitalSignId, setSelectedVitalSignId] = useState(null);
+  
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editVitalSignId, setEditVitalSignId] = useState(null);
 
   const { data, isLoading, refetch } = useVitalSigns(pagination.page, pagination.limit, filters);
   const vitalSigns = data?.vitalSigns || [];
@@ -103,6 +110,11 @@ const VitalSignsListPage = () => {
     }
   };
 
+  const handleRecordDeleted = () => {
+    setViewDialogOpen(false);
+    refetch();
+  };
+
   const getPatientName = (vitalSign) => {
     if (vitalSign.patientId?.firstName && vitalSign.patientId?.lastName) {
       return `${vitalSign.patientId.firstName} ${vitalSign.patientId.lastName}`;
@@ -142,7 +154,10 @@ const VitalSignsListPage = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/vital-signs/create')}
+            onClick={() => {
+              setEditVitalSignId(null);
+              setEditDialogOpen(true);
+            }}
           >
             Record Vitals
           </Button>
@@ -245,7 +260,10 @@ const VitalSignsListPage = () => {
                       <Tooltip title="View">
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/vital-signs/${vitalSign._id}`)}
+                          onClick={() => {
+                            setSelectedVitalSignId(vitalSign._id);
+                            setViewDialogOpen(true);
+                          }}
                         >
                           <ViewIcon />
                         </IconButton>
@@ -253,7 +271,10 @@ const VitalSignsListPage = () => {
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/vital-signs/${vitalSign._id}/edit`)}
+                          onClick={() => {
+                            setEditVitalSignId(vitalSign._id);
+                            setEditDialogOpen(true);
+                          }}
                         >
                           <EditIcon />
                         </IconButton>
@@ -297,6 +318,27 @@ const VitalSignsListPage = () => {
         cancelText="Cancel"
         loading={deleteLoading}
         severity="error"
+      />
+
+      <ViewVitalsDialog
+        open={viewDialogOpen}
+        onClose={() => setViewDialogOpen(false)}
+        vitalSignId={selectedVitalSignId}
+        onDeleted={handleRecordDeleted}
+        onEdit={(id) => {
+          setEditVitalSignId(id);
+          setEditDialogOpen(true);
+        }}
+      />
+
+      <RecordVitalsDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        editingVitalSignId={editVitalSignId}
+        onSaved={() => {
+          setEditDialogOpen(false);
+          refetch();
+        }}
       />
     </Box>
   );

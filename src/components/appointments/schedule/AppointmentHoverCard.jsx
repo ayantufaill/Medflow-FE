@@ -124,7 +124,13 @@ const formatProcedures = (procedures) => {
 };
 
 /* ═══════════════════════════════════════════════════════════ */
-const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLeave }) => {
+const AppointmentHoverCard = ({
+  appointment,
+  anchorRect,
+  onMouseEnter,
+  onMouseLeave,
+  privacyMode,
+}) => {
   /* Position: prefer right, fall back to left, clamp top */
   const spaceRight = window.innerWidth - anchorRect.right;
   const left = spaceRight >= CARD_WIDTH + 16
@@ -180,11 +186,11 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
         </Typography>
         <Box sx={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
           <Typography sx={{ ...headingPrimarySx }}>
-            {appointment.patientName}
+            {privacyMode ? "•••• ••••" : appointment.patientName}
           </Typography>
           {apt.patientId && (
             <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
-              (pt #{apt.patientId})
+              (pt #{privacyMode ? "****" : apt.patientId})
             </Typography>
           )}
         </Box>
@@ -262,16 +268,16 @@ const AppointmentHoverCard = ({ appointment, anchorRect, onMouseEnter, onMouseLe
           Patient Information
         </Typography>
 
-        <InfoRow label="Patient:">{displayValue(apt.patientName)}</InfoRow>
+        <InfoRow label="Patient:">{privacyMode ? "•••• ••••" : displayValue(apt.patientName)}</InfoRow>
 
-        <InfoRow label="D.O.B:">{displayValue(apt.dob)}</InfoRow>
+        <InfoRow label="D.O.B:">{privacyMode ? "•••• ••••" : displayValue(apt.dob)}</InfoRow>
 
         <InfoRow label="Mobile Phone:">
-          <IconValue icon={<PhoneOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.phone)} color={COLORS.STATUS_SUCCESS} />
+          <IconValue icon={<PhoneOutlined sx={{ fontSize: "12px" }} />} text={privacyMode ? "••••••••••" : displayValue(apt.phone)} color={COLORS.STATUS_SUCCESS} />
         </InfoRow>
 
         <InfoRow label="Email:">
-          <IconValue icon={<EmailOutlined sx={{ fontSize: "12px" }} />} text={displayValue(apt.email)} color={COLORS.ACCENT} />
+          <IconValue icon={<EmailOutlined sx={{ fontSize: "12px" }} />} text={privacyMode ? "••••••••••" : displayValue(apt.email)} color={COLORS.ACCENT} />
         </InfoRow>
 
         <InfoRow label="Preferred DDS:">{displayValue(apt.preferredDDS)}</InfoRow>

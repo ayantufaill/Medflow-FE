@@ -73,14 +73,7 @@ const ViewPatientPage = () => {
         showSnackbar('This patient is already a family member', 'info');
         return;
       }
-      const newMember = {
-        id: selectedPatient._id || selectedPatient.id,
-        firstName: selectedPatient.firstName,
-        lastName: selectedPatient.lastName,
-        dateOfBirth: selectedPatient.dateOfBirth,
-        relationship: 'Family Member',
-      };
-      await patientService.updatePatient(patientId, { household: [...currentHousehold, newMember] });
+      await patientService.updatePatient(selectedPatient._id || selectedPatient.id, { guarantorId: patientId });
       showSnackbar('Family member linked successfully', 'success');
       refetch();
     } catch (err) {

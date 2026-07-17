@@ -30,7 +30,7 @@ const PatientSignatureSection = ({ value, onChange, reviewedWithPatient }) => (
           height={72}
           value={value}
           onChange={onChange}
-          showClearButton={false} // Hide clear button in print
+          showClearButton={true}
           sx={{ 
             mt: 0.5,
             // Ensure signature canvas prints

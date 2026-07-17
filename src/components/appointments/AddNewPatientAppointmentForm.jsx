@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Box, Dialog } from "@mui/material";
 import dayjs from "dayjs";
+import { shortlistService } from "../../services/shortlist.service";
 
 import { INITIAL_PROCEDURES, TAG_DEFAULT_PROCEDURES, DEFAULT_PROCEDURE_TAGS } from "./new-appointment/constants";
 import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
@@ -14,6 +15,8 @@ const AddNewPatientAppointmentForm = ({
   onPatientSearch,
   providers = [],
   rooms = [],
+  appointments = [],
+  scheduleBlocks = [],
   // eslint-disable-next-line no-unused-vars
   appointmentTypes: _appointmentTypes = [],
   onSubmit,
@@ -22,15 +25,28 @@ const AddNewPatientAppointmentForm = ({
   initialPatient = null,
   initialDateTime = null,
   initialRoomId = "",
+  initialShortlistData = null,
   open = true,
-  appointments = [],
+  showExtendedOptions = false,
 }) => {
   /* ── Left panel state ── */
-  const [patient,           setPatient]           = useState(initialPatient || null);
-  const [apptDate,          setApptDate]          = useState(initialDateTime || dayjs());
-  const [timeHours,         setTimeHours]         = useState(initialDateTime ? initialDateTime.format("hh") : dayjs().format("hh"));
-  const [timeMins,          setTimeMins]          = useState(initialDateTime ? initialDateTime.format("mm") : dayjs().format("mm"));
-  const [amPm,              setAmPm]              = useState(initialDateTime ? initialDateTime.format("A") : dayjs().format("A"));
+  const [patient,           setPatient]           = useState(initialShortlistData ? initialShortlistData.patient : initialPatient || null);
+  
+  // Parse shortlist date/time if available
+  let parsedDate = initialDateTime || dayjs();
+  if (initialShortlistData?.AppointmentDate) {
+    let d = dayjs(initialShortlistData.AppointmentDate);
+    if (initialShortlistData.StartTime) {
+      const [h, m] = initialShortlistData.StartTime.split(':');
+      d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
+    }
+    parsedDate = d;
+  }
+
+  const [apptDate,          setApptDate]          = useState(parsedDate);
+  const [timeHours,         setTimeHours]         = useState(parsedDate.format("hh"));
+  const [timeMins,          setTimeMins]          = useState(parsedDate.format("mm"));
+  const [amPm,              setAmPm]              = useState(parsedDate.format("A"));
   const [visitType,         setVisitType]         = useState("recare");
   const [procedures,        setProcedures]        = useState(INITIAL_PROCEDURES);
 
@@ -42,16 +58,28 @@ const AddNewPatientAppointmentForm = ({
   const nextId = useRef(10);
 
   /* ── Right panel state ── */
-  const [status,             setStatus]             = useState("unconfirmed");
-  const [roomId,             setRoomId]             = useState(initialRoomId != null ? String(initialRoomId) : "");
-  const [durationMins,       setDurationMins]       = useState(60);
-  const [providerRows,       setProviderRows]       = useState([{ id: 1, providerId: "", time: 60 }]);
+  const [status,             setStatus]             = useState(initialShortlistData?.Status || "unconfirmed");
+  const [roomId,             setRoomId]             = useState(initialShortlistData?.RoomId ? String(initialShortlistData.RoomId) : initialRoomId != null ? String(initialRoomId) : "");
+  const [durationMins,       setDurationMins]       = useState(initialShortlistData?.DurationMins || 60);
+  
+  const initialProviderRows = initialShortlistData?.ProvNum ? 
+    [{ id: 1, providerId: String(initialShortlistData.ProvNum), time: initialShortlistData?.DurationMins || 60 }] : 
+    [{ id: 1, providerId: "", time: 60 }];
+  const [providerRows,       setProviderRows]       = useState(initialProviderRows);
+  
   const [preferredDentist,   setPreferredDentist]   = useState("");
   const [preferredHygienist, setPreferredHygienist] = useState("");
-  const [notes,              setNotes]              = useState("");
-  const [selectedColorTags,  setSelectedColorTags]  = useState(new Set(["#eab308"]));
+  const [notes,              setNotes]              = useState(initialShortlistData?.Notes || '');
+  const [selectedColorTags,  setSelectedColorTags]  = useState(new Set());
+  const [referredBy,         setReferredBy]         = useState('');
+  const [noReminders,        setNoReminders]        = useState(false);
+  const [tags,               setTags]               = useState([]);
 
-  const availableRooms = useMemo(() => {
+  // Tracks whether the user has tried to submit at least once — required-field
+  // borders only turn red after a failed attempt, not while the form is still empty on open.
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
     const hour = amPm === "PM" ? h + 12 : h;
     const selectedStart = dayjs(apptDate).hour(hour).minute(parseInt(timeMins));
@@ -71,45 +99,185 @@ const AddNewPatientAppointmentForm = ({
         occupied.add(String(appt.roomId));
       }
     });
-    // Keep the already-selected room in the list even if it now reads as occupied,
-    // otherwise the Select can't match `roomId` to a MenuItem and silently shows
-    // "Select operatory" instead of the operatory the user actually picked.
-    return rooms.filter(r => {
-      const id = String(r._id || r.id);
-      return id === String(roomId) || !occupied.has(id);
+
+    scheduleBlocks.forEach(block => {
+      if (!block.date || !block.roomId || !block.startTime || !block.endTime) return;
+      if (block.date !== selectedStart.format("YYYY-MM-DD")) return;
+
+      const [startH, startM] = block.startTime.split(':').map(Number);
+      const [endH, endM] = block.endTime.split(':').map(Number);
+      const blockStart = dayjs(apptDate).hour(startH).minute(startM);
+      const blockEnd = dayjs(apptDate).hour(endH).minute(endM);
+
+      if (selectedStart.isBefore(blockEnd) && selectedEnd.isAfter(blockStart)) {
+        occupied.add(String(block.roomId));
+      }
     });
-  }, [rooms, appointments, apptDate, timeHours, timeMins, amPm, durationMins, roomId]);
+
+    return occupied;
+  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins]);
 
   useEffect(() => {
     if (open) {
-      setPatient(initialPatient || null);
-      setApptDate(initialDateTime || dayjs());
-      setTimeHours(initialDateTime ? initialDateTime.format("hh") : dayjs().format("hh"));
-      setTimeMins(initialDateTime ? initialDateTime.format("mm") : dayjs().format("mm"));
-      setAmPm(initialDateTime ? initialDateTime.format("A") : dayjs().format("A"));
-      setRoomId(initialRoomId != null ? String(initialRoomId) : "");
-      // Radio values in AppointmentLeftPanel are lowercased ("treatment"/"recare"),
-      // so seeding with capitalized "Treatment" left both radios unchecked on open.
+      if (initialShortlistData) {
+        // Try to find the full patient object from the loaded patients list
+        const patId = String(initialShortlistData.PatNum || initialShortlistData.patientId);
+        const fullPatient = patients.find(p => String(p.id || p._id || p.PatNum) === patId);
+        
+        const mockPatient = { 
+          id: patId, 
+          rawId: patId,
+          firstName: initialShortlistData.PatientName ? initialShortlistData.PatientName.split(' ')[0] : 'Unknown',
+          lastName: initialShortlistData.PatientName ? initialShortlistData.PatientName.split(' ').slice(1).join(' ') : 'Patient'
+        };
+        
+        setPatient(fullPatient || mockPatient);
+        
+        let parsedDate = dayjs();
+        if (initialShortlistData.AppointmentDate) {
+          let d = dayjs(initialShortlistData.AppointmentDate);
+          if (initialShortlistData.StartTime) {
+            const [h, m] = initialShortlistData.StartTime.split(':');
+            d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
+          }
+          parsedDate = d;
+        }
+        
+        setApptDate(parsedDate);
+        setTimeHours(parsedDate.format("hh"));
+        setTimeMins(parsedDate.format("mm"));
+        setAmPm(parsedDate.format("A"));
+        
+        setRoomId(initialShortlistData.RoomId ? String(initialShortlistData.RoomId) : "");
+        setStatus(initialShortlistData.Status || "scheduled");
+        setDurationMins(initialShortlistData.DurationMins || 60);
+        
+        setProviderRows(initialShortlistData.ProvNum ? 
+          [{ id: Date.now(), providerId: String(initialShortlistData.ProvNum), time: initialShortlistData.DurationMins || 60 }] : 
+          [{ id: Date.now(), providerId: "", time: 60 }]);
+          
+        setNotes(initialShortlistData.Notes || "");
+        
+        // Extract procedures from shortlist custom fields
+        let customFieldsRaw = initialShortlistData.CustomFields || initialShortlistData.customFields;
+        let customFields = {};
+        if (typeof customFieldsRaw === 'string') {
+          try { customFields = JSON.parse(customFieldsRaw); } catch (e) { customFields = {}; }
+        } else if (customFieldsRaw) {
+          customFields = customFieldsRaw;
+        }
+
+        let initialProcs = [];
+        if (customFields.procedures && Array.isArray(customFields.procedures)) {
+          initialProcs = customFields.procedures;
+        } else if (customFields.procedureTags && Array.isArray(customFields.procedureTags)) {
+          // If they only have tags, we can map them to dummy procedures if needed, 
+          // or just leave them. The user wants procedures.
+          initialProcs = customFields.procedureTags.map(tag => ({
+            code: "TBD",
+            treatment: tag.label || tag,
+            charge: "$0.00",
+            tag: typeof tag === 'object' ? tag : { label: tag, color: "#374151" }
+          }));
+        } else if (initialShortlistData.procedures && Array.isArray(initialShortlistData.procedures)) {
+          initialProcs = initialShortlistData.procedures;
+        } else if (typeof initialShortlistData.Procedures === 'string') {
+          try { initialProcs = JSON.parse(initialShortlistData.Procedures); } catch (e) { initialProcs = []; }
+        } else if (Array.isArray(initialShortlistData.Procedures)) {
+          initialProcs = initialShortlistData.Procedures;
+        }
+        // Ensure they are objects and have checked: true so they aren't filtered out on submit
+        initialProcs = initialProcs.map((p, i) => {
+          const base = typeof p === 'string' ? { code: "TBD", treatment: p, charge: "$0.00" } : p;
+          return { ...base, checked: true, id: base.id || (Date.now() + i) };
+        });
+        
+        setProcedures(initialProcs.length > 0 ? initialProcs : INITIAL_PROCEDURES);
+
+        // Reconstruct selected tags if they exist
+        if (customFields.procedureTags && Array.isArray(customFields.procedureTags)) {
+          const tags = new Set();
+          customFields.procedureTags.forEach(tagObj => {
+            if (tagObj && tagObj.label) {
+              import('./new-appointment/constants').then(({ DEFAULT_PROCEDURE_TAGS }) => {
+                const idx = DEFAULT_PROCEDURE_TAGS.findIndex(t => t.label === tagObj.label && (t.color === tagObj.color || !tagObj.color));
+                if (idx >= 0) {
+                  tags.add(`${tagObj.label}-${idx}`);
+                  setSelectedTagLabels(new Set(tags));
+                }
+              }).catch(() => {});
+            }
+          });
+        }
+        
+        // Fetch full patient if not in the cached list to get preferred providers
+        if (fullPatient) {
+          const fallbackDentist = fullPatient.preferredDentistId || fullPatient.preferredDentist || fullPatient.preferredProviderId;
+          setPreferredDentist(customFields.preferredDentist || (fallbackDentist ? String(fallbackDentist) : ""));
+          const fallbackHygienist = fullPatient.preferredHygienistId || fullPatient.preferredHygienist;
+          setPreferredHygienist(customFields.preferredHygienist || (fallbackHygienist ? String(fallbackHygienist) : ""));
+        } else {
+          // If we don't have the full patient, temporarily set what we have in custom fields,
+          // then fetch the real patient to get the fallbacks!
+          setPreferredDentist(customFields.preferredDentist || "");
+          setPreferredHygienist(customFields.preferredHygienist || "");
+          
+          import('../../services/patient.service').then(({ patientService }) => {
+            patientService.getPatientById(patId).then(res => {
+              const p = res.data;
+              if (p) {
+                if (!customFields.preferredDentist) {
+                  const d = p.preferredDentistId || p.preferredDentist || p.preferredProviderId;
+                  if (d) setPreferredDentist(String(d));
+                }
+                if (!customFields.preferredHygienist) {
+                  const h = p.preferredHygienistId || p.preferredHygienist;
+                  if (h) setPreferredHygienist(String(h));
+                }
+              }
+            }).catch(() => {});
+          }).catch(() => {});
+        }
+        
+        // Color tags: if not in custom fields, use patient flags (which are colors) if available
+        if (customFields.colorTags && Array.isArray(customFields.colorTags)) {
+          setSelectedColorTags(new Set(customFields.colorTags.map(c => typeof c === 'string' ? c.toLowerCase() : c)));
+        } else if (initialShortlistData.flags && Array.isArray(initialShortlistData.flags)) {
+          import('../patient-flags/constants').then(({ getFlagColor }) => {
+            const mappedColors = initialShortlistData.flags.map(f => getFlagColor(f).toLowerCase());
+            setSelectedColorTags(new Set(mappedColors));
+          }).catch(() => {
+            setSelectedColorTags(new Set());
+          });
+        } else {
+          setSelectedColorTags(new Set());
+        }
+      } else {
+        setPatient(initialPatient || null);
+        setApptDate(initialDateTime || dayjs());
+        setTimeHours(initialDateTime ? initialDateTime.format("hh") : dayjs().format("hh"));
+        setTimeMins(initialDateTime ? initialDateTime.format("mm") : dayjs().format("mm"));
+        setAmPm(initialDateTime ? initialDateTime.format("A") : dayjs().format("A"));
+        setRoomId(initialRoomId != null ? String(initialRoomId) : "");
+        setStatus("scheduled");
+        setDurationMins(60);
+        setProviderRows([{ id: Date.now(), providerId: "", time: 60 }]);
+        setNotes("");
+        setProcedures(INITIAL_PROCEDURES);
+        setPreferredDentist("");
+        setPreferredHygienist("");
+        setSelectedColorTags(new Set());
+      }
+
       setVisitType("treatment");
-      // Re-seed the default procedure list every time the modal opens. This used to be
-      // setProcedures([]), which wiped out the INITIAL_PROCEDURES seed the moment the
-      // dialog became visible (the effect fires on every `open` transition to true),
-      // so the "New procedures" table always rendered empty instead of showing the
-      // default visit procedures — this was the "missing procedures list" bug.
-      setProcedures(INITIAL_PROCEDURES);
       setSelectedTagLabels(new Set());
       setTagProcedureIds({});
       setAddingProcedure(false);
       setProcedureInput("");
-      setStatus("scheduled");
-      setDurationMins(60);
-      setProviderRows([{ id: Date.now(), providerId: "", time: 60 }]);
-      setPreferredDentist("");
-      setPreferredHygienist("");
-      setNotes("");
-      setSelectedColorTags(new Set(["#eab308"]));
+
+      setSubmitAttempted(false);
     }
-  }, [open, initialPatient, initialDateTime, initialRoomId]);
+  }, [open, initialPatient, initialDateTime, initialRoomId, initialShortlistData]);
 
   const dateTime = useMemo(() => {
     const h = parseInt(timeHours || "9", 10);
@@ -126,6 +294,19 @@ const AddNewPatientAppointmentForm = ({
       setSelectedTagLabels(new Set());
       setTagProcedureIds({});
     }
+
+    if (newPatient) {
+      // Auto-populate preferred providers from patient profile if available
+      const dentist = newPatient.preferredDentistId || newPatient.preferredDentist || newPatient.preferredProviderId;
+      if (dentist) setPreferredDentist(String(dentist));
+      
+      const hygienist = newPatient.preferredHygienistId || newPatient.preferredHygienist;
+      if (hygienist) setPreferredHygienist(String(hygienist));
+    } else {
+      setPreferredDentist("");
+      setPreferredHygienist("");
+    }
+
     setPatient(newPatient);
   };
 
@@ -190,8 +371,7 @@ const AddNewPatientAppointmentForm = ({
   }, [procedures, tagProcedureIds, selectedTagLabels]);
 
   /* ── Submit ── */
-  const handleSubmit = () => {
-    if (!onSubmit) return;
+  const getAppointmentPayload = () => {
     const end = dateTime.add(durationMins || 30, "minute");
     const selectedProcedureTags = [...selectedTagLabels]
       .map((key) => {
@@ -207,29 +387,23 @@ const AddNewPatientAppointmentForm = ({
       })
       .filter((tag) => tag.label);
 
-    // Calculate endTime from dateTime + durationMins
     const start = dateTime || dayjs();
     if (start.isBefore(dayjs().startOf('day'))) {
       alert("Appointment date cannot be in the past.");
-      return;
+      return null;
     }
 
-    onSubmit({
+    return {
       patientId:       patient?._id || patient?.id,
       patientName:     patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "",
       appointmentDate: dateTime.format("YYYY-MM-DD"),
       startTime:       dateTime.format("HH:mm"),
       endTime:         end.format("HH:mm"),
       durationMinutes: durationMins,
+      durationMins:    durationMins, // Added for backend compatibility
       status,
       notes,
       providerId: providerRows[0]?.providerId || undefined,
-      // Backend appointment schema expects `roomId` (see project notes), so that stays
-      // the top-level field. `operatoryId` is mirrored into customFields as the same
-      // value so the schedule grid (which maps appointments back to an operatory
-      // column via roomId/columnId) and any operatory-scoped consumers of the
-      // created appointment have an explicit, correctly-named field to read instead
-      // of having to know that "operatory" and "room" are the same concept here.
       roomId:     roomId || undefined,
       customFields: {
         visitType,
@@ -238,13 +412,44 @@ const AddNewPatientAppointmentForm = ({
         preferredHygienist,
         colorTags: [...selectedColorTags],
         procedureTags: selectedProcedureTags,
-        // operatoryId reflects the operatory chart column the appointment was created
-        // from (set via the initialRoomId prop when the user clicks a slot on the
-        // /appointments operatory grid), kept in sync with roomId if changed via the
-        // Room dropdown in the right panel.
         operatoryId: roomId || undefined,
       },
-    });
+    };
+  };
+
+  const handleSubmit = () => {
+    if (!onSubmit) return;
+    setSubmitAttempted(true);
+    // Only providerRows[0] feeds the payload's providerId (see getAppointmentPayload),
+    // so that's the row that actually needs to be filled in to submit.
+    if (!patient || !providerRows[0]?.providerId) return;
+    const payload = getAppointmentPayload();
+    if (payload) onSubmit(payload);
+  };
+
+  const isEditMode = Boolean(initialShortlistData);
+
+  const handleConvertToShortlist = async () => {
+    if (!patient) {
+      alert("Please select a patient first.");
+      return;
+    }
+    const payload = getAppointmentPayload();
+    try {
+      if (isEditMode) {
+        await shortlistService.updateShortlistItem(initialShortlistData.ShortlistNum, payload);
+        alert("Successfully updated shortlist item!");
+      } else {
+        await shortlistService.createShortlistItem(payload);
+        alert("Successfully converted to shortlist!");
+      }
+      // Dispatch event to instantly update the Shortlist panel
+      window.dispatchEvent(new Event('shortlist-updated'));
+      if (onCancel) onCancel(); // Close modal
+    } catch (error) {
+      console.error("Failed to convert/update shortlist:", error);
+      alert(`Failed to ${isEditMode ? 'update' : 'convert to'} shortlist. See console for details.`);
+    }
   };
 
   const patientDisplayName = patient
@@ -265,7 +470,11 @@ const AddNewPatientAppointmentForm = ({
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", backgroundColor: "#fff" }}>
-        <AppointmentModalHeader onCancel={onCancel} />
+        <AppointmentModalHeader 
+          onCancel={onCancel} 
+          onConvertToShortlist={handleConvertToShortlist} 
+          isEditMode={isEditMode} 
+        />
 
         <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
           <AppointmentLeftPanel
@@ -274,6 +483,7 @@ const AddNewPatientAppointmentForm = ({
             patient={patient}
             onPatientChange={handlePatientChange}
             onPatientSearch={onPatientSearch}
+            patientError={submitAttempted && !patient}
             apptDate={apptDate}
             onDateChange={setApptDate}
             timeHours={timeHours}
@@ -293,6 +503,7 @@ const AddNewPatientAppointmentForm = ({
             procedures={procedures}
             setProcedures={setProcedures}
             providers={providers}
+            showExtendedOptions={showExtendedOptions}
           />
 
           <AppointmentRightPanel
@@ -300,11 +511,13 @@ const AddNewPatientAppointmentForm = ({
             onStatusChange={setStatus}
             roomId={roomId}
             onRoomChange={setRoomId}
-            rooms={availableRooms}
+            rooms={rooms}
+            isRoomOccupied={roomId && occupiedRoomIds.has(String(roomId))}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
             providerRows={providerRows}
             setProviderRows={setProviderRows}
+            providerError={submitAttempted && !providerRows[0]?.providerId}
             preferredDentist={preferredDentist}
             onPreferredDentistChange={setPreferredDentist}
             preferredHygienist={preferredHygienist}
@@ -314,6 +527,13 @@ const AddNewPatientAppointmentForm = ({
             selectedColorTags={selectedColorTags}
             onColorTagsChange={setSelectedColorTags}
             providers={providers}
+            referredBy={referredBy}
+            onReferredByChange={setReferredBy}
+            noReminders={noReminders}
+            onNoRemindersChange={setNoReminders}
+            tags={tags}
+            onTagsChange={setTags}
+            showExtendedOptions={showExtendedOptions}
           />
         </Box>
 
@@ -324,6 +544,7 @@ const AddNewPatientAppointmentForm = ({
           onCancel={onCancel}
           onSubmit={handleSubmit}
           loading={loading}
+          showExtendedOptions={showExtendedOptions}
         />
       </Box>
     </Dialog>

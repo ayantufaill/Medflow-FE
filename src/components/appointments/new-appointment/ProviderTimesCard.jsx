@@ -3,7 +3,7 @@ import { DeleteOutline } from "@mui/icons-material";
 import { Label, providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
-const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
+const ProviderTimesCard = ({ providerRows, setProviderRows, providers, error }) => (
   <Box>
     <Label>Provider / Assistant times</Label>
     <Box sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
@@ -17,7 +17,11 @@ const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
       </Box>
 
       {/* Rows */}
-      {providerRows.map((row) => (
+      {providerRows.map((row, idx) => {
+        // Only row 0 feeds the appointment's providerId (see getAppointmentPayload
+        // in AddNewPatientAppointmentForm), so that's the only row validated on submit.
+        const rowError = error && idx === 0;
+        return (
         <Box key={row.id} sx={{ display: "flex", alignItems: "center", gap: "6px", px: "8px", py: "8px", borderBottom: "1px solid #f0f2f5" }}>
           <Select
             size="small"
@@ -25,7 +29,14 @@ const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
             value={row.providerId}
             onChange={(e) => setProviderRows((prev) => prev.map((r) => r.id === row.id ? { ...r, providerId: e.target.value } : r))}
             MenuProps={{ sx: { zIndex: 1400 } }}
-            sx={{ flex: 1, fontFamily: "Inter", fontSize: "12px", "& .MuiSelect-select": { py: "5px" } }}
+            sx={{
+              flex: 1, fontFamily: "Inter", fontSize: "12px", "& .MuiSelect-select": { py: "5px" },
+              ...(rowError && {
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" },
+              }),
+            }}
           >
             <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
             {providers.map((p) => (
@@ -57,7 +68,8 @@ const ProviderTimesCard = ({ providerRows, setProviderRows, providers }) => (
             <Box component="img" src={DeleteIconImg} sx={{ width: "12px", height: "12px", objectFit: "contain" }} />
           </IconButton>
         </Box>
-      ))}
+        );
+      })}
 
       {/* Add button inside card */}
       <Box

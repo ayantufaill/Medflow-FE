@@ -6,6 +6,7 @@ import {
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
@@ -110,7 +111,8 @@ const spouseNameFields = (disabled) => [
   { name: "spouseWorkPhoneNumber", label: "Work Phone Number", type: "phone", disabled, gridSize: { xs: 12, sm: 4 } },
 ];
 const spouseEmailField = (disabled) => [
-  { name: "spouseEmailAddress", label: "Email Address", type: "text", placeholder: "spouse@email.com", disabled, gridSize: { xs: 12, sm: 4 } },
+  { name: "spouseEmailAddress", label: "Email Address", type: "text", placeholder: "spouse@email.com", disabled, gridSize: { xs: 12, sm: 4 },
+    pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Invalid email address" } },
 ];
 
 const EMERGENCY_CONTACT_FIELDS = [
@@ -151,7 +153,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
   const [patientSearchText, setPatientSearchText] = useState("");
   const [activeStep, setActiveStep] = useState(0);
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm({ defaultValues: DEFAULT_VALUES });
+  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm({ mode: "onChange", defaultValues: DEFAULT_VALUES });
 
   const maritalStatus = watch("maritalStatus");
   const isSingle = maritalStatus === "single";
@@ -191,7 +193,6 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
       referringSources: values.referringSources, referringPatient: trimValue(values.referringPatient),
       releaseSpouse: values.releaseSpouse, releaseChildren: values.releaseChildren, releaseParents: values.releaseParents, releaseOther: trimValue(values.releaseOther),
       reminderPreference: values.reminderPreference, stopReminderAfterConfirmation: values.stopReminderAfterConfirmation, dontRequestReview: values.dontRequestReview,
-      assignmentRelease: values.assignmentRelease, photographyRelease: values.photographyRelease, socialMediaRelease: values.socialMediaRelease,
       sendWelcome: values.sendWelcome, sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "", newPatientFlag: values.newPatientFlag,
     });
 
@@ -203,13 +204,25 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
       firstName: trimValue(values.firstName), lastName: trimValue(values.lastName), middleName: trimValue(values.middleName) || "", preferredName: trimValue(values.preferredName) || "",
       dateOfBirth: formatDateValue(values.dateOfBirth), gender: values.genderIdentity || values.sexAtBirth || "", ssn: (values.ssn || "").replace(/\D/g, ""),
       phonePrimary: normalizePhone(values.mobileNumber || values.homePhoneNumber), phoneSecondary: normalizePhone(values.homePhoneNumber || values.workPhoneNumber), email: trimValue(values.emailAddress) || "",
-      preferredLanguage: "en", communicationPreference: values.contactByPhone ? "phone" : values.agreeSmsMessages ? "sms" : values.sendWelcomeMethod === "text" ? "sms" : "email",
+      preferredLanguage: "en", communicationPreference: (() => {
+        const prefs = [];
+        if (values.contactByPhone) prefs.push("phone");
+        if (values.agreeSmsMessages || values.sendWelcomeMethod === "text") prefs.push("sms");
+        if (values.agreeElectronicCommunications) prefs.push("email");
+        return prefs.length > 0 ? prefs : [];
+      })(),
       portalAccessEnabled: false, referralSource: values.referringSources || trimValue(values.referringPatient) || "", isActive: true,
       address: Object.keys(address).length ? address : undefined, emergencyContact: Object.keys(emergencyContact).length ? emergencyContact : undefined, spouseInfo: Object.keys(spouseInfo).length ? spouseInfo : undefined,
       title: trimValue(values.title), sexAtBirth: values.sexAtBirth, genderIdentity: values.genderIdentity,
       preferredDentistId: values.preferredDentistId === "null" ? "" : values.preferredDentistId, preferredHygienistId: values.preferredHygienistId === "null" ? "" : values.preferredHygienistId,
       maritalStatus: values.maritalStatus, occupation: trimValue(values.occupation), employer: trimValue(values.employer) || trimValue(values.spouseEmployer), guardianEmployer: trimValue(values.guardianEmployer),
       customFields: Object.keys(customFields).length ? customFields : undefined,
+      assignmentAndRelease: removeEmptyCustomFields({
+        assignmentRelease: values.assignmentRelease,
+        photographyRelease: values.photographyRelease,
+        socialMediaRelease: values.socialMediaRelease,
+        aiRelease: values.aiRelease,
+      }),
     });
     onSubmit(payload);
   };
@@ -274,7 +287,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormField label="Date of Birth" required>
                   <Controller name="dateOfBirth" rules={{ required: "Date of birth is required" }} control={control} render={({ field, fieldState: { error } }) => (
-                    <DatePicker openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER }, "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED }, "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: fontSize.md } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
+                    <DatePicker disableFuture minDate={dayjs().subtract(150, 'year')} openTo="year" views={['year', 'month', 'day']} value={field.value} onChange={field.onChange} sx={{ "& .MuiOutlinedInput-root": { height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, "& fieldset": { borderWidth: "1.2px", borderColor: COLORS.BORDER }, "&:hover fieldset": { borderColor: COLORS.TEXT_MUTED }, "&.Mui-focused fieldset": { borderColor: COLORS.ACCENT, borderWidth: "1.2px" }, "&.Mui-error fieldset": { borderColor: COLORS.STATUS_ERROR }, "&.Mui-error:hover fieldset": { borderColor: COLORS.STATUS_ERROR }, "&.Mui-error.Mui-focused fieldset": { borderColor: COLORS.STATUS_ERROR } }, "& .MuiInputBase-input": { padding: "8px 12px", fontSize: fontSize.md } }} slotProps={{ textField: { variant: "outlined", size: "small", fullWidth: true, error: !!error, helperText: error?.message } }} />
                   )} />
                 </FormField>
               </Grid>

@@ -7,10 +7,10 @@ import { invoiceService } from '../../services/invoice.service';
 
 export const fetchPatients = createAsyncThunk(
   'patient/fetchPatients',
-  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '' } = {}, { rejectWithValue, signal }) => {
+  async ({ page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '', sortBy = '', sortOrder = '' } = {}, { rejectWithValue, signal }) => {
     try {
-      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, gender, providerId, signal);
-      return { ...result, params: { page, limit, search, status, dobStart, dobEnd, gender, providerId } };
+      const result = await patientService.getAllPatients(page, limit, search, status, dobStart, dobEnd, gender, providerId, signal, sortBy, sortOrder);
+      return { ...result, params: { page, limit, search, status, dobStart, dobEnd, gender, providerId, sortBy, sortOrder } };
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'CanceledError') throw err;
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch patients');
@@ -31,6 +31,15 @@ export const fetchPatientById = createAsyncThunk(
   {
     condition: (patientId, { getState }) => {
       const { patient } = getState();
+      // prevent double fetching if the request for this specific patient is already in-flight
+      if (patient.detailLoading && patient.detailLoadingId === patientId) {
+        return false;
+      }
+      // If there's no current patient or it's a different patient, we MUST fetch
+      // so that .fulfilled sets the state.
+      if (!patient.currentPatient || (patient.currentPatient._id !== patientId && patient.currentPatient.id !== patientId)) {
+        return true;
+      }
       // prevent double dispatch if it was fetched in the last second
       if (patient.cache && patient.cache[patientId]) {
         if (Date.now() - patient.cache[patientId].timestamp < 1000) {
@@ -283,6 +292,7 @@ const initialState = {
   currentPatient: null,
   selectedPatientId: typeof window !== 'undefined' ? localStorage.getItem('selectedPatientId') : null,
   detailLoading: false,
+  detailLoadingId: null,
   detailError: null,
 
   // Medical History
@@ -394,8 +404,9 @@ const patientSlice = createSlice({
         state.listError = action.payload;
       })
       // fetchPatientById
-      .addCase(fetchPatientById.pending, (state) => {
+      .addCase(fetchPatientById.pending, (state, action) => {
         state.detailLoading = true;
+        state.detailLoadingId = action.meta.arg;
         state.detailError = null;
       })
       .addCase(fetchPatientById.fulfilled, (state, action) => {
@@ -407,11 +418,13 @@ const patientSlice = createSlice({
           localStorage.removeItem('selectedPatientId');
         }
         state.detailLoading = false;
+        state.detailLoadingId = null;
         // Cache it
         state.cache[action.payload._id] = { data: action.payload, timestamp: Date.now() };
       })
       .addCase(fetchPatientById.rejected, (state, action) => {
         state.detailLoading = false;
+        state.detailLoadingId = null;
         state.detailError = action.payload;
       })
       // fetchPatientInsurances

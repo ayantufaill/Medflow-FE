@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -51,7 +51,7 @@ import {
   ReferenceArea,
 } from 'recharts';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { patientService } from '../../services/patient.service';
+import { usePatient } from '../../hooks/redux/usePatient';
 import {
   usePatientVitalSigns,
   usePatientVitalsTrend,
@@ -62,6 +62,16 @@ import {
   getBloodPressureCategory,
   getBMICategory,
 } from '../../validations/vitalSignValidations';
+import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
+import TaskList from '../../components/appointments/right-panel/TaskList';
+import Messages from '../../components/appointments/right-panel/Messages';
+import LatestVitalsSection from '../../components/vital-signs/LatestVitalsSection';
+import VitalTrendsSection from '../../components/vital-signs/VitalTrendsSection';
+import RecordVitalsDialog from "../../components/vital-signs/RecordVitalsDialog";
+import ViewVitalsDialog from "../../components/vital-signs/ViewVitalsDialog";
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { Add as AddIcon } from '@mui/icons-material';
 
 const PatientVitalHistoryPage = () => {
   const navigate = useNavigate();
@@ -69,42 +79,24 @@ const PatientVitalHistoryPage = () => {
   const [searchParams] = useSearchParams();
   const { showSnackbar } = useSnackbar();
   
-  const [patient, setPatient] = useState(null);
-  const [patientLoading, setPatientLoading] = useState(true);
-  const [patientError, setPatientError] = useState('');
+  const { currentPatient: patient, loading: patientLoading, error: patientError, fetchById: fetchPatient } = usePatient();
   const [viewMode, setViewMode] = useState('chart');
   const [trendDays, setTrendDays] = useState(30);
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
   });
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedVitalSignId, setSelectedVitalSignId] = useState(null);
+  const [editVitalSignId, setEditVitalSignId] = useState(null);
 
-  // Fetch patient info (not a vital-sign query, stays manual)
+  // Fetch patient info using Redux with caching/in-flight checks
   useEffect(() => {
-    const fetchPatient = async () => {
-      try {
-        setPatientLoading(true);
-        const patientData = await patientService.getPatientById(patientId);
-        setPatient(patientData);
-      } catch (err) {
-        const errorMessage = err.response?.data?.error?.message || 
-          err.response?.data?.message || 
-          'Failed to load patient';
-        
-        if (err.response?.status === 403) {
-          setPatientError('You do not have permission to view this patient\'s vital signs history. Please contact your administrator.');
-        } else if (err.response?.status === 401) {
-          setPatientError('Your session has expired. Please log in again.');
-        } else {
-          setPatientError(errorMessage);
-        }
-        showSnackbar(errorMessage, 'error');
-      } finally {
-        setPatientLoading(false);
-      }
-    };
-    fetchPatient();
-  }, [patientId, showSnackbar]);
+    if (patientId) {
+      fetchPatient(patientId);
+    }
+  }, [patientId, fetchPatient]);
 
   // React Query hooks for vitals data
   const {
@@ -147,22 +139,24 @@ const PatientVitalHistoryPage = () => {
   }, [trendVitals]);
 
   // Custom dot renderer that highlights out-of-range values in red
-  const CustomDot = (props) => {
+  const CustomDot = useCallback((props) => {
     const { cx, cy, value, dataKey, stroke } = props;
-    if (value === undefined || value === null || !normalRanges || !cx || !cy) return null;
+    if (value === undefined || value === null || cx === undefined || cy === undefined) return null;
     
     let isOut = false;
-    const ranges = {
-      systolic: normalRanges.bloodPressureSystolic,
-      diastolic: normalRanges.bloodPressureDiastolic,
-      heartRate: normalRanges.heartRate,
-      temperature: normalRanges.temperature,
-      oxygenSaturation: normalRanges.oxygenSaturation,
-    };
-    
-    const range = ranges[dataKey];
-    if (range) {
-      isOut = value < range.min || value > range.max;
+    if (normalRanges) {
+      const ranges = {
+        systolic: normalRanges.bloodPressureSystolic,
+        diastolic: normalRanges.bloodPressureDiastolic,
+        heartRate: normalRanges.heartRate,
+        temperature: normalRanges.temperature,
+        oxygenSaturation: normalRanges.oxygenSaturation,
+      };
+      
+      const range = ranges[dataKey];
+      if (range) {
+        isOut = value < range.min || value > range.max;
+      }
     }
     
     return (
@@ -175,7 +169,7 @@ const PatientVitalHistoryPage = () => {
         strokeWidth={isOut ? 2 : 1}
       />
     );
-  };
+  }, [normalRanges]);
 
   const handlePageChange = (event, newPage) => {
     setPagination((prev) => ({ ...prev, page: newPage + 1 }));
@@ -241,350 +235,128 @@ const PatientVitalHistoryPage = () => {
   const bmiCategory = latestVitals?.bmi ? getBMICategory(latestVitals.bmi) : null;
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(-1)}
-          >
-            Back
-          </Button>
-          <Box>
-            <Typography variant="h4" fontWeight="bold">
-              Vital Signs History
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {getPatientName()}
-            </Typography>
-          </Box>
+    <Box
+      sx={{
+        bgcolor: "#f5f5f5",
+        minHeight: "100%",
+        pb: 4,
+        position: "relative",
+      }}
+    >
+      <PatientSectionTabs activeTab="vitals" patientId={patientId} />
+
+      <Box
+        sx={{
+          mt: 1.5,
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+          px: 2.5,
+          py: 2,
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `0.8px solid ${COLORS.BORDER}`,
+        }}
+      >
+        <Box>
+          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
+            Vital Signs History
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
+            {getPatientName()}
+          </Typography>
         </Box>
-        <Button
-          variant="contained"
-          onClick={() => navigate(`/vital-signs/create?patientId=${patientId}`)}
-        >
-          Record New Vitals
-        </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon fontSize="small" />}
+            onClick={() => {
+              setEditVitalSignId(null);
+              setIsRecordModalOpen(true);
+            }}
+            sx={{
+              textTransform: "none",
+              fontFamily: "Inter",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.base,
+              borderRadius: radius.md,
+              boxShadow: "none",
+              backgroundColor: "#2262ef",
+              "&:hover": { backgroundColor: "#1b4dbd" },
+            }}
+          >
+            Record new Vitals
+          </Button>
+        </Box>
       </Box>
 
-      {latestVitals && (
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Latest Vitals ({formatDate(latestVitals.recordedDate)})
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6} md={2}>
-              <Card variant="outlined">
-                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                  <BPIcon color="primary" />
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    Blood Pressure
-                  </Typography>
-                  <Typography variant="h6">
-                    {formatBloodPressure(latestVitals.bloodPressureSystolic, latestVitals.bloodPressureDiastolic)}
-                  </Typography>
-                  {bpCategory && (
-                    <Chip label={bpCategory.label} color={bpCategory.color} size="small" />
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Card variant="outlined">
-                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                  <HeartIcon color="error" />
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    Heart Rate
-                  </Typography>
-                  <Typography variant="h6">
-                    {latestVitals.heartRate || '-'} <Typography component="span" variant="caption">bpm</Typography>
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Card variant="outlined">
-                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                  <TempIcon color="warning" />
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    Temperature
-                  </Typography>
-                  <Typography variant="h6">
-                    {latestVitals.temperature || '-'} <Typography component="span" variant="caption">°F</Typography>
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Card variant="outlined">
-                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                  <WeightIcon color="info" />
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    Weight
-                  </Typography>
-                  <Typography variant="h6">
-                    {latestVitals.weight || '-'} <Typography component="span" variant="caption">lbs</Typography>
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Card variant="outlined">
-                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    SpO2
-                  </Typography>
-                  <Typography variant="h6">
-                    {latestVitals.oxygenSaturation || '-'} <Typography component="span" variant="caption">%</Typography>
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Card variant="outlined">
-                <CardContent sx={{ textAlign: 'center', py: 1.5 }}>
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    BMI
-                  </Typography>
-                  <Typography variant="h6">
-                    {latestVitals.bmi || '-'}
-                  </Typography>
-                  {bmiCategory && (
-                    <Chip label={bmiCategory.label} color={bmiCategory.color} size="small" />
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Paper>
-      )}
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {latestVitals && (
+            <LatestVitalsSection
+              latestVitals={latestVitals}
+              formatDate={formatDate}
+              formatBloodPressure={formatBloodPressure}
+              bpCategory={bpCategory}
+              bmiCategory={bmiCategory}
+            />
+          )}
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <TrendIcon color="primary" />
-            <Typography variant="h6">Trends</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Time Period</InputLabel>
-              <Select
-                value={trendDays}
-                onChange={(e) => setTrendDays(e.target.value)}
-                label="Time Period"
-              >
-                <MenuItem value={7}>Last 7 days</MenuItem>
-                <MenuItem value={30}>Last 30 days</MenuItem>
-                <MenuItem value={90}>Last 90 days</MenuItem>
-                <MenuItem value={180}>Last 6 months</MenuItem>
-                <MenuItem value={365}>Last year</MenuItem>
-              </Select>
-            </FormControl>
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(e, val) => val && setViewMode(val)}
-              size="small"
-            >
-              <ToggleButton value="chart">
-                <TimelineIcon />
-              </ToggleButton>
-              <ToggleButton value="table">
-                <TableIcon />
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+          <VitalTrendsSection
+            chartData={chartData}
+            trendDays={trendDays}
+            setTrendDays={setTrendDays}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            vitalSigns={vitalSigns}
+            totalVitals={totalVitals}
+            pagination={pagination}
+            handlePageChange={handlePageChange}
+            handleRowsPerPageChange={handleRowsPerPageChange}
+            normalRanges={normalRanges}
+            formatDate={formatDate}
+            formatBloodPressure={formatBloodPressure}
+            CustomDot={CustomDot}
+            onViewClick={(id) => {
+              setSelectedVitalSignId(id);
+              setViewDialogOpen(true);
+            }}
+          />
         </Box>
 
-        {viewMode === 'chart' && chartData.length > 0 ? (
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Blood Pressure & Heart Rate
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis yAxisId="left" domain={[40, 200]} />
-                <YAxis yAxisId="right" orientation="right" domain={[40, 120]} />
-                <ChartTooltip />
-                <Legend />
-                {normalRanges?.bloodPressureSystolic && (
-                  <ReferenceArea
-                    yAxisId="left"
-                    y1={normalRanges.bloodPressureSystolic.min}
-                    y2={normalRanges.bloodPressureSystolic.max}
-                    fill="#4caf50"
-                    fillOpacity={0.08}
-                    label=""
-                  />
-                )}
-                {normalRanges?.heartRate && (
-                  <ReferenceArea
-                    yAxisId="right"
-                    y1={normalRanges.heartRate.min}
-                    y2={normalRanges.heartRate.max}
-                    fill="#4caf50"
-                    fillOpacity={0.08}
-                    label=""
-                  />
-                )}
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="systolic"
-                  stroke="#f44336"
-                  name="Systolic"
-                  strokeWidth={2}
-                  dot={<CustomDot />}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="diastolic"
-                  stroke="#2196f3"
-                  name="Diastolic"
-                  strokeWidth={2}
-                  dot={<CustomDot />}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="heartRate"
-                  stroke="#4caf50"
-                  name="Heart Rate"
-                  strokeWidth={2}
-                  dot={<CustomDot />}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TaskList />
+          <Messages />
+        </Box>
+      </Box>
 
-            <Divider sx={{ my: 3 }} />
+      <RecordVitalsDialog
+        open={isRecordModalOpen}
+        onClose={() => setIsRecordModalOpen(false)}
+        patientId={patientId}
+        editingVitalSignId={editVitalSignId}
+        onSaved={() => {
+          setIsRecordModalOpen(false);
+        }}
+      />
 
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Weight & Temperature
-            </Typography>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis yAxisId="left" domain={['auto', 'auto']} />
-                <YAxis yAxisId="right" orientation="right" domain={[93, 105]} />
-                <ChartTooltip />
-                <Legend />
-                {normalRanges?.temperature && (
-                  <ReferenceArea
-                    yAxisId="right"
-                    y1={normalRanges.temperature.min}
-                    y2={normalRanges.temperature.max}
-                    fill="#ff9800"
-                    fillOpacity={0.1}
-                    label=""
-                  />
-                )}
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="#9c27b0"
-                  name="Weight (lbs)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="temperature"
-                  stroke="#ff9800"
-                  name="Temp (°F)"
-                  strokeWidth={2}
-                  dot={<CustomDot />}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
-        ) : viewMode === 'chart' ? (
-          <Alert severity="info">No trend data available for the selected period</Alert>
-        ) : null}
-
-        {viewMode === 'table' && (
-          <>
-            {vitalSigns.length === 0 ? (
-              <Alert severity="info">No vital sign records found</Alert>
-            ) : (
-              <>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Time</TableCell>
-                        <TableCell>BP (mmHg)</TableCell>
-                        <TableCell>HR (bpm)</TableCell>
-                        <TableCell>Temp (°F)</TableCell>
-                        <TableCell>SpO2 (%)</TableCell>
-                        <TableCell>Weight (lbs)</TableCell>
-                        <TableCell>BMI</TableCell>
-                        <TableCell align="right">Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {vitalSigns.map((vital) => {
-                        // Check if any vitals are out of range
-                        const isOutOfRange = normalRanges && (
-                          (vital.bloodPressureSystolic && (vital.bloodPressureSystolic < normalRanges.bloodPressureSystolic?.min || vital.bloodPressureSystolic > normalRanges.bloodPressureSystolic?.max)) ||
-                          (vital.bloodPressureDiastolic && (vital.bloodPressureDiastolic < normalRanges.bloodPressureDiastolic?.min || vital.bloodPressureDiastolic > normalRanges.bloodPressureDiastolic?.max)) ||
-                          (vital.heartRate && (vital.heartRate < normalRanges.heartRate?.min || vital.heartRate > normalRanges.heartRate?.max)) ||
-                          (vital.temperature && (vital.temperature < normalRanges.temperature?.min || vital.temperature > normalRanges.temperature?.max)) ||
-                          (vital.oxygenSaturation && vital.oxygenSaturation < normalRanges.oxygenSaturation?.min)
-                        );
-
-                        return (
-                          <TableRow
-                            key={vital._id}
-                            hover
-                            sx={isOutOfRange ? { bgcolor: 'error.50', '&:hover': { bgcolor: 'error.100' } } : {}}
-                          >
-                            <TableCell>{formatDate(vital.recordedDate)}</TableCell>
-                            <TableCell>{vital.recordedTime || '-'}</TableCell>
-                            <TableCell>
-                              {formatBloodPressure(vital.bloodPressureSystolic, vital.bloodPressureDiastolic)}
-                            </TableCell>
-                            <TableCell>{vital.heartRate || '-'}</TableCell>
-                            <TableCell>{vital.temperature || '-'}</TableCell>
-                            <TableCell>{vital.oxygenSaturation || '-'}</TableCell>
-                            <TableCell>{vital.weight || '-'}</TableCell>
-                            <TableCell>{vital.bmi || '-'}</TableCell>
-                            <TableCell align="right">
-                              <Tooltip title="View Details">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => navigate(`/vital-signs/${vital._id}`)}
-                                >
-                                  <ViewIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <TablePagination
-                  component="div"
-                  count={totalVitals}
-                  page={pagination.page - 1}
-                  onPageChange={handlePageChange}
-                  rowsPerPage={pagination.limit}
-                  onRowsPerPageChange={handleRowsPerPageChange}
-                  rowsPerPageOptions={[5, 10, 25, 50]}
-                />
-              </>
-            )}
-          </>
-        )}
-      </Paper>
+      <ViewVitalsDialog
+        open={viewDialogOpen}
+        onClose={() => setViewDialogOpen(false)}
+        vitalSignId={selectedVitalSignId}
+        onDeleted={() => {
+          setViewDialogOpen(false);
+          // React Query invalidation will handle the refetch or we can just let it be
+        }}
+        onEdit={(id) => {
+          setEditVitalSignId(id);
+          setIsRecordModalOpen(true);
+        }}
+      />
     </Box>
   );
 };

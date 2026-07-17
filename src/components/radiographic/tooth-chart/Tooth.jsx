@@ -2,6 +2,8 @@ import React from "react";
 import { Box, Typography } from "@mui/material";
 import { fontWeight } from "../../../constants/styles";
 
+const teethIcons = import.meta.glob('../../../assets/Teeth icons/*.png', { eager: true, import: 'default' });
+
 // --- Crown View SVG Component representing the 5 surfaces of a tooth ---
 const ToothCrown = ({ num, surfaces = [], depth = 'Limited to enamel', size = 32, onSurfaceClick }) => {
   // Determine radius of the black dot based on radiolucency depth
@@ -27,9 +29,9 @@ const ToothCrown = ({ num, surfaces = [], depth = 'Limited to enamel', size = 32
   const getPathProps = (surfaceCode) => {
     const isSelected = hasSurface(surfaceCode);
     return {
-      fill: isSelected ? "rgba(239, 68, 68, 0.15)" : "#fff",
-      stroke: isSelected ? "#ef4444" : "#777",
-      strokeWidth: isSelected ? "2.5" : "1.5",
+      fill: isSelected ? "rgba(239, 68, 68, 0.35)" : "transparent",
+      stroke: isSelected ? "#ef4444" : "transparent",
+      strokeWidth: isSelected ? "2.5" : "0",
       style: onSurfaceClick ? { cursor: 'pointer', pointerEvents: 'auto' } : undefined,
       onClick: onSurfaceClick ? (e) => {
         e.stopPropagation();
@@ -38,16 +40,17 @@ const ToothCrown = ({ num, surfaces = [], depth = 'Limited to enamel', size = 32
     };
   };
 
+  const isUpperTooth = num >= 1 && num <= 16;
+  const surfacePrefix = isUpperTooth ? 'us' : 'ds';
+  const crownImageSrc = teethIcons[`../../../assets/Teeth icons/${surfacePrefix}-${num}.png`];
+
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5, mb: 0.5 }}>
       <svg width={size} height={size} viewBox="0 0 100 100" style={onSurfaceClick ? undefined : { pointerEvents: 'none' }}>
-        {/* Outer tooth contour */}
-        <path 
-          d="M 25 25 Q 50 15 75 25 Q 85 50 75 75 Q 50 85 25 75 Q 15 50 25 25 Z" 
-          fill="#fafafa" 
-          stroke="#555" 
-          strokeWidth="2" 
-        />
+        {/* Custom surface image */}
+        {crownImageSrc && (
+          <image href={crownImageSrc} x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" />
+        )}
         
         {/* Buccal/Facial (Top Surface) */}
         <path 
@@ -157,12 +160,18 @@ const Tooth = ({
       );
     }
 
-    let imageSrc = `/teeth${num}.png`;
     let sizeStyle = { width: isActive ? 40 : 30, height: isActive ? 75 : 60 };
+    let imageSrc = `/teeth${num}.png`; // fallback if not found
 
     if (isUnerupted) {
       sizeStyle = { width: isActive ? 45 : 35, height: isActive ? 85 : 70 };
       imageSrc = '/adult_tooth.png';
+    } else {
+      const prefix = isUpper ? 'u' : 'd';
+      const iconPath = `../../../assets/Teeth icons/${prefix}-${num}.png`;
+      if (teethIcons[iconPath]) {
+        imageSrc = teethIcons[iconPath];
+      }
     }
 
     return (

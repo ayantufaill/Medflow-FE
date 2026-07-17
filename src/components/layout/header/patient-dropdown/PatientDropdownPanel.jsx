@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { Search, PersonAdd, Add } from "@mui/icons-material";
 import { useDebounce } from "use-debounce";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 import CurrentPatientCard from "./CurrentPatientCard";
 import PatientListCard from "./PatientListCard";
 import { usePatients, usePatient } from "../../../../hooks/redux";
@@ -47,9 +50,9 @@ export const toCardShape = (patient) => {
     // Appt formatting logic
     let apptString = null;
     if (patient.nextAppointmentDate) {
-      const aptDate = dayjs(patient.nextAppointmentDate);
-      const today = dayjs().startOf('day');
-      const tomorrow = dayjs().add(1, 'day').startOf('day');
+      const aptDate = dayjs.utc(patient.nextAppointmentDate);
+      const today = dayjs.utc().startOf('day');
+      const tomorrow = dayjs.utc().add(1, 'day').startOf('day');
       const target = aptDate.startOf('day');
       
       if (target.isSame(today)) {
@@ -105,10 +108,9 @@ const FooterAction = ({ icon, label, onClick }) => (
 // onClose is called after a patient is selected so the parent can hide the panel.
 
 const PatientDropdownPanel = ({ onClose }) => {
+  const navigate = useNavigate();
   const { patients, loading, fetch: searchPatients } = usePatients();
-  // setPatient dispatches setCurrentPatient which atomically sets both
-  // currentPatient and selectedPatientId — no need to call setPatientId separately.
-  const { currentPatient, setPatient } = usePatient();
+  const { currentPatient, setPatient, fetchById, setPatientId } = usePatient();
 
   const [searchQuery, setSearchQuery] = useState("");
   const inputRef = useRef(null);
@@ -127,12 +129,20 @@ const PatientDropdownPanel = ({ onClose }) => {
     inputRef.current?.focus();
   }, []);
 
-  // Write the selected patient into Redux. setPatient (→ setCurrentPatient) atomically
-  // sets both currentPatient and selectedPatientId, so no second dispatch is needed.
-  // The trigger pill in PatientDropdown and PatientCard in LeftPanel both re-render
-  // because they read the same Redux state.
+  // Write the selected patient into Redux by fetching their full workspace data.
+  // This ensures family details, balances, and other deep fields are populated.
   const handleSelectPatient = (rawPatient) => {
+    const pId = rawPatient._id || rawPatient.id || rawPatient.PatNum;
+    
+    // Fallback: set basic patient data immediately so UI reacts fast
     setPatient(rawPatient);
+    if (pId) setPatientId(pId);
+    
+    if (pId) {
+      // Then fetch full workspace in background to populate family details
+      fetchById(pId);
+    }
+    
     onClose?.(); // collapse the dropdown
   };
 
@@ -237,6 +247,10 @@ const PatientDropdownPanel = ({ onClose }) => {
       <FooterAction
         icon={<PersonAdd sx={{ fontSize: "15px", color: "#2262ef" }} />}
         label="Add new patient"
+        onClick={() => {
+          onClose?.();
+          navigate("/patients/new");
+        }}
       />
       <FooterAction
         icon={<Add sx={{ fontSize: "15px", color: "#2262ef" }} />}

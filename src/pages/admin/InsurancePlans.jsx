@@ -42,8 +42,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { insurancePlanService } from '../../services/insurance.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
-import AuditInsurancePlanHistory from '../../components/insurance/AuditInsurancePlanHistory';
-import PlanFeeGuideDialog from '../../components/insurance/PlanFeeGuideDialog';
+import AuditInsurancePlanHistory from '../../components/insurance/components/AuditInsurancePlanHistory';
+import PlanFeeGuideDialog from '../../components/insurance/components/PlanFeeGuideDialog';
 import { 
   fetchPlansList, 
   deletePlanThunk, 

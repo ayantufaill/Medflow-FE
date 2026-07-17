@@ -22,7 +22,8 @@ const Layout = ({ children, hideSidebar = false }) => {
       <Header
         onMobileMenuClick={handleMobileDrawerToggle}
         onDesktopMenuClick={handleDesktopSidebarToggle}
-        onOpenPatientSlider={() => setSliderOpen(true)}
+        onOpenPatientSlider={() => setSliderOpen(prev => !prev)}
+        sliderOpen={sliderOpen}
       />
       <PatientSlider open={sliderOpen} onClose={() => setSliderOpen(false)} />
 

@@ -10,7 +10,7 @@ const labelWidth = 200; // kept for any remaining consumers of the old grid layo
  * matches the New Patient Intake form's FormField + OutlinedInput, instead
  * of the old label-left/underlined-input row.
  */
-export function InlineFieldRow({ label, value, placeholder, input, ...rest }) {
+export function InlineFieldRow({ label, value, placeholder, input, required, ...rest }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.75 }}>
       <Typography
@@ -25,6 +25,11 @@ export function InlineFieldRow({ label, value, placeholder, input, ...rest }) {
         }}
       >
         {label}
+        {required && (
+          <Box component="span" sx={{ color: COLORS.ACCENT, ml: 0.5, fontWeight: "bold" }}>
+            *
+          </Box>
+        )}
       </Typography>
       <Box title={value ?? ''}>
         {input ?? (

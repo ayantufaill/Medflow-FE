@@ -177,6 +177,7 @@ const SignaturePad = ({
             textTransform: 'none',
             fontSize: 12,
             color: '#757575',
+            '@media print': { display: 'none' }
           }}
         >
           Clear

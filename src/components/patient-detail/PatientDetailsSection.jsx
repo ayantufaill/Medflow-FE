@@ -1,3 +1,5 @@
+// http://localhost:5173/patients/details/16 => PatientDetailPage
+
 import { useEffect, useState } from 'react';
 import {
   Box,
@@ -9,9 +11,21 @@ import {
   FormControl,
 } from '@mui/material';
 import { CalendarToday as CalendarIcon } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { formatDate } from './utils';
 import { InlineFieldRow, standardFieldSx, labelWidth } from './InlineField';
-import { labelSx } from '../../constants/styles';
+import { labelSx, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+
+// Radio option text (Male/Female, Male/Man/Female/Woman) had no fontFamily/size set,
+// so it fell back to the theme default (Manrope, 1rem) instead of matching the
+// Inter/12px value text used everywhere else on this page.
+const radioLabelTypographySx = {
+  fontFamily: 'Inter',
+  fontSize: fontSize.base,
+  fontWeight: fontWeight.regular,
+};
 
 /**
  * Patient Details: demographics with underlined input style.
@@ -71,6 +85,7 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
           placeholder="First name"
           onChange={(e) => handleFieldChange('firstName', e.target.value)}
           InputProps={{ readOnly: !isEditMode }}
+          required={isEditMode}
         />
         <InlineFieldRow 
           label="Middle Name" 
@@ -85,6 +100,7 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
           placeholder="Last name"
           onChange={(e) => handleFieldChange('lastName', e.target.value)}
           InputProps={{ readOnly: !isEditMode }}
+          required={isEditMode}
         />
         <InlineFieldRow 
           label="Preferred Name" 
@@ -97,10 +113,25 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
         {isEditMode ? (
           <InlineFieldRow 
             label="Date of Birth" 
-            value={localPatientData?.dateOfBirth ? localPatientData.dateOfBirth.split('T')[0] : ''}
-            onChange={(e) => handleFieldChange('dateOfBirth', e.target.value)}
-            InputProps={{ readOnly: !isEditMode }}
-            type="date"
+            required={true}
+            input={
+              <DatePicker
+                views={['year', 'month', 'day']}
+                disableFuture
+                minDate={dayjs().subtract(150, 'year')}
+                value={localPatientData?.dateOfBirth ? dayjs(localPatientData.dateOfBirth) : null}
+                onChange={(newValue) => {
+                  handleFieldChange('dateOfBirth', newValue ? newValue.format('YYYY-MM-DD') : '');
+                }}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    sx: standardFieldSx,
+                  }
+                }}
+              />
+            }
           />
         ) : (
           <InlineFieldRow
@@ -137,26 +168,33 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
             minHeight: 36,
           }}
         >
-          <Typography sx={labelSx}>
+          <Typography sx={{ ...labelSx, fontFamily: 'Inter' }}>
             Sex at Birth:
+            {isEditMode && (
+              <Box component="span" sx={{ color: COLORS.ACCENT, ml: 0.5, fontWeight: "bold" }}>
+                *
+              </Box>
+            )}
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-            <RadioGroup 
-              row 
+            <RadioGroup
+              row
               value={sexAtBirth === 'male' ? 'male' : sexAtBirth === 'female' ? 'female' : ''}
               onChange={(e) => handleFieldChange('sexAtBirth', e.target.value)}
               disabled={!isEditMode}
             >
-              <FormControlLabel 
-                value="male" 
-                control={<Radio size="small" />} 
+              <FormControlLabel
+                value="male"
+                control={<Radio size="small" />}
                 label="Male"
+                slotProps={{ typography: radioLabelTypographySx }}
                 sx={{ opacity: !isEditMode ? 0.6 : 1 }}
               />
-              <FormControlLabel 
-                value="female" 
-                control={<Radio size="small" />} 
+              <FormControlLabel
+                value="female"
+                control={<Radio size="small" />}
                 label="Female"
+                slotProps={{ typography: radioLabelTypographySx }}
                 sx={{ opacity: !isEditMode ? 0.6 : 1 }}
               />
             </RadioGroup>
@@ -173,25 +211,27 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
             minHeight: 36,
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem', pt: 0.5 }}>
+          <Typography sx={{ ...labelSx, fontFamily: 'Inter', pt: 0.5 }}>
             Gender Identity:
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-            <RadioGroup 
+            <RadioGroup
               value={genderIdentity === 'male' ? 'male' : genderIdentity === 'female' ? 'female' : ''}
               onChange={(e) => handleFieldChange('genderIdentity', e.target.value)}
               disabled={!isEditMode}
             >
-              <FormControlLabel 
-                value="male" 
-                control={<Radio size="small" />} 
+              <FormControlLabel
+                value="male"
+                control={<Radio size="small" />}
                 label="Male/Man"
+                slotProps={{ typography: radioLabelTypographySx }}
                 sx={{ opacity: !isEditMode ? 0.6 : 1 }}
               />
-              <FormControlLabel 
-                value="female" 
-                control={<Radio size="small" />} 
+              <FormControlLabel
+                value="female"
+                control={<Radio size="small" />}
                 label="Female/Woman"
+                slotProps={{ typography: radioLabelTypographySx }}
                 sx={{ opacity: !isEditMode ? 0.6 : 1 }}
               />
             </RadioGroup>

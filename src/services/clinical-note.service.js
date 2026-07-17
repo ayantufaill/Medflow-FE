@@ -30,13 +30,14 @@ export const clinicalNoteService = {
     return response.data.data.clinicalNote;
   },
 
-  async getClinicalNotesByPatient(patientId, page = 1, limit = 10) {
+  async getClinicalNotesByPatient(patientId, page = 1, limit = 10, signal) {
     const params = new URLSearchParams();
     params.append('page', page);
     params.append('limit', limit);
     
     const response = await apiClient.get(
-      `/clinical-notes/patient/${patientId}?${params.toString()}`
+      `/clinical-notes/patient/${patientId}?${params.toString()}`,
+      { signal }
     );
     return response.data.data;
   },

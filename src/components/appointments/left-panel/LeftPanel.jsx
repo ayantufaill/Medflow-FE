@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import { fetchWaitlist } from '../../../store/slices/waitlistSlice';
 import LeftPanelTabs from './LeftPanelTabs';
 import PatientSearch from './PatientSearch';
 import PatientCard from './PatientCard';
+import AppointmentSummaryCard from './AppointmentSummaryCard';
+import AppointmentChecklist from './AppointmentChecklist';
 import PatientActions from './PatientActions';
 import PendingReschedules from './PendingReschedules';
 import EmptySlotsSearch from './EmptySlotsSearch';
@@ -19,14 +19,43 @@ import { COLORS } from '../../../constants/colors';
 
 const LeftPanel = () => {
   const [activeTab, setActiveTab] = useState('Patient');
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    dispatch(fetchWaitlist({ status: 'pending' }));
-  }, [dispatch]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  // Keep a ref so the event handler always sees the latest value without stale closure
+  const selectedApptRef = useRef(null);
 
   // Read currentPatient from Redux to conditionally show patient sub-components.
-  const { currentPatient } = usePatient();
+  const { currentPatient, fetchById, loading } = usePatient();
+
+  // Listen for appointment-clicked custom events fired by AppointmentCard.
+  // Using a ref to avoid re-subscribing on every render.
+  useEffect(() => {
+    const handleApptClick = (e) => {
+      const appt = e.detail || null;
+      selectedApptRef.current = appt;
+      setSelectedAppointment(appt);
+      
+      if (appt && appt.patientId) {
+        const pId = typeof appt.patientId === 'object' 
+          ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
+          : appt.patientId;
+        if (pId) fetchById(pId);
+      }
+    };
+    window.addEventListener('appointment-card-clicked', handleApptClick);
+    return () => window.removeEventListener('appointment-card-clicked', handleApptClick);
+  }, [fetchById]);
+
+  // Clear selected appointment if the user manually selects a different patient
+  useEffect(() => {
+    if (selectedAppointment && currentPatient && !loading) {
+      const apptPatientId = selectedAppointment.patientId;
+      const currentId = currentPatient._id || currentPatient.id;
+      if (apptPatientId && currentId && String(apptPatientId) !== String(currentId)) {
+        selectedApptRef.current = null;
+        setSelectedAppointment(null);
+      }
+    }
+  }, [currentPatient, selectedAppointment, loading]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden' }}>
@@ -40,25 +69,34 @@ const LeftPanel = () => {
       <Box sx={{ flex: 1, overflowY: 'auto', p: '12px', backgroundColor: COLORS.SURFACE_CARD }}>
         {activeTab === 'Patient' && (
           <>
-            {/* Search is always shown — the user must be able to search before a patient is selected */}
+            {/* Search is always shown */}
             <PatientSearch />
 
-            {/* Card and actions render only once a patient has been selected from search.
-                key forces a full remount when the selected patient changes so stale
-                data never bleeds through from a previous patient's render. */}
+            {/* PatientCard renders once a patient is selected */}
             {currentPatient && (
+              <PatientCard key={currentPatient._id || currentPatient.id} />
+            )}
+
+            {/* Appointment summary & checklist — shown as soon as an appointment card is clicked.
+                Deliberately NOT gated on currentPatient to avoid timing races. */}
+            {selectedAppointment && (
               <>
-                <PatientCard key={currentPatient._id || currentPatient.id} />
-                <PatientActions key={`actions-${currentPatient._id || currentPatient.id}`} />
+                <AppointmentSummaryCard appointment={selectedAppointment} />
+                <AppointmentChecklist />
               </>
+            )}
+
+            {/* Actions require a patient */}
+            {currentPatient && (
+              <PatientActions key={`actions-${currentPatient._id || currentPatient.id}`} appointment={selectedAppointment} />
             )}
           </>
         )}
-        
+
         {activeTab === 'Pending' && (
           <PendingReschedules />
         )}
-        
+
         {activeTab === 'Search' && (
           <EmptySlotsSearch />
         )}

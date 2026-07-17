@@ -115,7 +115,7 @@ const PatientForm = ({
       phoneSecondary: '',
       email: '',
       preferredLanguage: 'en',
-      communicationPreference: 'phone',
+      communicationPreference: [],
       portalAccessEnabled: false,
       lastVisitDate: null,
       referralSource: '',
@@ -206,7 +206,9 @@ const PatientForm = ({
           : '',
         email: initialData.email || '',
         preferredLanguage: initialData.preferredLanguage || 'en',
-        communicationPreference: initialData.communicationPreference || 'phone',
+        communicationPreference: Array.isArray(initialData.communicationPreference) 
+          ? initialData.communicationPreference 
+          : (typeof initialData.communicationPreference === 'string' ? [initialData.communicationPreference] : []),
         portalAccessEnabled:
           initialData.portalAccessEnabled !== undefined
             ? initialData.portalAccessEnabled
@@ -588,12 +590,10 @@ const PatientForm = ({
         : '',
       email: sanitizeValue(formData.email) || '',
       preferredLanguage: sanitizeValue(formData.preferredLanguage) || 'en',
-      communicationPreference:
-        sanitizeValue(formData.communicationPreference) || 'phone',
-      portalAccessEnabled:
-        formData.portalAccessEnabled !== undefined
-          ? formData.portalAccessEnabled
-          : false,
+      communicationPreference: Array.isArray(formData.communicationPreference) 
+        ? formData.communicationPreference 
+        : [],
+      portalAccessEnabled: !!formData.portalAccessEnabled,
       lastVisitDate: formatDate(formData.lastVisitDate),
       referralSource: sanitizeValue(formData.referralSource) || '',
       preferredDentistId: formData.preferredDentistId || undefined,
@@ -1229,8 +1229,14 @@ const PatientForm = ({
                 control={control}
                 rules={patientValidations.communicationPreference}
                 render={({ field }) => (
-                  <Select {...field} label="Communication Preference">
+                  <Select 
+                    {...field} 
+                    multiple 
+                    value={Array.isArray(field.value) ? field.value : []}
+                    label="Communication Preference"
+                  >
                     <MenuItem value="phone">Phone</MenuItem>
+                    <MenuItem value="voicemail">Voicemail</MenuItem>
                     <MenuItem value="email">Email</MenuItem>
                     <MenuItem value="sms">SMS</MenuItem>
                     <MenuItem value="portal">Portal</MenuItem>

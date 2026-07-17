@@ -51,12 +51,18 @@ import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import EditProviderDialog from '../../components/providers/EditProviderDialog';
 import AddProviderDialog from '../../components/providers/AddProviderDialog';
 
+// Import new modular UI components
+import ProvidersHeaderTabs from '../../components/providers/ProvidersHeaderTabs';
+import ProvidersFilterBar from '../../components/providers/ProvidersFilterBar';
+import ProvidersTable from '../../components/providers/ProvidersTable';
+import InactiveProvidersView from '../../components/providers/InactiveProvidersView';
+
 // ─── Tab config ──────────────────────────────────────────────────────────────
 
 const SUB_TABS = [
   {
     label: 'Active Providers',
-    heading: 'In Office Providers:',
+    heading: 'InOffice Providers:',
     buttonLabel: 'Add Provider',
     addPath: '/providers/new',
     useRedux: true,
@@ -298,141 +304,7 @@ const ExpandedDetails = ({ provider, onDeactivate, onActivate, actionLoading }) 
   );
 };
 
-// ─── Inactive providers multi-section view ────────────────────────────────────
-
-const INACTIVE_SECTIONS = [
-  {
-    key: 'inOffice',
-    heading: 'In Office Providers:',
-    apiParams: { isActive: false },
-    columns: ['provider', 'specialty', 'providerType', 'email', 'mobile', 'taxNumber', 'licenseNumber'],
-  },
-  {
-    key: 'referral',
-    heading: 'Referral Providers:',
-    apiParams: { isActive: false, providerCategory: 'referral' },
-    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
-  },
-  {
-    key: 'careTeam',
-    heading: 'Care Team Providers:',
-    apiParams: { isActive: false, providerCategory: 'care_team' },
-    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone'],
-  },
-  {
-    key: 'lab',
-    heading: 'LabCase Providers:',
-    apiParams: { isActive: false, providerCategory: 'lab' },
-    columns: ['provider', 'specialty', 'email', 'mobile', 'officePhone', 'verified'],
-  },
-];
-
-const InactiveSectionTable = ({ section, onEdit, onActivate, actionLoading }) => {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const isActive = section.apiParams.isActive;
-  const providerCategory = section.apiParams.providerCategory;
-
-  useEffect(() => {
-    let cancelled = false;
-    providerService
-      .getAllProviders(1, 50, '', isActive, '', providerCategory || '')
-      .then((result) => { if (!cancelled) { setRows(result.providers || []); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [isActive, providerCategory]);
-
-  return (
-    <Box sx={{ mb: 4 }}>
-      <Typography
-        variant="subtitle1"
-        fontWeight={700}
-        sx={{ mb: 1.5, color: '#1a6b9e', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-      >
-        {section.heading}
-      </Typography>
-      <Paper variant="outlined">
-        {loading ? (
-          <Box display="flex" justifyContent="center" p={3}><CircularProgress size={24} /></Box>
-        ) : (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ '& .MuiTableCell-head': { fontWeight: 700, backgroundColor: '#f8fafc', fontSize: '0.8rem' } }}>
-                  {section.columns.map((col) => (
-                    <TableCell key={col}>{COLUMN_HEADERS[col]}</TableCell>
-                  ))}
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={section.columns.length + 1} sx={{ py: 2, color: 'text.secondary', fontSize: '0.82rem' }} />
-                  </TableRow>
-                ) : (
-                  rows.map((provider) => {
-                    const id = provider._id || provider.id;
-                    return (
-                      <TableRow key={id} hover sx={{ '& .MuiTableCell-root': { fontSize: '0.82rem', py: 1.2 } }}>
-                        {section.columns.map((col) => (
-                          <TableCell key={col}>
-                            {col === 'provider' ? (
-                              <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
-                                {getCellValue(provider, col)}
-                              </Typography>
-                            ) : col === 'verified' ? (
-                              <VerifiedBadge provider={provider} />
-                            ) : (
-                              getCellValue(provider, col)
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell align="right">
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                            <Tooltip title="Activate">
-                              <span>
-                                <IconButton size="small" disabled={actionLoading}
-                                  onClick={() => onActivate(provider)}
-                                  sx={{ color: 'text.disabled' }}>
-                                  <CheckCircleOutlineIcon fontSize="small" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => onEdit(provider)} sx={{ color: 'text.secondary' }}>
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Paper>
-    </Box>
-  );
-};
-
-const InactiveProvidersView = ({ onEdit, onActivate, actionLoading }) => (
-  <Box>
-    {INACTIVE_SECTIONS.map((section) => (
-      <InactiveSectionTable
-        key={section.key}
-        section={section}
-        onEdit={onEdit}
-        onActivate={onActivate}
-        actionLoading={actionLoading}
-      />
-    ))}
-  </Box>
-);
+// ─── Component ────────────────────────────────────────────────────────────────
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -530,12 +402,12 @@ const ProvidersListPage = () => {
 
   const filteredProviders = providers.filter((p) => {
     if (specialtyFilter) {
-      const specialtyValue = typeof p.specialty === 'string' 
-        ? p.specialty 
+      const specialtyValue = typeof p.specialty === 'string'
+        ? p.specialty
         : (Array.isArray(p.specialty) ? p.specialty.join(' ') : '');
       const normalizedProviderSpecialty = normalizeSpecialty(specialtyValue);
       const normalizedFilter = normalizeSpecialty(specialtyFilter);
-      
+
       if (!normalizedProviderSpecialty.includes(normalizedFilter)) {
         return false;
       }
@@ -583,7 +455,7 @@ const ProvidersListPage = () => {
         showSnackbar(`Provider "${name}" activated`, 'success');
       } catch (err) {
         if (err?.name === 'ConditionError') return;
-        const msg = typeof err === 'string' ? err : 
+        const msg = typeof err === 'string' ? err :
           (err?.message || 'Failed to activate provider');
         showSnackbar(msg, 'error');
       } finally {
@@ -605,7 +477,7 @@ const ProvidersListPage = () => {
       setDeactivateDialog({ open: false, providerId: null, providerName: '' });
     } catch (err) {
       if (err?.name === 'ConditionError') return;
-      const msg = typeof err === 'string' ? err : 
+      const msg = typeof err === 'string' ? err :
         (err?.message || 'Failed to deactivate provider');
       showSnackbar(msg, 'error');
     } finally {
@@ -615,267 +487,127 @@ const ProvidersListPage = () => {
 
   // ─── Render ───────────────────────────────────────────────────
   return (
-    <Box>
+    <Paper variant="outlined" sx={{ borderRadius: 2, p: 3, backgroundColor: '#ffffff', border: '1px solid #E5E7EB', boxShadow: '0px 2px 4px rgba(0,0,0,0.02)' }}>
       {(error || localError) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => { setError(''); setLocalError(''); }}>
           {error || localError}
         </Alert>
       )}
 
-      {/* Sub-tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs
-          value={activeSubTab}
-          onChange={handleSubTabChange}
-          sx={{ '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, fontSize: '0.875rem' } }}
-        >
-          {SUB_TABS.map((tab) => (
-            <Tab
-              key={tab.label}
-              label={tab.label}
-              disableRipple
-              sx={tab.inactive ? { color: 'error.main', '&.Mui-selected': { color: 'error.main' } } : {}}
-            />
-          ))}
-        </Tabs>
-      </Box>
+      {/* Sub-tabs Component */}
+      <ProvidersHeaderTabs
+        activeSubTab={activeSubTab}
+        handleSubTabChange={handleSubTabChange}
+        SUB_TABS={SUB_TABS}
+      />
 
       {tabConfig.inactive ? (
         <InactiveProvidersView
           actionLoading={actionLoading}
           onActivate={(provider) => handleToggleActive(provider)}
           onEdit={(provider) => setEditDialog({ open: true, providerId: provider._id || provider.id, providerName: getProviderName(provider) })}
+          getCellValue={getCellValue}
+          VerifiedBadge={VerifiedBadge}
+          getProviderName={getProviderName}
         />
       ) : (
         <>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-            {tabConfig.heading}
+          <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '18px', lineHeight: '32px', color: '#111', mb: '24px' }}>
+            {tabConfig.heading.replace(':', '')}
           </Typography>
 
-          {/* Controls row */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
-            <TextField
-              size="small"
-              placeholder={tabConfig.searchPlaceholder || 'Search by provider name'}
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-              sx={{ width: 260 }}
-              InputProps={{
-                startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-              }}
-            />
+          {/* Filter Bar Component */}
+          <ProvidersFilterBar
+            tabConfig={tabConfig}
+            search={search}
+            setSearch={setSearch}
+            setPage={setPage}
+            specialtyFilter={specialtyFilter}
+            setSpecialtyFilter={setSpecialtyFilter}
+            SPECIALTIES={SPECIALTIES}
+            dragEnabled={dragEnabled}
+            setDragEnabled={setDragEnabled}
+            setAddDialog={setAddDialog}
+            useRedux={useRedux}
+            fetchLocal={fetchLocal}
+          />
 
-            <FormControl size="small" sx={{ minWidth: 180 }}>
-              <Select
-                displayEmpty
-                value={specialtyFilter}
-                onChange={(e) => { setSpecialtyFilter(e.target.value); setPage(0); }}
-                renderValue={(v) => v || 'Filter by Specialty'}
-              >
-                <MenuItem value=""><em>All Specialties</em></MenuItem>
-                {SPECIALTIES.map((s) => (
-                  <MenuItem key={s} value={s}>{s}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          {/* Table Component */}
+          <ProvidersTable
+            loading={loading}
+            displayedProviders={displayedProviders}
+            tabConfig={tabConfig}
+            dragEnabled={dragEnabled}
+            expandedRowId={expandedRowId}
+            setExpandedRowId={setExpandedRowId}
+            getCellValue={getCellValue}
+            VerifiedBadge={VerifiedBadge}
+            handleToggleActive={handleToggleActive}
+            setEditDialog={setEditDialog}
+            actionLoading={actionLoading}
+            getProviderName={getProviderName}
+            ExpandedDetails={ExpandedDetails}
+            onDeactivateConfirm={handleDeactivateConfirm}
+          />
 
-            <Box sx={{ flex: 1 }} />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={dragEnabled}
-                  onChange={(e) => setDragEnabled(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3 }}>
-                  Drag and drop table<br />rows to reorder
-                </Typography>
-              }
-              sx={{ mr: 1 }}
-            />
-
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setAddDialog({ open: true, title: tabConfig.buttonLabel, providerCategory: tabConfig.apiParams.providerCategory || null })}
-              sx={{ backgroundColor: '#1a3a6b', whiteSpace: 'nowrap' }}
-            >
-              {tabConfig.buttonLabel}
-            </Button>
-
-            <Button
-              variant="outlined"
-              onClick={() => { if (useRedux) { setSearch(''); setSpecialtyFilter(''); } else fetchLocal(); }}
-              sx={{ whiteSpace: 'nowrap', color: 'text.secondary', borderColor: 'divider' }}
-            >
-              Reset Providers Order
-            </Button>
-          </Box>
-
-          {/* Table */}
-          <Paper variant="outlined">
-            {loading ? (
-              <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
-            ) : (
-              <>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ '& .MuiTableCell-head': { fontWeight: 700, backgroundColor: '#f8fafc', fontSize: '0.8rem' } }}>
-                        {dragEnabled && <TableCell sx={{ width: 40 }} />}
-                        {tabConfig.columns.map((col) => (
-                          <TableCell key={col}>
-                            {(tabConfig.columnOverrides?.[col]) || COLUMN_HEADERS[col]}
-                          </TableCell>
-                        ))}
-                        <TableCell align="center">Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {displayedProviders.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={tabConfig.columns.length + (dragEnabled ? 2 : 1)} align="center" sx={{ py: 4 }}>
-                            <Typography color="text.secondary">No providers found</Typography>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        displayedProviders.map((provider) => {
-                          const id = provider._id || provider.id;
-                          const isExpanded = expandedRowId === id;
-                          const totalCols = tabConfig.columns.length + (dragEnabled ? 2 : 1);
-                          return (
-                            <>
-                              <TableRow
-                                key={id}
-                                hover
-                                onClick={() => setExpandedRowId(isExpanded ? null : id)}
-                                sx={{
-                                  cursor: 'pointer',
-                                  '& .MuiTableCell-root': { fontSize: '0.82rem', py: 1.2 },
-                                  ...(isExpanded && { backgroundColor: '#f0f4fa' }),
-                                }}
-                              >
-                                {dragEnabled && (
-                                  <TableCell sx={{ cursor: 'grab', color: 'text.disabled' }} onClick={(e) => e.stopPropagation()}>
-                                    <DragIndicatorIcon fontSize="small" />
-                                  </TableCell>
-                                )}
-                                {tabConfig.columns.map((col) => (
-                                  <TableCell key={col}>
-                                    {col === 'provider' ? (
-                                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
-                                        {getCellValue(provider, col)}
-                                      </Typography>
-                                    ) : col === 'verified' ? (
-                                      <VerifiedBadge provider={provider} />
-                                    ) : (
-                                      getCellValue(provider, col)
-                                    )}
-                                  </TableCell>
-                                ))}
-                                <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                    <Tooltip title={provider.isActive ? 'Deactivate' : 'Activate'}>
-                                      <span>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => handleToggleActive(provider)}
-                                          disabled={actionLoading}
-                                          sx={{ color: provider.isActive ? 'primary.main' : 'text.disabled' }}
-                                        >
-                                          <CheckCircleOutlineIcon fontSize="small" />
-                                        </IconButton>
-                                      </span>
-                                    </Tooltip>
-                                    <Tooltip title="Edit">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => setEditDialog({ open: true, providerId: id, providerName: getProviderName(provider) })}
-                                        sx={{ color: 'text.secondary' }}
-                                      >
-                                        <EditIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </Box>
-                                </TableCell>
-                              </TableRow>
-
-                              {/* Expanded details panel */}
-                              <TableRow key={`${id}-expanded`}>
-                                <TableCell colSpan={totalCols} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
-                                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                                    <ExpandedDetails
-                                      provider={provider}
-                                      actionLoading={actionLoading}
-                                      onDeactivate={() => setDeactivateDialog({ open: true, providerId: id, providerName: getProviderName(provider) })}
-                                      onActivate={() => handleToggleActive(provider)}
-                                    />
-                                  </Collapse>
-                                </TableCell>
-                              </TableRow>
-                            </>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <TablePagination
-                  component="div"
-                  count={totalProviders}
-                  page={page}
-                  onPageChange={(_, p) => setPage(p)}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-                  rowsPerPageOptions={[5, 10, 25, 50]}
-                />
-              </>
-            )}
-          </Paper>
+          {/* Pagination */}
+          <TablePagination
+            component="div"
+            count={totalProviders}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            sx={{ borderTop: 'none', mt: 1 }}
+          />
         </>
       )}
+      {/* Dialogs */}
+      {addDialog.open && (
+        <AddProviderDialog
+          open={addDialog.open}
+          onClose={() => setAddDialog({ open: false })}
+          title={addDialog.title}
+          providerCategory={addDialog.providerCategory}
+          onSuccess={() => {
+            if (!useRedux) fetchLocal();
+            else {
+              dispatch(fetchProviders({ page: 1, limit: 100, ...tabConfig.apiParams }));
+            }
+          }}
+        />
+      )}
 
-      <AddProviderDialog
-        open={addDialog.open}
-        title={addDialog.title}
-        providerCategory={addDialog.providerCategory}
-        onClose={() => setAddDialog({ open: false })}
-        onSaved={() => {
-          setAddDialog({ open: false });
-          if (useRedux) {
-            dispatch(fetchProviders({ page: 1, limit: 100, ...tabConfig.apiParams }));
-          } else {
-            fetchLocal();
-          }
-        }}
-      />
+      {editDialog.open && (
+        <EditProviderDialog
+          open={editDialog.open}
+          providerId={editDialog.providerId}
+          providerName={editDialog.providerName}
+          onClose={() => setEditDialog({ open: false, providerId: null, providerName: '' })}
+          onSuccess={() => {
+            setExpandedRowId(null);
+            if (!useRedux) fetchLocal();
+            else {
+              dispatch(fetchProviders({ page: 1, limit: 100, ...tabConfig.apiParams }));
+            }
+          }}
+        />
+      )}
 
       <ConfirmationDialog
         open={deactivateDialog.open}
-        onClose={() => setDeactivateDialog({ open: false, providerId: null, providerName: '' })}
+        title="Confirm Deactivation"
+        content={`Are you sure you want to deactivate ${deactivateDialog.providerName}?`}
         onConfirm={handleDeactivateConfirm}
-        title="Deactivate Provider"
-        message={`Deactivate "${deactivateDialog.providerName}"? They will be marked inactive.`}
+        onCancel={() => setDeactivateDialog({ open: false, providerId: null, providerName: '' })}
         confirmText="Deactivate"
-        cancelText="Cancel"
-        confirmColor="warning"
+        confirmColor="error"
         loading={actionLoading}
       />
-
-      <EditProviderDialog
-        open={editDialog.open}
-        providerId={editDialog.providerId}
-        providerName={editDialog.providerName}
-        onClose={() => setEditDialog({ open: false, providerId: null, providerName: '' })}
-        onSaved={() => {
-          setExpandedRowId(null);
-          if (!useRedux) fetchLocal();
-        }}
-      />
-    </Box>
+    </Paper>
   );
 };
 

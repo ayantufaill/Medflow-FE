@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, TextField, InputAdornment } from '@mui/material';
+import { Box, Typography, MenuItem, Autocomplete, TextField } from '@mui/material';
 import {
-  KeyboardArrowDown as ArrowDownIcon,
   HomeOutlined as HomeOutlinedIcon,
   AccountBalanceOutlined as WorkAddressIcon,
 } from '@mui/icons-material';
-import { InlineFieldRow, standardFieldSx } from './InlineField';
+import { InlineFieldRow } from './InlineField';
+import PhoneField from './PhoneField';
 import { COLORS } from '../../constants/colors';
-import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { fontSize, fontWeight, radius, standardFieldSx, roundedSelectMenuProps, roundedAutocompletePaperSx } from '../../constants/styles';
+import { patientValidations } from '../../validations/patientValidations';
+import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
+
+const MARITAL_STATUS_OPTIONS = [
+  { label: 'Single', value: 'single' },
+  { label: 'Married', value: 'married' },
+  { label: 'Widowed', value: 'widowed' },
+  { label: 'Divorced', value: 'divorced' },
+  { label: 'Under 18', value: 'under_18' },
+  { label: 'Prefer not to answer', value: 'prefer_not_to_answer' }
+];
 
 // Full-width tinted pill used to head off a nested address block ("Patient's
 // Address", "Work Address") within a larger card, matching the rounded
@@ -44,126 +55,9 @@ function AddressSectionLabel({ icon: Icon, children }) {
   );
 }
 
-/**
- * Format phone number for display
- * @param {string} value - Raw phone number value
- * @returns {string} - Formatted phone number
- */
-const formatPhoneNumber = (value) => {
-  if (!value) return '';
-  
-  // Remove all non-digit characters
-  const digitsOnly = value.replace(/\D/g, '');
-  
-  // Handle country code
-  let phoneNumber = digitsOnly;
-  
-  // Format based on length
-  if (digitsOnly.length === 10) {
-    // (XXX) XXX-XXXX
-    return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`;
-  } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
-    // +1 (XXX) XXX-XXXX
-    return `+1 (${digitsOnly.slice(1, 4)}) ${digitsOnly.slice(4, 7)}-${digitsOnly.slice(7)}`;
-  } else if (digitsOnly.length <= 3) {
-    // Just show digits
-    return digitsOnly;
-  } else if (digitsOnly.length <= 6) {
-    // (XXX XXX
-    return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
-  } else {
-    // (XXX) XXX-XXXXXX
-    return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`;
-  }
-};
-
-/**
- * Clean and validate phone number input
- * Limits to max 11 digits (1 country code + 10 digit number)
- * @param {string} value - Raw input value
- * @returns {string} - Cleaned phone number with max 11 digits
- */
-const cleanPhoneNumber = (value) => {
-  if (!value) return '';
-  
-  // Remove all non-digit characters
-  const digitsOnly = value.replace(/\D/g, '');
-  
-  // Limit to max 11 digits
-  if (digitsOnly.length > 11) {
-    return digitsOnly.slice(0, 11);
-  }
-  
-  // If starts with 0 or 9 (invalid first digits), remove them
-  if (digitsOnly.length > 0 && (digitsOnly[0] === '0' || digitsOnly[0] === '9')) {
-    return digitsOnly.slice(1);
-  }
-  
-  return digitsOnly;
-};
-
-const PhoneField = ({ value, label, isEditMode, onChange }) => {
-  const [inputValue, setInputValue] = useState(value || '');
-  
-  useEffect(() => {
-    setInputValue(formatPhoneNumber(value || ''));
-  }, [value]);
-  
-  const handleChange = (e) => {
-    const rawValue = e.target.value;
-    
-    // Clean and limit the phone number
-    const cleanedNumber = cleanPhoneNumber(rawValue);
-    
-    // Format for display
-    const formattedNumber = formatPhoneNumber(cleanedNumber);
-    
-    // Update local state with formatted value
-    setInputValue(formattedNumber);
-    
-    // Send cleaned (unformatted) value to parent
-    onChange({
-      target: {
-        value: cleanedNumber
-      }
-    });
-  };
-  
-  return (
-    <InlineFieldRow
-      label={label}
-      input={
-        <TextField
-          variant="outlined"
-          size="small"
-          fullWidth
-          value={isEditMode ? inputValue : value || ''}
-          onChange={handleChange}
-          inputProps={{
-            readOnly: !isEditMode,
-            maxLength: isEditMode ? 16 : undefined, // Max: +1 (XXX) XXX-XXXX = 16 chars
-            title: value || '',
-          }}
-          InputProps={{
-            readOnly: !isEditMode,
-            inputProps: { title: value || '' },
-            startAdornment: (
-              <InputAdornment position="start" sx={{ mr: 0.5, cursor: 'pointer', flexShrink: 0 }}>
-                <span style={{ fontSize: '1rem' }}>🇺🇸</span>
-                <ArrowDownIcon sx={{ fontSize: 18, ml: 0.25, color: 'action.active' }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ ...standardFieldSx, minWidth: 0 }}
-          placeholder="(XXX) XXX-XXXX"
-        />
-      }
-    />
-  );
-};
-
 export default function ContactInformationSection({ patient, isEditMode = false, onPatientDataChange }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
+  const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     if (patient) {
@@ -179,6 +73,24 @@ export default function ContactInformationSection({ patient, isEditMode = false,
     }
   };
 
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    handleFieldChange('email', value);
+    
+    if (isEditMode) {
+      if (!value) {
+        setEmailError('');
+        return;
+      }
+      const validationResult = patientValidations.email.validate(value, localPatientData);
+      if (validationResult !== true && validationResult !== 'Either phone number or email is required') {
+        setEmailError(validationResult);
+      } else {
+        setEmailError('');
+      }
+    }
+  };
+
   const addr = localPatientData?.address;
 
   return (
@@ -189,6 +101,7 @@ export default function ContactInformationSection({ patient, isEditMode = false,
           value={localPatientData?.phonePrimary}
           isEditMode={isEditMode}
           onChange={(e) => handleFieldChange('phonePrimary', e.target.value)}
+          required={isEditMode}
         />
         <PhoneField 
           label="Home Phone Number" 
@@ -199,10 +112,45 @@ export default function ContactInformationSection({ patient, isEditMode = false,
 
         <AddressSectionLabel icon={HomeOutlinedIcon}>Patient&apos;s Address</AddressSectionLabel>
 
-        <InlineFieldRow
-          label="Country"
+
+        <InlineFieldRow 
+          label="Country" 
           value={addr?.country || 'United States'}
-          onChange={(e) => handleFieldChange('address', { ...addr, country: e.target.value })}
+          input={isEditMode ? (
+            <TextField select SelectProps={{ MenuProps: roundedSelectMenuProps }} variant="outlined" size="small" fullWidth value={addr?.country || 'United States'} onChange={(e) => handleFieldChange('address', { ...addr, country: e.target.value })} sx={standardFieldSx}>
+              <MenuItem value="United States">United States</MenuItem>
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="State" 
+          value={addr?.state}
+          input={isEditMode ? (
+            <TextField select SelectProps={{ MenuProps: roundedSelectMenuProps }} variant="outlined" size="small" fullWidth value={addr?.state || ''} onChange={(e) => handleFieldChange('address', { ...addr, state: e.target.value, city: '' })} sx={standardFieldSx}>
+              <MenuItem value="">Select state</MenuItem>
+              {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="City" 
+          value={addr?.city}
+          input={isEditMode ? (
+            <Autocomplete
+              options={STATE_CITIES[addr?.state] || []}
+              value={addr?.city || ''}
+              onChange={(_, newVal) => handleFieldChange('address', { ...addr, city: newVal || '' })}
+              onInputChange={(_, newInputValue) => handleFieldChange('address', { ...addr, city: newInputValue || '' })}
+              disabled={!addr?.state}
+              freeSolo
+              slotProps={{ paper: { sx: roundedAutocompletePaperSx } }}
+              renderInput={(params) => (
+                <TextField {...params} variant="outlined" size="small" fullWidth placeholder={addr?.state ? "City" : "Select state first"} sx={standardFieldSx} />
+              )}
+            />
+          ) : undefined}
           InputProps={{ readOnly: !isEditMode }}
         />
         <InlineFieldRow 
@@ -220,20 +168,6 @@ export default function ContactInformationSection({ patient, isEditMode = false,
           InputProps={{ readOnly: !isEditMode }}
         />
         <InlineFieldRow 
-          label="City" 
-          value={addr?.city}
-          placeholder="City"
-          onChange={(e) => handleFieldChange('address', { ...addr, city: e.target.value })}
-          InputProps={{ readOnly: !isEditMode }}
-        />
-        <InlineFieldRow 
-          label="State" 
-          value={addr?.state}
-          placeholder="State"
-          onChange={(e) => handleFieldChange('address', { ...addr, state: e.target.value })}
-          InputProps={{ readOnly: !isEditMode }}
-        />
-        <InlineFieldRow 
           label="Zip/Postal Code" 
           value={addr?.postalCode}
           placeholder="Zip/Postal Code"
@@ -245,13 +179,30 @@ export default function ContactInformationSection({ patient, isEditMode = false,
           label="Email Address" 
           value={localPatientData?.email}
           placeholder="email@example.com"
-          onChange={(e) => handleFieldChange('email', e.target.value)}
+          onChange={handleEmailChange}
           InputProps={{ readOnly: !isEditMode }}
+          error={!!emailError}
+          helperText={emailError}
         />
         <InlineFieldRow 
           label="Marital Status" 
-          value={localPatientData?.maritalStatus || 'Single'}
-          onChange={(e) => handleFieldChange('maritalStatus', e.target.value)}
+          value={MARITAL_STATUS_OPTIONS.find(o => o.value === (localPatientData?.maritalStatus || 'single').toLowerCase())?.label || localPatientData?.maritalStatus || 'Single'}
+          input={isEditMode ? (
+            <TextField
+              select
+              SelectProps={{ MenuProps: roundedSelectMenuProps }}
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={(localPatientData?.maritalStatus || 'single').toLowerCase()}
+              onChange={(e) => handleFieldChange('maritalStatus', e.target.value)}
+              sx={standardFieldSx}
+            >
+              {MARITAL_STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+              ))}
+            </TextField>
+          ) : undefined}
           InputProps={{ readOnly: !isEditMode }}
         />
 
@@ -274,7 +225,42 @@ export default function ContactInformationSection({ patient, isEditMode = false,
         <InlineFieldRow
           label="Country"
           value={localPatientData?.workAddress?.country || 'United States'}
-          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, country: e.target.value })}
+          input={isEditMode ? (
+            <TextField select SelectProps={{ MenuProps: roundedSelectMenuProps }} variant="outlined" size="small" fullWidth value={localPatientData?.workAddress?.country || 'United States'} onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, country: e.target.value })} sx={standardFieldSx}>
+              <MenuItem value="United States">United States</MenuItem>
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="State" 
+          value={localPatientData?.workAddress?.state}
+          input={isEditMode ? (
+            <TextField select SelectProps={{ MenuProps: roundedSelectMenuProps }} variant="outlined" size="small" fullWidth value={localPatientData?.workAddress?.state || ''} onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, state: e.target.value, city: '' })} sx={standardFieldSx}>
+              <MenuItem value="">Select state</MenuItem>
+              {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow 
+          label="City" 
+          value={localPatientData?.workAddress?.city}
+          input={isEditMode ? (
+            <Autocomplete
+              options={STATE_CITIES[localPatientData?.workAddress?.state] || []}
+              value={localPatientData?.workAddress?.city || ''}
+              onChange={(_, newVal) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, city: newVal || '' })}
+              onInputChange={(_, newInputValue) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, city: newInputValue || '' })}
+              disabled={!localPatientData?.workAddress?.state}
+              freeSolo
+              slotProps={{ paper: { sx: roundedAutocompletePaperSx } }}
+              renderInput={(params) => (
+                <TextField {...params} variant="outlined" size="small" fullWidth placeholder={localPatientData?.workAddress?.state ? "City" : "Select state first"} sx={standardFieldSx} />
+              )}
+            />
+            
+          ) : undefined}
           InputProps={{ readOnly: !isEditMode }}
         />
         <InlineFieldRow
@@ -289,20 +275,6 @@ export default function ContactInformationSection({ patient, isEditMode = false,
           value={localPatientData?.workAddress?.line2}
           placeholder="Address line 2"
           onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, line2: e.target.value })}
-          InputProps={{ readOnly: !isEditMode }}
-        />
-        <InlineFieldRow 
-          label="City" 
-          value={localPatientData?.workAddress?.city}
-          placeholder="City"
-          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, city: e.target.value })}
-          InputProps={{ readOnly: !isEditMode }}
-        />
-        <InlineFieldRow 
-          label="State" 
-          value={localPatientData?.workAddress?.state}
-          placeholder="State"
-          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, state: e.target.value })}
           InputProps={{ readOnly: !isEditMode }}
         />
         <InlineFieldRow

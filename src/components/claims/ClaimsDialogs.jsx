@@ -61,6 +61,13 @@ export const ClaimsDialogs = ({
                     value={editingClaim.status}
                     onChange={(e) => setEditingClaim({ ...editingClaim, status: e.target.value })}
                   >
+                    <MenuItem value="draft">draft</MenuItem>
+                    <MenuItem value="submitted">submitted</MenuItem>
+                    <MenuItem value="pending">pending</MenuItem>
+                    <MenuItem value="paid">paid</MenuItem>
+                    <MenuItem value="partial">partial</MenuItem>
+                    <MenuItem value="denied">denied</MenuItem>
+                    <MenuItem value="cancelled">cancelled</MenuItem>
                     <MenuItem value="readyForSubmission">readyForSubmission</MenuItem>
                     <MenuItem value="inProcess">inProcess</MenuItem>
                     <MenuItem value="accepted">accepted</MenuItem>

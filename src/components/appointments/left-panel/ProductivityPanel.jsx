@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Box, Typography, Select, MenuItem, Button } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, Typography, Select, MenuItem, Button, CircularProgress } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -8,55 +8,48 @@ import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import dayjs from 'dayjs';
 import ProductivityCard from './ProductivityCard';
-
-const dummyData = {
-  total: {
-    title: 'Total',
-    scheduled: 1294,
-    rows: [
-      { id: 'P', label: 'P', value: 7115, goal: 6200, color: '#7cb342' },
-      { id: 'C', label: 'C', value: 6458.5, goal: 6076, color: '#7cb342' },
-      { id: 'GP', label: 'GP', value: 8136, color: '#545454' },
-      { id: 'GC', label: 'GC', value: 6458.5, color: '#a8a8a8' },
-    ],
-    perHour: 222.34,
-    perHourGoal: 193.7,
-    perVisit: 1778.75,
-    perVisitGoal: 1550,
-  },
-  dentist: {
-    title: 'Dentist',
-    scheduled: 932,
-    rows: [
-      { id: 'P', label: 'P', value: 6609, goal: 5600, color: '#7cb342' },
-      { id: 'C', label: 'C', value: 6096.5, goal: 5488, color: '#7cb342' },
-      { id: 'GP', label: 'GP', value: 7517, color: '#545454' },
-      { id: 'GC', label: 'GC', value: 6096.5, color: '#a8a8a8' },
-    ],
-    perHour: 275.38,
-    perHourGoal: 233.3,
-    perVisit: 1652.25,
-    perVisitGoal: 1400,
-  },
-  hygienist: {
-    title: 'Hygienist',
-    scheduled: 362,
-    rows: [
-      { id: 'P', label: 'P', value: 506, goal: 600, color: '#ef5350' },
-      { id: 'C', label: 'C', value: 362, goal: 588, color: '#ef5350' },
-      { id: 'GP', label: 'GP', value: 619, color: '#545454' },
-      { id: 'GC', label: 'GC', value: 362, color: '#a8a8a8' },
-    ],
-    perHour: 63.25,
-    perHourGoal: 75,
-    perVisit: 126.5,
-    perVisitGoal: 150,
-  }
-};
+import api from '../../../config/api';
 
 const ProductivityPanel = () => {
   const [providerId, setProviderId] = useState("all");
-  const [date, setDate] = useState(dayjs('2026-07-07'));
+  const [date, setDate] = useState(dayjs());
+  const [panelData, setPanelData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchPanelData = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/productivity/panel-summary', {
+        params: {
+          date: date.format('YYYY-MM-DD'),
+          ...(providerId !== 'all' && { providerId })
+        }
+      });
+      setPanelData(response.data?.data || null);
+    } catch (error) {
+      console.error('Failed to fetch productivity panel data:', error);
+      // Fallback empty data structure if the API fails or doesn't exist yet
+      const emptyRows = [
+        { id: 'P', label: 'P', value: 0, goal: 0, color: '#7cb342' },
+        { id: 'C', label: 'C', value: 0, goal: 0, color: '#7cb342' },
+        { id: 'GP', label: 'GP', value: 0, color: '#545454' },
+        { id: 'GC', label: 'GC', value: 0, color: '#a8a8a8' },
+      ];
+
+      setPanelData({
+        total: { title: 'Total', scheduled: 0, rows: emptyRows, perHour: 0, perHourGoal: 0, perVisit: 0, perVisitGoal: 0 },
+        dentist: { title: 'Dentist', scheduled: 0, rows: emptyRows, perHour: 0, perHourGoal: 0, perVisit: 0, perVisitGoal: 0 },
+        hygienist: { title: 'Hygienist', scheduled: 0, rows: emptyRows, perHour: 0, perHourGoal: 0, perVisit: 0, perVisitGoal: 0 }
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPanelData();
+  }, [date, providerId]);
+
   const { providers } = useDropdownData({ providers: true });
 
   return (
@@ -74,7 +67,7 @@ const ProductivityPanel = () => {
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           sx={{
-            height: "32px",
+            height: "40px",
             fontFamily: "Inter",
             fontSize: "13px",
             borderRadius: "8px",
@@ -107,23 +100,16 @@ const ProductivityPanel = () => {
               format="DD/MM/YYYY"
               value={date}
               onChange={(newDate) => setDate(newDate)}
+              views={['year', 'month', 'day']}
               slotProps={{
                 textField: {
                   size: 'small',
-                  placeholder: 'dd/mm/yyyy',
-                  sx: {
-                    width: "165px",
-                    backgroundColor: COLORS.WHITE,
-                    "& .MuiInputBase-root": { height: "32px", borderRadius: "8px", paddingRight: "4px" },
-                    "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "0", height: "32px", boxSizing: "border-box" }
+                  sx: { 
+                    width: "165px", 
+                    '& .MuiInputBase-root': { height: "40px", fontSize: "13px", fontFamily: "Inter", borderRadius: "8px", bgcolor: '#fff' } 
                   }
                 },
-                openPickerButton: {
-                  sx: { padding: '4px', color: '#9aa3ae' }
-                },
-                openPickerIcon: {
-                  sx: { fontSize: '18px' }
-                }
+                popper: { sx: { zIndex: 1600 } }
               }}
             />
           </LocalizationProvider>
@@ -134,25 +120,39 @@ const ProductivityPanel = () => {
             fullWidth
             disableElevation
             sx={{ 
-              height: '44px', 
+              height: '40px', 
               backgroundColor: COLORS.ACCENT, 
               color: COLORS.WHITE,
               textTransform: 'none', 
-              fontSize: fontSize.md, 
+              fontSize: '13px', 
               fontWeight: fontWeight.semibold,
-              borderRadius: radius.md,
+              borderRadius: radius.sm,
               '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
             }}
+            onClick={fetchPanelData}
+            disabled={loading}
           >
-            Refresh
+            {loading ? <CircularProgress size={20} color="inherit" /> : "Refresh"}
           </Button>
         </Box>
       </Box>
 
       {/* Cards */}
-      <ProductivityCard data={dummyData.total} />
-      <ProductivityCard data={dummyData.dentist} />
-      <ProductivityCard data={dummyData.hygienist} />
+      {loading && !panelData ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: '40px' }}>
+          <CircularProgress size={30} />
+        </Box>
+      ) : panelData ? (
+        <>
+          {panelData.total && <ProductivityCard data={panelData.total} />}
+          {panelData.dentist && <ProductivityCard data={panelData.dentist} />}
+          {panelData.hygienist && <ProductivityCard data={panelData.hygienist} />}
+        </>
+      ) : (
+        <Typography sx={{ textAlign: 'center', color: COLORS.TEXT_SECONDARY, py: 2 }}>
+          No data available
+        </Typography>
+      )}
 
     </Box>
   );

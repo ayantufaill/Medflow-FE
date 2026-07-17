@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
 import { KeyboardArrowUp } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
-import { PatientDetails, FamilyDetails } from './PatientDetails';
-import { usePatient } from '../../../hooks/redux';
+import { PatientDetails, FamilyDetails } from './PatientDetailsCard';
+import AppointmentHistoryDialog from '../schedule/appointment-history-modal/AppointmentHistoryDialog';
+import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {
   fetchPatientHistory,
-  fetchFamilyAppointments,
 } from '../../../store/slices/appointmentSlice';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
@@ -24,42 +25,52 @@ const DotGrid = ({ color = 'rgba(255,255,255,0.6)' }) => (
 // It reads the current appointment's procedure from Redux and dispatches
 // history/family-appointments fetch thunks when the user clicks those buttons.
 
-const PatientActions = () => {
+const PatientActions = ({ appointment }) => {
   const dispatch = useDispatch();
-  const { selectedPatientId }  = usePatient();
+  const { selectedPatientId, currentPatient }  = usePatient();
   const { currentAppointment } = useAppointmentDetail();
+  const { setRouteSlipDialogOpen, setFamilyAppointmentsDialogOpen } = useScheduleState();
 
-  // Extract the first procedure from the current appointment for the procedure row.
-  // Falls back to appointment type name if no explicit procedure list is present.
-  const firstProcedure = currentAppointment?.procedures?.[0];
-  const procedureLabel = firstProcedure
-    ? `${firstProcedure.code || ''} ${firstProcedure.name || ''}`.trim()
-    : currentAppointment?.appointmentTypeName || '';
+  // Use the passed appointment from the left panel if available, otherwise fallback to Redux
+  const activeAppt = appointment || currentAppointment;
 
-  // Duration from the current appointment in minutes.
-  const durationLabel = currentAppointment?.duration ? `${currentAppointment.duration} min` : '__ min';
+  // Determine procedure text. The calendar appointment passes procedures as a string,
+  // but Redux might store it as an array or object. We handle both.
+  let procedureLabel = '';
+  if (typeof activeAppt?.procedures === 'string') {
+    procedureLabel = activeAppt.procedures;
+  } else if (Array.isArray(activeAppt?.procedures)) {
+    const firstProcedure = activeAppt.procedures[0];
+    procedureLabel = firstProcedure ? `${firstProcedure.code || ''} ${firstProcedure.name || ''}`.trim() : '';
+  }
+  
+  if (!procedureLabel) {
+    procedureLabel = activeAppt?.appointmentTypeName || activeAppt?.visitType || activeAppt?.appointmentType || '';
+  }
+
+  // Duration from the current appointment in minutes. Calendar appointments use durationMinutes.
+  const apptDuration = activeAppt?.durationMinutes || activeAppt?.duration;
+  const durationLabel = apptDuration ? `${apptDuration} min` : '__ min';
+
+  const [appointmentHistoryOpen, setAppointmentHistoryOpen] = useState(false);
 
   // ── Button handlers ──────────────────────────────────────────────────────────
 
   const handleAppointmentHistory = () => {
     if (!selectedPatientId) return;
-    // fetchPatientHistory expects a bare patientId string, not an object.
-    // Result lands in state.appointment.patientHistoryList — wire to a
-    // right-panel or modal in the parent page when that is implemented.
     dispatch(fetchPatientHistory(selectedPatientId));
+    setAppointmentHistoryOpen(true);
   };
 
   const handleFamilyAppointments = () => {
     if (!selectedPatientId) return;
-    // fetchFamilyAppointments expects an array of IDs so it can batch-fetch
-    // appointments for all family members simultaneously.
-    dispatch(fetchFamilyAppointments([selectedPatientId]));
+    setFamilyAppointmentsDialogOpen(true);
   };
 
   // Route Slip and Purchase Products require a separate modal/drawer — they are
   // wired as stubs here; the page component will add the dialog trigger later.
   const handleRouteSlip = () => {
-    // TODO: dispatch openRouteSlipDialog() or navigate to route slip page
+    setRouteSlipDialogOpen(true);
   };
 
   const ACTION_BUTTONS = [
@@ -144,6 +155,12 @@ const PatientActions = () => {
       {/* ── Accordions ──────────────────────────────────────────────────────── */}
       <PatientDetails />
       <FamilyDetails />
+
+      <AppointmentHistoryDialog 
+        open={appointmentHistoryOpen} 
+        onClose={() => setAppointmentHistoryOpen(false)} 
+        patient={currentPatient} 
+      />
     </Box>
   );
 };

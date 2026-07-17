@@ -750,19 +750,12 @@ export const savePaymentTerminals = createAsyncThunk(
 
 export const fetchArAgingReport = createAsyncThunk(
   'billing/fetchArAgingReport',
-  async (_, { rejectWithValue }) => {
+  async (filters, { rejectWithValue }) => {
     try {
-      const data = await reportingService.getFinancialReport('aging');
+      const data = await reportingService.getFinancialReport('aging', filters);
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
-    }
-  },
-  {
-    condition: (_, { getState }) => {
-      const { billing } = getState();
-      if (billing.arAgingLoading || billing.arAging) return false;
-      return true;
     }
   }
 );

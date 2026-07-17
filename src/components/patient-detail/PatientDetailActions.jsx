@@ -1,4 +1,4 @@
-import { Box, Button, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox } from '@mui/material';
+import { Box, Button, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox, Tooltip } from '@mui/material';
 import {
   Edit as EditIcon,
   PersonOff as PersonOffIcon,
@@ -13,8 +13,12 @@ import {
   AccountBox as AccountBoxIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MyChartFileDialog from './MyChartFileDialog';
 import AuditPatientHistoryDialog from './AuditPatientHistoryDialog';
+import PatientChat from '../shared/PatientChat';
+import RouteSlipDialog from '../appointments/schedule/route-slip-modal/RouteSlipDialog';
+import { useScheduleState } from '../../hooks/redux';
 import { COLORS } from '../../constants/colors';
 import { radius, fontSize, fontWeight } from '../../constants/styles';
 
@@ -58,6 +62,9 @@ export default function PatientDetailActions({
   });
   const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
+  const [patientChatOpen, setPatientChatOpen] = useState(false);
+  const { setRouteSlipDialogOpen } = useScheduleState();
+  const navigate = useNavigate();
 
   const handleRequestOpen = (e) => setRequestMenuAnchor(e.currentTarget);
   const handleRequestClose = () => setRequestMenuAnchor(null);
@@ -65,6 +72,16 @@ export default function PatientDetailActions({
   const handleMyChartFileClose = () => setMyChartFileDialogOpen(false);
   const handleAuditDialogOpen = () => setAuditDialogOpen(true);
   const handleAuditDialogClose = () => setAuditDialogOpen(false);
+  const handlePatientChatOpen = () => setPatientChatOpen(true);
+  const handlePatientChatClose = () => setPatientChatOpen(false);
+
+  const patientId = patient?._id || patient?.id;
+  const patientName = patient
+    ? (patient.name || `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || undefined)
+    : undefined;
+  const handleOpenAdditionalDocs = () => {
+    if (patientId) navigate(`/patients/${patientId}/additional-documents`);
+  };
 
   const toggleRequest = (key) => {
     setRequestChecks((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -121,66 +138,86 @@ export default function PatientDetailActions({
         ) : (
           /* Icon Toolbar — Edit + small utility icons, all in one compact row */
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-            <IconButton size="small" sx={iconButtonSx} onClick={onEdit}>
-              <EditIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            <Tooltip title="Edit patient details">
+              <IconButton size="small" sx={iconButtonSx} onClick={onEdit}>
+                <EditIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
 
-            {/* Hx (History) Icon */}
-            <IconButton size="small" sx={iconButtonSx}>
-              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                <SyncIcon sx={{ fontSize: 20 }} />
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: '6px',
-                    fontWeight: 'bold',
-                    color: COLORS.ACCENT,
-                  }}
-                >
-                  Hx
+            {/* Hx (History) Icon — moved the audit-log action here from the Document
+                icon below, since "Hx" unambiguously means history, not documents. */}
+            <Tooltip title="View patient history">
+              <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
+                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                  <SyncIcon sx={{ fontSize: 20 }} />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: '6px',
+                      fontWeight: 'bold',
+                      color: COLORS.ACCENT,
+                    }}
+                  >
+                    Hx
+                  </Box>
                 </Box>
-              </Box>
-            </IconButton>
+              </IconButton>
+            </Tooltip>
 
             {/* Chat Icon */}
-            <IconButton size="small" sx={iconButtonSx}>
-              <ChatIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            <Tooltip title="Messages & communication history">
+              <IconButton size="small" sx={iconButtonSx} onClick={handlePatientChatOpen}>
+                <ChatIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
 
-            {/* Email with Check Icon */}
-            <IconButton size="small" sx={iconButtonSx}>
-              <Box sx={{ position: 'relative' }}>
-                <MailIcon sx={{ fontSize: 18 }} />
-                <CheckCircleIcon
-                  sx={{
-                    position: 'absolute',
-                    bottom: -2,
-                    right: -2,
-                    fontSize: 10,
-                    fontWeight: 'bold',
-                    color: 'inherit',
-                  }}
-                />
-              </Box>
-            </IconButton>
+            {/* Email with Check Icon — same communication hub as Chat: there's no
+                separate single-email-compose feature in this app, and the hub's
+                history already shows email confirmations (the checkmark this icon
+                itself displays), so this opens the same dialog rather than a fake
+                "resend email" action that wouldn't actually send anything. */}
+            <Tooltip title="Email confirmations">
+              <IconButton size="small" sx={iconButtonSx} onClick={handlePatientChatOpen}>
+                <Box sx={{ position: 'relative' }}>
+                  <MailIcon sx={{ fontSize: 18 }} />
+                  <CheckCircleIcon
+                    sx={{
+                      position: 'absolute',
+                      bottom: -2,
+                      right: -2,
+                      fontSize: 10,
+                      fontWeight: 'bold',
+                      color: 'inherit',
+                    }}
+                  />
+                </Box>
+              </IconButton>
+            </Tooltip>
 
             {/* Print Icon */}
-            <IconButton size="small" sx={iconButtonSx}>
-              <PrintIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            <Tooltip title="Print route slip">
+              <IconButton size="small" sx={iconButtonSx} onClick={() => setRouteSlipDialogOpen(true)}>
+                <PrintIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
 
-            {/* Document/File Icon */}
-            <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
-              <FileIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            {/* Document/File Icon — now points at the "Additional Docs" tab (same
+                route PatientSectionTabs.jsx uses) instead of the history dialog. */}
+            <Tooltip title="Additional documents">
+              <IconButton size="small" sx={iconButtonSx} onClick={handleOpenAdditionalDocs}>
+                <FileIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
 
             {/* Profile/User Icon */}
-            <IconButton size="small" sx={iconButtonSx} onClick={handleMyChartFileOpen}>
-              <AccountBoxIcon sx={{ fontSize: 20 }} />
-            </IconButton>
+            <Tooltip title="MyChart profile">
+              <IconButton size="small" sx={iconButtonSx} onClick={handleMyChartFileOpen}>
+                <AccountBoxIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
           </Box>
         )}
 
@@ -335,6 +372,16 @@ export default function PatientDetailActions({
         open={auditDialogOpen}
         onClose={handleAuditDialogClose}
       />
+
+      {/* Patient Chat — communication hub, shared by both the Chat and Mail icons */}
+      <PatientChat
+        open={patientChatOpen}
+        onClose={handlePatientChatClose}
+        patientName={patientName}
+      />
+
+      {/* Route Slip — uses the new modernized RouteSlipDialog that handles its own Redux state */}
+      <RouteSlipDialog />
     </>
   );
 }

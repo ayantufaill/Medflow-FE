@@ -17,8 +17,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
-import { usePatients } from '../../hooks/redux/usePatient';
-import { useProviders } from '../../hooks/queries/useProviders';
+import { usePatients, useDropdownData } from '../../hooks/redux';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSearchActionsBar from '../../components/patients/list/PatientSearchActionsBar';
 import PatientFiltersBar from '../../components/patients/list/PatientFiltersBar';
@@ -45,11 +44,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     updateInList,
   } = usePatients();
 
-  const { data: providersData } = useProviders({ activeOnly: true });
-  // useMemo (rather than `providersData?.providers || []`) keeps a stable array
-  // reference across renders while the query hasn't changed, so PatientFiltersBar
-  // doesn't see a "new" providerList prop on every unrelated re-render.
-  const providerList = useMemo(() => providersData?.providers || EMPTY_PROVIDER_LIST, [providersData]);
+  const { providers: providerList = EMPTY_PROVIDER_LIST } = useDropdownData({ providers: true });
 
   // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
@@ -112,6 +107,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       providerId: providerFilter,
       dobStart: '',
       dobEnd: '',
+      sortBy: sortByName ? 'name' : '',
+      sortOrder: sortByName ? 'asc' : '',
     };
   };
   const fetchParamsRef = useRef();
@@ -126,7 +123,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     return () => {
       if (promise && promise.abort) promise.abort();
     };
-  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, fetchPatientsRedux]);
+  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, sortByName, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
@@ -347,17 +344,13 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
 
   const handleImportPatient = () => navigate('/patients/import');
 
-  const displayPatients = useMemo(() => {
-    const list = [...patients];
-    if (sortByName) {
-      list.sort((a, b) => {
-        const na = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
-        const nb = `${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase();
-        return na.localeCompare(nb);
-      });
-    }
-    return list;
-  }, [patients, sortByName]);
+  const displayPatients = useMemo(() => patients, [patients]);
+
+  // Reset to page 0 and re-fetch when sort changes
+  const handleSortByNameChange = useCallback((checked) => {
+    setSortByName(checked);
+    setPage(0);
+  }, []);
 
   const totalPatients = pagination?.total || 0;
   const allSelected = displayPatients.length > 0 && selectedIds.length === displayPatients.length;
@@ -374,9 +367,6 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           search={search}
           onSearchChange={handleSearchChange}
           loading={loading}
-          allSelected={allSelected}
-          someSelected={someSelected}
-          onSelectAll={handleSelectAll}
           onAddPatient={() => navigate('/patients/new')}
           onImportPatient={handleImportPatient}
           onDeactivateSelected={handleDeactivateSelected}
@@ -392,7 +382,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           onProviderFilterChange={(v) => { setProviderFilter(v); setPage(0); }}
           providerList={providerList}
           sortByName={sortByName}
-          onSortByNameChange={setSortByName}
+          onSortByNameChange={handleSortByNameChange}
           loading={loading}
           onRefresh={handleRefresh}
           onResetFilters={handleResetFilters}

@@ -15,3 +15,11 @@ export { default as SupportingStructure } from './sections/SupportingStructure';
 
 // Tooth Chart Components
 export { default as Tooth } from './tooth-chart/Tooth';
+
+// Page-Level Components (Radiographic Tab)
+export { default as RadioExamHeader } from './RadioExamHeader';
+export { default as FindingsSidebar } from './FindingsSidebar';
+export { default as AdditionalTeethSection } from './AdditionalTeethSection';
+export { default as ExamActionBar } from './ExamActionBar';
+export { default as ToothDetailsModal } from './ToothDetailsModal';
+export { default as ExamToolbar } from './ExamToolbar';

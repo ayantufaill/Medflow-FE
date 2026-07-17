@@ -622,9 +622,6 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       reminderPreference: values.reminderPreference,
       stopReminderAfterConfirmation: values.stopReminderAfterConfirmation,
       dontRequestReview: values.dontRequestReview,
-      assignmentRelease: values.assignmentRelease,
-      photographyRelease: values.photographyRelease,
-      socialMediaRelease: values.socialMediaRelease,
       sendWelcome: values.sendWelcome,
       sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "",
       newPatientFlag: values.newPatientFlag,
@@ -674,13 +671,13 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       ),
       email: trimValue(values.emailAddress) || "",
       preferredLanguage: "en",
-      communicationPreference: values.contactByPhone
-        ? "phone"
-        : values.agreeSmsMessages
-          ? "sms"
-          : values.sendWelcomeMethod === "text"
-            ? "sms"
-            : "email",
+      communicationPreference: (() => {
+        const prefs = [];
+        if (values.contactByPhone) prefs.push("phone");
+        if (values.agreeSmsMessages || values.sendWelcomeMethod === "text") prefs.push("sms");
+        if (values.agreeElectronicCommunications) prefs.push("email");
+        return prefs.length > 0 ? prefs : [];
+      })(),
       portalAccessEnabled: false,
       referralSource: values.referringSources || trimValue(values.referringPatient) || "",
       isActive: true,
@@ -697,6 +694,12 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       employer: trimValue(values.employer) || trimValue(values.spouseEmployer),
       guardianEmployer: trimValue(values.guardianEmployer),
       customFields: Object.keys(customFields).length ? customFields : undefined,
+      assignmentAndRelease: removeEmptyCustomFields({
+        assignmentRelease: values.assignmentRelease,
+        photographyRelease: values.photographyRelease,
+        socialMediaRelease: values.socialMediaRelease,
+        aiRelease: values.aiRelease,
+      }),
     });
 
     console.log("New patient payload:", JSON.stringify(payload, null, 2));

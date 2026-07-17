@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Box, Tabs, Tab, useTheme, Button, Typography } from '@mui/material';
+import { Box, Tabs, Tab, useTheme, Button, Typography, Paper } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
 import ProvidersListPage from '../providers/ProvidersListPage';
@@ -144,15 +144,22 @@ const AdminPage = () => {
   }
 
   return (
-    <Box>
+    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 65px)' }}>
+      <Paper elevation={0} sx={{ backgroundColor: '#fff', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'visible' }}>
+
       {/* Main tab bar + sub-nav wrapper — Hidden on sub-management pages */}
       {!isSubPage && (
         <Box
           onMouseLeave={() => setHoveredTab(null)}
-          sx={{ mx: -3, backgroundColor: theme.palette.background.paper, position: 'relative' }}
+          sx={{ position: 'relative', pt: 1 }}
         >
+          {/* Admin Title */}
+          <Typography variant="h6" fontWeight={700} sx={{ px: 3, pt: 2, pb: 1, color: '#111' }}>
+            Admin
+          </Typography>
+
           {/* Main tabs */}
-          <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 3 }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
             <Tabs
               value={activeTab === -1 ? false : activeTab}
               onChange={() => { }}
@@ -163,16 +170,18 @@ const AdminPage = () => {
                   fontWeight: 600,
                   textTransform: 'none',
                   fontSize: '0.875rem',
-                  minWidth: 140,
+                  minWidth: 'auto',
+                  marginRight: '24px',
+                  paddingX: 0,
                   color: 'text.secondary',
                   borderBottom: '3px solid transparent',
                   '&.Mui-selected': {
-                    color: theme.palette.primary.main,
+                    color: '#2262EF',
                   },
                 },
                 '& .MuiTabs-indicator': {
                   height: 3,
-                  backgroundColor: theme.palette.primary.main,
+                  backgroundColor: '#2262EF',
                 },
               }}
             >
@@ -194,8 +203,8 @@ const AdminPage = () => {
             <Box
               sx={{
                 position: 'absolute',
-                top: '48px',
-                left: 24 + hoveredTab * 140,
+                top: '96px',
+                left: 24 + hoveredTab * 145,
                 zIndex: 1100,
                 backgroundColor: '#ffffff',
                 border: '1px solid',
@@ -277,7 +286,7 @@ const AdminPage = () => {
       )}
 
       {/* Page content */}
-      <Box sx={{ mt: isSubPage ? 0 : 3 }}>
+      <Box sx={{ p: 3 }}>
         {activeTab === 0 && (
           location.pathname === '/admin/user-management/providers' ? (
             <ProvidersListPage />
@@ -411,6 +420,7 @@ const AdminPage = () => {
           )
         )}
       </Box>
+      </Paper>
     </Box>
   );
 };

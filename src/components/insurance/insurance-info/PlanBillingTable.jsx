@@ -8,9 +8,7 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableRow,
-  Paper,
   Button,
   Select,
   MenuItem,
@@ -18,30 +16,24 @@ import {
   ListItemText,
 } from "@mui/material";
 import { InfoOutlined as InfoIcon } from "@mui/icons-material";
+import PhoneNumberInput from "../../shared/PhoneNumberInput";
 
-const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
+const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }) => {
   const [templateAnchorEl, setTemplateAnchorEl] = useState(null);
 
   return (
-    <Box sx={{ border: "1px solid #DFE5EC", borderRadius: 2, p: 2 }}>
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{ border: "1px solid #DFE5EC", borderRadius: 2 }}
-      >
-        <Table size="small">
+    <Box sx={{ border: "1px solid #DFE5EC", borderRadius: 2, overflow: "hidden" }}>
+      <Table size="small">
           <TableBody>
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
-                  borderTop: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                   textTransform: "uppercase",
@@ -52,11 +44,9 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
               </TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
-                  borderTop: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -66,7 +56,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   fullWidth
                   InputProps={{
                     sx: {
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                       "& fieldset": { border: "none" },
                     },
@@ -76,19 +66,20 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     handleInputChange("insurancePlan", e.target.value)
                   }
                   required
+                  error={!!errors.insurancePlan}
+                  helperText={errors.insurancePlan}
                 />
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                   textTransform: "uppercase",
@@ -99,10 +90,9 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
               </TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -112,7 +102,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   fullWidth
                   InputProps={{
                     sx: {
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                       "& fieldset": { border: "none" },
                     },
@@ -122,19 +112,20 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     handleInputChange("groupName", e.target.value)
                   }
                   required
+                  error={!!errors.groupName}
+                  helperText={errors.groupName}
                 />
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                   textTransform: "uppercase",
@@ -148,10 +139,9 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
               </TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -161,7 +151,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   fullWidth
                   InputProps={{
                     sx: {
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       color: "#333",
                       "& fieldset": { border: "none" },
                     },
@@ -169,26 +159,27 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   value={formData.groupNumber || ""}
                   onChange={(e) => {
                     const alphanumericValue = e.target.value.replace(
-                      /[^a-zA-Z0-9]/g,
+                      /[^a-zA-Z0-9\s-]/g,
                       "",
                     );
                     handleInputChange("groupNumber", alphanumericValue);
                   }}
-                  placeholder="e.g. 300871"
+                  placeholder="e.g. GRP-300871"
                   required
+                  error={!!errors.groupNumber}
+                  helperText={errors.groupNumber}
                 />
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                   textTransform: "uppercase",
@@ -199,52 +190,46 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
               </TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
                 }}
               >
-                <TextField
-                  fullWidth
-                  InputProps={{
-                    sx: {
-                      fontSize: "0.85rem",
+                <PhoneNumberInput
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+                  sx={{
+                    '& .react-tel-input .form-control': {
+                      border: "none",
+                      bgcolor: "transparent",
+                      fontSize: "0.8rem",
                       color: "#333",
-                      "& fieldset": { border: "none" },
                     },
                   }}
-                  value={formData.phoneNumber || ""}
-                  onChange={(e) =>
-                    handleInputChange("phoneNumber", e.target.value)
-                  }
-                  placeholder="(XXX) XXX-XXXX"
                 />
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                 }}
               ></TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                 }}
@@ -260,7 +245,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                    <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
                       Health Plan
                     </Typography>
                   }
@@ -270,13 +255,12 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                   textTransform: "uppercase",
@@ -291,10 +275,9 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
               </TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
+                  borderBottom: "1px solid #DFE5EC",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                   color: "#333",
@@ -307,13 +290,13 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                   onChange={(e) =>
                     handleInputChange("assignmentOfBenefits", e.target.value)
                   }
-                  sx={{ fontSize: "0.85rem" }}
+                  sx={{ fontSize: "0.8rem" }}
                 >
                   {benefits.map((option) => (
                     <MenuItem
                       key={option.value}
                       value={option.value}
-                      sx={{ fontSize: "0.85rem" }}
+                      sx={{ fontSize: "0.8rem" }}
                     >
                       {option.label}
                     </MenuItem>
@@ -324,25 +307,21 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
             <TableRow>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderLeft: "none",
                   borderBottom: "none",
                   p: "8px 16px",
                   height: "44px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   fontWeight: 600,
-                  bgcolor: "#ffffff",
+                  bgcolor: "#f8f9fc",
                   width: "40%",
                   color: "#666",
                 }}
               ></TableCell>
               <TableCell
                 sx={{
-                  border: "1px solid #DFE5EC",
-                  borderRight: "none",
                   borderBottom: "none",
                   height: "44px",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   width: "60%",
                   p: "0px 16px",
                 }}
@@ -358,7 +337,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                    <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
                       Save as Template
                     </Typography>
                   }
@@ -366,26 +345,26 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
               </TableCell>
             </TableRow>
           </TableBody>
-        </Table>
-      </TableContainer>
-      <Button
-        variant="contained"
-        fullWidth
-        onClick={(e) => setTemplateAnchorEl(e.currentTarget)}
-        sx={{
-          mt: 2,
-          bgcolor: "#2563eb",
-          borderRadius: "6px",
-          textTransform: "none",
-          fontWeight: 600,
-          py: 1,
-          fontSize: "0.85rem",
-          boxShadow: "none",
-          "&:hover": { bgcolor: "#1d4ed8" },
-        }}
-      >
-        Copy Plan Billing Info From Template
-      </Button>
+      </Table>
+      <Box sx={{ p: 2 }}>
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={(e) => setTemplateAnchorEl(e.currentTarget)}
+          sx={{
+            bgcolor: "#2563eb",
+            borderRadius: "6px",
+            textTransform: "none",
+            fontWeight: 600,
+            py: 1,
+            fontSize: "0.8rem",
+            boxShadow: "none",
+            "&:hover": { bgcolor: "#1d4ed8" },
+          }}
+        >
+          Copy Plan Billing Info From Template
+        </Button>
+      </Box>
       <Menu
         anchorEl={templateAnchorEl}
         open={Boolean(templateAnchorEl)}
@@ -407,10 +386,10 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits }) => {
                 primary={template.name || "Unnamed Template"}
                 secondary={template.description || "No description available"}
                 primaryTypographyProps={{
-                  fontSize: "0.85rem",
+                  fontSize: "0.8rem",
                   fontWeight: 600,
                 }}
-                secondaryTypographyProps={{ fontSize: "0.75rem" }}
+                secondaryTypographyProps={{ fontSize: "0.7rem" }}
               />
             </MenuItem>
           ))

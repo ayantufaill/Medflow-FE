@@ -1,33 +1,40 @@
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom'; // 1. Import the router navigation hook
+import LogoImg from '../../../assets/medflow-logo.png'; 
 
-const HeaderLogo = () => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-    <Box
-      sx={{
-        width: '36px',
-        height: '36px',
-        backgroundColor: '#333333',
-        border: '2px solid #ffffff',
-        borderRadius: '6px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+const HeaderLogo = () => {
+  const navigate = useNavigate(); // 2. Initialize the routing navigator function
+
+  return (
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px', 
+        flexShrink: 0 
       }}
     >
-      <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '14px' }}>M</Typography>
+      <Box
+        component="img"
+        src={LogoImg}
+        alt="MedFlow Logo"
+        onClick={() => navigate('/appointments/operatory-schedule')} // 3. Update path string to match your exact route declaration (e.g., /schedule, /patient-schedule)
+        sx={{
+          width: '90px',
+          height: '45px',
+          objectFit: 'contain',
+          cursor: 'pointer', // Changes cursor mouse state to a click pointer indicator
+          transition: 'transform 0.2s ease, opacity 0.2s ease',
+          '&:hover': {
+            opacity: 0.85, // Smooth feedback when hovered
+          },
+          '&:active': {
+            transform: 'scale(0.98)', // Subtle click compression effect
+          }
+        }}
+      />
     </Box>
-    <Typography
-      sx={{
-        fontFamily: 'Manrope',
-        fontWeight: 700,
-        fontSize: '14px',
-        letterSpacing: '-0.14px',
-        color: '#0b2545',
-      }}
-    >
-      MedFlow
-    </Typography>
-  </Box>
-);
+  );
+};
 
 export default HeaderLogo;

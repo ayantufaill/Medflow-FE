@@ -275,11 +275,11 @@ export const patientValidations = {
   },
   communicationPreference: {
     validate: (value) => {
-      if (!value) return true; // Optional, defaults to 'phone'
-      const validPreferences = ['phone', 'email', 'sms', 'portal'];
-      return (
-        validPreferences.includes(value) || 'Invalid communication preference'
-      );
+      if (!value || (Array.isArray(value) && value.length === 0)) return true; // Optional, defaults to []
+      if (!Array.isArray(value)) return 'Communication preference must be an array';
+      const validPreferences = ['phone', 'voicemail', 'email', 'sms', 'portal'];
+      const isValid = value.every(v => validPreferences.includes(v));
+      return isValid || 'Invalid communication preference option';
     },
   },
   'address.line1': {

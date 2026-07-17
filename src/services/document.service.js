@@ -16,8 +16,8 @@ export const documentService = {
     return response.data.data;
   },
 
-  async getDocumentById(documentId) {
-    const response = await apiClient.get(`/documents/${documentId}`);
+  async getDocumentById(documentId, signal) {
+    const response = await apiClient.get(`/documents/${documentId}`, { signal });
     return response.data.data.document;
   },
 

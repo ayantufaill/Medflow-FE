@@ -1,4 +1,5 @@
-import { Box, MenuItem, Select, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, FormControlLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import { FieldBox } from "./helpers";
 import { providerLabel } from "./helpers";
 import { STATUS_OPTIONS } from "./constants";
@@ -8,14 +9,18 @@ import ColorTagPicker from "./ColorTagPicker";
 
 const AppointmentRightPanel = ({
   status, onStatusChange,
-  roomId, onRoomChange, rooms,
+  roomId, onRoomChange, rooms, isRoomOccupied,
   durationMins, onDurationChange,
-  providerRows, setProviderRows,
+  providerRows, setProviderRows, providerError,
   preferredDentist, onPreferredDentistChange,
   preferredHygienist, onPreferredHygienistChange,
   notes, onNotesChange,
   selectedColorTags, onColorTagsChange,
   providers,
+  referredBy, onReferredByChange,
+  noReminders, onNoRemindersChange,
+  tags, onTagsChange,
+  showExtendedOptions,
 }) => (
   <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "18px" }}>
 
@@ -50,11 +55,16 @@ const AppointmentRightPanel = ({
           );
         })}
       </Select>
+      {isRoomOccupied && (
+        <Typography sx={{ color: '#ef4444', fontSize: '12px', mt: '4px', fontFamily: 'Inter' }}>
+          This operatory is occupied at the selected time.
+        </Typography>
+      )}
     </FieldBox>
 
     <DurationPicker value={durationMins} onChange={onDurationChange} />
 
-    <ProviderTimesCard providerRows={providerRows} setProviderRows={setProviderRows} providers={providers} />
+    <ProviderTimesCard providerRows={providerRows} setProviderRows={setProviderRows} providers={providers} error={providerError} />
 
     <FieldBox label="Patient's preferred dentist">
       <Select MenuProps={{ sx: { zIndex: 1400 } }}
@@ -101,6 +111,42 @@ const AppointmentRightPanel = ({
     </Box>
 
     <ColorTagPicker selected={selectedColorTags} onChange={onColorTagsChange} />
+
+    {/* Extended fields — only visible when opened from PatientCard Book button */}
+    {showExtendedOptions && (
+      <>
+        {/* Referred By */}
+        <FieldBox label="Referred by">
+          <TextField
+            size="small" fullWidth
+            placeholder="e.g. Google reviews."
+            value={referredBy || ''}
+            onChange={(e) => onReferredByChange && onReferredByChange(e.target.value)}
+            sx={{ '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '8px' } }}
+          />
+        </FieldBox>
+
+        {/* Reminder Preferences */}
+        <Box>
+          <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 500, color: '#374151', mb: '6px' }}>Reminder Preferences</Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={!!noReminders}
+                onChange={(e) => onNoRemindersChange && onNoRemindersChange(e.target.checked)}
+                sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#2262ef' } }}
+              />
+            }
+            label={
+              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#374151' }}>
+                Don't send reminders for this appointment
+              </Typography>
+            }
+          />
+        </Box>
+      </>
+    )}
   </Box>
 );
 

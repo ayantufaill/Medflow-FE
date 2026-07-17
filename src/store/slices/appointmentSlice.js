@@ -69,9 +69,10 @@ export const createAppointmentThunk = createAsyncThunk(
     try {
       return await appointmentService.createAppointment(payload);
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment',
-      );
+      return rejectWithValue({
+        message: err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment',
+        status: err.response?.status
+      });
     }
   }
 );
@@ -85,9 +86,10 @@ export const updateAppointmentThunk = createAsyncThunk(
     try {
       return await appointmentService.updateAppointment(appointmentId, payload);
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update appointment',
-      );
+      return rejectWithValue({
+        message: err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update appointment',
+        status: err.response?.status
+      });
     }
   }
 );
@@ -149,25 +151,66 @@ export const fetchCheckoutAppointments = createAsyncThunk(
 // doesn't block the rest from rendering.
 export const fetchFamilyAppointments = createAsyncThunk(
   'appointment/fetchFamilyAppointments',
-  async (patientIds, { rejectWithValue }) => {
+  async (patientId, { rejectWithValue }) => {
     try {
-      const results = await Promise.all(
-        patientIds.map(id => appointmentService.getAppointmentsByPatient(id).catch(() => [])),
-      );
-      return results.flat();
+      return await appointmentService.getFamilyAppointments(patientId);
     } catch (err) {
       return rejectWithValue(err.message || 'Failed to fetch family appointments');
     }
   }
 );
 
-// Fetches past appointments for a single patient (used in appointment history dialog
-// and the operatory sidebar's patient history panel).
+// Fetches all appointments for a single patient (used in appointment history dialog
+// and the operatory sidebar's patient history panel). Uses the dedicated
+// /patients/:id/appointments endpoint which returns all records sorted newest-first.
 export const fetchPatientHistory = createAsyncThunk(
   'appointment/fetchPatientHistory',
   async (patientId, { rejectWithValue }) => {
     try {
-      return await appointmentService.getAppointmentsByPatient(patientId);
+      const result = await appointmentService.getPatientAppointments(patientId, 500);
+      // Normalize: the patient-appointments endpoint returns { appointments: [...] }
+      // or a flat array depending on the FE service implementation.
+      const raw = Array.isArray(result) ? result : (result?.appointments || []);
+      // Ensure consistent field names the table uses: appointmentDate, startTime, etc.
+      return raw.map(a => ({
+        ...a,
+        appointmentDate: a.appointmentDate || a.date || a.AptDateTime || null,
+        startTime: a.startTime || null,
+        endTime: a.endTime || null,
+        status: a.status || null,
+        duration: a.durationMinutes || a.duration || 60,
+        appointmentType: a.appointmentType || null,
+        appointmentTypeId: a.appointmentTypeId || null,
+        visitType:
+          a.visitType ||
+          a.customFields?.visitType ||
+          a.workspace?.visitType ||
+          a.appointmentTypeName ||
+          null,
+        providerId:
+          a.providerId ||
+          a.provider ||
+          a.customFields?.providerRows?.[0]?.providerId ||
+          a.customFields?.providers?.[0]?.providerId ||
+          a.customFields?.providers?.[0] ||
+          a.ProvNum ||
+          null,
+        provider: a.provider || null,
+        procedures:
+          a.workspace?.procedures ||
+          a.customFields?.procedures ||
+          a.procedures ||
+          a.appointmentProcedures ||
+          a.procedureCodes ||
+          a.customFields?.procedureTags ||
+          a.note ||
+          null,
+        room: a.room || null,
+        roomId: a.roomId || null,
+        columnId: a.columnId || null,
+        Op: a.Op || null,
+        opId: a.opId || null,
+      }));
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch appointment history');
     }
@@ -205,6 +248,7 @@ const initialState = {
   checkoutCompleteList: [],   // Used by ProgressNotesDialog
   checkoutLoading: false,
   familyAppointmentsList: [], // Used by FamilyAppointmentsDialog
+  familyAppointmentsMembers: [], // Used by FamilyAppointmentsDialog
   familyAppointmentsLoading: false,
   patientHistoryList: [],     // Used by AppointmentHistoryDialog and OperatorySidebar
   patientHistoryLoading: false,
@@ -227,10 +271,15 @@ const initialState = {
   // ── Schedule UI state ───────────────────────────────────────────────────────
   // Stored in Redux (not local component state) so ScheduleGridHeader, ScheduleCalendar,
   // and LeftPanel can all read and update the same date/view without prop drilling.
-  calendarView: 'week', // 'day' | 'week' | 'month'
+  calendarView: 'day', // 'day' | 'week' | 'month'
   selectedDate: new Date().toISOString(),
   // Conflict windows detected during the booking flow — cleared on dialog close.
   conflicts: [],
+  // Client-side visual filters (e.g. from the Filter Labs popover)
+  frontendFilters: { providerId: 'All', visitType: 'All' },
+  // Modal visibility
+  routeSlipDialogOpen: false,
+  familyAppointmentsDialogOpen: false,
 
   // ── Operatory schedule pending tray ────────────────────────────────────────
   // Holds items the user has dragged off the grid into the "pending" holding area.
@@ -318,6 +367,14 @@ const appointmentSlice = createSlice({
       state.calendarView = action.payload; // 'day' | 'week' | 'month'
     },
 
+    setRouteSlipDialogOpen: (state, action) => {
+      state.routeSlipDialogOpen = action.payload;
+    },
+
+    setFamilyAppointmentsDialogOpen(state, action) {
+      state.familyAppointmentsDialogOpen = action.payload;
+    },
+
     // Stores the date as an ISO string so it survives Redux serialization checks.
     // Components convert to/from dayjs at the boundary.
     setSelectedDate: (state, action) => {
@@ -364,6 +421,14 @@ const appointmentSlice = createSlice({
     // so stale pending items don't reappear on return.
     clearPendingItems: (state) => {
       state.pendingItems = [];
+    },
+
+    // Frontend visual filters reducers
+    setFrontendFilters: (state, action) => {
+      state.frontendFilters = { ...state.frontendFilters, ...action.payload };
+    },
+    clearFrontendFilters: (state) => {
+      state.frontendFilters = { providerId: 'All', visitType: 'All' };
     },
   },
 
@@ -418,10 +483,31 @@ const appointmentSlice = createSlice({
       // ── updateAppointmentThunk ────────────────────────────────────────────
       .addCase(updateAppointmentThunk.fulfilled, (state, action) => {
         if (!action.payload) return;
-        const id = action.payload._id || action.payload.id;
-        const idx = state.list.findIndex(a => (a._id || a.id) === id);
+        const id = String(action.payload._id || action.payload.id);
+        const idx = state.list.findIndex(a => String(a._id || a.id) === id);
         // Update in the list so the grid card reflects the new time/status/room.
-        if (idx !== -1) state.list[idx] = action.payload;
+        if (idx !== -1) {
+          const existing = state.list[idx];
+          const payload = { ...action.payload };
+
+          // Preserve populated objects if the payload returned an unpopulated string ID
+          if (typeof payload.patientId === 'string' && typeof existing.patientId === 'object' && existing.patientId) {
+            payload.patientId = existing.patientId;
+          }
+          if (typeof payload.providerId === 'string' && typeof existing.providerId === 'object' && existing.providerId) {
+            payload.providerId = existing.providerId;
+          }
+          if (typeof payload.appointmentTypeId === 'string' && typeof existing.appointmentTypeId === 'object' && existing.appointmentTypeId) {
+            payload.appointmentTypeId = existing.appointmentTypeId;
+          }
+
+          // Preserve frontend-mapped names if backend didn't return them
+          if (!payload.patientName && existing.patientName) payload.patientName = existing.patientName;
+          if (!payload.patient && existing.patient) payload.patient = existing.patient;
+          if (!payload.appointmentType && existing.appointmentType) payload.appointmentType = existing.appointmentType;
+
+          state.list[idx] = { ...existing, ...payload };
+        }
         // Keep currentAppointment in sync if the details panel is open.
         if (state.currentAppointment?._id === id) state.currentAppointment = action.payload;
         // Evict the cache entry so the next fetchAppointmentById returns fresh data
@@ -477,7 +563,8 @@ const appointmentSlice = createSlice({
         state.familyAppointmentsLoading = true;
       })
       .addCase(fetchFamilyAppointments.fulfilled, (state, action) => {
-        state.familyAppointmentsList = action.payload || [];
+        state.familyAppointmentsList = action.payload?.appointments || [];
+        state.familyAppointmentsMembers = action.payload?.familyMembers || [];
         state.familyAppointmentsLoading = false;
       })
       .addCase(fetchFamilyAppointments.rejected, (state) => {
@@ -513,6 +600,8 @@ export const {
   updateAppointmentInList,
   removeAppointmentFromList,
   setCalendarView,
+  setRouteSlipDialogOpen,
+  setFamilyAppointmentsDialogOpen,
   setSelectedDate,
   setFilters,
   clearFilters,
@@ -521,6 +610,8 @@ export const {
   addPendingItem,
   removePendingItem,
   clearPendingItems,
+  setFrontendFilters,
+  clearFrontendFilters,
 } = appointmentSlice.actions;
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
@@ -537,6 +628,7 @@ export const selectAppointmentLastFetched     = (state) => state.appointment.las
 export const selectCheckoutCompleteList       = (state) => state.appointment.checkoutCompleteList;
 export const selectCheckoutLoading            = (state) => state.appointment.checkoutLoading;
 export const selectFamilyAppointmentsList     = (state) => state.appointment.familyAppointmentsList;
+export const selectFamilyAppointmentsMembers  = (state) => state.appointment.familyAppointmentsMembers;
 export const selectFamilyAppointmentsLoading  = (state) => state.appointment.familyAppointmentsLoading;
 export const selectPatientHistoryList         = (state) => state.appointment.patientHistoryList;
 export const selectPatientHistoryLoading      = (state) => state.appointment.patientHistoryLoading;
@@ -553,5 +645,8 @@ export const selectConflicts                  = (state) => state.appointment.con
 
 // Operatory schedule selectors
 export const selectPendingItems               = (state) => state.appointment.pendingItems;
+export const selectFrontendFilters            = (state) => state.appointment.frontendFilters;
+export const selectRouteSlipDialogOpen        = (state) => state.appointment.routeSlipDialogOpen;
+export const selectFamilyAppointmentsDialogOpen = (state) => state.appointment.familyAppointmentsDialogOpen;
 
 export default appointmentSlice.reducer;

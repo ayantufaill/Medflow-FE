@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
@@ -6,6 +8,7 @@ import {
 } from '@mui/icons-material';
 import { usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
+import { Tooltip } from '@mui/material';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
 
 // Patient flag tags shown in the footer row of the card.
@@ -19,20 +22,69 @@ const TAGS = [
 ];
 
 const ACTION_BUTTONS = [
-  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false },
-  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true  },
-  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false },
-  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false },
+  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
+  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
+  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
+  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
 ];
 
 // Renders one contact-info row with an icon, text, and copy button.
-const ContactRow = ({ icon, text }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
-    <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</Box>
-    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{text}</Typography>
-    <ContentCopyOutlined sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} />
-  </Box>
-);
+const ContactRow = ({ icon, text }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const handleCopy = () => {
+    const textToCopy = text.replace('DOB: ', '');
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      // Open tooltip message toast popup on success
+      setShowTooltip(true);
+      
+      // Clear popup context bubble visibility after 1.5 seconds
+      setTimeout(() => {
+        setShowTooltip(false);
+      }, 1500);
+    });
+  };
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+      <Box sx={{ color: COLORS.TEXT_MUTED, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        {icon}
+      </Box>
+      <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+        {text}
+      </Typography>
+      
+      {/* Wrap copy icon in standard floating tooltip overlay container */}
+      <Tooltip 
+        title="Copied!" 
+        open={showTooltip} 
+        placement="top"
+        arrow
+        slotProps={{
+          popper: {
+            sx: {
+              '& .MuiTooltip-tooltip': {
+                fontFamily: 'Inter',
+                fontSize: '10px',
+                backgroundColor: '#1e293b', // Muted slate look matching app design constants
+                px: '8px',
+                py: '4px'
+              },
+              '& .MuiTooltip-arrow': {
+                color: '#1e293b'
+              }
+            }
+          }
+        }}
+      >
+        <ContentCopyOutlined 
+          onClick={handleCopy} 
+          sx={{ fontSize: '13px', color: COLORS.ACCENT, cursor: 'pointer', flexShrink: 0 }} 
+        />
+      </Tooltip>
+    </Box>
+  );
+};
 
 // PatientCard reads currentPatient from Redux (set by PatientSearch).
 // When no patient is selected, it renders nothing — LeftPanel conditionally
@@ -40,6 +92,7 @@ const ContactRow = ({ icon, text }) => (
 
 const PatientCard = () => {
   const { currentPatient } = usePatient();
+  const navigate = useNavigate();
 
   // Guard — should not render when no patient is selected (LeftPanel gates it),
   // but defensive early return prevents blank-card flash during Redux hydration.
@@ -148,12 +201,14 @@ const PatientCard = () => {
           wire to currentPatient.medicalAlerts when that field is available. */}
       <Box sx={{ display: 'flex' }}>
         <Box
+          onClick={() => navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`)}
           sx={{
             width: '22px', height: '22px',
             backgroundColor: '#fef08a',
             borderRadius: '4px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: '1px solid #fde047',
+            cursor: 'pointer',
           }}
         >
           <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#854d0e' }}>+</Typography>
@@ -197,9 +252,15 @@ const PatientCard = () => {
 
       {/* ── Quick-action buttons ─────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', gap: '6px' }}>
-        {ACTION_BUTTONS.map(({ label, icon, dot }) => (
+        {ACTION_BUTTONS.map(({ label, icon, dot, disabled }) => (
           <Box
             key={label}
+            onClick={() => {
+              if (disabled) return;
+              if (label === 'Book') {
+                window.dispatchEvent(new CustomEvent('open-new-appointment-modal', { detail: { isFromPatientCard: true } }));
+              }
+            }}
             sx={{
               flex: 1,
               display: 'flex',
@@ -211,13 +272,14 @@ const PatientCard = () => {
               backgroundColor: COLORS.SURFACE_CARD,
               border: `1px solid ${COLORS.BORDER}`,
               borderRadius: radius.md,
-              cursor: 'pointer',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.45 : 1,
               position: 'relative',
-              '&:hover': { backgroundColor: COLORS.SURFACE_INPUT },
+              '&:hover': disabled ? {} : { backgroundColor: COLORS.SURFACE_INPUT },
             }}
           >
             {/* Notification dot for Email button */}
-            {dot && (
+            {dot && !disabled && (
               <Box
                 sx={{
                   position: 'absolute', top: '6px', right: '10px',

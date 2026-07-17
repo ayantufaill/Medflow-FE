@@ -16,7 +16,7 @@ export const patientService = {
    * @param {string} dobEnd - Date of birth end date (YYYY-MM-DD)
    * @returns {Promise<Object>} Patients data with pagination
    */
-  async getAllPatients(page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '', signal = null) {
+  async getAllPatients(page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '', signal = null, sortBy = '', sortOrder = '') {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
@@ -26,6 +26,8 @@ export const patientService = {
     if (dobEnd) params.append('dobEnd', dobEnd);
     if (gender) params.append('gender', gender);
     if (providerId) params.append('providerId', providerId);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
 
     const config = {};
     if (signal) {
@@ -255,6 +257,21 @@ export const patientService = {
       `/patients/${patientId}/insurance/${patientInsuranceId}`
     );
     return response.data.data;
+  },
+
+  /**
+   * Reorder patient insurances
+   * @param {string} patientId - Patient ID
+   * @param {Array<string>} insuranceIds - Array of insurance IDs in new order
+   * @returns {Promise<Array>} Reordered insurances
+   */
+  async reorderPatientInsurances(patientId, insuranceIds) {
+    const response = await apiClient.post(
+      `/patients/${patientId}/insurance/reorder`,
+      { insuranceIds }
+    );
+    const result = response.data?.data?.insurances || response.data?.data?.coverages || response.data?.data?.plans || response.data?.data;
+    return Array.isArray(result) ? result : [];
   },
 
   // ---------------- Patient Allergies ----------------

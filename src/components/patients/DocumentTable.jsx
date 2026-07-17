@@ -17,6 +17,53 @@ const truncateLabel = (value, max = 30) => {
   return `${value.slice(0, max - 3)}...`;
 };
 
+// Blob-based download — works for cross-origin URLs (S3/CloudFront)
+// where the `download` attribute on <a> is silently ignored by browsers.
+const downloadFile = async (url, filename) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Fetch failed");
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename || "document";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    // Fallback: open in new tab if blob fetch fails
+    window.open(url, "_blank");
+  }
+};
+
+const DownloadCell = ({ row }) => {
+  const [downloading, setDownloading] = useState(false);
+  const fileUrl = row.fileUrl || row.documentUrl;
+
+  const handleDownload = async () => {
+    if (!fileUrl || downloading) return;
+    setDownloading(true);
+    await downloadFile(fileUrl, row.name);
+    setDownloading(false);
+  };
+
+  return (
+    <Typography
+      variant="body2"
+      sx={{
+        fontSize: "0.8rem",
+        color: downloading ? "#9e9e9e" : "#1976d2",
+        cursor: downloading ? "default" : "pointer",
+      }}
+      onClick={handleDownload}
+    >
+      {downloading ? "Downloading..." : "Download"}
+    </Typography>
+  );
+};
+
 export const DocumentTable = ({ 
   title, 
   tooltipTitle, 
@@ -140,17 +187,7 @@ export const DocumentTable = ({
                 </Typography>
               </TableCell>
               <TableCell>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: "0.8rem",
-                    color: "#1976d2",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => onDownload(row)}
-                >
-                  Download
-                </Typography>
+                <DownloadCell row={row} />
               </TableCell>
               <TableCell>
                 <Typography

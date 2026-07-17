@@ -26,11 +26,9 @@ import {
   Edit as EditIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  Description as DescriptionIcon,
   ArrowRight as ArrowRightIcon,
   ArrowDropDown as ArrowDropDownIcon,
   DeleteOutline as DeleteOutlineIcon,
-  Delete as DeleteIcon,
   AttachFile as AttachFileIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
@@ -39,6 +37,8 @@ import {
   Autorenew as AutorenewIcon,
   Sync as SyncIcon,
 } from "@mui/icons-material";
+import notesIcon from "../../assets/claimicons/notesicon.svg";
+import deleteIcon from "../../assets/claimicons/deleteicon.svg";
 
 export const StandardClaimsTable = ({
   activeTab,
@@ -54,15 +54,15 @@ export const StandardClaimsTable = ({
   handleLoadMoreClaims,
   toggleProcedures,
   expandedProcedures,
-  handleRowStatusChange,
-  handleRevalidate,
+  handleRowStatusChange = () => {},
+  handleRevalidate = () => {},
   expandAllMessages,
-  handleNoteOpen,
-  handleOpenEdit,
-  handleOpenAttach,
-  handleOpenPreview,
-  handleDeletePredetermination,
-  handleToggleHide,
+  handleNoteOpen = () => {},
+  handleOpenEdit = () => {},
+  handleOpenAttach = () => {},
+  handleOpenPreview = () => {},
+  handleDeletePredetermination = () => {},
+  handleToggleHide = () => {},
 }) => {
   return (
     // STANDARD CLAIMS Data Table
@@ -205,9 +205,11 @@ export const StandardClaimsTable = ({
                 Treating Provider
               </TableCell>
             )}
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
-              Status
-            </TableCell>
+            {activeTab !== 0 && (
+              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+                Status
+              </TableCell>
+            )}
             {activeTab === 0 && (
               <TableCell sx={{ color: "#1a3a6b", fontWeight: 700, pl: 3 }}>
                 Alerts
@@ -395,7 +397,7 @@ export const StandardClaimsTable = ({
                         sx={{
                           fontWeight: 600,
                           color:
-                            isError && activeTab === 0 ? "#d93838" : "#2d3748",
+                            isError && activeTab === 0 ? "#e53e3e" : "#2d3748",
                           fontSize: "0.74rem",
                         }}
                       >
@@ -430,7 +432,7 @@ export const StandardClaimsTable = ({
                         sx={{
                           fontWeight: 600,
                           color:
-                            isError && activeTab === 0 ? "#d93838" : "#4a5568",
+                            isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
                           fontSize: "0.72rem",
                         }}
                       >
@@ -454,7 +456,7 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           color:
-                            isError && activeTab === 0 ? "#d93838" : "#718096",
+                            isError && activeTab === 0 ? "#e53e3e" : "#718096",
                           display: "flex",
                           flexDirection: "column",
                           fontSize: "0.7rem",
@@ -474,7 +476,7 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           color:
-                            isError && activeTab === 0 ? "#d93838" : "#4a5568",
+                            isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
                         }}
                       >
                         {activeTab === 0 ? claim.createdDate : claim.sentDate}
@@ -506,7 +508,7 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           color:
-                            isError && activeTab === 0 ? "#d93838" : "#4a5568",
+                            isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
                           fontWeight: 500,
                           fontSize: "0.72rem",
                         }}
@@ -572,156 +574,131 @@ export const StandardClaimsTable = ({
                     )}
 
                     {/* Status Dropdown */}
-                    <TableCell>
-                      {activeTab === 1 ||
-                      activeTab === 2 ||
-                      activeTab === 3 ||
-                      activeTab === 4 ||
-                      activeTab === 5 ? (
-                        // Interactive Dropdown
-                        <FormControl
-                          size="small"
-                          variant="standard"
-                          sx={{ m: 0, minWidth: 75 }}
-                        >
-                          <Select
-                            value={claim.status}
-                            onChange={(e) =>
-                              handleRowStatusChange(claim.id, e.target.value)
-                            }
-                            sx={{
-                              fontSize: "0.72rem",
-                              fontWeight: 500,
-                              color:
-                                claim.status === "denied" ||
-                                claim.status === "rejected"
-                                  ? "#d93838"
-                                  : "#2d3748",
-                              "& .MuiSelect-select": { py: 0.5, pr: 2 },
-                            }}
+                    {activeTab !== 0 && (
+                      <TableCell>
+                        {activeTab === 1 ||
+                        activeTab === 2 ||
+                        activeTab === 3 ||
+                        activeTab === 4 ||
+                        activeTab === 5 ? (
+                          // Interactive Dropdown
+                          <FormControl
+                            size="small"
+                            variant="standard"
+                            sx={{ m: 0, minWidth: 75 }}
                           >
-                            <MenuItem value="draft" sx={{ fontSize: "0.7rem" }}>
-                              Draft
-                            </MenuItem>
-                            <MenuItem
-                              value="submitted"
-                              sx={{ fontSize: "0.7rem" }}
+                            <Select
+                              value={claim.status}
+                              onChange={(e) =>
+                                handleRowStatusChange(claim.id, e.target.value)
+                              }
+                              sx={{
+                                fontSize: "0.72rem",
+                                fontWeight: 500,
+                                color:
+                                  claim.status === "denied" ||
+                                  claim.status === "rejected"
+                                    ? "#d93838"
+                                    : "#2d3748",
+                                "& .MuiSelect-select": { py: 0.5, pr: 2 },
+                              }}
                             >
-                              Submitted
-                            </MenuItem>
-                            <MenuItem
-                              value="pending"
-                              sx={{ fontSize: "0.7rem" }}
-                            >
-                              Pending
-                            </MenuItem>
-                            <MenuItem
-                              value="accepted"
-                              sx={{ fontSize: "0.7rem" }}
-                            >
-                              Accepted
-                            </MenuItem>
-                            <MenuItem value="paid" sx={{ fontSize: "0.7rem" }}>
-                              Paid
-                            </MenuItem>
-                            <MenuItem
-                              value="partial"
-                              sx={{ fontSize: "0.7rem" }}
-                            >
-                              Partial
-                            </MenuItem>
-                            <MenuItem
-                              value="denied"
-                              sx={{ fontSize: "0.7rem", color: "#d93838" }}
-                            >
-                              Denied
-                            </MenuItem>
-                            <MenuItem
-                              value="rejected"
-                              sx={{ fontSize: "0.7rem", color: "#d93838" }}
-                            >
-                              Rejected
-                            </MenuItem>
-                            <MenuItem
-                              value="cancelled"
-                              sx={{ fontSize: "0.7rem" }}
-                            >
-                              Cancelled
-                            </MenuItem>
-                          </Select>
-                        </FormControl>
-                      ) : // Standard Status in UNSENT tab
-                      isError ? (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.5,
-                          }}
-                        >
+                              <MenuItem value="draft" sx={{ fontSize: "0.7rem" }}>
+                                Draft
+                              </MenuItem>
+                              <MenuItem
+                                value="submitted"
+                                sx={{ fontSize: "0.7rem" }}
+                              >
+                                Submitted
+                              </MenuItem>
+                              <MenuItem
+                                value="pending"
+                                sx={{ fontSize: "0.7rem" }}
+                              >
+                                Pending
+                              </MenuItem>
+                              <MenuItem
+                                value="accepted"
+                                sx={{ fontSize: "0.7rem" }}
+                              >
+                                Accepted
+                              </MenuItem>
+                              <MenuItem value="paid" sx={{ fontSize: "0.7rem" }}>
+                                Paid
+                              </MenuItem>
+                              <MenuItem
+                                value="partial"
+                                sx={{ fontSize: "0.7rem" }}
+                              >
+                                Partial
+                              </MenuItem>
+                              <MenuItem
+                                value="denied"
+                                sx={{ fontSize: "0.7rem", color: "#d93838" }}
+                              >
+                                Denied
+                              </MenuItem>
+                              <MenuItem
+                                value="rejected"
+                                sx={{ fontSize: "0.7rem", color: "#d93838" }}
+                              >
+                                Rejected
+                              </MenuItem>
+                              <MenuItem
+                                value="cancelled"
+                                sx={{ fontSize: "0.7rem" }}
+                              >
+                                Cancelled
+                              </MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : (
                           <Typography
                             sx={{
-                              fontWeight: 600,
-                              color: "#d93838",
+                              fontWeight: 500,
+                              color: "#2d3748",
                               fontSize: "0.72rem",
                             }}
                           >
                             {claim.status}
                           </Typography>
-                          <Tooltip title="Click to Revalidate / Resolve errors">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleRevalidate(claim.id)}
-                              sx={{ p: 0.2, color: "#1a3a6b" }}
-                            >
-                              <SyncIcon sx={{ fontSize: 12 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      ) : (
-                        <Typography
-                          sx={{
-                            fontWeight: 500,
-                            color: "#2d3748",
-                            fontSize: "0.72rem",
-                          }}
-                        >
-                          {claim.status}
-                        </Typography>
-                      )}
-                    </TableCell>
+                        )}
+                      </TableCell>
+                    )}
 
                     {/* Alerts Column right next to Status */}
                     {activeTab === 0 && (
                       <TableCell sx={{ pl: 3 }}>
-                        {claim.status === "validationError" && (
+                        {isError ? (
                           <Box
                             sx={{
                               display: "flex",
-                              flexDirection: "column",
-                              gap: 0.5,
-                              alignItems: "flex-start",
+                              alignItems: "center",
+                              gap: 1.5,
                             }}
                           >
                             <Button
                               size="small"
                               sx={{
-                                backgroundColor: "#b92b2b",
+                                backgroundColor: "#e53e3e",
                                 color: "#ffffff",
                                 fontSize: "0.65rem",
                                 fontWeight: 600,
                                 textTransform: "none",
                                 minWidth: "auto",
-                                py: 0.2,
-                                px: 0.8,
+                                height: "22px",
+                                py: 0,
+                                px: 1,
                                 borderRadius: "4px",
                                 lineHeight: 1.2,
-                                "&:hover": { backgroundColor: "#9a2424" },
+                                "&:hover": { backgroundColor: "#c53030" },
                               }}
                             >
                               Show Invalid info
                             </Button>
                             <Typography
+                              onClick={() => handleRevalidate(claim.id)}
                               sx={{
                                 color: "#3182ce",
                                 fontSize: "0.7rem",
@@ -733,6 +710,8 @@ export const StandardClaimsTable = ({
                               Revalidate
                             </Typography>
                           </Box>
+                        ) : (
+                          <Typography sx={{ color: "#718096" }}>—</Typography>
                         )}
                       </TableCell>
                     )}
@@ -802,9 +781,12 @@ export const StandardClaimsTable = ({
                           color: "#a0aec0",
                           "&:hover": { color: "#1a3a6b" },
                           p: 0.2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
                         }}
                       >
-                        <DescriptionIcon sx={{ fontSize: 14 }} />
+                        <Box component="img" src={notesIcon} alt="notes" sx={{ width: 14, height: 14 }} />
                       </IconButton>
                     </TableCell>
 
@@ -927,37 +909,26 @@ export const StandardClaimsTable = ({
                                 <AttachFileIcon sx={{ fontSize: 14 }} />
                               </IconButton>
                             </Tooltip>
-                            {claim.showEye ? (
-                              <Tooltip
-                                title={
-                                  claim.isHidden ? "Unhide Claim" : "Hide Claim"
-                                }
+                            <Tooltip title="Preview Predetermination">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenPreview(claim)}
+                                sx={{ color: "#7d9cc4", p: 0.2 }}
                               >
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleToggleHide(claim)}
-                                  sx={{ color: "#7d9cc4", p: 0.2 }}
-                                >
-                                  {claim.isHidden ? (
-                                    <VisibilityOffIcon sx={{ fontSize: 14 }} />
-                                  ) : (
-                                    <VisibilityIcon sx={{ fontSize: 14 }} />
-                                  )}
-                                </IconButton>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip title="Delete Predetermination">
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    handleDeletePredetermination(claim.id)
-                                  }
-                                  sx={{ color: "#e53e3e", p: 0.2 }}
-                                >
-                                  <DeleteIcon sx={{ fontSize: 14 }} />
-                                </IconButton>
-                              </Tooltip>
-                            )}
+                                <VisibilityIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Predetermination">
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleDeletePredetermination(claim.id)
+                                }
+                                sx={{ p: 0.2 }}
+                              >
+                                <Box component="img" src={deleteIcon} alt="delete" sx={{ width: 14, height: 14 }} />
+                              </IconButton>
+                            </Tooltip>
                           </>
                         ) : (
                           <>
@@ -983,23 +954,16 @@ export const StandardClaimsTable = ({
                                 <AttachFileIcon sx={{ fontSize: 14 }} />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip
-                              title={
-                                claim.isHidden ? "Unhide Claim" : "Hide Claim"
-                              }
-                            >
+                            <Tooltip title="Preview Claim">
                               <IconButton
                                 size="small"
-                                onClick={() => handleToggleHide(claim)}
+                                onClick={() => handleOpenPreview(claim)}
                                 sx={{ color: "#7d9cc4", p: 0.2 }}
                               >
-                                {claim.isHidden ? (
-                                  <VisibilityOffIcon sx={{ fontSize: 14 }} />
-                                ) : (
-                                  <VisibilityIcon sx={{ fontSize: 14 }} />
-                                )}
+                                <VisibilityIcon sx={{ fontSize: 14 }} />
                               </IconButton>
                             </Tooltip>
+
                           </>
                         )}
                       </Box>

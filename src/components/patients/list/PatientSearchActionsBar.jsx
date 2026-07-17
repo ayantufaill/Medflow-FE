@@ -1,4 +1,4 @@
-import { Box, Checkbox, CircularProgress, IconButton, Tooltip, Button } from '@mui/material';
+import { Box, CircularProgress, IconButton, Tooltip, Button } from '@mui/material';
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
@@ -15,15 +15,11 @@ const actionButtonSx = {
   fontFamily: 'Inter', fontSize: fontSize.base, fontWeight: fontWeight.semibold,
 };
 
-// Row 1 of PatientsListPage: search box, select-all checkbox, and the
-// Add / Import / Deactivate action buttons.
+// Row 1 of PatientsListPage: search box and the Add / Import / Deactivate action buttons.
 const PatientSearchActionsBar = ({
   search,
   onSearchChange,
   loading,
-  allSelected,
-  someSelected,
-  onSelectAll,
   onAddPatient,
   onImportPatient,
   onDeactivateSelected,
@@ -65,7 +61,6 @@ const PatientSearchActionsBar = ({
     </Tooltip>
 
     <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', ml: 'auto', alignItems: 'center' }}>
-      <Checkbox size="small" indeterminate={someSelected} checked={allSelected} onChange={onSelectAll} />
       <Button
         variant="contained"
         disableElevation

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Radio, TextField, MenuItem } from '@mui/material';
 import { COLORS } from '../../constants/colors';
-import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from '../../constants/styles';
 
 const OPTIONS = [
   { value: 'self', title: 'Self', description: 'Patient pays their own balance.' },
@@ -88,11 +88,12 @@ export default function FinancialResponsibilitySection({ patient, isEditMode = f
       {isEditMode && value === 'hoh' ? (
         <TextField
           select
-          variant="standard"
+          variant="outlined"
           size="small"
+          SelectProps={{ MenuProps: roundedSelectMenuProps }}
           value={responsibility?.name || ''}
           onChange={(e) => handleFieldChange('financialResponsibility', { ...responsibility, type: 'hoh', name: e.target.value })}
-          sx={{ mt: 1, minWidth: 200, '.MuiInputBase-root': { fontSize: '0.85rem' } }}
+          sx={{ mt: 1, minWidth: 200, '.MuiInputBase-root': { fontSize: '0.85rem', borderRadius: radius.md } }}
           displayEmpty
         >
           <MenuItem value="" disabled>Select Household Member</MenuItem>

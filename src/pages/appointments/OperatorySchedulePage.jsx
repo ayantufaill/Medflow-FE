@@ -1,30 +1,45 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu } from '@mui/material';
+/* eslint-disable no-unused-vars, no-empty */
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton } from '@mui/material';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import dayjs from 'dayjs';
 import ScheduleGridHeader from '../../components/appointments/schedule/ScheduleGridHeader';
 import ScheduleCalendar from '../../components/appointments/schedule/ScheduleCalendar';
+import WeekMonthCalendarView from '../../components/appointments/schedule/WeekMonthCalendarView';
 import LeftPanel from '../../components/appointments/left-panel/LeftPanel';
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
+import RightPanelCollapsed from '../../components/appointments/right-panel/RightPanelCollapsed';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
-import { usePatients, usePatient } from '../../hooks/redux/usePatient';
-import { useAppointmentList, useScheduleState } from '../../hooks/redux';
+import { usePatients, usePatient, useScheduleState, useAppointmentList } from '../../hooks/redux';
+import { fetchPatientById, fetchPatients } from '../../store/slices/patientSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
 import { useDispatch } from "react-redux";
-import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
+import { setSelectedAppointmentId, fetchAppointments } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
-import ProgressNotesDialog from "../../components/appointments/ProgressNotesDialog";
-import LabCasesDialog from "../../components/appointments/LabCasesDialog";
-import BlockSlotDialog from "../../components/appointments/BlockSlotDialog";
+import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
+import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
+import FamilyAppointmentsDialog from "../../components/appointments/schedule/family-appointments-modal/FamilyAppointmentsDialog";
+import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
+import BlockSlotModal from "../../components/appointments/schedule/BlockSlotModal";
+import AppointmentDetailModal from "../../components/appointments/schedule/appointment-detail-modal/AppointmentDetailModal";
 import { scheduleBlockService } from "../../services/schedule-block.service";
+import { shortlistService } from "../../services/shortlist.service";
+
 import {
-  fetchPatients,
-} from '../../store/slices/patientSlice';
+  DndContext,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  pointerWithin,
+} from "@dnd-kit/core";
 
 // Constants
 const START_HOUR = 0;
@@ -95,6 +110,21 @@ const OperatorySchedulePage = () => {
   const { patients: formPatients } = usePatients();
   const { currentPatient } = usePatient();
 
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 5,
+    },
+  });
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5,
+    },
+  });
+  const sensors = useSensors(mouseSensor, touchSensor);
+  const [activeDragData, setActiveDragData] = useState(null);
+  const [pendingItems, setPendingItems] = useState([]);
+
   // Dynamically derive operatory columns from the rooms list.
   const OPERATORY_COLUMNS = useMemo(() => {
     if (!rooms || rooms.length === 0) {
@@ -109,10 +139,10 @@ const OperatorySchedulePage = () => {
 
   const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
   const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
-  const [labAnchorEl, setLabAnchorEl] = useState(null);
-  const [labFilters, setLabFilters] = useState({ providerId: 'all', visitTypeId: 'all' });
-  const [labCasesDialogOpen, setLabCasesDialogOpen] = useState(false);
+
+  const { frontendFilters, calendarView } = useScheduleState();
 
   const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
     const key = `${dateStr}:${columnId}`;
@@ -127,26 +157,24 @@ const OperatorySchedulePage = () => {
 
   const handlePrint = (orientation) => {
     setPrintingOrientation(orientation);
-    setViewMode("day");
+    setTimeout(() => {
+      window.print();
+      setPrintingOrientation(null);
+    }, 100);
   };
 
 
 
-  const handleDropOnPending = (dragData) => {
+  const handleDropOnPending = async (dragData) => {
     if (dragData.isAppointment) {
       const appt = dragData.appointment;
       const apptId = dragData.appointmentId;
-      if (pendingItems.some(item => item.id === apptId)) {
-        showSnackbar("Appointment is already in the pending list", "info");
-        return;
+      try {
+        await updateAppointment(apptId, { status: "pending", roomId: null });
+        showSnackbar(`Moved ${appt.patientName}'s appointment to Pending`, "success");
+      } catch (err) {
+        showSnackbar("Failed to move appointment to pending", "error");
       }
-      setPendingItems(prev => [...prev, {
-        id: apptId,
-        type: "appointment",
-        data: appt
-      }]);
-      showSnackbar(`Moved ${appt.patientName}'s appointment to Pending`, "success");
-      setActiveTab(1);
     } else if (dragData.isBlockSlot) {
       const block = dragData.block;
       const blockId = dragData.blockId;
@@ -160,7 +188,6 @@ const OperatorySchedulePage = () => {
         data: block
       }]);
       showSnackbar(`Moved calendar block to Pending`, "success");
-      setActiveTab(1);
     }
   };
 
@@ -172,46 +199,98 @@ const OperatorySchedulePage = () => {
   const handleDropReschedule = async (columnId, minutesFromStart, dragData) => {
     const isAppt = dragData.isAppointment || (dragData.isPendingItem && dragData.type === "appointment");
     const isBlock = dragData.isBlockSlot || (dragData.isPendingItem && dragData.type === "block");
-    
-    const itemData = dragData.isPendingItem ? dragData.originalData : (dragData.appointment || dragData.block);
-    const itemId = dragData.isPendingItem ? dragData.id : (dragData.appointmentId || dragData.blockId);
+    const isShortlist = dragData.isShortlistItem;
+
+    const itemData = dragData.isPendingItem || isShortlist ? dragData.originalData : (dragData.appointment || dragData.block);
+    const itemId = dragData.isPendingItem || isShortlist ? dragData.id : (dragData.appointmentId || dragData.blockId);
 
     const start = selectedDate
       .clone()
       .startOf("day")
       .add(minutesFromStart, "minute");
-    
-    const duration = isAppt 
-      ? (itemData.durationMinutes || 60) 
+
+    const duration = isAppt || isShortlist
+      ? (itemData.durationMinutes || itemData.DurationMins || 60)
       : 30;
-    
+
     let blockDuration = 30;
     if (isBlock && itemData.startTime && itemData.endTime) {
       const startMin = minutesSinceStart(dayjs(`${itemData.date}T${itemData.startTime}`));
       const endMin = minutesSinceStart(dayjs(`${itemData.date}T${itemData.endTime}`));
       blockDuration = endMin - startMin;
     }
-    
-    const end = start.clone().add(isAppt ? duration : blockDuration, "minute");
 
-    if (isAppt) {
+    const end = start.clone().add(isAppt || isShortlist ? duration : blockDuration, "minute");
+
+    if (isShortlist) {
       try {
         setFormSaving(true);
         const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-        
+        const patientId = itemData.patientId || itemData.PatNum;
+        const providerId = itemData.providerId || itemData.ProvNum;
+
+        // Create new appointment from shortlist data
+        await reduxCreateAppointment({
+          patientId: String(patientId),
+          providerId: String(providerId || DUMMY_PROVIDER_ID),
+          appointmentDate: start.format('YYYY-MM-DD'),
+          startTime: start.format('HH:mm'),
+          endTime: end.format('HH:mm'),
+          durationMinutes: duration,
+          notes: itemData.notes || itemData.Notes || '',
+          status: 'scheduled',
+          roomId: roomId,
+          customFields: itemData.customFields || itemData.CustomFields || {},
+        });
+
+        // Optionally delete from shortlist
+        if (itemId) {
+          try {
+            await shortlistService.deleteShortlistItem(itemId);
+            window.dispatchEvent(new Event('shortlist-updated'));
+          } catch (e) { }
+        }
+
+        // Refresh calendar appointments with correct dates and limit
+        const viewUnit = calendarView === "day" ? "day" : calendarView;
+        const sDate = selectedDate.startOf(viewUnit).format("YYYY-MM-DD");
+        const eDate = selectedDate.endOf(viewUnit).format("YYYY-MM-DD");
+        dispatch(fetchAppointments({ startDate: sDate, endDate: eDate, limit: 200 }));
+
+        showSnackbar("Shortlist appointment scheduled successfully", "success");
+      } catch (err) {
+        if (err.response?.status === 409) {
+          const conflictMsg = err.response.data?.error?.message;
+          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+        } else {
+          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to schedule shortlist appointment";
+          showSnackbar(msg, "error");
+        }
+      } finally {
+        setFormSaving(false);
+      }
+    } else if (isAppt) {
+      try {
+        setFormSaving(true);
+        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+
         await updateAppointment(itemId, {
           appointmentDate: start.format("YYYY-MM-DD"),
           startTime: start.format("HH:mm"),
           endTime: end.format("HH:mm"),
-          roomId: roomId
-        }).unwrap();
+          roomId: roomId,
+          status: "scheduled"
+        });
 
         showSnackbar("Appointment rescheduled successfully", "success");
-        setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        await refreshAppointments();
       } catch (err) {
-        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
-        showSnackbar(msg, "error");
+        if (err.response?.status === 409) {
+          const conflictMsg = err.response.data?.error?.message;
+          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+        } else {
+          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+          showSnackbar(msg, "error");
+        }
       } finally {
         setFormSaving(false);
       }
@@ -222,7 +301,7 @@ const OperatorySchedulePage = () => {
         if (itemId && !String(itemId).startsWith("temp-")) {
           await scheduleBlockService.deleteBlock(itemId);
         }
-        
+
         const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
         const newBlockData = {
           roomId: roomId,
@@ -232,7 +311,7 @@ const OperatorySchedulePage = () => {
           notes: itemData.notes || "Blocked Slot",
           color: itemData.color || "#ffe082"
         };
-        
+
         await scheduleBlockService.createBlock(newBlockData);
         showSnackbar("Calendar block rescheduled successfully", "success");
         setPendingItems(prev => prev.filter(i => i.id !== itemId));
@@ -257,6 +336,32 @@ const OperatorySchedulePage = () => {
   const [blockSlotDialogData, setBlockSlotDialogData] = useState(null);
   const [slotPopoverAnchorEl, setSlotPopoverAnchorEl] = useState(null);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState(null);
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+
+  useEffect(() => {
+    const handleApptDoubleClick = (e) => {
+      setEditingAppointment(e.detail);
+      setDetailModalOpen(true);
+    };
+    window.addEventListener('appointment-card-double-clicked', handleApptDoubleClick);
+
+    const handleBlockClick = (e) => {
+      const { block } = e.detail;
+      setBlockSlotDialogData({
+        ...block,
+        roomId: block.roomId ? String(block.roomId).replace(/^op/, "") : undefined
+      });
+      setBlockSlotDialogOpen(true);
+    };
+    window.addEventListener('block-card-clicked', handleBlockClick);
+
+    return () => {
+      window.removeEventListener('appointment-card-double-clicked', handleApptDoubleClick);
+      window.removeEventListener('block-card-clicked', handleBlockClick);
+    };
+  }, []);
 
   const fetchScheduleBlocks = useCallback(async () => {
     try {
@@ -288,6 +393,7 @@ const OperatorySchedulePage = () => {
     try {
       await scheduleBlockService.deleteBlock(blockId);
       showSnackbar("Block deleted successfully", "success");
+      setBlockSlotDialogOpen(false);
       fetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
@@ -316,7 +422,7 @@ const OperatorySchedulePage = () => {
   }, [dispatch]);
 
   // ── Modal state ───────────────────────────────────────────────────
-  const [formOpen,   setFormOpen]   = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
 
   useEffect(() => {
@@ -325,13 +431,42 @@ const OperatorySchedulePage = () => {
 
   const [initialFormDateTime, setInitialFormDateTime] = useState(null);
   const [initialFormRoomId, setInitialFormRoomId] = useState(null);
+  const [initialShortlistData, setInitialShortlistData] = useState(null);
+  const [showExtendedOptions, setShowExtendedOptions] = useState(false);
 
-  const handleOpenForm = (dateTime, roomId) => {
+  const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
     setInitialFormDateTime(dateTime || baseDate.hour(9).minute(0));
     setInitialFormRoomId(roomId || null);
+    setInitialShortlistData(null);
+    setShowExtendedOptions(extendedOptions);
     setFormOpen(true);
   };
+
+  const handleOpenFormRef = useRef(handleOpenForm);
+  useEffect(() => {
+    handleOpenFormRef.current = handleOpenForm;
+  }, [handleOpenForm]);
+
+  useEffect(() => {
+    const handleEditShortlistItem = (e) => {
+      const data = e.detail;
+      setInitialShortlistData(data);
+      setFormOpen(true);
+    };
+    const handleOpenNewAppointmentModal = (e) => {
+      const isFromPatientCard = e?.detail?.isFromPatientCard || false;
+      handleOpenFormRef.current(null, null, isFromPatientCard);
+    };
+    
+    window.addEventListener('edit-shortlist-item', handleEditShortlistItem);
+    window.addEventListener('open-new-appointment-modal', handleOpenNewAppointmentModal);
+    
+    return () => {
+      window.removeEventListener('edit-shortlist-item', handleEditShortlistItem);
+      window.removeEventListener('open-new-appointment-modal', handleOpenNewAppointmentModal);
+    };
+  }, []);
 
   // ── Appointments (for conflict detection inside the form) ─────────
   const { createAppointment } = useAppointmentList();
@@ -427,29 +562,60 @@ const OperatorySchedulePage = () => {
       const operatoryLabel =
         OPERATORY_COLUMNS?.find((c) => c.id === columnId)?.label || columnId || "—";
 
+      const patientData = (a.patientId && typeof a.patientId === 'object') ? a.patientId : (a.patient && typeof a.patient === 'object' ? a.patient : null);
+      const patientNumber = patientData?.patientCode || patientData?.patientId || patientData?.chartNumber || "";
+      const patientPhone = patientData?.phonePrimary || patientData?.phone || patientData?.mobilePhone || "";
+      const patientEmail = patientData?.email || "";
+      const cf = a.customFields || {};
+      const visitType = cf.visitType || a.visitType || a.appointmentTypeName || a.type || "";
+      const scheduledBy = a.createdBy?.name || a.scheduledBy?.name || a.createdByName || "";
+      
+      const safeStartTime = a.startTime?.length === 5 ? `${a.startTime}:00` : a.startTime;
+      const displayTime = safeStartTime ? dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A") : "";
+
+      let rawProcs = cf.procedures && Array.isArray(cf.procedures) && cf.procedures.length > 0
+        ? cf.procedures 
+        : (a.workspace?.procedures || a.procedures || a.procedureCodes || []);
+      let procString = "";
+      if (Array.isArray(rawProcs) && rawProcs.length > 0) {
+        procString = rawProcs.map(p => typeof p === 'string' ? p : (p.treatment || p.name || p.code || p.ProcCode || p.Descript || "")).filter(Boolean).join(", ");
+      }
+      if (!procString) {
+        procString = a.chiefComplaint || a.appointmentTypeName || a.type || "EXAM, PROPHY";
+      }
+
       return {
         id: a._id || a.id,
         appointmentDate: a.appointmentDate,
         date: dateOnly,
-        patientId: (a.patientId && (a.patientId._id || a.patientId.id)) || "",
+        patientId: String((a.patientId && typeof a.patientId === 'object' ? (a.patientId._id || a.patientId.id || a.patientId.PatNum) : a.patientId) || ""),
         columnId,
         roomId: a.roomId || "",
         startTime: a.startTime || "",
         endTime: a.endTime || "",
+        time: displayTime,
         title: a.chiefComplaint || a.appointmentTypeId?.name || a.appointmentType || "Appointment",
         patientName: fullName || "Patient",
         patientInitials: initials,
+        patientNumber,
+        patientPhone,
+        patientEmail,
+        visitType,
+        scheduledBy,
         start: startObj.toISOString(),
         end: endObj.toISOString(),
         status: a.status || "scheduled",
         note: a.notes || "",
+        description: a.notes || a.reason || "",
         color: "#1976d2",
         providerName,
+        provider: providerName,
         providerId: (a.providerId && (a.providerId._id || a.providerId.id || a.providerId)) || "",
         operatoryLabel,
         durationMinutes: a.durationMinutes || dayjs(endObj).diff(startObj, "minute"),
         customFields: a.customFields,
         checklists: a.checklists,
+        procedures: procString,
       };
     } catch {
       return null;
@@ -460,27 +626,44 @@ const OperatorySchedulePage = () => {
   const fetchStartDate = selectedDate.startOf('month').format('YYYY-MM-DD');
   // Add 1 day to the end date so the backend's "less than" filter safely includes the entire final day of the month
   const fetchEndDate = selectedDate.endOf('month').add(1, 'day').format('YYYY-MM-DD');
-  
+
   const {
     appointments: reduxAppointments,
     refresh: refreshAppointments,
-    createAppointment: reduxCreateAppointment,
+    loading: apptsLoading,
     updateAppointment,
   } = useAppointmentList({
-    patientId: selectedPatientId || "", // Filter by selected patient, otherwise show all
+    patientId: selectedPatientId || "",
     startDate: fetchStartDate,
     endDate: fetchEndDate,
-    limit: 100, // required to see a full day's or week's schedule
+    limit: 200,
   });
 
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
     if (!reduxAppointments) return [];
-    console.log("Raw reduxAppointments:", reduxAppointments);
-    const mapped = reduxAppointments.map(mapAppointment).filter(Boolean);
-    console.log("Mapped appointments:", mapped);
+
+    const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
+
+    const mapped = reduxAppointments
+      .filter(a => String(a.status).toLowerCase() !== 'pending')
+      .filter(a => {
+        if (providerId !== 'All') {
+          const aProviderId = String(a.providerId && (a.providerId._id || a.providerId.id || a.providerId));
+          if (aProviderId !== String(providerId)) return false;
+        }
+        if (visitType !== 'All') {
+          const apptVisitType = String(a.visitType || a.customFields?.visitType || "").toLowerCase();
+          if (apptVisitType !== visitType.toLowerCase()) return false;
+        }
+        return true;
+      })
+      .map(mapAppointment)
+      .filter(Boolean);
+
+    console.log("Filters applied:", { providerId, visitType }, "Resulting appointments:", mapped.length);
     return mapped;
-  }, [reduxAppointments]);
+  }, [reduxAppointments, frontendFilters]);
 
   const [appointments, setAppointments] = useState([]);
 
@@ -550,378 +733,504 @@ const OperatorySchedulePage = () => {
 
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
-    if (!patientId) {
-      showSnackbar("Please select a patient.", "warning");
+    const providerId = formData.providerId;
+    if (!patientId || !providerId) {
+      showSnackbar("Please select a patient and provider.", "warning");
       return;
     }
     const start = formData.appointmentDate && formData.startTime
       ? dayjs(`${formData.appointmentDate}T${formData.startTime}`)
       : dayjs();
     const duration = formData.durationMinutes || 30;
-    const end = start.add(duration, 'minute');
+    const end = start.clone().add(duration, "minute");
 
     try {
       setFormSaving(true);
       await createAppointment({
-        patientId:         formData.patientId,
-        providerId:        formData.providerId,
-        appointmentDate:   start.format('YYYY-MM-DD'),
-        startTime:         start.format('HH:mm'),
-        endTime:           end.format('HH:mm'),
-        durationMinutes:   duration,
-        chiefComplaint:    formData.chiefComplaint || '',
-        notes:             formData.notes || '',
-        status:            formData.status || 'scheduled',
+        patientId: formData.patientId,
+        providerId: formData.providerId,
+        appointmentDate: start.format("YYYY-MM-DD"),
+        startTime: start.format("HH:mm"),
+        endTime: end.format("HH:mm"),
+        durationMinutes: duration,
+        chiefComplaint: formData.chiefComplaint || '',
+        notes: formData.notes || "",
+        status: formData.status || "scheduled",
         ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
-        ...(formData.roomId            && { roomId:            formData.roomId }),
-        ...(formData.customFields      && { customFields:      formData.customFields }),
+        ...(formData.roomId && { roomId: formData.roomId }),
+        ...(formData.customFields && { customFields: formData.customFields }),
       });
       showSnackbar('Appointment created successfully', 'success');
       setFormOpen(false);
     } catch (err) {
-      const msg = err.response?.data?.error?.message
-        || err.response?.data?.message
-        || 'Failed to create appointment.';
-      showSnackbar(msg, 'error');
+      if (err.status === 409 || err.response?.status === 409) {
+        const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+        showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+      } else {
+        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
+        showSnackbar(msg, 'error');
+      }
     } finally {
       setFormSaving(false);
     }
   };
 
-  return (
-    <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: COLORS.SURFACE_PAGE, boxSizing: 'border-box', overflow: 'hidden' }}>
-
-      {/* LEFT PANEL — 1/5 */}
-      <Box sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
-        <LeftPanel />
-      </Box>
-
-      {/* CENTER PANEL — 3/5 */}
-      <Box sx={{ flex: 3, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} />
-        <ScheduleCalendar onSlotClick={(hour, mins, roomId) => {
-          const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-          handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
-        }} />
-      </Box>
-
-      {/* RIGHT PANEL — 1/5 */}
-      <Box sx={{ flex: 1, minWidth: 0, height: '100%', overflowY: 'auto' }}>
-        <RightPanel />
-      </Box>
-
-      {/* Add New Appointment Modal */}
-      <AddNewPatientAppointmentForm
-        open={formOpen}
-        onCancel={() => setFormOpen(false)}
-        onSubmit={handleAddAppointmentSubmit}
-        loading={formSaving}
-        initialDateTime={initialFormDateTime}
-        initialRoomId={initialFormRoomId}
-        initialPatient={currentPatient || null}
-        providers={providers || []}
-        rooms={rooms || []}
-        appointmentTypes={appointmentTypes || []}
-        appointments={appointments || []}
-        patients={formPatients || []}
-        loadingPatients={loadingFormPatients}
-        onPatientSearch={searchFormPatients}
-      />
-
-      <SendBulkTextDialog
-        open={bulkTextDialogOpen}
-        onClose={() => setBulkTextDialogOpen(false)}
-        selectedDate={selectedDate}
-        providers={providers || []}
-      />
-
-      <ProgressNotesDialog
-        open={progressNotesOpen}
-        onClose={() => setProgressNotesOpen(false)}
-        providers={providers || []}
-      />
-
-      <BlockSlotDialog
-        open={blockSlotDialogOpen}
-        onClose={() => setBlockSlotDialogOpen(false)}
-        initialData={blockSlotDialogData}
-        onSave={handleSaveBlock}
-      />
-
-      <Popover
-        open={Boolean(slotPopoverAnchorEl)}
-        anchorEl={slotPopoverAnchorEl}
-        onClose={() => setSlotPopoverAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 0.5,
-            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
-            border: '1px solid #e1e4e8',
-            borderRadius: 1.5,
+  useEffect(() => {
+    const handleAddShortlistToSchedule = async (e) => {
+      const data = e.detail;
+      const apptDateStr = data.AppointmentDate || data.appointmentDate;
+      const startTimeStr = data.StartTime || data.startTime;
+      const roomIdStr = data.RoomId || data.roomId;
+      
+      if (!apptDateStr || !startTimeStr || !roomIdStr) {
+        showSnackbar("Please edit this shortlist item to specify an exact Date, Time, and Operatory first.", "warning");
+        return;
+      }
+      
+      const startObj = dayjs(`${apptDateStr}T${startTimeStr}`);
+      const duration = data.DurationMins || data.durationMinutes || 60;
+      const endObj = startObj.clone().add(duration, 'minute');
+      
+      if (startObj.isBefore(dayjs())) {
+        showSnackbar("The specified time for this shortlist item has already passed.", "error");
+        return;
+      }
+      
+      const patientId = data.PatNum || data.patientId;
+      const providerId = data.ProvNum || data.providerId;
+      
+      if (!patientId || !providerId) {
+        showSnackbar("Please edit this shortlist item to specify a Provider first.", "warning");
+        return;
+      }
+      
+      try {
+        setFormSaving(true);
+        await createAppointment({
+          patientId: String(patientId),
+          providerId: String(providerId),
+          appointmentDate: apptDateStr,
+          startTime: startTimeStr,
+          endTime: endObj.format('HH:mm'),
+          durationMinutes: duration,
+          chiefComplaint: '',
+          notes: data.Notes || data.notes || '',
+          status: 'scheduled',
+          roomId: roomIdStr,
+          customFields: data.CustomFields || data.customFields || {},
+        });
+        
+        // Delete from shortlist
+        const shortlistId = data.ShortlistNum || data.id || data._id;
+        if (shortlistId) {
+          try {
+            await shortlistService.deleteShortlistItem(shortlistId);
+            window.dispatchEvent(new Event('shortlist-updated'));
+          } catch (deleteErr) {
+            console.error("Failed to delete shortlist item:", deleteErr);
           }
-        }}
-      >
-        <List size="small" disablePadding sx={{ py: 0.5 }}>
-          <ListItem 
-            button 
-            onClick={() => {
-              setSlotPopoverAnchorEl(null);
-              if (selectedSlotInfo) {
-                const start = selectedDate
-                  .clone()
-                  .startOf("day")
-                  .add(selectedSlotInfo.minutesFromStart, "minute");
-                // The columnId is the operatory room ID (e.g., 'op1', 'op2', or MongoDB ID)
-                const roomId = selectedSlotInfo.columnId.startsWith("op")
-                  ? selectedSlotInfo.columnId.substring(2)
-                  : selectedSlotInfo.columnId;
-                handleOpenForm(start, roomId);
+        }
+        showSnackbar('Shortlist item successfully added to schedule!', 'success');
+      } catch (err) {
+        if (err.status === 409 || err.response?.status === 409) {
+          const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+        } else {
+          const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add to schedule.';
+          showSnackbar(msg, 'error');
+        }
+      } finally {
+        setFormSaving(false);
+      }
+    };
+
+    window.addEventListener('add-shortlist-to-schedule', handleAddShortlistToSchedule);
+    return () => window.removeEventListener('add-shortlist-to-schedule', handleAddShortlistToSchedule);
+  }, [createAppointment]);
+
+  const handleDragStart = (event) => {
+    setActiveDragData(event.active.data.current);
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setActiveDragData(null);
+    if (!over) return;
+
+    const dragData = active.data.current;
+    if (!dragData) return;
+
+    // Dropped on Pending Reschedules
+    if (over.id === "pending-tab") {
+      handleDropOnPending(dragData);
+      return;
+    }
+
+    // Dropped on Schedule Grid Time Slot
+    // Expecting over.id format: `slot-${roomId}-${hour}-${mins}`
+    if (String(over.id).startsWith("slot-")) {
+      const parts = String(over.id).split('-');
+      if (parts.length >= 4) {
+        const roomId = parts[1];
+        const hour = parseInt(parts[2], 10);
+        const mins = parseInt(parts[3], 10);
+        const minutesFromStart = (hour - START_HOUR) * 60 + mins;
+        handleDropReschedule(roomId, minutesFromStart, dragData);
+      }
+    }
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 65px)', gap: '8px', p: '8px', backgroundColor: COLORS.SURFACE_PAGE, boxSizing: 'border-box', overflow: 'hidden' }}>
+
+        {printingOrientation && (
+          <style>
+            {`
+            @media print {
+              @page {
+                size: ${printingOrientation};
+                margin: 5mm;
               }
-            }}
-            sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
-          >
-            <ListItemText 
-              primary="Schedule Appointment" 
-              primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }} 
-            />
-          </ListItem>
-          <ListItem 
-            button 
-            onClick={() => {
-              setSlotPopoverAnchorEl(null);
-              if (selectedSlotInfo) {
-                const start = selectedDate
-                  .clone()
-                  .startOf("day")
-                  .add(selectedSlotInfo.minutesFromStart, "minute");
-                const end = start.clone().add(30, "minute"); // default 30 min block
-                
+              body * {
+                visibility: hidden;
+              }
+              body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                background-color: white !important;
+              }
+              .no-print, .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+              }
+              /* Make the center panel take up the full printed page */
+              .print-container, .print-container * {
+                visibility: visible;
+              }
+              .print-container {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+            }
+          `}
+          </style>
+        )}
+
+        {/* LEFT PANEL — Static Width */}
+        <Box className="no-print" sx={{ flex: '0 0 280px', width: '280px', minWidth: '280px', maxWidth: '280px', height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
+          <LeftPanel />
+        </Box>
+
+        {/* CENTER PANEL — Dynamic Width */}
+        <Box className="print-container" sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box className="no-print">
+            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} />
+          </Box>
+          {calendarView === 'day' || calendarView === 'week' ? (
+            <ScheduleCalendar
+              scheduleBlocks={scheduleBlocks}
+              privacyMode={privacyMode}
+              onSlotClick={(hour, mins, roomId) => {
+                const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+                handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
+              }}
+              onBlockClick={(hour, mins, roomId) => {
+                const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+                const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+                const end = start.clone().add(30, "minute");
+
                 setBlockSlotDialogData({
-                  roomId: selectedSlotInfo.columnId.replace("op", ""),
-                  date: selectedDate.format("YYYY-MM-DD"),
+                  roomId: String(roomId).replace(/^op/, ""),
+                  date: baseDate.format("YYYY-MM-DD"),
                   startTime: start.format("HH:mm"),
                   endTime: end.format("HH:mm")
                 });
                 setBlockSlotDialogOpen(true);
-              }
-            }}
-            sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
-          >
-            <ListItemText 
-              primary="Block Slot" 
-              primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }} 
+              }}
             />
-          </ListItem>
-        </List>
-      </Popover>
-
-      {/* Lab Filters Popover (Matching Screenshot) */}
-      <Popover
-        open={Boolean(labAnchorEl)}
-        anchorEl={labAnchorEl}
-        onClose={() => setLabAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 0.5,
-            p: 2,
-            width: 170, // Further reduced width as requested
-            borderRadius: '4px',
-            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
-            border: '1px solid #e1e4e8'
-          }
-        }}
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Provider Section */}
-          <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
-              Provider:
-            </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={labFilters.providerId}
-              onChange={(e) => setLabFilters(prev => ({ ...prev, providerId: e.target.value }))}
-              sx={{
-                height: '32px',
-                fontSize: '0.85rem',
-                '& .MuiSelect-select': { py: 0.5 }
+          ) : (
+            <WeekMonthCalendarView
+              calendarView={calendarView}
+              selectedDate={selectedDate}
+              appointments={mappedAppointments}
+              onSlotClick={(e) => {
+                const appt = e.detail;
+                window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+                  detail: { ...appt },
+                }));
+                if (appt.patientId) {
+                  const pId = typeof appt.patientId === 'object' 
+                    ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
+                    : appt.patientId;
+                  if (pId) dispatch(fetchPatientById(pId));
+                }
               }}
-            >
-              <MenuItem value="all">All</MenuItem>
-              {providers && providers.length > 0 && providers.map(p => (
-                <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                  {/* Handling nested userId structure found in ProvidersListPage.jsx */}
-                  {p.userId?.firstName || p.firstName || ''} {p.userId?.lastName || p.lastName || ''}
-                </MenuItem>
-              ))}
-            </Select>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
-              <Link
-                component="button"
-                variant="body2"
-                sx={{
-                  color: '#1976d2',
-                  fontSize: '0.8rem',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' }
-                }}
-              >
-                +Add
-              </Link>
-            </Box>
-          </Box>
-
-          {/* Visit Type Section */}
-          <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1, color: '#333' }}>
-              Visit Type:
-            </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={labFilters.visitTypeId}
-              onChange={(e) => setLabFilters(prev => ({ ...prev, visitTypeId: e.target.value }))}
-              sx={{
-                height: '32px',
-                fontSize: '0.85rem',
-                '& .MuiSelect-select': { py: 0.5 }
-              }}
-            >
-              <MenuItem value="all">All</MenuItem>
-              {appointmentTypes && appointmentTypes.length > 0 && appointmentTypes.map(at => (
-                <MenuItem key={at._id || at.id} value={at._id || at.id}>
-                  {at.name || at.title || 'Unknown'}
-                </MenuItem>
-              ))}
-            </Select>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
-              <Link
-                component="button"
-                variant="body2"
-                sx={{
-                  color: '#1976d2',
-                  fontSize: '0.8rem',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' }
-                }}
-              >
-                +Add
-              </Link>
-            </Box>
-          </Box>
-
-          {/* Bottom Actions */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-            <Link
-              component="button"
-              variant="body2"
-              onClick={() => {
-                setLabFilters({ providerId: 'all', visitTypeId: 'all' });
-                setLabAnchorEl(null);
-              }}
-              sx={{
-                color: '#f44336',
-                fontSize: '0.8rem',
-                textDecoration: 'none',
-                opacity: 0.8,
-                '&:hover': { opacity: 1, textDecoration: 'underline' }
-              }}
-            >
-              clear filter
-            </Link>
-          </Box>
+            />
+          )}
         </Box>
-      </Popover>
-      <LabCasesDialog
-        open={labCasesDialogOpen}
-        onClose={() => setLabCasesDialogOpen(false)}
-      />
 
-      {/* More Options Menu */}
-      <Menu
-        anchorEl={moreMenuAnchorEl}
-        open={Boolean(moreMenuAnchorEl)}
-        onClose={() => setMoreMenuAnchorEl(null)}
-        PaperProps={{
-          sx: {
-            mt: 0.5,
-            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
-            border: '1px solid #e1e4e8',
-            borderRadius: 1.5,
-          }
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            setShowConsult(true);
-            setMoreMenuAnchorEl(null);
-          }}
-          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
-        >
-          Show all columns
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setIsCloseOpenDayMode(prev => !prev);
-            setMoreMenuAnchorEl(null);
-          }}
-          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
-        >
-          {isCloseOpenDayMode ? "Exit Close/Open a day" : "Close/Open a day"}
-        </MenuItem>
-      </Menu>
+        {/* RIGHT PANEL — Static Width */}
+        {rightPanelOpen ? (
+          <Box className="no-print" sx={{ flex: '0 0 320px', width: '320px', minWidth: '320px', maxWidth: '320px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+              <IconButton onClick={() => setRightPanelOpen(false)} sx={{ color: COLORS.TEXT_SECONDARY, p: 0, '&:hover': { color: COLORS.ACCENT } }}>
+                <KeyboardDoubleArrowRightIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <RightPanel />
+          </Box>
+        ) : (
+          <Box className="no-print" sx={{ height: '100%', flexShrink: 0 }}>
+            <RightPanelCollapsed onExpand={() => setRightPanelOpen(true)} />
+          </Box>
+        )}
 
-      {/* Print Options Menu */}
-      <Menu
-        anchorEl={printMenuAnchorEl}
-        open={Boolean(printMenuAnchorEl)}
-        onClose={() => setPrintMenuAnchorEl(null)}
-        PaperProps={{
-          sx: {
-            mt: 0.5,
-            boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
-            border: '1px solid #e1e4e8',
-            borderRadius: 1.5,
-          }
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            handlePrint("portrait");
-            setPrintMenuAnchorEl(null);
+        {/* Add New Appointment Modal */}
+        <AddNewPatientAppointmentForm
+          open={formOpen}
+          onCancel={() => { setFormOpen(false); setShowExtendedOptions(false); }}
+          onSubmit={handleAddAppointmentSubmit}
+          loading={formSaving}
+          initialDateTime={initialFormDateTime}
+          initialRoomId={initialFormRoomId}
+          initialPatient={currentPatient || null}
+          initialShortlistData={initialShortlistData}
+          providers={providers || []}
+          rooms={rooms || []}
+          appointmentTypes={appointmentTypes || []}
+          appointments={appointments || []}
+          scheduleBlocks={scheduleBlocks || []}
+          patients={formPatients || []}
+          loadingPatients={loadingFormPatients}
+          onPatientSearch={searchFormPatients}
+          showExtendedOptions={showExtendedOptions}
+        />
+
+        <AppointmentDetailModal
+          open={detailModalOpen}
+          appointment={editingAppointment}
+          onClose={() => setDetailModalOpen(false)}
+          onSave={async (updatedData) => {
+            if (!editingAppointment) return;
+            try {
+              await updateAppointment(editingAppointment.id, updatedData);
+              showSnackbar("Appointment updated", "success");
+              setDetailModalOpen(false);
+            } catch (e) {
+              console.error("Failed to update appointment", e);
+              if (e.status === 409 || e.response?.status === 409) {
+                const conflictMsg = e.response?.data?.error?.message || e.response?.data?.message;
+                showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+              } else {
+                const msg = e.message || e.response?.data?.error?.message || e.response?.data?.message || 'Failed to update appointment';
+                showSnackbar(msg, "error");
+              }
+            }
           }}
-          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
-        >
-          Portrait
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            handlePrint("landscape");
-            setPrintMenuAnchorEl(null);
+        />
+
+        <SendBulkTextDialog
+          open={bulkTextDialogOpen}
+          onClose={() => setBulkTextDialogOpen(false)}
+          selectedDate={selectedDate}
+          providers={providers || []}
+        />
+
+        <ProgressNotesDialog
+          open={progressNotesOpen}
+          onClose={() => setProgressNotesOpen(false)}
+          providers={providers || []}
+        />
+
+        {/* Block Slot Modal */}
+        {blockSlotDialogOpen && (
+          <BlockSlotModal
+            open={blockSlotDialogOpen}
+            onClose={() => setBlockSlotDialogOpen(false)}
+            initialData={blockSlotDialogData}
+            onSave={handleSaveBlock}
+            onDelete={handleDeleteBlock}
+          />
+        )}
+
+        <Popover
+          open={Boolean(slotPopoverAnchorEl)}
+          anchorEl={slotPopoverAnchorEl}
+          onClose={() => setSlotPopoverAnchorEl(null)}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
           }}
-          sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          PaperProps={{
+            sx: {
+              mt: 0.5,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+              border: '1px solid #e1e4e8',
+              borderRadius: 1.5,
+            }
+          }}
         >
-          Landscape
-        </MenuItem>
-      </Menu>
-    </Box>
+          <List size="small" disablePadding sx={{ py: 0.5 }}>
+            <ListItem
+              button
+              onClick={() => {
+                setSlotPopoverAnchorEl(null);
+                if (selectedSlotInfo) {
+                  const start = selectedDate
+                    .clone()
+                    .startOf("day")
+                    .add(selectedSlotInfo.minutesFromStart, "minute");
+                  // The columnId is the operatory room ID (e.g., 'op1', 'op2', or MongoDB ID)
+                  const roomId = selectedSlotInfo.columnId.startsWith("op")
+                    ? selectedSlotInfo.columnId.substring(2)
+                    : selectedSlotInfo.columnId;
+                  handleOpenForm(start, roomId);
+                }
+              }}
+              sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+            >
+              <ListItemText
+                primary="Schedule Appointment"
+                primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
+              />
+            </ListItem>
+            <ListItem
+              button
+              onClick={() => {
+                setSlotPopoverAnchorEl(null);
+                if (selectedSlotInfo) {
+                  const start = selectedDate
+                    .clone()
+                    .startOf("day")
+                    .add(selectedSlotInfo.minutesFromStart, "minute");
+                  const end = start.clone().add(30, "minute"); // default 30 min block
+
+                  setBlockSlotDialogData({
+                    roomId: selectedSlotInfo.columnId.replace("op", ""),
+                    date: selectedDate.format("YYYY-MM-DD"),
+                    startTime: start.format("HH:mm"),
+                    endTime: end.format("HH:mm")
+                  });
+                  setBlockSlotDialogOpen(true);
+                }
+              }}
+              sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+            >
+              <ListItemText
+                primary="Block Slot"
+                primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
+              />
+            </ListItem>
+          </List>
+        </Popover>
+
+
+        {/* More Options Menu */}
+        <Menu
+          anchorEl={moreMenuAnchorEl}
+          open={Boolean(moreMenuAnchorEl)}
+          onClose={() => setMoreMenuAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              mt: 0.5,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+              border: '1px solid #e1e4e8',
+              borderRadius: 1.5,
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              setShowConsult(true);
+              setMoreMenuAnchorEl(null);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Show all columns
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setIsCloseOpenDayMode(prev => !prev);
+              setMoreMenuAnchorEl(null);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            {isCloseOpenDayMode ? "Exit Close/Open a day" : "Close/Open a day"}
+          </MenuItem>
+        </Menu>
+
+        {/* Print Options Menu */}
+        <Menu
+          anchorEl={printMenuAnchorEl}
+          open={Boolean(printMenuAnchorEl)}
+          onClose={() => setPrintMenuAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              mt: 0.5,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+              border: '1px solid #e1e4e8',
+              borderRadius: 1.5,
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              handlePrint("portrait");
+              setPrintMenuAnchorEl(null);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Portrait
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handlePrint("landscape");
+              setPrintMenuAnchorEl(null);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Landscape
+          </MenuItem>
+        </Menu>
+
+        <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+          {activeDragData ? (
+            <Box sx={{
+              p: 1.5,
+              backgroundColor: 'rgba(255,255,255,0.95)',
+              border: `1px solid ${COLORS.BORDER}`,
+              borderRadius: radius.md,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              width: '200px',
+              opacity: 0.9,
+              cursor: 'grabbing'
+            }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
+                {activeDragData.appointment?.patientName || activeDragData.originalData?.patientId?.firstName || "Dragging Item"}
+              </Typography>
+              <Typography sx={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY }}>
+                {activeDragData.appointment?.visitType || "Appointment"}
+              </Typography>
+            </Box>
+          ) : null}
+        </DragOverlay>
+
+      </Box>
+      {/* Route Slip Modal */}
+      <RouteSlipDialog />
+      <FamilyAppointmentsDialog />
+
+    </DndContext>
   );
 };
 

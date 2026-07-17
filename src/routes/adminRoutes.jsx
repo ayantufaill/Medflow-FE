@@ -26,7 +26,7 @@ import PrePostOps from '../pages/admin/PrePostOps';
 import ReportsDashboard from '../pages/admin/ReportsDashboard';
 import AdvancedReporting from '../pages/admin/AdvancedReporting';
 
-const adminOnly = (children, hideSidebar = false) => (
+const adminOnly = (children, hideSidebar = true) => (
   <ProtectedRoute requiredRoles={['Admin']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
@@ -66,7 +66,7 @@ const adminRoutes = [
   <Route key="/admin/insurance-management/membership-plans" path="/admin/insurance-management/membership-plans" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-converted-carriers" path="/admin/insurance-management/match-converted-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-vyne-carriers" path="/admin/insurance-management/match-vyne-carriers" element={adminOnly(<AdminPage />)} />,
-  <Route key="/admin/practice-setup/onboarding" path="/admin/practice-setup/onboarding" element={adminOnly(<PracticeOnboardingPage />)} />,
+  <Route key="/admin/practice-setup/onboarding" path="/admin/practice-setup/onboarding" element={adminOnly(<PracticeOnboardingPage />, true)} />,
   <Route key="/admin/practice-setup/kiosk-accounts" path="/admin/practice-setup/kiosk-accounts" element={adminOnly(<KioskAccountsView />)} />,
   <Route key="/admin/practice-setup/my-chart-configuration" path="/admin/practice-setup/my-chart-configuration" element={adminOnly(<MyChartConfiguration />)} />,
   <Route key="/admin/practice-setup/operatory-setup" path="/admin/practice-setup/operatory-setup" element={adminOnly(<OperatorySetup />)} />,

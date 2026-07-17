@@ -18,7 +18,7 @@ const Row = ({ icon, label, value, valueColor, muted }) => (
 const BalancePanel = ({ pt }) => (
   <Box sx={{ flex: 1, minWidth: 0, px: "16px", py: "12px", borderRight: "1px solid #f0f2f5" }}>
     <Row icon={<CreditCardOutlined sx={{ fontSize: "13px", color: "#9aa3ae" }} />} label="Family Balance"  value={pt.familyBalance}  valueColor="#ef4444" />
-    <Row label="Patient Balance" value={pt.patientBalance} valueColor="#ef4444" />
+    <Row icon={<CreditCardOutlined sx={{ fontSize: "13px", color: "#9aa3ae" }} />} label="Patient Balance" value={pt.patientBalance} valueColor="#ef4444" />
 
     <Divider sx={{ my: "8px", borderColor: "#f0f2f5" }} />
 
