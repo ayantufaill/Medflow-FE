@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { Box, CircularProgress, Alert } from '@mui/material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { documentService } from '../../services/document.service';
 import { clinicalNoteService } from '../../services/clinical-note.service';
+import { deleteDocumentThunk } from '../../store/slices/documentSlice';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
 import { COLORS } from '../../constants/colors';
@@ -18,6 +20,7 @@ const ViewDocumentPage = () => {
   const navigate = useNavigate();
   const { documentId, patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,10 +35,18 @@ const ViewDocumentPage = () => {
   const [selectedNoteId, setSelectedNoteId] = useState('');
 
   useEffect(() => {
+    // AbortController lets us cancel in-flight requests when the effect cleans up.
+    // React 18 StrictMode mounts every component twice in development
+    // (mount → unmount → mount), which would otherwise fire the API calls twice.
+    // On cleanup the first mount's requests are aborted; only the second mount
+    // (the real one) completes — so exactly one call of each type hits the network.
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const fetchDocument = async () => {
       try {
         setLoading(true);
-        const data = await documentService.getDocumentById(documentId);
+        const data = await documentService.getDocumentById(documentId, signal);
         setDocument(data);
 
         // Fetch unsigned clinical notes for attaching
@@ -44,13 +55,16 @@ const ViewDocumentPage = () => {
           const notesResult = await clinicalNoteService.getClinicalNotesByPatient(
             pId,
             1,
-            50
+            50,
+            signal
           );
           setClinicalNotes(
             (notesResult.clinicalNotes || []).filter((n) => !n.isSigned)
           );
         }
       } catch (err) {
+        // Ignore abort errors — these are expected on StrictMode cleanup
+        if (err.name === 'AbortError' || err.name === 'CanceledError') return;
         setError(
           err.response?.data?.error?.message ||
             err.response?.data?.message ||
@@ -58,16 +72,22 @@ const ViewDocumentPage = () => {
         );
         showSnackbar('Failed to load document', 'error');
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     };
+
     fetchDocument();
-  }, [documentId, showSnackbar]);
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
 
   const handleDelete = async () => {
     try {
       setDeleteLoading(true);
-      await documentService.deleteDocument(documentId);
+      // Use the Redux thunk so the patientDocumentsCache is invalidated
+      // and refreshed automatically — no stale data on the list page.
+      await dispatch(deleteDocumentThunk({ documentId, patientId })).unwrap();
       showSnackbar('Document deleted successfully', 'success');
       navigate(patientId ? `/patients/${patientId}/signed-documents` : '/documents');
     } catch (err) {

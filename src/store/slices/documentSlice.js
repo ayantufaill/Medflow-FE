@@ -33,8 +33,9 @@ export const deleteDocumentThunk = createAsyncThunk(
   async ({ documentId, patientId }, { dispatch, rejectWithValue }) => {
     try {
       await documentService.deleteDocument(documentId);
-      // Automatically refresh the patient's documents list
       if (patientId) {
+        // Invalidate the cache first so the fetch guard doesn't skip the refresh.
+        dispatch(invalidatePatientDocuments(patientId));
         dispatch(fetchPatientDocumentsThunk({ patientId }));
       }
       return documentId;

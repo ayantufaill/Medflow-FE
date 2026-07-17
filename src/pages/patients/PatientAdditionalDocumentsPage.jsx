@@ -57,7 +57,7 @@ const PatientAdditionalDocumentsPage = () => {
     loading: docsLoading,
     fetch: fetchDocuments,
     refresh: refreshDocuments,
-    remove: deleteDocumentThunk,
+    remove,
   } = usePatientDocuments(patientId);
 
   const [documents, setDocuments] = useState([]);
@@ -208,8 +208,7 @@ const PatientAdditionalDocumentsPage = () => {
       return;
     }
     try {
-      await deleteDocumentThunk(customFormDeleteDialog.formId).unwrap();
-      await refreshDocuments();
+      await remove(customFormDeleteDialog.formId).unwrap();
       showSnackbar("Custom form removed", "success");
     } catch (err) {
       showSnackbar(
@@ -269,8 +268,10 @@ const PatientAdditionalDocumentsPage = () => {
     });
   };
 
-  const handleSaveEditDialog = async () => {
-    const { docId, name, category } = editDialog;
+  const handleSaveEditDialog = async (savedData) => {
+    // Use values passed back from the dialog (user's edits live in the
+    // dialog's internal state — reading editDialog here gives stale values).
+    const { docId, name, category } = savedData || {};
     if (!docId) {
       setEditDialog((prev) => ({ ...prev, open: false }));
       return;
@@ -297,8 +298,7 @@ const PatientAdditionalDocumentsPage = () => {
     }
     try {
       setDeleteLoading(true);
-      await deleteDocumentThunk(documentId).unwrap();
-      await refreshDocuments();
+      await remove(documentId).unwrap();
       showSnackbar("Document deleted successfully", "success");
     } catch (err) {
       showSnackbar(
@@ -335,18 +335,18 @@ const PatientAdditionalDocumentsPage = () => {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 2,
-          bgcolor: COLORS.SURFACE_CARD,
-          border: `1px solid ${COLORS.BORDER}`,
-          borderRadius: radius.lg,
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `0.8px solid ${COLORS.BORDER}`,
           px: 2.5,
           py: 2,
         }}
       >
         <Box>
-          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: COLORS.TEXT_PRIMARY }}>
+          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
             Additional Docs
           </Typography>
-          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
             Check the custom forms and additional documents
           </Typography>
         </Box>

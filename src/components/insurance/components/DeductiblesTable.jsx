@@ -204,12 +204,11 @@ const DeductiblesTable = ({
                     fullWidth
                     size="small" 
                     value={row.metAmount}
-                    disabled
-                    placeholder="Auto-calc"
+                    onChange={(e) => handleDeductibleChange(index, 'metAmount', e.target.value)}
                     InputProps={{
-                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                      startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#999' }}>$</Typography></InputAdornment>,
                     }}
-                    sx={{ ...inputSx, '& .MuiInputBase-root.Mui-disabled': { bgcolor: '#f8f9fc', color: '#aaa' } }}
+                    sx={inputSx}
                   />
                 </TableCell>
                 <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>

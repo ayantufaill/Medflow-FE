@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -9,12 +9,99 @@ import {
   Typography,
   Box,
   Chip,
-  Link,
   IconButton,
 } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import {
+  Close as CloseIcon,
+  Description as DescriptionIcon,
+  DescriptionOutlined as DescriptionOutlinedIcon,
+  FolderOutlined as FolderOutlinedIcon,
+} from "@mui/icons-material";
 
-const EDIT_NAME_SUGGESTIONS = [
+// ─── Design tokens (mirrors RecordVitalsDialog) ───────────────────────────────
+
+const Label = ({ children, required }) => (
+  <Typography
+    sx={{
+      fontFamily: "Inter",
+      fontWeight: 500,
+      fontSize: "11.5px",
+      lineHeight: "17.25px",
+      color: "#4b5563",
+      display: "block",
+      mb: 0.75,
+    }}
+  >
+    {children}
+    {required && <span style={{ color: "#e53935" }}> *</span>}
+  </Typography>
+);
+
+const sharedInputSx = {
+  borderRadius: "8px",
+  backgroundColor: "#fff",
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#E5E7EB",
+  },
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#D1D5DB",
+  },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#2563EB",
+  },
+  "& .MuiInputBase-input": {
+    padding: "10px 14px",
+    fontSize: "0.875rem",
+    fontFamily: "Inter",
+  },
+  "& .MuiInputBase-input::placeholder": {
+    color: "#9CA3AF",
+    opacity: 1,
+  },
+};
+
+const SectionContainer = ({ title, icon: Icon, children }) => (
+  <Box
+    sx={{
+      border: "1px solid #E5E7EB",
+      borderRadius: "12px",
+      mb: 2.5,
+      backgroundColor: "#FFFFFF",
+    }}
+  >
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+        px: 2.5,
+        py: 1.75,
+        backgroundColor: "#F3F8FD",
+        borderBottom: "1px solid #E5E7EB",
+        borderTopLeftRadius: "11px",
+        borderTopRightRadius: "11px",
+      }}
+    >
+      {Icon && <Icon sx={{ color: "#2563EB", fontSize: 20 }} />}
+      <Typography
+        sx={{
+          fontFamily: "Inter",
+          fontWeight: 600,
+          fontSize: "14px",
+          lineHeight: "20px",
+          color: "#111",
+        }}
+      >
+        {title}
+      </Typography>
+    </Box>
+    <Box sx={{ p: 2.5 }}>{children}</Box>
+  </Box>
+);
+
+// ─── Suggestion data ──────────────────────────────────────────────────────────
+
+const DEFAULT_NAME_SUGGESTIONS = [
   "BOB (Breakdown of benefits)",
   "Insurance Fax Back",
   "Treatment consent",
@@ -23,7 +110,7 @@ const EDIT_NAME_SUGGESTIONS = [
   "Pre-D",
 ];
 
-const EDIT_CATEGORY_SUGGESTIONS = [
+const DEFAULT_CATEGORY_SUGGESTIONS = [
   "Insurance",
   "Consent",
   "Medical/Dental History",
@@ -37,67 +124,74 @@ const EDIT_CATEGORY_SUGGESTIONS = [
   "Consult",
 ];
 
-export const EditDocumentDialog = ({ open, section, docId, name, type, category, onClose, onSave }) => {
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export const EditDocumentDialog = ({
+  open,
+  section,
+  docId,
+  name,
+  type,
+  category,
+  onClose,
+  onSave,
+}) => {
   const [editData, setEditData] = useState({
     name: name || "",
     type: type || "",
     category: category || "",
   });
 
-  const [nameSuggestions, setNameSuggestions] = useState(EDIT_NAME_SUGGESTIONS);
-  const [categorySuggestions, setCategorySuggestions] = useState(EDIT_CATEGORY_SUGGESTIONS);
+  const [nameSuggestions, setNameSuggestions] = useState(DEFAULT_NAME_SUGGESTIONS);
+  const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORY_SUGGESTIONS);
 
-  // Load from localStorage on mount
-  useState(() => {
+  // Sync fields when props change (dialog re-opens for a different doc)
+  useEffect(() => {
+    setEditData({ name: name || "", type: type || "", category: category || "" });
+  }, [name, type, category, open]);
+
+  // Load persisted suggestions from localStorage on mount
+  useEffect(() => {
     try {
       const savedNames = localStorage.getItem("medflow_doc_names");
       if (savedNames) setNameSuggestions(JSON.parse(savedNames));
-      
+
       const savedCats = localStorage.getItem("medflow_doc_categories");
       if (savedCats) setCategorySuggestions(JSON.parse(savedCats));
-    } catch (e) {
-      console.error("Failed to load suggestions from localStorage", e);
+    } catch {
+      // ignore parse errors
     }
-    
-    setEditData({
-      name: name || "",
-      type: type || "",
-      category: category || "",
-    });
-  });
+  }, []);
 
   const handleSave = () => {
-    onSave({
-      section,
-      docId,
-      name: editData.name,
-      category: editData.category,
-    });
+    onSave({ section, docId, name: editData.name, category: editData.category });
   };
 
+  // ── Name suggestion persistence ──
   const handleSaveNameDefault = () => {
     const val = editData.name.trim();
     if (!val || nameSuggestions.includes(val)) return;
-    const newSuggestions = [val, ...nameSuggestions];
-    setNameSuggestions(newSuggestions);
-    localStorage.setItem("medflow_doc_names", JSON.stringify(newSuggestions));
+    const updated = [val, ...nameSuggestions];
+    setNameSuggestions(updated);
+    localStorage.setItem("medflow_doc_names", JSON.stringify(updated));
   };
 
   const handleResetNameDefaults = () => {
-    setNameSuggestions(EDIT_NAME_SUGGESTIONS);
+    setNameSuggestions(DEFAULT_NAME_SUGGESTIONS);
     localStorage.removeItem("medflow_doc_names");
   };
 
+  // ── Category suggestion persistence ──
   const handleSaveCategoryDefault = () => {
     const val = editData.category.trim();
     if (!val || categorySuggestions.includes(val)) return;
-    const newSuggestions = [val, ...categorySuggestions];
-    setCategorySuggestions(newSuggestions);
-    localStorage.setItem("medflow_doc_categories", JSON.stringify(newSuggestions));
+    const updated = [val, ...categorySuggestions];
+    setCategorySuggestions(updated);
+    localStorage.setItem("medflow_doc_categories", JSON.stringify(updated));
   };
 
   const handleResetCategoryDefaults = () => {
-    setCategorySuggestions(EDIT_CATEGORY_SUGGESTIONS);
+    setCategorySuggestions(DEFAULT_CATEGORY_SUGGESTIONS);
     localStorage.removeItem("medflow_doc_categories");
   };
 
@@ -109,273 +203,312 @@ export const EditDocumentDialog = ({ open, section, docId, name, type, category,
       maxWidth="sm"
       PaperProps={{
         sx: {
-          borderRadius: 1,
-          minWidth: 420,
+          borderRadius: "12px",
+          overflow: "hidden",
+          mt: "80px",
+          maxHeight: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
         },
       }}
+      sx={{ alignItems: "flex-start" }}
     >
+      {/* ── Header ── */}
       <DialogTitle
         sx={{
-          fontWeight: 700,
-          fontSize: "1rem",
-          bgcolor: "#3f5f98",
-          color: "#ffffff",
-          py: 1,
-          px: 2,
+          backgroundColor: "#F1F5FD",
+          borderBottom: "1px solid #E5E7EB",
+          py: 2,
+          px: 3,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        <span>Edit Additional Document</span>
-        <IconButton
-          size="small"
-          onClick={onClose}
-          sx={{ color: "#ffffff" }}
-        >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {/* Icon badge */}
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              backgroundColor: "#e2ebfc",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <DescriptionIcon sx={{ color: "#2563EB", fontSize: 20 }} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontFamily: "Inter",
+                fontWeight: 600,
+                fontSize: "16px",
+                lineHeight: "24px",
+                letterSpacing: "-0.4px",
+                color: "#111",
+              }}
+            >
+              Edit Document
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: "Inter",
+                fontWeight: 400,
+                fontSize: "11.5px",
+                lineHeight: "17.25px",
+                color: "#6B7280",
+              }}
+            >
+              Update the document name and category
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton size="small" onClick={onClose} sx={{ color: "#6B7280" }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
-      <DialogContent
+
+      {/* ── Content ── */}
+      <DialogContent sx={{ px: 3, pt: "24px !important", pb: 1, overflowY: "auto", flex: 1 }}>
+        {/* Section 1 — Document Name */}
+        <SectionContainer title="Document Name" icon={DescriptionOutlinedIcon}>
+          <Label required>Name</Label>
+          <TextField
+            fullWidth
+            variant="outlined"
+            value={editData.name}
+            onChange={(e) =>
+              setEditData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            placeholder="e.g. Treatment Consent"
+            InputProps={{ sx: sharedInputSx }}
+          />
+
+          {/* Quick-select chips */}
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}>
+            {nameSuggestions.map((label) => {
+              const isSelected = editData.name === label;
+              return (
+                <Chip
+                  key={label}
+                  label={label}
+                  size="small"
+                  variant="outlined"
+                  onClick={() =>
+                    setEditData((prev) => ({ ...prev, name: label }))
+                  }
+                  sx={{
+                    fontFamily: "Inter",
+                    fontSize: "0.72rem",
+                    borderColor: isSelected ? "#2563EB" : "#E5E7EB",
+                    color: isSelected ? "#2563EB" : "#6B7280",
+                    backgroundColor: isSelected ? "#EFF6FF" : "transparent",
+                    fontWeight: isSelected ? 600 : 400,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    "&:hover": {
+                      borderColor: "#2563EB",
+                      color: "#2563EB",
+                      backgroundColor: "#EFF6FF",
+                    },
+                    "& .MuiChip-label": { px: 1 },
+                  }}
+                />
+              );
+            })}
+          </Box>
+
+          {/* Persist controls */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 1.5,
+              mt: 1.25,
+            }}
+          >
+            <Typography
+              component="button"
+              onClick={handleSaveNameDefault}
+              sx={{
+                fontFamily: "Inter",
+                fontSize: "11.5px",
+                color: "#2563EB",
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                p: 0,
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              + Save as default
+            </Typography>
+            <Typography
+              component="button"
+              onClick={handleResetNameDefaults}
+              sx={{
+                fontFamily: "Inter",
+                fontSize: "11.5px",
+                color: "#9CA3AF",
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                p: 0,
+                "&:hover": { textDecoration: "underline", color: "#6B7280" },
+              }}
+            >
+              Reset
+            </Typography>
+          </Box>
+        </SectionContainer>
+
+        {/* Section 2 — Category */}
+        <SectionContainer title="Category" icon={FolderOutlinedIcon}>
+          <Label>Category</Label>
+          <TextField
+            fullWidth
+            variant="outlined"
+            value={editData.category}
+            onChange={(e) =>
+              setEditData((prev) => ({ ...prev, category: e.target.value }))
+            }
+            placeholder="e.g. Consent"
+            InputProps={{ sx: sharedInputSx }}
+          />
+
+          {/* Quick-select chips */}
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}>
+            {categorySuggestions.map((label) => {
+              const isSelected = editData.category === label;
+              return (
+                <Chip
+                  key={label}
+                  label={label}
+                  size="small"
+                  variant="outlined"
+                  onClick={() =>
+                    setEditData((prev) => ({ ...prev, category: label }))
+                  }
+                  sx={{
+                    fontFamily: "Inter",
+                    fontSize: "0.72rem",
+                    borderColor: isSelected ? "#2563EB" : "#E5E7EB",
+                    color: isSelected ? "#2563EB" : "#6B7280",
+                    backgroundColor: isSelected ? "#EFF6FF" : "transparent",
+                    fontWeight: isSelected ? 600 : 400,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    "&:hover": {
+                      borderColor: "#2563EB",
+                      color: "#2563EB",
+                      backgroundColor: "#EFF6FF",
+                    },
+                    "& .MuiChip-label": { px: 1 },
+                  }}
+                />
+              );
+            })}
+          </Box>
+
+          {/* Persist controls */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 1.5,
+              mt: 1.25,
+            }}
+          >
+            <Typography
+              component="button"
+              onClick={handleSaveCategoryDefault}
+              sx={{
+                fontFamily: "Inter",
+                fontSize: "11.5px",
+                color: "#2563EB",
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                p: 0,
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              + Save as default
+            </Typography>
+            <Typography
+              component="button"
+              onClick={handleResetCategoryDefaults}
+              sx={{
+                fontFamily: "Inter",
+                fontSize: "11.5px",
+                color: "#9CA3AF",
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                p: 0,
+                "&:hover": { textDecoration: "underline", color: "#6B7280" },
+              }}
+            >
+              Reset
+            </Typography>
+          </Box>
+        </SectionContainer>
+      </DialogContent>
+
+      {/* ── Footer ── */}
+      <DialogActions
         sx={{
-          pt: 2,
-          pb: 1,
+          px: 3,
+          py: 2,
+          borderTop: "1px solid #E5E7EB",
+          gap: 1,
         }}
       >
-        <Typography variant="body2" sx={{ mb: 1.5, color: "#616161" }}>
-          Please enter a name and category
-        </Typography>
-
-        {/* Name row */}
-        <Box sx={{ mb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "baseline", mb: 0.5 }}>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: "#333333", mr: 0.5 }}
-            >
-              Name:
-            </Typography>
-            <TextField
-              variant="standard"
-              fullWidth
-              value={editData.name}
-              onChange={(e) =>
-                setEditData((prev) => ({ ...prev, name: e.target.value }))
-              }
-              InputProps={{
-                disableUnderline: false,
-              }}
-              sx={{
-                "& .MuiInputBase-input": {
-                  fontSize: "0.9rem",
-                  py: 0.25,
-                },
-              }}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 1.5,
-            }}
-          >
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 1,
-                  pr: 1,
-                  maxHeight: 140,
-                  overflowY: "auto",
-                }}
-              >
-                {nameSuggestions.map((label) => (
-                  <Chip
-                    key={label}
-                    label={label}
-                    size="small"
-                    onClick={() =>
-                      setEditData((prev) => ({ ...prev, name: label }))
-                    }
-                    sx={{
-                      bgcolor: "#b0b0b0",
-                      color: "#ffffff",
-                      borderRadius: 0.5,
-                      fontSize: "0.7rem",
-                      px: 1,
-                      "& .MuiChip-label": {
-                        px: 1,
-                        py: 0.25,
-                        whiteSpace: "normal",
-                      },
-                    }}
-                  />
-                ))}
-              </Box>
-            </Box>
-            <Box
-              sx={{
-                minWidth: 140,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
-                gap: 1,
-              }}
-            >
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleSaveNameDefault}
-                sx={{
-                  textTransform: "none",
-                  px: 2,
-                  bgcolor: "#3f5f98",
-                  "&:hover": { bgcolor: "#344a7c" },
-                }}
-              >
-                Save to Defaults
-              </Button>
-              <Link
-                component="button"
-                variant="caption"
-                underline="hover"
-                onClick={handleResetNameDefaults}
-                sx={{ color: "#3f5f98" }}
-              >
-                Reset Defaults
-              </Link>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* Category row */}
-        <Box sx={{ mt: 1 }}>
-          <Box sx={{ display: "flex", alignItems: "baseline", mb: 0.5 }}>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: "#333333", mr: 0.5 }}
-            >
-              Category:
-            </Typography>
-            <TextField
-              variant="standard"
-              fullWidth
-              value={editData.category}
-              onChange={(e) =>
-                setEditData((prev) => ({ ...prev, category: e.target.value }))
-              }
-              placeholder="e.g. custom_form"
-              InputProps={{
-                disableUnderline: false,
-              }}
-              sx={{
-                "& .MuiInputBase-input": {
-                  fontSize: "0.9rem",
-                  py: 0.25,
-                },
-              }}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 1.5,
-            }}
-          >
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 1,
-                  pr: 1,
-                  maxHeight: 160,
-                  overflowY: "auto",
-                }}
-              >
-                {categorySuggestions.map((label) => (
-                  <Chip
-                    key={label}
-                    label={label}
-                    size="small"
-                    onClick={() =>
-                      setEditData((prev) => ({ ...prev, category: label }))
-                    }
-                    sx={{
-                      bgcolor: "#b0b0b0",
-                      color: "#ffffff",
-                      borderRadius: 0.5,
-                      fontSize: "0.7rem",
-                      px: 1,
-                      "& .MuiChip-label": {
-                        px: 1,
-                        py: 0.25,
-                        whiteSpace: "normal",
-                      },
-                    }}
-                  />
-                ))}
-              </Box>
-            </Box>
-            <Box
-              sx={{
-                minWidth: 140,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
-                gap: 1,
-              }}
-            >
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleSaveCategoryDefault}
-                sx={{
-                  textTransform: "none",
-                  px: 2,
-                  bgcolor: "#3f5f98",
-                  "&:hover": { bgcolor: "#344a7c" },
-                }}
-              >
-                Save to Defaults
-              </Button>
-              <Link
-                component="button"
-                variant="caption"
-                underline="hover"
-                onClick={handleResetCategoryDefaults}
-                sx={{ color: "#3f5f98" }}
-              >
-                Reset Defaults
-              </Link>
-            </Box>
-          </Box>
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button
           onClick={onClose}
-          size="small"
-          sx={{ textTransform: "none" }}
+          variant="outlined"
+          sx={{
+            textTransform: "none",
+            fontFamily: "Inter",
+            fontWeight: 500,
+            fontSize: "0.875rem",
+            borderColor: "#D1D5DB",
+            color: "#374151",
+            borderRadius: "8px",
+            px: 2.5,
+            "&:hover": {
+              borderColor: "#9CA3AF",
+              backgroundColor: "#F9FAFB",
+            },
+          }}
         >
           Cancel
         </Button>
         <Button
           onClick={handleSave}
           variant="contained"
-          size="small"
           sx={{
             textTransform: "none",
-            bgcolor: "#3f5f98",
-            "&:hover": { bgcolor: "#344a7c" },
+            fontFamily: "Inter",
+            fontWeight: 600,
+            fontSize: "0.875rem",
+            backgroundColor: "#2563EB",
+            borderRadius: "8px",
+            px: 2.5,
+            boxShadow: "none",
+            "&:hover": {
+              backgroundColor: "#1d4ed8",
+              boxShadow: "none",
+            },
           }}
         >
-          Ok
+          Save Changes
         </Button>
       </DialogActions>
     </Dialog>
