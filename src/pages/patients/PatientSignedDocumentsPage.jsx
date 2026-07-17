@@ -257,18 +257,6 @@ const PatientSignedDocumentsPage = () => {
                             color: "#64b5f6",
                           }}
                         />
-                        <Box
-                          sx={{
-                            position: "absolute",
-                            top: -6,
-                            left: -6,
-                            width: 12,
-                            height: 12,
-                            bgcolor: "#ffffff",
-                            border: "1px solid #bdbdbd",
-                            borderRadius: 0.5,
-                          }}
-                        />
                       </Box>
                     </Box>
                     <Typography
@@ -324,18 +312,6 @@ const PatientSignedDocumentsPage = () => {
                             bottom: -6,
                             fontSize: 26,
                             color: "#64b5f6",
-                          }}
-                        />
-                        <Box
-                          sx={{
-                            position: "absolute",
-                            top: -6,
-                            left: -6,
-                            width: 12,
-                            height: 12,
-                            bgcolor: "#ffffff",
-                            border: "1px solid #bdbdbd",
-                            borderRadius: 0.5,
                           }}
                         />
                       </Box>

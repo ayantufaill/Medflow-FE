@@ -268,8 +268,10 @@ const PatientAdditionalDocumentsPage = () => {
     });
   };
 
-  const handleSaveEditDialog = async () => {
-    const { docId, name, category } = editDialog;
+  const handleSaveEditDialog = async (savedData) => {
+    // Use values passed back from the dialog (user's edits live in the
+    // dialog's internal state — reading editDialog here gives stale values).
+    const { docId, name, category } = savedData || {};
     if (!docId) {
       setEditDialog((prev) => ({ ...prev, open: false }));
       return;

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Box, Typography, Button, Chip } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -16,6 +17,34 @@ export default function DocumentHeader({
   onDelete,
   hasNotes,
 }) {
+  const fileUrl = document.fileUrl || document.storagePath || document.documentUrl;
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!fileUrl) return;
+    try {
+      setDownloading(true);
+      // Fetch as blob — this works for cross-origin URLs (S3/CloudFront)
+      // where the `download` attribute on <a> is silently ignored by browsers.
+      const response = await fetch(fileUrl);
+      if (!response.ok) throw new Error('Failed to fetch file');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = objectUrl;
+      link.download = document.documentName || 'document';
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+      // Release the object URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      // Fallback: open in new tab if blob fetch fails
+      window.open(fileUrl, '_blank');
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <Box
       sx={{
@@ -85,14 +114,12 @@ export default function DocumentHeader({
 
       {/* Right — action buttons */}
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {document.storagePath && (
+        {fileUrl && (
           <Button
             variant="contained"
             startIcon={<DownloadIcon />}
-            component="a"
-            href={document.storagePath}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={handleDownload}
+            disabled={downloading}
             sx={{
               textTransform: 'none',
               borderRadius: radius.md,
@@ -106,7 +133,7 @@ export default function DocumentHeader({
               },
             }}
           >
-            Download
+            {downloading ? 'Downloading...' : 'Download'}
           </Button>
         )}
         <Button
