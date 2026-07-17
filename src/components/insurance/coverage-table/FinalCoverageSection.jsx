@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Select, MenuItem } from "@mui/material";
 import { Add as AddIconNew } from "@mui/icons-material";
 import CoverageGroup from './CoverageGroup';
 import { COVERAGE_DATA } from '../utils/insuranceConstants';
+import AddCoverageItemDialog from '../components/AddCoverageItemDialog';
 
 const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
+  const [isAddCoverageOpen, setIsAddCoverageOpen] = useState(false);
+
   const handleDeleteCoverageItem = (itemId) => {
     if (!setCoverageData) return;
     const currentData = { ...COVERAGE_DATA, ...coverageData };
@@ -29,6 +32,7 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
     <Box sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Typography 
+          onClick={() => setIsAddCoverageOpen(true)}
           sx={{ color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}
         >
           <AddIconNew sx={{ fontSize: 16 }} /> Add Coverage
@@ -75,6 +79,24 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
           <CoverageGroup title="Maxillofacial Prosthetics" rows={coverageData?.maxillofacialProsthetics || COVERAGE_DATA.maxillofacialProsthetics} onDeleteItem={handleDeleteCoverageItem} onChangeItem={handleChangeCoverageItem} />
         </Box>
       </Box>
+
+      <AddCoverageItemDialog
+        open={isAddCoverageOpen}
+        onClose={() => setIsAddCoverageOpen(false)}
+        onSave={(newItem) => {
+          if (setCoverageData) {
+             const currentData = { ...COVERAGE_DATA, ...coverageData };
+             const updatedData = { ...currentData };
+             // Default to preventative for now until category selection is added
+             updatedData.preventative = [...(updatedData.preventative || []), { 
+               ...newItem, 
+               description: newItem.procedure || newItem.code || 'Custom Item', 
+               noCoverage: false 
+             }];
+             setCoverageData(updatedData);
+          }
+        }}
+      />
     </Box>
   );
 };

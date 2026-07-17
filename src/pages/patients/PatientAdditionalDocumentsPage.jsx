@@ -335,18 +335,18 @@ const PatientAdditionalDocumentsPage = () => {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 2,
-          bgcolor: COLORS.SURFACE_CARD,
-          border: `1px solid ${COLORS.BORDER}`,
-          borderRadius: radius.lg,
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `0.8px solid ${COLORS.BORDER}`,
           px: 2.5,
           py: 2,
         }}
       >
         <Box>
-          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: COLORS.TEXT_PRIMARY }}>
+          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
             Additional Docs
           </Typography>
-          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
             Check the custom forms and additional documents
           </Typography>
         </Box>

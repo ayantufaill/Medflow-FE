@@ -22,6 +22,7 @@ import { useSnackbar } from "../../contexts/SnackbarContext";
 import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
 import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
+import SectionCard from "../../components/shared/SectionCard";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -65,21 +66,6 @@ const PageContainer = (props) => (
       minHeight: "100%",
       pb: 4,
       position: "relative",
-      ...(props.sx || {}),
-    }}
-  />
-);
-
-const Card = (props) => (
-  <Paper
-    elevation={0}
-    {...props}
-    sx={{
-      p: 3,
-      mb: 2,
-      borderRadius: 1,
-      border: "1px solid #e0e0e0",
-      bgcolor: "#ffffff",
       ...(props.sx || {}),
     }}
   />
@@ -174,25 +160,20 @@ const PatientSignedDocumentsPage = () => {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 2,
-          bgcolor: COLORS.SURFACE_CARD,
-          border: `1px solid ${COLORS.BORDER}`,
-          borderRadius: radius.lg,
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `0.8px solid ${COLORS.BORDER}`,
           px: 2.5,
           py: 2,
         }}
       >
-        <Box sx={{ fontFamily: "Inter", display: "flex", fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: COLORS.TEXT_PRIMARY, alignItems: "center", gap: 2 }}>
-          <Box>
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 700, color: COLORS.TEXT_PRIMARY, fontSize: "1.05rem" }}
-            >
-              Signed Documents
-            </Typography>
-            <Typography variant="body2" sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
-              {getPatientName()}
-            </Typography>
-          </Box>
+        <Box>
+          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
+            Signed Documents
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
+            {getPatientName()}
+          </Typography>
         </Box>
 
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
@@ -222,11 +203,7 @@ const PatientSignedDocumentsPage = () => {
       ) : (
         <>
           {/* HIPAA section always visible, even if empty */}
-          <Card>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              HIPAA Document:
-            </Typography>
-
+          <SectionCard icon={DocIcon} title="HIPAA Document">
             {hipaaDocs.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 No HIPAA documents for this patient.
@@ -276,14 +253,10 @@ const PatientSignedDocumentsPage = () => {
                 ))}
               </Box>
             )}
-          </Card>
+          </SectionCard>
 
           {/* Signed forms (non-HIPAA) */}
-          <Card>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Signed Forms:
-            </Typography>
-
+          <SectionCard icon={ChecklistIcon} title="Signed Forms">
             {signedDocs.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 No non-HIPAA signed documents for this patient.
@@ -333,7 +306,7 @@ const PatientSignedDocumentsPage = () => {
                 ))}
               </Box>
             )}
-          </Card>
+          </SectionCard>
         </>
       )}
     </PageContainer>
