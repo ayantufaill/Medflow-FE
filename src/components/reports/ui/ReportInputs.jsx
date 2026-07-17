@@ -1,7 +1,5 @@
 import React from 'react';
 import { Select, MenuItem, Checkbox, FormControlLabel, Typography, TextField, InputAdornment, Box } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import SearchIcon from '@mui/icons-material/Search';
 
 export const ReportSelect = ({ label, prefix, options = [], value, defaultValue, onChange, width, sx }) => {
@@ -34,13 +32,24 @@ export const ReportSelect = ({ label, prefix, options = [], value, defaultValue,
         },
         ...sx
       }}
+      renderValue={(selected) => {
+        const selectedOpt = options.find(opt => {
+          const optVal = typeof opt === 'object' ? opt.value : opt;
+          return optVal === selected;
+        });
+        
+        let displayLabel = selected;
+        if (selectedOpt) {
+          displayLabel = typeof selectedOpt === 'object' ? selectedOpt.label : selectedOpt;
+        }
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span>{displayLabel}</span>
+          </Box>
+        );
+      }}
     >
-      {(label || prefix) && (
-        <MenuItem value={defaultValue || ''} disabled={!defaultValue}>
-          {prefix && <span style={{ color: '#64748b', marginRight: '4px' }}>{prefix}</span>}
-          {label}
-        </MenuItem>
-      )}
       {options.map((opt, idx) => {
         const optValue = typeof opt === 'object' ? opt.value : opt;
         const optLabel = typeof opt === 'object' ? opt.label : opt;
@@ -56,8 +65,6 @@ export const ReportCheckbox = ({ label, checked, defaultChecked, onChange, sx })
       control={
         <Checkbox 
           size="small" 
-          icon={<RadioButtonUncheckedIcon sx={{ color: '#cbd5e1' }} />} 
-          checkedIcon={<CheckCircleIcon sx={{ color: '#2563eb' }} />} 
           checked={checked}
           defaultChecked={defaultChecked}
           onChange={onChange}

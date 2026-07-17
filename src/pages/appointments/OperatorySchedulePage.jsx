@@ -341,11 +341,11 @@ const OperatorySchedulePage = () => {
   const [editingAppointment, setEditingAppointment] = useState(null);
 
   useEffect(() => {
-    const handleApptClick = (e) => {
+    const handleApptDoubleClick = (e) => {
       setEditingAppointment(e.detail);
       setDetailModalOpen(true);
     };
-    window.addEventListener('appointment-card-clicked', handleApptClick);
+    window.addEventListener('appointment-card-double-clicked', handleApptDoubleClick);
 
     const handleBlockClick = (e) => {
       const { block } = e.detail;
@@ -358,7 +358,7 @@ const OperatorySchedulePage = () => {
     window.addEventListener('block-card-clicked', handleBlockClick);
 
     return () => {
-      window.removeEventListener('appointment-card-clicked', handleApptClick);
+      window.removeEventListener('appointment-card-double-clicked', handleApptDoubleClick);
       window.removeEventListener('block-card-clicked', handleBlockClick);
     };
   }, []);

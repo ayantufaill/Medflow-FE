@@ -40,23 +40,28 @@ const AgingReport = () => {
   const [selectedPatientForNotes, setSelectedPatientForNotes] = useState(null);
   const [showGenerateStatements, setShowGenerateStatements] = useState(false);
   const [showViewGeneratedStatements, setShowViewGeneratedStatements] = useState(false);
-  const [showAccountNotes, setShowAccountNotes] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hidePatientNames, setHidePatientNames] = useState(false);
   const [selectedNames, setSelectedNames] = useState([]);
-  const [flagFilter, setFlagFilter] = useState('pts');
-  const [showFlags, setShowFlags] = useState(true);
-  
-  const [providerFilter, setProviderFilter] = useState('all');
-  const [patientStatusFilter, setPatientStatusFilter] = useState('active');
-  const [claimsFilter, setClaimsFilter] = useState('both');
-  
-  const [balanceFilter, setBalanceFilter] = useState('any');
-  const [owingFilter, setOwingFilter] = useState('any');
-  const [billingDateFilter, setBillingDateFilter] = useState('any');
-  const [arRangeFilter, setArRangeFilter] = useState('any');
-  const [sortBy, setSortBy] = useState('high-low');
-  const [showPaymentPlan, setShowPaymentPlan] = useState(true);
+  const [appliedFilters, setAppliedFilters] = useState({
+    balance: 'any',
+    billingDate: 'any',
+    claims: 'with_or_without',
+    patients: 'all',
+    provider: 'all',
+    sortReport: 'high_to_low',
+    owing: 'any',
+    arRange: 'any',
+    flags: 'with_or_without',
+    showFlags: true,
+    paymentPlanOwing: true,
+    resetOnPatientPayment: 'dont_reset',
+    resetOnInsurancePayment: 'dont_reset',
+  });
+
+  const handleApplyFilters = (newFilters) => {
+    setAppliedFilters(newFilters);
+  };
   
   const [batches, setBatches] = useState([
     {
@@ -232,88 +237,17 @@ const AgingReport = () => {
     });
   }, [reportData]);
 
-  const filteredReportData = useMemo(() => {
-    let result = enrichedReportData.filter(row => {
-      // Flag Filter
-      if (flagFilter === 'with_flags' && (!row.flags || row.flags.length === 0)) return false;
-      if (flagFilter === 'without_flags' && (row.flags && row.flags.length > 0)) return false;
-      
-      // Provider Filter
-      if (providerFilter !== 'all' && row.providerId !== providerFilter) return false;
-      
-      // Patient Status Filter
-      if (patientStatusFilter === 'active' && row.isActive === false) return false;
-      if (patientStatusFilter === 'inactive' && row.isActive !== false) return false;
-      
-      // Claims Filter
-      if (claimsFilter === 'with_claims' && !row.hasOpenClaims) return false;
-      if (claimsFilter === 'without_claims' && row.hasOpenClaims) return false;
-      
-      // Balance Filter
-      if (balanceFilter === 'positive' && (row.total || 0) <= 0) return false;
-      if (balanceFilter === 'negative' && (row.total || 0) >= 0) return false;
-      
-      // Owing Type Filter
-      if (owingFilter === 'patient') {
-        const ptTotal = Object.values(row.buckets || {}).reduce((sum, b) => sum + (b.pt || 0), 0);
-        if (ptTotal <= 0) return false;
-      }
-      if (owingFilter === 'insurance') {
-        const insTotal = Object.values(row.buckets || {}).reduce((sum, b) => sum + (b.ins || 0), 0);
-        if (insTotal <= 0) return false;
-      }
-      
-      // Billing Date Filter
-      if (billingDateFilter !== 'any' && row.lastBilled) {
-        const billedDate = new Date(row.lastBilled);
-        const today = new Date();
-        const diffDays = Math.floor((today - billedDate) / (1000 * 60 * 60 * 24));
-        if (billingDateFilter === '30' && diffDays > 30) return false;
-        if (billingDateFilter === '60' && diffDays > 60) return false;
-        if (billingDateFilter === '90' && diffDays <= 90) return false;
-      }
-      
-      // AR Range Filter
-      if (arRangeFilter !== 'any' && row.buckets) {
-        if (arRangeFilter === '0-30' && (row.buckets['0 - 30 days']?.total || 0) <= 0) return false;
-        if (arRangeFilter === '31-60' && (row.buckets['31 - 60 days']?.total || 0) <= 0) return false;
-        if (arRangeFilter === '61-90' && (row.buckets['61 - 90 days']?.total || 0) <= 0) return false;
-        if (arRangeFilter === '>90') {
-          const over90 = ['91 - 120 days', '121 - 150 days', '151 - 180 days', '> 180 day']
-            .reduce((sum, b) => sum + (row.buckets[b]?.total || 0), 0);
-          if (over90 <= 0) return false;
-        }
-      }
-      
-      return true;
-    });
-
-    // Sorting
-    result.sort((a, b) => {
-      if (sortBy === 'high-low') return (b.total || 0) - (a.total || 0);
-      if (sortBy === 'patient-name') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'last-billed') {
-        const da = a.lastBilled ? new Date(a.lastBilled).getTime() : 0;
-        const db = b.lastBilled ? new Date(b.lastBilled).getTime() : 0;
-        return db - da; // newest first
-      }
-      if (sortBy === 'flags') {
-        const aFlags = a.flags && a.flags.length > 0 ? 1 : 0;
-        const bFlags = b.flags && b.flags.length > 0 ? 1 : 0;
-        return bFlags - aFlags;
-      }
-      return 0;
-    });
-
-    return result;
-  }, [enrichedReportData, flagFilter, providerFilter, patientStatusFilter, claimsFilter, balanceFilter, owingFilter, billingDateFilter, arRangeFilter, sortBy]);
+  const filteredReportData = enrichedReportData;
 
   const [archivedDate, setArchivedDate] = useState('');
   const [archivedData, setArchivedData] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchArAgingReport());
+    dispatch(fetchArAgingReport(appliedFilters));
+  }, [dispatch, appliedFilters]);
+
+  useEffect(() => {
     dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
 
@@ -347,7 +281,7 @@ const AgingReport = () => {
       ...agingBuckets,
       'Total',
       'Total owings',
-      showPaymentPlan ? 'Payment Plan Owing' : null,
+      appliedFilters.paymentPlanOwing ? 'Payment Plan Owing' : null,
       'Credit',
       'Last Billed On'
     ].filter(Boolean);
@@ -355,7 +289,7 @@ const AgingReport = () => {
     const rows = filteredReportData.map(row => {
       const dataRow = [
         '', // Flags
-        !hidePatientNames ? row.name : null,
+        !hidePatientNames ? row.name || 'Unknown Patient' : null,
         ...agingBuckets.map(bucket => {
           const pt = row.buckets?.[bucket]?.pt || 0;
           const ins = row.buckets?.[bucket]?.ins || 0;
@@ -363,16 +297,16 @@ const AgingReport = () => {
         }),
         `$${(row.total || 0).toFixed(2)}`,
         `$${(row.totalOwings || 0).toFixed(2)}`,
-        showPaymentPlan ? `$${(row.paymentPlan || 0).toFixed(2)}` : null,
+        appliedFilters.paymentPlanOwing ? `$${(row.paymentPlan || 0).toFixed(2)}` : null,
         `$${(row.credit || 0).toFixed(2)}`,
         row.lastBilled || ''
-      ].filter(val => val !== null);
+      ].filter(val => val !== null && val !== undefined);
       return dataRow;
     });
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -388,9 +322,12 @@ const AgingReport = () => {
 
   const handlePrint = () => {
     const tableEl = document.getElementById('aging-report-table');
-    if (!tableEl) return;
+    if (!tableEl) {
+      alert("Table not found to print.");
+      return;
+    }
     const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Aging Report Table Only</title>');
+    printWindow.document.write('<html><head><title>Aging Report</title>');
     printWindow.document.write('<style>');
     printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
@@ -402,8 +339,10 @@ const AgingReport = () => {
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   const agingBuckets = useMemo(() => [
@@ -457,12 +396,19 @@ const AgingReport = () => {
   // dummyData is replaced by reportData from API
 
   return (
-    <Box sx={{ p: 0 }}>
-      <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#1e293b' }}>
+    <Box sx={{ 
+      p: 0,
+      '@media print': {
+        '& .hide-on-print': {
+          display: 'none !important'
+        }
+      }
+    }}>
+      <Typography variant="h6" className="hide-on-print" sx={{ mb: 1, fontWeight: 700, color: '#1e293b' }}>
         Aging Report
       </Typography>
 
-      <Box sx={{ borderBottom: 1, borderColor: '#f1f5f9', mb: 2 }}>
+      <Box className="hide-on-print" sx={{ borderBottom: 1, borderColor: '#f1f5f9', mb: 2 }}>
         <Tabs 
           value={tabValue} 
           onChange={handleTabChange} 
@@ -501,121 +447,49 @@ const AgingReport = () => {
 
       {tabValue === 0 ? (
         <>
-          <AgingReportFilters />
+          <Box className="hide-on-print">
+            <AgingReportFilters onApplyFilters={handleApplyFilters} />
+          </Box>
           
-          <AgingReportActions 
-            hidePatientNames={hidePatientNames} 
-            setHidePatientNames={setHidePatientNames} 
-          />
+          <Box className="hide-on-print">
+            <AgingReportActions 
+              hidePatientNames={hidePatientNames} 
+              setHidePatientNames={setHidePatientNames} 
+              onExportCsv={handleExportCSV}
+              onPrint={handlePrint}
+            />
+          </Box>
 
           <AgingReportTable 
             loading={loading}
-            reportData={reportData}
+            reportData={filteredReportData}
             hidePatientNames={hidePatientNames}
             agingBuckets={agingBuckets}
             totals={totals}
-            setShowAccountNotes={setShowAccountNotes}
+            showFlags={appliedFilters.showFlags}
+            showPaymentPlan={appliedFilters.paymentPlanOwing}
+            setSelectedPatientForNotes={setSelectedPatientForNotes}
+            selectedNames={selectedNames}
+            setSelectedNames={setSelectedNames}
           />
-
-          {/* Summary Footer */}
-          <Box sx={{ mt: 2, borderTop: '2px solid #e0e0e0', pt: 2 }}>
-            <Table size="small">
-              <TableBody>
-                <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-                  <TableCell sx={{ width: '25%', fontWeight: 600 }}>Total Patients Balances</TableCell>
-                  {agingBuckets.map((bucket) => (
-                    <TableCell key={bucket} align="right">
-                      {bucket}
-                    </TableCell>
-                  ))}
-                  <TableCell align="right">Total</TableCell>
-                  <TableCell colSpan={5} />
-                </TableRow>
-
-                {/* Footer Row 2: Total Outstanding Balances */}
-                <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
-                    Total Outstanding Balances
-                  </TableCell>
-                  {agingBuckets.map((bucket) => (
-                    <TableCell key={bucket} align="right">
-                      ${totals.buckets[bucket].total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                  ))}
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    ${totals.totalOutstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell colSpan={5} />
-                </TableRow>
-
-                {/* Footer Row 3: Total Patients Balances */}
-                <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
-                    Total Patients Balances
-                  </TableCell>
-                  {agingBuckets.map((bucket) => (
-                    <TableCell key={bucket} align="right">
-                      ${totals.buckets[bucket].pt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                  ))}
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    ${totals.totalPt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell colSpan={5} />
-                </TableRow>
-
-                {/* Footer Row 4: Total Insurance Balances */}
-                <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
-                    Total Insurance Balances
-                  </TableCell>
-                  {agingBuckets.map((bucket) => (
-                    <TableCell key={bucket} align="right">
-                      ${totals.buckets[bucket].ins.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                  ))}
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    ${totals.totalIns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell colSpan={5} />
-                </TableRow>
-
-                {/* Footer Row 5: Total Account Credit */}
-                <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-                  <TableCell colSpan={(showFlags ? 1 : 0) + (hidePatientNames ? 1 : 2)} sx={{ color: '#555', fontWeight: 600 }}>
-                    Total Account Credit
-                  </TableCell>
-                  {agingBuckets.map((bucket) => (
-                    <TableCell key={bucket} />
-                  ))}
-                  <TableCell align="right" />
-                  <TableCell colSpan={2} />
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    ${totals.totalCredit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell colSpan={2} />
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Box>
         </>
       ) : (
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600 }}>Select report by date:</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #ccc', pb: 0.5, width: 200 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Select report by date:</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e2e8f0', pb: 0.5, width: 200 }}>
               <input 
                 type="date" 
                 value={archivedDate} 
                 onChange={handleDateSelect} 
-                style={{ border: 'none', outline: 'none', width: '100%', color: '#333', fontSize: '0.875rem' }} 
+                style={{ border: 'none', outline: 'none', width: '100%', color: '#1e293b', fontSize: '0.875rem', backgroundColor: 'transparent' }} 
               />
             </Box>
             {archivedDate && (
               <Button 
                 variant="outlined" 
                 size="small" 
-                sx={{ textTransform: 'none', py: 0, height: 26 }}
+                sx={{ textTransform: 'none', py: 0, height: 26, borderColor: '#e2e8f0', color: '#64748b', '&:hover': { bgcolor: '#f8fafc' } }}
                 onClick={() => {
                   setArchivedDate('');
                   setArchivedData([]);
@@ -627,11 +501,11 @@ const AgingReport = () => {
           </Box>
 
           {!archivedDate ? (
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ '& th': { fontSize: '0.8rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1.25 } }}>
-                    <TableCell>Name</TableCell>
+                  <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f8fafc', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
+                    <TableCell>Report Date / Name</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -658,13 +532,13 @@ const AgingReport = () => {
                       key={idx} 
                       hover
                       sx={{ 
-                        '& td': { py: 1.25, fontSize: '0.825rem' },
+                        '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
                         cursor: 'pointer',
-                        backgroundColor: idx % 2 === 1 ? '#fbfbfb' : '#fff'
+                        backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff'
                       }}
                       onClick={() => handleDateSelect({ target: { value: report.date } })}
                     >
-                      <TableCell sx={{ color: '#4a70b0', fontWeight: 500 }}>
+                      <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>
                         {report.name}
                       </TableCell>
                     </TableRow>
@@ -674,13 +548,13 @@ const AgingReport = () => {
             </TableContainer>
           ) : (
             <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: '#1e293b' }}>
                 Viewing report for date: {archivedDate}
               </Typography>
-              <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                 <Table size="small" stickyHeader>
                   <TableHead>
-                    <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1 } }}>
+                    <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f8fafc', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
                       <TableCell>Patient Name</TableCell>
                       <TableCell align="right">Total Owings</TableCell>
                     </TableRow>
@@ -699,16 +573,13 @@ const AgingReport = () => {
                         </TableCell>
                       </TableRow>
                     ) : archivedData.map((row, idx) => (
-                      <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 0.5 } }}>
+                      <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 16, height: 16, bgcolor: '#1976d2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>👤</Typography>
-                            </Box>
-                            <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer' }}>{row.name}</Typography>
+                            <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', color: '#3b82f6', fontSize: '0.8rem' }}>{row.name}</Typography>
                           </Box>
                         </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600 }}>${row.totalOwings?.toFixed(2)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.totalOwings?.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -719,40 +590,10 @@ const AgingReport = () => {
         </Box>
       )}
 
-      {selectedPatientForNotes && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setSelectedPatientForNotes(null)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '800px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '8px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AccountNotesDialog 
-              patient={selectedPatientForNotes}
-              onClose={() => setSelectedPatientForNotes(null)}
-            />
-          </Box>
-        </Box>
-      )}
+      <AccountNotesDialog 
+        patient={selectedPatientForNotes}
+        onClose={() => setSelectedPatientForNotes(null)}
+      />
 
       {showGenerateStatements && (
         <Box 
@@ -822,12 +663,6 @@ const AgingReport = () => {
             />
           </Box>
         </Box>
-      )}
-      
-      {showAccountNotes && (
-        <AccountNotesDialog 
-          onClose={() => setShowAccountNotes(false)} 
-        />
       )}
     </Box>
   );
