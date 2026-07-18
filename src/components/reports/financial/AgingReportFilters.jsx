@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProviders, selectProviderList } from '../../../../store/slices/providerSlice';
-import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportDivider } from '../../../../components/reports/ui';
+import { fetchProviders, selectProviderList } from '../../../store/slices/providerSlice';
+import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportDivider } from '../ui';
 import {
   BALANCE_OPTIONS,
   OWING_OPTIONS,
@@ -15,7 +15,7 @@ import {
   SORT_REPORT_OPTIONS,
   ON_PATIENT_PAYMENT_OPTIONS,
   ON_INSURANCE_PAYMENT_OPTIONS
-} from '../constants/reportFilters';
+} from '../../../pages/admin/reports/constants/reportFilters';
 
 const AgingReportFilters = ({ onApplyFilters }) => {
   const dispatch = useDispatch();
@@ -80,7 +80,7 @@ const AgingReportFilters = ({ onApplyFilters }) => {
       <ReportSelect label="CLAIMS" options={CLAIMS_OPTIONS} value={draftFilters.claims} onChange={(e) => handleFilterChange('claims', e.target.value)} />
       <ReportSelect label="PATIENTS" options={PATIENTS_OPTIONS} value={draftFilters.patients} onChange={(e) => handleFilterChange('patients', e.target.value)} />
       <ReportSelect label="PROVIDER" options={dynamicProviderOptions} value={draftFilters.provider} onChange={(e) => handleFilterChange('provider', e.target.value)} />
-      <ReportSelect label="SORT REPORT" options={SORT_REPORT_OPTIONS} value={draftFilters.sortReport} onChange={(e) => handleFilterChange('sortReport', e.target.value)} />
+      <ReportSelect label="SORT REPORT BY" options={SORT_REPORT_OPTIONS} value={draftFilters.sortReport} onChange={(e) => handleFilterChange('sortReport', e.target.value)} />
     </>
   );
 
@@ -97,21 +97,20 @@ const AgingReportFilters = ({ onApplyFilters }) => {
       <ReportCheckbox label="Show Flags" checked={draftFilters.showFlags} onChange={(e) => handleFilterChange('showFlags', e.target.checked)} />
       <ReportCheckbox label="Payment Plan Owing" checked={draftFilters.paymentPlanOwing} onChange={(e) => handleFilterChange('paymentPlanOwing', e.target.checked)} />
       <ReportDivider />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>
-          RESET AGE ON 
-        </Typography>
-        <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8', border: '1px solid #cbd5e1', borderRadius: '50%', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>i</Typography>
-      </Box>
-      
+      <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', ml: 1 }}>
+                  Reset age on 
+                  <Box component="span" sx={{ ml: 1, color: '#3CA2E0', cursor: 'help' }}>ⓘ</Box>
+      </Typography>
+      <Typography />
+
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Pt</Typography>
-        <ReportSelect options={ON_PATIENT_PAYMENT_OPTIONS} value={draftFilters.resetOnPatientPayment} onChange={(e) => handleFilterChange('resetOnPatientPayment', e.target.value)} sx={{ height: 32, borderRadius: '20px' }} width="120px" />
+        <ReportSelect options={ON_PATIENT_PAYMENT_OPTIONS} value={draftFilters.resetOnPatientPayment} onChange={(e) => handleFilterChange('resetOnPatientPayment', e.target.value)} width="120px" />
       </Box>
       
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Ins</Typography>
-        <ReportSelect options={ON_INSURANCE_PAYMENT_OPTIONS} value={draftFilters.resetOnInsurancePayment} onChange={(e) => handleFilterChange('resetOnInsurancePayment', e.target.value)} sx={{ height: 32, borderRadius: '20px' }} width="120px" />
+        <ReportSelect options={ON_INSURANCE_PAYMENT_OPTIONS} value={draftFilters.resetOnInsurancePayment} onChange={(e) => handleFilterChange('resetOnInsurancePayment', e.target.value)} width="120px" />
       </Box>
     </>
   );

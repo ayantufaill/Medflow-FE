@@ -26,7 +26,7 @@ const AgingReportActions = ({ hidePatientNames, setHidePatientNames, onExportCsv
           } 
           label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b' }}>Hide Patient Names</Typography>} 
         />
-        <Button onClick={onExportCsv} variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#3b82f6', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600 }}>
+        <Button onClick={onExportCsv} variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' } }}>
           Export as CSV
         </Button>
         <Button onClick={onPrint} variant="outlined" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600 }}>

@@ -762,19 +762,12 @@ export const fetchArAgingReport = createAsyncThunk(
 
 export const fetchPatientAgingReport = createAsyncThunk(
   'billing/fetchPatientAgingReport',
-  async (_, { rejectWithValue }) => {
+  async (filters, { rejectWithValue }) => {
     try {
-      const data = await reportingService.getFinancialReport('patient-aging');
+      const data = await reportingService.getFinancialReport('patient-aging', filters);
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
-    }
-  },
-  {
-    condition: (_, { getState }) => {
-      const { billing } = getState();
-      if (billing.patientAgingLoading || billing.patientAging) return false;
-      return true;
     }
   }
 );

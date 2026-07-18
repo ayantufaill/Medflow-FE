@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
-import { Box, Typography, Table, TableBody, TableCell, TableRow, Button } from '@mui/material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox } from '../../../../components/reports/ui';
-import PatientAgingReportTable from './PatientAgingReportTable';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPatientAgingReport, selectPatientAging, selectPatientAgingLoading } from '../../../../store/slices/billingSlice';
+import { reportingService } from '../../../../services/reporting.service';
+import { Box, Typography, Table, TableBody, TableCell, TableRow } from '@mui/material';
+import { ReportFilterBar, ReportSelect, ReportCheckbox } from '../../../../components/reports/ui';
+import {
+  AR_RANGE_OPTIONS,
+  FLAGS_OPTIONS,
+  SORT_REPORT_OPTIONS,
+  ON_PATIENT_PAYMENT_OPTIONS,
+  ON_INSURANCE_PAYMENT_OPTIONS
+} from '../constants/reportFilters';
+import PatientAgingReportTable from '../../../../components/reports/financial/PatientAgingReportTable';
+import AgingReportFilters from '../../../../components/reports/financial/AgingReportFilters';
+import AgingReportActions from '../../../../components/reports/financial/AgingReportActions';
 
 const PatientAgingReport = () => {
   const [hidePatientNames, setHidePatientNames] = useState(false);
 
-  const agingBuckets = ([
+  const agingBuckets = [
     '0 - 30 days',
     '31 - 60 days',
     '61 - 90 days',
@@ -14,168 +26,216 @@ const PatientAgingReport = () => {
     '121 - 150 days',
     '151 - 180 days',
     '> 180 day',
-  ], []);
+  ];
 
-  const totals = useMemo(() => {
-    const sums = {
-      buckets: {},
-      totalOutstanding: 0,
-      totalPt: 0,
-      totalIns: 0,
-      totalCredit: 0
+  const dispatch = useDispatch();
+  const patientAging = useSelector(selectPatientAging);
+  const loading = useSelector(selectPatientAgingLoading);
+
+  const [draftFilters, setDraftFilters] = useState({
+    arRange: AR_RANGE_OPTIONS[0].value,
+    flags: FLAGS_OPTIONS[0].value,
+    sortReport: SORT_REPORT_OPTIONS[0].value,
+    showFlags: true,
+    paymentPlanOwing: true,
+    resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
+    resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value
+  });
+
+  const [appliedFilters, setAppliedFilters] = useState({ ...draftFilters });
+
+  useEffect(() => {
+    dispatch(fetchPatientAgingReport(appliedFilters));
+  }, [dispatch, appliedFilters]);
+
+  const handleFilterChange = (key, value) => {
+    setDraftFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedFilters({ ...draftFilters });
+  };
+
+  const handleClearAll = () => {
+    const defaultFilters = {
+      arRange: AR_RANGE_OPTIONS[0].value,
+      flags: FLAGS_OPTIONS[0].value,
+      sortReport: SORT_REPORT_OPTIONS[0].value,
+      showFlags: true,
+      paymentPlanOwing: true,
+      resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
+      resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value
     };
-    
-    agingBuckets.forEach(b => {
-      sums.buckets[b] = { total: 0, pt: 0, ins: 0 };
+    setDraftFilters(defaultFilters);
+    setAppliedFilters(defaultFilters);
+  };
+
+  const filteredReportData = patientAging || [];
+
+  const { totals, netOutstandingBalance } = useMemo(() => {
+    const bucketsTotals = {};
+    agingBuckets.forEach(bucket => {
+      bucketsTotals[bucket] = { pt: 0, ins: 0, total: 0 };
     });
+    
+    let totalOutstanding = 0;
+    let totalPt = 0;
+    let totalIns = 0;
+    let totalCredit = 0;
 
     filteredReportData.forEach(row => {
-      let rowPtTotal = 0;
-      let rowInsTotal = 0;
+      totalOutstanding += row.totalOwings || 0;
+      totalCredit += row.credit || 0;
       
-      agingBuckets.forEach(b => {
-        const bData = row.buckets?.[b];
-        if (bData) {
-          const ptVal = bData.pt || 0;
-          const insVal = bData.ins || 0;
-          sums.buckets[b].pt += ptVal;
-          sums.buckets[b].ins += insVal;
-          sums.buckets[b].total += (ptVal + insVal);
-          
-          rowPtTotal += ptVal;
-          rowInsTotal += insVal;
+      agingBuckets.forEach(bucket => {
+        if (row.buckets && row.buckets[bucket]) {
+          const pt = row.buckets[bucket].pt || 0;
+          const ins = row.buckets[bucket].ins || 0;
+          bucketsTotals[bucket].pt += pt;
+          bucketsTotals[bucket].ins += ins;
+          bucketsTotals[bucket].total += pt + ins;
+          totalPt += pt;
+          totalIns += ins;
         }
       });
-      sums.totalPt += rowPtTotal;
-      sums.totalIns += rowInsTotal;
-      sums.totalOutstanding += (rowPtTotal + rowInsTotal);
-      sums.totalCredit += (row.credit || 0);
     });
-    return sums;
+
+    return {
+      totals: {
+        buckets: bucketsTotals,
+        totalOutstanding,
+        totalPt,
+        totalIns,
+        totalCredit
+      },
+      netOutstandingBalance: Math.max(0, totalOutstanding - totalCredit)
+    };
   }, [filteredReportData, agingBuckets]);
 
-  const netOutstandingBalance = useMemo(() => {
-    return Math.max(0, totals.totalOutstanding - totals.totalCredit);
-  }, [totals]);
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = async () => {
+    const headers = [
+      appliedFilters.showFlags ? 'Flags' : null,
+      !hidePatientNames ? 'Patient Name' : null,
+      ...agingBuckets,
+      'Total',
+      'Total owings',
+      appliedFilters.paymentPlanOwing ? 'Payment Plan Owing' : null,
+      'Credit',
+      'Last Billed On'
+    ].filter(Boolean);
+
+    const rows = filteredReportData.map(row => {
+      const dataRow = [
+        appliedFilters.showFlags ? '' : null, // Flags
+        !hidePatientNames ? row.name || 'Unknown Patient' : null,
+        ...agingBuckets.map(bucket => {
+          const pt = row.buckets?.[bucket]?.pt || 0;
+          return `$${pt.toFixed(2)}`;
+        }),
+        `$${(row.total || 0).toFixed(2)}`,
+        `$${(row.totalOwings || 0).toFixed(2)}`,
+        appliedFilters.paymentPlanOwing ? `$${(row.paymentPlan || 0).toFixed(2)}` : null,
+        `$${(row.credit || 0).toFixed(2)}`,
+        row.lastBilled || ''
+      ].filter(val => val !== null && val !== undefined);
+      return dataRow;
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Patient_Aging_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Save snapshot to backend archive
+    try {
+      await reportingService.archiveReport('patient-aging', filteredReportData);
+    } catch (err) {
+      console.error('Failed to archive patient aging report:', err);
+    }
+  };
 
   const topFilters = (
     <>
-      <ReportSelect defaultValue="any" options={[{ value: 'any', label: 'Any AR Range' }]} width="140px" />
-      <ReportSelect defaultValue="pts" options={[{ value: 'pts', label: 'Pts With Or Without Flags' }]} width="180px" />
-      <ReportCheckbox label="Show Flags in Report" defaultChecked />
-      <ReportSelect label="High to Low Owings" prefix="Sort Report By" defaultValue="high-low" options={[{ value: 'high-low', label: 'High to Low Owings' }]} width="180px" />
-      <ReportCheckbox label="Show Payment Plan Owing" defaultChecked />
+      <ReportSelect label="AR RANGE" value={draftFilters.arRange} onChange={(e) => handleFilterChange('arRange', e.target.value)} options={AR_RANGE_OPTIONS} width="140px" />
+      <ReportSelect label="PTS FLAGS" value={draftFilters.flags} onChange={(e) => handleFilterChange('flags', e.target.value)} options={FLAGS_OPTIONS} width="180px" />
+      <ReportSelect label="SORT REPORT BY" value={draftFilters.sortReport} onChange={(e) => handleFilterChange('sortReport', e.target.value)} options={SORT_REPORT_OPTIONS} width="180px" />
     </>
   );
 
   const bottomFilters = (
     <>
-      <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>
-        Reset Invoice outstanding balance age to 0 days: 
-        <Box component="span" sx={{ ml: 1, color: '#3CA2E0', cursor: 'help' }}>ⓘ</Box>
+      <ReportCheckbox label="Show Flags in Report" checked={draftFilters.showFlags} onChange={(e) => handleFilterChange('showFlags', e.target.checked)} />
+      <ReportCheckbox label="Show Payment Plan Owing" checked={draftFilters.paymentPlanOwing} onChange={(e) => handleFilterChange('paymentPlanOwing', e.target.checked)} />
+      <Box sx={{ borderLeft: '1px solid #e2e8f0', height: 24, mx: 1 }} />
+      <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>
+        RESET AGE ON 
+        <Box component="span" sx={{ ml: 0.5, color: '#94a3b8', border: '1px solid #cbd5e1', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', verticalAlign: 'middle' }}>i</Box>
       </Typography>
-      <ReportSelect label="Don't reset invoice age" prefix="On Patient Payment:" defaultValue="dont" options={[{ value: 'dont', label: "Don't reset invoice age" }]} width="200px" />
       
-      <Box sx={{ width: '20px' }} />
-      <ReportCheckbox 
-        label="Hide Patient Names" 
-        checked={hidePatientNames}
-        onChange={(e) => setHidePatientNames(e.target.checked)}
-      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Pt</Typography>
+        <ReportSelect value={draftFilters.resetOnPatientPayment} onChange={(e) => handleFilterChange('resetOnPatientPayment', e.target.value)} options={ON_PATIENT_PAYMENT_OPTIONS} width="120px" />
+      </Box>
     </>
   );
 
-  const bottomRowLeftActions = (
-    <Box sx={{ display: 'flex', gap: 1 }}>
-      <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#3CA2E0', '&:hover': { bgcolor: '#2d84bb' } }}>Generate Batch Statement</Button>
-      <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#00BBAB', '&:hover': { bgcolor: '#009b8e' } }}>View generated statements</Button>
-    </Box>
-  );
-
   return (
-    <ReportLayout title="Patient Aging Report">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        bottomRowFilters={bottomFilters}
-        bottomRowLeftActions={bottomRowLeftActions}
-        onApplyFilters={() => console.log('Apply Filters')}
-        onCreateTemplate={() => console.log('Create Template')}
-        onExportCsv={() => alert('Exporting as CSV...')}
-        onPrint={() => window.print()}
-      />
+    <Box sx={{ 
+      p: 0,
+      '@media print': {
+        '& .hide-on-print': {
+          display: 'none !important'
+        }
+      }
+    }}>
+      <Typography variant="h6" className="hide-on-print" sx={{ mb: 2, fontWeight: 700, color: '#1e293b' }}>
+        Patient Aging Report
+      </Typography>
+
+      <Box className="hide-on-print" sx={{ mb: 2 }}>
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          bottomRowFilters={bottomFilters}
+          onApplyFilters={handleApplyFilters}
+          onCreateTemplate={() => console.log('Create Template')}
+          onClearAll={handleClearAll}
+        />
+      </Box>
+
+      <Box className="hide-on-print">
+        <AgingReportActions 
+          hidePatientNames={hidePatientNames} 
+          setHidePatientNames={setHidePatientNames} 
+          onExportCsv={handleExportCSV}
+          onPrint={handlePrint}
+        />
+      </Box>
 
       <PatientAgingReportTable 
-        reportData={dummyData}
+        loading={loading}
+        reportData={filteredReportData}
         agingBuckets={agingBuckets}
         hidePatientNames={hidePatientNames}
+        groupByRange={appliedFilters.arRange === 'any'}
+        totals={totals}
+        showFlags={appliedFilters.showFlags}
+        showPaymentPlan={appliedFilters.paymentPlanOwing}
       />
-
-      {/* Summary Footer */}
-      <Box sx={{ mt: 2, borderTop: '2px solid #e0e0e0', pt: 2 }}>
-        <Table size="small">
-          <TableBody>
-            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-              <TableCell sx={{ width: '25%', fontWeight: 600 }}>Total Outstanding Balances</TableCell>
-              {agingBuckets.map((bucket, i) => (
-                <TableCell key={i} align="right" sx={{ width: '8%', fontWeight: 600 }}>
-                  ${totals.buckets[bucket]?.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </TableCell>
-              ))}
-              <TableCell align="right" sx={{ width: '8%', fontWeight: 600 }}>
-                ${totals.totalOutstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell sx={{ width: '15%' }}></TableCell>
-            </TableRow>
-
-            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-              <TableCell sx={{ fontWeight: 600 }}>Total Patients Balances</TableCell>
-              {agingBuckets.map((bucket, i) => (
-                <TableCell key={i} align="right" sx={{ fontWeight: 600 }}>
-                  ${totals.buckets[bucket]?.pt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </TableCell>
-              ))}
-              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                ${totals.totalPt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-
-            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-              <TableCell sx={{ fontWeight: 600 }}>Total Insurance Balances</TableCell>
-              {agingBuckets.map((bucket, i) => (
-                <TableCell key={i} align="right" sx={{ fontWeight: 600 }}>
-                  ${totals.buckets[bucket]?.ins.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </TableCell>
-              ))}
-              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                ${totals.totalIns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-
-            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-              <TableCell sx={{ fontWeight: 600 }}>Total Account Credit</TableCell>
-              {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
-              <TableCell></TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                ${totals.totalCredit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-            </TableRow>
-            <TableRow sx={{ '& td': { fontSize: '0.75rem', border: 'none', py: 0.2 } }}>
-              <TableCell sx={{ fontWeight: 600 }}>
-                Net Outstanding Balances<br/>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>(Total Outstanding - Total Account Credit)</Typography>
-              </TableCell>
-              {agingBuckets.map((_, i) => <TableCell key={i}></TableCell>)}
-              <TableCell></TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>
-                ${netOutstandingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Box>
-    </ReportLayout>
+    </Box>
   );
 };
 
