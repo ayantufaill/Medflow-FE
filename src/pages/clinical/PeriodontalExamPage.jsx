@@ -547,7 +547,7 @@ const PeriodontalExamPage = () => {
             <CircularProgress />
           </Box>
         </Box>
-        <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
           <RightPanel hideAppointmentShortlist />
         </Box>
       </Box>
@@ -885,7 +885,7 @@ const PeriodontalExamPage = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
 

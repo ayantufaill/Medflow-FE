@@ -75,7 +75,7 @@ const InteractiveToothChart = ({
       </Box>
 
       {/* Tooth Chart Grid */}
-      <Box sx={{ ml: 6, mt: 4 }}>
+      <Box sx={{ ml: 6, mt: 4, zoom: { xs: 0.65, sm: 0.75, md: 0.85, lg: 0.95, xl: 1 } }}>
         <Box sx={{ display: 'flex', position: 'relative', width: '100%', alignItems: 'stretch' }}>
           
           {/* Column 1: Q1 / Q4 */}

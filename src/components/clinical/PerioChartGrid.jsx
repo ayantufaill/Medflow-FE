@@ -5,7 +5,7 @@ import {
 import TeethImageRow from './periodontal/TeethImageRow';
 import PerioGraphOverlay from './periodontal/PerioGraphOverlay';
 
-const LABEL_WIDTH = 140;
+const LABEL_WIDTH = 110;
 const ROW_HEIGHT = 32;
 
 const SmallSelect = ({ value = 'none', onChange }) => (
@@ -510,7 +510,7 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
   );
 
   return (
-    <Box sx={{ mt: 3, bgcolor: 'transparent', overflowX: 'auto' }}>
+    <Box sx={{ mt: 3, bgcolor: 'transparent', overflowX: 'auto', zoom: { xs: 0.65, sm: 0.75, md: 0.85, lg: 0.95, xl: 1 } }}>
       {renderArchSection(
         'UPPER ARCH • MAXILLA', 
         'Teeth 1-16', 
