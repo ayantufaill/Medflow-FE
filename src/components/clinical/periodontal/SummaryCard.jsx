@@ -24,12 +24,12 @@ const SummaryCard = ({ summaryData }) => {
           }}>
             <TableHead sx={{ backgroundColor: '#F1F6FA', height: '32px' }}>
               <TableRow>
-                <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', pl: 3, width: '206px' }}>METRIC</TableCell>
-                <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textAlign: 'center' }}>BLEEDING</TableCell>
-                <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textAlign: 'center' }}>PROBING ≤ 4MM</TableCell>
-                <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textAlign: 'center' }}>PROBING 5MM</TableCell>
-                <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textAlign: 'center' }}>PROBING ≥ 6MM</TableCell>
-                <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textAlign: 'right', pr: 3 }}>RECESSION</TableCell>
+                <TableCell sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', pl: { xs: 1, md: 2 }, width: { xs: 'auto', md: '120px' } }}>METRIC</TableCell>
+                <TableCell sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textAlign: 'center', px: 0.5 }}>BLEEDING</TableCell>
+                <TableCell sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textAlign: 'center', px: 0.5 }}>PROBING ≤ 4MM</TableCell>
+                <TableCell sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textAlign: 'center', px: 0.5 }}>PROBING 5MM</TableCell>
+                <TableCell sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textAlign: 'center', px: 0.5 }}>PROBING ≥ 6MM</TableCell>
+                <TableCell sx={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textAlign: 'right', pr: { xs: 1, md: 2 } }}>RECESSION</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -39,18 +39,18 @@ const SummaryCard = ({ summaryData }) => {
                   <TableRow key={idx} sx={{ height: '31px' }}>
                     <TableCell sx={{ 
                       color: isPercentage ? '#334155' : '#64748b', 
-                      fontSize: '12px', 
+                      fontSize: '11px', 
                       fontWeight: isPercentage ? 700 : 600, 
                       backgroundColor: 'rgba(241, 246, 250, 0.4)', 
-                      pl: 3
+                      pl: { xs: 1, md: 2 }
                     }}>
                       {row.label}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '13px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center' }}>{row.bleeding}</TableCell>
-                    <TableCell sx={{ fontSize: '13px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center' }}>{row.p4}</TableCell>
-                    <TableCell sx={{ fontSize: '13px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center' }}>{row.p5}</TableCell>
-                    <TableCell sx={{ fontSize: '13px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center' }}>{row.p6}</TableCell>
-                    <TableCell sx={{ fontSize: '13px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'right', pr: 3 }}>{row.recession}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center', px: 0.5 }}>{row.bleeding}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center', px: 0.5 }}>{row.p4}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center', px: 0.5 }}>{row.p5}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'center', px: 0.5 }}>{row.p6}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', backgroundColor: '#ffffff', color: isPercentage ? '#0f172a' : '#334155', fontWeight: isPercentage ? 700 : 500, textAlign: 'right', pr: { xs: 1, md: 2 } }}>{row.recession}</TableCell>
                   </TableRow>
                 );
               })}

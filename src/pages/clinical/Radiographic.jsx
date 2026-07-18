@@ -410,7 +410,7 @@ const Radiographic = () => {
             <CircularProgress />
           </Box>
         </Box>
-        <Box sx={{ width: { xs: 240, md: 260, lg: 300 }, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', pt: 1 }}>
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column', pt: 1 }}>
           <RightPanel hideAppointmentShortlist />
         </Box>
       </Box>
@@ -543,7 +543,7 @@ const Radiographic = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ width: { xs: 240, md: 260, lg: 300 }, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
 

@@ -295,7 +295,7 @@ const Morphological = () => {
               boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
               overflow: 'hidden'
             }}>
-              <Box component="fieldset" disabled={isSigned} sx={{ border: 'none', padding: 4, margin: 0, width: '100%' }}>
+              <Box component="fieldset" disabled={isSigned} sx={{ border: 'none', padding: 4, margin: 0, width: '100%', zoom: { xs: 0.75, sm: 0.85, md: 0.9, lg: 1 } }}>
                 <Box sx={{ display: 'flex', gap: 6, flexWrap: { xs: 'wrap', lg: 'nowrap' } }}>
                   {/* Left Side: Forms Container */}
                   <Box sx={{ flex: 1, minWidth: 0 }}>

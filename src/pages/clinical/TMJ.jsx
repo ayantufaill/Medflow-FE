@@ -508,7 +508,8 @@ const DentalTmdExamPage = () => {
               />
             </Box>
 
-            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', zoom: 1 }}>
+              <Box sx={{ zoom: { xs: 0.75, sm: 0.85, md: 0.9, lg: 1 } }}>
 
 
               {/* Accordion 1: Range of Motion */}
@@ -556,6 +557,7 @@ const DentalTmdExamPage = () => {
                 />
               </TMJSectionContainer>
 
+              </Box>
             </fieldset>
 
             {/* Footer section */}

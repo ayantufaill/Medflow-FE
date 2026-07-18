@@ -765,10 +765,10 @@ const PeriodontalExamPage = () => {
 
         {/* 2. DIAGNOSTIC SECTION */}
         <Grid container spacing={3} sx={{ mt: 1, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
-          <Grid item xs={12} sx={{ flexBasis: { md: '42.5%' }, maxWidth: { md: '42.5%' } }}>
+          <Grid item xs={12} sx={{ flexBasis: { md: '30%' }, maxWidth: { md: '30%' } }}>
             <DiagnosisCard />
           </Grid>
-          <Grid item xs={12} sx={{ flexBasis: { md: '57.5%' }, maxWidth: { md: '57.5%' } }}>
+          <Grid item xs={12} sx={{ flexBasis: { md: '70%' }, maxWidth: { md: '70%' } }}>
             <SummaryCard summaryData={dynamicSummaryData} />
           </Grid>
         </Grid>
@@ -895,6 +895,7 @@ const PeriodontalExamPage = () => {
         onClose={() => setShowSettings(false)}
         maxWidth="sm"
         fullWidth
+        sx={{ zIndex: 99999 }}
         PaperProps={{
           sx: {
             borderRadius: '12px',

@@ -5,7 +5,7 @@ import {
 import TeethImageRow from './periodontal/TeethImageRow';
 import PerioGraphOverlay from './periodontal/PerioGraphOverlay';
 
-const LABEL_WIDTH = 110;
+const LABEL_WIDTH = 96;
 const ROW_HEIGHT = 32;
 
 const SmallSelect = ({ value = 'none', onChange }) => (
@@ -283,11 +283,12 @@ const RowLabels = ({ labels, isBottom = false, hasMobility = true }) => (
     {labels.map((l, idx) => (
       <Typography key={`${l}-${idx}`} sx={{ 
         height: ROW_HEIGHT, 
-        fontSize: '11px', 
+        fontSize: '10px',
+        lineHeight: 1.1,
         display: 'flex', 
         alignItems: 'center', 
-        px: 2,
-        fontWeight: 600,
+        px: 1,
+        fontWeight: 700,
         color: '#64748B',
         borderBottom: idx < labels.length - 1 ? '1px solid #E2E8F0' : 'none'
       }}>
@@ -400,7 +401,7 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
     <Box sx={{ display: 'flex' }}>
       <Box sx={{ display: 'flex', flex: 1, minWidth: 0, bgcolor: '#F8FAFC', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
         <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, borderRight: '1px solid #E2E8F0' }}>
-          <Typography sx={{ height: 32, fontSize: '11px', display: 'flex', alignItems: 'center', px: 2, fontWeight: 600, color: '#64748B' }}>
+          <Typography sx={{ height: 32, fontSize: '10px', display: 'flex', alignItems: 'center', px: 1, fontWeight: 700, color: '#64748B' }}>
             Teeth
           </Typography>
         </Box>
@@ -424,14 +425,14 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
           <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#64748B', letterSpacing: '0.5px' }}>{title}</Typography>
           <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8' }}>{teethStr}</Typography>
         </Box>
-        <Box sx={{ overflowX: 'auto', pb: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 'max-content' }}>
+        <Box sx={{ overflow: 'hidden', pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: '100%' }}>
 
           {/* Upper Teeth Row (Above Top Data Section) */}
           {isUpper && (
             <Box sx={{ mt: 2, mb: 1, display: 'flex' }}>
               <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '11px', px: 2, fontWeight: 600, color: '#64748B' }}>
+                <Typography sx={{ fontSize: '10px', px: 1, fontWeight: 700, color: '#64748B' }}>
                   Teeth
                 </Typography>
               </Box>
@@ -467,7 +468,7 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
           {!isUpper && (
             <Box sx={{ mt: 1, mb: 2, display: 'flex' }}>
               <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '11px', px: 2, fontWeight: 600, color: '#64748B' }}>
+                <Typography sx={{ fontSize: '10px', px: 1, fontWeight: 700, color: '#64748B' }}>
                   Teeth
                 </Typography>
               </Box>
@@ -510,7 +511,7 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
   );
 
   return (
-    <Box sx={{ mt: 3, bgcolor: 'transparent', overflowX: 'auto', zoom: { xs: 0.65, sm: 0.75, md: 0.85, lg: 0.95, xl: 1 } }}>
+    <Box sx={{ mt: 3, bgcolor: 'transparent', overflow: 'hidden', zoom: { xs: 0.45, sm: 0.55, md: 0.65, lg: 0.75, xl: 0.9 } }}>
       {renderArchSection(
         'UPPER ARCH • MAXILLA', 
         'Teeth 1-16', 
