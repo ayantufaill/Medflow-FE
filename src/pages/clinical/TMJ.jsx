@@ -508,7 +508,7 @@ const DentalTmdExamPage = () => {
               />
             </Box>
 
-            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', zoom: 1 }}>
+            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', zoom: 1, minWidth: 0 }}>
               <Box sx={{ zoom: { xs: 0.75, sm: 0.85, md: 0.9, lg: 1 } }}>
 
 

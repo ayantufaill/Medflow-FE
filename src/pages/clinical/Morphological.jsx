@@ -315,7 +315,7 @@ const Morphological = () => {
                   </Box>
 
                   {/* Right Side: Tooth Position Widget */}
-                  <Box sx={{ width: { xs: '100%', lg: '400px' }, flexShrink: 0 }}>
+                  <Box sx={{ width: { xs: '100%', lg: '340px' }, flexShrink: 0 }}>
                     <ToothPositionCard
                       formData={formData}
                       handleFieldChange={handleFieldChange}

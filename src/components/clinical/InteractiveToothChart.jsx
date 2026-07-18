@@ -54,7 +54,19 @@ const InteractiveToothChart = ({
   };
 
   return (
-    <Box sx={{ display: 'flex', mt: 4, zoom: { xs: 0.55, sm: 0.65, md: 0.75, lg: 0.85, xl: 1 }, pb: 2, alignItems: 'flex-start' }}>
+    <Box sx={{ 
+      mt: 4, 
+      overflowX: 'auto',
+      '&::-webkit-scrollbar': { height: '6px' },
+      '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        zoom: { xs: 0.55, sm: 0.65, md: 0.75, lg: 0.85, xl: 1 }, 
+        pb: 2, 
+        alignItems: 'flex-start',
+        minWidth: 'min-content'
+      }}>
       {/* Surface Selection Sidebar */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mr: 3, flexShrink: 0, mt: -1 }}>
         {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
@@ -212,6 +224,7 @@ const InteractiveToothChart = ({
           }} />
         </Box>
       </Box>
+    </Box>
   );
 };
 

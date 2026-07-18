@@ -511,9 +511,17 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
   );
 
   return (
-    <Box sx={{ mt: 3, bgcolor: 'transparent', overflow: 'hidden', zoom: { xs: 0.45, sm: 0.55, md: 0.65, lg: 0.75, xl: 0.9 } }}>
-      {renderArchSection(
-        'UPPER ARCH • MAXILLA', 
+    <Box sx={{ 
+      mt: 3, 
+      bgcolor: 'transparent', 
+      overflowX: 'auto', 
+      overflowY: 'hidden',
+      '&::-webkit-scrollbar': { height: '6px' },
+      '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
+    }}>
+      <Box sx={{ minWidth: 'min-content', zoom: { xs: 0.45, sm: 0.55, md: 0.65, lg: 0.75, xl: 0.9 } }}>
+        {renderArchSection(
+          'UPPER ARCH • MAXILLA', 
         'Teeth 1-16', 
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
         topLabelsUpper,
@@ -529,6 +537,7 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => 
         bottomLabelsLower,
         false
       )}
+      </Box>
     </Box>
   );
 };

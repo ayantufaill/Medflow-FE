@@ -483,7 +483,7 @@ const Radiographic = () => {
             </Box>
 
             {/* Main 2-Column Layout: Findings Sidebar + Tooth Chart */}
-            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
               <Box sx={{ display: 'flex', gap: 2, width: '100%', flexWrap: { xs: 'wrap', lg: 'nowrap' } }}>
                 {/* Left Column - Findings Sidebar */}
                 <FindingsSidebar

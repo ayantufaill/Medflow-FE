@@ -761,14 +761,14 @@ const PeriodontalExamPage = () => {
           </Box>
         </Box>
 
-        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
 
         {/* 2. DIAGNOSTIC SECTION */}
         <Grid container spacing={3} sx={{ mt: 1, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
-          <Grid item xs={12} sx={{ flexBasis: { md: '30%' }, maxWidth: { md: '30%' } }}>
+          <Grid item xs={12} sx={{ flexBasis: { md: '30%' }, maxWidth: { md: '30%' }, minWidth: 0 }}>
             <DiagnosisCard />
           </Grid>
-          <Grid item xs={12} sx={{ flexBasis: { md: '70%' }, maxWidth: { md: '70%' } }}>
+          <Grid item xs={12} sx={{ flexBasis: { md: '70%' }, maxWidth: { md: '70%' }, minWidth: 0 }}>
             <SummaryCard summaryData={dynamicSummaryData} />
           </Grid>
         </Grid>

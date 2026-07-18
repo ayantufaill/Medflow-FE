@@ -23,7 +23,10 @@ const ExamFilterBar = ({
       justifyContent: 'space-between', 
       alignItems: 'center', 
       bgcolor: '#fff', 
-      mb: 2 
+      mb: 2,
+      overflowX: 'auto',
+      '&::-webkit-scrollbar': { height: '4px' },
+      '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
     }}>
       
       {/* Left: Erupted | Resolve */}

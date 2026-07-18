@@ -12,8 +12,10 @@ const SummaryCard = ({ summaryData }) => {
       <Box sx={{ px: 3, pb: 1.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ 
           borderRadius: '8px',
-          overflow: 'hidden',
-          border: '1px solid #e2e8f0'
+          overflowX: 'auto',
+          border: '1px solid #e2e8f0',
+          '&::-webkit-scrollbar': { height: '6px' },
+          '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
         }}>
           <Table size="small" sx={{ 
             width: '100%',
