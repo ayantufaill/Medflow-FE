@@ -54,9 +54,9 @@ const InteractiveToothChart = ({
   };
 
   return (
-    <>
+    <Box sx={{ display: 'flex', mt: 4, zoom: { xs: 0.55, sm: 0.65, md: 0.75, lg: 0.85, xl: 1 }, pb: 2, alignItems: 'flex-start' }}>
       {/* Surface Selection Sidebar */}
-      <Box sx={{ position: 'absolute', left: 10, top: 40, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mr: 3, flexShrink: 0, mt: -1 }}>
         {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
           <Box 
             key={lbl} 
@@ -75,118 +75,127 @@ const InteractiveToothChart = ({
       </Box>
 
       {/* Tooth Chart Grid */}
-      <Box sx={{ ml: 6, mt: 4, zoom: { xs: 0.55, sm: 0.65, md: 0.75, lg: 0.85, xl: 1 }, pb: 2 }}>
-        <Box sx={{ display: 'flex', position: 'relative', width: '100%', minWidth: 0, alignItems: 'stretch' }}>
+      <Box sx={{ display: 'flex', position: 'relative', width: '100%', minWidth: 0, alignItems: 'stretch' }}>
           
           {/* Column 1: Q1 / Q4 */}
-          <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            {/* Upper Row */}
-            <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-              {[1, 2, 3, 4, 5].map(n => renderTooth(n))}
-            </Stack>
-            
-            {/* Upper Label */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
+          <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ width: 'fit-content' }}>
+              {/* Upper Row */}
+              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                {[1, 2, 3, 4, 5].map(n => renderTooth(n))}
+              </Stack>
+              
+              {/* Upper Label */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
+              </Box>
             </Box>
             
-            {/* Lower Label */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
+            <Box sx={{ width: 'fit-content' }}>
+              {/* Lower Label */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
+              </Box>
+              
+              {/* Lower Row */}
+              <Stack direction="row" spacing={1} justifyContent="center">
+                {[32, 31, 30, 29, 28].map(n => renderTooth(n))}
+              </Stack>
             </Box>
-            
-            {/* Lower Row */}
-            <Stack direction="row" spacing={1} justifyContent="center">
-              {[32, 31, 30, 29, 28].map(n => renderTooth(n))}
-            </Stack>
           </Box>
 
           {/* Vertical Divider 1 */}
           <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
 
           {/* Column 2: UA / LA */}
-          <Box sx={{ flex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            {/* Upper Row */}
-            <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-              {[6, 7, 8, 9, 10, 11].map(n => renderTooth(n))}
-            </Stack>
-            
-            {/* Upper Label */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
+          <Box sx={{ flex: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ width: 'fit-content' }}>
+              {/* Upper Row */}
+              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                {[6, 7, 8, 9, 10, 11].map(n => renderTooth(n))}
+              </Stack>
+              
+              {/* Upper Label */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
+              </Box>
             </Box>
             
-            {/* Lower Label */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
+            <Box sx={{ width: 'fit-content' }}>
+              {/* Lower Label */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
+              </Box>
+              
+              {/* Lower Row */}
+              <Stack direction="row" spacing={1} justifyContent="center">
+                {[27, 26, 25, 24, 23, 22].map(n => renderTooth(n))}
+              </Stack>
             </Box>
-            
-            {/* Lower Row */}
-            <Stack direction="row" spacing={1} justifyContent="center">
-              {[27, 26, 25, 24, 23, 22].map(n => renderTooth(n))}
-            </Stack>
           </Box>
 
           {/* Vertical Divider 2 */}
           <Box sx={{ borderLeft: '1px dotted #ccc', mx: 2, opacity: 0.8 }} />
 
           {/* Column 3: Q2 / Q3 */}
-          <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pr: 4, position: 'relative' }}>
-            {/* Upper Row */}
-            <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
-              {[12, 13, 14, 15, 16].map(n => renderTooth(n))}
-            </Stack>
-            
-            {/* Upper Label */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, position: 'relative' }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
-              <Typography 
-                onClick={onMaxToggle}
-                sx={{ 
-                  position: 'absolute', 
-                  right: -32, 
-                  top: 0, 
-                  fontSize: '0.75rem', 
-                  color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                  fontWeight: 'bold', 
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#3b82f6' }
-                }}
-              >
-                Max
-              </Typography>
+          <Box sx={{ flex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', pr: 6, position: 'relative' }}>
+            <Box sx={{ width: 'fit-content' }}>
+              {/* Upper Row */}
+              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 1.5 }}>
+                {[12, 13, 14, 15, 16].map(n => renderTooth(n))}
+              </Stack>
+              
+              {/* Upper Label */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
+                  <Typography 
+                    onClick={onMaxToggle}
+                    sx={{ 
+                      fontSize: '0.75rem', 
+                      color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer',
+                      transition: 'color 0.2s',
+                      '&:hover': { color: '#3b82f6' }
+                    }}
+                  >
+                    Max
+                  </Typography>
+                </Stack>
+              </Box>
             </Box>
             
-            {/* Lower Label */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, position: 'relative' }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
-              <Typography 
-                onClick={onManToggle}
-                sx={{ 
-                  position: 'absolute', 
-                  right: -32, 
-                  top: 0, 
-                  fontSize: '0.75rem', 
-                  color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                  fontWeight: 'bold', 
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#3b82f6' }
-                }}
-              >
-                Man
-              </Typography>
+            <Box sx={{ width: 'fit-content' }}>
+              {/* Lower Label */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
+                  <Typography 
+                    onClick={onManToggle}
+                    sx={{ 
+                      fontSize: '0.75rem', 
+                      color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer',
+                      transition: 'color 0.2s',
+                      '&:hover': { color: '#3b82f6' }
+                    }}
+                  >
+                    Man
+                  </Typography>
+                </Stack>
+              </Box>
+              
+              {/* Lower Row */}
+              <Stack direction="row" spacing={1} justifyContent="center">
+                {[21, 20, 19, 18, 17].map(n => renderTooth(n))}
+              </Stack>
             </Box>
-            
-            {/* Lower Row */}
-            <Stack direction="row" spacing={1} justifyContent="center">
-              {[21, 20, 19, 18, 17].map(n => renderTooth(n))}
-            </Stack>
           </Box>
 
           {/* Horizontal Divider Line */}
@@ -203,7 +212,6 @@ const InteractiveToothChart = ({
           }} />
         </Box>
       </Box>
-    </>
   );
 };
 
