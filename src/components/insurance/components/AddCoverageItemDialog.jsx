@@ -10,11 +10,16 @@ import {
   TextField,
   IconButton,
   InputAdornment,
+  Autocomplete,
+  CircularProgress,
+  Chip
 } from '@mui/material';
 import {
   Close as CloseIcon,
   HealthAndSafety as CoverageIcon,
 } from '@mui/icons-material';
+import { useDebouncedCallback } from 'use-debounce';
+import { feeService } from '../../../services/fee.service';
 
 const sharedInputSx = {
   borderRadius: '8px',
@@ -38,6 +43,12 @@ const sharedInputSx = {
     color: '#9CA3AF',
     opacity: 1,
   },
+  '&.MuiAutocomplete-inputRoot': {
+    padding: '2px',
+  },
+  '& .MuiAutocomplete-input': {
+    padding: '8px 12px !important',
+  }
 };
 
 const Label = ({ children }) => (
@@ -56,25 +67,49 @@ const Label = ({ children }) => (
 );
 
 const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
-  const [code, setCode] = useState('');
+  const [selectedProcedure, setSelectedProcedure] = useState(null);
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  
   const [coverage, setCoverage] = useState('');
   const [waitingPeriod, setWaitingPeriod] = useState('');
 
+  const fetchOptions = useDebouncedCallback(async (query) => {
+    if (!query) {
+      setOptions([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await feeService.getProcedureCodes({ search: query, limit: 20 });
+      setOptions(result.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, 300);
+
   const handleSave = () => {
-    if (onSave) {
+    if (onSave && selectedProcedure) {
       onSave({
         id: Date.now(),
-        code,
-        procedure: code,
-        coverage,
-        waitingPeriod,
+        code: selectedProcedure.ProcCode,
+        procedure: selectedProcedure.ProcCode,
+        description: selectedProcedure.Descript,
+        category: selectedProcedure.Category,
+        coverage: coverage ? parseInt(coverage, 10) : 0,
+        waitingPeriod: waitingPeriod ? parseInt(waitingPeriod, 10) : 0,
       });
     }
     handleClose();
   };
 
   const handleClose = () => {
-    setCode('');
+    setSelectedProcedure(null);
+    setInputValue('');
+    setOptions([]);
     setCoverage('');
     setWaitingPeriod('');
     onClose();
@@ -173,15 +208,70 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
               Select Procedure
             </Typography>
           </Box>
-          <TextField
-            variant="outlined"
-            placeholder="Enter code or procedure"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            fullWidth
-            size="small"
-            InputProps={{ sx: sharedInputSx }}
+          <Autocomplete
+            options={options}
+            loading={loading}
+            getOptionLabel={(option) => `${option.ProcCode} - ${option.Descript}`}
+            isOptionEqualToValue={(option, value) => option.ProcCode === value?.ProcCode}
+            value={selectedProcedure}
+            onChange={(event, newValue) => {
+              setSelectedProcedure(newValue);
+            }}
+            inputValue={inputValue}
+            onInputChange={(event, newInputValue) => {
+              setInputValue(newInputValue);
+              fetchOptions(newInputValue);
+            }}
+            filterOptions={(x) => x}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                placeholder="Search procedure code or description"
+                size="small"
+                InputProps={{
+                  ...params.InputProps,
+                  sx: sharedInputSx,
+                  endAdornment: (
+                    <>
+                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.ProcCode}>
+                <Box>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>{option.ProcCode}</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>{option.Descript}</Typography>
+                </Box>
+              </Box>
+            )}
+            ListboxProps={{
+              sx: {
+                '& .MuiAutocomplete-option': {
+                  padding: '8px 16px',
+                }
+              }
+            }}
           />
+          {selectedProcedure && (
+            <Box sx={{ mt: 1.5 }}>
+              <Chip 
+                label={`${selectedProcedure.Category || 'Uncategorized'} · ${selectedProcedure.ProcCode}`} 
+                size="small" 
+                sx={{ 
+                  backgroundColor: '#E2EBFC', 
+                  color: '#2563EB', 
+                  fontSize: '11px', 
+                  fontWeight: 500,
+                  borderRadius: '6px'
+                }} 
+              />
+            </Box>
+          )}
         </Box>
 
         {/* Coverage row */}
@@ -191,6 +281,7 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
             variant="outlined"
             placeholder="0"
             value={coverage}
+            type="number"
             onChange={(e) => setCoverage(e.target.value)}
             fullWidth
             size="small"
@@ -203,6 +294,7 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
                   </Typography>
                 </InputAdornment>
               ),
+              inputProps: { min: 0, max: 100 }
             }}
           />
         </Box>
@@ -214,6 +306,7 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
             variant="outlined"
             placeholder="0"
             value={waitingPeriod}
+            type="number"
             onChange={(e) => setWaitingPeriod(e.target.value)}
             fullWidth
             size="small"
@@ -226,6 +319,7 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
                   </Typography>
                 </InputAdornment>
               ),
+              inputProps: { min: 0 }
             }}
           />
         </Box>
@@ -261,6 +355,7 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
         </Button>
         <Button
           onClick={handleSave}
+          disabled={!selectedProcedure}
           variant="contained"
           sx={{
             fontFamily: 'Inter',
@@ -273,6 +368,10 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
             boxShadow: 'none',
             px: 2.5,
             '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' },
+            '&.Mui-disabled': {
+              backgroundColor: '#93C5FD',
+              color: '#FFFFFF'
+            }
           }}
         >
           Save
