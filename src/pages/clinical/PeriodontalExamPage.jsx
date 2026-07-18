@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
-  Button, Select, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
+  Button, Select, Menu, MenuItem, Grid, Divider, Tabs, Tab, IconButton, Checkbox,
   Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent, TextField, Stack,
   CircularProgress, Alert
 } from '@mui/material';
@@ -13,6 +13,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PrintIcon from '@mui/icons-material/Print';
 import MicIcon from '@mui/icons-material/Mic';
 import AddIcon from '@mui/icons-material/Add';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import settingIcon from "../../assets/clinicalicons/setting icon.svg";
 import printIcon from "../../assets/clinicalicons/print icon.svg";
 import compareIcon from "../../assets/clinicalicons/compare icon.svg";
@@ -86,35 +87,78 @@ const PeriodontalExamPage = () => {
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('periodontal', appointmentId);
-  const upsertMutation = useUpsertClinicalExam('periodontal', appointmentId);
-  const radiographicUpsertMutation = useUpsertClinicalExam('radiographic', appointmentId);
-  const signMutation = useSignClinicalExam('periodontal', appointmentId);
+  const [viewingAppointmentId, setViewingAppointmentId] = useState(null);
+  const activeAppointmentId = viewingAppointmentId && viewingAppointmentId !== 'undefined' 
+    ? String(viewingAppointmentId) 
+    : (appointmentId && String(appointmentId) !== 'undefined' ? String(appointmentId) : null);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('periodontal', activeAppointmentId);
+  const upsertMutation = useUpsertClinicalExam('periodontal', activeAppointmentId);
+  const radiographicUpsertMutation = useUpsertClinicalExam('radiographic', activeAppointmentId);
+  const signMutation = useSignClinicalExam('periodontal', activeAppointmentId);
 
   const isSigned = !!examRecord?.isSigned;
 
   const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
   const dispatch = useDispatch();
 
-  const { data: radiographicRecord } = useClinicalExamQuery('radiographic', appointmentId);
+  const { data: radiographicRecord } = useClinicalExamQuery('radiographic', activeAppointmentId);
   const missingTeeth = (radiographicRecord?.examData?.missingTeeth || []).map(Number);
 
   const { currentAppointment } = useAppointmentDetail();
 
   const { data: historicalDates } = useExamHistoryDates('periodontal', patientId);
   const visitDates = React.useMemo(() => {
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      if (dateString instanceof Date) {
+        if (isNaN(dateString)) return '';
+        return dateString.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+      }
+      if (typeof dateString === 'string') {
+        const isMidnightUTC = dateString.endsWith('T00:00:00.000Z') || dateString.endsWith('T00:00:00Z');
+        const isJustDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString.trim());
+        
+        if (isJustDate || isMidnightUTC) {
+          const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            const y = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const d = parseInt(match[3], 10);
+            const localDate = new Date(y, m - 1, d, 12, 0, 0);
+            return localDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+          }
+        }
+        const parsedDate = new Date(dateString);
+        if (!isNaN(parsedDate)) {
+          return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+      }
+      return '';
+    };
+
     const historyArray = historicalDates || [];
-    const formattedHistory = historyArray.map(dateStr => {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const formattedHistory = historyArray.map(item => {
+      const dateValue = typeof item === 'object' ? item.date : item;
+      return {
+        label: formatDate(dateValue) || 'Invalid Date',
+        appointmentId: typeof item === 'object' ? item.appointmentId : null
+      };
     });
 
-    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(currentD)) {
-        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        if (!formattedHistory.includes(formattedCurrent)) {
-          formattedHistory.push(formattedCurrent);
+    if (currentAppointment?.appointmentDate || currentAppointment?.date || currentAppointment?.AptDateTime) {
+      const rawDate = currentAppointment.appointmentDate || currentAppointment.date || currentAppointment.AptDateTime;
+      const formattedCurrent = formatDate(rawDate);
+      if (formattedCurrent) {
+        const currentApptId = currentAppointment.id || currentAppointment.AptNum || appointmentId;
+        if (currentApptId && String(currentApptId) !== 'undefined') {
+          const exists = formattedHistory.find(h => h.appointmentId === String(currentApptId));
+          if (!exists) {
+            formattedHistory.push({
+              label: formattedCurrent,
+              appointmentId: String(currentApptId)
+            });
+          }
         }
       }
     }
@@ -125,6 +169,17 @@ const PeriodontalExamPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [talkBackEnabled, setTalkBackEnabled] = useState(false);
   const [perioTab, setPerioTab] = useState(0);
+
+  const [anchorEl, setAnchorEl] = useState(null);
+  const openDropdown = Boolean(anchorEl);
+
+  const handleDropdownClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleDropdownClose = () => {
+    setAnchorEl(null);
+  };
   
   const defaultSettings = {
     probing: ['3', '2', '3'],
@@ -168,14 +223,19 @@ const PeriodontalExamPage = () => {
     // For now, we update Redux with DB data if it arrives
     if (examRecord?.examData && examRecord.examData.chartData) {
       setChartData(examRecord.examData.chartData);
+    } else if (!examLoading) {
+      setChartData(initialToothData(missingTeeth));
     }
+    
     if (examRecord?.examData && examRecord.examData.settings) {
       setSettings(examRecord.examData.settings);
+    } else if (!examLoading) {
+      setSettings(defaultSettings);
     }
-  }, [examRecord?.examData]);
+  }, [examRecord?.examData, examLoading]);
 
   const handleSaveExam = async () => {
-    if (!appointmentId) {
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
@@ -192,7 +252,7 @@ const PeriodontalExamPage = () => {
   };
 
   const handleSignExam = () => {
-    if (!appointmentId) {
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
@@ -222,9 +282,28 @@ const PeriodontalExamPage = () => {
     // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleNewExam = () => {
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    // setVisitDates([...visitDates, today]);
+  const handleNewExam = async () => {
+    if (isSigned) {
+      showSnackbar('Cannot create a new exam on a signed record', 'error');
+      return;
+    }
+    setViewingAppointmentId(null);
+    handleClearAll();
+    if (appointmentId) {
+      try {
+        await upsertMutation.mutateAsync({
+          patientId: patientId ? String(patientId) : undefined,
+          providerId: providerId ? String(providerId) : undefined,
+          examData: {
+            chartData: initialToothData(missingTeeth),
+            settings: defaultSettings
+          }
+        });
+        showSnackbar('New Periodontal exam initialized', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to initialize new exam', 'error');
+      }
+    }
   };
 
   const handleApplyAll = () => {
@@ -484,6 +563,7 @@ const PeriodontalExamPage = () => {
           backgroundColor: '#ffffff', 
           flex: 1, 
           overflowY: 'auto',
+          overflowX: 'hidden',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
@@ -536,25 +616,27 @@ const PeriodontalExamPage = () => {
           {/* Left: Visit dates timeline + New Exam */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', flex: 1 }}>
             <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowBackIosNewIcon sx={{ fontSize: 16 }} /></IconButton>
-            <VisitDatesTimeline visitDates={visitDates} />
+            <VisitDatesTimeline visitDates={visitDates} onDateClick={(id) => setViewingAppointmentId(id)} activeAppointmentId={activeAppointmentId} />
             <IconButton size="small" sx={{ flexShrink: 0 }}><ArrowForwardIosIcon sx={{ fontSize: 16 }} /></IconButton>
             <Button 
               startIcon={<AddIcon sx={{ fontSize: 18 }} />} 
               sx={{ 
                 textTransform: 'none', 
-                color: '#2563eb', 
+                color: isSigned ? '#9ca3af' : '#2563eb', 
                 fontWeight: 600, 
                 fontSize: '0.8rem', 
                 whiteSpace: 'nowrap', 
                 flexShrink: 0,
-                border: '1.5px dashed #d1d5db',
+                border: isSigned ? '1.5px dashed #e5e7eb' : '1.5px dashed #d1d5db',
                 borderRadius: '20px',
                 px: 2,
                 py: 0.5,
                 bgcolor: '#fff',
-                '&:hover': { bgcolor: '#f9fafb', borderColor: '#9ca3af' },
+                '&:hover': { bgcolor: '#f9fafb', borderColor: isSigned ? '#e5e7eb' : '#9ca3af' },
                 ml: 2
               }}
+              onClick={handleNewExam}
+              disabled={isSigned}
             >
               New Exam
             </Button>
@@ -610,7 +692,8 @@ const PeriodontalExamPage = () => {
             </Button>
             <Button 
               variant="contained" 
-              onClick={handleResetToDefault}
+              onClick={handleDropdownClick}
+              endIcon={<KeyboardArrowDownIcon />}
               sx={{ 
                 bgcolor: '#00BBAB', 
                 color: '#fff',
@@ -623,8 +706,58 @@ const PeriodontalExamPage = () => {
                 '&:hover': { bgcolor: '#00a093' }
               }}
             >
-              New Period Chart &gt;
+              New Period Chart
             </Button>
+            <Menu
+              anchorEl={anchorEl}
+              open={openDropdown}
+              onClose={handleDropdownClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  minWidth: '180px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  '& .MuiMenuItem-root': {
+                    fontSize: '14px',
+                    color: '#334155',
+                    py: 1.5,
+                    px: 2,
+                    fontWeight: 500,
+                    '&:hover': {
+                      backgroundColor: '#f8fafc'
+                    }
+                  }
+                }
+              }}
+            >
+              <MenuItem 
+                onClick={() => {
+                  handleResetToDefault();
+                  handleDropdownClose();
+                }}
+              >
+                Copy from latest
+              </MenuItem>
+              
+              <MenuItem 
+                onClick={() => {
+                  handleClearAll();
+                  handleDropdownClose();
+                }}
+              >
+                Empty Chart
+              </MenuItem>
+            </Menu>
           </Box>
         </Box>
 
@@ -715,11 +848,13 @@ const PeriodontalExamPage = () => {
         </Box>
 
         {/* 4. PERIO CHART GRID */}
-        {perioTab === 0 ? (
-          <PerioChartGrid chartData={chartData} setChartData={setChartData} missingTeeth={missingTeeth} />
-        ) : (
-          <PeriographTab chartData={chartData} missingTeeth={missingTeeth} />
-        )}
+        <Box sx={{ overflowX: 'auto', width: '100%' }}>
+          {perioTab === 0 ? (
+            <PerioChartGrid chartData={chartData} setChartData={setChartData} missingTeeth={missingTeeth} />
+          ) : (
+            <PeriographTab chartData={chartData} missingTeeth={missingTeeth} />
+          )}
+        </Box>
 
         </fieldset>
 

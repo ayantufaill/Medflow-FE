@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
-const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
+const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, activeAppointmentId }) => {
   if (!visitDates || visitDates.length === 0) return null;
 
   const ITEM_WIDTH = 120;
@@ -48,9 +48,20 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
           strokeWidth="2" 
         />
 
-        {visitDates.map((date, index) => {
+        {visitDates.map((dateItem, index) => {
           const isLast = index === visitDates.length - 1;
           const xPos = index * ITEM_WIDTH + (ITEM_WIDTH / 2);
+          const label = typeof dateItem === 'object' ? dateItem.label : dateItem;
+          
+          const isActive = activeAppointmentId 
+            ? (typeof dateItem === 'object' && String(dateItem.appointmentId) === String(activeAppointmentId))
+            : isLast;
+
+          const handleDateClick = () => {
+            if (onDateClick && typeof dateItem === 'object') {
+              onDateClick(dateItem.appointmentId || null);
+            }
+          };
 
           return (
             <g key={`group-${index}`}>
@@ -58,8 +69,10 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
               <circle 
                 cx={xPos} 
                 cy={DOT_Y} 
-                r={isLast ? LARGE_R : SMALL_R} 
-                fill={isLast ? "#5b6d96" : "#a2b9d6"} 
+                r={isActive ? LARGE_R : SMALL_R} 
+                fill={isActive ? "#5b6d96" : "#a2b9d6"} 
+                onClick={handleDateClick}
+                style={{ cursor: 'pointer' }}
               />
 
               {/* 3. Date Label */}
@@ -69,10 +82,12 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate }) => {
                 textAnchor="middle" 
                 fontFamily="inherit"
                 fontSize="12px"
-                fontWeight={isLast ? "700" : "400"}
-                fill={isLast ? "#333" : "#7a869a"}
+                fontWeight={isActive ? "700" : "400"}
+                fill={isActive ? "#333" : "#7a869a"}
+                onClick={handleDateClick}
+                style={{ cursor: 'pointer' }}
               >
-                {date}
+                {label}
               </text>
 
               {/* 4. Delete Icon (Only for last item, and only when removal is supported) */}
