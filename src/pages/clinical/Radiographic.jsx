@@ -33,9 +33,14 @@ const Radiographic = () => {
   const appointmentId = useSelector(selectSelectedAppointmentId);
   const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
 
-  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('radiographic', appointmentId);
-  const upsertMutation = useUpsertClinicalExam('radiographic', appointmentId);
-  const signMutation = useSignClinicalExam('radiographic', appointmentId);
+  const [viewingAppointmentId, setViewingAppointmentId] = useState(null);
+  const activeAppointmentId = viewingAppointmentId && viewingAppointmentId !== 'undefined' 
+    ? String(viewingAppointmentId) 
+    : (appointmentId && String(appointmentId) !== 'undefined' ? String(appointmentId) : null);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('radiographic', activeAppointmentId);
+  const upsertMutation = useUpsertClinicalExam('radiographic', activeAppointmentId);
+  const signMutation = useSignClinicalExam('radiographic', activeAppointmentId);
 
   const isSigned = !!examRecord?.isSigned;
 
@@ -99,11 +104,17 @@ const Radiographic = () => {
       setToothFindings(examRecord.examData.toothFindings || {});
       setAdditionalTeeth(examRecord.examData.additionalTeeth || []);
       setUneruptedTeeth(examRecord.examData.uneruptedTeeth || []);
+    } else if (!examLoading) {
+      setSelectedTeeth([]);
+      setMissingTeeth([]);
+      setToothFindings({});
+      setAdditionalTeeth([]);
+      setUneruptedTeeth([]);
     }
-  }, [examRecord]);
+  }, [examRecord, examLoading]);
 
   const handleSaveExam = async () => {
-    if (!appointmentId) {
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
@@ -126,7 +137,7 @@ const Radiographic = () => {
   };
 
   const handleSignExam = () => {
-    if (!appointmentId) {
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
@@ -257,18 +268,56 @@ const Radiographic = () => {
 
   const { data: historicalDates } = useExamHistoryDates('radiographic', patientId);
   const visitDates = React.useMemo(() => {
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      if (dateString instanceof Date) {
+        if (isNaN(dateString)) return '';
+        return dateString.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+      }
+      if (typeof dateString === 'string') {
+        const isMidnightUTC = dateString.endsWith('T00:00:00.000Z') || dateString.endsWith('T00:00:00Z');
+        const isJustDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString.trim());
+        
+        if (isJustDate || isMidnightUTC) {
+          const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            const y = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const d = parseInt(match[3], 10);
+            const localDate = new Date(y, m - 1, d, 12, 0, 0);
+            return localDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+          }
+        }
+        const parsedDate = new Date(dateString);
+        if (!isNaN(parsedDate)) {
+          return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+      }
+      return '';
+    };
+
     const historyArray = historicalDates || [];
-    const formattedHistory = historyArray.map(dateStr => {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const formattedHistory = historyArray.map(item => {
+      const dateValue = typeof item === 'object' ? item.date : item;
+      return {
+        label: formatDate(dateValue) || 'Invalid Date',
+        appointmentId: typeof item === 'object' ? item.appointmentId : null
+      };
     });
 
-    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(currentD)) {
-        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        if (!formattedHistory.includes(formattedCurrent)) {
-          formattedHistory.push(formattedCurrent);
+    if (currentAppointment?.appointmentDate || currentAppointment?.date || currentAppointment?.AptDateTime) {
+      const rawDate = currentAppointment.appointmentDate || currentAppointment.date || currentAppointment.AptDateTime;
+      const formattedCurrent = formatDate(rawDate);
+      if (formattedCurrent) {
+        const currentApptId = currentAppointment.id || currentAppointment.AptNum || appointmentId;
+        if (currentApptId && String(currentApptId) !== 'undefined') {
+          const exists = formattedHistory.find(h => h.appointmentId === String(currentApptId));
+          if (!exists) {
+            formattedHistory.push({
+              label: formattedCurrent,
+              appointmentId: String(currentApptId)
+            });
+          }
         }
       }
     }
@@ -305,9 +354,35 @@ const Radiographic = () => {
   };
 
   // Handle new exam
-  const handleNewExam = () => {
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    // setVisitDates([...visitDates, today]);
+  const handleNewExam = async () => {
+    if (isSigned) {
+      showSnackbar('Cannot create a new exam on a signed record', 'error');
+      return;
+    }
+    setViewingAppointmentId(null);
+    setSelectedTeeth([]);
+    setMissingTeeth([]);
+    setToothFindings({});
+    setAdditionalTeeth([]);
+    setUneruptedTeeth([]);
+    if (appointmentId) {
+      try {
+        await upsertMutation.mutateAsync({
+          patientId: patientId ? String(patientId) : undefined,
+          providerId: providerId ? String(providerId) : undefined,
+          examData: {
+            selectedTeeth: [],
+            missingTeeth: [],
+            toothFindings: {},
+            additionalTeeth: [],
+            uneruptedTeeth: []
+          }
+        });
+        showSnackbar('New Radiographic exam initialized', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to initialize new exam', 'error');
+      }
+    }
   };
 
   // Handle delete exam
@@ -351,6 +426,7 @@ const Radiographic = () => {
           backgroundColor: '#ffffff', 
           flex: 1, 
           overflowY: 'auto',
+          overflowX: 'hidden',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
@@ -372,23 +448,25 @@ const Radiographic = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, pb: 2, mx: -3, px: 3, borderBottom: '1px solid #e0e0e0' }}>
               {/* Left: Visit dates timeline + New Exam */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', flex: 1 }}>
-                <VisitDatesTimeline visitDates={visitDates} />
+                <VisitDatesTimeline visitDates={visitDates} onDateClick={(id) => setViewingAppointmentId(id)} activeAppointmentId={activeAppointmentId} />
                 <Button 
                   startIcon={<AddIcon sx={{ fontSize: 18 }} />} 
                   sx={{ 
                     textTransform: 'none', 
-                    color: '#2563eb', 
+                    color: isSigned ? '#9ca3af' : '#2563eb', 
                     fontWeight: 600, 
                     fontSize: '0.8rem', 
                     whiteSpace: 'nowrap', 
                     flexShrink: 0,
-                    border: '1.5px dashed #d1d5db',
+                    border: isSigned ? '1.5px dashed #e5e7eb' : '1.5px dashed #d1d5db',
                     borderRadius: '20px',
                     px: 2,
                     py: 0.5,
                     bgcolor: '#fff',
-                    '&:hover': { bgcolor: '#f9fafb', borderColor: '#9ca3af' }
+                    '&:hover': { bgcolor: '#f9fafb', borderColor: isSigned ? '#e5e7eb' : '#9ca3af' }
                   }}
+                  onClick={handleNewExam}
+                  disabled={isSigned}
                 >
                   New Exam
                 </Button>
@@ -406,7 +484,7 @@ const Radiographic = () => {
 
             {/* Main 2-Column Layout: Findings Sidebar + Tooth Chart */}
             <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
-              <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+              <Box sx={{ display: 'flex', gap: 2, width: '100%', flexWrap: { xs: 'wrap', lg: 'nowrap' } }}>
                 {/* Left Column - Findings Sidebar */}
                 <FindingsSidebar
                   selectedTeeth={selectedTeeth}

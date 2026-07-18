@@ -22,11 +22,12 @@ const FindingsSidebar = ({
   toggleNoFindings
 }) => {
   return (
-    <Box sx={{ width: '32%', flexShrink: 0, pr: 1 }}>
+    <Box sx={{ width: { xs: '100%', lg: '32%' }, flexShrink: 0, pr: { xs: 0, lg: 1 } }}>
       <Box sx={{ 
         width: '100%', 
         height: 'calc(100vh - 180px)', 
         overflowY: "auto", 
+        overflowX: "hidden",
         pb: 4,
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
