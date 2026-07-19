@@ -86,6 +86,7 @@ const LedgerDialogManager = ({
     </Dialog>
 
     <Dialog open={showInvoiceModal} onClose={handleInvoiceModalCancel} maxWidth={false} fullWidth
+      sx={{ zIndex: 1400 }}
       PaperProps={{ sx: { borderRadius: '2px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', border: '1px solid #ccc' } }}>
       <DialogContent sx={{ p: 0 }}>
         <InvoiceModal invoiceData={invoiceModalData} onSave={handleInvoiceModalSave} onCancel={handleInvoiceModalCancel} />
@@ -107,7 +108,7 @@ const LedgerDialogManager = ({
 
     {showEditInvoice && (
       <Box
-        sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}
+        sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1400 }}
         onClick={() => setShowEditInvoice(false)}
       >
         <Box onClick={(e) => e.stopPropagation()}>

@@ -124,7 +124,7 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth sx={{ zIndex: 1500 }}>
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f5f5f5' }}>
         <Typography variant="h6" fontWeight={700}>
           Select Code(s):

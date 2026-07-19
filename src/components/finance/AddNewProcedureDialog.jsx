@@ -14,12 +14,32 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
   const mandibularLA = [27, 26, 25, 'Q4', '', 'Q3', 24, 23, 22];
   const mandibularLL = [21, 20, 19, 18, 17];
 
+  // Supernumerary Adult Teeth
+  const superAdultRightPost = { top: [51, 52, 53, 54, 55], bottom: [82, 81, 80, 79, 78] };
+  const superAdultAnterior = { top: [56, 57, 58, 59, 60, 61], bottom: [77, 76, 75, 74, 73, 72] };
+  const superAdultLeftPost = { top: [62, 63, 64, 65, 66], bottom: [71, 70, 69, 68, 67] };
+
+  // Retained Primary Teeth
+  const retainedRightPost = { top: ['A', 'B'], bottom: ['T', 'S'] };
+  const retainedAnterior = { top: ['C', 'D', 'E', 'F', 'G', 'H'], bottom: ['R', 'Q', 'P', 'O', 'N', 'M'] };
+  const retainedLeftPost = { top: ['I', 'J'], bottom: ['L', 'K'] };
+
+  // Supernumerary Primary Teeth
+  const superPrimaryRightPost = { top: ['AS', 'BS'], bottom: ['TS', 'SS'] };
+  const superPrimaryAnterior = { top: ['CS', 'DS', 'ES', 'FS', 'GS', 'HS'], bottom: ['RS', 'QS', 'PS', 'OS', 'NS', 'MS'] };
+  const superPrimaryLeftPost = { top: ['IS', 'JS'], bottom: ['LS', 'KS'] };
+
   const surfaces = ['M', 'D', 'O/I', 'L', 'B/F', 'C', 'V'];
 
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
   const [selectedProcedures, setSelectedProcedures] = useState([]);
   const [dontChangeCode, setDontChangeCode] = useState(false);
+
+  // Visibility state for additional teeth containers
+  const [showSuperAdult, setShowSuperAdult] = useState(false);
+  const [showRetainedPrimary, setShowRetainedPrimary] = useState(false);
+  const [showSuperPrimary, setShowSuperPrimary] = useState(false);
   
   // Autocomplete and Dialog states
   const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
@@ -106,6 +126,46 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
     </Box>
   );
 
+  const AdditionalTeethContainer = ({ title, rightPost, anterior, leftPost }) => (
+    <Box sx={{ borderTop: '1px solid #e5e7eb', mb: 0, overflow: 'hidden' }}>
+      <Typography sx={{ fontWeight: 'bold', fontSize: '13px', color: '#1e3a8a', bgcolor: '#f9fafb', py: 0.5, px: 1.5 }}>
+        {title}
+      </Typography>
+      <Box sx={{ display: 'flex', borderBottom: '1px solid #f3f4f6' }}>
+        {/* Right Posterior */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <HeaderBox label="Right Posterior" />
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+            {rightPost.top.map(t => <ToothButton key={t} label={t} />)}
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+            {rightPost.bottom.map(t => <ToothButton key={t} label={t} />)}
+          </Box>
+        </Box>
+        {/* Anterior */}
+        <Box sx={{ flex: 1.5, borderLeft: '1px solid #f3f4f6', borderRight: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <HeaderBox label="Anterior" />
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+            {anterior.top.map(t => <ToothButton key={t} label={t} />)}
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+            {anterior.bottom.map(t => <ToothButton key={t} label={t} />)}
+          </Box>
+        </Box>
+        {/* Left Posterior */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <HeaderBox label="Left Posterior" />
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+            {leftPost.top.map(t => <ToothButton key={t} label={t} />)}
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+            {leftPost.bottom.map(t => <ToothButton key={t} label={t} />)}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+
   return (
     <Box
       sx={{
@@ -139,7 +199,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
       </Box>
 
       {/* Body */}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 2, maxHeight: 'calc(90vh - 60px)', overflowY: 'auto' }}>
         {/* Select Tooth Section */}
         <Typography sx={{ color: '#5c7bb5', fontSize: '14px', mb: 1, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
           Select Tooth
@@ -188,15 +248,41 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
             </Box>
           </Box>
           <HeaderBox label="Mandibular Arch" />
+
+          {/* Conditionally rendered additional teeth containers — inside arch box */}
+          {showSuperAdult && (
+            <AdditionalTeethContainer
+              title="Supernumerary Adult Teeth"
+              rightPost={superAdultRightPost}
+              anterior={superAdultAnterior}
+              leftPost={superAdultLeftPost}
+            />
+          )}
+          {showRetainedPrimary && (
+            <AdditionalTeethContainer
+              title="Retained Primary Teeth"
+              rightPost={retainedRightPost}
+              anterior={retainedAnterior}
+              leftPost={retainedLeftPost}
+            />
+          )}
+          {showSuperPrimary && (
+            <AdditionalTeethContainer
+              title="Supernumerary Primary Teeth"
+              rightPost={superPrimaryRightPost}
+              anterior={superPrimaryAnterior}
+              leftPost={superPrimaryLeftPost}
+            />
+          )}
         </Box>
 
         {/* Action Buttons */}
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
-          {['Supernumerary Adult Teeth', 'Retained Primary Teeth', 'Supernumerary Primary Teeth'].map(label => (
+          {!showSuperAdult && (
             <Button
-              key={label}
               variant="contained"
               size="small"
+              onClick={() => setShowSuperAdult(true)}
               sx={{
                 bgcolor: '#003380',
                 borderRadius: '20px',
@@ -206,9 +292,43 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
                 '&:hover': { bgcolor: '#002660' }
               }}
             >
-              {label}
+              Supernumerary Adult Teeth
             </Button>
-          ))}
+          )}
+          {!showRetainedPrimary && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => setShowRetainedPrimary(true)}
+              sx={{
+                bgcolor: '#003380',
+                borderRadius: '20px',
+                textTransform: 'none',
+                fontSize: '12px',
+                px: 2,
+                '&:hover': { bgcolor: '#002660' }
+              }}
+            >
+              Retained Primary Teeth
+            </Button>
+          )}
+          {!showSuperPrimary && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => setShowSuperPrimary(true)}
+              sx={{
+                bgcolor: '#003380',
+                borderRadius: '20px',
+                textTransform: 'none',
+                fontSize: '12px',
+                px: 2,
+                '&:hover': { bgcolor: '#002660' }
+              }}
+            >
+              Supernumerary Primary Teeth
+            </Button>
+          )}
         </Box>
 
         <Divider sx={{ mb: 2, borderColor: '#5c7bb5' }} />
@@ -270,6 +390,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
               onChange={(e, newValue) => {
                 setSelectedProcedures(newValue);
               }}
+              componentsProps={{ popper: { sx: { zIndex: 1500 } } }}
               renderInput={(params) => (
                 <TextField
                   {...params}

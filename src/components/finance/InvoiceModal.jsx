@@ -217,6 +217,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
         onChange={(e) => onChange(e.target.value)}
         displayEmpty
         variant="standard"
+        MenuProps={{ style: { zIndex: 9999 }, sx: { zIndex: 9999 } }}
         renderValue={(selected) => {
           if (!selected) return "Sel";
           return selected.substring(0, 2).toUpperCase();
