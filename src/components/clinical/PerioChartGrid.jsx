@@ -31,7 +31,7 @@ const SmallSelect = ({ value = 'none', onChange }) => (
   </Select>
 );
 
-const MeasurementCell = ({ value, color, bgcolor, isEditing, onDoubleClick, onChange, onBlur }) => {
+const MeasurementCell = ({ value, color, bgcolor, isEditing, onDoubleClick, onChange, onBlur, isReadOnly }) => {
   const inputRef = useRef(null);
   
   useEffect(() => {
@@ -43,7 +43,7 @@ const MeasurementCell = ({ value, color, bgcolor, isEditing, onDoubleClick, onCh
 
   return (
     <Box 
-      onDoubleClick={onDoubleClick}
+      onDoubleClick={isReadOnly ? undefined : onDoubleClick}
       sx={{ 
         flex: 1,
         minWidth: 0,
@@ -58,7 +58,7 @@ const MeasurementCell = ({ value, color, bgcolor, isEditing, onDoubleClick, onCh
         border: '1px solid #E2E8F0',
         borderRadius: '4px',
         mx: '1.5px',
-        cursor: 'text',
+        cursor: isReadOnly ? 'default' : 'text',
         boxSizing: 'border-box',
         position: 'relative',
         overflow: 'hidden'
@@ -96,8 +96,8 @@ const MeasurementCell = ({ value, color, bgcolor, isEditing, onDoubleClick, onCh
   );
 };
 
-const SiteMeasurement = ({ values = ['', '', ''], type, editingCell, onEditStart, onEditSave, tooth, side, isLast }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: ROW_HEIGHT, borderBottom: isLast ? 'none' : '1px solid #E2E8F0' }}>
+const SiteMeasurement = ({ values = ['', '', ''], type, editingCell, onEditStart, onEditSave, tooth, side, isLast, isReadOnly }) => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: ROW_HEIGHT, borderBottom: isLast ? 'none' : '1px solid #E2E8F0', bgcolor: isReadOnly ? '#f1f5f9' : 'transparent' }}>
     {values.map((v, i) => {
       let color = '#334155';
       let bgcolor = '#fff';
@@ -122,8 +122,9 @@ const SiteMeasurement = ({ values = ['', '', ''], type, editingCell, onEditStart
           key={i} 
           value={v} 
           color={color} 
-          bgcolor={bgcolor} 
+          bgcolor={isReadOnly ? 'transparent' : bgcolor} 
           isEditing={isEditing}
+          isReadOnly={isReadOnly}
           onDoubleClick={() => onEditStart(tooth, side, type, i)}
           onBlur={(newValue) => onEditSave(tooth, side, type, i, newValue)}
         />
@@ -132,7 +133,7 @@ const SiteMeasurement = ({ values = ['', '', ''], type, editingCell, onEditStart
   </Box>
 );
 
-const PCSCell = ({ active = [], onToggle, isLast }) => {
+const PCSCell = ({ active = [], onToggle, isLast, isReadOnly }) => {
   const configs = {
     'P': { color: '#d97706', bg: '#fef3c7' },
     'C': { color: '#2563eb', bg: '#dbeafe' },
@@ -140,7 +141,7 @@ const PCSCell = ({ active = [], onToggle, isLast }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: ROW_HEIGHT, borderBottom: isLast ? 'none' : '1px solid #E2E8F0' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: ROW_HEIGHT, borderBottom: isLast ? 'none' : '1px solid #E2E8F0', bgcolor: isReadOnly ? '#f1f5f9' : 'transparent' }}>
       {['P', 'C', 'S'].map(label => {
         const isActive = active.includes(label);
         return (
@@ -155,14 +156,13 @@ const PCSCell = ({ active = [], onToggle, isLast }) => {
               alignItems: 'center', 
               justifyContent: 'center',
               fontSize: '11px',
-              color: isActive ? configs[label].color : '#94A3B8',
-              bgcolor: isActive ? configs[label].bg : '#fff',
-              border: isActive ? `1px solid ${configs[label].bg}` : '1px solid #E2E8F0',
+              bgcolor: isActive ? (isReadOnly ? 'transparent' : configs[label].bg) : (isReadOnly ? 'transparent' : '#fff'),
+              border: isActive ? `1px solid ${configs[label].color}` : '1px solid #E2E8F0',
               borderRadius: '4px',
               mx: '1.5px',
               fontWeight: isActive ? 700 : 500,
-              cursor: 'pointer',
-              opacity: isActive ? 1 : 0.6,
+              cursor: isReadOnly ? 'default' : 'pointer',
+              opacity: isActive ? 1 : (isReadOnly ? 0.3 : 0.6),
               transition: 'all 0.2s',
               boxSizing: 'border-box'
             }}
@@ -175,12 +175,12 @@ const PCSCell = ({ active = [], onToggle, isLast }) => {
   );
 };
 
-const BleedingCell = ({ active = [], onToggle, isLast }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: ROW_HEIGHT, borderBottom: isLast ? 'none' : '1px solid #E2E8F0' }}>
+const BleedingCell = ({ active = [], onToggle, isLast, isReadOnly }) => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: ROW_HEIGHT, borderBottom: isLast ? 'none' : '1px solid #E2E8F0', bgcolor: isReadOnly ? '#f1f5f9' : 'transparent' }}>
     {[0, 1, 2].map(i => (
       <Box 
         key={i} 
-        onDoubleClick={() => onToggle(i)}
+        onDoubleClick={isReadOnly ? undefined : () => onToggle(i)}
         sx={{ 
           flex: 1, 
           minWidth: 0,
@@ -191,8 +191,8 @@ const BleedingCell = ({ active = [], onToggle, isLast }) => (
           border: '1px solid #E2E8F0',
           borderRadius: '4px',
           mx: '1.5px',
-          cursor: 'pointer',
-          bgcolor: '#fff',
+          cursor: isReadOnly ? 'default' : 'pointer',
+          bgcolor: isReadOnly ? 'transparent' : '#fff',
           boxSizing: 'border-box'
         }}
       >
@@ -220,8 +220,25 @@ const ToothColumn = ({
   onSelectChange,
   side,
   hideMobility = false,
-  isLastColumn = false
+  isLastColumn = false,
+  isCompareMode = false,
+  compareDates = [],
+  compareFields = {}
 }) => {
+  // Mock historical data for read-only rows
+  const getHistoricalData = (date, tooth, side, type) => {
+    // Return empty arrays or strings as default placeholder for now. 
+    // This allows the UI to render correctly.
+    if (type === 'bleeding') return [];
+    if (type === 'pcs') return [];
+    if (type === 'probe') return ['', '', ''];
+    if (type === 'recession') return ['', '', ''];
+    if (type === 'attachment') return ['', '', ''];
+    if (type === 'mobility') return 'none';
+    if (type === 'furcation') return 'none';
+    return null;
+  };
+
   return (
     <Box 
       component="fieldset"
@@ -244,33 +261,99 @@ const ToothColumn = ({
       {!isBottom ? (
         <>
           {!hideMobility && (
-            <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: '1px solid #E2E8F0' }}>
-              <SmallSelect value={data?.mobility} onChange={(val) => onSelectChange(number, side, 'mobility', val)} />
-            </Box>
+            <>
+              <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: '1px solid #E2E8F0' }}>
+                <SmallSelect value={data?.mobility} onChange={(val) => onSelectChange(number, side, 'mobility', val)} />
+              </Box>
+              {isCompareMode && compareFields?.mobility && compareDates.map(date => (
+                <Box key={`mob-${date}`} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: '1px solid #E2E8F0', bgcolor: '#f1f5f9' }}>
+                  <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>{getHistoricalData(date, number, side, 'mobility')}</Typography>
+                </Box>
+              ))}
+            </>
           )}
+          
           <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: '1px solid #E2E8F0' }}>
             <SmallSelect value={data?.furcation} onChange={(val) => onSelectChange(number, side, 'furcation', val)} />
           </Box>
+          {isCompareMode && compareFields?.furcation && compareDates.map(date => (
+            <Box key={`furc-${date}`} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: '1px solid #E2E8F0', bgcolor: '#f1f5f9' }}>
+              <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>{getHistoricalData(date, number, side, 'furcation')}</Typography>
+            </Box>
+          ))}
+
           <BleedingCell active={data?.bleeding} onToggle={(val) => onToggleArrayItem(number, side, 'bleeding', val)} />
+          {isCompareMode && compareFields?.bleeding && compareDates.map(date => (
+            <BleedingCell key={`bld-${date}`} active={getHistoricalData(date, number, side, 'bleeding')} isReadOnly />
+          ))}
+
           <PCSCell active={data?.pcs} onToggle={(val) => onToggleArrayItem(number, side, 'pcs', val)} />
+          {isCompareMode && compareFields?.pcs && compareDates.map(date => (
+            <PCSCell key={`pcs-${date}`} active={getHistoricalData(date, number, side, 'pcs')} isReadOnly />
+          ))}
+
           <SiteMeasurement values={data?.attachment || ['', '', '']} type="attachment" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          {isCompareMode && compareFields?.attachmentLoss && compareDates.map(date => (
+            <SiteMeasurement key={`att-${date}`} values={getHistoricalData(date, number, side, 'attachment')} type="attachment" tooth={number} side={side} isReadOnly />
+          ))}
+
           <SiteMeasurement values={data?.recession || ['', '', '']} type="recession" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
-          <SiteMeasurement values={data?.probe || ['', '', '']} type="probe" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} isLast={true} />
+          {isCompareMode && compareFields?.recession && compareDates.map(date => (
+            <SiteMeasurement key={`rec-${date}`} values={getHistoricalData(date, number, side, 'recession')} type="recession" tooth={number} side={side} isReadOnly />
+          ))}
+
+          <SiteMeasurement values={data?.probe || ['', '', '']} type="probe" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} isLast={!isCompareMode || !compareFields?.probe || compareDates.length === 0} />
+          {isCompareMode && compareFields?.probe && compareDates.map((date, idx) => (
+            <SiteMeasurement key={`prb-${date}`} values={getHistoricalData(date, number, side, 'probe')} type="probe" tooth={number} side={side} isReadOnly isLast={idx === compareDates.length - 1} />
+          ))}
         </>
       ) : (
         <>
           <SiteMeasurement values={data?.probe || ['', '', '']} type="probe" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          {isCompareMode && compareFields?.probe && compareDates.map(date => (
+            <SiteMeasurement key={`prb-${date}`} values={getHistoricalData(date, number, side, 'probe')} type="probe" tooth={number} side={side} isReadOnly />
+          ))}
+
           <SiteMeasurement values={data?.recession || ['', '', '']} type="recession" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          {isCompareMode && compareFields?.recession && compareDates.map(date => (
+            <SiteMeasurement key={`rec-${date}`} values={getHistoricalData(date, number, side, 'recession')} type="recession" tooth={number} side={side} isReadOnly />
+          ))}
+
           <SiteMeasurement values={data?.attachment || ['', '', '']} type="attachment" editingCell={editingCell} onEditStart={onEditStart} onEditSave={onEditSave} tooth={number} side={side} />
+          {isCompareMode && compareFields?.attachmentLoss && compareDates.map(date => (
+            <SiteMeasurement key={`att-${date}`} values={getHistoricalData(date, number, side, 'attachment')} type="attachment" tooth={number} side={side} isReadOnly />
+          ))}
+
           <PCSCell active={data?.pcs} onToggle={(val) => onToggleArrayItem(number, side, 'pcs', val)} />
+          {isCompareMode && compareFields?.pcs && compareDates.map(date => (
+            <PCSCell key={`pcs-${date}`} active={getHistoricalData(date, number, side, 'pcs')} isReadOnly />
+          ))}
+
           <BleedingCell active={data?.bleeding} onToggle={(val) => onToggleArrayItem(number, side, 'bleeding', val)} />
-          <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: hideMobility ? 'none' : '1px solid #E2E8F0' }}>
+          {isCompareMode && compareFields?.bleeding && compareDates.map(date => (
+            <BleedingCell key={`bld-${date}`} active={getHistoricalData(date, number, side, 'bleeding')} isReadOnly />
+          ))}
+
+          <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: (hideMobility && (!isCompareMode || !compareFields?.furcation || compareDates.length === 0)) ? 'none' : '1px solid #E2E8F0' }}>
             <SmallSelect value={data?.furcation} onChange={(val) => onSelectChange(number, side, 'furcation', val)} />
           </Box>
-          {!hideMobility && (
-            <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px' }}>
-              <SmallSelect value={data?.mobility} onChange={(val) => onSelectChange(number, side, 'mobility', val)} />
+          {isCompareMode && compareFields?.furcation && compareDates.map((date, idx) => (
+            <Box key={`furc-${date}`} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: (hideMobility && idx === compareDates.length - 1) ? 'none' : '1px solid #E2E8F0', bgcolor: '#f1f5f9' }}>
+              <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>{getHistoricalData(date, number, side, 'furcation')}</Typography>
             </Box>
+          ))}
+
+          {!hideMobility && (
+            <>
+              <Box sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: (!isCompareMode || !compareFields?.mobility || compareDates.length === 0) ? 'none' : '1px solid #E2E8F0' }}>
+                <SmallSelect value={data?.mobility} onChange={(val) => onSelectChange(number, side, 'mobility', val)} />
+              </Box>
+              {isCompareMode && compareFields?.mobility && compareDates.map((date, idx) => (
+                <Box key={`mob-${date}`} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', px: '6px', borderBottom: idx === compareDates.length - 1 ? 'none' : '1px solid #E2E8F0', bgcolor: '#f1f5f9' }}>
+                  <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>{getHistoricalData(date, number, side, 'mobility')}</Typography>
+                </Box>
+              ))}
+            </>
           )}
         </>
       )}
@@ -298,14 +381,30 @@ const RowLabels = ({ labels, isBottom = false, hasMobility = true }) => (
   </Box>
 );
 
-const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [] }) => {
+const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [], isCompareMode, compareDates, compareFields }) => {
   const [editingCell, setEditingCell] = useState(null);
 
-  const topLabelsUpper = ['MOBILITY', 'FURCATION', 'BLEEDING', 'PLQ / CALC / SUP', 'ATTACHMENT LOSS', 'RECESSION (FGM/CEJ)', 'PROBE'];
-  const bottomLabelsUpper = ['PROBE', 'RECESSION (FGM/CEJ)', 'ATTACHMENT LOSS', 'PLQ / CALC / SUP', 'BLEEDING', 'FURCATION'];
+  const generateLabels = (baseLabels) => {
+    if (!isCompareMode || !compareDates || compareDates.length === 0) return baseLabels;
+    let newLabels = [];
+    baseLabels.forEach(label => {
+      newLabels.push(label);
+      if (label === 'MOBILITY' && compareFields?.mobility) compareDates.forEach(d => newLabels.push(`Mobility ${d}`));
+      if (label === 'FURCATION' && compareFields?.furcation) compareDates.forEach(d => newLabels.push(`Furcation ${d}`));
+      if (label === 'BLEEDING' && compareFields?.bleeding) compareDates.forEach(d => newLabels.push(`Bleeding ${d}`));
+      if (label === 'PLQ / CALC / SUP' && compareFields?.pcs) compareDates.forEach(d => newLabels.push(`Plq/calc/sup ${d}`));
+      if (label === 'ATTACHMENT LOSS' && compareFields?.attachmentLoss) compareDates.forEach(d => newLabels.push(`Attachment Loss ${d}`));
+      if (label === 'RECESSION (FGM/CEJ)' && compareFields?.recession) compareDates.forEach(d => newLabels.push(`Recession (FGM/CEJ) ${d}`));
+      if (label === 'PROBE' && compareFields?.probe) compareDates.forEach(d => newLabels.push(`Probe ${d}`));
+    });
+    return newLabels;
+  };
+
+  const topLabelsUpper = generateLabels(['MOBILITY', 'FURCATION', 'BLEEDING', 'PLQ / CALC / SUP', 'ATTACHMENT LOSS', 'RECESSION (FGM/CEJ)', 'PROBE']);
+  const bottomLabelsUpper = generateLabels(['PROBE', 'RECESSION (FGM/CEJ)', 'ATTACHMENT LOSS', 'PLQ / CALC / SUP', 'BLEEDING', 'FURCATION']);
   
-  const topLabelsLower = ['MOBILITY', 'FURCATION', 'BLEEDING', 'PLQ / CALC / SUP', 'ATTACHMENT LOSS', 'RECESSION (FGM/CEJ)', 'PROBE'];
-  const bottomLabelsLower = ['PROBE', 'RECESSION (FGM/CEJ)', 'ATTACHMENT LOSS', 'PLQ / CALC / SUP', 'BLEEDING', 'FURCATION'];
+  const topLabelsLower = generateLabels(['MOBILITY', 'FURCATION', 'BLEEDING', 'PLQ / CALC / SUP', 'ATTACHMENT LOSS', 'RECESSION (FGM/CEJ)', 'PROBE']);
+  const bottomLabelsLower = generateLabels(['PROBE', 'RECESSION (FGM/CEJ)', 'ATTACHMENT LOSS', 'PLQ / CALC / SUP', 'BLEEDING', 'FURCATION']);
 
   const chartDataRef = useRef(chartData);
   useEffect(() => {

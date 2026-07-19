@@ -170,6 +170,15 @@ const PeriodontalExamPage = () => {
   const [talkBackEnabled, setTalkBackEnabled] = useState(false);
   const [perioTab, setPerioTab] = useState(0);
 
+  // --- Compare Mode State ---
+  const [isCompareMode, setIsCompareMode] = useState(false);
+  const [compareDates, setCompareDates] = useState([]);
+  const [compareFields, setCompareFields] = useState({
+    bleeding: true, probe: true, recession: true,
+    attachmentLoss: false, gingiva: false, furcation: false,
+    mobility: false, pcs: false
+  });
+
   const [anchorEl, setAnchorEl] = useState(null);
   const openDropdown = Boolean(anchorEl);
 
@@ -674,7 +683,8 @@ const PeriodontalExamPage = () => {
             </IconButton>
             <Button 
               variant="outlined" 
-              startIcon={<img src={compareIcon} alt="Compare" style={{ width: 16, height: 16 }} />}
+              onClick={() => setIsCompareMode(!isCompareMode)}
+              startIcon={!isCompareMode && <img src={compareIcon} alt="Compare" style={{ width: 16, height: 16 }} />}
               sx={{ 
                 color: '#334155', 
                 bgcolor: '#FBFDFE',
@@ -688,7 +698,7 @@ const PeriodontalExamPage = () => {
                 '&:hover': { backgroundColor: '#f0f4f8', borderColor: '#cbd5e1' }
               }}
             >
-              Compare
+              {isCompareMode ? 'Exit Compare View' : 'Compare'}
             </Button>
             <Button 
               variant="contained" 
@@ -766,7 +776,14 @@ const PeriodontalExamPage = () => {
         {/* 2. DIAGNOSTIC SECTION */}
         <Grid container spacing={3} sx={{ mt: 1, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
           <Grid item xs={12} sx={{ flexBasis: { md: '30%' }, maxWidth: { md: '30%' }, minWidth: 0 }}>
-            <DiagnosisCard />
+            <DiagnosisCard 
+              isCompareMode={isCompareMode}
+              compareDates={compareDates}
+              setCompareDates={setCompareDates}
+              compareFields={compareFields}
+              setCompareFields={setCompareFields}
+              visitDates={visitDates}
+            />
           </Grid>
           <Grid item xs={12} sx={{ flexBasis: { md: '70%' }, maxWidth: { md: '70%' }, minWidth: 0 }}>
             <SummaryCard summaryData={dynamicSummaryData} />
@@ -850,7 +867,14 @@ const PeriodontalExamPage = () => {
         {/* 4. PERIO CHART GRID */}
         <Box sx={{ overflowX: 'auto', width: '100%' }}>
           {perioTab === 0 ? (
-            <PerioChartGrid chartData={chartData} setChartData={setChartData} missingTeeth={missingTeeth} />
+            <PerioChartGrid 
+              chartData={chartData} 
+              setChartData={setChartData} 
+              missingTeeth={missingTeeth} 
+              isCompareMode={isCompareMode}
+              compareDates={compareDates}
+              compareFields={compareFields}
+            />
           ) : (
             <PeriographTab chartData={chartData} missingTeeth={missingTeeth} />
           )}
