@@ -2,11 +2,11 @@ import React from 'react';
 import { Select, MenuItem, Checkbox, FormControlLabel, Typography, TextField, InputAdornment, Box } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
-export const ReportSelect = ({ label, prefix, options = [], value, defaultValue, onChange, width, sx }) => {
+export const ReportSelect = ({ label, labelPosition = 'top', prefix, options = [], value, defaultValue, onChange, width, sx }) => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: width || 140 }}>
+    <Box sx={{ display: 'flex', flexDirection: labelPosition === 'left' ? 'row' : 'column', alignItems: labelPosition === 'left' ? 'center' : 'flex-start', gap: labelPosition === 'left' ? 1 : 0, minWidth: width || 140 }}>
       {label && (
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: labelPosition === 'top' ? 0.5 : 0, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
           {label.toLowerCase()}
         </Typography>
       )}

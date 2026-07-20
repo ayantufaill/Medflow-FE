@@ -10,7 +10,7 @@ const PatientAgingReportTable = ({ loading, reportData, agingBuckets, hidePatien
   const rightColSpan = 4 + (showPaymentPlan ? 1 : 0); // Owings + PaymentPlan + Credit + Billed + Notes
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-      <Table size="small" stickyHeader>
+      <Table id="patient-aging-table" size="small" stickyHeader>
         <TableHead>
           <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1 } }}>
             <TableCell padding="checkbox" sx={{ width: '40px' }}><Checkbox size="small" /></TableCell>

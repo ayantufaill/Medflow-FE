@@ -35,7 +35,7 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
       <TableContainer elevation={0}>
         <Table id="aging-report-table" size="small">
           <TableHead>
-            <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f8fafc', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
+            <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
               <TableCell padding="checkbox" sx={{ width: '40px' }}>
                 <Checkbox 
                   size="small"

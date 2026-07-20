@@ -371,6 +371,7 @@ const AgingReport = () => {
     printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
     printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
     printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
     printWindow.document.write('</style></head><body>');
     printWindow.document.write('<h2>Aging Report</h2>');
