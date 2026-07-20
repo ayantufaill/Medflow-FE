@@ -97,6 +97,18 @@ export const claimService = {
   },
 
   /**
+   * Download claim PDF
+   * @param {string} claimId - Claim ID
+   * @returns {Promise<Blob>} PDF blob
+   */
+  async downloadClaimPdf(claimId) {
+    const response = await apiClient.get(`/claims/${claimId}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
    * Get denied claims only
    * @param {Object} options - Filter options
    * @returns {Promise<Object>} Denied claims data
