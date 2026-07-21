@@ -1,12 +1,28 @@
 import React, { useState } from 'react';
-import { Box, Typography, Select, MenuItem } from "@mui/material";
+import { Box, Typography, Select, MenuItem, Snackbar, Alert } from "@mui/material";
 import { Add as AddIconNew } from "@mui/icons-material";
 import CoverageGroup from './CoverageGroup';
 import { COVERAGE_DATA } from '../utils/insuranceConstants';
 import AddCoverageItemDialog from '../components/AddCoverageItemDialog';
 
+const ADA_CATEGORY_KEY_MAP = {
+  'Diagnostic':                  'diagnostic',
+  'Preventive':                  'preventative',
+  'Restorative':                 'restorative',
+  'Endodontics':                 'endodontics',
+  'Periodontics':                'periodontics',
+  'Prosthodontics, removable':   'prosthodonticsRemovable',
+  'Maxillofacial Prosthetics':   'maxillofacialProsthetics',
+  'Implant Services':            'implantServices',
+  'Prosthodontics, fixed':       'prosthodonticsFixed',
+  'Oral & Maxillofacial Surgery':'oralSurgery',
+  'Orthodontics':                'orthodontics',
+  'Adjunctive General Services': 'adjunctGeneral',
+};
+
 const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
   const [isAddCoverageOpen, setIsAddCoverageOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const handleDeleteCoverageItem = (itemId) => {
     if (!setCoverageData) return;
@@ -87,16 +103,28 @@ const FinalCoverageSection = ({ coverageData, setCoverageData }) => {
           if (setCoverageData) {
              const currentData = { ...COVERAGE_DATA, ...coverageData };
              const updatedData = { ...currentData };
-             // Default to preventative for now until category selection is added
-             updatedData.preventative = [...(updatedData.preventative || []), { 
+             
+             const categoryKey = ADA_CATEGORY_KEY_MAP[newItem.category];
+             if (!categoryKey) {
+               setSnackbarMessage('Procedure not found — category cannot be determined');
+               return;
+             }
+
+             updatedData[categoryKey] = [...(updatedData[categoryKey] || []), { 
                ...newItem, 
-               description: newItem.procedure || newItem.code || 'Custom Item', 
+               label: newItem.code,
+               waiting: newItem.waitingPeriod,
+               deletable: true,
+               isCustom: true,
                noCoverage: false 
              }];
              setCoverageData(updatedData);
           }
         }}
       />
+      <Snackbar open={!!snackbarMessage} autoHideDuration={4000} onClose={() => setSnackbarMessage('')} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="warning" onClose={() => setSnackbarMessage('')}>{snackbarMessage}</Alert>
+      </Snackbar>
     </Box>
   );
 };

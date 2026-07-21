@@ -3,18 +3,20 @@ import { Box, Button, Typography, Radio, FormControlLabel } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add';
 import VisitDatesTimeline from '../patients/VisitDatesTimeline';
 
-const MorphologicalHeader = ({ visitDates, formData, handleFieldChange }) => {
+const MorphologicalHeader = ({ visitDates, formData, handleFieldChange, onNewExam, onDateClick, isSigned, activeAppointmentId }) => {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, pb: 2, mx: -3, px: 3, borderBottom: '1px solid #e0e0e0' }}>
       {/* Left: Visit dates timeline + New Exam */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', flex: 1 }}>
-        <VisitDatesTimeline visitDates={visitDates} />
+        <VisitDatesTimeline visitDates={visitDates} onDateClick={onDateClick} activeAppointmentId={activeAppointmentId} />
         <Button 
           startIcon={<AddIcon sx={{ fontSize: 18 }} />} 
           disableRipple
+          onClick={onNewExam}
+          disabled={isSigned}
           sx={{ 
             textTransform: 'none', 
-            color: '#2563eb', 
+            color: isSigned ? '#9ca3af' : '#2563eb', 
             fontWeight: 600, 
             fontSize: '0.8rem', 
             whiteSpace: 'nowrap', 
@@ -22,7 +24,7 @@ const MorphologicalHeader = ({ visitDates, formData, handleFieldChange }) => {
             px: 2,
             py: 0.5,
             bgcolor: 'transparent',
-            '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+            '&:hover': { bgcolor: 'transparent', textDecoration: isSigned ? 'none' : 'underline' }
           }}
         >
           New Exam

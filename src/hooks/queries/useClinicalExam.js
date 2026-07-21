@@ -35,6 +35,9 @@ export const useUpsertClinicalExam = (examType, appointmentId) => {
       queryClient.invalidateQueries({
         queryKey: clinicalExamKeys.detail(examType, appointmentId),
       });
+      queryClient.invalidateQueries({
+        queryKey: clinicalExamKeys.histories(),
+      });
     },
   });
 };
@@ -49,6 +52,9 @@ export const useSignClinicalExam = (examType, appointmentId) => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: clinicalExamKeys.detail(examType, appointmentId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: clinicalExamKeys.histories(),
       });
     },
   });

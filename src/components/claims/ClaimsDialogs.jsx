@@ -1,14 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Grid, TextField, Button, IconButton, Autocomplete, Checkbox, FormControl, FormControlLabel, MenuItem, Select
+  Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Grid, TextField, Button, IconButton, Autocomplete, Checkbox, FormControl, FormControlLabel, MenuItem, Select, CircularProgress, Table, TableHead, TableBody, TableRow, TableCell
 } from '@mui/material';
 import { Download as DownloadIcon, Close as CloseIcon, Info as InfoIcon, Edit as EditIcon, ErrorOutline as ErrorIcon } from '@mui/icons-material';
+import { claimService } from '../../services/claim.service';
 
 export const ClaimsDialogs = ({
   openEditDialog, setOpenEditDialog, editingClaim, setEditingClaim,
   openAttachDialog, setOpenAttachDialog, attachingClaim,
   openPreviewDialog, setOpenPreviewDialog, previewingClaim, activeTab, handleSaveEdit, handleSaveAttach
 }) => {
+  const [fullClaimDetails, setFullClaimDetails] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  useEffect(() => {
+    if (openPreviewDialog && previewingClaim?.id) {
+      setLoadingPreview(true);
+      claimService.getClaimById(previewingClaim.id)
+        .then(res => setFullClaimDetails(res.claim || res))
+        .catch(err => console.error('Failed to load full claim details', err))
+        .finally(() => setLoadingPreview(false));
+    } else {
+      setFullClaimDetails(null);
+    }
+  }, [openPreviewDialog, previewingClaim]);
+
+  const displayClaim = fullClaimDetails || previewingClaim;
+
+  const handlePrintClaim = async () => {
+    if (!displayClaim?.id) return;
+    try {
+      const blob = await claimService.downloadClaimPdf(displayClaim.id);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error('Failed to print claim PDF', error);
+      alert('Failed to generate claim form. Please try again.');
+    }
+  };
+
   return (
     <>
       {/* Edit Claim Dialog */}
@@ -297,52 +328,160 @@ export const ClaimsDialogs = ({
       </Dialog>
 
       {/* Claim Form Preview Dialog */}
-      <Dialog open={openPreviewDialog} onClose={() => setOpenPreviewDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, color: '#1a3a6b', borderBottom: '1px solid #e0e6ed', pb: 2 }}>
-          ADA 2019 Claim Form Preview ({previewingClaim?.claimNumber})
+      <Dialog open={openPreviewDialog} onClose={() => setOpenPreviewDialog(false)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: '#1a3a6b', borderBottom: '1px solid #e0e6ed', pb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>ADA 2019 Claim Form Preview ({displayClaim?.claimNumber})</span>
+          <IconButton onClick={() => setOpenPreviewDialog(false)} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          {previewingClaim && (
-            <Box sx={{ border: '2px solid #e0e6ed', p: 3, borderRadius: '6px', backgroundColor: '#fafafa', fontFamily: 'monospace' }}>
-              <Typography sx={{ fontWeight: 700, textAlign: 'center', mb: 2 }}>
+        <DialogContent sx={{ pt: 3, backgroundColor: '#f8fafc' }}>
+          {loadingPreview ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+              <CircularProgress />
+            </Box>
+          ) : displayClaim && (
+            <Box sx={{ border: '1px solid #cbd5e1', p: 4, borderRadius: '8px', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: '900px', mx: 'auto' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 4, color: '#1a3a6b' }}>
                 ADA Dental Claim Form
               </Typography>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 6 }} sx={{ borderRight: '1px solid #e0e6ed' }}>
-                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>1. HEADER INFORMATION</Typography>
-                  <Typography variant="body2">Primary Insurance Claim</Typography>
-                  <Typography variant="body2">Carrier: {previewingClaim.carrier}</Typography>
+
+              <Grid container spacing={3}>
+                {/* 1. Header & Carrier */}
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>HEADER INFORMATION</Typography>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid size={{ xs: 6 }}>
+                      <Typography variant="body2"><strong>Type of Transaction:</strong> Statement of Actual Services</Typography>
+                      <Typography variant="body2"><strong>Claim Format:</strong> {displayClaim.claimFormat || 'E-claim'}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <Typography variant="body2"><strong>Carrier Name:</strong> {displayClaim.insuranceCompany?.name || displayClaim.carrier || '—'}</Typography>
+                      <Typography variant="body2"><strong>Carrier Address:</strong> {displayClaim.insuranceCompany?.address || '—'}</Typography>
+                      <Typography variant="body2"><strong>Carrier City, State, Zip:</strong> {displayClaim.insuranceCompany?.city ? `${displayClaim.insuranceCompany.city}, ${displayClaim.insuranceCompany.state} ${displayClaim.insuranceCompany.zip}` : '—'}</Typography>
+                    </Grid>
+                  </Grid>
                 </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>2. PATIENT INFORMATION</Typography>
-                  <Typography variant="body2">Name: {previewingClaim.patientName}</Typography>
-                  <Typography variant="body2">Code: {previewingClaim.patientCode}</Typography>
+
+                {/* 2. Subscriber & Patient */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>SUBSCRIBER INFORMATION</Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2"><strong>Name:</strong> {displayClaim.subscriberDetails?.firstName} {displayClaim.subscriberDetails?.lastName}</Typography>
+                    <Typography variant="body2"><strong>Member ID:</strong> {displayClaim.subscriberDetails?.memberId}</Typography>
+                    <Typography variant="body2"><strong>Group Number:</strong> {displayClaim.subscriberDetails?.groupNumber}</Typography>
+                    <Typography variant="body2"><strong>DOB:</strong> {displayClaim.subscriberDetails?.dateOfBirth ? new Date(displayClaim.subscriberDetails.dateOfBirth).toLocaleDateString() : '—'} <strong>Gender:</strong> {displayClaim.subscriberDetails?.gender || '—'}</Typography>
+                    <Typography variant="body2"><strong>Address:</strong> {displayClaim.subscriberDetails?.address}, {displayClaim.subscriberDetails?.city}, {displayClaim.subscriberDetails?.state} {displayClaim.subscriberDetails?.zip}</Typography>
+                  </Box>
                 </Grid>
-                <Grid size={{ xs: 12 }} sx={{ borderTop: '1px solid #e0e6ed', mt: 2, pt: 2 }}>
-                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>3. PROCEDURES SUBMITTED</Typography>
-                  {previewingClaim.procedures.map((proc, index) => (
-                    <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">{proc.code} - {proc.name}</Typography>
-                      <Typography variant="body2">${proc.fee.toFixed(2)}</Typography>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>PATIENT INFORMATION</Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2"><strong>Name:</strong> {displayClaim.patient?.firstName || displayClaim.patientName} {displayClaim.patient?.lastName || ''}</Typography>
+                    <Typography variant="body2"><strong>Relationship to Subscriber:</strong> {displayClaim.subscriberDetails?.relationshipToSubscriber === 1 ? 'Self' : displayClaim.subscriberDetails?.relationshipToSubscriber === 2 ? 'Spouse' : displayClaim.subscriberDetails?.relationshipToSubscriber === 3 ? 'Child' : 'Other'}</Typography>
+                    <Typography variant="body2"><strong>DOB:</strong> {displayClaim.patient?.dateOfBirth ? new Date(displayClaim.patient.dateOfBirth).toLocaleDateString() : displayClaim.patientDob || '—'} <strong>Gender:</strong> {displayClaim.patient?.gender || '—'}</Typography>
+                    <Typography variant="body2"><strong>Address:</strong> {displayClaim.patient?.address ? `${displayClaim.patient.address.line1 || displayClaim.patient.address || ''} ${displayClaim.patient.address.line2 || ''}, ${displayClaim.patient.address.city || displayClaim.patient.city || ''}, ${displayClaim.patient.address.state || displayClaim.patient.state || ''} ${displayClaim.patient.address.postalCode || displayClaim.patient.zip || ''}`.replace(/ ,/g, ',').trim().replace(/^,|,$/g, '') : '—'}</Typography>
+                  </Box>
+                </Grid>
+
+                {/* 3. Provider Info */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>BILLING PROVIDER</Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2"><strong>Name:</strong> {displayClaim.billingProvider ? `${displayClaim.billingProvider.firstName} ${displayClaim.billingProvider.lastName}` : '—'}</Typography>
+                    <Typography variant="body2"><strong>NPI:</strong> {displayClaim.billingProvider?.npi || '—'}</Typography>
+                    <Typography variant="body2"><strong>TIN:</strong> {displayClaim.billingProvider?.tin || '—'}</Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>TREATING DENTIST</Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2"><strong>Name:</strong> {displayClaim.treatingProvider ? `${displayClaim.treatingProvider.firstName} ${displayClaim.treatingProvider.lastName}` : displayClaim.treatingProvider || '—'}</Typography>
+                    <Typography variant="body2"><strong>NPI:</strong> {displayClaim.treatingProvider?.npi || '—'}</Typography>
+                  </Box>
+                </Grid>
+
+                {/* 4. Record of Services */}
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>RECORD OF SERVICES PROVIDED</Typography>
+                  <Table size="small" sx={{ mt: 1, border: '1px solid #e0e6ed' }}>
+                    <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>Date of Service</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Procedure Code</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Tooth/Surface</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Provider</TableCell>
+                        <TableCell sx={{ fontWeight: 600, textAlign: 'right' }}>Fee</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayClaim.procedures?.length > 0 ? displayClaim.procedures.map((proc, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>{proc.dateOfService ? new Date(proc.dateOfService).toLocaleDateString() : '—'}</TableCell>
+                          <TableCell>{proc.code || '—'}</TableCell>
+                          <TableCell>{proc.tooth || '—'} {proc.surface ? `(${proc.surface})` : ''}</TableCell>
+                          <TableCell>{proc.description || '—'}</TableCell>
+                          <TableCell>{proc.providerName || (displayClaim.treatingProvider ? `${displayClaim.treatingProvider.firstName} ${displayClaim.treatingProvider.lastName}` : '—')}</TableCell>
+                          <TableCell align="right">${(proc.fee || 0).toFixed(2)}</TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center" sx={{ color: '#718096', py: 2 }}>
+                            No procedures listed for this claim.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      <TableRow>
+                        <TableCell colSpan={5} align="right" sx={{ fontWeight: 700, borderTop: '2px solid #e2e8f0' }}>Total Fee:</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, borderTop: '2px solid #e2e8f0' }}>
+                          ${(displayClaim.procedures || []).reduce((acc, curr) => acc + (Number(curr.fee) || 0), 0).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </Grid>
+
+                {/* 5. Signatures */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>AUTHORIZATIONS & SIGNATURES</Typography>
+                  <Box sx={{ mt: 1, p: 2, border: '1px dashed #cbd5e1', borderRadius: '4px' }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary">Patient / Subscriber Signature</Typography>
+                      <Box sx={{ mt: 0.5, borderBottom: '1px solid #e2e8f0', pb: 0.5 }}>
+                        <Typography sx={{ fontFamily: 'cursive', color: displayClaim.patientSignature ? '#1a3a6b' : '#a0aec0', fontStyle: displayClaim.patientSignature ? 'normal' : 'italic' }}>
+                          {displayClaim.patientSignature ? displayClaim.patientSignature : 'Signature on File'}
+                        </Typography>
+                      </Box>
                     </Box>
-                  ))}
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Provider Signature</Typography>
+                      <Box sx={{ mt: 0.5, borderBottom: '1px solid #e2e8f0', pb: 0.5 }}>
+                        <Typography sx={{ fontFamily: 'cursive', color: displayClaim.providerSignature ? '#1a3a6b' : '#a0aec0', fontStyle: displayClaim.providerSignature ? 'normal' : 'italic' }}>
+                          {displayClaim.providerSignature ? displayClaim.providerSignature : 'Signature on File'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
                 </Grid>
-                <Grid size={{ xs: 12 }} sx={{ borderTop: '1px solid #e0e6ed', mt: 2, pt: 2, textAlign: 'right' }}>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    Total Claim Charge: ${previewingClaim.procedures.reduce((acc, curr) => acc + curr.fee, 0).toFixed(2)}
-                  </Typography>
+
+                {/* 6. Attachments & Remarks */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>ATTACHMENTS & REMARKS</Typography>
+                  <Box sx={{ mt: 1, p: 2, backgroundColor: '#f8fafc', borderRadius: '4px', height: '100%' }}>
+                    <Typography variant="body2"><strong>Remarks:</strong> {displayClaim.notes || displayClaim.description || 'None'}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}><strong>Attachments included:</strong> {displayClaim.hasAttachment ? 'Yes (See attachments section)' : 'None'}</Typography>
+                  </Box>
                 </Grid>
               </Grid>
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #e0e6ed' }}>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #e0e6ed', backgroundColor: '#ffffff' }}>
           <Button onClick={() => setOpenPreviewDialog(false)} sx={{ textTransform: 'none', color: '#718096' }}>
             Close Preview
           </Button>
           <Button
             variant="contained"
-            onClick={() => alert('Printing ADA form...')}
+            onClick={handlePrintClaim}
             sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
           >
             Print Form
