@@ -325,7 +325,7 @@ const MyChartConfiguration = () => {
 
   return (
     <Box sx={{ 
-      p: { xs: 2, md: 4 }, 
+      p: { xs: 1, md: 2 }, 
       bgcolor: '#f4f6f8', 
       minHeight: '100vh', 
       fontFamily: "'Manrope', 'Segoe UI', sans-serif",
@@ -333,52 +333,116 @@ const MyChartConfiguration = () => {
       flexDirection: 'column',
       alignItems: 'center'
     }}>
-      <Box sx={{ width: '100%', maxWidth: 1400 }}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography
-              variant="caption"
-              component={RouterLink}
-              to="/admin/practice-setup"
-              sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-            >
-              Practice Setup
-            </Typography>
-            <Typography variant="caption" color="textSecondary">{'>'}</Typography>
-            <Typography variant="caption" color="textSecondary">MyChart Configuration</Typography>
+      <Box sx={{ width: '100%', maxWidth: '100%' }}>
+        <Paper elevation={0} sx={{ p: 4, borderRadius: 3, bgcolor: '#ffffff', border: '1px solid #e8eaf0' }}>
+          {/* Admin Header and Navigation */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Admin</Typography>
+            <Box sx={{ display: 'flex', gap: 0, mb: 3, borderBottom: '1px solid #e8eaf0' }}>
+              <Typography
+                component={RouterLink}
+                to="/admin/practice-setup"
+                sx={{
+                  pb: 1.5,
+                  px: 0,
+                  mr: 3,
+                  textDecoration: 'none',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  borderBottom: '2px solid #2196F3',
+                  cursor: 'pointer',
+                }}
+              >
+                Practice Setup
+              </Typography>
+              <Typography
+                sx={{
+                  pb: 1.5,
+                  px: 0,
+                  mr: 3,
+                  color: 'text.secondary',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  '&:hover': { color: 'text.primary' }
+                }}
+              >
+                User Management
+              </Typography>
+              <Typography
+                sx={{
+                  pb: 1.5,
+                  px: 0,
+                  mr: 3,
+                  color: 'text.secondary',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  '&:hover': { color: 'text.primary' }
+                }}
+              >
+                Clinical Management
+              </Typography>
+              <Typography
+                sx={{
+                  pb: 1.5,
+                  px: 0,
+                  mr: 3,
+                  color: 'text.secondary',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  '&:hover': { color: 'text.primary' }
+                }}
+              >
+                Insurance Management
+              </Typography>
+              <Typography
+                sx={{
+                  pb: 1.5,
+                  px: 0,
+                  color: 'text.secondary',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  '&:hover': { color: 'text.primary' }
+                }}
+              >
+                Finance Management
+              </Typography>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>MyChart Configuration</Typography>
           </Box>
-          <Button 
-            variant="contained" 
-            color="success" 
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
-          >
-            Save Configuration
-          </Button>
-        </Box>
 
-        <Grid container spacing={3}>
-          {/* LEFT COLUMN: Visuals & Payments */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" fontWeight="bold">Colors</Typography>
+          <Divider sx={{ mb: 3 }} />
+
+          <Grid container spacing={2.5}>
+          {/* LEFT COLUMN: Colors & Identity & Legal Name & Patient Info & Marital Status */}
+          <Grid item xs={12} md={4}>
+            {/* Colors Section */}
+            <Paper sx={{ p: 3, mb: 2.5, borderRadius: 2, bgcolor: '#f5f7fa' }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3}>
+                <Box>
+                  <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                    <Box sx={{ width: 24, height: 24, bgcolor: '#cfe9ff', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 'bold' }}>🎨</Typography>
+                    </Box>
+                    <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>COLORS</Typography>
+                  </Box>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem', ml: 3.5 }}>Brand appearance</Typography>
+                </Box>
                 <Button 
                   variant="outlined" 
                   size="small" 
                   onClick={handleResetColors}
-                  sx={{ textTransform: 'none' }}
+                  sx={{ textTransform: 'none', fontSize: '0.7rem', borderRadius: 1, py: 0.5 }}
                 >
                   Reset Colors
                 </Button>
               </Box>
               
               {colorMapping.map(({ label, key }) => (
-                <Box key={key} display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
-                  <Typography variant="body2">{label}</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                <Box key={key} display="flex" justifyContent="space-between" alignItems="center" mb={1.8} px={1}>
+                  <Typography variant="caption" sx={{ fontSize: '0.8rem', color: '#333' }}>{label}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: '0.7rem' }}>
                       {(settings.colors[key] || '#ffffff').toUpperCase()}
                     </Typography>
                     <input
@@ -387,9 +451,9 @@ const MyChartConfiguration = () => {
                       onChange={(e) => handleColorChange(key, e.target.value)}
                       style={{
                         border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        width: '28px',
-                        height: '24px',
+                        borderRadius: '3px',
+                        width: '24px',
+                        height: '20px',
                         padding: 0,
                         cursor: 'pointer',
                         outline: 'none',
@@ -398,60 +462,18 @@ const MyChartConfiguration = () => {
                   </Box>
                 </Box>
               ))}
-
-              <Divider sx={{ my: 3 }} />
-
-              <Typography variant="h6" fontWeight="bold" gutterBottom>Patient Payment</Typography>
-              <Box display="flex" flexDirection="column">
-                <FormControlLabel 
-                  control={
-                    <Checkbox 
-                      checked={settings.patientPayment.includeAchPayment} 
-                      onChange={(e) => handlePatientPaymentChange('includeAchPayment', e.target.checked)} 
-                    />
-                  } 
-                  label={<Typography variant="body2">Include ACH Payment</Typography>} 
-                />
-                <FormControlLabel 
-                  control={
-                    <Checkbox 
-                      checked={settings.patientPayment.addPaymentAsQuickDeposit} 
-                      onChange={(e) => handlePatientPaymentChange('addPaymentAsQuickDeposit', e.target.checked)} 
-                    />
-                  } 
-                  label={<Typography variant="body2">Add payment as a quick deposit</Typography>} 
-                />
-                <FormControlLabel 
-                  control={
-                    <Checkbox 
-                      checked={settings.patientPayment.allowPatientToEditQuickPaymentAmount} 
-                      onChange={(e) => handlePatientPaymentChange('allowPatientToEditQuickPaymentAmount', e.target.checked)} 
-                    />
-                  } 
-                  label={<Typography variant="body2">Allow patient to edit quick payment amount</Typography>} 
-                />
-              </Box>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Typography variant="h6" fontWeight="bold" gutterBottom>Google Measurement ID Setup</Typography>
-              <TextField 
-                fullWidth 
-                size="small" 
-                placeholder="G-XXXXXXXXXX" 
-                value={settings.googleMeasurementId}
-                onChange={(e) => handleGoogleIdChange(e.target.value)}
-                sx={{ maxWidth: 350, mt: 1 }} 
-              />
             </Paper>
-          </Grid>
 
-          {/* RIGHT COLUMN: Patient Info & General Sections */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="h6" fontWeight="bold">Confidential Information</Typography>
-              <Typography variant="caption" color="textSecondary" sx={{ mb: 3, display: 'block' }}>
-                Setting up the configuration here will apply to MyChart and Oryx Docs
+            {/* Identity & Legal Name Section */}
+            <Paper sx={{ p: 3, mb: 2.5, borderRadius: 2, bgcolor: '#f0f4ff' }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <Box sx={{ width: 24, height: 24, bgcolor: '#e3f2fd', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>👤</Typography>
+                </Box>
+                <Typography variant="subtitle2" fontWeight="bold">IDENTITY & LEGAL NAME</Typography>
+              </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block', fontSize: '0.75rem' }}>
+                Name, pronouns, gender & marital status
               </Typography>
 
               <ConfigRow 
@@ -469,81 +491,139 @@ const MyChartConfiguration = () => {
                 checked={settings.confidentialInfo.preferredPronouns.enabled}
                 onChange={(val) => handleConfidentialInfoChange('preferredPronouns', 'enabled', val)}
               />
+            </Paper>
 
-              <Divider sx={{ my: 2 }} />
+            {/* Patient Information Section */}
+            <Paper sx={{ p: 3, mb: 2.5, borderRadius: 2, bgcolor: '#ffffff' }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <Box sx={{ width: 24, height: 24, bgcolor: '#fff3e0', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>ℹ️</Typography>
+                </Box>
+                <Typography variant="subtitle2" fontWeight="bold">PATIENT'S INFORMATION</Typography>
+              </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block', fontSize: '0.75rem' }}>
+                Additional patient profile fields
+              </Typography>
 
-              <Box sx={{ mb: 4 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Box display="flex" alignItems="center">
-                    <Typography variant="subtitle2" fontWeight="bold">Patient's Information</Typography>
-                    <InfoOutlinedIcon sx={{ fontSize: 16, ml: 0.5, color: 'text.secondary' }} />
-                  </Box>
+              <Box sx={{ mb: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography variant="body2" fontWeight="500" sx={{ fontSize: '0.85rem' }}>Gender Identity (for adults only)</Typography>
                   <Switch 
                     size="small" 
-                    checked={settings.patientInfo.enabled} 
-                    onChange={(e) => handlePatientInfoChange('enabled', e.target.checked)}
+                    checked={settings.patientInfo.genderIdentity.enabled} 
+                    onChange={(e) => handleGenderIdentityChange('enabled', e.target.checked)}
                   />
                 </Box>
-                
-                <Box sx={{ ml: 3, mt: 2 }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2" fontWeight="500">Gender Identity (for adults only)</Typography>
-                    <Switch 
-                      size="small" 
-                      checked={settings.patientInfo.genderIdentity.enabled} 
-                      onChange={(e) => handleGenderIdentityChange('enabled', e.target.checked)}
-                      disabled={!settings.patientInfo.enabled}
-                    />
-                  </Box>
-                  <Typography variant="caption" color="textSecondary" sx={{ opacity: settings.patientInfo.enabled && settings.patientInfo.genderIdentity.enabled ? 1 : 0.5 }}>
-                    Select gender options:
-                  </Typography>
-                  <Grid container>
-                    {['Male/Man', 'Female/Woman', 'Trans Male', 'Trans Female', 'Nonbinary', 'Another Gender', 'Decline'].map((g) => (
-                      <Grid item xs={6} key={g}>
-                        <FormControlLabel 
-                          control={
-                            <Checkbox 
-                              size="small" 
-                              checked={settings.patientInfo.genderIdentity.options[g]} 
-                              onChange={(e) => handleGenderOptionChange(g, e.target.checked)}
-                              disabled={!settings.patientInfo.enabled || !settings.patientInfo.genderIdentity.enabled}
-                            />
-                          } 
-                          label={<Typography variant="caption" sx={{ opacity: settings.patientInfo.enabled && settings.patientInfo.genderIdentity.enabled ? 1 : 0.5 }}>{g}</Typography>} 
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
+                <Grid container spacing={0.5}>
+                  {['Male/Man', 'Female/Woman', 'Trans Male', 'Trans Female', 'Nonbinary', 'Another Gender', 'Decline'].map((g) => (
+                    <Grid item xs={6} key={g}>
+                      <FormControlLabel 
+                        control={
+                          <Checkbox 
+                            size="small" 
+                            checked={settings.patientInfo.genderIdentity.options[g]} 
+                            onChange={(e) => handleGenderOptionChange(g, e.target.checked)}
+                            disabled={!settings.patientInfo.genderIdentity.enabled}
+                          />
+                        } 
+                        label={<Typography variant="caption" sx={{ fontSize: '0.75rem' }}>{g}</Typography>} 
+                        sx={{ mb: 0 }}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            </Paper>
 
-                <ConfigRow 
-                  label="Marital Status" 
-                  hasInfo 
-                  checked={settings.confidentialInfo.maritalStatus.enabled}
-                  requiredStatus={settings.confidentialInfo.maritalStatus.requiredStatus}
-                  onChange={(val) => handleConfidentialInfoChange('maritalStatus', 'enabled', val)}
-                  onRequiredStatusChange={(val) => handleConfidentialInfoChange('maritalStatus', 'requiredStatus', val)}
+            {/* Marital Status */}
+            <Paper sx={{ p: 3, borderRadius: 2, bgcolor: '#ffffff' }}>
+              <ConfigRow 
+                label="Marital Status" 
+                hasInfo 
+                checked={settings.confidentialInfo.maritalStatus.enabled}
+                requiredStatus={settings.confidentialInfo.maritalStatus.requiredStatus}
+                onChange={(val) => handleConfidentialInfoChange('maritalStatus', 'enabled', val)}
+                onRequiredStatusChange={(val) => handleConfidentialInfoChange('maritalStatus', 'requiredStatus', val)}
+              />
+            </Paper>
+          </Grid>
+
+          {/* MIDDLE COLUMN: Payment & Analytics & General Sections */}
+          <Grid item xs={12} md={4}>
+            {/* Payment & Analytics Section */}
+            <Paper sx={{ p: 3, mb: 2.5, borderRadius: 2, bgcolor: '#f3f4ff' }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <Box sx={{ width: 24, height: 24, bgcolor: '#e8eaf6', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>💳</Typography>
+                </Box>
+                <Typography variant="subtitle2" fontWeight="bold">PATIENT PAYMENT & ANALYTICS</Typography>
+              </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block', fontSize: '0.75rem' }}>
+                Billing options and analytics setup
+              </Typography>
+
+              <Typography variant="subtitle2" fontWeight="600" sx={{ fontSize: '0.85rem', mb: 1.5 }}>Payment Options</Typography>
+              <Box display="flex" flexDirection="column" sx={{ mb: 2 }}>
+                <FormControlLabel 
+                  control={
+                    <Checkbox 
+                      size="small"
+                      checked={settings.patientPayment.includeAchPayment} 
+                      onChange={(e) => handlePatientPaymentChange('includeAchPayment', e.target.checked)} 
+                    />
+                  } 
+                  label={<Typography variant="caption" sx={{ fontSize: '0.8rem' }}>Include ACH Payment</Typography>} 
+                  sx={{ mb: 0.5 }}
+                />
+                <FormControlLabel 
+                  control={
+                    <Checkbox 
+                      size="small"
+                      checked={settings.patientPayment.addPaymentAsQuickDeposit} 
+                      onChange={(e) => handlePatientPaymentChange('addPaymentAsQuickDeposit', e.target.checked)} 
+                    />
+                  } 
+                  label={<Typography variant="caption" sx={{ fontSize: '0.8rem' }}>Add payment as a quick deposit</Typography>} 
+                  sx={{ mb: 0.5 }}
+                />
+                <FormControlLabel 
+                  control={
+                    <Checkbox 
+                      size="small"
+                      checked={settings.patientPayment.allowPatientToEditQuickPaymentAmount} 
+                      onChange={(e) => handlePatientPaymentChange('allowPatientToEditQuickPaymentAmount', e.target.checked)} 
+                    />
+                  } 
+                  label={<Typography variant="caption" sx={{ fontSize: '0.8rem' }}>Allow patient to edit quick payment amount</Typography>} 
                 />
               </Box>
 
-              <Typography variant="h6" fontWeight="bold" sx={{ mt: 4, mb: 2 }}>Patient's Phone Number</Typography>
-              <ConfigRow 
-                label="Home Phone Number" 
-                checked={settings.phoneNumber.homePhone.enabled}
-                requiredStatus={settings.phoneNumber.homePhone.requiredStatus}
-                onChange={(val) => handlePhoneNumberChange('homePhone', 'enabled', val)}
-                onRequiredStatusChange={(val) => handlePhoneNumberChange('homePhone', 'requiredStatus', val)}
-              />
-              <ConfigRow 
-                label="Work Phone Number" 
-                checked={settings.phoneNumber.workPhone.enabled}
-                requiredStatus={settings.phoneNumber.workPhone.requiredStatus}
-                onChange={(val) => handlePhoneNumberChange('workPhone', 'enabled', val)}
-                onRequiredStatusChange={(val) => handlePhoneNumberChange('workPhone', 'requiredStatus', val)}
-              />
+              <Divider sx={{ my: 2 }} />
 
-              <Typography variant="h6" fontWeight="bold" sx={{ mt: 4, mb: 2 }}>General Sections</Typography>
+              <Typography variant="subtitle2" fontWeight="600" sx={{ fontSize: '0.85rem', mb: 1 }}>Google Measurement ID</Typography>
+              <TextField 
+                fullWidth 
+                size="small" 
+                placeholder="G-XXXXXXXXXX" 
+                value={settings.googleMeasurementId}
+                onChange={(e) => handleGoogleIdChange(e.target.value)}
+                inputProps={{ style: { fontSize: '0.8rem' } }}
+                sx={{ maxWidth: '100%' }} 
+              />
+            </Paper>
+
+            {/* General Sections */}
+            <Paper sx={{ p: 3, borderRadius: 2, bgcolor: '#ffffff' }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <Box sx={{ width: 24, height: 24, bgcolor: '#fce4ec', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>📋</Typography>
+                </Box>
+                <Typography variant="subtitle2" fontWeight="bold">GENERAL SECTIONS</Typography>
+              </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block', fontSize: '0.75rem' }}>
+                Additional forms shown to patients
+              </Typography>
+
               <ConfigRow 
                 label="Additional Info (for pedo only)" 
                 hasInfo 
@@ -576,11 +656,52 @@ const MyChartConfiguration = () => {
                 onChange={(val) => handleGeneralSectionsChange('spouseInformation', 'enabled', val)}
                 onRequiredStatusChange={(val) => handleGeneralSectionsChange('spouseInformation', 'requiredStatus', val)}
               />
-              
-              <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
-                <Box display="flex" alignItems="center">
-                  <Typography variant="subtitle2" fontWeight="bold">Dental Insurance And Financial Information</Typography>
-                  <InfoOutlinedIcon sx={{ fontSize: 16, ml: 0.5, color: 'text.secondary' }} />
+            </Paper>
+          </Grid>
+
+          {/* RIGHT COLUMN: Phone Numbers & Dental Insurance */}
+          <Grid item xs={12} md={4}>
+            {/* Phone Numbers Section */}
+            <Paper sx={{ p: 3, mb: 2.5, borderRadius: 2, bgcolor: '#f0f8ff' }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <Box sx={{ width: 24, height: 24, bgcolor: '#e0f2f1', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>☎️</Typography>
+                </Box>
+                <Typography variant="subtitle2" fontWeight="bold">PHONE NUMBERS</Typography>
+              </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block', fontSize: '0.75rem' }}>
+                Home & work contact options
+              </Typography>
+
+              <ConfigRow 
+                label="Home Phone Number" 
+                checked={settings.phoneNumber.homePhone.enabled}
+                requiredStatus={settings.phoneNumber.homePhone.requiredStatus}
+                onChange={(val) => handlePhoneNumberChange('homePhone', 'enabled', val)}
+                onRequiredStatusChange={(val) => handlePhoneNumberChange('homePhone', 'requiredStatus', val)}
+              />
+              <ConfigRow 
+                label="Work Phone Number" 
+                checked={settings.phoneNumber.workPhone.enabled}
+                requiredStatus={settings.phoneNumber.workPhone.requiredStatus}
+                onChange={(val) => handlePhoneNumberChange('workPhone', 'enabled', val)}
+                onRequiredStatusChange={(val) => handlePhoneNumberChange('workPhone', 'requiredStatus', val)}
+              />
+            </Paper>
+
+            {/* Dental Insurance Section */}
+            <Paper sx={{ p: 3, borderRadius: 2, bgcolor: '#fff5f0' }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                <Box display="flex" alignItems="flex-start" gap={1} flex={1}>
+                  <Box sx={{ width: 24, height: 24, bgcolor: '#ffebee', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>🦷</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '0.9rem' }}>Dental Insurance And Financial Information</Typography>
+                    <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
+                      Required settings
+                    </Typography>
+                  </Box>
                 </Box>
                 <Switch 
                   size="small" 
@@ -591,6 +712,19 @@ const MyChartConfiguration = () => {
             </Paper>
           </Grid>
         </Grid>
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<SaveIcon />}
+            onClick={handleSave}
+            sx={{ borderRadius: 2, textTransform: 'none', px: 4, py: 1.2 }}
+          >
+            Save Configuration
+          </Button>
+        </Box>
+        </Paper>
       </Box>
     </Box>
   );

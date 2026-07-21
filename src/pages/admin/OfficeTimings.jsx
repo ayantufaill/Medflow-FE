@@ -9,30 +9,22 @@ import {
   Box,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   Tabs,
   Tab,
   Checkbox,
   TextField,
-  IconButton,
   Divider,
   CircularProgress,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SaveIcon from '@mui/icons-material/Save';
-import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import OfficeTimingCycles from '../../components/admin/office-timings/OfficeTimingCycles';
+import OfficeTimingScheduleEditor from '../../components/admin/office-timings/OfficeTimingScheduleEditor';
 
 dayjs.extend(customParseFormat);
 
@@ -75,19 +67,23 @@ const OfficeTimings = () => {
 
   const handleAddCycle = () => {
     if (!newCycle.name) return;
-    setTimings(prev => ({
+    setTimings((prev) => ({
       ...prev,
-      cycles: [...(prev.cycles || []), { id: Date.now().toString(), ...newCycle }]
+      cycles: [...(prev.cycles || []), { id: Date.now().toString(), ...newCycle }],
     }));
     setNewCycle({ name: '', fromDate: '', toDate: '' });
     setShowAddCycle(false);
   };
 
   const handleDeleteCycle = (id) => {
-    setTimings(prev => ({
+    setTimings((prev) => ({
       ...prev,
-      cycles: (prev.cycles || []).filter(c => c.id !== id)
+      cycles: (prev.cycles || []).filter((c) => c.id !== id),
     }));
+  };
+
+  const handleCycleFieldChange = (field, value) => {
+    setNewCycle((prev) => ({ ...prev, [field]: value }));
   };
 
   const validateTimes = () => {
@@ -147,210 +143,61 @@ const OfficeTimings = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh' }}>
-        {/* Breadcrumb */}
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Typography
-            variant="caption"
-            component={RouterLink}
-            to="/admin/practice-setup"
-            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-          >
-            Practice Setup
-          </Typography>
-          <Typography variant="caption" color="textSecondary">{'>'}</Typography>
-          <Typography variant="caption" color="textSecondary">Office Timings</Typography>
-        </Box>
-
         {/* Header Buttons */}
         <Box display="flex" justifyContent="flex-end" gap={2} mb={4}>
-          <Button variant="outlined" color="primary" sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}>
+          <Button
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              px: 3,
+              borderColor: '#2563eb',
+              color: '#2563eb',
+              '&:hover': {
+                borderColor: '#1d4ed8',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+              },
+            }}
+          >
             Re-Generate
           </Button>
-          <Button 
-            variant="contained" 
-            color="success" 
+          <Button
+            variant="contained"
             startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
             onClick={handleSave}
             disabled={updateLoading}
-            sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
+            sx={{
+              textTransform: 'none',
+              px: 3,
+              backgroundColor: '#2563eb',
+              '&:hover': {
+                backgroundColor: '#1d4ed8',
+              },
+            }}
           >
             {updateLoading ? 'Saving...' : 'Save Timings'}
           </Button>
         </Box>
 
-        {/* Cycles Section */}
-        <Box mb={6}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h6" fontWeight="bold">Cycles</Typography>
-            <Button 
-              variant="contained" 
-              onClick={() => setShowAddCycle(true)}
-              sx={{ bgcolor: '#003366', borderRadius: 5, textTransform: 'none' }}
-            >
-              Add Cycle
-            </Button>
-          </Box>
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableBody>
-                {(timings.cycles || []).map((cycle) => (
-                  <TableRow key={cycle.id}>
-                    <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>{cycle.name}</TableCell>
-                    <TableCell>
-                      {cycle.fromDate && <>From <Typography component="span" variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{cycle.fromDate}</Typography></>}
-                    </TableCell>
-                    <TableCell>
-                      {cycle.toDate && <>To <Typography component="span" variant="body2" sx={{ ml: 1, fontWeight: 'bold' }}>{cycle.toDate}</Typography></>}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box display="flex" alignItems="center" justifyContent="flex-end">
-                        <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>Show details</Typography>
-                        <InfoOutlinedIcon fontSize="small" sx={{ color: '#ccc', mr: 2 }} />
-                        <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
-                        <IconButton size="small" onClick={() => handleDeleteCycle(cycle.id)}><DeleteOutlineIcon fontSize="small" /></IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-
-                {showAddCycle && (
-                  <TableRow>
-                    <TableCell>
-                      <TextField 
-                        size="small" 
-                        placeholder="Name (e.g. Summer)" 
-                        value={newCycle.name} 
-                        onChange={(e) => setNewCycle(p => ({ ...p, name: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField 
-                        size="small" 
-                        placeholder="From (e.g. Jun 1)" 
-                        value={newCycle.fromDate} 
-                        onChange={(e) => setNewCycle(p => ({ ...p, fromDate: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField 
-                        size="small" 
-                        placeholder="To (e.g. Aug 31)" 
-                        value={newCycle.toDate} 
-                        onChange={(e) => setNewCycle(p => ({ ...p, toDate: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button size="small" variant="contained" onClick={handleAddCycle} sx={{ mr: 1, textTransform: 'none' }}>Add</Button>
-                      <Button size="small" variant="outlined" onClick={() => setShowAddCycle(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-                    </TableCell>
-                  </TableRow>
-                )}
-
-                <TableRow>
-                  <TableCell colSpan={3} sx={{ color: '#1976d2', fontWeight: 500, cursor: 'pointer' }}>+ Add Exceptions</TableCell>
-                  <TableCell align="right" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>233 Exception/s</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+        <OfficeTimingCycles
+          cycles={timings.cycles || []}
+          showAddCycle={showAddCycle}
+          newCycle={newCycle}
+          onShowAddCycle={() => setShowAddCycle(true)}
+          onCycleFieldChange={handleCycleFieldChange}
+          onAddCycle={handleAddCycle}
+          onCancelAddCycle={() => setShowAddCycle(false)}
+          onDeleteCycle={handleDeleteCycle}
+        />
 
         {/* Schedules Section */}
         <Box>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="h6" fontWeight="bold">Schedules</Typography>
-            <Button variant="contained" sx={{ bgcolor: '#003366', borderRadius: 5, textTransform: 'none' }}>
-              Add Schedule
-            </Button>
-          </Box>
-
-          <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
-            {(timings.cycles || []).map((cycle, i) => (
-              <Tab key={cycle.id} label={cycle.name} sx={{ textTransform: 'none' }} />
-            ))}
-          </Tabs>
-
-          <Paper variant="outlined" sx={{ p: 3 }}>
-            {/* Opening Hours */}
-            <Typography variant="subtitle2" color="textSecondary" gutterBottom>Opening hours:</Typography>
-            {days.map((day) => {
-              const rowData = timings.openingHours[day] || {};
-              return (
-                <Box key={day} display="flex" alignItems="center" mb={1.5} sx={{ height: 40 }}>
-                  <Typography variant="body2" sx={{ width: 120 }}>{day}</Typography>
-                  <Box display="flex" alignItems="center" gap={2} sx={{ flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>from</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.from || ''} 
-                      onChange={(e) => handleTimingChange('openingHours', day, 'from', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
-                    />
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>to</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.to || ''} 
-                      onChange={(e) => handleTimingChange('openingHours', day, 'to', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
-                    />
-                    <Box display="flex" alignItems="center" ml="auto">
-                      <Checkbox 
-                        size="small" 
-                        checked={!!rowData.closed}
-                        onChange={(e) => handleTimingChange('openingHours', day, 'closed', e.target.checked)}
-                      />
-                      <Typography variant="caption">closed</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              );
-            })}
-
-            <Divider sx={{ my: 4 }} />
-
-            {/* Scheduling Appt */}
-            <Typography variant="subtitle2" color="textSecondary" gutterBottom>Scheduling Appt:</Typography>
-            {days.map((day) => {
-              const rowData = timings.schedulingAppt[day] || {};
-              return (
-                <Box key={`appt-${day}`} display="flex" alignItems="center" mb={1.5} sx={{ height: 40 }}>
-                  <Typography variant="body2" sx={{ width: 120 }}>{day}</Typography>
-                  <Box display="flex" alignItems="center" gap={2} sx={{ flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>from</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.from || ''} 
-                      onChange={(e) => handleTimingChange('schedulingAppt', day, 'from', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
-                    />
-                    <Typography variant="caption" sx={{ opacity: rowData.closed ? 0.5 : 1 }}>to</Typography>
-                    <TextField 
-                      size="small" 
-                      value={rowData.to || ''} 
-                      onChange={(e) => handleTimingChange('schedulingAppt', day, 'to', e.target.value)}
-                      disabled={rowData.closed}
-                      sx={{ width: 100 }} 
-                      inputProps={{ style: { fontSize: 12, textAlign: 'center' } }} 
-                    />
-                    <Box display="flex" alignItems="center" ml="auto">
-                      <Checkbox 
-                        size="small" 
-                        checked={!!rowData.closed}
-                        onChange={(e) => handleTimingChange('schedulingAppt', day, 'closed', e.target.checked)}
-                      />
-                      <Typography variant="caption">closed</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              );
-            })}
-          </Paper>
+          <OfficeTimingScheduleEditor
+            days={days}
+            timings={timings}
+            tabValue={tabValue}
+            onTabChange={(e, v) => setTabValue(v)}
+            onTimingChange={handleTimingChange}
+          />
         </Box>
       </Box>
     </LocalizationProvider>
