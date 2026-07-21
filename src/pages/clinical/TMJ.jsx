@@ -508,7 +508,14 @@ const DentalTmdExamPage = () => {
               />
             </Box>
 
-            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
+              <Box sx={{ 
+                overflowX: 'auto',
+                '&::-webkit-scrollbar': { height: '6px' },
+                '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' },
+                pb: 1
+              }}>
+                <Box sx={{ minWidth: 'min-content', zoom: { xs: 0.75, sm: 0.85, md: 0.9, lg: 1 } }}>
 
 
               {/* Accordion 1: Range of Motion */}
@@ -556,6 +563,8 @@ const DentalTmdExamPage = () => {
                 />
               </TMJSectionContainer>
 
+                </Box>
+              </Box>
             </fieldset>
 
             {/* Footer section */}
@@ -589,7 +598,7 @@ const DentalTmdExamPage = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
     </Box>

@@ -11,6 +11,10 @@ import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
 import InstallationGuide from './InstallationGuide';
 import MoveData from './MoveData';
+import DocumentCategorySetup from './DocumentCategorySetup';
+import ScheduleConfiguration from './ScheduleConfiguration';
+import PracticeSettings from './PracticeSettings';
+import PracticeInformation from './PracticeInformation';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
@@ -127,7 +131,12 @@ const AdminPage = () => {
   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
     isUserManagementSubTab ||
-    location.pathname === '/admin/practice-setup/installation-guide';
+    location.pathname === '/admin/practice-setup/installation-guide' ||
+    location.pathname === '/admin/practice-setup/move-data' ||
+    location.pathname === '/admin/practice-setup/document-category-setup' ||
+    location.pathname === '/admin/practice-setup/schedule-configuration' ||
+    location.pathname === '/admin/practice-setup/practice-settings' ||
+    location.pathname === '/admin/practice-setup/practice-information';
 
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
@@ -308,6 +317,14 @@ const AdminPage = () => {
             <InstallationGuide />
           ) : location.pathname === '/admin/practice-setup/move-data' ? (
             <MoveData />
+          ) : location.pathname === '/admin/practice-setup/document-category-setup' ? (
+            <DocumentCategorySetup />
+          ) : location.pathname === '/admin/practice-setup/schedule-configuration' ? (
+            <ScheduleConfiguration />
+          ) : location.pathname === '/admin/practice-setup/practice-settings' ? (
+            <PracticeSettings />
+          ) : location.pathname === '/admin/practice-setup/practice-information' ? (
+            <PracticeInformation />
           ) : (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>

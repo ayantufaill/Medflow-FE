@@ -4,7 +4,7 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 
 const ToothPositionCard = ({ formData, handleFieldChange, MORPHOLOGICAL_DATA, handleAddTeeth, handleShowPhotos }) => {
   return (
-    <Box sx={{ bgcolor: '#F9FBFD', borderRadius: '12px', p: '24px', border: '1px solid #e5e7eb', width: '100%', maxWidth: '402.13px', height: '392.8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', ml: 'auto' }}>
+    <Box sx={{ bgcolor: '#F9FBFD', borderRadius: '12px', p: '16px', border: '1px solid #e5e7eb', width: '100%', maxWidth: '340px', height: '392.8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', ml: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827' }}>
           Tooth Position

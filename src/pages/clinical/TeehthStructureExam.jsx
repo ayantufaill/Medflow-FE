@@ -363,7 +363,7 @@ const TeethStructureExam = () => {
           </Button>
         </Box>
 
-        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
         {/* 2-Column Layout */}
         <Box sx={{ display: 'flex', gap: 2, width: '100%', justifyContent: 'space-between' }}>
           {/* Left Column - Sidebar (30% Width) */}

@@ -2,42 +2,74 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCurrentPracticeInfo, updateScheduleConfig } from '../../store/slices/practiceInfoSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import SaveIcon from '@mui/icons-material/Save';
 import CircularProgress from '@mui/material/CircularProgress';
+import { Box, Typography, Button, Grid, Dialog, DialogTitle, DialogContent, TextField, DialogActions } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
-import {
-  Box,
-  Typography,
-  Paper,
-  Switch,
-  FormControlLabel,
-  TextField,
-  Select,
-  MenuItem,
-  Slider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  Grid,
-  Divider,
-  IconButton,
-  Chip,
-  Link,
-  Checkbox,
-  Collapse,
-} from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import DeleteIcon from '@mui/icons-material/Delete';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import InfoIcon from '@mui/icons-material/Info';
+import GeneralSettings from '../../components/admin/practice-setup/schedule-configuration/GeneralSettings';
+import AppointmentCardHeader from '../../components/admin/practice-setup/schedule-configuration/AppointmentCardHeader';
+import AppointmentCardSettings from '../../components/admin/practice-setup/schedule-configuration/AppointmentCardSettings';
+import TreatmentScheduleSettings from '../../components/admin/practice-setup/schedule-configuration/TreatmentScheduleSettings';
+import AppointmentStatusColors from '../../components/admin/practice-setup/schedule-configuration/AppointmentStatusColors';
+import AppointmentTypesSetting from '../../components/admin/practice-setup/schedule-configuration/AppointmentTypesSetting';
+import TooltipPatientInfoRouteSlip from '../../components/admin/practice-setup/schedule-configuration/TooltipPatientInfoRouteSlip';
+import AppointmentChecklist from '../../components/admin/practice-setup/schedule-configuration/AppointmentChecklist';
 
+import SaveConfigIcon from '../../assets/scheduleconfigurationicon/saveconfigurationicon.svg';
+
+const scheduleConfigTheme = createTheme({
+  typography: {
+    fontFamily: '"Segoe UI", sans-serif',
+    body1: {
+      fontSize: '12px',
+      fontWeight: 400,
+      lineHeight: 1.2,
+      letterSpacing: '0px',
+    },
+    body2: {
+      fontSize: '12px',
+      fontWeight: 400,
+      lineHeight: 1.2,
+      letterSpacing: '0px',
+    },
+    subtitle1: {
+      fontFamily: '"Segoe UI", sans-serif',
+    },
+    subtitle2: {
+      fontFamily: '"Segoe UI", sans-serif',
+    },
+    button: {
+      fontFamily: '"Segoe UI", sans-serif',
+    }
+  },
+  components: {
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Segoe UI", sans-serif',
+          fontSize: '12px',
+          fontWeight: 400,
+        }
+      }
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Segoe UI", sans-serif',
+          fontSize: '12px',
+        }
+      }
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Segoe UI", sans-serif',
+          fontSize: '12px',
+        }
+      }
+    }
+  }
+});
 
 const ScheduleConfiguration = () => {
   const dispatch = useDispatch();
@@ -48,10 +80,11 @@ const ScheduleConfiguration = () => {
     dispatch(fetchCurrentPracticeInfo());
   }, [dispatch]);
 
-  const [routeSlipOpen, setRouteSlipOpen] = useState(true);
+  const [addItemModalOpen, setAddItemModalOpen] = useState(false);
+  const [addItemCategory, setAddItemCategory] = useState('');
+  const [newItemText, setNewItemText] = useState('');
+
   const [enableRouteSlip, setEnableRouteSlip] = useState(true);
-  const [defaultColorsOpen, setDefaultColorsOpen] = useState(true);
-  const [checklistsOpen, setChecklistsOpen] = useState(true);
 
   const DEFAULT_PRE_APPT_CHECKLIST = ["Import History", "Import Record", "Appt Reminder", "Verify Insurance Eligibility", "Share Consent Forms", "Deposit for treatment"];
   const DEFAULT_CHECK_IN_CHECKLIST = ["Review Records", "Review & sign Visit Plan", "Sign Consent Forms", "Verify Premed Taken"];
@@ -60,6 +93,70 @@ const ScheduleConfiguration = () => {
   const [preApptChecklist, setPreApptChecklist] = useState(DEFAULT_PRE_APPT_CHECKLIST);
   const [checkInChecklist, setCheckInChecklist] = useState(DEFAULT_CHECK_IN_CHECKLIST);
   const [checkOutChecklist, setCheckOutChecklist] = useState(DEFAULT_CHECK_OUT_CHECKLIST);
+
+  const [generalSettings, setGeneralSettings] = useState({
+    enableHorizontalScroll: false,
+    minSlotWidth: 200,
+    showCalendar: true,
+    adjustableSlotHeight: false,
+    slotHeight: 50
+  });
+
+  const [appointmentCardHeader, setAppointmentCardHeader] = useState({
+    patientNameFormat: 'First Name Last Name',
+    displayAge: true,
+    headerFontColor: '#ffffff'
+  });
+
+  const [appointmentCardSettings, setAppointmentCardSettings] = useState({}); // Stores key-value boolean pairs for the toggles
+
+  const [treatmentScheduleSettings, setTreatmentScheduleSettings] = useState({
+    defaultTreatmentSlotDuration: '60 mins',
+    defaultAppointmentSlotDuration: '60 mins',
+    scheduleUnit: '10 mins',
+    scheduleIncrements: '5 mins'
+  });
+
+  const INITIAL_STATUS_COLORS = [
+    { name: "Unconfirmed", color1: "#f3f4f6", color2: "", anim: "None" },
+    { name: "Preconfirmed", color1: "#3b82f6", color2: "", anim: "None" },
+    { name: "Confirmed", color1: "#22c55e", color2: "", anim: "None" },
+    { name: "Arrived", color1: "#eab308", color2: "#fef08a", anim: "Moving Stripes" },
+    { name: "Ready To Be Seated", color1: "#eab308", color2: "#fef08a", anim: "On/Off" },
+    { name: "Seated", color1: "#22c55e", color2: "#bbf7d0", anim: "Moving Stripes" },
+    { name: "Ready For Doctor", color1: "#3b82f6", color2: "#bfdbfe", anim: "Moving Stripes" },
+    { name: "In Treatment", color1: "#f472b6", color2: "", anim: "None" },
+    { name: "Ready For Checkout", color1: "#374151", color2: "#9ca3af", anim: "Moving Stripes" },
+    { name: "Checked out incomplete", color1: "#4b5563", color2: "", anim: "None" },
+    { name: "Checked out complete", color1: "#9ca3af", color2: "", anim: "None" },
+    { name: "Call", color1: "#ef4444", color2: "", anim: "None" },
+    { name: "Left message", color1: "#f59e0b", color2: "", anim: "None" },
+    { name: "Running Late", color1: "#92400e", color2: "", anim: "None" },
+    { name: "Sent Email Or Text", color1: "#8b5cf6", color2: "", anim: "None" },
+    { name: "Late", color1: "#ef4444", color2: "#fecaca", anim: "Moving Stripes" },
+  ];
+  const [statusColors, setStatusColors] = useState(INITIAL_STATUS_COLORS);
+
+  const INITIAL_TYPES = [
+    { type: "Crown/bridge prep", providers: 3, time: "90 mins" },
+    { type: "Periodic Ortho check", providers: 2, time: "30 mins" },
+    { type: "Hygiene + Exam", providers: 2, time: "60 mins" },
+    { type: "SRP", providers: 1, time: "120 mins" },
+    { type: "Crown Delivery", providers: 2, time: "60 mins" },
+    { type: "Invisalign bond", providers: 1, time: "60 mins" },
+    { type: "Doctor new patient exam", providers: 2, time: "60 mins" },
+    { type: "Hygiene new patient exam", providers: 2, time: "60 mins" },
+    { type: "Composite 1-3 teeth", providers: 2, time: "60 mins" },
+    { type: "Provisional swap", providers: 2, time: "65 mins" },
+    { type: "Hygiene-no exam", providers: 1, time: "60 mins" },
+    { type: "Limited Exam", providers: 2, time: "45 mins" },
+    { type: "Implant scan 1-2 implants", providers: 3, time: "60 mins" },
+    { type: "Implant delivery 1-2 implants", providers: 2, time: "60 mins" },
+    { type: "New Patient Comp Exam", providers: 2, time: "60 mins" },
+    { type: "Full arch prep", providers: 2, time: "180 mins" },
+    { type: "Post op photos", providers: 2, time: "30 mins" },
+  ];
+  const [appointmentTypes, setAppointmentTypes] = useState(INITIAL_TYPES);
 
   // Sync route slip and checklist settings from Redux
   useEffect(() => {
@@ -78,6 +175,24 @@ const ScheduleConfiguration = () => {
     if (practiceData?.scheduleConfig?.checkOutChecklist) {
       setCheckOutChecklist(practiceData.scheduleConfig.checkOutChecklist);
     }
+    if (practiceData?.scheduleConfig?.generalSettings) {
+      setGeneralSettings(prev => ({...prev, ...practiceData.scheduleConfig.generalSettings}));
+    }
+    if (practiceData?.scheduleConfig?.appointmentCardHeader) {
+      setAppointmentCardHeader(prev => ({...prev, ...practiceData.scheduleConfig.appointmentCardHeader}));
+    }
+    if (practiceData?.scheduleConfig?.appointmentCardSettings) {
+      setAppointmentCardSettings(prev => ({...prev, ...practiceData.scheduleConfig.appointmentCardSettings}));
+    }
+    if (practiceData?.scheduleConfig?.treatmentScheduleSettings) {
+      setTreatmentScheduleSettings(prev => ({...prev, ...practiceData.scheduleConfig.treatmentScheduleSettings}));
+    }
+    if (practiceData?.scheduleConfig?.statusColors && practiceData.scheduleConfig.statusColors.length > 0) {
+      setStatusColors(practiceData.scheduleConfig.statusColors);
+    }
+    if (practiceData?.scheduleConfig?.appointmentTypes && practiceData.scheduleConfig.appointmentTypes.length > 0) {
+      setAppointmentTypes(practiceData.scheduleConfig.appointmentTypes);
+    }
   }, [practiceData]);
 
   const handleSave = async () => {
@@ -92,6 +207,12 @@ const ScheduleConfiguration = () => {
         preApptChecklist,
         checkInChecklist,
         checkOutChecklist,
+        generalSettings,
+        appointmentCardHeader,
+        appointmentCardSettings,
+        treatmentScheduleSettings,
+        statusColors,
+        appointmentTypes
       };
       await dispatch(updateScheduleConfig({ practiceInfoId: practiceData._id || practiceData.id, scheduleConfigData: payload })).unwrap();
       showSnackbar('Schedule Configuration saved successfully', 'success');
@@ -101,12 +222,19 @@ const ScheduleConfiguration = () => {
   };
 
   const handleAddItem = (category) => {
-    const item = window.prompt(`Add item to ${category === 'preAppt' ? 'Pre-appointment' : category === 'checkIn' ? 'Check-in' : 'Check-out'} checklist:`);
-    if (item && item.trim()) {
-      if (category === 'preAppt') setPreApptChecklist(prev => [...prev, item.trim()]);
-      else if (category === 'checkIn') setCheckInChecklist(prev => [...prev, item.trim()]);
-      else if (category === 'checkOut') setCheckOutChecklist(prev => [...prev, item.trim()]);
+    setAddItemCategory(category);
+    setNewItemText('');
+    setAddItemModalOpen(true);
+  };
+
+  const submitNewItem = () => {
+    if (newItemText && newItemText.trim()) {
+      const item = newItemText.trim();
+      if (addItemCategory === 'preAppt') setPreApptChecklist(prev => [...prev, item]);
+      else if (addItemCategory === 'checkIn') setCheckInChecklist(prev => [...prev, item]);
+      else if (addItemCategory === 'checkOut') setCheckOutChecklist(prev => [...prev, item]);
     }
+    setAddItemModalOpen(false);
   };
 
   const handleDeleteItem = (category, index) => {
@@ -157,622 +285,118 @@ const ScheduleConfiguration = () => {
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
-  const APPOINTMENT_CARD_SETTINGS = [
-    { label: "Display half-hour intervals", defaultChecked: true },
-    { label: "Hide appointments with 'No Show' status", defaultChecked: true },
-    { label: "Show patient flags", defaultChecked: true },
-    { label: "Show adjusted production", defaultChecked: false },
-    { label: "Display Appointment Procedures", defaultChecked: true },
-    { label: "Display Dental History/Risk Assessment icon", defaultChecked: true },
-    { label: "Display Alerts icon", defaultChecked: true },
-    { label: "Display Progress Notes icon", defaultChecked: true },
-    { label: "Display Billing icon", defaultChecked: true },
-    { label: "Display Treatment Plan icon", defaultChecked: true },
-    { label: "Display Exam icon", defaultChecked: true },
-    { label: "Display Appointment Tags", defaultChecked: true },
-    { label: "Display Notes icon", defaultChecked: true },
-    { label: "Display Appointment Status Bar", defaultChecked: true },
-    { label: "Name", defaultChecked: true },
-    { label: "Display Appointment Time", defaultChecked: true },
-    { label: "Show Patient Phone Number On Print", defaultChecked: true },
-    // Newly requested settings
-    { label: "Send emails on declined appointments", defaultChecked: false },
-    { label: "Display clinical docs icon", defaultChecked: true },
-    { label: "Minimize communication icons", defaultChecked: false },
-    { label: "Display total charge", defaultChecked: false },
-    { label: "On appointment card: display total patient owing", defaultChecked: false },
-    { label: "Inside appointment card details: display total patient owing", defaultChecked: false },
-  ];
+
   return (
-    <Box sx={{ p: 4, bgcolor: '#f8fafc' }}>
-      <Link
-            component={RouterLink}
-            to="/admin/practice-setup"
-            variant="body2"
-            underline="hover"
-            color="primary"
-            >
-            Practice Setup
-        </Link>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ m: 0 }}>
-          Practice Setup → Schedule Configuration
+    <ThemeProvider theme={scheduleConfigTheme}>
+      <Box 
+        sx={{ 
+          bgcolor: '#F4F5F7', 
+          borderRadius: '12px', 
+          border: '1px solid #e0e0e0', 
+          p: { xs: 2, sm: 3, md: 4 },
+          fontFamily: '"Segoe UI", sans-serif'
+        }}
+      >
+      {/* --- HEADER SECTION --- */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4,
+          flexWrap: 'wrap',
+          gap: 2
+        }}
+      >
+        <Typography variant="h6" fontWeight="bold" color="#11223F">
+          Schedule Configuration
         </Typography>
+        
         <Button 
           variant="contained" 
-          color="success" 
-          startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+          color="primary"
           onClick={handleSave}
           disabled={updateLoading}
-          sx={{ borderRadius: 5, textTransform: 'none', px: 3, bgcolor: '#003366' }}
+          sx={{ borderRadius: 1.5, textTransform: 'none', px: 2, py: 1 }}
+          startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <img src={SaveConfigIcon} alt="Save" style={{ width: 16, height: 16 }} />}
         >
           {updateLoading ? 'Saving...' : 'Save Configuration'}
         </Button>
       </Box>
 
-      {/* General Settings */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>General Settings</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <FormControlLabel control={<Switch />} label="Enable Horizontal Scroll" />
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography>Minimum Slot Width</Typography>
-            <TextField size="small" defaultValue={200} sx={{ width: 100 }} /> px
-          </Box>
-
-          <FormControlLabel control={<Switch defaultChecked />} label="Show Calendar in Patient Tab" />
-          <FormControlLabel control={<Switch />} label="Enable adjustable slot height for screens wider than 2560px" />
-
-          <Box>
-            <Typography gutterBottom>Adjust slot height for wide screens</Typography>
-            <Slider defaultValue={50} valueLabelDisplay="auto" />
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Appointment Card Header */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>Appointment Card Header</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
-          <Box>
-            <Typography variant="body2" gutterBottom>Patient Name Format</Typography>
-            <Select defaultValue="First Name Last Name" size="small" sx={{ minWidth: 220 }}>
-              <MenuItem value="First Name Last Name">First Name Last Name</MenuItem>
-            </Select>
-          </Box>
-          <FormControlLabel control={<Switch defaultChecked />} label="Display age" />
-        </Box>
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="body2" gutterBottom>Header Font Color</Typography>
-          <Box sx={{ width: 60, height: 40, border: '2px solid #ddd', borderRadius: 1, bgcolor: '#ffffff' }} />
-        </Box>
-      </Paper>
-
-      {/* Appointment Card Settings */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>Appointment Card Settings</Typography>
-        <Grid container spacing={2}>
-          {APPOINTMENT_CARD_SETTINGS.map((item, index) => (
-            <Grid item xs={12} sm={6} key={index}>
-              <FormControlLabel
-                control={<Switch defaultChecked={!!item.defaultChecked} />}
-                label={item.label}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-
-      {/* Treatment & Schedule Settings */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>Treatment & Schedule Settings</Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Treatment Visit Duration" defaultValue="60 mins" />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Recare Visit Duration" defaultValue="60 mins" />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" gutterBottom>Schedule Unit</Typography>
-            <Select fullWidth defaultValue="10 mins">
-              <MenuItem value="10 mins">10 mins</MenuItem>
-            </Select>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" gutterBottom>Schedule Increments</Typography>
-            <Select fullWidth defaultValue="5 mins">
-              <MenuItem value="5 mins">5 mins</MenuItem>
-            </Select>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Appointment Status Colors */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Appointment Status Colors</Typography>
-          <Button startIcon={<RefreshIcon />} variant="outlined" size="small">
-            Reset all
-          </Button>
-        </Box>
-
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Status Name</strong></TableCell>
-                <TableCell align="center"><strong>Color 1</strong></TableCell>
-                <TableCell align="center"><strong>Color 2*</strong></TableCell>
-                <TableCell><strong>Animation</strong></TableCell>
-                <TableCell align="center">Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[
-                { name: "Unconfirmed", color1: "#e5e7eb", color2: "", anim: "None" },
-                { name: "Preconfirmed", color1: "#60a5fa", color2: "", anim: "None" },
-                { name: "Confirmed", color1: "#4ade80", color2: "", anim: "None" },
-                { name: "Arrived", color1: "#facc15", color2: "#fed7aa", anim: "Moving Stripes" },
-                { name: "Ready To Be Seated", color1: "#facc15", color2: "#fed7aa", anim: "On Off" },
-                { name: "Seated", color1: "#4ade80", color2: "#d1fae5", anim: "Moving Stripes" },
-                { name: "Ready For Doctor", color1: "#3b82f6", color2: "#93c5fd", anim: "Moving Stripes" },
-                { name: "In Treatment", color1: "#f9a8d4", color2: "", anim: "None" },
-                { name: "Ready For Checkout", color1: "#374151", color2: "#9ca3af", anim: "Moving Stripes" },
-                { name: "Checked out incomplete", color1: "#374151", color2: "", anim: "None" },
-                { name: "Checked out complete", color1: "#6b7280", color2: "", anim: "None" },
-                { name: "Call", color1: "#ef4444", color2: "", anim: "None" },
-                { name: "Left message", color1: "#fbbf24", color2: "", anim: "None" },
-                { name: "Running Late", color1: "#92400e", color2: "", anim: "None" },
-                { name: "Sent Email Or Text", color1: "#6b21a8", color2: "", anim: "None" },
-                { name: "Late", color1: "#f87171", color2: "#fecaca", anim: "Moving Stripes" },
-              ].map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ width: 30, height: 20, bgcolor: row.color1, borderRadius: 1, mx: 'auto', border: '1px solid #ccc' }} />
-                  </TableCell>
-                  <TableCell align="center">
-                    {row.color2 && (
-                      <Box sx={{ width: 30, height: 20, bgcolor: row.color2, borderRadius: 1, mx: 'auto', border: '1px solid #ccc' }} />
-                    )}
-                  </TableCell>
-                  <TableCell>{row.anim}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" color="primary">
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      {/* Appointment Types */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Appointment Types Settings</Typography>
-          <Button variant="contained" color="primary" size="small">
-            + Add Appointment Type
-          </Button>
-        </Box>
-
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Type</strong></TableCell>
-                <TableCell align="center"><strong># of providers</strong></TableCell>
-                <TableCell align="center"><strong>Total time</strong></TableCell>
-                <TableCell align="center">Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[
-                { type: "Crown/bridge prep", providers: 3, time: "90 mins" },
-                { type: "Periodic Ortho check", providers: 2, time: "30 mins" },
-                { type: "Hygiene + Exam", providers: 2, time: "60 mins" },
-                { type: "SRP", providers: 1, time: "120 mins" },
-                { type: "Crown Delivery", providers: 2, time: "60 mins" },
-                { type: "Invisalign bond", providers: 1, time: "60 mins" },
-                { type: "Doctor new patient exam", providers: 2, time: "60 mins" },
-                { type: "Hygiene new patient exam", providers: 2, time: "60 mins" },
-                { type: "Composite 1-3 teeth", providers: 2, time: "60 mins" },
-                { type: "Provisional swap", providers: 2, time: "65 mins" },
-                { type: "Hygiene-no exam", providers: 1, time: "60 mins" },
-                { type: "Limited Exam", providers: 2, time: "45 mins" },
-                { type: "Implant scan 1-2 implants", providers: 3, time: "60 mins" },
-                { type: "Implant delivery 1-2 implants", providers: 2, time: "60 mins" },
-                { type: "New Patient Comp Exam", providers: 2, time: "60 mins" },
-                { type: "Full arch prep", providers: 2, time: "180 mins" },
-                { type: "Post op photos", providers: 2, time: "30 mins" },
-              ].map((appt, i) => (
-                <TableRow key={i}>
-                  <TableCell>{appt.type}</TableCell>
-                  <TableCell align="center">{appt.providers}</TableCell>
-                  <TableCell align="center">{appt.time}</TableCell>
-                  <TableCell align="center">
-                    <IconButton color="error" size="small">
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      {/* Appointment Types Default Colors */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Box 
-          onClick={() => setDefaultColorsOpen(!defaultColorsOpen)}
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', mb: defaultColorsOpen ? 2 : 0 }}
-        >
-          <Typography variant="h6" color="primary" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            Appointment Types Default Colors
-          </Typography>
-          <InfoIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
-          {defaultColorsOpen ? <KeyboardArrowUpIcon color="primary" /> : <KeyboardArrowDownIcon color="primary" />}
-        </Box>
+      {/* --- CONTENT SECTION --- */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         
-        <Collapse in={defaultColorsOpen}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-            {[
-              { key: 'dentist', label: 'Dentist', color: '#4ade80' },
-              { key: 'hygienist', label: 'Hygienist', color: '#60a5fa' },
-              { key: 'assistant', label: 'Assistant', color: '#fbbf24' },
-            ].map((role) => (
-              <Box key={role.key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5, pl: 0.5 }}>
-                <Box sx={{ width: 24, height: 18, bgcolor: role.color, borderRadius: 1, border: '1px solid #ccc', cursor: 'pointer', '&:hover': { opacity: 0.8 } }} />
-                <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>{role.label}</Typography>
-              </Box>
-            ))}
+        {/* General Settings */}
+        <GeneralSettings generalSettings={generalSettings} setGeneralSettings={setGeneralSettings} />
+
+        {/* Appointment Card Header & Settings */}
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' }, alignItems: 'stretch' }}>
+          <Box sx={{ width: { xs: '100%', sm: '320px' }, flexShrink: 0 }}>
+            <AppointmentCardHeader appointmentCardHeader={appointmentCardHeader} setAppointmentCardHeader={setAppointmentCardHeader} />
           </Box>
-        </Collapse>
-      </Paper>
-      {/* Tooltip, Patient Info & Route Slip Settings */}
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Appointment Tooltip Settings</Typography>
-            <FormControlLabel control={<Switch defaultChecked />} label="Enable Tooltip" sx={{ mb: 2 }} />
-            
-            <Typography variant="subtitle2" gutterBottom>Appointment Information</Typography>
-            {[
-              "Appointment Provider", "Appointment Type", "Appointment Tags", "Appointment Procedures",
-              "Appointment Date", "Appointment Start Time", "Appointment End Time", "Appointment Charge",
-              "Appointment Status", "Appointment Scheduled By", "Appointment Notes"
-            ].map((item) => (
-              <FormControlLabel key={item} control={<Switch defaultChecked />} label={item} sx={{ display: 'block', ml: 0 }} />
-            ))}
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Patient Information</Typography>
-            {[
-              "Patient ID", "Patient Title", "Patient First Name", "Patient Last Name",
-              "Patient Date of Birth", "Patient Home Phone", "Patient Mobile Number",
-              "Patient Email", "Patient Risk", "Patient Premed", "Insurance Info",
-              "Patient Credit", "Reffering Sources", "Patient Default DDS", "Patient Default Hygienist"
-            ].map((item) => (
-              <FormControlLabel
-                key={item}
-                control={<Switch defaultChecked />}
-                label={item}
-                sx={{ display: 'block', ml: 0 }}
-              />
-            ))}
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          {/* Patient Route Slip Settings Section */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Patient Route Slip Settings</Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox 
-                      checked={enableRouteSlip} 
-                      onChange={(e) => setEnableRouteSlip(e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label="Enable Route Slip"
-                  sx={{ mb: 1 }}
-                />
-                
-                {/* Sub-accordions when enabled */}
-                <Collapse in={enableRouteSlip}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 1 }}>
-                    {/* Patient Details */}
-                    <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 1 }}>
-                      <Box 
-                        onClick={() => toggleSection('patientDetails')}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { color: '#1a73e8' }, py: 0.5 }}
-                      >
-                        {expandedSections.patientDetails ? <KeyboardArrowDownIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-                        <Typography variant="body2" sx={{ fontWeight: expandedSections.patientDetails ? 600 : 500, color: expandedSections.patientDetails ? '#1a73e8' : 'text.primary' }}>
-                          Patient Details
-                        </Typography>
-                      </Box>
-                      <Collapse in={expandedSections.patientDetails}>
-                        <Box sx={{ pl: 4, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {[
-                            { key: 'patientName', label: 'Name' },
-                            { key: 'patientAddress', label: 'Address' },
-                            { key: 'patientDob', label: 'Date of Birth' },
-                            { key: 'patientEmail', label: 'Email' },
-                            { key: 'patientPhone', label: 'Phone Number' },
-                            { key: 'patientPrefDentist', label: 'Preferred Dentist' },
-                            { key: 'patientPrefHygienist', label: 'Preferred Hygienist' },
-                            { key: 'patientReferringSources', label: 'Referring Sources' },
-                          ].map((item) => (
-                            <FormControlLabel
-                              key={item.key}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={routeSlipSettings[item.key]}
-                                  onChange={(e) => setRouteSlipSettings(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                                />
-                              }
-                              label={<Typography variant="body2">{item.label}</Typography>}
-                              sx={{ my: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-
-                    {/* Account Details */}
-                    <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 1 }}>
-                      <Box 
-                        onClick={() => toggleSection('accountDetails')}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { color: '#1a73e8' }, py: 0.5 }}
-                      >
-                        {expandedSections.accountDetails ? <KeyboardArrowDownIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-                        <Typography variant="body2" sx={{ fontWeight: expandedSections.accountDetails ? 600 : 500, color: expandedSections.accountDetails ? '#1a73e8' : 'text.primary' }}>
-                          Account Details
-                        </Typography>
-                      </Box>
-                      <Collapse in={expandedSections.accountDetails}>
-                        <Box sx={{ pl: 4, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {[
-                            { key: 'totalOutstanding', label: 'Total Outstanding' },
-                            { key: 'individualOutstanding', label: 'Individual Outstanding' },
-                            { key: 'insuranceOutstanding', label: 'Insurance Outstanding' },
-                          ].map((item) => (
-                            <FormControlLabel
-                              key={item.key}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={routeSlipSettings[item.key]}
-                                  onChange={(e) => setRouteSlipSettings(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                                />
-                              }
-                              label={<Typography variant="body2">{item.label}</Typography>}
-                              sx={{ my: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-
-                    {/* Insurance Details */}
-                    <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 1 }}>
-                      <Box 
-                        onClick={() => toggleSection('insuranceDetails')}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { color: '#1a73e8' }, py: 0.5 }}
-                      >
-                        {expandedSections.insuranceDetails ? <KeyboardArrowDownIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-                        <Typography variant="body2" sx={{ fontWeight: expandedSections.insuranceDetails ? 600 : 500, color: expandedSections.insuranceDetails ? '#1a73e8' : 'text.primary' }}>
-                          Insurance Details
-                        </Typography>
-                      </Box>
-                      <Collapse in={expandedSections.insuranceDetails}>
-                        <Box sx={{ pl: 4, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {[
-                            { key: 'carrierName', label: 'Carrier Name' },
-                            { key: 'subscriberId', label: 'Subscriber ID' },
-                            { key: 'groupNumber', label: 'Group Number' },
-                          ].map((item) => (
-                            <FormControlLabel
-                              key={item.key}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={routeSlipSettings[item.key]}
-                                  onChange={(e) => setRouteSlipSettings(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                                />
-                              }
-                              label={<Typography variant="body2">{item.label}</Typography>}
-                              sx={{ my: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-
-                    {/* Appointment Details */}
-                    <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 1 }}>
-                      <Box 
-                        onClick={() => toggleSection('appointmentDetails')}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { color: '#1a73e8' }, py: 0.5 }}
-                      >
-                        {expandedSections.appointmentDetails ? <KeyboardArrowDownIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-                        <Typography variant="body2" sx={{ fontWeight: expandedSections.appointmentDetails ? 600 : 500, color: expandedSections.appointmentDetails ? '#1a73e8' : 'text.primary' }}>
-                          Appointment Details
-                        </Typography>
-                      </Box>
-                      <Collapse in={expandedSections.appointmentDetails}>
-                        <Box sx={{ pl: 4, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {[
-                            { key: 'apptTime', label: 'Appointment Time' },
-                            { key: 'apptReason', label: 'Appointment Reason' },
-                            { key: 'apptProvider', label: 'Provider Name' },
-                          ].map((item) => (
-                            <FormControlLabel
-                              key={item.key}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={routeSlipSettings[item.key]}
-                                  onChange={(e) => setRouteSlipSettings(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                                />
-                              }
-                              label={<Typography variant="body2">{item.label}</Typography>}
-                              sx={{ my: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-
-                    {/* Next Appointment Details */}
-                    <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 1 }}>
-                      <Box 
-                        onClick={() => toggleSection('nextAppointmentDetails')}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { color: '#1a73e8' }, py: 0.5 }}
-                      >
-                        {expandedSections.nextAppointmentDetails ? <KeyboardArrowDownIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-                        <Typography variant="body2" sx={{ fontWeight: expandedSections.nextAppointmentDetails ? 600 : 500, color: expandedSections.nextAppointmentDetails ? '#1a73e8' : 'text.primary' }}>
-                          Next Appointment Details
-                        </Typography>
-                      </Box>
-                      <Collapse in={expandedSections.nextAppointmentDetails}>
-                        <Box sx={{ pl: 4, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {[
-                            { key: 'nextApptDate', label: 'Next Appointment Date' },
-                            { key: 'nextApptTime', label: 'Next Appointment Time' },
-                            { key: 'nextApptReason', label: 'Next Appointment Reason' },
-                          ].map((item) => (
-                            <FormControlLabel
-                              key={item.key}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={routeSlipSettings[item.key]}
-                                  onChange={(e) => setRouteSlipSettings(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                                />
-                              }
-                              label={<Typography variant="body2">{item.label}</Typography>}
-                              sx={{ my: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-
-                    {/* Other Details */}
-                    <Box sx={{ pb: 0.5 }}>
-                      <Box 
-                        onClick={() => toggleSection('otherDetails')}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { color: '#1a73e8' }, py: 0.5 }}
-                      >
-                        {expandedSections.otherDetails ? <KeyboardArrowDownIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-                        <Typography variant="body2" sx={{ fontWeight: expandedSections.otherDetails ? 600 : 500, color: expandedSections.otherDetails ? '#1a73e8' : 'text.primary' }}>
-                          Other Details
-                        </Typography>
-                      </Box>
-                      <Collapse in={expandedSections.otherDetails}>
-                        <Box sx={{ pl: 4, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {[
-                            { key: 'printableNotes', label: 'Printable Notes' },
-                            { key: 'customHeader', label: 'Custom Header' },
-                          ].map((item) => (
-                            <FormControlLabel
-                              key={item.key}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={routeSlipSettings[item.key]}
-                                  onChange={(e) => setRouteSlipSettings(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                                />
-                              }
-                              label={<Typography variant="body2">{item.label}</Typography>}
-                              sx={{ my: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-                  </Box>
-                </Collapse>
-              </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Appointment Checklists */}
-      <Paper sx={{ p: 3, mt: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box 
-            onClick={() => setChecklistsOpen(!checklistsOpen)}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
-          >
-            <Typography variant="h6" color="primary" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              Appointment Checklists
-            </Typography>
-            <InfoIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
-            {checklistsOpen ? <KeyboardArrowUpIcon color="primary" /> : <KeyboardArrowDownIcon color="primary" />}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <AppointmentCardSettings appointmentCardSettings={appointmentCardSettings} setAppointmentCardSettings={setAppointmentCardSettings} />
           </Box>
-          <Button 
-            variant="text" 
-            color="primary" 
-            startIcon={<RefreshIcon />} 
-            size="small" 
-            sx={{ textTransform: 'none', fontWeight: 500 }}
-          >
-            Update Existing Checklists
-          </Button>
         </Box>
-        
-        <Collapse in={checklistsOpen}>
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle1" gutterBottom>Pre-appointment Checklist</Typography>
-              {preApptChecklist.map((item, index) => (
-                <Box key={`${item}-${index}`} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee', alignItems: 'center' }}>
-                  <Typography>{item}</Typography>
-                  <IconButton color="error" size="small" onClick={() => handleDeleteItem('preAppt', index)}><DeleteIcon /></IconButton>
-                </Box>
-              ))}
-              <Button sx={{ mt: 2 }} onClick={() => handleAddItem('preAppt')}>+ Add</Button>
-            </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle1" gutterBottom>Check-in Checklist</Typography>
-              {checkInChecklist.map((item, index) => (
-                <Box key={`${item}-${index}`} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee', alignItems: 'center' }}>
-                  <Typography>{item}</Typography>
-                  <IconButton color="error" size="small" onClick={() => handleDeleteItem('checkIn', index)}><DeleteIcon /></IconButton>
-                </Box>
-              ))}
-              <Button sx={{ mt: 2 }} onClick={() => handleAddItem('checkIn')}>+ Add</Button>
-            </Grid>
+        {/* Treatment & Schedule Settings */}
+        <TreatmentScheduleSettings treatmentScheduleSettings={treatmentScheduleSettings} setTreatmentScheduleSettings={setTreatmentScheduleSettings} />
 
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle1" gutterBottom>Check-out Checklist</Typography>
-              {checkOutChecklist.map((item, index) => (
-                <Box key={`${item}-${index}`} sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #eee', alignItems: 'center' }}>
-                  <Typography>{item}</Typography>
-                  <IconButton color="error" size="small" onClick={() => handleDeleteItem('checkOut', index)}><DeleteIcon /></IconButton>
-                </Box>
-              ))}
-              <Button sx={{ mt: 2 }} onClick={() => handleAddItem('checkOut')}>+ Add</Button>
-            </Grid>
-          </Grid>
-        </Collapse>
-      </Paper>
+        {/* Appointment Status Colors */}
+        <AppointmentStatusColors statusColors={statusColors} setStatusColors={setStatusColors} />
+
+        {/* Appointment Types Settings */}
+        <AppointmentTypesSetting apptTypes={appointmentTypes} setApptTypes={setAppointmentTypes} />
+
+        {/* Tooltip, Patient Info & Route Slip */}
+        <TooltipPatientInfoRouteSlip 
+          enableRouteSlip={enableRouteSlip}
+          setEnableRouteSlip={setEnableRouteSlip}
+          routeSlipSettings={routeSlipSettings}
+          setRouteSlipSettings={setRouteSlipSettings}
+          expandedSections={expandedSections}
+          toggleSection={toggleSection}
+        />
+
+        {/* Appointment Checklists */}
+        <AppointmentChecklist 
+          preApptChecklist={preApptChecklist}
+          checkInChecklist={checkInChecklist}
+          checkOutChecklist={checkOutChecklist}
+          handleAddItem={handleAddItem}
+          handleDeleteItem={handleDeleteItem}
+        />
+      </Box>
+
+      {/* Add Checklist Item Dialog */}
+      <Dialog open={addItemModalOpen} onClose={() => setAddItemModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontFamily: '"Segoe UI", sans-serif', fontWeight: 600, fontSize: '16px' }}>
+          Add {addItemCategory === 'preAppt' ? 'Pre-appointment' : addItemCategory === 'checkIn' ? 'Check-in' : 'Check-out'} Checklist Item
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Item Description"
+            type="text"
+            fullWidth
+            variant="outlined"
+            size="small"
+            value={newItemText}
+            onChange={(e) => setNewItemText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitNewItem();
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setAddItemModalOpen(false)} sx={{ textTransform: 'none', color: '#6b7280' }}>Cancel</Button>
+          <Button onClick={submitNewItem} variant="contained" color="primary" sx={{ textTransform: 'none', boxShadow: 'none', borderRadius: '4px' }}>Add Item</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
+    </ThemeProvider>
   );
 };
 

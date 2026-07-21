@@ -21,6 +21,9 @@ import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
 import AppleIcon from '@mui/icons-material/Apple';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import GetAppIcon from '@mui/icons-material/GetApp';
+import OSSelectionCard from '../../components/admin/installation/OSSelectionCard';
+import WindowsInstallationSteps from '../../components/admin/installation/WindowsInstallationSteps';
+import MacOSInstallationSteps from '../../components/admin/installation/MacOSInstallationSteps';
 
 const InstallationGuide = () => {
   const [selectedOs, setSelectedOs] = useState('');
@@ -73,110 +76,33 @@ const InstallationGuide = () => {
   const submitBtnHover = '#3b5d8a';
 
   return (
-    <Box sx={{ p: 0, minHeight: '80vh' }}>
+    <Box sx={{ 
+      p: 4, 
+      bgcolor: '#FFFFFF', 
+      borderRadius: '12px', 
+      border: '1px solid #E2E8F0',
+      minHeight: '266px' // from the figma design, though it will expand with content
+    }}>
       
       {/* Header Container */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: 1 }}>
         <Typography 
-          variant="h4" 
-          sx={{ 
-            color: titleColor, 
-            fontWeight: 500,
-            fontSize: { xs: '1.75rem', md: '2.25rem' }
-          }}
+          variant="subtitle1" 
+          fontWeight="bold" 
+          color="#11223F"
+          sx={{ fontSize: '16px' }}
         >
-          Oryx Imaging Installation Guide
+          Installation Guide
         </Typography>
-
-        <Button
-          variant="contained"
-          onClick={() => setScheduleOpen(true)}
-          sx={{
-            backgroundColor: scheduleBtnBg,
-            color: '#fff',
-            textTransform: 'none',
-            fontWeight: 500,
-            px: 2.5,
-            py: 1,
-            borderRadius: '4px',
-            fontSize: '0.875rem',
-            boxShadow: 'none',
-            '&:hover': {
-              backgroundColor: scheduleBtnHover,
-              boxShadow: 'none'
-            }
-          }}
-        >
-          Schedule Appointment
-        </Button>
       </Box>
 
       {/* Main Form/Wizard Area */}
       {!submittedOs ? (
-        <Box sx={{ mt: 5 }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 600, 
-              color: '#333', 
-              mb: 2,
-              fontSize: '1rem'
-            }}
-          >
-            1. What Operating System will you be installing Oryx Imaging on?
-          </Typography>
-
-          <form onSubmit={handleOsSubmit}>
-            <FormControl component="fieldset">
-              <RadioGroup
-                row
-                value={selectedOs}
-                onChange={(e) => setSelectedOs(e.target.value)}
-                sx={{ mb: 4 }}
-              >
-                <FormControlLabel 
-                  value="Windows" 
-                  control={<Radio size="medium" sx={{ color: '#ccc', '&.Mui-checked': { color: submitBtnBg } }} />} 
-                  label={<Typography sx={{ fontSize: '0.95rem', color: '#4a5568' }}>Windows</Typography>} 
-                  sx={{ mr: 4 }}
-                />
-                <FormControlLabel 
-                  value="macOs" 
-                  control={<Radio size="medium" sx={{ color: '#ccc', '&.Mui-checked': { color: submitBtnBg } }} />} 
-                  label={<Typography sx={{ fontSize: '0.95rem', color: '#4a5568' }}>macOs</Typography>} 
-                />
-              </RadioGroup>
-            </FormControl>
-
-            <Box>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={!selectedOs}
-                sx={{
-                  backgroundColor: submitBtnBg,
-                  color: '#fff',
-                  textTransform: 'none',
-                  px: 4,
-                  py: 0.75,
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    backgroundColor: submitBtnHover,
-                    boxShadow: 'none'
-                  },
-                  '&.Mui-disabled': {
-                    backgroundColor: '#e2e8f0',
-                    color: '#a0aec0'
-                  }
-                }}
-              >
-                Submit
-              </Button>
-            </Box>
-          </form>
-        </Box>
+        <OSSelectionCard 
+          selectedOs={selectedOs} 
+          setSelectedOs={setSelectedOs} 
+          onSubmit={handleOsSubmit} 
+        />
       ) : (
         /* STEP-BY-STEP GUIDES */
         <Box sx={{ mt: 2 }}>
@@ -188,171 +114,21 @@ const InstallationGuide = () => {
               setSelectedOs('');
             }}
             sx={{
-              color: '#718096',
+              color: '#9CA3AF',
               textTransform: 'none',
-              fontSize: '0.85rem',
+              fontSize: '13px',
               mb: 4,
               p: 0,
               '&:hover': { background: 'none', textDecoration: 'underline' }
             }}
           >
-            Choose a different Operating System
+            Choose a different operating system
           </Button>
 
           {submittedOs === 'Windows' ? (
-            /* WINDOWS GUIDE */
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                <DesktopWindowsIcon sx={{ color: '#1976d2', fontSize: '2rem' }} />
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#2d3748' }}>
-                  Windows Installation Steps
-                </Typography>
-              </Box>
-
-              <Grid container spacing={4}>
-                <Grid item xs={12} md={8}>
-                  {/* Step 1 */}
-                  <Paper variant="outlined" sx={{ p: 3, mb: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2b6cb0', mb: 1 }}>
-                      Step 1: Download the Oryx Imaging Installer
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', mb: 2, lineHeight: 1.6 }}>
-                      Download the certified MSI installer packet for Windows. This download contains the drivers and system service utility required to establish bridge communication between your local X-ray sensors/intraoral cameras and the Oryx cloud system.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<GetAppIcon />}
-                      sx={{
-                        backgroundColor: '#2b6cb0',
-                        color: '#fff',
-                        textTransform: 'none',
-                        fontSize: '0.8rem',
-                        '&:hover': { backgroundColor: '#1d4ed8' }
-                      }}
-                    >
-                      Download OryxImagingSetup.msi (112 MB)
-                    </Button>
-                  </Paper>
-
-                  {/* Step 2 */}
-                  <Paper variant="outlined" sx={{ p: 3, mb: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      Step 2: Run the Setup Wizard
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', lineHeight: 1.6 }}>
-                      Once the download is complete, locate the <strong>OryxImagingSetup.msi</strong> file in your downloads folder. Double-click it to run the installer. If a Windows User Account Control prompt appears, click <strong>Yes</strong> to grant administration privilege. Follow the prompt wizard and click <strong>Finish</strong>.
-                    </Typography>
-                  </Paper>
-
-                  {/* Step 3 */}
-                  <Paper variant="outlined" sx={{ p: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      Step 3: Connect and Activate Workstation Device
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', lineHeight: 1.6 }}>
-                      Connect your X-ray sensor or intraoral camera to an active USB port. Open the <strong>Oryx Imaging</strong> client from the newly created Desktop shortcut. Fill in your clinic authentication keys and select the appropriate workstation name. The sensor integration status will light up green once ready.
-                    </Typography>
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 3, bgcolor: '#f7fafc', borderLeft: '4px solid #4b71a1' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      System Requirements (Windows)
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', fontSize: '0.8rem', lineHeight: 1.7 }}>
-                      • OS: Windows 10 or 11 (64-bit Pro recommended)<br />
-                      • CPU: Intel Core i5 / AMD Ryzen 5 or higher<br />
-                      • RAM: 8 GB minimum (16 GB recommended)<br />
-                      • USB: USB 3.0 port for hardware sensors<br />
-                      • Network: Active high-speed broadband connection
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
+            <WindowsInstallationSteps />
           ) : (
-            /* MACOS GUIDE */
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                <AppleIcon sx={{ color: '#000', fontSize: '2rem' }} />
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#2d3748' }}>
-                  macOS Installation Steps
-                </Typography>
-              </Box>
-
-              <Grid container spacing={4}>
-                <Grid item xs={12} md={8}>
-                  {/* Step 1 */}
-                  <Paper variant="outlined" sx={{ p: 3, mb: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2b6cb0', mb: 1 }}>
-                      Step 1: Download the macOS Disk Image Bundle
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', mb: 2, lineHeight: 1.6 }}>
-                      Download the secure package installer for macOS. This package includes both Intel and Apple Silicon native compilation formats to ensure optimal workstation performance.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<GetAppIcon />}
-                      sx={{
-                        backgroundColor: '#1a202c',
-                        color: '#fff',
-                        textTransform: 'none',
-                        fontSize: '0.8rem',
-                        '&:hover': { backgroundColor: '#2d3748' }
-                      }}
-                    >
-                      Download OryxImagingBundle.dmg (95 MB)
-                    </Button>
-                  </Paper>
-
-                  {/* Step 2 */}
-                  <Paper variant="outlined" sx={{ p: 3, mb: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      Step 2: Install the Application
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', lineHeight: 1.6 }}>
-                      Double-click the downloaded <strong>OryxImagingBundle.dmg</strong> file. In the window that opens, drag the <strong>Oryx Imaging</strong> icon directly into your macOS <strong>Applications</strong> shortcut folder.
-                    </Typography>
-                  </Paper>
-
-                  {/* Step 3 */}
-                  <Paper variant="outlined" sx={{ p: 3, mb: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      Step 3: Allow Privacy &amp; Security Permissions
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', lineHeight: 1.6 }}>
-                      Due to macOS Gatekeeper, you may need to authorize the application. Go to <strong>System Settings &gt; Privacy &amp; Security</strong>. Under "Security", click <strong>Open Anyway</strong> next to Oryx Imaging to confirm launch permissions.
-                    </Typography>
-                  </Paper>
-
-                  {/* Step 4 */}
-                  <Paper variant="outlined" sx={{ p: 3, borderColor: '#e2e8f0' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      Step 4: Launch and Sync
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', lineHeight: 1.6 }}>
-                      Launch the app from your Applications list. Select "Allow local network access" if prompted. Log in with your clinical registration keys to sync Oryx Imaging with your administrative database workstation.
-                    </Typography>
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 3, bgcolor: '#f7fafc', borderLeft: '4px solid #4b71a1' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#2d3748', mb: 1 }}>
-                      System Requirements (macOS)
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#4a5568', fontSize: '0.8rem', lineHeight: 1.7 }}>
-                      • OS: macOS Monterey 12 or newer<br />
-                      • CPU: Apple Silicon (M1, M2, M3) or Intel Core i5<br />
-                      • RAM: 8 GB minimum (16 GB recommended)<br />
-                      • Hardware support: macOS-supported intraoral camera drivers<br />
-                      • Network: Active broadband internet connection
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
+            <MacOSInstallationSteps />
           )}
         </Box>
       )}

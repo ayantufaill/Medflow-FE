@@ -17,13 +17,16 @@ const ExamFilterBar = ({
     <Box sx={{ 
       border: '1px solid #e5e7eb', 
       borderRadius: '12px', 
-      px: 1.5,
-      py: 1, 
+      px: 0.5,
+      py: 0.5, 
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center', 
       bgcolor: '#fff', 
-      mb: 2 
+      mb: 2,
+      overflowX: 'auto',
+      '&::-webkit-scrollbar': { height: '4px' },
+      '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
     }}>
       
       {/* Left: Erupted | Resolve */}
@@ -33,23 +36,23 @@ const ExamFilterBar = ({
           sx={{ 
             bgcolor: '#f3f4f6', 
             borderRadius: '6px', 
-            px: 1.5, 
-            py: 0.5,
+            px: 0.75, 
+            py: 0.25,
             cursor: isUnerupted ? 'pointer' : 'default',
             border: '1px solid #e5e7eb',
             '&:hover': { bgcolor: isUnerupted ? '#e5e7eb' : '#f3f4f6' }
           }}
         >
-          <Typography sx={{ fontSize: '0.8rem', color: '#374151', fontWeight: 600 }}>
+          <Typography sx={{ fontSize: '0.65rem', color: '#374151', fontWeight: 600 }}>
             {isUnerupted ? "Unerupted" : "Erupted"}
           </Typography>
         </Box>
         
-        <Divider orientation="vertical" flexItem sx={{ mx: 2, borderColor: '#e5e7eb' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: '#e5e7eb' }} />
         
-        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ cursor: 'pointer' }}>
-          <VisibilityOutlined sx={{ fontSize: 16, color: '#2563eb' }} />
-          <Typography sx={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
+        <Stack direction="row" alignItems="center" spacing={0.25} sx={{ cursor: 'pointer' }}>
+          <VisibilityOutlined sx={{ fontSize: 14, color: '#2563eb' }} />
+          <Typography sx={{ fontSize: '0.65rem', color: '#2563eb', fontWeight: 600 }}>
              Resolve
           </Typography>
         </Stack>
@@ -61,25 +64,25 @@ const ExamFilterBar = ({
         alignItems: 'center', 
         border: '1px solid #e5e7eb', 
         borderRadius: '8px', 
-        p: 0.5,
+        p: 0.25,
         bgcolor: '#fff'
       }}>
         <Stack 
           direction="row" 
           alignItems="center" 
-          spacing={0.5} 
+          spacing={0.25} 
           onClick={() => setActiveView('tooth')}
           sx={{ 
             bgcolor: activeView === 'tooth' ? '#eff6ff' : 'transparent', 
             borderRadius: '6px', 
-            px: 1.5, 
-            py: 0.5,
+            px: 0.75, 
+            py: 0.25,
             cursor: 'pointer',
             transition: 'all 0.2s'
           }}
         >
-          <MasksOutlined sx={{ fontSize: 16, color: activeView === 'tooth' ? '#2563eb' : '#6b7280' }} />
-          <Typography sx={{ fontSize: '0.75rem', color: activeView === 'tooth' ? '#2563eb' : '#6b7280', fontWeight: 600 }}>
+          <MasksOutlined sx={{ fontSize: 14, color: activeView === 'tooth' ? '#2563eb' : '#6b7280' }} />
+          <Typography sx={{ fontSize: '0.65rem', color: activeView === 'tooth' ? '#2563eb' : '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>
             Tooth First
           </Typography>
         </Stack>
@@ -87,19 +90,19 @@ const ExamFilterBar = ({
         <Stack 
           direction="row" 
           alignItems="center" 
-          spacing={0.5} 
+          spacing={0.25} 
           onClick={() => setActiveView('condition')}
           sx={{ 
             bgcolor: activeView === 'condition' ? '#eff6ff' : 'transparent', 
             borderRadius: '6px', 
-            px: 1.5, 
-            py: 0.5,
+            px: 0.75, 
+            py: 0.25,
             cursor: 'pointer',
             transition: 'all 0.2s'
           }}
         >
-          <ElectricBolt sx={{ fontSize: 16, color: activeView === 'condition' ? '#2563eb' : '#6b7280' }} />
-          <Typography sx={{ fontSize: '0.75rem', color: activeView === 'condition' ? '#2563eb' : '#6b7280', fontWeight: 600 }}>
+          <ElectricBolt sx={{ fontSize: 14, color: activeView === 'condition' ? '#2563eb' : '#6b7280' }} />
+          <Typography sx={{ fontSize: '0.65rem', color: activeView === 'condition' ? '#2563eb' : '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>
             Condition First
           </Typography>
         </Stack>
