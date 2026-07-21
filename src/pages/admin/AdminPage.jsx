@@ -127,7 +127,8 @@ const AdminPage = () => {
   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
     isUserManagementSubTab ||
-    location.pathname === '/admin/practice-setup/installation-guide';
+    location.pathname === '/admin/practice-setup/installation-guide' ||
+    location.pathname === '/admin/practice-setup/move-data';
 
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
