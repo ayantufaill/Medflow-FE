@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Tooltip } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { useDispatch } from "react-redux";
@@ -21,6 +21,7 @@ import AppointmentHoverCard from "./AppointmentHoverCard";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../../constants/styles";
 import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
+import { ICON_TAGS } from "../new-appointment/constants";
 
 const STATUS_CONFIG = {
   PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
@@ -597,8 +598,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                 {colorTags.length > 0 &&
                   (() => {
                     const visibleColorTags = colorTags.slice(0, 3);
-                    const hiddenCount =
-                      colorTags.length - visibleColorTags.length;
+                    const hiddenCount = colorTags.length - visibleColorTags.length;
                     return (
                       <Box
                         sx={{
@@ -607,25 +607,35 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                           gap: "6px",
                         }}
                       >
-                        {visibleColorTags.map((color, i) => (
-                          <Box
-                            key={`${color}-${i}`}
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: "50%",
-                              bgcolor: color,
-                              border: "2px solid rgba(255,255,255,0.9)",
-                              boxShadow: "0 0 0 1px rgba(15,23,42,0.12)",
-                            }}
-                          />
-                        ))}
+                        {visibleColorTags.map((tagId, i) => {
+                          const tagObj = ICON_TAGS.find(t => t.id.toLowerCase() === String(tagId).toLowerCase());
+                          if (!tagObj) return null;
+                          return (
+                            <Tooltip key={`${tagId}-${i}`} title={tagObj.label} arrow placement="top" disableInteractive>
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: "6px", // rounded square
+                                  bgcolor: "#f3f4f6", // light background
+                                  border: "1px solid #d1d5db",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  p: "2px",
+                                }}
+                              >
+                                <img src={tagObj.src} alt={tagObj.label} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                              </Box>
+                            </Tooltip>
+                          );
+                        })}
                         {hiddenCount > 0 && (
                           <Box
                             sx={{
                               width: 24,
                               height: 24,
-                              borderRadius: "50%",
+                              borderRadius: "6px", // rounded square
                               bgcolor: "#f3f4f6",
                               border: "1px solid #d1d5db",
                               display: "flex",
