@@ -20,7 +20,7 @@ const ProgressNotesActions = ({ onRefresh, onExport, onPrint }) => {
           size="small" 
           startIcon={<FileDownloadIcon />} 
           onClick={onExport}
-          sx={{ textTransform: 'none', bgcolor: '#3b82f6', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2563eb' } }}
+          sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' } }}
         >
           Export as CSV
         </Button>

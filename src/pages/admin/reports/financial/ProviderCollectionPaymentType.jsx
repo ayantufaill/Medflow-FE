@@ -1,13 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
-  Grid,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -17,18 +11,34 @@ import {
   Paper,
   CircularProgress,
 } from '@mui/material';
-import PrintIcon from '@mui/icons-material/Print';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
+
+// Services & Store
 import { reportingService } from '../../../../services/reporting.service';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
+// UI Components
+import { 
+  ReportLayout, 
+  ReportFilterBar, 
+  ReportSelect, 
+  ReportCheckbox,
+  ReportDivider
+} from '../../../../components/reports/ui'; 
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+
 const ProviderCollectionPerPaymentType = () => {
   const dispatch = useDispatch();
-  const dropdownProviders = useSelector(selectProviderDropdownList);
+  const dropdownProviders = useSelector(selectProviderDropdownList) || [];
+
+  const initialStartDate = new Date().toISOString().split('T')[0];
+  const initialEndDate = new Date().toISOString().split('T')[0];
 
   const [dateRange, setDateRange] = useState('daily');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
   const [provider, setProvider] = useState('all');
   const [showFlags, setShowFlags] = useState(true);
   const [flagFilter, setFlagFilter] = useState('pts');
@@ -36,6 +46,36 @@ const ProviderCollectionPerPaymentType = () => {
 
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const getLocalDateString = (d) => {
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  };
+
+  const handleFilterChange = (key, value) => {
+    switch (key) {
+      case 'showFlags':
+        setShowFlags(value);
+        break;
+      case 'startDate':
+        setStartDate(value);
+        break;
+      case 'endDate':
+        setEndDate(value);
+        break;
+      case 'provider':
+        setProvider(value);
+        break;
+      case 'flagFilter':
+        setFlagFilter(value);
+        break;
+      case 'sortBy':
+        setSortBy(value);
+        break;
+      default:
+        break;
+    }
+  };
 
   const handleFilterModeChange = (e) => {
     const newMode = e.target.value;
@@ -47,42 +87,40 @@ const ProviderCollectionPerPaymentType = () => {
     let start = new Date(today);
     let end = new Date(today);
 
-    const getLocalDateString = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
     switch (newMode) {
       case 'daily':
         break;
       case 'this_week': {
         const day = today.getDay();
         const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(today.setDate(diff));
+        start = new Date(today);
+        start.setDate(diff);
         end = new Date(start);
         end.setDate(start.getDate() + 6);
         break;
       }
-      case 'this_month': {
+      case 'this_month':
+      case 'month_to_date': {
         start = new Date(today.getFullYear(), today.getMonth(), 1);
-        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        end = newMode === 'this_month' ? new Date(today.getFullYear(), today.getMonth() + 1, 0) : new Date(today);
         break;
       }
       case 'last_7_days': {
+        start = new Date(today);
         start.setDate(today.getDate() - 7);
         break;
       }
       case 'last_week': {
         const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
-        start = new Date(today.setDate(diff));
+        const diffToLastWeekStart = today.getDate() - day - 7 + (day === 0 ? -6 : 1);
+        start = new Date(today);
+        start.setDate(diffToLastWeekStart);
         end = new Date(start);
         end.setDate(start.getDate() + 6);
         break;
       }
       case 'last_4_weeks': {
+        start = new Date(today);
         start.setDate(today.getDate() - 28);
         break;
       }
@@ -92,10 +130,12 @@ const ProviderCollectionPerPaymentType = () => {
         break;
       }
       case 'last_3_months': {
+        start = new Date(today);
         start.setMonth(today.getMonth() - 3);
         break;
       }
       case 'last_12_months': {
+        start = new Date(today);
         start.setFullYear(today.getFullYear() - 1);
         break;
       }
@@ -121,7 +161,7 @@ const ProviderCollectionPerPaymentType = () => {
     setEndDate(getLocalDateString(end));
   };
 
-  const lastFetchedRef = React.useRef(null);
+  const lastFetchedRef = useRef(null);
 
   const fetchData = async () => {
     const paramsKey = `${dateRange}_${startDate}_${endDate}`;
@@ -185,7 +225,6 @@ const ProviderCollectionPerPaymentType = () => {
   })() : '';
 
   const filteredReportData = reportData.filter(row => {
-    // 1. Provider Filter
     if (provider !== 'all') {
       const renderLower = (row.render || '').toLowerCase();
       const billLower = (row.bill || '').toLowerCase();
@@ -197,7 +236,6 @@ const ProviderCollectionPerPaymentType = () => {
       if (!match) return false;
     }
 
-    // 2. Flag Filter
     if (flagFilter === 'with_flags') {
       if (!row.flags || row.flags.length === 0) return false;
     } else if (flagFilter === 'without_flags') {
@@ -206,6 +244,24 @@ const ProviderCollectionPerPaymentType = () => {
 
     return true;
   });
+
+  const handleApply = () => {
+    lastFetchedRef.current = null;
+    fetchData();
+  };
+
+  const handleClear = () => {
+    setDateRange('daily');
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setProvider('all');
+    setShowFlags(true);
+    setFlagFilter('pts');
+    setSortBy('default');
+
+    lastFetchedRef.current = null;
+    fetchData();
+  };
 
   const sortedReportData = [...filteredReportData].sort((a, b) => {
     if (sortBy === 'date_asc') {
@@ -218,8 +274,8 @@ const ProviderCollectionPerPaymentType = () => {
       return (a.patient || '').localeCompare(b.patient || '');
     }
     if (sortBy === 'amount_desc') {
-      const aAmt = a.ins + a.pt;
-      const bAmt = b.ins + b.pt;
+      const aAmt = (a.ins || 0) + (a.pt || 0);
+      const bAmt = (b.ins || 0) + (b.pt || 0);
       return bAmt - aAmt;
     }
     return 0;
@@ -244,47 +300,215 @@ const ProviderCollectionPerPaymentType = () => {
     { label: 'Total Production Adjustments:', value: `$${totalAdj.toFixed(2)}` },
   ];
 
+  const handleExportCSV = () => {
+    const headers = [
+      'Date',
+      showFlags ? 'Flags' : null,
+      'Patient',
+      'Code',
+      'Procedure',
+      'Render Provider',
+      'Bill Provider',
+      'Insurance Payment',
+      'Patient Payment',
+      'Actual Write-off',
+      'Adjustment',
+      'Pt. Refund',
+      'Ins. Refund',
+      'Pay From Credit',
+      'New Credit'
+    ].filter(Boolean);
+
+    const rows = sortedReportData.map(row => {
+      const rowData = [
+        row.date ? new Date(row.date).toLocaleDateString() : '',
+        showFlags ? (row.flags ? row.flags.length : 0) : null,
+        row.patient || '',
+        row.code || '',
+        row.procedure || '',
+        row.render || '',
+        row.bill || '',
+        `$${(row.ins || 0).toFixed(2)}`,
+        `$${(row.pt || 0).toFixed(2)}`,
+        `$${(row.actual || 0).toFixed(2)}`,
+        `$${(row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0).toFixed(2)}`,
+        `$${(row.ptRef || 0).toFixed(2)}`,
+        `$${(row.insRef || 0).toFixed(2)}`,
+        `$${(row.payFrom || 0).toFixed(2)}`,
+        `$${(row.newCredit || 0).toFixed(2)}`
+      ].filter(val => val !== null);
+      return rowData;
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Provider_Collection_Per_Payment_Type_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const tableEl = document.getElementById('provider-collection-payment-table');
+    const footerEl = document.getElementById('provider-collection-payment-footer');
+    if (!tableEl) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Provider Collection Per Payment Type</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2 style="font-family: sans-serif;">Provider Collection Per Payment Type</h2>');
+    printWindow.document.write(tableEl.outerHTML);
+    if (footerEl) {
+      printWindow.document.write('<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">' + footerEl.innerHTML + '</div>');
+    }
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
   const topFilters = (
     <>
       <ReportSelect 
-        label="daily" 
-        prefix="Date Range:" 
-        defaultValue="daily"
-        options={[{ value: 'daily', label: 'Daily' }]}
+        label="DATE RANGE"
+        options={[
+          { value: 'daily', label: 'Daily' },
+          { value: 'range', label: 'Range' },
+          { value: 'this_week', label: 'This Week' },
+          { value: 'this_month', label: 'This Month' },
+          { value: 'last_7_days', label: 'Last 7 days' },
+          { value: 'last_week', label: 'Last Week' },
+          { value: 'last_4_weeks', label: 'Last 4 Weeks' },
+          { value: 'last_month', label: 'Last Month' },
+          { value: 'last_3_months', label: 'Last 3 Months' },
+          { value: 'last_12_months', label: 'Last 12 Months' },
+          { value: 'month_to_date', label: 'Month to date' },
+          { value: 'quarter_to_date', label: 'Quarter to date' },
+          { value: 'year_to_date', label: 'Year to date' },
+          { value: 'last_year', label: 'Last Year' },
+        ]}
+        value={dateRange}
+        onChange={handleFilterModeChange}
       />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
-        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
+        <DatePicker
+          value={dayjs(startDate)}
+          onChange={(newValue) => setStartDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '160px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
+        <DatePicker
+          value={dayjs(endDate)}
+          onChange={(newValue) => setEndDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '160px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
       </Box>
 
+      <ReportDivider />
+
       <ReportSelect 
-        label="all" 
-        prefix="Filter Report by:" 
-        defaultValue="all"
-        options={[{ value: 'all', label: 'Provider: All' }]}
+        label="FILTER REPORT BY PROVIDER" 
+        value={provider}
+        onChange={(e) => setProvider(e.target.value)}
+        options={[
+          { value: 'all', label: 'All' },
+          ...dropdownProviders.map((p) => ({
+            value: p._id || p.id,
+            label: getProviderLabel(p)
+          }))
+        ]}
+      />
+      <ReportSelect 
+        label="FLAG FILTER" 
+        value={flagFilter}
+        onChange={(e) => setFlagFilter(e.target.value)}
+        options={[
+          { value: 'pts', label: 'Pts With Or Without Flags' },
+          { value: 'with_flags', label: 'Pts With Flags Only' },
+          { value: 'without_flags', label: 'Pts Without Flags Only' },
+        ]}
       />
     </>
   );
 
   const bottomFilters = (
     <>
-      <ReportCheckbox label="Show Flags in Report" defaultChecked />
-      
       <ReportSelect 
-        label="pts" 
-        defaultValue="pts"
-        options={[{ value: 'pts', label: 'Pts With Or Without Flags' }]}
+        label="SORT REPORT BY" 
+        labelPosition='left'
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        options={[
+          { value: 'default', label: 'Default' },
+          { value: 'date_asc', label: 'Date: Ascending' },
+          { value: 'date_desc', label: 'Date: Descending' },
+          { value: 'patient', label: 'Patient Name' },
+          { value: 'amount_desc', label: 'Amount: High to Low' },
+        ]}
       />
-
-      <ReportSelect 
-        label="default" 
-        prefix="Sort Report By:" 
-        defaultValue="default"
-        options={[{ value: 'default', label: 'Default' }]}
-      />
+      <Box sx={{ display: 'flex', alignItems: 'center'}}>
+        <ReportCheckbox 
+          label="Show Flags in Report" 
+          checked={showFlags} 
+          onChange={(e) => handleFilterChange('showFlags', typeof e === 'boolean' ? e : e?.target?.checked)} 
+        />
+      </Box>
     </>
   );
 
@@ -293,207 +517,123 @@ const ProviderCollectionPerPaymentType = () => {
       <ReportFilterBar 
         topRowFilters={topFilters}
         bottomRowFilters={bottomFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onPrint={() => window.print()}
+        onApplyFilters={handleApply}
+        onClearAll={handleClear}
+        onCreateTemplate={() => {}}
       />
 
-      {/* Filters Section */}
-      <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-          <Grid item>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
-            <Select 
-              size="small" 
-              value={dateRange} 
-              onChange={handleFilterModeChange} 
-              sx={{ minWidth: 140, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="daily">Daily</MenuItem>
-              <MenuItem value="range">Range</MenuItem>
-              <MenuItem value="this_week">This Week</MenuItem>
-              <MenuItem value="this_month">This Month</MenuItem>
-              <MenuItem value="last_7_days">Last 7 days</MenuItem>
-              <MenuItem value="last_week">Last Week</MenuItem>
-              <MenuItem value="last_4_weeks">Last 4 Weeks</MenuItem>
-              <MenuItem value="last_month">Last Month</MenuItem>
-              <MenuItem value="last_3_months">Last 3 Months</MenuItem>
-              <MenuItem value="last_12_months">Last 12 Months</MenuItem>
-              <MenuItem value="quarter_to_date">Quarter to date</MenuItem>
-              <MenuItem value="year_to_date">Year to date</MenuItem>
-              <MenuItem value="last_year">Last Year</MenuItem>
-            </Select>
-          </Grid>
-          <Grid item sx={{ display: 'flex', gap: 2 }}>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Start Date:
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-              />
-            </Typography>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              End Date:
-              <input 
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setDateRange('range') || setEndDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-              />
-            </Typography>
-          </Grid>
-        </Grid>
+      <ProductionReportActions 
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+      />
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Filter Report by:</Typography>
-          <Select 
-            size="small" 
-            value={provider} 
-            onChange={(e) => setProvider(e.target.value)} 
-            sx={{ minWidth: 140, fontSize: '0.75rem' }}
-          >
-            <MenuItem value="all">Provider: All</MenuItem>
-            {dropdownProviders.map((p) => (
-              <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                {getProviderLabel(p)}
-              </MenuItem>
-            ))}
-          </Select>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FormControlLabel 
-              control={<Checkbox size="small" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />} 
-              label={<Typography variant="caption">Show Flags in Report</Typography>} 
-            />
-            <Select 
-              size="small" 
-              value={flagFilter} 
-              onChange={(e) => setFlagFilter(e.target.value)} 
-              sx={{ minWidth: 180, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
-              <MenuItem value="with_flags">Pts With Flags Only</MenuItem>
-              <MenuItem value="without_flags">Pts Without Flags Only</MenuItem>
-            </Select>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-              <Select 
-                size="small" 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)} 
-                sx={{ minWidth: 120, fontSize: '0.75rem' }}
-              >
-                <MenuItem value="default">Default</MenuItem>
-                <MenuItem value="date_asc">Date: Ascending</MenuItem>
-                <MenuItem value="date_desc">Date: Descending</MenuItem>
-                <MenuItem value="patient">Patient Name</MenuItem>
-                <MenuItem value="amount_desc">Amount: High to Low</MenuItem>
-              </Select>
+      {/* Styled Card Wrapper matching AgingReportTable */}
+      <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2 }}>
+        <TableContainer 
+          id="provider-collection-payment-table" 
+          elevation={0} 
+          sx={{ overflowX: 'auto', '& .MuiTableCell-root': { whiteSpace: 'nowrap' }, position: 'relative' }}
+        >
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
+              <CircularProgress size={30} />
             </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" size="small" onClick={fetchData} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
-            <Button variant="contained" size="small" disabled sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
-      </Box>
-
-      {/* Table Section */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', position: 'relative' }}>
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
-            <CircularProgress size={30} />
-          </Box>
-        )}
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700, py: 1 } }}>
-              <TableCell rowSpan={2}>Date</TableCell>
-              <TableCell rowSpan={2}>Flags</TableCell>
-              <TableCell rowSpan={2}>Patient</TableCell>
-              <TableCell rowSpan={2}>Code</TableCell>
-              <TableCell rowSpan={2}>Procedure</TableCell>
-              <TableCell align="center" colSpan={2}>Provider / Internal Code</TableCell>
-              <TableCell align="center" colSpan={3}>Collection</TableCell>
-              <TableCell align="right" rowSpan={2}>Adjustment</TableCell>
-              <TableCell align="right" rowSpan={2}>Pt. Refund</TableCell>
-              <TableCell align="right" rowSpan={2}>Ins. Refund</TableCell>
-              <TableCell align="right" rowSpan={2}>Pay From Credit</TableCell>
-              <TableCell align="right" rowSpan={2}>New Credit</TableCell>
-            </TableRow>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700, py: 1 } }}>
-              <TableCell align="center">Render</TableCell>
-              <TableCell align="center">Bill</TableCell>
-              <TableCell align="right">Insurance Payment</TableCell>
-              <TableCell align="right">Patient Payment</TableCell>
-              <TableCell align="right">Actual Write-off</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedReportData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary', fontSize: '0.75rem' }}>
-                  No records found matching current criteria.
-                </TableCell>
+          )}
+          <Table size="small" sx={{ minWidth: 1200 }}>
+            <TableHead>
+              <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
+                <TableCell rowSpan={2}>Date</TableCell>
+                <TableCell rowSpan={2}>Flags</TableCell>
+                <TableCell rowSpan={2}>Patient</TableCell>
+                <TableCell rowSpan={2}>Code</TableCell>
+                <TableCell rowSpan={2}>Procedure</TableCell>
+                <TableCell align="center" colSpan={2} sx={{ borderLeft: '1px solid #e2e8f0' }}>Provider / Internal Code</TableCell>
+                <TableCell align="center" colSpan={3} sx={{ borderLeft: '1px solid #e2e8f0' }}>Collection</TableCell>
+                <TableCell align="right" rowSpan={2} sx={{ borderLeft: '1px solid #e2e8f0' }}>Adjustment</TableCell>
+                <TableCell align="right" rowSpan={2}>Pt. Refund</TableCell>
+                <TableCell align="right" rowSpan={2}>Ins. Refund</TableCell>
+                <TableCell align="right" rowSpan={2}>Pay From Credit</TableCell>
+                <TableCell align="right" rowSpan={2}>New Credit</TableCell>
               </TableRow>
-            ) : (
-              sortedReportData.map((row, idx) => (
-                <TableRow key={idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
-                  <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
-                  <TableCell>
-                    {showFlags && row.flags && row.flags.length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 0.2 }}>
-                        {row.flags.map((color, i) => (
-                          <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                        ))}
-                      </Box>
-                    )}
+              <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
+                <TableCell align="center" sx={{ borderLeft: '1px solid #e2e8f0' }}>Render</TableCell>
+                <TableCell align="center">Bill</TableCell>
+                <TableCell align="right" sx={{ borderLeft: '1px solid #e2e8f0' }}>Insurance Payment</TableCell>
+                <TableCell align="right">Patient Payment</TableCell>
+                <TableCell align="right">Actual Write-off</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedReportData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={15} align="center" sx={{ py: 6 }}>
+                    <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      No records found matching current criteria.
+                    </Typography>
                   </TableCell>
-                  <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Patient'}</TableCell>
-                  <TableCell>{row.code || '-'}</TableCell>
-                  <TableCell>{row.procedure || '-'}</TableCell>
-                  <TableCell align="center">{row.render || '-'}</TableCell>
-                  <TableCell align="center">{row.bill || '-'}</TableCell>
-                  <TableCell align="right">${(row.ins || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.pt || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.actual || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.ptRef || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.insRef || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.payFrom || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.newCredit || 0).toFixed(2)}</TableCell>
                 </TableRow>
-              ))
-            )}
-            <TableRow sx={{ fontWeight: 700, backgroundColor: '#fafafa', '& td': { fontWeight: 700, fontSize: '0.7rem' } }}>
-              <TableCell colSpan={7} align="right">Total:</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>${totalIns.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalPt.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalActualWriteOff.toFixed(2)}</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>${totalCollAdj.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalPtRef.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalInsRef.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalPayFrom.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalRefundTo.toFixed(2)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                sortedReportData.map((row, idx) => (
+                  <TableRow 
+                    key={idx} 
+                    sx={{ 
+                      '& td': { 
+                        fontSize: '0.75rem', 
+                        py: 1.5, 
+                        verticalAlign: 'middle', 
+                        borderBottom: '1px solid #e2e8f0', 
+                        color: '#1e293b' 
+                      } 
+                    }}
+                  >
+                    <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell>
+                      {showFlags && row.flags && row.flags.length > 0 && (
+                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                          {row.flags.map((color, i) => (
+                            <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
+                          ))}
+                        </Box>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }}>{row.patient || 'Patient'}</TableCell>
+                    <TableCell>{row.code || '-'}</TableCell>
+                    <TableCell>{row.procedure || '-'}</TableCell>
+                    <TableCell align="center">{row.render || '-'}</TableCell>
+                    <TableCell align="center">{row.bill || '-'}</TableCell>
+                    <TableCell align="right">${(row.ins || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.pt || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.actual || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.ptRef || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.insRef || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.payFrom || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right">${(row.newCredit || 0).toFixed(2)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+              <TableRow sx={{ '& td': { fontWeight: 700, fontSize: '0.75rem', color: '#1e293b', borderTop: '2px solid #e0e0e0', py: 1.5 } }}>
+                <TableCell colSpan={7} align="right">Total:</TableCell>
+                <TableCell align="right">${totalIns.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalPt.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalActualWriteOff.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalCollAdj.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalPtRef.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalInsRef.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalPayFrom.toFixed(2)}</TableCell>
+                <TableCell align="right">${totalRefundTo.toFixed(2)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
 
       {/* Footer Summary Section */}
-      <Box sx={{ mt: 4, ml: 4 }}>
+      <Box id="provider-collection-payment-footer" sx={{ mt: 3, ml: 4 }}>
         {summaryStats.map((stat, idx) => (
           <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 260, color: '#337ab7' }}>{stat.label}</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 700 }}>{stat.value}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 260, color: '#3b82f6' }}>{stat.label}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#1e293b' }}>{stat.value}</Typography>
           </Box>
         ))}
       </Box>
@@ -502,4 +642,3 @@ const ProviderCollectionPerPaymentType = () => {
 };
 
 export default ProviderCollectionPerPaymentType;
-

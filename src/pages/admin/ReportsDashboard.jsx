@@ -91,13 +91,15 @@ const ReportsDashboard = () => {
   };
 
   return (
-    <Box onMouseLeave={() => setHoveredTab(null)} sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
+    <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
       {/* Main Reports Area */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ flexShrink: 0, borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 2, pt: 1, mb: hoveredTab !== null ? 0 : 2 }}>
-            <Tabs
-              value={activeTab === -1 ? false : activeTab}
+          
+          <Box onMouseLeave={() => setHoveredTab(null)} sx={{ flexShrink: 0, zIndex: 10 }}>
+            <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 2, pt: 1, mb: hoveredTab !== null ? 0 : 2 }}>
+              <Tabs
+                value={activeTab === -1 ? false : activeTab}
               variant="scrollable"
               scrollButtons="auto"
               sx={{
@@ -137,6 +139,7 @@ const ReportsDashboard = () => {
           {hoveredTab === 2 && <PatientReportsSubNav left={296} />}
           {hoveredTab === 3 && <OthersReportsSubNav left={436} />}
           {hoveredTab === 4 && <SavingReportsSubNav left={576} />}
+          </Box>
 
           {/* Page content */}
           <Box sx={{ flex: 1, p: 3, backgroundColor: '#fff', overflowY: 'auto', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
