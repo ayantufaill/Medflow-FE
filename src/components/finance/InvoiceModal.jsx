@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 
-const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
+const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
@@ -515,7 +515,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
             >
               Add New Invoice
             </button>
-            <button type="button" style={cancelButtonStyle} onClick={onCancel}>
+            <button type="button" style={cancelButtonStyle} onClick={onCancel || onClose}>
               Cancel
             </button>
           </div>
