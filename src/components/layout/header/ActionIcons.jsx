@@ -67,11 +67,12 @@ const ActionIcons = () => {
         disableScrollLock
         PaperProps={{
           sx: {
-            bgcolor: '#e8f0fe',
-            minWidth: 200,
-            borderRadius: '8px',
-            boxShadow: '0px 4px 12px rgba(0,0,0,0.1)',
+            overflow: 'visible',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
             mt: 1,
+            minWidth: 180,
+            borderRadius: '6px',
           },
         }}
       >
@@ -97,13 +98,14 @@ const ActionIcons = () => {
                 handleSettingsClose();
               }}
               sx={{
-                color: '#1a3a6b',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                py: 1.2,
+                fontFamily: 'Inter',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#09121f',
+                py: 1,
                 px: 2,
                 '&:hover': {
-                  bgcolor: 'rgba(26, 58, 107, 0.08)',
+                  backgroundColor: '#f8fafc',
                 },
               }}
             >

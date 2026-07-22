@@ -3,6 +3,9 @@ import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../../constants/styles";
 
 const CompactAppointmentPoint = ({ appointment, onSlotClick }) => {
+  const statusStr = String(appointment.status || '').toLowerCase();
+  const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
+
   return (
     <Box
       onClick={(e) => {
@@ -19,6 +22,7 @@ const CompactAppointmentPoint = ({ appointment, onSlotClick }) => {
         borderRadius: radius.md,
         cursor: 'pointer',
         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+        opacity: isGhosted ? 0.7 : 1,
         '&:hover': {
           backgroundColor: '#f8fafc',
           borderColor: COLORS.ACCENT,

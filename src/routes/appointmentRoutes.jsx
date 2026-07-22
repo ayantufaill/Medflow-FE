@@ -17,6 +17,7 @@ import RecurringAppointmentsListPage from '../pages/recurring-appointments/Recur
 import CreateRecurringAppointmentPage from '../pages/recurring-appointments/CreateRecurringAppointmentPage';
 import EditRecurringAppointmentPage from '../pages/recurring-appointments/EditRecurringAppointmentPage';
 import ViewRecurringAppointmentPage from '../pages/recurring-appointments/ViewRecurringAppointmentPage';
+import DayTasksPage from '../pages/appointments/DayTasks/DayTasksPage';
 
 const adminReception = (children) => (
   <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
@@ -66,6 +67,15 @@ const appointmentRoutes = [
   <Route key="/recurring-appointments/new" path="/recurring-appointments/new" element={adminReception(<CreateRecurringAppointmentPage />)} />,
   <Route key="/recurring-appointments/:recurringAppointmentId" path="/recurring-appointments/:recurringAppointmentId" element={adminReception(<ViewRecurringAppointmentPage />)} />,
   <Route key="/recurring-appointments/:recurringAppointmentId/edit" path="/recurring-appointments/:recurringAppointmentId/edit" element={adminReception(<EditRecurringAppointmentPage />)} />,
+  <Route 
+    key="/day-tasks" 
+    path="/day-tasks" 
+    element={
+      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider', 'Doctor']}>
+        <Layout><DayTasksPage /></Layout>
+      </ProtectedRoute>
+    } 
+  />,
 ];
 
 export default appointmentRoutes;

@@ -222,14 +222,6 @@ const AppointmentLeftPanel = ({
         </Box>
       </>
     )}
-
-    {/* Recare hint */}
-    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px", mt: 2 }}>
-      Patient doesn't have a recare plan.{" "}
-      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
-      {" "}or{" "}
-      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
-    </Typography>
     
     <Typography 
       sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}

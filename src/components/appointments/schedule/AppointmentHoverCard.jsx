@@ -11,6 +11,19 @@ import { fontSize, fontWeight, radius, headingPrimarySx, headingSecondarySx } fr
 const CARD_WIDTH = 290;
 const CARD_MAX_HEIGHT = 540;
 
+const getPrivacyName = (fullName) => {
+  if (!fullName) return "";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0).toUpperCase()} ${parts[parts.length - 1].charAt(0).toUpperCase()}`;
+};
+
+const getAge = (dob) => {
+  if (!dob) return "";
+  const age = dayjs().diff(dayjs(dob), 'year');
+  return Number.isNaN(age) ? "" : `(${age})`;
+};
+
 /* ── 2-column info row ───────────────────────────────────── */
 const InfoRow = ({ label, labelSuffix, children }) => (
   <Box sx={{ display: "flex", alignItems: "flex-start", gap: "8px", mb: "7px" }}>
@@ -186,7 +199,7 @@ const AppointmentHoverCard = ({
         </Typography>
         <Box sx={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
           <Typography sx={{ ...headingPrimarySx }}>
-            {privacyMode ? "•••• ••••" : appointment.patientName}
+            {privacyMode ? getPrivacyName(appointment.patientName) : appointment.patientName} {getAge(appointment.dob)}
           </Typography>
           {apt.patientId && (
             <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED }}>
@@ -268,7 +281,7 @@ const AppointmentHoverCard = ({
           Patient Information
         </Typography>
 
-        <InfoRow label="Patient:">{privacyMode ? "•••• ••••" : displayValue(apt.patientName)}</InfoRow>
+        <InfoRow label="Patient:">{privacyMode ? getPrivacyName(apt.patientName) : displayValue(apt.patientName)} {getAge(apt.dob)}</InfoRow>
 
         <InfoRow label="D.O.B:">{privacyMode ? "•••• ••••" : displayValue(apt.dob)}</InfoRow>
 
