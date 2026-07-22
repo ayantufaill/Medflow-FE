@@ -57,6 +57,8 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
         case 'print': handlePrintClick(e); break;
         case 'share': handleShareSelect('request-payment'); break;
         case 'cashPlus': handleCashPlusClick(e); break;
+        case 'printSelect': handlePrintSelect(e); break;
+        case 'shareSelect': handleShareSelect(e); break;
         default: break;
       }
     }

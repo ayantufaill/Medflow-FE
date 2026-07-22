@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -41,6 +41,7 @@ const STATUS_COLORS = {
 const ViewInvoicePage = () => {
   const navigate = useNavigate();
   const { invoiceId } = useParams();
+  const location = useLocation();
   const { showSnackbar } = useSnackbar();
   const [invoice, setInvoice] = useState(null);
   const [existingClaim, setExistingClaim] = useState(null);
@@ -71,6 +72,15 @@ const ViewInvoicePage = () => {
     };
     fetchInvoice();
   }, [invoiceId]);
+
+  useEffect(() => {
+    if (!loading && invoice && !error) {
+      const searchParams = new URLSearchParams(location.search);
+      if (searchParams.get('download') === 'true') {
+        setTimeout(() => window.print(), 500);
+      }
+    }
+  }, [loading, invoice, error, location.search]);
 
   const handleCreateClaim = async () => {
     if (!invoice?.insuranceCompanyId && !invoice?.insuranceCompany?._id) {
