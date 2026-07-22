@@ -1,16 +1,26 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Box, Tabs, Tab, useTheme, Button, Typography, Paper } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Box, Tabs, Tab, useTheme, Button, Typography, Paper, Breadcrumbs } from '@mui/material';
+import { Add as AddIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
+import OfficeTimings from './OfficeTimings';
+import OnlineScheduleConfiguration from './OnlineSchedule';
 import ProvidersListPage from '../providers/ProvidersListPage';
 import PracticeInfoListPage from '../practice-info/PracticeInfoListPage';
 import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompaniesListPage';
 import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListPage';
 import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
+import KioskAccountsView from './KioskAccountsView';
+import InformedConsent from './InformedConsent';
+import PrePostOps from './PrePostOps';
+import ReportsDashboard from './ReportsDashboard';
+import AdvancedReporting from './AdvancedReporting';
+import MyChartConfiguration from './MyChartConfiguration';
 import InstallationGuide from './InstallationGuide';
 import MoveData from './MoveData';
+import OperatorySetup from './OperatorySetup';
+import PatientFlags from './PatientFlags';
 import DocumentCategorySetup from './DocumentCategorySetup';
 import ScheduleConfiguration from './ScheduleConfiguration';
 import PracticeSettings from './PracticeSettings';
@@ -113,6 +123,15 @@ const INSURANCE_MANAGEMENT_SUB_TABS = [
   { label: 'Match Vyne Carriers', path: '/admin/insurance-management/match-vyne-carriers' },
 ];
 
+// Groups used to resolve breadcrumbs for sub-pages (parent tab + matched sub tab)
+const SUB_TAB_GROUPS = [
+  { parent: TABS[1], subTabs: PRACTICE_SETUP_SUB_TABS },
+  { parent: TABS[2], subTabs: PATIENT_COMMUNICATION_SUB_TABS },
+  { parent: TABS[3], subTabs: CLINICAL_MANAGEMENT_SUB_TABS },
+  { parent: TABS[4], subTabs: FINANCIAL_MANAGEMENT_SUB_TABS },
+  { parent: TABS[5], subTabs: INSURANCE_MANAGEMENT_SUB_TABS },
+];
+
 const AdminPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -128,10 +147,16 @@ const AdminPage = () => {
   const isFinancialManagementSubTab = FINANCIAL_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
   const isInsuranceManagementSubTab = INSURANCE_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
 
-  const isTopLevelPage =
+   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
     isUserManagementSubTab ||
     location.pathname === '/admin/practice-setup/installation-guide' ||
+    location.pathname === '/admin/practice-setup/kiosk-accounts' ||
+    location.pathname === '/admin/practice-setup/office-timings' ||
+    location.pathname === '/admin/practice-setup/operatory-setup' ||
+    location.pathname === '/admin/practice-setup/patient-flags' ||
+    location.pathname === '/admin/practice-setup/my-chart-configuration' ||
+    location.pathname === '/admin/practice-setup/online-schedule';
     location.pathname === '/admin/practice-setup/move-data' ||
     location.pathname === '/admin/practice-setup/document-category-setup' ||
     location.pathname === '/admin/practice-setup/schedule-configuration' ||
@@ -139,6 +164,16 @@ const AdminPage = () => {
     location.pathname === '/admin/practice-setup/practice-information';
 
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
+
+  // Resolve breadcrumb info (parent tab + current sub tab label) for flat sub-pages
+  let breadcrumbInfo = null;
+  for (const group of SUB_TAB_GROUPS) {
+    const matchedSubTab = group.subTabs.find((t) => t.path === location.pathname);
+    if (matchedSubTab) {
+      breadcrumbInfo = { parent: group.parent, current: matchedSubTab };
+      break;
+    }
+  }
 
   if (location.pathname === '/admin') {
     return <Navigate to="/admin/user-management" replace />;
@@ -152,12 +187,187 @@ const AdminPage = () => {
     return <Navigate to="/admin/patient-communication/settings" replace />;
   }
 
+  const pageContent = (
+    <>
+      {activeTab === 0 && (
+        location.pathname === '/admin/user-management/providers' ? (
+          <ProvidersListPage />
+        ) : location.pathname === '/admin/user-management/roles' ||
+          location.pathname === '/admin/user-management/time-clock' ||
+          location.pathname === '/admin/user-management/task-management' ? (
+          <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
+            <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+              {USER_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label}
+            </Typography>
+            <Typography color="text.secondary">Content for this section is coming soon.</Typography>
+          </Box>
+        ) : (
+          <UserManagementView />
+        )
+      )}
+      {activeTab === 1 && (
+        location.pathname === '/admin/practice-setup/kiosk-accounts' ? (
+          <KioskAccountsView />
+        ) : location.pathname === '/admin/practice-setup/office-timings' ? (
+          <OfficeTimings />
+        ) : location.pathname === '/admin/practice-setup/patient-flags' ? (
+          <PatientFlags />
+        ) : location.pathname === '/admin/practice-setup/installation-guide' ? (
+          <InstallationGuide />
+        ) : location.pathname === '/admin/practice-setup/move-data' ? (
+          <MoveData />
+        ) : location.pathname === '/admin/practice-setup/operatory-setup' ? (
+          <OperatorySetup />
+        ) : location.pathname === '/admin/practice-setup/my-chart-configuration' ? (
+          <MyChartConfiguration />
+        ) : location.pathname === '/admin/practice-setup/online-schedule' ? (
+          <OnlineScheduleConfiguration />
+        ) : (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => navigate('/admin/practice-setup/onboarding')}
+                sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
+              >
+                Onboard New Practice
+              </Button>
+            </Box>
+            <PracticeInfoListPage />
+          </Box>
+        )
+      )}
+      {activeTab === 2 && (
+        location.pathname === '/admin/patient-communication/settings' ? (
+          <PatientCommunicationSettings />
+        ) : location.pathname === '/admin/patient-communication/templates' ? (
+          <PatientCommunicationTemplates />
+        ) : location.pathname === '/admin/patient-communication/email-campaign' ? (
+          <EmailCampaigns />
+        ) : location.pathname === '/admin/patient-communication/questionnaires' ? (
+          <Questionnaires />
+        ) : location.pathname === '/admin/patient-communication/gap-fills' ? (
+          <ScheduleGapFills />
+        ) : location.pathname === '/admin/patient-communication/review-settings' ? (
+          <ReviewSettings />
+        ) : (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
+              Patient Communication - {PATIENT_COMMUNICATION_SUB_TABS.find(t => t.path === location.pathname)?.label || 'Module'}
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', mt: 2 }}>
+              This module is under development.
+            </Typography>
+          </Box>
+        )
+      )}
+      {activeTab === 3 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {location.pathname === '/admin/clinical-management' ? (
+            <AppointmentTypesListPage />
+          ) : location.pathname === '/admin/clinical-management/products' ? (
+            <ProductsManagement />
+          ) : location.pathname === '/admin/clinical-management/procedure-codes' ? (
+            <ProcedureCodesManagement />
+          ) : location.pathname === '/admin/clinical-management/checklists' ? (
+            <ChecklistsManagement />
+          ) : (
+            <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {CLINICAL_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label ||
+                  'Clinical Management'}
+              </Typography>
+              <Typography color="text.secondary">Content for this section is coming soon.</Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+      {activeTab === 4 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {location.pathname === '/admin/finance-management' ? (
+            <ServicesListPage />
+          ) : location.pathname === '/admin/finance-management/adjustment-types' ? (
+            <AdjustmentTypes />
+          ) : location.pathname.includes('/admin/finance-management/fee-guide/') ? (
+            <FeeGuideDetail />
+          ) : location.pathname === '/admin/finance-management/fee-guide' ? (
+            <FeeGuides />
+          ) : location.pathname === '/admin/finance-management/billing-configuration' ? (
+            <BillingConfiguration />
+          ) : location.pathname === '/admin/finance-management/payment-types' ? (
+            <PaymentTypes />
+          ) : location.pathname === '/admin/finance-management/payment-terminal' ? (
+            <PaymentTerminals />
+          ) : location.pathname === '/admin/finance-management/dashboard-goals' ? (
+            <DashboardGoals />
+          ) : location.pathname === '/admin/finance-management/payment-presentation' ? (
+            <PaymentPresentation />
+          ) : location.pathname === '/admin/finance-management/ar-automation' ? (
+            <ARAutomation />
+          ) : location.pathname === '/admin/finance-management/coverage-book-shortcut' ? (
+            <CoverageBookShortcuts />
+          ) : (
+            <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {FINANCIAL_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label ||
+                  'Finance Management'}
+              </Typography>
+              <Typography color="text.secondary">Content for this section is coming soon.</Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+      {activeTab === 5 && (
+        location.pathname === '/admin/insurance-management/carriers' ? (
+          <InsuranceCarriers />
+        ) : location.pathname === '/admin/insurance-management/plans' ? (
+          <InsurancePlans />
+        ) : location.pathname === '/admin/insurance-management/membership-plans' ? (
+          <MembershipPlans />
+        ) : location.pathname === '/admin/insurance-management/match-converted-carriers' ? (
+          <MatchConvertedCarriers />
+        ) : location.pathname === '/admin/insurance-management/match-vyne-carriers' ? (
+          <MatchVyneCarriers />
+        ) : (
+          <InsuranceCompaniesListPage />
+        )
+      )}
+    </>
+  );
+
+  // Flat layout for sub-pages (e.g. Operatory Setup): breadcrumb + content, no card/tab chrome
+  if (isSubPage) {
+    return (
+      <Box sx={{ p: 3, backgroundColor: '#fff', minHeight: 'calc(100vh - 65px)' }}>
+        {breadcrumbInfo && (
+          <Breadcrumbs
+            separator={<NavigateNextIcon fontSize="small" sx={{ color: '#bdbdbd' }} />}
+            sx={{ mb: 3, fontSize: '0.875rem' }}
+          >
+            <Typography
+              component={Link}
+              to={breadcrumbInfo.parent.clickPath || breadcrumbInfo.parent.path}
+              sx={{ color: '#1976d2', textDecoration: 'none', fontWeight: 500, fontSize: '0.875rem' }}
+            >
+              {breadcrumbInfo.parent.label}
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.875rem' }}>
+              {breadcrumbInfo.current.label}
+            </Typography>
+          </Breadcrumbs>
+        )}
+        {pageContent}
+      </Box>
+    );
+  }
+
+  // Standard layout for top-level tabs: card wrapper + tab bar
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 65px)' }}>
       <Paper elevation={0} sx={{ backgroundColor: '#fff', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'visible' }}>
 
-      {/* Main tab bar + sub-nav wrapper — Hidden on sub-management pages */}
-      {!isSubPage && (
+        {/* Main tab bar + sub-nav wrapper */}
         <Box
           onMouseLeave={() => setHoveredTab(null)}
           sx={{ position: 'relative', pt: 1 }}
@@ -292,151 +502,11 @@ const AdminPage = () => {
             </Box>
           )}
         </Box>
-      )}
 
-      {/* Page content */}
-      <Box sx={{ p: 3 }}>
-        {activeTab === 0 && (
-          location.pathname === '/admin/user-management/providers' ? (
-            <ProvidersListPage />
-          ) : location.pathname === '/admin/user-management/roles' ||
-            location.pathname === '/admin/user-management/time-clock' ||
-            location.pathname === '/admin/user-management/task-management' ? (
-            <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
-              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                {USER_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label}
-              </Typography>
-              <Typography color="text.secondary">Content for this section is coming soon.</Typography>
-            </Box>
-          ) : (
-            <UserManagementView />
-          )
-        )}
-        {activeTab === 1 && (
-          location.pathname === '/admin/practice-setup/installation-guide' ? (
-            <InstallationGuide />
-          ) : location.pathname === '/admin/practice-setup/move-data' ? (
-            <MoveData />
-          ) : location.pathname === '/admin/practice-setup/document-category-setup' ? (
-            <DocumentCategorySetup />
-          ) : location.pathname === '/admin/practice-setup/schedule-configuration' ? (
-            <ScheduleConfiguration />
-          ) : location.pathname === '/admin/practice-setup/practice-settings' ? (
-            <PracticeSettings />
-          ) : location.pathname === '/admin/practice-setup/practice-information' ? (
-            <PracticeInformation />
-          ) : (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => navigate('/admin/practice-setup/onboarding')}
-                  sx={{ textTransform: 'none', backgroundColor: '#1a3a6b' }}
-                >
-                  Onboard New Practice
-                </Button>
-              </Box>
-              <PracticeInfoListPage />
-            </Box>
-          )
-        )}
-        {activeTab === 2 && (
-          location.pathname === '/admin/patient-communication/settings' ? (
-            <PatientCommunicationSettings />
-          ) : location.pathname === '/admin/patient-communication/templates' ? (
-            <PatientCommunicationTemplates />
-          ) : location.pathname === '/admin/patient-communication/email-campaign' ? (
-            <EmailCampaigns />
-          ) : location.pathname === '/admin/patient-communication/questionnaires' ? (
-            <Questionnaires />
-          ) : location.pathname === '/admin/patient-communication/gap-fills' ? (
-            <ScheduleGapFills />
-          ) : location.pathname === '/admin/patient-communication/review-settings' ? (
-            <ReviewSettings />
-          ) : (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
-                Patient Communication - {PATIENT_COMMUNICATION_SUB_TABS.find(t => t.path === location.pathname)?.label || 'Module'}
-              </Typography>
-              <Typography sx={{ color: 'text.secondary', mt: 2 }}>
-                This module is under development.
-              </Typography>
-            </Box>
-          )
-        )}
-        {activeTab === 3 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {location.pathname === '/admin/clinical-management' ? (
-              <AppointmentTypesListPage />
-            ) : location.pathname === '/admin/clinical-management/products' ? (
-              <ProductsManagement />
-            ) : location.pathname === '/admin/clinical-management/procedure-codes' ? (
-              <ProcedureCodesManagement />
-            ) : location.pathname === '/admin/clinical-management/checklists' ? (
-              <ChecklistsManagement />
-            ) : (
-              <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
-                <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                  {CLINICAL_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label ||
-                    'Clinical Management'}
-                </Typography>
-                <Typography color="text.secondary">Content for this section is coming soon.</Typography>
-              </Box>
-            )}
-          </Box>
-        )}
-        {activeTab === 4 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {location.pathname === '/admin/finance-management' ? (
-              <ServicesListPage />
-            ) : location.pathname === '/admin/finance-management/adjustment-types' ? (
-              <AdjustmentTypes />
-            ) : location.pathname.includes('/admin/finance-management/fee-guide/') ? (
-              <FeeGuideDetail />
-            ) : location.pathname === '/admin/finance-management/fee-guide' ? (
-              <FeeGuides />
-            ) : location.pathname === '/admin/finance-management/billing-configuration' ? (
-              <BillingConfiguration />
-            ) : location.pathname === '/admin/finance-management/payment-types' ? (
-              <PaymentTypes />
-            ) : location.pathname === '/admin/finance-management/payment-terminal' ? (
-              <PaymentTerminals />
-            ) : location.pathname === '/admin/finance-management/dashboard-goals' ? (
-              <DashboardGoals />
-            ) : location.pathname === '/admin/finance-management/payment-presentation' ? (
-              <PaymentPresentation />
-            ) : location.pathname === '/admin/finance-management/ar-automation' ? (
-              <ARAutomation />
-            ) : location.pathname === '/admin/finance-management/coverage-book-shortcut' ? (
-              <CoverageBookShortcuts />
-            ) : (
-              <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
-                <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                  {FINANCIAL_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label ||
-                    'Finance Management'}
-                </Typography>
-                <Typography color="text.secondary">Content for this section is coming soon.</Typography>
-              </Box>
-            )}
-          </Box>
-        )}
-        {activeTab === 5 && (
-          location.pathname === '/admin/insurance-management/carriers' ? (
-            <InsuranceCarriers />
-          ) : location.pathname === '/admin/insurance-management/plans' ? (
-            <InsurancePlans />
-          ) : location.pathname === '/admin/insurance-management/membership-plans' ? (
-            <MembershipPlans />
-          ) : location.pathname === '/admin/insurance-management/match-converted-carriers' ? (
-            <MatchConvertedCarriers />
-          ) : location.pathname === '/admin/insurance-management/match-vyne-carriers' ? (
-            <MatchVyneCarriers />
-          ) : (
-            <InsuranceCompaniesListPage />
-          )
-        )}
-      </Box>
+        {/* Page content */}
+        <Box sx={{ p: 3 }}>
+          {pageContent}
+        </Box>
       </Paper>
     </Box>
   );

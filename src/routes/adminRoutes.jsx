@@ -6,8 +6,6 @@ import PracticeOnboardingPage from '../pages/admin/PracticeOnboardingPage';
 import KioskAccountsView from '../pages/admin/KioskAccountsView';
 import MyChartConfiguration from '../pages/admin/MyChartConfiguration';
 import OfficeTimings from '../pages/admin/OfficeTimings';
-import OnlineSchedule from '../pages/admin/OnlineSchedule';
-import OperatorySetup from '../pages/admin/OperatorySetup';
 import PatientFlags from '../pages/admin/PatientFlags';
 import PaymentTerminals from '../pages/admin/PaymentTerminals';
 import DocumentCategorySetup from '../pages/admin/DocumentCategorySetup';
@@ -67,17 +65,17 @@ const adminRoutes = [
   <Route key="/admin/insurance-management/match-converted-carriers" path="/admin/insurance-management/match-converted-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-vyne-carriers" path="/admin/insurance-management/match-vyne-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/practice-setup/onboarding" path="/admin/practice-setup/onboarding" element={adminOnly(<PracticeOnboardingPage />, true)} />,
-  <Route key="/admin/practice-setup/kiosk-accounts" path="/admin/practice-setup/kiosk-accounts" element={adminOnly(<KioskAccountsView />)} />,
-  <Route key="/admin/practice-setup/my-chart-configuration" path="/admin/practice-setup/my-chart-configuration" element={adminOnly(<MyChartConfiguration />)} />,
-  <Route key="/admin/practice-setup/operatory-setup" path="/admin/practice-setup/operatory-setup" element={adminOnly(<OperatorySetup />)} />,
-  <Route key="/admin/practice-setup/patient-flags" path="/admin/practice-setup/patient-flags" element={adminOnly(<PatientFlags />)} />,
+  <Route key="/admin/practice-setup/kiosk-accounts" path="/admin/practice-setup/kiosk-accounts" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/practice-setup/my-chart-configuration" path="/admin/practice-setup/my-chart-configuration" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/practice-setup/operatory-setup" path="/admin/practice-setup/operatory-setup" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/practice-setup/patient-flags" path="/admin/practice-setup/patient-flags" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/practice-setup/financial/payment-terminals" path="/admin/practice-setup/financial/payment-terminals" element={adminOnly(<PaymentTerminals />)} />,
-  <Route key="/admin/practice-setup/document-category-setup" path="/admin/practice-setup/document-category-setup" element={adminOnly(<AdminPage />)} />,
-  <Route key="/admin/practice-setup/schedule-configuration" path="/admin/practice-setup/schedule-configuration" element={adminOnly(<AdminPage />)} />,
-  <Route key="/admin/practice-setup/practice-settings" path="/admin/practice-setup/practice-settings" element={adminOnly(<AdminPage />)} />,
-  <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(<AdminPage />)} />,
-  <Route key="/admin/practice-setup/office-timings" path="/admin/practice-setup/office-timings" element={adminOnly(<OfficeTimings />)} />,
-  <Route key="/admin/practice-setup/online-schedule" path="/admin/practice-setup/online-schedule" element={adminOnly(<OnlineSchedule />)} />,
+  <Route key="/admin/practice-setup/document-category-setup" path="/admin/practice-setup/document-category-setup" element={adminOnly(<DocumentCategorySetup />)} />,
+  <Route key="/admin/practice-setup/schedule-configuration" path="/admin/practice-setup/schedule-configuration" element={adminOnly(<ScheduleConfiguration />)} />,
+  <Route key="/admin/practice-setup/practice-settings" path="/admin/practice-setup/practice-settings" element={adminOnly(<PracticeSettings />)} />,
+  <Route key="/admin/practice-setup/practice-information" path="/admin/practice-setup/practice-information" element={adminOnly(<PracticeInformation />)} />,
+  <Route key="/admin/practice-setup/office-timings" path="/admin/practice-setup/office-timings" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/practice-setup/online-schedule" path="/admin/practice-setup/online-schedule" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/practice-setup/installation-guide" path="/admin/practice-setup/installation-guide" element={adminOnly(<AdminPage />)} />,
 
   <Route key="/admin/clinical-management/products" path="/admin/clinical-management/products" element={adminOnly(<ProductsManagement />)} />,
