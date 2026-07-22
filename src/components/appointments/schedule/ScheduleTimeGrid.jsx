@@ -362,7 +362,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
   );
 };
 
-const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, scheduleBlocks, privacyMode, isCloseOpenDayMode, closedOperatories = {} }) => {
+const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, scheduleBlocks, privacyMode, showGhosted, isCloseOpenDayMode, closedOperatories = {} }) => {
   const dispatch = useDispatch();
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
@@ -464,8 +464,10 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
           ? (apptDate >= weekStart && apptDate <= weekEnd)
           : (apptDate === targetDate);
 
-        const isNotPending = String(appt.status).toLowerCase() !== 'pending';
-        if (!isDateValid || !isNotPending) return false;
+        const statusStr = String(appt.status).toLowerCase();
+        if (statusStr === 'pending') return false;
+        if (!showGhosted && (statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken')) return false;
+        if (!isDateValid) return false;
 
         // Apply visual frontend filters
         if (providerId !== 'All') {
@@ -631,6 +633,14 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
           // to prevent perfect overlap if same time, we could add a slight offset but it's okay for now.
         }
 
+        const statusStr = String(gridItem.status || '').toLowerCase();
+        const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
+
+        if (isGhosted) {
+          pos.left = pos.left + pos.width / 2;
+          pos.width = pos.width / 2;
+        }
+
         return (
           <Box
             key={gridItem.id + i}
@@ -640,7 +650,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
               height: pos.height,
               left: pos.left,
               width: pos.width,
-              zIndex: 2,
+              zIndex: isGhosted ? 3 : 2,
             }}
           >
             {isWeek ? (

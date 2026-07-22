@@ -140,6 +140,7 @@ const OperatorySchedulePage = () => {
   const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
   const [viewMyColumn, setViewMyColumn] = useState(false);
   const [hideBlocks, setHideBlocks] = useState(false);
+  const [showGhosted, setShowGhosted] = useState(false);
   const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
@@ -689,7 +690,12 @@ const OperatorySchedulePage = () => {
     const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
 
     const mapped = reduxAppointments
-      .filter(a => String(a.status).toLowerCase() !== 'pending')
+      .filter(a => {
+        const status = String(a.status).toLowerCase();
+        if (status === 'pending') return false;
+        if (!showGhosted && (status === 'cancelled' || status === 'no_show' || status === 'no show' || status === 'broken')) return false;
+        return true;
+      })
       .filter(a => {
         if (providerId !== 'All') {
           const aProviderId = String(a.providerId && (a.providerId._id || a.providerId.id || a.providerId));
@@ -973,7 +979,7 @@ const OperatorySchedulePage = () => {
         {/* CENTER PANEL — Dynamic Width */}
         <Box className="print-container" sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <Box className="no-print">
-            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} onMoreClick={(e) => setMoreMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} hideBlocks={hideBlocks} setHideBlocks={setHideBlocks} />
+            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} onMoreClick={(e) => setMoreMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} hideBlocks={hideBlocks} setHideBlocks={setHideBlocks} showGhosted={showGhosted} setShowGhosted={setShowGhosted} />
             {isCloseOpenDayMode && (
               <Box sx={{ width: '100%', bgcolor: '#fef3c7', color: '#92400e', py: 1, textAlign: 'center', fontWeight: 600, fontSize: '13px', borderBottom: '1px solid #fde68a' }}>
                 Select operatory for opening or closing it
@@ -984,6 +990,7 @@ const OperatorySchedulePage = () => {
             <ScheduleCalendar
               scheduleBlocks={hideBlocks ? [] : scheduleBlocks.filter(b => b.notes !== "CLOSED_DAY")}
               privacyMode={privacyMode}
+              showGhosted={showGhosted}
               isCloseOpenDayMode={isCloseOpenDayMode}
               closedOperatories={closedOperatories}
               viewMyColumn={viewMyColumn}

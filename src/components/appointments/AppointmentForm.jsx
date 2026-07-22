@@ -248,11 +248,15 @@ const AppointmentForm = ({
           );
           if (selectedProvider?.maxDailyAppointments) {
             const activeAppointments = existingAppointments.filter(
-              (apt) =>
-                apt.status !== 'cancelled' &&
-                apt.status !== 'no_show' &&
+              (apt) => {
+                const s = String(apt.status).toLowerCase();
+                return s !== 'cancelled' &&
+                s !== 'no_show' &&
+                s !== 'no show' &&
+                s !== 'broken' &&
                 (!excludeAppointmentId ||
-                  (apt._id !== excludeAppointmentId && apt.id !== excludeAppointmentId))
+                  (apt._id !== excludeAppointmentId && apt.id !== excludeAppointmentId));
+              }
             );
             if (activeAppointments.length >= selectedProvider.maxDailyAppointments) {
               setConflictError(
@@ -272,7 +276,8 @@ const AppointmentForm = ({
             ) {
               return false;
             }
-            if (apt.status === 'cancelled' || apt.status === 'no_show') return false;
+            const statusStr = String(apt.status).toLowerCase();
+            if (statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken') return false;
 
             const aptStart = parseTime(apt.startTime);
             const aptEnd = parseTime(apt.endTime);

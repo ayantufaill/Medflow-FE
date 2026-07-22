@@ -13,7 +13,7 @@ import { COLORS } from '../../../constants/colors';
 // Redux (useScheduleState) so ScheduleTimeGrid responds to the same state
 // without prop-drilling through the page component.
 
-const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, privacyMode, setPrivacyMode, hideBlocks, setHideBlocks }) => {
+const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, privacyMode, setPrivacyMode, hideBlocks, setHideBlocks, showGhosted, setShowGhosted }) => {
   const { calendarView, selectedDate, setCalendarView, setSelectedDate } = useScheduleState();
 
   // Redux stores selectedDate as an ISO string; DateNavigation expects a dayjs object.
@@ -59,7 +59,7 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
         {/* Flexible space to push icons and button to the right side if needed, or simply let ActionIconsBar handle alignment */}
         <Box sx={{ flex: 1 }} />
         
-        <ActionIconsBar onPrintClick={onPrintClick} onMoreClick={onMoreClick} privacyMode={privacyMode} onTogglePrivacyMode={() => setPrivacyMode(!privacyMode)} hideBlocks={hideBlocks} onToggleHideBlocks={() => setHideBlocks(!hideBlocks)} />
+        <ActionIconsBar onPrintClick={onPrintClick} onMoreClick={onMoreClick} privacyMode={privacyMode} onTogglePrivacyMode={() => setPrivacyMode(!privacyMode)} hideBlocks={hideBlocks} onToggleHideBlocks={() => setHideBlocks(!hideBlocks)} showGhosted={showGhosted} onToggleShowGhosted={() => setShowGhosted(!showGhosted)} />
         <VerticalDivider height="36px" />
         <NewAppointmentButton onClick={onNewAppointment} />
       </Box>

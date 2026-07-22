@@ -196,6 +196,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
       )
     : [];
 
+  const statusStr = String(appointment.status || '').toLowerCase();
+  const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
+
   // xs: just a coloured header bar with name + time, no body at all
   if (tier === "xs") {
     return (
@@ -219,6 +222,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
             display: "flex",
             flexDirection: "row",
             cursor: "pointer",
+            opacity: isGhosted ? 0.7 : 1,
           }}
         >
           <Box
@@ -306,6 +310,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
           display: "flex",
           flexDirection: "row",
           cursor: "pointer",
+          opacity: isGhosted ? 0.7 : 1,
         }}
       >
         {/* Main content column */}

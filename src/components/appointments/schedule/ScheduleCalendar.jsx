@@ -5,7 +5,7 @@ import ScheduleTimeGrid from './ScheduleTimeGrid';
 import { TIME_LABEL_WIDTH, COLUMN_MIN_WIDTH } from './scheduleConstants';
 import { useDropdownData, useScheduleState } from '../../../hooks/redux';
 
-const ScheduleCalendar = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode, isCloseOpenDayMode, closedOperatories, onToggleOperatoryStatus, viewMyColumn }) => {
+const ScheduleCalendar = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode, showGhosted, isCloseOpenDayMode, closedOperatories, onToggleOperatoryStatus, viewMyColumn }) => {
   const { rooms: allRooms } = useDropdownData({ rooms: true });
   const { calendarView, selectedDate } = useScheduleState();
 
@@ -34,6 +34,7 @@ const ScheduleCalendar = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
           onBlockClick={onBlockClick} 
           scheduleBlocks={scheduleBlocks} 
           privacyMode={privacyMode} 
+          showGhosted={showGhosted}
           calendarView={calendarView}
           selectedDate={selectedDate}
           isCloseOpenDayMode={isCloseOpenDayMode}

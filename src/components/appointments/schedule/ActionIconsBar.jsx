@@ -7,6 +7,7 @@ import {
   DescriptionOutlined,
   FilterAltOutlined,
   VisibilityOffOutlined,
+  VisibilityOutlined,
   SpeakerNotesOffOutlined,
   SpeakerNotesOutlined,
   PrintOutlined,
@@ -24,7 +25,7 @@ import ProgressNotesDialog from './progress-notes-modal/ProgressNotesDialog';
 import FilterLabsPopover from './FilterLabsPopover';
 import { useNavigate } from 'react-router-dom';
 
-const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivacyMode, hideBlocks, onToggleHideBlocks }) => {
+const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivacyMode, hideBlocks, onToggleHideBlocks, showGhosted, onToggleShowGhosted }) => {
   const navigate = useNavigate();
 
   const [isBulkTextModalOpen, setIsBulkTextModalOpen] = useState(false);
@@ -38,7 +39,7 @@ const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivac
     { icon: <ScienceOutlined />, title: 'Lab Cases', onClick: () => setIsLabCasesModalOpen(true) },
     { icon: <DescriptionOutlined />, title: 'Progress notes', onClick: () => setIsProgressNotesModalOpen(true) },
     { icon: <FilterAltOutlined />, title: 'Filter Labs', onClick: (e) => setFilterLabsAnchorEl(e.currentTarget) },
-    { icon: <VisibilityOffOutlined />, title: 'Show Appointments', disabled: true },
+    { icon: showGhosted ? <VisibilityOutlined /> : <VisibilityOffOutlined />, title: showGhosted ? 'Hide Appointments' : 'Show Appointments', active: showGhosted, onClick: onToggleShowGhosted },
     { icon: hideBlocks ? <SpeakerNotesOffOutlined /> : <SpeakerNotesOutlined />, title: hideBlocks ? 'Show Blocks' : 'Hide Blocks', active: hideBlocks, onClick: onToggleHideBlocks },
     { icon: <PrintOutlined />, title: 'Print', onClick: onPrintClick },
     { icon: privacyMode ? <PersonOffOutlined /> : <PersonOutline />, title: 'Hide Names', active: privacyMode, onClick: onTogglePrivacyMode },
