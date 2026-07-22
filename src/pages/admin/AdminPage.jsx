@@ -131,6 +131,7 @@ const AdminPage = () => {
   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
     isUserManagementSubTab ||
+    isPatientCommunicationSubTab ||
     location.pathname === '/admin/practice-setup/installation-guide' ||
     location.pathname === '/admin/practice-setup/move-data' ||
     location.pathname === '/admin/practice-setup/document-category-setup' ||
