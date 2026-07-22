@@ -1,55 +1,58 @@
 import React from 'react';
-import {
-  Box, Typography, Grid, Select, MenuItem, Button, TextField
-} from '@mui/material';
-import { ReportLayout, ReportFilterBar, ReportSelect } from '../../../../components/reports/ui';
+import { Box, Typography } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import CollectionCodeCarrierFilters from '../../../../components/reports/financial/CollectionCodeCarrierFilters';
+import CollectionCodeCarrierTable from '../../../../components/reports/financial/CollectionCodeCarrierTable';
+import { useCollectionCodeCarrier } from '../../../../hooks/reports/financial/useCollectionCodeCarrier';
 
 const CollectionCodeCarrier = () => {
-  const topFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>
-          Start by searching for procedure codes: 
-          <Box component="span" sx={{ ml: 1, color: '#337ab7', cursor: 'pointer', textDecoration: 'underline' }}>Enter Code</Box>
-        </Typography>
-        <TextField 
-          variant="standard" 
-          placeholder="Enter code or procedure" 
-          sx={{ ml: 2, minWidth: 200, '& .MuiInputBase-input': { fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} 
-        />
-      </Box>
-
-      <ReportSelect 
-        label="daily" 
-        prefix="Date Range:" 
-        defaultValue="daily"
-        options={[{ value: 'daily', label: 'Daily' }]}
-        sx={{ ml: 4 }}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
-        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
-      </Box>
-    </>
-  );
+  const {
+    dateRange,
+    startDate,
+    endDate,
+    codeFilter,
+    codeText,
+    loading,
+    reportData,
+    setStartDate,
+    setEndDate,
+    setCodeFilter,
+    setCodeText,
+    handleFilterModeChange,
+    handleClearAll,
+    handleApply,
+    handleExportCSV,
+    handlePrint
+  } = useCollectionCodeCarrier();
 
   return (
     <ReportLayout title="Collection per code per carrier:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onPrint={() => window.print()}
+      <CollectionCodeCarrierFilters 
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        codeFilter={codeFilter}
+        codeText={codeText}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setCodeFilter={setCodeFilter}
+        setCodeText={setCodeText}
+        handleFilterModeChange={handleFilterModeChange}
+        handleApply={handleApply}
+        handleClearAll={handleClearAll}
       />
 
-      {/* Placeholder Content */}
-      <Box sx={{ py: 4, textAlign: 'center' }}>
-        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-          Start by searching for procedure codes:
-        </Typography>
-      </Box>
+      <ProductionReportActions 
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={reportData.length > 0}
+      />
+
+      <CollectionCodeCarrierTable 
+        loading={loading}
+        reportData={reportData}
+      />
 
       {/* Disclaimers Section */}
       <Box sx={{ mt: 4, pt: 2, borderTop: '1px solid #e0e0e0' }}>
@@ -72,4 +75,3 @@ const CollectionCodeCarrier = () => {
 };
 
 export default CollectionCodeCarrier;
-

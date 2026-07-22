@@ -74,30 +74,73 @@ const Morphological = () => {
   const appointmentId = useSelector(selectSelectedAppointmentId);
   const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
 
-  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('morphological', appointmentId);
-  const upsertMutation = useUpsertClinicalExam('morphological', appointmentId);
-  const signMutation = useSignClinicalExam('morphological', appointmentId);
-
-  const isSigned = !!examRecord?.isSigned;
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [viewingAppointmentId, setViewingAppointmentId] = useState(null);
+  const activeAppointmentId = viewingAppointmentId && viewingAppointmentId !== 'undefined' 
+    ? String(viewingAppointmentId) 
+    : (appointmentId && String(appointmentId) !== 'undefined' ? String(appointmentId) : null);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('morphological', activeAppointmentId);
+  const upsertMutation = useUpsertClinicalExam('morphological', activeAppointmentId);
+  const signMutation = useSignClinicalExam('morphological', activeAppointmentId);
+
+  const isSigned = !!examRecord?.isSigned;
 
   const { currentAppointment } = useAppointmentDetail();
   const { data: historicalDates } = useExamHistoryDates('morphological', patientId);
 
   const visitDates = React.useMemo(() => {
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      if (dateString instanceof Date) {
+        if (isNaN(dateString)) return '';
+        return dateString.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+      }
+      if (typeof dateString === 'string') {
+        const isMidnightUTC = dateString.endsWith('T00:00:00.000Z') || dateString.endsWith('T00:00:00Z');
+        const isJustDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString.trim());
+        
+        if (isJustDate || isMidnightUTC) {
+          const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            const y = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const d = parseInt(match[3], 10);
+            const localDate = new Date(y, m - 1, d, 12, 0, 0);
+            return localDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+          }
+        }
+        const parsedDate = new Date(dateString);
+        if (!isNaN(parsedDate)) {
+          return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+      }
+      return '';
+    };
+
     const historyArray = historicalDates || [];
-    const formattedHistory = historyArray.map(dateStr => {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const formattedHistory = historyArray.map(item => {
+      const dateValue = typeof item === 'object' ? item.date : item;
+      return {
+        label: formatDate(dateValue) || 'Invalid Date',
+        appointmentId: typeof item === 'object' ? item.appointmentId : null
+      };
     });
 
-    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(currentD)) {
-        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        if (!formattedHistory.includes(formattedCurrent)) {
-          formattedHistory.push(formattedCurrent);
+    if (currentAppointment?.appointmentDate || currentAppointment?.date || currentAppointment?.AptDateTime) {
+      const rawDate = currentAppointment.appointmentDate || currentAppointment.date || currentAppointment.AptDateTime;
+      const formattedCurrent = formatDate(rawDate);
+      if (formattedCurrent) {
+        const currentApptId = currentAppointment.id || currentAppointment.AptNum || appointmentId;
+        if (currentApptId && String(currentApptId) !== 'undefined') {
+          const exists = formattedHistory.find(h => h.appointmentId === String(currentApptId));
+          if (!exists) {
+            formattedHistory.push({
+              label: formattedCurrent,
+              appointmentId: String(currentApptId)
+            });
+          }
         }
       }
     }
@@ -124,16 +167,55 @@ const Morphological = () => {
     dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'morphological', data: { formData: newVal } } });
   };
 
+  // Default form state for Morphological
+  const defaultFormData = React.useMemo(() => ({
+    canineRight: '', canineLeft: '', posteriorCrossbite: [], overbite: 2, overbitePercent: '', overjet: 1,
+    molarRight: '', molarLeft: '', primaryMolarRight: '', primaryMolarLeft: '', anteriorToothShape: '',
+    midline: '', midlineMm: '', axialInclination: '',
+    toothPosition: {
+      crossBite: { value: '', selectedTeeth: [] }, openBite: { value: '', selectedTeeth: [] },
+      crowdingOverlap: { value: '', selectedTeeth: [] }, diastema: { value: 'select', selectedTeeth: [] },
+      rotation: { value: '', selectedTeeth: [] }
+    },
+    analysisRequired: false, analysisReferred: false, noFindings: false
+  }), []);
+
   useEffect(() => {
     if (examRecord?.examData) {
-      setFormData(prev => ({ ...prev, ...examRecord.examData }));
+      setFormData({
+        ...defaultFormData,
+        ...examRecord.examData
+      });
+    } else if (!examLoading) {
+      setFormData(defaultFormData);
     }
-  }, [examRecord?.examData]);
+  }, [examRecord?.examData, examLoading, defaultFormData]);
 
   const handleFieldChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
+  const handleNewExam = async () => {
+    if (isSigned) {
+      showSnackbar('Cannot create a new exam on a signed record', 'error');
+      return;
+    }
+    setViewingAppointmentId(null); // Reset back to current appointment
+    setFormData(defaultFormData);
+    if (appointmentId) {
+      try {
+        await upsertMutation.mutateAsync({
+          patientId: patientId ? String(patientId) : undefined,
+          providerId: providerId ? String(providerId) : undefined,
+          examData: defaultFormData
+        });
+        showSnackbar('New Morphological exam initialized', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to initialize new exam', 'error');
+      }
+    }
+  };
+
   const handleSaveExam = async () => {
-    if (!appointmentId) return showSnackbar('No active appointment selected', 'error');
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') return showSnackbar('No active appointment selected', 'error');
     try {
       await upsertMutation.mutateAsync({ patientId: patientId ? String(patientId) : undefined, providerId: providerId ? String(providerId) : undefined, examData: formData });
       showSnackbar('Morphological exam saved successfully', 'success');
@@ -141,7 +223,7 @@ const Morphological = () => {
   };
 
   const handleSignExam = () => {
-    if (!appointmentId) return showSnackbar('No active appointment selected', 'error');
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') return showSnackbar('No active appointment selected', 'error');
     setSignDialogOpen(true);
   };
 
@@ -180,6 +262,7 @@ const Morphological = () => {
           backgroundColor: '#ffffff',
           flex: 1,
           overflowY: 'auto',
+          overflowX: 'hidden',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
@@ -199,6 +282,10 @@ const Morphological = () => {
               visitDates={visitDates}
               formData={formData}
               handleFieldChange={handleFieldChange}
+              onNewExam={handleNewExam}
+              onDateClick={(id) => setViewingAppointmentId(id)}
+              isSigned={isSigned}
+              activeAppointmentId={activeAppointmentId}
             />
 
             <Box sx={{
@@ -208,7 +295,7 @@ const Morphological = () => {
               boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
               overflow: 'hidden'
             }}>
-              <Box component="fieldset" disabled={isSigned} sx={{ border: 'none', padding: 4, margin: 0, width: '100%' }}>
+              <Box component="fieldset" disabled={isSigned} sx={{ border: 'none', padding: 4, margin: 0, width: '100%', zoom: { xs: 0.75, sm: 0.85, md: 0.9, lg: 1 } }}>
                 <Box sx={{ display: 'flex', gap: 6, flexWrap: { xs: 'wrap', lg: 'nowrap' } }}>
                   {/* Left Side: Forms Container */}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -228,7 +315,7 @@ const Morphological = () => {
                   </Box>
 
                   {/* Right Side: Tooth Position Widget */}
-                  <Box sx={{ width: '402.13px', flexShrink: 0 }}>
+                  <Box sx={{ width: { xs: '100%', lg: '340px' }, flexShrink: 0 }}>
                     <ToothPositionCard
                       formData={formData}
                       handleFieldChange={handleFieldChange}
@@ -254,7 +341,7 @@ const Morphological = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
 

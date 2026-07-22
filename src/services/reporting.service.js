@@ -68,5 +68,32 @@ export const reportingService = {
   async getClinicalReport(reportName, params = {}) {
     const response = await apiClient.get(`/reports/clinical/${reportName}`, { params });
     return response.data.data;
+  },
+
+  /**
+   * Archive a report snapshot
+   * @param {string} type - Report type (e.g. 'aging')
+   * @param {Object} data - The JSON report data
+   */
+  async archiveReport(type, data) {
+    const response = await apiClient.post('/reports/archive', { type, data });
+    return response.data.data;
+  },
+
+  /**
+   * Get all archived reports
+   */
+  async getArchivedReports() {
+    const response = await apiClient.get('/reports/archive');
+    return response.data.data;
+  },
+
+  /**
+   * Get archived report by ID
+   * @param {string} id 
+   */
+  async getArchivedReportById(id) {
+    const response = await apiClient.get(`/reports/archive/${id}`);
+    return response.data.data;
   }
 };

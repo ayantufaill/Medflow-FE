@@ -169,6 +169,7 @@ const NewInvoiceDialog = ({ patient, onClose }) => {
                 value={selectedApptId}
                 label="Select Appointment"
                 onChange={(e) => setSelectedApptId(e.target.value)}
+                MenuProps={{ style: { zIndex: 9999 }, sx: { zIndex: 9999 } }}
                 sx={{ 
                   fontSize: '13px',
                   borderRadius: '4px',

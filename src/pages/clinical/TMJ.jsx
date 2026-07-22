@@ -78,9 +78,14 @@ const DentalTmdExamPage = () => {
   const appointmentId = useSelector(selectSelectedAppointmentId);
   const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
 
-  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('tmj', appointmentId);
-  const upsertMutation = useUpsertClinicalExam('tmj', appointmentId);
-  const signMutation = useSignClinicalExam('tmj', appointmentId);
+  const [viewingAppointmentId, setViewingAppointmentId] = useState(null);
+  const activeAppointmentId = viewingAppointmentId && viewingAppointmentId !== 'undefined' 
+    ? String(viewingAppointmentId) 
+    : (appointmentId && String(appointmentId) !== 'undefined' ? String(appointmentId) : null);
+
+  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('tmj', activeAppointmentId);
+  const upsertMutation = useUpsertClinicalExam('tmj', activeAppointmentId);
+  const signMutation = useSignClinicalExam('tmj', activeAppointmentId);
 
   const isSigned = !!examRecord?.isSigned;
   const [signDialogOpen, setSignDialogOpen] = useState(false);
@@ -155,18 +160,32 @@ const DentalTmdExamPage = () => {
     dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'tmj', data: { formData: newVal } } });
   };
 
+  // Default form state for TMJ
+  const defaultFormData = useMemo(() => ({
+    maxOpening: '60', deviationOnOpening: 'yes', restrictedHorizontal: 'no', leftLateral: '12', rightLateral: '12',
+    deviationDirection: ['yes'], deviationLeft: false, deviationLeftReduction: false, deviationRight: true, deviationRightReduction: true,
+    painWhenInMotion: 'no', painTypes: [], tenderness: 'no', immobilizationTest: 'neg', temporalisMasseter: 'symp',
+    frequency: 'Daily', timing: 'am', timingCustom: '', duration: 'constant', intensity: '3', painOnPalpation: true,
+    rigidity: false, reproducible: true, jointSounds: 'no', loadTest: 'neg', jointSoundsNeg: false, crepitus: false,
+    crepitusLeftGrade: '', crepitusRightGrade: '', clicking: true, clickingLeftGrade: '2', clickingRightGrade: '1',
+    clickingLeftOpening: false, clickingLeftClosing: false, clickingRightOpening: false, clickingRightClosing: true,
+    reproducibleLeft: false, reproducibleRight: false, selectedMuscles: [], selectedJoints: []
+  }), []);
+
   // Sync data from database to form state when loaded
   useEffect(() => {
     if (examRecord?.examData) {
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
+        ...defaultFormData,
         ...examRecord.examData
-      }));
+      });
+    } else if (!examLoading) {
+      setFormData(defaultFormData);
     }
-  }, [examRecord?.examData]);
+  }, [examRecord?.examData, examLoading, defaultFormData]);
 
   const handleSaveExam = async () => {
-    if (!appointmentId) {
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
@@ -183,7 +202,7 @@ const DentalTmdExamPage = () => {
   };
 
   const handleSignExam = () => {
-    if (!appointmentId) {
+    if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
@@ -263,18 +282,56 @@ const DentalTmdExamPage = () => {
 
   const { data: historicalDates } = useExamHistoryDates('tmj', patientId);
   const visitDates = React.useMemo(() => {
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      if (dateString instanceof Date) {
+        if (isNaN(dateString)) return '';
+        return dateString.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+      }
+      if (typeof dateString === 'string') {
+        const isMidnightUTC = dateString.endsWith('T00:00:00.000Z') || dateString.endsWith('T00:00:00Z');
+        const isJustDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString.trim());
+        
+        if (isJustDate || isMidnightUTC) {
+          const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            const y = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const d = parseInt(match[3], 10);
+            const localDate = new Date(y, m - 1, d, 12, 0, 0);
+            return localDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+          }
+        }
+        const parsedDate = new Date(dateString);
+        if (!isNaN(parsedDate)) {
+          return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+      }
+      return '';
+    };
+
     const historyArray = historicalDates || [];
-    const formattedHistory = historyArray.map(dateStr => {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const formattedHistory = historyArray.map(item => {
+      const dateValue = typeof item === 'object' ? item.date : item;
+      return {
+        label: formatDate(dateValue) || 'Invalid Date',
+        appointmentId: typeof item === 'object' ? item.appointmentId : null
+      };
     });
 
-    if (currentAppointment?.appointmentDate || currentAppointment?.date) {
-      const currentD = new Date(currentAppointment.appointmentDate || currentAppointment.date);
-      if (!isNaN(currentD)) {
-        const formattedCurrent = currentD.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        if (!formattedHistory.includes(formattedCurrent)) {
-          formattedHistory.push(formattedCurrent);
+    if (currentAppointment?.appointmentDate || currentAppointment?.date || currentAppointment?.AptDateTime) {
+      const rawDate = currentAppointment.appointmentDate || currentAppointment.date || currentAppointment.AptDateTime;
+      const formattedCurrent = formatDate(rawDate);
+      if (formattedCurrent) {
+        const currentApptId = currentAppointment.id || currentAppointment.AptNum || appointmentId;
+        if (currentApptId && String(currentApptId) !== 'undefined') {
+          const exists = formattedHistory.find(h => h.appointmentId === String(currentApptId));
+          if (!exists) {
+            formattedHistory.push({
+              label: formattedCurrent,
+              appointmentId: String(currentApptId)
+            });
+          }
         }
       }
     }
@@ -299,9 +356,25 @@ const DentalTmdExamPage = () => {
     }
   };
 
-  const handleNewExam = () => {
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    // setVisitDates([...visitDates, today]);
+  const handleNewExam = async () => {
+    if (isSigned) {
+      showSnackbar('Cannot create a new exam on a signed record', 'error');
+      return;
+    }
+    setViewingAppointmentId(null);
+    setFormData(defaultFormData);
+    if (appointmentId) {
+      try {
+        await upsertMutation.mutateAsync({
+          patientId: patientId ? String(patientId) : undefined,
+          providerId: providerId ? String(providerId) : undefined,
+          examData: defaultFormData
+        });
+        showSnackbar('New TMJ exam initialized', 'success');
+      } catch (err) {
+        showSnackbar(err.response?.data?.error?.message || 'Failed to initialize new exam', 'error');
+      }
+    }
   };
 
   const handleRemoveDate = (indexToRemove) => {
@@ -380,6 +453,7 @@ const DentalTmdExamPage = () => {
           backgroundColor: '#ffffff',
           flex: 1,
           overflowY: 'auto',
+          overflowX: 'hidden',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
@@ -400,24 +474,25 @@ const DentalTmdExamPage = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, pb: 2, mx: -3, px: 3, borderBottom: '1px solid #e0e0e0' }}>
               {/* Left: Visit dates timeline + New Exam */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', flex: 1 }}>
-                <VisitDatesTimeline visitDates={visitDates} />
+                <VisitDatesTimeline visitDates={visitDates} onDateClick={(id) => setViewingAppointmentId(id)} activeAppointmentId={activeAppointmentId} />
                 <Button
                   startIcon={<AddIcon sx={{ fontSize: 18 }} />}
                   sx={{
                     textTransform: 'none',
-                    color: '#2563eb',
+                    color: isSigned ? '#9ca3af' : '#2563eb',
                     fontWeight: 600,
                     fontSize: '0.8rem',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
-                    border: '1.5px dashed #d1d5db',
+                    border: isSigned ? '1.5px dashed #e5e7eb' : '1.5px dashed #d1d5db',
                     borderRadius: '20px',
                     px: 2,
                     py: 0.5,
                     bgcolor: '#fff',
-                    '&:hover': { bgcolor: '#f9fafb', borderColor: '#9ca3af' }
+                    '&:hover': { bgcolor: '#f9fafb', borderColor: isSigned ? '#e5e7eb' : '#9ca3af' }
                   }}
                   onClick={handleNewExam}
+                  disabled={isSigned}
                 >
                   New Exam
                 </Button>
@@ -433,7 +508,14 @@ const DentalTmdExamPage = () => {
               />
             </Box>
 
-            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', maxWidth: '1200px' }}>
+            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
+              <Box sx={{ 
+                overflowX: 'auto',
+                '&::-webkit-scrollbar': { height: '6px' },
+                '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' },
+                pb: 1
+              }}>
+                <Box sx={{ minWidth: 'min-content', zoom: { xs: 0.75, sm: 0.85, md: 0.9, lg: 1 } }}>
 
 
               {/* Accordion 1: Range of Motion */}
@@ -481,6 +563,8 @@ const DentalTmdExamPage = () => {
                 />
               </TMJSectionContainer>
 
+                </Box>
+              </Box>
             </fieldset>
 
             {/* Footer section */}
@@ -514,7 +598,7 @@ const DentalTmdExamPage = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
     </Box>

@@ -1,505 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Grid,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-} from '@mui/material';
-import PrintIcon from '@mui/icons-material/Print';
-import { useDispatch, useSelector } from 'react-redux';
-import { reportingService } from '../../../../services/reporting.service';
-import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+import React from 'react';
+import { ReportLayout } from '../../../../components/reports/ui'; 
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { useProviderCollectionPaymentType } from '../../../../hooks/reports/financial/useProviderCollectionPaymentType';
+import ProviderCollectionPaymentTypeFilters from '../../../../components/reports/financial/ProviderCollectionPaymentTypeFilters';
+import ProviderCollectionPaymentTypeTable from '../../../../components/reports/financial/ProviderCollectionPaymentTypeTable';
 
 const ProviderCollectionPerPaymentType = () => {
-  const dispatch = useDispatch();
-  const dropdownProviders = useSelector(selectProviderDropdownList);
-
-  const [dateRange, setDateRange] = useState('daily');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [provider, setProvider] = useState('all');
-  const [showFlags, setShowFlags] = useState(true);
-  const [flagFilter, setFlagFilter] = useState('pts');
-  const [sortBy, setSortBy] = useState('default');
-
-  const [reportData, setReportData] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const handleFilterModeChange = (e) => {
-    const newMode = e.target.value;
-    setDateRange(newMode);
-    
-    if (newMode === 'range') return;
-
-    const today = new Date();
-    let start = new Date(today);
-    let end = new Date(today);
-
-    const getLocalDateString = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    switch (newMode) {
-      case 'daily':
-        break;
-      case 'this_week': {
-        const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(today.setDate(diff));
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
-      }
-      case 'this_month': {
-        start = new Date(today.getFullYear(), today.getMonth(), 1);
-        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        break;
-      }
-      case 'last_7_days': {
-        start.setDate(today.getDate() - 7);
-        break;
-      }
-      case 'last_week': {
-        const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
-        start = new Date(today.setDate(diff));
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
-      }
-      case 'last_4_weeks': {
-        start.setDate(today.getDate() - 28);
-        break;
-      }
-      case 'last_month': {
-        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        end = new Date(today.getFullYear(), today.getMonth(), 0);
-        break;
-      }
-      case 'last_3_months': {
-        start.setMonth(today.getMonth() - 3);
-        break;
-      }
-      case 'last_12_months': {
-        start.setFullYear(today.getFullYear() - 1);
-        break;
-      }
-      case 'quarter_to_date': {
-        const quarter = Math.floor(today.getMonth() / 3);
-        start = new Date(today.getFullYear(), quarter * 3, 1);
-        break;
-      }
-      case 'year_to_date': {
-        start = new Date(today.getFullYear(), 0, 1);
-        break;
-      }
-      case 'last_year': {
-        start = new Date(today.getFullYear() - 1, 0, 1);
-        end = new Date(today.getFullYear() - 1, 11, 31);
-        break;
-      }
-      default:
-        break;
-    }
-    
-    setStartDate(getLocalDateString(start));
-    setEndDate(getLocalDateString(end));
-  };
-
-  const lastFetchedRef = React.useRef(null);
-
-  const fetchData = async () => {
-    const paramsKey = `${dateRange}_${startDate}_${endDate}`;
-    if (lastFetchedRef.current === paramsKey) return;
-    lastFetchedRef.current = paramsKey;
-
-    try {
-      setLoading(true);
-      const rangeParam = dateRange.charAt(0).toUpperCase() + dateRange.slice(1);
-      const res = await reportingService.getFinancialReport('provider-collection-payment-type', {
-        date: startDate,
-        range: rangeParam,
-        startDate: startDate,
-        endDate: endDate,
-      });
-      setReportData(res || []);
-    } catch (err) {
-      console.error('Failed to fetch provider collection per payment type report:', err);
-      lastFetchedRef.current = null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    dispatch(fetchAllProvidersForDropdown());
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchData();
-  }, [dateRange, startDate, endDate]);
-
-  const getProviderFirstAndLastName = (p) => {
-    if (p?.userId?.firstName || p?.userId?.lastName) {
-      return {
-        firstName: p.userId.firstName || '',
-        lastName: p.userId.lastName || ''
-      };
-    }
-    return {
-      firstName: p?.firstName || '',
-      lastName: p?.lastName || ''
-    };
-  };
-
-  const getProviderLabel = (p) => {
-    const { firstName, lastName } = getProviderFirstAndLastName(p);
-    return `${firstName} ${lastName}`.trim() || p?.name || 'Unknown';
-  };
-
-  const selectedProvObj = dropdownProviders.find(p => (p._id || p.id) === provider);
-  const selectedProvAbbr = selectedProvObj ? (selectedProvObj.abbr || selectedProvObj.Abbr || '').trim() : '';
-  const selectedProvInitials = selectedProvObj ? (() => {
-    const { firstName, lastName } = getProviderFirstAndLastName(selectedProvObj);
-    const f = firstName.trim();
-    const l = lastName.trim();
-    if (f && l) {
-      return (f[0] + l.substring(0, 2)).toUpperCase();
-    }
-    return (f ? f.substring(0, 3) : '').toUpperCase();
-  })() : '';
-
-  const filteredReportData = reportData.filter(row => {
-    // 1. Provider Filter
-    if (provider !== 'all') {
-      const renderLower = (row.render || '').toLowerCase();
-      const billLower = (row.bill || '').toLowerCase();
-      const abbrLower = selectedProvAbbr.toLowerCase();
-      const initialsLower = selectedProvInitials.toLowerCase();
-      
-      const match = (abbrLower && (renderLower === abbrLower || billLower === abbrLower)) ||
-                    (initialsLower && (renderLower === initialsLower || billLower === initialsLower));
-      if (!match) return false;
-    }
-
-    // 2. Flag Filter
-    if (flagFilter === 'with_flags') {
-      if (!row.flags || row.flags.length === 0) return false;
-    } else if (flagFilter === 'without_flags') {
-      if (row.flags && row.flags.length > 0) return false;
-    }
-
-    return true;
-  });
-
-  const sortedReportData = [...filteredReportData].sort((a, b) => {
-    if (sortBy === 'date_asc') {
-      return new Date(a.date || 0) - new Date(b.date || 0);
-    }
-    if (sortBy === 'date_desc') {
-      return new Date(b.date || 0) - new Date(a.date || 0);
-    }
-    if (sortBy === 'patient') {
-      return (a.patient || '').localeCompare(b.patient || '');
-    }
-    if (sortBy === 'amount_desc') {
-      const aAmt = a.ins + a.pt;
-      const bAmt = b.ins + b.pt;
-      return bAmt - aAmt;
-    }
-    return 0;
-  });
-
-  const totalIns = filteredReportData.reduce((sum, row) => sum + (row.ins || 0), 0);
-  const totalPt = filteredReportData.reduce((sum, row) => sum + (row.pt || 0), 0);
-  const totalActualWriteOff = filteredReportData.reduce((sum, row) => sum + (row.actual || 0), 0);
-  const totalCollAdj = filteredReportData.reduce((sum, row) => sum + (row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0), 0);
-  const totalAdj = filteredReportData.reduce((sum, row) => sum + (row.paymentType === 'Adjustment' ? (row.adj || 0) : 0), 0);
-  const totalPtRef = filteredReportData.reduce((sum, row) => sum + (row.ptRef || 0), 0);
-  const totalInsRef = filteredReportData.reduce((sum, row) => sum + (row.insRef || 0), 0);
-  const totalPayFrom = filteredReportData.reduce((sum, row) => sum + (row.payFrom || 0), 0);
-  const totalRefundTo = filteredReportData.reduce((sum, row) => sum + (row.newCredit || 0), 0);
-
-  const summaryStats = [
-    { label: 'Total Collection Incl. Pay From Credit:', value: `$${(totalIns + totalPt + totalPayFrom).toFixed(2)}` },
-    { label: 'Total Collection Excl. Pay From Credit:', value: `$${(totalIns + totalPt).toFixed(2)}` },
-    { label: 'Total Prepayments:', value: `$${totalPayFrom.toFixed(2)}` },
-    { label: 'Actual Write-off:', value: `$${totalActualWriteOff.toFixed(2)}` },
-    { label: 'Total Collection Adjustments:', value: `$${totalCollAdj.toFixed(2)}` },
-    { label: 'Total Production Adjustments:', value: `$${totalAdj.toFixed(2)}` },
-  ];
-
-  const topFilters = (
-    <>
-      <ReportSelect 
-        label="daily" 
-        prefix="Date Range:" 
-        defaultValue="daily"
-        options={[{ value: 'daily', label: 'Daily' }]}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
-        <Typography variant="caption" sx={{ color: '#337ab7', fontWeight: 600 }}>⬅ May 08, 2026 ⮕</Typography>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7' }}>05/08/2026</Typography>
-      </Box>
-
-      <ReportSelect 
-        label="all" 
-        prefix="Filter Report by:" 
-        defaultValue="all"
-        options={[{ value: 'all', label: 'Provider: All' }]}
-      />
-    </>
-  );
-
-  const bottomFilters = (
-    <>
-      <ReportCheckbox label="Show Flags in Report" defaultChecked />
-      
-      <ReportSelect 
-        label="pts" 
-        defaultValue="pts"
-        options={[{ value: 'pts', label: 'Pts With Or Without Flags' }]}
-      />
-
-      <ReportSelect 
-        label="default" 
-        prefix="Sort Report By:" 
-        defaultValue="default"
-        options={[{ value: 'default', label: 'Default' }]}
-      />
-    </>
-  );
+  const {
+    dateRange,
+    startDate,
+    endDate,
+    provider,
+    showFlags,
+    flagFilter,
+    sortBy,
+    loading,
+    dropdownProviders,
+    sortedReportData,
+    summaryStats,
+    totals,
+    getProviderLabel,
+    handleFilterChange,
+    handleFilterModeChange,
+    handleApply,
+    handleClear,
+    handleExportCSV,
+    handlePrint
+  } = useProviderCollectionPaymentType();
 
   return (
     <ReportLayout title="Provider Collection Per Payment Type:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        bottomRowFilters={bottomFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onPrint={() => window.print()}
+      <ProviderCollectionPaymentTypeFilters 
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        provider={provider}
+        showFlags={showFlags}
+        flagFilter={flagFilter}
+        sortBy={sortBy}
+        dropdownProviders={dropdownProviders}
+        getProviderLabel={getProviderLabel}
+        handleFilterChange={handleFilterChange}
+        handleFilterModeChange={handleFilterModeChange}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      {/* Filters Section */}
-      <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff', border: '1px solid #f0f0f0', borderRadius: 1 }}>
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-          <Grid item>
-            <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Date Range:</Typography>
-            <Select 
-              size="small" 
-              value={dateRange} 
-              onChange={handleFilterModeChange} 
-              sx={{ minWidth: 140, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="daily">Daily</MenuItem>
-              <MenuItem value="range">Range</MenuItem>
-              <MenuItem value="this_week">This Week</MenuItem>
-              <MenuItem value="this_month">This Month</MenuItem>
-              <MenuItem value="last_7_days">Last 7 days</MenuItem>
-              <MenuItem value="last_week">Last Week</MenuItem>
-              <MenuItem value="last_4_weeks">Last 4 Weeks</MenuItem>
-              <MenuItem value="last_month">Last Month</MenuItem>
-              <MenuItem value="last_3_months">Last 3 Months</MenuItem>
-              <MenuItem value="last_12_months">Last 12 Months</MenuItem>
-              <MenuItem value="quarter_to_date">Quarter to date</MenuItem>
-              <MenuItem value="year_to_date">Year to date</MenuItem>
-              <MenuItem value="last_year">Last Year</MenuItem>
-            </Select>
-          </Grid>
-          <Grid item sx={{ display: 'flex', gap: 2 }}>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Start Date:
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-              />
-            </Typography>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              End Date:
-              <input 
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setDateRange('range') || setEndDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-              />
-            </Typography>
-          </Grid>
-        </Grid>
+      <ProductionReportActions 
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={sortedReportData.length > 0}
+      />
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>Filter Report by:</Typography>
-          <Select 
-            size="small" 
-            value={provider} 
-            onChange={(e) => setProvider(e.target.value)} 
-            sx={{ minWidth: 140, fontSize: '0.75rem' }}
-          >
-            <MenuItem value="all">Provider: All</MenuItem>
-            {dropdownProviders.map((p) => (
-              <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                {getProviderLabel(p)}
-              </MenuItem>
-            ))}
-          </Select>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FormControlLabel 
-              control={<Checkbox size="small" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />} 
-              label={<Typography variant="caption">Show Flags in Report</Typography>} 
-            />
-            <Select 
-              size="small" 
-              value={flagFilter} 
-              onChange={(e) => setFlagFilter(e.target.value)} 
-              sx={{ minWidth: 180, fontSize: '0.75rem' }}
-            >
-              <MenuItem value="pts">Pts With Or Without Flags</MenuItem>
-              <MenuItem value="with_flags">Pts With Flags Only</MenuItem>
-              <MenuItem value="without_flags">Pts Without Flags Only</MenuItem>
-            </Select>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>Sort Report By</Typography>
-              <Select 
-                size="small" 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)} 
-                sx={{ minWidth: 120, fontSize: '0.75rem' }}
-              >
-                <MenuItem value="default">Default</MenuItem>
-                <MenuItem value="date_asc">Date: Ascending</MenuItem>
-                <MenuItem value="date_desc">Date: Descending</MenuItem>
-                <MenuItem value="patient">Patient Name</MenuItem>
-                <MenuItem value="amount_desc">Amount: High to Low</MenuItem>
-              </Select>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" size="small" onClick={fetchData} sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}>Apply Filters</Button>
-            <Button variant="contained" size="small" disabled sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Create Template</Button>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button variant="contained" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', bgcolor: '#f5a623' }}>Print</Button>
-      </Box>
-
-      {/* Table Section */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', position: 'relative' }}>
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
-            <CircularProgress size={30} />
-          </Box>
-        )}
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700, py: 1 } }}>
-              <TableCell rowSpan={2}>Date</TableCell>
-              <TableCell rowSpan={2}>Flags</TableCell>
-              <TableCell rowSpan={2}>Patient</TableCell>
-              <TableCell rowSpan={2}>Code</TableCell>
-              <TableCell rowSpan={2}>Procedure</TableCell>
-              <TableCell align="center" colSpan={2}>Provider / Internal Code</TableCell>
-              <TableCell align="center" colSpan={3}>Collection</TableCell>
-              <TableCell align="right" rowSpan={2}>Adjustment</TableCell>
-              <TableCell align="right" rowSpan={2}>Pt. Refund</TableCell>
-              <TableCell align="right" rowSpan={2}>Ins. Refund</TableCell>
-              <TableCell align="right" rowSpan={2}>Pay From Credit</TableCell>
-              <TableCell align="right" rowSpan={2}>New Credit</TableCell>
-            </TableRow>
-            <TableRow sx={{ backgroundColor: '#f8f9fa', '& th': { fontSize: '0.65rem', fontWeight: 700, py: 1 } }}>
-              <TableCell align="center">Render</TableCell>
-              <TableCell align="center">Bill</TableCell>
-              <TableCell align="right">Insurance Payment</TableCell>
-              <TableCell align="right">Patient Payment</TableCell>
-              <TableCell align="right">Actual Write-off</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedReportData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary', fontSize: '0.75rem' }}>
-                  No records found matching current criteria.
-                </TableCell>
-              </TableRow>
-            ) : (
-              sortedReportData.map((row, idx) => (
-                <TableRow key={idx} sx={{ '& td': { fontSize: '0.7rem', py: 0.5 } }}>
-                  <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
-                  <TableCell>
-                    {showFlags && row.flags && row.flags.length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 0.2 }}>
-                        {row.flags.map((color, i) => (
-                          <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                        ))}
-                      </Box>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ color: 'primary.main', fontWeight: 600 }}>{row.patient || 'Patient'}</TableCell>
-                  <TableCell>{row.code || '-'}</TableCell>
-                  <TableCell>{row.procedure || '-'}</TableCell>
-                  <TableCell align="center">{row.render || '-'}</TableCell>
-                  <TableCell align="center">{row.bill || '-'}</TableCell>
-                  <TableCell align="right">${(row.ins || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.pt || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.actual || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.paymentType !== 'Adjustment' ? (row.adj || 0) : 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.ptRef || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.insRef || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.payFrom || 0).toFixed(2)}</TableCell>
-                  <TableCell align="right">${(row.newCredit || 0).toFixed(2)}</TableCell>
-                </TableRow>
-              ))
-            )}
-            <TableRow sx={{ fontWeight: 700, backgroundColor: '#fafafa', '& td': { fontWeight: 700, fontSize: '0.7rem' } }}>
-              <TableCell colSpan={7} align="right">Total:</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>${totalIns.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalPt.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalActualWriteOff.toFixed(2)}</TableCell>
-              <TableCell align="right" sx={{ borderLeft: '1px solid #e0e0e0' }}>${totalCollAdj.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalPtRef.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalInsRef.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalPayFrom.toFixed(2)}</TableCell>
-              <TableCell align="right">${totalRefundTo.toFixed(2)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Footer Summary Section */}
-      <Box sx={{ mt: 4, ml: 4 }}>
-        {summaryStats.map((stat, idx) => (
-          <Box key={idx} sx={{ display: 'flex', mb: 0.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 260, color: '#337ab7' }}>{stat.label}</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 700 }}>{stat.value}</Typography>
-          </Box>
-        ))}
-      </Box>
+      <ProviderCollectionPaymentTypeTable 
+        loading={loading}
+        sortedReportData={sortedReportData}
+        showFlags={showFlags}
+        totals={totals}
+        summaryStats={summaryStats}
+      />
     </ReportLayout>
   );
 };
 
 export default ProviderCollectionPerPaymentType;
-

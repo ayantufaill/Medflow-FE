@@ -27,7 +27,7 @@ const DialogWrapper = ({ children, onClose, maxWidth = '1200px' }) => (
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      zIndex: 1300
+      zIndex: 1400
     }}
     onClick={onClose}
   >

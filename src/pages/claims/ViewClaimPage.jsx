@@ -52,6 +52,7 @@ import {
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { claimService } from '../../services/claim.service';
+import SignaturePad from '../../components/shared/SignaturePad';
 
 const STATUS_COLORS = {
   draft: 'default',
@@ -94,6 +95,9 @@ const ViewClaimPage = () => {
   const [validationResult, setValidationResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [providerSignature, setProviderSignature] = useState(null);
+  const [patientSignature, setPatientSignature] = useState(null);
+  const [savingSignatures, setSavingSignatures] = useState(false);
 
   const fetchClaimDocuments = useCallback(async () => {
     try {
@@ -116,6 +120,8 @@ const ViewClaimPage = () => {
           claimService.getClaimStatusHistory(claimId).catch(() => []), // Gracefully handle if not available
         ]);
         setClaim(claimData);
+        setProviderSignature(claimData?.providerSignature || null);
+        setPatientSignature(claimData?.patientSignature || null);
         setStatusHistory(Array.isArray(historyData) ? historyData : (historyData?.statusHistory || []));
         // Fetch documents after claim is loaded
         fetchClaimDocuments();
@@ -131,6 +137,22 @@ const ViewClaimPage = () => {
     };
     fetchClaim();
   }, [claimId, fetchClaimDocuments]);
+
+  const handleSaveSignatures = async () => {
+    try {
+      setSavingSignatures(true);
+      await claimService.updateClaim(claimId, {
+        providerSignature,
+        patientSignature,
+      });
+      showSnackbar('Signatures saved successfully', 'success');
+      setClaim((prev) => ({ ...prev, providerSignature, patientSignature }));
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to save signatures', 'error');
+    } finally {
+      setSavingSignatures(false);
+    }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -541,6 +563,60 @@ const ViewClaimPage = () => {
                 </Table>
               </TableContainer>
             )}
+          </Paper>
+        </Grid>
+
+        {/* Row 4: Signatures and Authorizations */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Signatures and Authorizations
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+                  Provider Signature
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Indicates the services were performed and that the provider accepts assignment of benefits.
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <SignaturePad
+                    width={320}
+                    height={80}
+                    value={providerSignature}
+                    onChange={setProviderSignature}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+                  Patient/Subscriber Signature
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Authorizes release of information to the insurance company and assigns payment directly to the dental practice.
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <SignaturePad
+                    width={320}
+                    height={80}
+                    value={patientSignature}
+                    onChange={setPatientSignature}
+                  />
+                </Box>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                variant="contained"
+                onClick={handleSaveSignatures}
+                disabled={savingSignatures || (claim?.providerSignature === providerSignature && claim?.patientSignature === patientSignature)}
+              >
+                {savingSignatures ? 'Saving...' : 'Save Signatures'}
+              </Button>
+            </Box>
           </Paper>
         </Grid>
 

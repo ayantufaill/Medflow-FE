@@ -11,7 +11,7 @@ const AdditionalTeethSection = ({ additionalTeeth = [], setAdditionalTeeth }) =>
   return (
     <>
       {/* Additional Footer Controls */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 20, ml: 2 }}>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 4, ml: 2 }}>
         <Stack 
           direction="row" 
           spacing={1} 

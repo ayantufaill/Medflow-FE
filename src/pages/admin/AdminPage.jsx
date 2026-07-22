@@ -21,6 +21,10 @@ import InstallationGuide from './InstallationGuide';
 import MoveData from './MoveData';
 import OperatorySetup from './OperatorySetup';
 import PatientFlags from './PatientFlags';
+import DocumentCategorySetup from './DocumentCategorySetup';
+import ScheduleConfiguration from './ScheduleConfiguration';
+import PracticeSettings from './PracticeSettings';
+import PracticeInformation from './PracticeInformation';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
@@ -153,6 +157,12 @@ const AdminPage = () => {
     location.pathname === '/admin/practice-setup/patient-flags' ||
     location.pathname === '/admin/practice-setup/my-chart-configuration' ||
     location.pathname === '/admin/practice-setup/online-schedule';
+    location.pathname === '/admin/practice-setup/move-data' ||
+    location.pathname === '/admin/practice-setup/document-category-setup' ||
+    location.pathname === '/admin/practice-setup/schedule-configuration' ||
+    location.pathname === '/admin/practice-setup/practice-settings' ||
+    location.pathname === '/admin/practice-setup/practice-information';
+
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   // Resolve breadcrumb info (parent tab + current sub tab label) for flat sub-pages

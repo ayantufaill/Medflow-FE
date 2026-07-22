@@ -78,6 +78,17 @@ export const practiceInfoService = {
    * @returns {Promise<Object>} Updated practice info data
    */
   async updatePracticeInfo(practiceInfoId, updates) {
+    const hasLogo = updates.logo instanceof File;
+
+    if (!hasLogo) {
+      // Remove logo key if it's not a file (to prevent sending raw path strings or null)
+      const { logo, ...jsonUpdates } = updates;
+      
+      const response = await apiClient.put(`/practice-info/${practiceInfoId}`, jsonUpdates);
+      console.log('[DEBUG] PUT response full:', JSON.stringify(response.data, null, 2));
+      return response.data.data.practiceInfo;
+    }
+
     const formData = new FormData();
     
     // Append all fields to FormData
