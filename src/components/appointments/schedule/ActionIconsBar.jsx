@@ -8,6 +8,7 @@ import {
   FilterAltOutlined,
   VisibilityOffOutlined,
   SpeakerNotesOffOutlined,
+  SpeakerNotesOutlined,
   PrintOutlined,
   PersonOutline,
   PersonOffOutlined,
@@ -21,27 +22,29 @@ import SendBulkTextModal from './bulk-text/SendBulkTextModal';
 import LabCasesDialog from './lab-cases-modal/LabCasesDialog';
 import ProgressNotesDialog from './progress-notes-modal/ProgressNotesDialog';
 import FilterLabsPopover from './FilterLabsPopover';
+import { useNavigate } from 'react-router-dom';
 
-const ActionIconsBar = ({ onPrintClick, privacyMode, onTogglePrivacyMode }) => {
+const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivacyMode, hideBlocks, onToggleHideBlocks }) => {
+  const navigate = useNavigate();
+
   const [isBulkTextModalOpen, setIsBulkTextModalOpen] = useState(false);
   const [isLabCasesModalOpen, setIsLabCasesModalOpen] = useState(false);
   const [isProgressNotesModalOpen, setIsProgressNotesModalOpen] = useState(false);
   const [filterLabsAnchorEl, setFilterLabsAnchorEl] = useState(null);
-  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
   const ICONS = [
-    { icon: <NoteAddOutlined />, title: 'Send Bulk Text', active: true, onClick: () => setIsBulkTextModalOpen(true) },
-    { icon: <PersonAddOutlined />, title: 'Patients', disabled: true },
+    { icon: <NoteAddOutlined />, title: 'Bulk Text', active: true, onClick: () => setIsBulkTextModalOpen(true) },
+    { icon: <PersonAddOutlined />, title: 'Huddle', onClick: () => navigate('/day-tasks') },
     { icon: <ScienceOutlined />, title: 'Lab Cases', onClick: () => setIsLabCasesModalOpen(true) },
     { icon: <DescriptionOutlined />, title: 'Progress notes', onClick: () => setIsProgressNotesModalOpen(true) },
     { icon: <FilterAltOutlined />, title: 'Filter Labs', onClick: (e) => setFilterLabsAnchorEl(e.currentTarget) },
-    { icon: <VisibilityOffOutlined />, title: 'Hide', disabled: true },
-    { icon: <SpeakerNotesOffOutlined />, title: 'No Notes', disabled: true },
+    { icon: <VisibilityOffOutlined />, title: 'Show Appointments', disabled: true },
+    { icon: hideBlocks ? <SpeakerNotesOffOutlined /> : <SpeakerNotesOutlined />, title: hideBlocks ? 'Show Blocks' : 'Hide Blocks', active: hideBlocks, onClick: onToggleHideBlocks },
     { icon: <PrintOutlined />, title: 'Print', onClick: onPrintClick },
-    { icon: privacyMode ? <PersonOffOutlined /> : <PersonOutline />, title: 'Privacy Mode', active: privacyMode, onClick: onTogglePrivacyMode },
-    { icon: <AttachMoney />, title: 'Billing', disabled: true },
+    { icon: privacyMode ? <PersonOffOutlined /> : <PersonOutline />, title: 'Hide Names', active: privacyMode, onClick: onTogglePrivacyMode },
+    { icon: <AttachMoney />, title: 'Billing', onClick: () => navigate('/batch-actions') },
     { divider: true },
-    { icon: <MoreVert />, title: 'More', onClick: (e) => setMoreMenuAnchorEl(e.currentTarget) },
+    { icon: <MoreVert />, title: 'More', onClick: onMoreClick },
   ];
 
   return (
@@ -102,29 +105,6 @@ const ActionIconsBar = ({ onPrintClick, privacyMode, onTogglePrivacyMode }) => {
         anchorEl={filterLabsAnchorEl}
         onClose={() => setFilterLabsAnchorEl(null)}
       />
-
-      <Menu
-        anchorEl={moreMenuAnchorEl}
-        open={Boolean(moreMenuAnchorEl)}
-        onClose={() => setMoreMenuAnchorEl(null)}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            borderRadius: '8px',
-            minWidth: '160px',
-            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
-          }
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem disabled onClick={() => setMoreMenuAnchorEl(null)} sx={{ fontSize: '13px', fontWeight: 500, color: COLORS.TEXT_PRIMARY }}>
-          Show all columns
-        </MenuItem>
-        <MenuItem disabled onClick={() => setMoreMenuAnchorEl(null)} sx={{ fontSize: '13px', fontWeight: 500, color: COLORS.TEXT_PRIMARY }}>
-          Close/Open a day
-        </MenuItem>
-      </Menu>
     </>
   );
 };

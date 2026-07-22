@@ -7,7 +7,7 @@ const TABS = [
   { label: 'Clinical', path: '/clinical' },
   { label: 'Insurance', path: '/insurance' },
   { label: 'Billing', path: '/finance' },
-  { label: 'Reports', path: '/admin/reports' },
+  { label: 'Reports', path: '/patient-reports' },
 ];
 
 const NavTabs = () => {

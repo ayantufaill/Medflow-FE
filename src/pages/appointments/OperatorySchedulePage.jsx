@@ -138,21 +138,19 @@ const OperatorySchedulePage = () => {
   }, [rooms]);
 
   const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
+  const [viewMyColumn, setViewMyColumn] = useState(false);
+  const [hideBlocks, setHideBlocks] = useState(false);
   const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate } = useScheduleState();
+  const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
-  const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
-    const key = `${dateStr}:${columnId}`;
-    setClosedOperatories(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  }, []);
+
 
   const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
+  const [scheduleMenuAnchorEl, setScheduleMenuAnchorEl] = useState(null);
   const [printingOrientation, setPrintingOrientation] = useState(null);
 
   const handlePrint = (orientation) => {
@@ -323,7 +321,7 @@ const OperatorySchedulePage = () => {
     }
   };
 
-  const [selectedDate, setSelectedDate] = useState(dayjs());
+
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
   const [patientQuery, setPatientQuery] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -368,6 +366,18 @@ const OperatorySchedulePage = () => {
       const dateStr = selectedDate.format("YYYY-MM-DD");
       const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
       setScheduleBlocks(blocks);
+
+      // Parse closed days from blocks
+      const closedOps = {};
+      blocks.forEach(block => {
+        if (block.notes === "CLOSED_DAY") {
+          const roomId = block.roomId ? String(block.roomId).replace(/^op/, "") : "";
+          if (roomId) {
+            closedOps[`${dateStr}:op${roomId}`] = true;
+          }
+        }
+      });
+      setClosedOperatories(closedOps);
     } catch (err) {
       console.error("Error fetching schedule blocks:", err);
     }
@@ -376,6 +386,39 @@ const OperatorySchedulePage = () => {
   useEffect(() => {
     fetchScheduleBlocks();
   }, [fetchScheduleBlocks]);
+
+  const handleToggleOperatoryStatus = useCallback(async (dateStr, columnId) => {
+    const key = `${dateStr}:${columnId}`;
+    const isCurrentlyClosed = closedOperatories[key];
+    const roomIdStr = columnId.replace(/^op/, "");
+
+    try {
+      if (isCurrentlyClosed) {
+        // OPEN it by deleting the block
+        const blockToDelete = scheduleBlocks.find(b => b.notes === "CLOSED_DAY" && String(b.roomId).replace(/^op/, "") === roomIdStr);
+        if (blockToDelete) {
+          await scheduleBlockService.deleteBlock(blockToDelete._id || blockToDelete.id);
+        }
+        setClosedOperatories(prev => ({ ...prev, [key]: false }));
+      } else {
+        // CLOSE it by creating a full-day block
+        await scheduleBlockService.createBlock({
+          roomId: roomIdStr,
+          date: dateStr,
+          startTime: '00:00',
+          endTime: '23:59',
+          notes: 'CLOSED_DAY',
+          color: '#e5e7eb'
+        });
+        setClosedOperatories(prev => ({ ...prev, [key]: true }));
+      }
+      // Re-fetch to ensure sync with backend
+      fetchScheduleBlocks();
+    } catch (err) {
+      console.error("Failed to toggle operatory status:", err);
+      showSnackbar("Failed to update operatory status", "error");
+    }
+  }, [closedOperatories, scheduleBlocks, fetchScheduleBlocks, showSnackbar]);
 
   const handleSaveBlock = async (blockData) => {
     try {
@@ -930,17 +973,31 @@ const OperatorySchedulePage = () => {
         {/* CENTER PANEL — Dynamic Width */}
         <Box className="print-container" sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <Box className="no-print">
-            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} />
+            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} onMoreClick={(e) => setMoreMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} hideBlocks={hideBlocks} setHideBlocks={setHideBlocks} />
+            {isCloseOpenDayMode && (
+              <Box sx={{ width: '100%', bgcolor: '#fef3c7', color: '#92400e', py: 1, textAlign: 'center', fontWeight: 600, fontSize: '13px', borderBottom: '1px solid #fde68a' }}>
+                Select operatory for opening or closing it
+              </Box>
+            )}
           </Box>
           {calendarView === 'day' || calendarView === 'week' ? (
             <ScheduleCalendar
-              scheduleBlocks={scheduleBlocks}
+              scheduleBlocks={hideBlocks ? [] : scheduleBlocks.filter(b => b.notes !== "CLOSED_DAY")}
               privacyMode={privacyMode}
+              isCloseOpenDayMode={isCloseOpenDayMode}
+              closedOperatories={closedOperatories}
+              viewMyColumn={viewMyColumn}
+              onToggleOperatoryStatus={(columnId) => {
+                const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
+                handleToggleOperatoryStatus(dateStr, columnId);
+              }}
               onSlotClick={(hour, mins, roomId) => {
+                if (isCloseOpenDayMode || closedOperatories[`${selectedDate.format("YYYY-MM-DD")}:${roomId}`]) return;
                 const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
                 handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
               }}
               onBlockClick={(hour, mins, roomId) => {
+                if (isCloseOpenDayMode || closedOperatories[`${selectedDate.format("YYYY-MM-DD")}:${roomId}`]) return;
                 const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
                 const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
                 const end = start.clone().add(30, "minute");
@@ -1151,12 +1208,12 @@ const OperatorySchedulePage = () => {
         >
           <MenuItem
             onClick={() => {
-              setShowConsult(true);
+              setViewMyColumn(prev => !prev);
               setMoreMenuAnchorEl(null);
             }}
             sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
           >
-            Show all columns
+            {viewMyColumn ? "Show all columns" : "View my column"}
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -1185,7 +1242,47 @@ const OperatorySchedulePage = () => {
         >
           <MenuItem
             onClick={() => {
+              setRouteSlipDialogOpen(true);
+              setPrintMenuAnchorEl(null);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Route Slip
+          </MenuItem>
+          <MenuItem
+            onClick={(e) => {
+              setScheduleMenuAnchorEl(e.currentTarget);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Schedule
+          </MenuItem>
+        </Menu>
+
+        {/* Nested Schedule Menu */}
+        <Menu
+          anchorEl={scheduleMenuAnchorEl}
+          open={Boolean(scheduleMenuAnchorEl)}
+          onClose={() => {
+            setScheduleMenuAnchorEl(null);
+            setPrintMenuAnchorEl(null);
+          }}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: {
+              mt: -1,
+              ml: 1,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+              border: '1px solid #e1e4e8',
+              borderRadius: 1.5,
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => {
               handlePrint("portrait");
+              setScheduleMenuAnchorEl(null);
               setPrintMenuAnchorEl(null);
             }}
             sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
@@ -1195,6 +1292,7 @@ const OperatorySchedulePage = () => {
           <MenuItem
             onClick={() => {
               handlePrint("landscape");
+              setScheduleMenuAnchorEl(null);
               setPrintMenuAnchorEl(null);
             }}
             sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}

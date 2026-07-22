@@ -18,10 +18,24 @@ import {
   PhoneOutlined,
 } from "@mui/icons-material";
 import AppointmentHoverCard from "./AppointmentHoverCard";
+import dayjs from "dayjs";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../../constants/styles";
 import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
 import { ICON_TAGS } from "../new-appointment/constants";
+
+const getPrivacyName = (fullName) => {
+  if (!fullName) return "";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0).toUpperCase()} ${parts[parts.length - 1].charAt(0).toUpperCase()}`;
+};
+
+const getAge = (dob) => {
+  if (!dob) return "";
+  const age = dayjs().diff(dayjs(dob), 'year');
+  return Number.isNaN(age) ? "" : `(${age})`;
+};
 
 const STATUS_CONFIG = {
   PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
@@ -228,7 +242,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              {privacyMode ? "•••• ••••" : appointment.patientName}
+              {privacyMode ? getPrivacyName(appointment.patientName) : appointment.patientName} {getAge(appointment.dob)}
             </Typography>
             <Typography
               sx={{
@@ -327,7 +341,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              {privacyMode ? "•••• ••••" : appointment.patientName}
+              {privacyMode ? getPrivacyName(appointment.patientName) : appointment.patientName} {getAge(appointment.dob)}
             </Typography>
             <Typography
               sx={{
