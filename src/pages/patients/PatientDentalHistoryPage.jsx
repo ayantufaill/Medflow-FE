@@ -7,6 +7,8 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   AssignmentOutlined as HistoryTimelineIcon,
@@ -23,7 +25,7 @@ import { usePatientAppointments } from "../../hooks/queries/usePatientAppointmen
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
-import { DentalGeneralInfo, DentalHistorySummary, DentalHistoryFullView } from "../../components/dental-history";
+import { DentalGeneralInfo, DentalHistorySummaryTab, DentalHistoryFullView } from "../../components/dental-history";
 import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
 import SectionCard from "../../components/shared/SectionCard";
@@ -45,8 +47,9 @@ const EMPTY_HISTORY = {
   personalHistory: [],
   gumAndBone: [],
   biteAndJawJoint: [],
-  reviewStatus: false,
-  lastUpdateDate: null,
+  toothStructure: [],
+  smileCharacteristics: [],
+  sectionSummaries: {},
   review: {
     reviewedWithPatient: false,
     reviewedAt: null,
@@ -131,6 +134,10 @@ const PatientDentalHistoryPage = () => {
   const [localPersonalHistory, setLocalPersonalHistory] = useState([]);
   const [localGumAndBone, setLocalGumAndBone] = useState([]);
   const [localBiteAndJawJoint, setLocalBiteAndJawJoint] = useState([]);
+  const [localToothStructure, setLocalToothStructure] = useState([]);
+  const [localSmileCharacteristics, setLocalSmileCharacteristics] = useState([]);
+  const [localSectionSummaries, setLocalSectionSummaries] = useState({});
+  const [activeTab, setActiveTab] = useState(0);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -153,6 +160,9 @@ const PatientDentalHistoryPage = () => {
         setLocalPersonalHistory(Array.isArray(data?.personalHistory) ? data.personalHistory : []);
         setLocalGumAndBone(Array.isArray(data?.gumAndBone) ? data.gumAndBone : []);
         setLocalBiteAndJawJoint(Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : []);
+        setLocalToothStructure(Array.isArray(data?.toothStructure) ? data.toothStructure : []);
+        setLocalSmileCharacteristics(Array.isArray(data?.smileCharacteristics) ? data.smileCharacteristics : []);
+        setLocalSectionSummaries(data?.sectionSummaries || {});
         setSignature(data?.review?.signatureDataUrl || null);
       })
       .catch((err) => {
@@ -187,6 +197,28 @@ const PatientDentalHistoryPage = () => {
     );
   };
 
+  const updateToothStructure = (id, field, value) => {
+    setHasUnsavedChanges(true);
+    setLocalToothStructure((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const updateSmileCharacteristics = (id, field, value) => {
+    setHasUnsavedChanges(true);
+    setLocalSmileCharacteristics((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const handleUpdateSectionSummary = (sectionKey, newData) => {
+    setHasUnsavedChanges(true);
+    setLocalSectionSummaries((prev) => ({
+      ...prev,
+      [sectionKey]: newData,
+    }));
+  };
+
 
 
   const saveDentalHistory = async (reviewedWithPatient = false) => {
@@ -210,6 +242,9 @@ const PatientDentalHistoryPage = () => {
         personalHistory: localPersonalHistory,
         gumAndBone: localGumAndBone,
         biteAndJawJoint: localBiteAndJawJoint,
+        toothStructure: localToothStructure,
+        smileCharacteristics: localSmileCharacteristics,
+        sectionSummaries: localSectionSummaries,
         review,
       }).unwrap();
 
@@ -220,6 +255,9 @@ const PatientDentalHistoryPage = () => {
       setLocalPersonalHistory(Array.isArray(data?.personalHistory) ? data.personalHistory : []);
       setLocalGumAndBone(Array.isArray(data?.gumAndBone) ? data.gumAndBone : []);
       setLocalBiteAndJawJoint(Array.isArray(data?.biteAndJawJoint) ? data.biteAndJawJoint : []);
+      setLocalToothStructure(Array.isArray(data?.toothStructure) ? data.toothStructure : []);
+      setLocalSmileCharacteristics(Array.isArray(data?.smileCharacteristics) ? data.smileCharacteristics : []);
+      setLocalSectionSummaries(data?.sectionSummaries || {});
       
       setSignature(data?.review?.signatureDataUrl || signature || null);
       setHasUnsavedChanges(false);
@@ -244,6 +282,10 @@ const PatientDentalHistoryPage = () => {
       updateGumAndBone(id, field, value);
     } else if (section === 'biteAndJawJoint') {
       updateBiteAndJawJoint(id, field, value);
+    } else if (section === 'toothStructure') {
+      updateToothStructure(id, field, value);
+    } else if (section === 'smileCharacteristics') {
+      updateSmileCharacteristics(id, field, value);
     }
   };
 
@@ -388,12 +430,70 @@ const PatientDentalHistoryPage = () => {
                 onChange={updateGeneralInfo}
               />
 
-              <DentalHistorySummary
-                personalHistory={localPersonalHistory}
-                gumAndBone={localGumAndBone}
-                biteAndJawJoint={localBiteAndJawJoint}
-                onUpdateItem={handleUpdateItem}
-              />
+              <SectionCard
+                icon={HistoryTimelineIcon}
+                title={
+                  <Tabs 
+                    value={activeTab} 
+                    onChange={(e, val) => setActiveTab(val)} 
+                    aria-label="dental history tabs"
+                    TabIndicatorProps={{ sx: { backgroundColor: COLORS.ACCENT, height: 3 } }}
+                    sx={{ minHeight: 40, ml: -1 }}
+                  >
+                    <Tab 
+                      label="Summary" 
+                      sx={{ 
+                        textTransform: 'none', 
+                        fontWeight: activeTab === 0 ? fontWeight.semibold : fontWeight.medium, 
+                        fontFamily: 'Inter',
+                        fontSize: fontSize.lg,
+                        color: activeTab === 0 ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                        '&.Mui-selected': { color: COLORS.TEXT_PRIMARY },
+                        minHeight: 40,
+                      }} 
+                    />
+                    <Tab 
+                      label="Full Dental History" 
+                      sx={{ 
+                        textTransform: 'none', 
+                        fontWeight: activeTab === 1 ? fontWeight.semibold : fontWeight.medium, 
+                        fontFamily: 'Inter',
+                        fontSize: fontSize.lg,
+                        color: activeTab === 1 ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                        '&.Mui-selected': { color: COLORS.TEXT_PRIMARY },
+                        minHeight: 40,
+                      }} 
+                    />
+                  </Tabs>
+                }
+                sx={{ p: 0 }}
+              >
+
+              {activeTab === 0 && (
+                <DentalHistorySummaryTab
+                  sectionSummaries={localSectionSummaries}
+                  onUpdateSectionSummary={handleUpdateSectionSummary}
+                  personalHistory={localPersonalHistory}
+                  gumAndBone={localGumAndBone}
+                  biteAndJawJoint={localBiteAndJawJoint}
+                  toothStructure={localToothStructure}
+                  smileCharacteristics={localSmileCharacteristics}
+                />
+              )}
+
+              {activeTab === 1 && (
+                <DentalHistoryFullView
+                  groupedHistory={groupDentalHistoryRows(localPersonalHistory)}
+                  gumAndBoneGrouped={groupDentalHistoryRows(localGumAndBone)}
+                  biteAndJawJointGrouped={groupDentalHistoryRows(localBiteAndJawJoint)}
+                  toothStructureGrouped={groupDentalHistoryRows(localToothStructure)}
+                  smileCharacteristicsGrouped={groupDentalHistoryRows(localSmileCharacteristics)}
+                  onUpdateItem={handleUpdateItem}
+                  sectionSummaries={localSectionSummaries}
+                  onUpdateSectionSummary={handleUpdateSectionSummary}
+                />
+              )}
+              </SectionCard>
 
 
             </Box>
