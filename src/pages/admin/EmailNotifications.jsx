@@ -23,11 +23,11 @@ categoriesTemplate.forEach(cat => {
 });
 
 const CustomCheckbox = ({ checked, onChange }) => (
-  <Checkbox 
-    size="small" 
-    checked={checked} 
-    onChange={onChange} 
-    sx={{ p: 0.5, '&.Mui-checked': { color: '#2563EB' } }} 
+  <Checkbox
+    size="small"
+    checked={checked}
+    onChange={onChange}
+    sx={{ p: 0.5, '&.Mui-checked': { color: '#2563EB' } }}
     icon={<Box sx={{ width: 14, height: 14, border: '2px solid #CBD5E1', borderRadius: '4px' }} />}
     checkedIcon={<Box sx={{ width: 14, height: 14, bgcolor: '#2563EB', borderRadius: '4px', position: 'relative', '&::after': { content: '""', position: 'absolute', width: 4, height: 8, border: 'solid white', borderWidth: '0 2px 2px 0', transform: 'rotate(45deg)', top: 1, left: 4 } }} />}
   />
@@ -65,7 +65,7 @@ const EmailNotifications = ({ settings, setSettings }) => {
   return (
     <Box sx={{ border: '1px solid #E5E9F2', borderRadius: '8px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: '#F4F7FB', px: 3, py: 2, borderBottom: '1px solid #E5E9F2' }}>
+      <Box sx={{ bgcolor: '#F2F6FC', px: 3, py: 2, borderBottom: '1px solid #E5E9F2' }}>
         <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#1E293B', mb: 0.5 }}>Email Notifications</Typography>
         <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
           You can configure email notifications that each role would receive within the patient's table action by checking or unchecking the user to send or not to send an email notification.
@@ -105,9 +105,9 @@ const EmailNotifications = ({ settings, setSettings }) => {
                             {item}
                           </TableCell>
                           <TableCell sx={{ width: 60, py: 1.5, borderBottom: isLast ? 'none' : '1px solid #F1F5F9' }} align="right">
-                            <CustomCheckbox 
-                              checked={isChecked} 
-                              onChange={(e) => updateSettings(cat.name, item, e.target.checked)} 
+                            <CustomCheckbox
+                              checked={isChecked}
+                              onChange={(e) => updateSettings(cat.name, item, e.target.checked)}
                             />
                           </TableCell>
                         </TableRow>

@@ -97,11 +97,11 @@ const SortableUpdateRow = ({ form, tCellSx, onToggle }) => {
       </TableCell>
       <TableCell sx={{ ...tCellSx, color: '#3B82F6', fontWeight: 500, fontSize: '0.85rem' }}>{form.name}</TableCell>
       <TableCell sx={tCellSx}>
-        <Checkbox 
-          size="small" 
-          checked={form.checked} 
-          onChange={(e) => onToggle(e.target.checked)} 
-          sx={{ p: 0.3, '&.Mui-checked': { color: '#2563EB' } }} 
+        <Checkbox
+          size="small"
+          checked={form.checked}
+          onChange={(e) => onToggle(e.target.checked)}
+          sx={{ p: 0.3, '&.Mui-checked': { color: '#2563EB' } }}
           icon={<Box sx={{ width: 16, height: 16, border: '2px solid #CBD5E1', borderRadius: '4px' }} />}
           checkedIcon={<Box sx={{ width: 16, height: 16, bgcolor: '#2563EB', borderRadius: '4px' }} />}
         />
@@ -187,13 +187,13 @@ const WelcomeEmailDefaults = ({ settings, setSettings }) => {
     updateWelcomeSettings({ updateForms: arr });
   };
 
-  const tHeadSx = { bgcolor: '#F4F7FB', color: '#334155', fontWeight: 700, fontSize: '0.7rem', py: 1.5, borderBottom: 'none' };
+  const tHeadSx = { bgcolor: '#F2F6FC', color: '#334155', fontWeight: 700, fontSize: '0.7rem', py: 1.5, borderBottom: 'none' };
   const tCellSx = { fontSize: '0.8rem', py: 1.5, borderBottom: '1px solid #f1f5f9' };
 
   return (
     <Box sx={{ border: '1px solid #E5E9F2', borderRadius: '8px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: '#F4F7FB', px: 3, py: 1.5, borderBottom: '1px solid #E5E9F2' }}>
+      <Box sx={{ bgcolor: '#F2F6FC', px: 3, py: 1.5, borderBottom: '1px solid #E5E9F2' }}>
         <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#1E293B' }}>Welcome/Update Email Defaults</Typography>
       </Box>
 
@@ -201,11 +201,11 @@ const WelcomeEmailDefaults = ({ settings, setSettings }) => {
         {/* Age filter */}
         <Box sx={{ mb: 4 }}>
           <Typography sx={{ fontSize: '0.85rem', color: '#64748b', mb: 1.5 }}>Send pediatric forms to patients below the age of:</Typography>
-          <TextField 
-            size="small" 
-            value={currentSettings.pediatricAge} 
-            onChange={(e) => updateWelcomeSettings({ pediatricAge: e.target.value })} 
-            sx={{ width: 60, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', borderRadius: '6px' } }} 
+          <TextField
+            size="small"
+            value={currentSettings.pediatricAge}
+            onChange={(e) => updateWelcomeSettings({ pediatricAge: e.target.value })}
+            sx={{ width: 60, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', borderRadius: '6px' } }}
           />
         </Box>
 
@@ -259,11 +259,11 @@ const WelcomeEmailDefaults = ({ settings, setSettings }) => {
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndUpdate}>
                     <SortableContext items={currentSettings.updateForms.map(f => f.name)} strategy={verticalListSortingStrategy}>
                       {currentSettings.updateForms.map((form, i) => (
-                        <SortableUpdateRow 
-                          key={form.name} 
-                          form={form} 
-                          tCellSx={tCellSx} 
-                          onToggle={(checked) => toggleUpdateFormCheck(i, checked)} 
+                        <SortableUpdateRow
+                          key={form.name}
+                          form={form}
+                          tCellSx={tCellSx}
+                          onToggle={(checked) => toggleUpdateFormCheck(i, checked)}
                         />
                       ))}
                     </SortableContext>
