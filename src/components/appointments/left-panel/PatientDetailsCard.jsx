@@ -211,7 +211,7 @@ export const PatientDetails = () => {
 
       {/* Bills */}
       <SubSection label="Bills" open>
-        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, textAlign: 'center' }}>
+        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, pl: '8px' }}>
           Balance: ${Number(totalBalance).toFixed(2)}
         </Typography>
       </SubSection>

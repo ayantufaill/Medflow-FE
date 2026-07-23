@@ -26,6 +26,17 @@ export const scheduleBlockService = {
   },
 
   /**
+   * Update a schedule block
+   * @param {string} blockId - Block ID
+   * @param {Object} blockData - Updated block data
+   * @returns {Promise<Object>} Updated block data
+   */
+  async updateBlock(blockId, blockData) {
+    const response = await apiClient.put(`/schedule-blocks/${blockId}`, blockData);
+    return response.data.data;
+  },
+
+  /**
    * Delete a schedule block
    * @param {string} blockId - Block ID
    * @returns {Promise<Object>} Response message

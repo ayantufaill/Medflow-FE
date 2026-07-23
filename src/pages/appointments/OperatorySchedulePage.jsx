@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars, no-empty */
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton } from '@mui/material';
+import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton, Backdrop, CircularProgress } from '@mui/material';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import dayjs from 'dayjs';
 import ScheduleGridHeader from '../../components/appointments/schedule/ScheduleGridHeader';
@@ -229,7 +229,7 @@ const OperatorySchedulePage = () => {
         const providerId = itemData.providerId || itemData.ProvNum;
 
         // Create new appointment from shortlist data
-        await reduxCreateAppointment({
+        await createAppointment({
           patientId: String(patientId),
           providerId: String(providerId || DUMMY_PROVIDER_ID),
           appointmentDate: start.format('YYYY-MM-DD'),
@@ -338,11 +338,42 @@ const OperatorySchedulePage = () => {
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [isOpeningForm, setIsOpeningForm] = useState(false);
 
   useEffect(() => {
     const handleApptDoubleClick = (e) => {
-      setEditingAppointment(e.detail);
-      setDetailModalOpen(true);
+      const shallowAppt = e.detail;
+      const realId = shallowAppt.id && !String(shallowAppt.id).startsWith("temp-") 
+        ? String(shallowAppt.id).replace('appt-', '') 
+        : null;
+
+      if (!realId) {
+        setEditingAppointment(shallowAppt);
+        setFormOpen(true);
+        setShowExtendedOptions(true);
+        return;
+      }
+
+      setIsOpeningForm(true);
+      import('../../services/appointment.service').then(async ({ appointmentService }) => {
+        try {
+          const fullAppt = await appointmentService.getAppointmentById(realId);
+          const fullProcedures = await appointmentService.getAppointmentProcedures(realId);
+          fullAppt.rawAppointment = fullAppt;
+          fullAppt.procedures = fullProcedures;
+          
+          setEditingAppointment(fullAppt);
+          setFormOpen(true);
+          setShowExtendedOptions(true);
+        } catch (err) {
+          console.error("Failed to load appointment full details", err);
+          setEditingAppointment(shallowAppt);
+          setFormOpen(true);
+          setShowExtendedOptions(true);
+        } finally {
+          setIsOpeningForm(false);
+        }
+      });
     };
     window.addEventListener('appointment-card-double-clicked', handleApptDoubleClick);
 
@@ -423,8 +454,13 @@ const OperatorySchedulePage = () => {
 
   const handleSaveBlock = async (blockData) => {
     try {
-      await scheduleBlockService.createBlock(blockData);
-      showSnackbar("Block created successfully", "success");
+      if (blockData.id || blockData._id) {
+        await scheduleBlockService.updateBlock(blockData.id || blockData._id, blockData);
+        showSnackbar("Block updated successfully", "success");
+      } else {
+        await scheduleBlockService.createBlock(blockData);
+        showSnackbar("Block created successfully", "success");
+      }
       setBlockSlotDialogOpen(false);
       fetchScheduleBlocks();
     } catch (err) {
@@ -480,7 +516,8 @@ const OperatorySchedulePage = () => {
 
   const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-    setInitialFormDateTime(dateTime || baseDate.hour(9).minute(0));
+    const now = dayjs();
+    setInitialFormDateTime(dateTime || baseDate.hour(now.hour()).minute(now.minute()));
     setInitialFormRoomId(roomId || null);
     setInitialShortlistData(null);
     setShowExtendedOptions(extendedOptions);
@@ -512,8 +549,7 @@ const OperatorySchedulePage = () => {
     };
   }, []);
 
-  // ── Appointments (for conflict detection inside the form) ─────────
-  const { createAppointment } = useAppointmentList();
+  // createAppointment is obtained from the main useAppointmentList call below (line ~712)
 
   // Maps a raw appointment object from the API into the shape the grid expects
   const mapAppointment = (a) => {
@@ -541,12 +577,10 @@ const OperatorySchedulePage = () => {
         return null;
       }
 
-      const fullName =
-        (a.patientId &&
-          (a.patientId.firstName || a.patientId.lastName) &&
-          `${a.patientId.firstName || ""} ${a.patientId.lastName || ""}`.trim()) ||
-        a.patientName ||
-        "";
+      const patientData = (a.patientId && typeof a.patientId === 'object') ? a.patientId : (a.patient && typeof a.patient === 'object' ? a.patient : null);
+      const fName = patientData?.firstName || patientData?.FName || "";
+      const lName = patientData?.lastName || patientData?.LName || "";
+      const fullName = `${fName} ${lName}`.trim() || patientData?.name || patientData?.fullName || a.patientName || "";
       const initials = fullName
         ? fullName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
         : "PT";
@@ -605,8 +639,6 @@ const OperatorySchedulePage = () => {
       // Resolve operatory room label
       const operatoryLabel =
         OPERATORY_COLUMNS?.find((c) => c.id === columnId)?.label || columnId || "—";
-
-      const patientData = (a.patientId && typeof a.patientId === 'object') ? a.patientId : (a.patient && typeof a.patient === 'object' ? a.patient : null);
       const patientNumber = patientData?.patientCode || patientData?.patientId || patientData?.chartNumber || "";
       const patientPhone = patientData?.phonePrimary || patientData?.phone || patientData?.mobilePhone || "";
       const patientEmail = patientData?.email || "";
@@ -630,6 +662,7 @@ const OperatorySchedulePage = () => {
 
       return {
         id: a._id || a.id,
+        rawAppointment: a,
         appointmentDate: a.appointmentDate,
         date: dateOnly,
         patientId: String((a.patientId && typeof a.patientId === 'object' ? (a.patientId._id || a.patientId.id || a.patientId.PatNum) : a.patientId) || ""),
@@ -674,14 +707,25 @@ const OperatorySchedulePage = () => {
   const {
     appointments: reduxAppointments,
     refresh: refreshAppointments,
+    fetch: fetchApptsMain,
     loading: apptsLoading,
     updateAppointment,
+    createAppointment,
   } = useAppointmentList({
-    patientId: selectedPatientId || "",
     startDate: fetchStartDate,
     endDate: fetchEndDate,
-    limit: 200,
+    limit: 500,
   });
+
+  useEffect(() => {
+    if (fetchApptsMain) {
+      fetchApptsMain({
+        startDate: fetchStartDate,
+        endDate: fetchEndDate,
+        limit: 500,
+      });
+    }
+  }, [fetchStartDate, fetchEndDate, fetchApptsMain]);
 
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
@@ -808,6 +852,7 @@ const OperatorySchedulePage = () => {
         ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
         ...(formData.roomId && { roomId: formData.roomId }),
         ...(formData.customFields && { customFields: formData.customFields }),
+        patientName: formData.patientName,
       });
       showSnackbar('Appointment created successfully', 'success');
       setFormOpen(false);
@@ -1001,12 +1046,25 @@ const OperatorySchedulePage = () => {
               onSlotClick={(hour, mins, roomId) => {
                 if (isCloseOpenDayMode || closedOperatories[`${selectedDate.format("YYYY-MM-DD")}:${roomId}`]) return;
                 const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-                handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
+                const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+                
+                if (start.isBefore(dayjs())) {
+                  showSnackbar("Cannot create an appointment in the past.", "warning");
+                  return;
+                }
+                
+                handleOpenForm(start, roomId);
               }}
               onBlockClick={(hour, mins, roomId) => {
                 if (isCloseOpenDayMode || closedOperatories[`${selectedDate.format("YYYY-MM-DD")}:${roomId}`]) return;
                 const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
                 const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+                
+                if (start.isBefore(dayjs())) {
+                  showSnackbar("Cannot create a block in the past.", "warning");
+                  return;
+                }
+                
                 const end = start.clone().add(30, "minute");
 
                 setBlockSlotDialogData({
@@ -1058,13 +1116,18 @@ const OperatorySchedulePage = () => {
         {/* Add New Appointment Modal */}
         <AddNewPatientAppointmentForm
           open={formOpen}
-          onCancel={() => { setFormOpen(false); setShowExtendedOptions(false); }}
+          onCancel={() => { 
+            setFormOpen(false); 
+            setShowExtendedOptions(false); 
+            setEditingAppointment(null);
+          }}
           onSubmit={handleAddAppointmentSubmit}
           loading={formSaving}
           initialDateTime={initialFormDateTime}
           initialRoomId={initialFormRoomId}
           initialPatient={currentPatient || null}
           initialShortlistData={initialShortlistData}
+          initialAppointment={editingAppointment}
           providers={providers || []}
           rooms={rooms || []}
           appointmentTypes={appointmentTypes || []}
@@ -1335,6 +1398,12 @@ const OperatorySchedulePage = () => {
       <RouteSlipDialog />
       <FamilyAppointmentsDialog />
 
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 9999 }}
+        open={isOpeningForm}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
     </DndContext>
   );
 };

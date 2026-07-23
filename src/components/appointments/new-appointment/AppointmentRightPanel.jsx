@@ -109,10 +109,7 @@ const AppointmentRightPanel = ({
         sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
       />
     </Box>
-
-    <ColorTagPicker selected={selectedColorTags} onChange={onColorTagsChange} />
-
-    {/* Extended fields — only visible when opened from PatientCard Book button */}
+      {/* Extended fields — only visible when opened from PatientCard Book button */}
     {showExtendedOptions && (
       <>
         {/* Referred By */}
@@ -147,6 +144,8 @@ const AppointmentRightPanel = ({
         </Box>
       </>
     )}
+
+    <ColorTagPicker selected={selectedColorTags} onChange={onColorTagsChange} />
   </Box>
 );
 

@@ -7,6 +7,7 @@ import {
 } from "@mui/icons-material";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius, headingPrimarySx, headingSecondarySx } from "../../../constants/styles";
+import { ICON_TAGS } from "../new-appointment/constants";
 
 const CARD_WIDTH = 290;
 const CARD_MAX_HEIGHT = 540;
@@ -225,16 +226,17 @@ const AppointmentHoverCard = ({
 
         <InfoRow label="Tags:">
           <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {tags.length > 0 ? tags.map((tag, i) => {
-              const { bg, color, border } = getTagStyle(tag);
-              return (
-                <Box key={i} sx={{ px: "8px", py: "3px", borderRadius: "4px", backgroundColor: bg, border }}>
-                  <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color }}>
-                    {getTagLabel(tag)}
-                  </Typography>
-                </Box>
-              );
-            }) : (
+            {Array.isArray(appointment.colorTags) && appointment.colorTags.length > 0 ? (
+              appointment.colorTags.map((tagId, i) => {
+                const tagObj = ICON_TAGS.find(t => t.id.toLowerCase() === String(tagId).toLowerCase());
+                if (!tagObj) return null;
+                return (
+                  <Box key={`icon-${i}`} sx={{ width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img src={tagObj.src} alt={tagObj.label} style={{ maxWidth: "100%", maxHeight: "100%" }} title={tagObj.label} />
+                  </Box>
+                );
+              })
+            ) : (
               <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{EMPTY_VALUE}</Typography>
             )}
           </Box>
