@@ -308,6 +308,7 @@ const FinancePage = () => {
         onTriggerPatientFinanceIcon={(iconId, e) =>
           patientFinanceRef.current?.triggerIcon?.(iconId, e)
         }
+        patient={currentPatient}
       />
 
       {/* Ledger Filters */}

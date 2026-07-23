@@ -43,6 +43,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [showDescription,      setShowDescription]      = useState(false);
   const [patientAmountChecked, setPatientAmountChecked] = useState(false);
   const [manualAmount,         setManualAmount]         = useState('');
+  const [amountType,           setAmountType]           = useState('patient amount');
 
   // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
@@ -63,7 +64,9 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     return { totalChecked: sum };
   }, [invoices]);
 
-  const displayAmount   = manualAmount !== '' ? manualAmount : totalChecked.toFixed(2);
+  const displayAmount   = amountType === 'specific amount'
+    ? manualAmount
+    : (manualAmount !== '' ? manualAmount : totalChecked.toFixed(2));
   const paymentAmount   = parseFloat(displayAmount) || 0;
   const overpayment     = '0.00';
 
@@ -148,9 +151,15 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         {/* Patient Amount Row */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <Checkbox size="small" sx={{ p: 0.5 }} checked={patientAmountChecked} onChange={(e) => setPatientAmountChecked(e.target.checked)} />
-          <Select variant="standard" value="patient amount"
-            sx={{ fontSize: '0.8125rem', width: 130, '& .MuiSelect-select': { pb: 0.5 } }} MenuProps={MENU_PROPS}>
-            <MenuItem value="patient amount">patient amount</MenuItem>
+          <Select variant="standard" value={amountType}
+            onChange={(e) => {
+              setAmountType(e.target.value);
+              if (e.target.value === 'specific amount') setManualAmount('');
+              if (e.target.value === 'patient amount') setManualAmount('');
+            }}
+            sx={{ fontSize: '0.8125rem', width: 150, '& .MuiSelect-select': { pb: 0.5 } }} MenuProps={MENU_PROPS}>
+            <MenuItem value="patient amount">Patient Amount</MenuItem>
+            <MenuItem value="specific amount">Specific Amount</MenuItem>
           </Select>
           <Box sx={{ border: '1px dashed #999', padding: '2px 8px', display: 'flex', alignItems: 'center', width: '80px' }}>
             <Typography sx={{ fontSize: '0.8125rem', mr: 0.5 }}>$</Typography>
