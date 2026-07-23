@@ -7,7 +7,7 @@ import {
   selectPracticeInfo,
 } from '../../store/slices/practiceInfoSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { Box, Grid, Paper } from '@mui/material';
+import { Box, Grid } from '@mui/material';
 import PatientFlagsHeader from '../../components/admin/patient-flags/PatientFlagsHeader';
 import PatientFlagCategorySection from '../../components/admin/patient-flags/PatientFlagCategorySection';
 import PatientFlagsDialog from '../../components/admin/patient-flags/PatientFlagsDialog';
@@ -117,36 +117,25 @@ const PatientFlags = () => {
   const categories = [...new Set(flags.map((f) => f.category))];
 
   return (
-    <Box sx={{ bgcolor: '#f4f6fb', minHeight: '100vh', fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
-      <Box sx={{ p: 4, maxWidth: 1600, mx: 'auto' }}>
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 3, bgcolor: '#ffffff', border: '1px solid #e8eaf0' }}>
-          <PatientFlagsHeader
-            onAddCategory={openAddCategoryDialog}
-            onSave={handleSave}
-            onSync={() => showSnackbar('Sync is not available yet.', 'info')}
-          />
-          <Grid container spacing={3}>
-            {categories.map((category) => (
-              <Grid
-                item
-                xs={12}
-                sm={12}
-                md={category === 'Billing' ? 8 : 6}
-                lg={category === 'Billing' ? 8 : 6}
-                key={category}
-              >
-                <PatientFlagCategorySection
-                  category={category}
-                  flags={flags.filter((flag) => flag.category === category)}
-                  onAddFlag={openAddFlagDialog}
-                  onEditFlag={openEditFlagDialog}
-                  onDeleteFlag={handleDeleteFlag}
-                />
-              </Grid>
-            ))}
+    <Box sx={{ bgcolor: '#FBFCFE', fontFamily: "'Manrope', 'Segoe UI', sans-serif", borderRadius: '12px', border: '1px solid', borderColor: 'divider', p: 3 }}>
+      <PatientFlagsHeader
+        onAddCategory={openAddCategoryDialog}
+        onSave={handleSave}
+        onSync={() => showSnackbar('Sync is not available yet.', 'info')}
+      />
+      <Grid container spacing={3}>
+        {categories.map((category) => (
+          <Grid item key={category}>
+            <PatientFlagCategorySection
+              category={category}
+              flags={flags.filter((flag) => flag.category === category)}
+              onAddFlag={openAddFlagDialog}
+              onEditFlag={openEditFlagDialog}
+              onDeleteFlag={handleDeleteFlag}
+            />
           </Grid>
-        </Paper>
-      </Box>
+        ))}
+      </Grid>
 
       <PatientFlagsDialog
         open={dialogOpen}

@@ -1,7 +1,7 @@
 import { Box, Typography, Table, TableHead, TableRow, TableCell, TableBody, TextField, Button, Paper } from '@mui/material';
 import { Add as AddIcon, InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
 
-const SECTION_HEADER_BG = '#eef4ff';
+const SECTION_HEADER_BG = '#F3F8FD';
 
 const KioskAccountsSection = ({
   accounts,
@@ -53,7 +53,7 @@ const KioskAccountsSection = ({
             <TableHead>
               <TableRow
                 sx={{
-                  backgroundColor: '#f4f7ff',
+                  backgroundColor: '#F3F8FD',
                   '& th': {
                     fontWeight: 700,
                     fontSize: '0.72rem',

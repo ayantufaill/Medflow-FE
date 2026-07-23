@@ -18,8 +18,8 @@ const PatientFlagCategorySection = ({ category, flags, onAddFlag, onEditFlag, on
     <Paper
       elevation={0}
       sx={{
-        width: '100%',
-        borderRadius: 3,
+        width: 527,
+        borderRadius: '10px',
         border: '1px solid #e5e7eb',
         overflow: 'hidden',
         bgcolor: '#ffffff',
@@ -28,21 +28,19 @@ const PatientFlagCategorySection = ({ category, flags, onAddFlag, onEditFlag, on
       }}
     >
       {/* Blue Header with Icon */}
-      <Box sx={{ px: 3, py: 2, bgcolor: '#eef4ff', borderBottom: '1px solid #dbeafe', display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box sx={{ width: 28, height: 28, display: 'grid', placeItems: 'center', bgcolor: '#dbeafe', borderRadius: 1.5 }}>
-          {getCategoryIcon(category)}
-        </Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <Box sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        {getCategoryIcon(category)}
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', textTransform: 'uppercase', fontSize: '0.8rem' }}>
           {category}
         </Typography>
       </Box>
 
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minHeight: 0 }}>
-        {/* 3-Column Header: COLOR | NAME | ACTIONS */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr 92px', alignItems: 'center', gap: 1, p: 1.5, borderRadius: 2, bgcolor: '#f8fafc', mb: 1, flexShrink: 0 }}>
-          <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Color</Typography>
-          <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Name</Typography>
-          <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</Typography>
+        {/* 2-Column Header: COLOR | NAME */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: '56px 1fr 92px', alignItems: 'center', gap: 1, px: 1, pt: 1, mb: 0, flexShrink: 0 }}>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'center' }}>Color</Typography>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>Name</Typography>
+          <Box /> {/* Empty cell for actions */}
         </Box>
 
         {/* List of Flags - scrollable */}
@@ -62,16 +60,17 @@ const PatientFlagCategorySection = ({ category, flags, onAddFlag, onEditFlag, on
         <Button
           size="small"
           variant="text"
-          startIcon={<AddIcon />}
+          startIcon={<AddIcon fontSize="small" />}
           onClick={() => onAddFlag(category)}
           sx={{
             justifyContent: 'flex-start',
             textTransform: 'none',
-            color: '#2563eb',
-            fontWeight: 600,
-            px: 0,
+            color: '#9ca3af',
+            fontWeight: 500,
+            fontSize: '0.85rem',
+            px: 1,
             flexShrink: 0,
-            '&:hover': { backgroundColor: 'rgba(37, 99, 235, 0.06)' },
+            '&:hover': { backgroundColor: 'transparent', color: '#6b7280' },
           }}
         >
           Add new flag

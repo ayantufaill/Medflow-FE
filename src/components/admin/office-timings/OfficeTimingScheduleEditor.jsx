@@ -123,33 +123,47 @@ const OfficeTimingScheduleEditor = ({ days, timings, onTimingChange }) => (
       </Typography>
     </Box>
 
-    <Box sx={{ px: 2, py: 2 }}>
-      <Typography fontWeight={700} fontSize="0.95rem" sx={{ mb: 1 }}>
-        Weekday
-      </Typography>
-      {days.map((day) => (
-        <DayRow
-          key={day}
-          day={day}
-          rowData={timings.openingHours[day] || {}}
-          section="openingHours"
-          onTimingChange={onTimingChange}
-        />
-      ))}
+    {/* Weekday sub-container */}
+    <Paper
+      elevation={0}
+      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, backgroundColor: '#fff', mx: 2, mt: 2, overflow: 'hidden' }}
+    >
+      <Box sx={{ px: 2, py: 2 }}>
+        <Typography fontWeight={700} fontSize="0.95rem" sx={{ mb: 1 }}>
+          Weekday
+        </Typography>
+        {days.map((day) => (
+          <DayRow
+            key={day}
+            day={day}
+            rowData={timings.openingHours[day] || {}}
+            section="openingHours"
+            onTimingChange={onTimingChange}
+          />
+        ))}
+      </Box>
+    </Paper>
 
-      <Typography fontWeight={700} fontSize="0.95rem" sx={{ mt: 4, mb: 1 }}>
-        Schedule Appointment
-      </Typography>
-      {days.map((day) => (
-        <DayRow
-          key={`appt-${day}`}
-          day={day}
-          rowData={timings.schedulingAppt[day] || {}}
-          section="schedulingAppt"
-          onTimingChange={onTimingChange}
-        />
-      ))}
-    </Box>
+    {/* Schedule Appointment sub-container */}
+    <Paper
+      elevation={0}
+      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, backgroundColor: '#fff', mx: 2, mt: 2, mb: 2, overflow: 'hidden' }}
+    >
+      <Box sx={{ px: 2, py: 2 }}>
+        <Typography fontWeight={700} fontSize="0.95rem" sx={{ mb: 1 }}>
+          Schedule Appointment
+        </Typography>
+        {days.map((day) => (
+          <DayRow
+            key={`appt-${day}`}
+            day={day}
+            rowData={timings.schedulingAppt[day] || {}}
+            section="schedulingAppt"
+            onTimingChange={onTimingChange}
+          />
+        ))}
+      </Box>
+    </Paper>
   </Paper>
 );
 

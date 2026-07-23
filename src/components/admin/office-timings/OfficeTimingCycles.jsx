@@ -26,7 +26,7 @@ const OfficeTimingCycles = ({
 }) => (
   <Paper
     elevation={0}
-    sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, backgroundColor: '#fff', overflow: 'hidden', mb: 3 }}
+    sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, backgroundColor: '#fff', overflow: 'hidden' }}
   >
     {/* Header strip */}
     <Box

@@ -8,26 +8,25 @@ const PatientFlagRow = ({ flag, onEdit, onDelete }) => (
     sx={{
       width: '100%',
       display: 'grid',
-      gridTemplateColumns: '72px minmax(0, 1fr) 92px',
+      gridTemplateColumns: '56px minmax(0, 1fr) 92px',
       alignItems: 'center',
       gap: 1,
       p: 1.25,
       borderRadius: 2,
       bgcolor: '#ffffff',
       border: '1px solid #e5e7eb',
-      '&:hover': { bgcolor: '#f8fafc' },
     }}
   >
     <Box
       sx={{
-        width: 18,
-        height: 18,
+        width: 20,
+        height: 20,
         bgcolor: flag.color,
-        borderRadius: '4px',
+        borderRadius: '6px',
         justifySelf: 'center',
       }}
     />
-    <Typography variant="body2" sx={{ color: '#111827', fontWeight: 500 }}>
+    <Typography variant="body2" sx={{ color: '#4b5563', fontWeight: 500, fontSize: '0.85rem' }}>
       {flag.name}
     </Typography>
     <Stack direction="row" spacing={0.5} justifyContent="flex-end">

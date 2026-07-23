@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -105,7 +105,12 @@ const KioskAccountsView = () => {
   }
 
   return (
-    <Box>
+    <Box sx={{
+      border: '1px solid #DFE5EC',
+      borderRadius: 2,
+      bgcolor: '#FBFCFE',
+      p: 3,
+    }}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
           Kiosk Accounts

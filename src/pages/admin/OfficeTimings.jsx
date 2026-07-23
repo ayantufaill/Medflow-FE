@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchCurrentPracticeInfo,
@@ -10,11 +9,6 @@ import {
   Typography,
   Button,
   Paper,
-  Tabs,
-  Tab,
-  Checkbox,
-  TextField,
-  Divider,
   CircularProgress,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
@@ -45,7 +39,6 @@ const OfficeTimings = () => {
   const dispatch = useDispatch();
   const { data: practiceData, loading, updateLoading } = useSelector((state) => state.practiceInfo);
 
-  const [tabValue, setTabValue] = useState(0);
   const [timings, setTimings] = useState(defaultTimings);
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [newCycle, setNewCycle] = useState({ name: '', fromDate: '', toDate: '' });
@@ -143,62 +136,80 @@ const OfficeTimings = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh' }}>
-        {/* Header Buttons */}
-        <Box display="flex" justifyContent="flex-end" gap={2} mb={4}>
-          <Button
-            variant="outlined"
-            sx={{
-              textTransform: 'none',
-              px: 3,
-              borderColor: '#2563eb',
-              color: '#2563eb',
-              '&:hover': {
-                borderColor: '#1d4ed8',
-                backgroundColor: 'rgba(37, 99, 235, 0.08)',
-              },
-            }}
-          >
-            Re-Generate
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-            onClick={handleSave}
-            disabled={updateLoading}
-            sx={{
-              textTransform: 'none',
-              px: 3,
-              backgroundColor: '#2563eb',
-              '&:hover': {
-                backgroundColor: '#1d4ed8',
-              },
-            }}
-          >
-            {updateLoading ? 'Saving...' : 'Save Timings'}
-          </Button>
-        </Box>
+        {/* Outer Office Timing Container */}
+        <Paper
+          elevation={0}
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            backgroundColor: '#fff',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Container Title + Buttons */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
+            <Typography fontWeight={700} fontSize="1.15rem">
+              Office Timing
+            </Typography>
+            <Box display="flex" gap={2}>
+              <Button
+                variant="outlined"
+                sx={{
+                  textTransform: 'none',
+                  px: 3,
+                  borderColor: '#2563eb',
+                  color: '#2563eb',
+                  '&:hover': {
+                    borderColor: '#1d4ed8',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  },
+                }}
+              >
+                Re-Generate
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                onClick={handleSave}
+                disabled={updateLoading}
+                sx={{
+                  textTransform: 'none',
+                  px: 3,
+                  backgroundColor: '#2563eb',
+                  '&:hover': {
+                    backgroundColor: '#1d4ed8',
+                  },
+                }}
+              >
+                {updateLoading ? 'Saving...' : 'Save Timings'}
+              </Button>
+            </Box>
+          </Box>
 
-        <OfficeTimingCycles
-          cycles={timings.cycles || []}
-          showAddCycle={showAddCycle}
-          newCycle={newCycle}
-          onShowAddCycle={() => setShowAddCycle(true)}
-          onCycleFieldChange={handleCycleFieldChange}
-          onAddCycle={handleAddCycle}
-          onCancelAddCycle={() => setShowAddCycle(false)}
-          onDeleteCycle={handleDeleteCycle}
-        />
+          {/* Cycles Section */}
+          <Box sx={{ mx: 3, mb: 3 }}>
+            <OfficeTimingCycles
+              cycles={timings.cycles || []}
+              showAddCycle={showAddCycle}
+              newCycle={newCycle}
+              onShowAddCycle={() => setShowAddCycle(true)}
+              onCycleFieldChange={handleCycleFieldChange}
+              onAddCycle={handleAddCycle}
+              onCancelAddCycle={() => setShowAddCycle(false)}
+              onDeleteCycle={handleDeleteCycle}
+            />
+          </Box>
 
-        {/* Schedules Section */}
-        <Box>
-          <OfficeTimingScheduleEditor
-            days={days}
-            timings={timings}
-            tabValue={tabValue}
-            onTabChange={(e, v) => setTabValue(v)}
-            onTimingChange={handleTimingChange}
-          />
-        </Box>
+          {/* Schedule Section */}
+          <Box sx={{ mx: 3, mb: 3 }}>
+            <OfficeTimingScheduleEditor
+              days={days}
+              timings={timings}
+              onTimingChange={handleTimingChange}
+            />
+          </Box>
+        </Paper>
       </Box>
     </LocalizationProvider>
   );

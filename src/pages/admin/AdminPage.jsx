@@ -4,6 +4,7 @@ import { Box, Tabs, Tab, useTheme, Button, Typography, Paper, Breadcrumbs } from
 import { Add as AddIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
 import OfficeTimings from './OfficeTimings';
+import OnlineScheduleConfiguration from './OnlineSchedule';
 import ProvidersListPage from '../providers/ProvidersListPage';
 import PracticeInfoListPage from '../practice-info/PracticeInfoListPage';
 import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompaniesListPage';
@@ -11,6 +12,11 @@ import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListP
 import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
 import KioskAccountsView from './KioskAccountsView';
+import InformedConsent from './InformedConsent';
+import PrePostOps from './PrePostOps';
+import ReportsDashboard from './ReportsDashboard';
+import AdvancedReporting from './AdvancedReporting';
+import MyChartConfiguration from './MyChartConfiguration';
 import InstallationGuide from './InstallationGuide';
 import MoveData from './MoveData';
 import OperatorySetup from './OperatorySetup';
@@ -144,7 +150,9 @@ const AdminPage = () => {
     location.pathname === '/admin/practice-setup/kiosk-accounts' ||
     location.pathname === '/admin/practice-setup/office-timings' ||
     location.pathname === '/admin/practice-setup/operatory-setup' ||
-    location.pathname === '/admin/practice-setup/patient-flags';
+    location.pathname === '/admin/practice-setup/patient-flags' ||
+    location.pathname === '/admin/practice-setup/my-chart-configuration' ||
+    location.pathname === '/admin/practice-setup/online-schedule';
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
 
   // Resolve breadcrumb info (parent tab + current sub tab label) for flat sub-pages
@@ -200,6 +208,10 @@ const AdminPage = () => {
           <MoveData />
         ) : location.pathname === '/admin/practice-setup/operatory-setup' ? (
           <OperatorySetup />
+        ) : location.pathname === '/admin/practice-setup/my-chart-configuration' ? (
+          <MyChartConfiguration />
+        ) : location.pathname === '/admin/practice-setup/online-schedule' ? (
+          <OnlineScheduleConfiguration />
         ) : (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>

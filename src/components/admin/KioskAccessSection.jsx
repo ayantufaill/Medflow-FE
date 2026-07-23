@@ -16,7 +16,7 @@ import {
   SwapHoriz,
 } from '@mui/icons-material';
 
-const SECTION_HEADER_BG = '#eef4ff';
+const SECTION_HEADER_BG = '#F3F8FD';
 
 const SectionHeader = ({ icon, title }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, backgroundColor: SECTION_HEADER_BG }}>
