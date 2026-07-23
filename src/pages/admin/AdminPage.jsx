@@ -156,7 +156,7 @@ const AdminPage = () => {
     location.pathname === '/admin/practice-setup/operatory-setup' ||
     location.pathname === '/admin/practice-setup/patient-flags' ||
     location.pathname === '/admin/practice-setup/my-chart-configuration' ||
-    location.pathname === '/admin/practice-setup/online-schedule';
+    location.pathname === '/admin/practice-setup/online-schedule' ||
     location.pathname === '/admin/practice-setup/move-data' ||
     location.pathname === '/admin/practice-setup/document-category-setup' ||
     location.pathname === '/admin/practice-setup/schedule-configuration' ||
@@ -222,6 +222,14 @@ const AdminPage = () => {
           <MyChartConfiguration />
         ) : location.pathname === '/admin/practice-setup/online-schedule' ? (
           <OnlineScheduleConfiguration />
+        ) : location.pathname === '/admin/practice-setup/document-category-setup' ? (
+          <DocumentCategorySetup />
+        ) : location.pathname === '/admin/practice-setup/schedule-configuration' ? (
+          <ScheduleConfiguration />
+        ) : location.pathname === '/admin/practice-setup/practice-settings' ? (
+          <PracticeSettings />
+        ) : location.pathname === '/admin/practice-setup/practice-information' ? (
+          <PracticeInformation />
         ) : (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
