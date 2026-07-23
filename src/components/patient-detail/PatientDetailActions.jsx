@@ -144,10 +144,9 @@ export default function PatientDetailActions({
               </IconButton>
             </Tooltip>
 
-            {/* Hx (History) Icon — moved the audit-log action here from the Document
-                icon below, since "Hx" unambiguously means history, not documents. */}
-            <Tooltip title="View patient history">
-              <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
+            {/* Hx (Communication) Icon — opens patient communication/chat */}
+            <Tooltip title="Patient communication">
+              <IconButton size="small" sx={iconButtonSx} onClick={handlePatientChatOpen}>
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>
                   <SyncIcon sx={{ fontSize: 20 }} />
                   <Box
@@ -204,10 +203,9 @@ export default function PatientDetailActions({
               </IconButton>
             </Tooltip>
 
-            {/* Document/File Icon — now points at the "Additional Docs" tab (same
-                route PatientSectionTabs.jsx uses) instead of the history dialog. */}
-            <Tooltip title="Additional documents">
-              <IconButton size="small" sx={iconButtonSx} onClick={handleOpenAdditionalDocs}>
+            {/* Document/File Icon — opens patient history audit dialog */}
+            <Tooltip title="View patient history">
+              <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
                 <FileIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>

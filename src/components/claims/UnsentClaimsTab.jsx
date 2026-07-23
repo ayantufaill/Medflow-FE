@@ -61,7 +61,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       result = result.filter((c) => c.carrier === currentFilters.carrier);
     }
     if (currentFilters.claimType !== 'all') {
-      result = result.filter((c) => c.claimType === currentFilters.claimType);
+      result = result.filter((c) => c.claimType && c.claimType.includes(currentFilters.claimType));
     }
     if (currentFilters.status !== 'all') {
       result = result.filter((c) => c.status === currentFilters.status);

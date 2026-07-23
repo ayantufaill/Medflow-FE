@@ -74,4 +74,54 @@ export const COLOR_TAGS = [
   "#22c55e", "#ec4899",
 ];
 
+import AsapSvg from "../../../assets/tags/ASAP.svg";
+import BalanceSvg from "../../../assets/tags/Balance.svg";
+import BotoxSvg from "../../../assets/tags/Botox.svg";
+import CreditSvg from "../../../assets/tags/Credit.svg";
+import DebitSvg from "../../../assets/tags/Debit.svg";
+import DeliveryReceivedSvg from "../../../assets/tags/Delivery Received.svg";
+import DeliverySentSvg from "../../../assets/tags/Delivery Sent.svg";
+import DeliverySvg from "../../../assets/tags/Delivery.svg";
+import DoctorSvg from "../../../assets/tags/Doctor.svg";
+import DoubleAppointmentSvg from "../../../assets/tags/Double Appointment.svg";
+import EmergencySvg from "../../../assets/tags/Emergency.svg";
+import ExamSvg from "../../../assets/tags/Exam.svg";
+import FamilySvg from "../../../assets/tags/Family.svg";
+import FillerSvg from "../../../assets/tags/Filler.svg";
+import HygieneSvg from "../../../assets/tags/Hygiene.svg";
+import MissingDocumentSvg from "../../../assets/tags/Missing Document.svg";
+import NeedsSedationSvg from "../../../assets/tags/Needs Sedation.svg";
+import NewPatientSvg from "../../../assets/tags/New Patient.svg";
+import PredeterminationSvg from "../../../assets/tags/Predetermination.svg";
+import SendDocumentSvg from "../../../assets/tags/Send Document.svg";
+import TreatmentPlanSvg from "../../../assets/tags/Treatment Plan.svg";
+import VerifiedSvg from "../../../assets/tags/Verified.svg";
+import RadiographSvg from "../../../assets/tags/radiograph.svg";
+
+export const ICON_TAGS = [
+  { id: 'Delivery', label: 'Delivery', src: DeliverySvg },
+  { id: 'Delivery Received', label: 'Delivery Received', src: DeliveryReceivedSvg },
+  { id: 'Delivery Sent', label: 'Delivery Sent', src: DeliverySentSvg },
+  { id: 'Emergency', label: 'Emergency', src: EmergencySvg },
+  { id: 'Exam', label: 'Exam', src: ExamSvg },
+  { id: 'Needs Sedation', label: 'Needs Sedation', src: NeedsSedationSvg },
+  { id: 'New Patient', label: 'New Patient', src: NewPatientSvg },
+  { id: 'radiograph', label: 'Radiograph', src: RadiographSvg },
+  { id: 'ASAP', label: 'ASAP', src: AsapSvg },
+  { id: 'Balance', label: 'Balance', src: BalanceSvg },
+  { id: 'Double Appointment', label: 'Double Appointment', src: DoubleAppointmentSvg },
+  { id: 'Doctor', label: 'Doctor', src: DoctorSvg },
+  { id: 'Family', label: 'Family', src: FamilySvg },
+  { id: 'Hygiene', label: 'Hygiene', src: HygieneSvg },
+  { id: 'Missing Document', label: 'Missing Document', src: MissingDocumentSvg },
+  { id: 'Predetermination', label: 'Predetermination', src: PredeterminationSvg },
+  { id: 'Send Document', label: 'Send Document', src: SendDocumentSvg },
+  { id: 'Treatment Plan', label: 'Treatment Plan', src: TreatmentPlanSvg },
+  { id: 'Verified', label: 'Verified', src: VerifiedSvg },
+  { id: 'Credit', label: 'Credit', src: CreditSvg },
+  { id: 'Debit', label: 'Debit', src: DebitSvg },
+  { id: 'Filler', label: 'Filler', src: FillerSvg },
+  { id: 'Botox', label: 'Botox', src: BotoxSvg },
+];
+
 export const INITIAL_PROCEDURES = [];

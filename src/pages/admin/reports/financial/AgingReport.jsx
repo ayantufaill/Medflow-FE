@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import dayjs from 'dayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {
   Box,
   Typography,
@@ -25,14 +27,16 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import AccountNotesDialog from '../../../../components/finance/AccountNotesDialog';
-import AgingReportFilters from './AgingReportFilters';
-import AgingReportActions from './AgingReportActions';
-import AgingReportTable from './AgingReportTable';
+import AgingReportTable from '../../../../components/reports/financial/AgingReportTable';
+import AgingReportFilters from '../../../../components/reports/financial/AgingReportFilters';
+import AgingReportActions from '../../../../components/reports/financial/AgingReportActions';
 import GenerateStatementsDialog from '../../../../components/finance/GenerateStatementsDialog';
 import ViewGeneratedStatementsDialog from '../../../../components/finance/ViewGeneratedStatementsDialog';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchArAgingReport, selectArAging, selectArAgingLoading } from '../../../../store/slices/billingSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+
+import { ReportSelect } from '../../../../components/reports/ui';
 import { reportingService } from '../../../../services/reporting.service';
 
 const AgingReport = () => {
@@ -240,8 +244,11 @@ const AgingReport = () => {
   const filteredReportData = enrichedReportData;
 
   const [archivedDate, setArchivedDate] = useState('');
+  const [archivedReportsList, setArchivedReportsList] = useState([]);
+  const [archivedReportsLoading, setArchivedReportsLoading] = useState(false);
   const [archivedData, setArchivedData] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
+  const [archiveFilterDate, setArchiveFilterDate] = useState(null);
 
   useEffect(() => {
     dispatch(fetchArAgingReport(appliedFilters));
@@ -251,18 +258,38 @@ const AgingReport = () => {
     dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
 
+  useEffect(() => {
+    if (tabValue === 1) {
+      const fetchArchived = async () => {
+        setArchivedReportsLoading(true);
+        try {
+          const list = await reportingService.getArchivedReports();
+          setArchivedReportsList(list.filter(r => r.type === 'aging'));
+        } catch (error) {
+          console.error('Failed to fetch archived reports list', error);
+        } finally {
+          setArchivedReportsLoading(false);
+        }
+      };
+      fetchArchived();
+    }
+  }, [tabValue]);
+
   const handleDateSelect = async (e) => {
-    const date = e.target.value;
-    setArchivedDate(date);
-    if (!date) {
+    const selectedId = e.target.value;
+    const reportItem = archivedReportsList.find(r => r.id === selectedId);
+    
+    if (!selectedId || !reportItem) {
+      setArchivedDate('');
       setArchivedData([]);
       return;
     }
     
+    setArchivedDate(new Date(reportItem.snapshotDate).toLocaleDateString() + ' ' + new Date(reportItem.snapshotDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setArchivedLoading(true);
     try {
-      const data = await reportingService.getFinancialReport('aging', { date });
-      setArchivedData(data);
+      const result = await reportingService.getArchivedReportById(selectedId);
+      setArchivedData(result.data);
     } catch (error) {
       console.error('Failed to fetch archived report', error);
     } finally {
@@ -274,7 +301,7 @@ const AgingReport = () => {
     setTabValue(newValue);
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     const headers = [
       'Flags',
       !hidePatientNames ? 'Patient Name' : null,
@@ -318,6 +345,18 @@ const AgingReport = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // Save snapshot to backend archive
+    try {
+      await reportingService.archiveReport('aging', filteredReportData);
+      if (tabValue === 1) {
+        // Refresh list if currently on archived tab
+        const list = await reportingService.getArchivedReports();
+        setArchivedReportsList(list.filter(r => r.type === 'aging'));
+      }
+    } catch (e) {
+      console.error('Failed to archive report', e);
+    }
   };
 
   const handlePrint = () => {
@@ -332,6 +371,7 @@ const AgingReport = () => {
     printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
     printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
     printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
     printWindow.document.write('</style></head><body>');
     printWindow.document.write('<h2>Aging Report</h2>');
@@ -465,6 +505,7 @@ const AgingReport = () => {
             reportData={filteredReportData}
             hidePatientNames={hidePatientNames}
             agingBuckets={agingBuckets}
+            groupByRange={appliedFilters.arRange === 'any'}
             totals={totals}
             showFlags={appliedFilters.showFlags}
             showPaymentPlan={appliedFilters.paymentPlanOwing}
@@ -476,32 +517,38 @@ const AgingReport = () => {
       ) : (
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Select report by date:</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e2e8f0', pb: 0.5, width: 200 }}>
-              <input 
-                type="date" 
-                value={archivedDate} 
-                onChange={handleDateSelect} 
-                style={{ border: 'none', outline: 'none', width: '100%', color: '#1e293b', fontSize: '0.875rem', backgroundColor: 'transparent' }} 
-              />
-            </Box>
-            {archivedDate && (
+            {!archivedDate && (
+              <>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter reports by date:</Typography>
+                <DatePicker
+                  value={archiveFilterDate}
+                  onChange={(v) => setArchiveFilterDate(v)}
+                  format="MM/DD/YYYY"
+                  slotProps={{ 
+                    popper: { sx: { zIndex: 1400 } },
+                    textField: { 
+                      size: 'small', 
+                      sx: { width: '165px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '8px', height: '40px', backgroundColor: '#fff' }, '& fieldset': { borderColor: '#e2e8f0' } } 
+                    }
+                  }}
+                />
+              </>
+            )}
+            {archiveFilterDate && (
               <Button 
                 variant="outlined" 
                 size="small" 
                 sx={{ textTransform: 'none', py: 0, height: 26, borderColor: '#e2e8f0', color: '#64748b', '&:hover': { bgcolor: '#f8fafc' } }}
                 onClick={() => {
-                  setArchivedDate('');
-                  setArchivedData([]);
+                  setArchiveFilterDate(null);
                 }}
               >
-                Clear / View All
+                Clear
               </Button>
             )}
           </Box>
 
-          {!archivedDate ? (
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f8fafc', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
@@ -509,84 +556,48 @@ const AgingReport = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {[
-                    { date: '2022-07-14', name: 'Report - Jul 14, 2022' },
-                    { date: '2022-07-13', name: 'Report - Jul 13, 2022' },
-                    { date: '2022-07-12', name: 'Report - Jul 12, 2022' },
-                    { date: '2022-07-11', name: 'Report - Jul 11, 2022' },
-                    { date: '2022-07-10', name: 'Report - Jul 10, 2022' },
-                    { date: '2022-07-09', name: 'Report - Jul 09, 2022' },
-                    { date: '2022-07-08', name: 'Report - Jul 08, 2022' },
-                    { date: '2022-07-07', name: 'Report - Jul 07, 2022' },
-                    { date: '2022-07-06', name: 'Report - Jul 06, 2022' },
-                    { date: '2022-07-05', name: 'Report - Jul 05, 2022' },
-                    { date: '2022-07-04', name: 'Report - Jul 04, 2022' },
-                    { date: '2022-07-03', name: 'Report - Jul 03, 2022' },
-                    { date: '2022-07-02', name: 'Report - Jul 02, 2022' },
-                    { date: '2022-07-01', name: 'Report - Jul 01, 2022' },
-                    { date: '2022-06-30', name: 'Report - Jun 30, 2022' },
-                    { date: '2022-06-29', name: 'Report - Jun 29, 2022' },
-                    { date: '2022-06-28', name: 'Report - Jun 28, 2022' },
-                  ].map((report, idx) => (
-                    <TableRow 
-                      key={idx} 
-                      hover
-                      sx={{ 
-                        '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
-                        cursor: 'pointer',
-                        backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff'
-                      }}
-                      onClick={() => handleDateSelect({ target: { value: report.date } })}
-                    >
-                      <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>
-                        {report.name}
-                      </TableCell>
+                  {archivedReportsLoading ? (
+                    <TableRow>
+                      <TableCell align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">Loading archived reports...</Typography></TableCell>
                     </TableRow>
-                  ))}
+                  ) : archivedReportsList.length === 0 ? (
+                    <TableRow>
+                      <TableCell align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No archived reports available.</Typography></TableCell>
+                    </TableRow>
+                  ) : (() => {
+                    const visibleReports = archiveFilterDate && archiveFilterDate.isValid()
+                      ? archivedReportsList.filter(r => new Date(r.snapshotDate).toISOString().split('T')[0] === archiveFilterDate.format('YYYY-MM-DD'))
+                      : archivedReportsList;
+                      
+                    if (visibleReports.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No reports match the selected date.</Typography></TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    return visibleReports.map((report, idx) => {
+                      const dt = new Date(report.snapshotDate);
+                      const formattedName = `Report - ${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                      return (
+                        <TableRow 
+                          key={report.id} 
+                          sx={{ 
+                            '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
+                            backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff'
+                          }}
+                        >
+                          <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>
+                            {formattedName}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </TableContainer>
-          ) : (
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: '#1e293b' }}>
-                Viewing report for date: {archivedDate}
-              </Typography>
-              <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f8fafc', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
-                      <TableCell>Patient Name</TableCell>
-                      <TableCell align="right">Total Owings</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {archivedLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
-                          <Typography variant="body2" color="text.secondary">Loading...</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : archivedData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
-                          <Typography variant="body2" color="text.secondary">No report data found for this date.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : archivedData.map((row, idx) => (
-                      <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', color: '#3b82f6', fontSize: '0.8rem' }}>{row.name}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.totalOwings?.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          )}
         </Box>
       )}
 

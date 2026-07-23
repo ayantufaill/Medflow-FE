@@ -1,10 +1,8 @@
 // Claim type options
 export const CLAIM_TYPES = [
-  { value: 'all', label: 'All' },
-  { value: 'eclaim_primary', label: 'E-claim Primary' },
-  { value: 'eclaim_secondary', label: 'E-claim Secondary' },
-  { value: 'paper_primary', label: 'Paper Primary' },
-  { value: 'manual_primary', label: 'Manual Primary' },
+  { value: 'all', label: 'Both' },
+  { value: 'E-claim', label: 'Electronic claims' },
+  { value: 'Manual', label: 'Manual claim' },
 ];
 
 // Carrier options

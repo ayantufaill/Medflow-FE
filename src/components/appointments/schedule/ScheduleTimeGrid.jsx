@@ -238,7 +238,7 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick }) => {
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode }) => {
   const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
   
   // Create two droppable zones for the hour: top half (0 mins) and bottom half (30 mins)
@@ -253,6 +253,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
   return (
     <Box
       onClick={(e) => {
+        if (isCloseOpenDayMode || isClosed) return; // Disallow booking interactions while in toggle mode or if column is closed
         e.stopPropagation();
         const rect = e.currentTarget.getBoundingClientRect();
         const y = e.clientY - rect.top;
@@ -269,11 +270,17 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
         flexShrink: 0,
         borderLeft: `1px solid ${COLORS.BORDER}`,
         position: "relative",
-        cursor: "pointer",
+        cursor: isCloseOpenDayMode ? "default" : (isClosed ? "not-allowed" : "pointer"),
         display: "flex",
         flexDirection: "column",
+        backgroundColor: isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
+        backgroundImage: isClosed ? 'repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.02) 75%, rgba(0,0,0,0.02)), repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.02) 75%, rgba(0,0,0,0.02))' : 'none',
+        backgroundPosition: '0 0, 10px 10px',
+        backgroundSize: '20px 20px',
         "&:hover": {
-          backgroundColor: "rgba(34, 98, 239, 0.04)",
+          backgroundColor: isCloseOpenDayMode 
+            ? (isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent') 
+            : "rgba(34, 98, 239, 0.04)",
         },
         "&::after": {
           content: '""',
@@ -355,7 +362,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
   );
 };
 
-const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMode }) => {
+const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, scheduleBlocks, privacyMode, showGhosted, isCloseOpenDayMode, closedOperatories = {} }) => {
   const dispatch = useDispatch();
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
@@ -369,10 +376,12 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
     return () => window.removeEventListener('click', handleClickOutside);
   }, [activeCell]);
 
-  const { rooms, providers } = useDropdownData({
-    rooms: true,
+  const { rooms: fetchedRooms, providers } = useDropdownData({
+    rooms: !propRooms,
     providers: true,
   });
+
+  const rooms = propRooms || fetchedRooms;
 
   // Convert the ISO date string to a dayjs object for date arithmetic.
   const dayjsDate = dayjs(selectedDate);
@@ -455,8 +464,10 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
           ? (apptDate >= weekStart && apptDate <= weekEnd)
           : (apptDate === targetDate);
 
-        const isNotPending = String(appt.status).toLowerCase() !== 'pending';
-        if (!isDateValid || !isNotPending) return false;
+        const statusStr = String(appt.status).toLowerCase();
+        if (statusStr === 'pending') return false;
+        if (!showGhosted && (statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken')) return false;
+        if (!isDateValid) return false;
 
         // Apply visual frontend filters
         if (providerId !== 'All') {
@@ -475,6 +486,13 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
     const blocks = scheduleBlocks.map(block => {
       if (!block.startTime || !block.endTime) return null;
       
+      const blockDate = dayjs(block.date).format("YYYY-MM-DD");
+      const isBlockDateValid = isWeek 
+        ? (blockDate >= weekStart && blockDate <= weekEnd)
+        : (blockDate === targetDate);
+
+      if (!isBlockDateValid) return null;
+
       const startH = parseInt(block.startTime.split(':')[0], 10);
       const startM = parseInt(block.startTime.split(':')[1], 10);
       const endH = parseInt(block.endTime.split(':')[0], 10);
@@ -549,18 +567,26 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
           </Box>
 
           {/* One cell per column */}
-          {activeColumns.map((col, idx) => (
-            <DroppableCell 
-              key={col._id || col.id || idx}
-              hour={hour}
-              room={col}
-              idx={idx}
-              activeCell={activeCell}
-              setActiveCell={setActiveCell}
-              onSlotClick={onSlotClick}
-              onBlockClick={onBlockClick}
-            />
-          ))}
+          {activeColumns.map((col, idx) => {
+            const roomId = `op${col._id || col.id}`;
+            const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
+            const isClosed = closedOperatories[`${dateStr}:${roomId}`];
+
+            return (
+              <DroppableCell 
+                key={col._id || col.id || idx}
+                hour={hour}
+                room={col}
+                idx={idx}
+                activeCell={activeCell}
+                setActiveCell={setActiveCell}
+                onSlotClick={onSlotClick}
+                onBlockClick={onBlockClick}
+                isClosed={isClosed}
+                isCloseOpenDayMode={isCloseOpenDayMode}
+              />
+            );
+          })}
         </Box>
       ))}
 
@@ -607,6 +633,14 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
           // to prevent perfect overlap if same time, we could add a slight offset but it's okay for now.
         }
 
+        const statusStr = String(gridItem.status || '').toLowerCase();
+        const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
+
+        if (isGhosted) {
+          pos.left = pos.left + pos.width / 2;
+          pos.width = pos.width / 2;
+        }
+
         return (
           <Box
             key={gridItem.id + i}
@@ -616,7 +650,7 @@ const ScheduleTimeGrid = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
               height: pos.height,
               left: pos.left,
               width: pos.width,
-              zIndex: 2,
+              zIndex: isGhosted ? 3 : 2,
             }}
           >
             {isWeek ? (

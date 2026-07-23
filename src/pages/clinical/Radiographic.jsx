@@ -410,7 +410,7 @@ const Radiographic = () => {
             <CircularProgress />
           </Box>
         </Box>
-        <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', pt: 1 }}>
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column', pt: 1 }}>
           <RightPanel hideAppointmentShortlist />
         </Box>
       </Box>
@@ -483,7 +483,7 @@ const Radiographic = () => {
             </Box>
 
             {/* Main 2-Column Layout: Findings Sidebar + Tooth Chart */}
-            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%' }}>
+            <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
               <Box sx={{ display: 'flex', gap: 2, width: '100%', flexWrap: { xs: 'wrap', lg: 'nowrap' } }}>
                 {/* Left Column - Findings Sidebar */}
                 <FindingsSidebar
@@ -543,7 +543,7 @@ const Radiographic = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ width: 300, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
         <RightPanel hideAppointmentShortlist />
       </Box>
 

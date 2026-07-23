@@ -4,6 +4,17 @@ const capitalizeFirstLetter = (string) => {
   if (!string) return string;
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
+
+const parseQuestionOptions = (questionText) => {
+  if (!questionText) return { cleanQuestion: '', options: null };
+  const match = questionText.match(/\(Options:\s*(.*?)\)/);
+  if (match) {
+    const options = match[1].split(',').map(s => s.trim());
+    const cleanQuestion = questionText.replace(/\s*\(Options:\s*.*?\)/, '');
+    return { cleanQuestion, options };
+  }
+  return { cleanQuestion: questionText, options: null };
+};
 import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, TextField, InputAdornment, IconButton, Radio, FormControlLabel, MenuItem } from "@mui/material";
 import {
   AssignmentOutlined as PersonalHistoryIcon,
@@ -46,10 +57,16 @@ const SeverityBadge = ({ severity }) => {
 };
 
 const AnswerPill = ({ answer }) => {
-  const style = CONDITION_ANSWER_STYLES[(answer || "").toLowerCase()];
-  if (!style) {
-    return <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, textAlign: "center" }}>—</Typography>;
+  const answerLower = (answer || "").toLowerCase();
+  const isNo = answerLower === 'no';
+  const isNotAnswered = answerLower === 'not answered' || answerLower === '';
+  const isYes = !isNo && !isNotAnswered;
+
+  if (isNotAnswered) {
+    return <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, textAlign: "center", color: COLORS.TEXT_MUTED }}>not answered</Typography>;
   }
+
+  const style = isYes ? CONDITION_ANSWER_STYLES.yes : CONDITION_ANSWER_STYLES.no;
   return (
     <Box
       sx={{
@@ -110,12 +127,38 @@ const FieldBox = ({ label, value, onChange, placeholder, multiline, minRows, max
 );
 
 import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
-import { RadioGroup, Button } from "@mui/material";
+import { RadioGroup, Button, Checkbox, FormGroup } from "@mui/material";
 
 const MedicalAccordionRow = ({ section, index, onSectionChange }) => {
   const [expanded, setExpanded] = useState(false);
   const onToggle = () => setExpanded(!expanded);
+  
+  const answerLower = (section.answer || "").toLowerCase();
+  const isPositive = answerLower !== 'no' && answerLower !== 'not answered' && answerLower !== '';
+
   const severityColor = SEVERITY_STYLES[(section.severity || "").toLowerCase()]?.color;
+  const { cleanQuestion, options } = parseQuestionOptions(section.question);
+
+  const selectedOptions = options && isPositive && answerLower !== 'yes'
+    ? section.answer.split(',').map(s => s.trim())
+    : [];
+
+  const handleOptionChange = (option, checked) => {
+    if (checked) {
+      const newOptions = [...selectedOptions, option];
+      onSectionChange(section.id || section.number || index, "answer", newOptions.join(', '));
+    } else {
+      const newOptions = selectedOptions.filter(o => o !== option);
+      if (newOptions.length === 0) {
+        // If all options are unchecked, the answer becomes 'No' (or could be 'Yes' depending on preference, 
+        // but typically unchecking all means no issues). Let's default to 'not answered' or 'No'.
+        // We'll set it to 'No' so it resolves the question.
+        onSectionChange(section.id || section.number || index, "answer", "No");
+      } else {
+        onSectionChange(section.id || section.number || index, "answer", newOptions.join(', '));
+      }
+    }
+  };
 
   return (
     <Box sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
@@ -125,29 +168,50 @@ const MedicalAccordionRow = ({ section, index, onSectionChange }) => {
       >
         <RowNumber number={section.number || index + 1} />
         <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          {capitalizeFirstLetter(section.question)}
+          {capitalizeFirstLetter(cleanQuestion)}
         </Typography>
-        {severityColor && section.answer?.toLowerCase() === 'yes' && <LegendDot color={severityColor} />}
+        {severityColor && isPositive && <LegendDot color={severityColor} />}
         <AnswerPill answer={section.answer} />
         <ExpandMoreIcon sx={{ fontSize: 20, color: COLORS.TEXT_MUTED, transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
       </Box>
 
       {expanded && (
         <Box sx={{ px: 2, pb: 2, backgroundColor: COLORS.SURFACE_TINT }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, pt: 1 }}>
-            <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase" }}>Answer:</Typography>
-            <RadioGroup
-              row
-              value={section.answer?.toLowerCase() === 'yes' ? 'yes' : 'no'}
-              onChange={(e) => onSectionChange(section.id || section.number || index, "answer", e.target.value === 'yes' ? 'Yes' : 'No')}
-            >
-              <FormControlLabel value="yes" control={<Radio size="small" />} label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter" }}>Yes</Typography>} />
-              <FormControlLabel value="no" control={<Radio size="small" />} label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter" }}>No</Typography>} />
-            </RadioGroup>
-          </Box>
+          {options ? (
+            <Box sx={{ mb: 3, pt: 1, ml: 4 }}>
+              <FormGroup>
+                {options.map(opt => (
+                  <FormControlLabel
+                    key={opt}
+                    control={
+                      <Checkbox 
+                        size="small" 
+                        checked={selectedOptions.includes(opt)}
+                        onChange={(e) => handleOptionChange(opt, e.target.checked)}
+                        sx={{ p: 0.5 }}
+                      />
+                    }
+                    label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter", color: COLORS.TEXT_PRIMARY }}>{opt}</Typography>}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, pt: 1 }}>
+              <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase" }}>Answer:</Typography>
+              <RadioGroup
+                row
+                value={isPositive ? 'yes' : (answerLower === 'no' ? 'no' : '')}
+                onChange={(e) => onSectionChange(section.id || section.number || index, "answer", e.target.value === 'yes' ? 'Yes' : 'No')}
+              >
+                <FormControlLabel value="yes" control={<Radio size="small" />} label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter" }}>Yes</Typography>} />
+                <FormControlLabel value="no" control={<Radio size="small" />} label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter" }}>No</Typography>} />
+              </RadioGroup>
+            </Box>
+          )}
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-              {(section.answer && section.answer.toLowerCase() === 'yes') && (
+              {isPositive && (
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
                   <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                     Severity
@@ -263,11 +327,22 @@ const MedicalSummarySection = ({
 
   const filteredSections = useMemo(() => {
     return summarySections.filter((section) => {
-      if (flaggedOnly && (section.answer || "").toLowerCase() !== "yes") return false;
-      if (searchQuery && !(section.question || "").toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      const answerLower = (section.answer || "").toLowerCase();
+      const isPositive = answerLower !== 'no' && answerLower !== 'not answered' && answerLower !== '';
+      
+      const hasNote = !!(section.comment || section.doctorNote || section.additionalInfo || section.scale);
+
+      if (historyTab === 0) {
+        if (!isPositive && !hasNote) return false;
+      } else {
+        if (flaggedOnly && !isPositive) return false;
+      }
+      
+      const { cleanQuestion } = parseQuestionOptions(section.question);
+      if (searchQuery && !(cleanQuestion || "").toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [summarySections, flaggedOnly, searchQuery]);
+  }, [summarySections, flaggedOnly, searchQuery, historyTab]);
 
   return (
     <SectionCard
@@ -353,9 +428,13 @@ const MedicalSummarySection = ({
                       <Box>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
-                            {capitalizeFirstLetter(section.question) || "No question available"}
+                            {capitalizeFirstLetter(parseQuestionOptions(section.question).cleanQuestion) || "No question available"}
                           </Typography>
-                          {section.answer?.toLowerCase() === 'yes' && <SeverityBadge severity={section.severity} />}
+                          {(() => {
+                            const answerLower = (section.answer || "").toLowerCase();
+                            const isPositive = answerLower !== 'no' && answerLower !== 'not answered' && answerLower !== '';
+                            return isPositive && <SeverityBadge severity={section.severity} />;
+                          })()}
                         </Box>
                         {section.scale && (
                           <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>

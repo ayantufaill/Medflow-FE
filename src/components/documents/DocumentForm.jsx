@@ -303,6 +303,19 @@ const DocumentForm = ({
       if (isEditMode && initialData?._id) {
         await documentService.updateDocument(initialData._id, documentData);
         showSnackbar('Document updated successfully', 'success');
+      } else if (selectedFile) {
+        const uploadData = new FormData();
+        uploadData.append('file', selectedFile);
+        uploadData.append('patientId', formData.patientId);
+        uploadData.append('documentType', formData.documentType || 'other');
+        uploadData.append('documentName', sanitizeFileName(formData.documentName.trim()));
+        if (formData.appointmentId) uploadData.append('appointmentId', formData.appointmentId);
+        if (formData.description?.trim()) uploadData.append('description', formData.description.trim());
+        if (formData.isConfidential) uploadData.append('isConfidential', 'true');
+        if (formData.tags?.length) uploadData.append('tags', Array.isArray(formData.tags) ? formData.tags.join(',') : formData.tags);
+
+        await documentService.uploadDocument(uploadData);
+        showSnackbar('Document uploaded successfully', 'success');
       } else {
         await documentService.createDocument(documentData);
         showSnackbar('Document created successfully', 'success');
@@ -344,7 +357,7 @@ const DocumentForm = ({
 
   return (
     <form onSubmit={handleSubmit}>
-      <Grid container spacing={3}>
+      <Grid container spacing={1.5}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Autocomplete
             options={patients}
@@ -425,7 +438,7 @@ const DocumentForm = ({
               startIcon={<UploadIcon />}
               fullWidth
               sx={{
-                p: 2,
+                p: 1,
                 justifyContent: 'flex-start',
                 borderStyle: errors.file ? 'solid' : 'dashed',
                 borderColor: errors.file ? 'error.main' : 'divider',
@@ -456,7 +469,7 @@ const DocumentForm = ({
           <TextField
             fullWidth
             multiline
-            minRows={3}
+            minRows={1}
             maxRows={10}
             label="Description"
             value={formData.description}

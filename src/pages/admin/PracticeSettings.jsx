@@ -1,6 +1,25 @@
 import { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import AI from '../../components/admin/practice-setup/practice-settings/AI';
+import AgingReport from '../../components/admin/practice-setup/practice-settings/AgingReport';
+import AutomatedWorkflows from '../../components/admin/practice-setup/practice-settings/AutomatedWorkflows';
+import ClaimManagement from '../../components/admin/practice-setup/practice-settings/ClaimManagement';
+import Communication from '../../components/admin/practice-setup/practice-settings/Communication';
+import ExamPageItems from '../../components/admin/practice-setup/practice-settings/ExamPageItems';
+import General from '../../components/admin/practice-setup/practice-settings/General';
+import ImagingSettings from '../../components/admin/practice-setup/practice-settings/ImagingSettings';
+import Insurance from '../../components/admin/practice-setup/practice-settings/Insurance';
+import MenuItems from '../../components/admin/practice-setup/practice-settings/MenuItems';
+import PatientConfidentialInfo from '../../components/admin/practice-setup/practice-settings/PatientConfidentialInfo';
+import Reports from '../../components/admin/practice-setup/practice-settings/Reports';
+import Templates from '../../components/admin/practice-setup/practice-settings/Templates';
+import TextEditors from '../../components/admin/practice-setup/practice-settings/TextEditors';
+import TimeClock from '../../components/admin/practice-setup/practice-settings/TimeClock';
+import TreatmentPlanPage from '../../components/admin/practice-setup/practice-settings/TreatmentPlanPage';
+import TreatmentPrintoutForm from '../../components/admin/practice-setup/practice-settings/TreatmentPrintoutForm';
+import { SettingsContext } from '../../components/admin/practice-setup/practice-settings/SharedSettings';
+
 import {
   fetchCurrentPracticeInfo,
   createPracticeInfo,
@@ -31,141 +50,14 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 
-// ─── Section anchor IDs ────────────────────────────────────────────────────────
-const SECTIONS = [
-  { id: 'ai',                       label: 'AI' },
-  { id: 'aging-report',             label: 'Aging Report' },
-  { id: 'automated-workflows',      label: 'Automated Workflows' },
-  { id: 'claim-management',         label: 'Claim Management' },
-  { id: 'communication',            label: 'Communication' },
-  { id: 'exam-page-items',          label: 'Exam Page Items' },
-  { id: 'general',                  label: 'General' },
-  { id: 'imaging-settings',         label: 'Imaging Settings' },
-  { id: 'insurance-nea-vyne',       label: 'Insurance (NEA/Vyne)' },
-  { id: 'menu-items',               label: 'Menu Items' },
-  { id: 'patient-confidential-info', label: 'Patient Confidential Info' },
-  { id: 'reports',                   label: 'Reports' },
-  { id: 'templates',                 label: 'Templates (Emails/Texts)' },
-  { id: 'text-editors',              label: 'Text Editors' },
-  { id: 'time-clock',                label: 'Time Clock' },
-  { id: 'treatment-plan-page',       label: 'Treatment Plan Page' },
-  { id: 'treatment-printout-form',   label: 'Treatment Printout Form' },
-];
 
-const SettingsContext = createContext(null);
 
-// ─── Reusable atoms ────────────────────────────────────────────────────────────
 
-const SectionHeader = ({ id, label }) => (
-  <Box id={id} sx={{ pt: 1, pb: 0.5 }}>
-    <Typography variant="body1" fontWeight={500} color="text.secondary" sx={{ mb: 0.75 }}>
-      {label}
-    </Typography>
-    <Divider />
-  </Box>
-);
-
-const InfoIcon = () => (
-  <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled', ml: 0.5, verticalAlign: 'middle' }} />
-);
-
-/** Checkbox row — blue text when checked */
-const SettingCheckbox = ({ label, defaultChecked = false, info = false }) => {
-  const ctx = useContext(SettingsContext);
-  const checked = ctx?.settings[label] !== undefined ? ctx.settings[label] : defaultChecked;
-  return (
-    <FormControlLabel
-      control={
-        <Checkbox
-          size="small"
-          checked={checked}
-          onChange={(e) => ctx?.handleChange(label, e.target.checked)}
-          sx={{ py: 0.5 }}
-        />
-      }
-      label={
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ color: checked ? 'primary.main' : 'text.primary' }}>
-            {label}
-          </Typography>
-          {info && (
-            <Tooltip title="More info" placement="right">
-              <span><InfoIcon /></span>
-            </Tooltip>
-          )}
-        </Box>
-      }
-      sx={{ display: 'flex', ml: 0, my: 0.25 }}
-    />
-  );
-};
-
-/** Toggle row with inline number input */
-const SettingToggle = ({ label, defaultValue, defaultOn = true }) => {
-  const ctx = useContext(SettingsContext);
-  const on = ctx?.settings[`${label}_on`] !== undefined ? ctx.settings[`${label}_on`] : defaultOn;
-  const val = ctx?.settings[`${label}_val`] !== undefined ? ctx.settings[`${label}_val`] : defaultValue;
-  
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.5 }}>
-      <Switch size="small" checked={on} onChange={(e) => ctx?.handleChange(`${label}_on`, e.target.checked)} color="success" />
-      <Typography variant="body2" sx={{ flex: 1 }}>{label}</Typography>
-      {defaultValue !== undefined && (
-        <TextField
-          variant="standard"
-          value={val}
-          onChange={(e) => ctx?.handleChange(`${label}_val`, e.target.value)}
-          inputProps={{ style: { width: 28, textAlign: 'center', fontSize: '0.85rem' } }}
-          sx={{ width: 36 }}
-        />
-      )}
-    </Box>
-  );
-};
-
-/** Inline label + number field row (blue label) */
-const SettingInlineNumber = ({ label, defaultValue, info = false }) => {
-  const ctx = useContext(SettingsContext);
-  const val = ctx?.settings[label] !== undefined ? ctx.settings[label] : defaultValue;
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
-      <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>{label}</Typography>
-      <TextField
-        variant="standard"
-        value={val}
-        onChange={(e) => ctx?.handleChange(label, e.target.value)}
-        inputProps={{ style: { width: 36, textAlign: 'center', fontSize: '0.85rem' } }}
-        sx={{ width: 44 }}
-      />
-      {info && <Tooltip title="More info" placement="right"><span><InfoIcon /></span></Tooltip>}
-    </Box>
-  );
-};
-
-/** Inline label + select dropdown */
-const SettingInlineSelect = ({ label, options, defaultValue, info = false }) => {
-  const ctx = useContext(SettingsContext);
-  const val = ctx?.settings[label] !== undefined ? ctx.settings[label] : defaultValue;
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, my: 0.75 }}>
-      <Typography variant="body2" color="primary.main">{label}</Typography>
-      <FormControl variant="standard" sx={{ minWidth: 200 }}>
-        <Select value={val} onChange={(e) => ctx?.handleChange(label, e.target.value)} sx={{ fontSize: '0.85rem' }}>
-          {options.map((o) => (
-            <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.85rem' }}>{o.label}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      {info && <Tooltip title="More info" placement="right"><span><InfoIcon /></span></Tooltip>}
-    </Box>
-  );
-};
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PracticeSettings = () => {
   const [search, setSearch]         = useState('');
-  const [airwayExam, setAirwayExam] = useState('fairest'); // Will keep local for simplicity as it's custom below
   const contentRef                  = useRef(null);
   const { showSnackbar } = useSnackbar();
   
@@ -207,449 +99,163 @@ const PracticeSettings = () => {
     }
   };
 
-  const scrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+
 
   return (
     <SettingsContext.Provider value={{ settings, handleChange }}>
-      <Box sx={{ display: 'flex', gap: 3, position: 'relative' }}>
-        {/* ── Main content ── */}
-        <Box ref={contentRef} sx={{ flex: 1, minWidth: 0 }}>
-
-          {/* Breadcrumb + Search */}
-          <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography
-              variant="caption"
-              component={RouterLink}
-              to="/admin/practice-setup"
-              sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-            >
-              Practice Setup
-            </Typography>
-            <Typography variant="caption" color="text.secondary">{'>'}</Typography>
-            <Typography variant="caption" color="text.secondary">Practice Settings</Typography>
-          </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <TextField
-                size="small"
-                placeholder="Search Settings"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ width: 220 }}
-              />
-              <Button 
-                variant="contained" 
-                color="success" 
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                sx={{ borderRadius: 5, textTransform: 'none', px: 3 }}
-              >
-                Save
-              </Button>
+      <Box 
+        sx={{ 
+          bgcolor: '#F4F5F7', 
+          borderRadius: '12px', 
+          border: '1px solid #e0e0e0', 
+          p: { xs: 2, sm: 3, md: 4 },
+          fontFamily: '"Segoe UI", sans-serif'
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 3, position: 'relative' }}>
+          {/* ── Main content ── */}
+          <Box ref={contentRef} sx={{ flex: 1, minWidth: 0 }}>
+  
+            {/* Header + Search */}
+            <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="h6" fontWeight="bold" color="#11223F">
+                Practice Settings
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <TextField
+                  size="small"
+                  placeholder="Search settings"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" sx={{ color: '#9CA3AF' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ 
+                    width: '220px',
+                    '& .MuiOutlinedInput-root': {
+                      height: '31.33px',
+                      borderRadius: '8px',
+                      bgcolor: '#F9FAFB',
+                      fontSize: '12px',
+                    }
+                  }}
+                />
+                <Button 
+                  variant="contained" 
+                  startIcon={<SaveIcon sx={{ width: 14, height: 14 }} />}
+                  onClick={handleSave}
+                  sx={{ 
+                    width: '166.59px',
+                    height: '30.67px',
+                    borderRadius: '8px', 
+                    bgcolor: '#3B63E0',
+                    textTransform: 'none', 
+                    fontSize: '12px',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      bgcolor: '#2f51bd',
+                      boxShadow: 'none'
+                    }
+                  }}
+                >
+                  Save Configuration
+                </Button>
+              </Box>
             </Box>
-          </Box>
 
-        {/* ── AI ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="ai" label="AI" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Enable Audio Denoising" defaultChecked info />
-            <SettingCheckbox label="Enable Transcription Validation" defaultChecked info />
+        {/* ── First Row: AI & Aging Report ── */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+          <Box id="ai" sx={{ width: { xs: '100%', md: '30%' }, flexShrink: 0 }}>
+            <AI />
           </Box>
-        </Box>
-
-        {/* ── Aging Report ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="aging-report" label="Aging report" />
+          <Box id="aging-report" sx={{ flex: 1, minWidth: 0 }}>
+            <AgingReport />
+          </Box>
         </Box>
 
         {/* ── Automated Workflows ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="automated-workflows" label="Automated Workflows" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingToggle
-              label="Automate Consent Form Creation and Sharing X Days Before Appointment"
-              defaultValue={3}
-            />
-            <SettingToggle
-              label="Automatically request medical history updates X days prior to appointment"
-              defaultValue={5}
-            />
-            <SettingToggle
-              label="Send Unsigned Consent Forms Reminder X Days Before Appointment"
-              defaultValue={1}
-            />
-          </Box>
+        <Box id="automated-workflows" sx={{ mb: 4 }}>
+          <AutomatedWorkflows />
         </Box>
 
         {/* ── Claim Management ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="claim-management" label="Claim Management" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Allow Custom Codes In Claims" />
-            <SettingCheckbox label="Disallow Deactivating Patient Policy if it has unclosed Claims." info />
-            <SettingCheckbox label="Enable $0 Procedures in Claim Submission" defaultChecked />
-            <SettingCheckbox label="Enable claims auto-attachment" defaultChecked />
-            <SettingCheckbox label="Hide Subscriber Signature From Manual Claim" />
-            <SettingCheckbox label="Include Pearl Annotations In Claim Attachments" defaultChecked />
-            <SettingCheckbox label="Only display the total fee on the last page for multi-page claims." />
-            <SettingCheckbox label="Print a Doctor & Patient copy for EOB" defaultChecked info />
-          </Box>
+        <Box id="claim-management" sx={{ mb: 4 }}>
+          <ClaimManagement />
         </Box>
 
         {/* ── Communication ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="communication" label="Communication" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Add calendar invitation to appointment reminders" defaultChecked />
-            <SettingCheckbox label="Include confirmations messages in the patient notifications pop-up" />
-            <SettingCheckbox label="Include unread messages only in the patient notifications pop-up" defaultChecked />
-            <SettingCheckbox label="Show phone call pop-up when having unread confirmation messages" />
-            <SettingInlineNumber label="Hide the Caller Id Popup After # of seconds" defaultValue={5} info />
-          </Box>
+        <Box id="communication" sx={{ mb: 4 }}>
+          <Communication />
         </Box>
 
         {/* ── Exam Page Items ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="exam-page-items" label="Exam Page Items" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Create Progress Note From Mango AI Summary" info />
-            <SettingCheckbox label="Generate progress notes for new exams without an existing progress note" defaultChecked />
-            <SettingCheckbox label="Show Airway Exam" defaultChecked />
-            <SettingCheckbox label="Show Clinical Exam for Pediatric Patients" />
-            <SettingCheckbox label="Show Dentofacial Exam" defaultChecked />
-            <SettingCheckbox label="Show Head & Neck Exam" defaultChecked />
-            <SettingCheckbox label="Show Morphological Exam" defaultChecked />
-            <SettingCheckbox label="Show Periodontal Exam" defaultChecked />
-            <SettingCheckbox label="Show Radiographic Exam" defaultChecked />
-            <SettingCheckbox label="Show TMJ Exam" defaultChecked />
-            <SettingCheckbox label="Show Tooth Structure Exam" defaultChecked />
-
-            <SettingInlineSelect
-              label="Use Google Speech To Text"
-              options={[
-                { value: 'model2', label: 'Model 2' },
-                { value: 'model1', label: 'Model 1' },
-              ]}
-              defaultValue="model2"
-            />
-
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                Select which airway exam to display
-              </Typography>
-              <RadioGroup
-                row
-                value={airwayExam}
-                onChange={(e) => setAirwayExam(e.target.value)}
-              >
-                <FormControlLabel
-                  value="fairest"
-                  control={<Radio size="small" />}
-                  label={<Typography variant="body2">FAIrEST 15</Typography>}
-                />
-                <FormControlLabel
-                  value="orofacial"
-                  control={<Radio size="small" />}
-                  label={<Typography variant="body2">Orofacial Airway Screener</Typography>}
-                />
-              </RadioGroup>
-            </Box>
-          </Box>
+        <Box id="exam-page-items" sx={{ mb: 4 }}>
+          <ExamPageItems />
         </Box>
 
         {/* ── General ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="general" label="General" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Hide Pearl Advertisement" />
-            <SettingCheckbox label="Show Dentists on Hygienist list on Patient Info Page" />
-            <SettingCheckbox label="Show Outbound Calls" />
-            <SettingCheckbox label="Show Patient ID next to patient name in header." />
-            <SettingCheckbox label="Use Insurance New Design as Default" defaultChecked />
-            <SettingInlineNumber
-              label="Consider medical history outdated after X months from the last review"
-              defaultValue={11}
-            />
-            <SettingInlineNumber
-              label="Session Expiration Duration (minutes)"
-              defaultValue={60}
-              info
-            />
-            <SettingInlineSelect
-              label="Custom Date Format"
-              options={[
-                { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
-                { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
-                { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
-              ]}
-              defaultValue="MM/DD/YYYY"
-              info
-            />
-          </Box>
+        <Box id="general" sx={{ mb: 4 }}>
+          <General />
         </Box>
 
         {/* ── Imaging Settings ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="imaging-settings" label="Imaging Settings" />
+        <Box id="imaging-settings" sx={{ mb: 4 }}>
+          <ImagingSettings />
         </Box>
 
         {/* ── Insurance (for NEA/Vyne offices) ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="insurance-nea-vyne" label="Insurance (for NEA/Vyne offices)" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Allow Sending Quads as Teeth for Claims" defaultChecked info />
-            <SettingCheckbox label="Allow Submission of Claims/Preds with no Attachments" defaultChecked info />
-            <SettingCheckbox label="Allow Submission of Secondary Claims without Primary Claim Insurance Payment Amount" info />
-            <SettingCheckbox label="Allow Submission of Secondary Claims without Primary Claim Remittance Date" info />
-            <SettingCheckbox label="Automatically apply payment based on ERA report (beta)" info />
-            <SettingCheckbox label="Display Eligibility Response in Vyne HTML Format" defaultChecked info />
-            <SettingCheckbox label="Use Tesia Payer Procedure Requirements" defaultChecked info />
-            <SettingInlineNumber label="Eligibility Data-Validity Duration" defaultValue={14} info />
-          </Box>
+        <Box id="insurance-nea-vyne" sx={{ mb: 4 }}>
+          <Insurance />
         </Box>
 
         {/* ── Menu Items ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="menu-items" label="Menu Items" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Show Adjunctive Therapy menu item under Clinical menu" defaultChecked />
-            <SettingCheckbox label="Show Dental History menu item under Patient menu" defaultChecked />
-            <SettingCheckbox label="Show Diagnostic Opinion menu item under Clinical menu" defaultChecked />
-            <SettingCheckbox label="Show ETrans menu item under Finance menu" />
-            <SettingCheckbox label="Show Home Care menu item under Patient Reports menu" defaultChecked />
-            <SettingCheckbox label="Show Medical History menu item under Patient menu" defaultChecked />
-            <SettingCheckbox label="Show Pedo Dental History menu item under Patient menu" defaultChecked />
-            <SettingCheckbox label="Show Pedo Medical History menu item under Patient menu" defaultChecked />
-            <SettingCheckbox label="Show Responses for Deleted Questionnaires" />
-            <SettingCheckbox label="Show Risk Assessment menu item under Patient Reports menu" defaultChecked />
-            <SettingCheckbox label="Show Scans menu item under Ancillary Tests menu" defaultChecked />
-            <SettingCheckbox label="Show Showcase menu item under Patient Reports menu" defaultChecked />
-          </Box>
+        <Box id="menu-items" sx={{ mb: 4 }}>
+          <MenuItems />
         </Box>
 
         {/* ── Patient Confidential Info ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="patient-confidential-info" label="Patient Confidential Info" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Additional Info (for pedo only)" defaultChecked />
-            <SettingCheckbox label="Emergency Contact Information" defaultChecked />
-            <SettingCheckbox label="Home Phone Number" defaultChecked />
-            <SettingCheckbox label="Marital Status" defaultChecked />
-            <SettingCheckbox label="Release Information" defaultChecked />
-            <SettingCheckbox label="Spouse Information" defaultChecked />
-            <SettingCheckbox label="Title" defaultChecked />
-            <SettingCheckbox label="Work Phone Number" defaultChecked />
-          </Box>
+        <Box id="patient-confidential-info" sx={{ mb: 4 }}>
+          <PatientConfidentialInfo />
         </Box>
 
         {/* ── Reports ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="reports" label="Reports" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Compute Production Per Hour Based On Schedule" info />
-            <SettingCheckbox label="View the row number for all reports" />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
-              <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>
-                The Production &amp; Collection report will be generated at the selected business day of the month
-              </Typography>
-              <FormControl variant="standard" sx={{ minWidth: 60 }}>
-                <Select 
-                  value={settings['Production & Collection Report Day'] || "5"}
-                  onChange={(e) => handleChange('Production & Collection Report Day', e.target.value)}
-                  sx={{ fontSize: '0.85rem' }}
-                >
-                  {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-                    <MenuItem key={n} value={String(n)} sx={{ fontSize: '0.85rem' }}>{n}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Tooltip title="More info" placement="right"><span><InfoIcon /></span></Tooltip>
-            </Box>
-          </Box>
+        <Box id="reports" sx={{ mb: 4 }}>
+          <Reports />
         </Box>
 
         {/* ── Templates (Emails/Texts) ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="templates" label="Templates (Emails/Texts)" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Add Default Sms Footer" defaultChecked info />
-          </Box>
+        <Box id="templates" sx={{ mb: 4 }}>
+          <Templates />
         </Box>
 
         {/* ── Text Editors ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="text-editors" label="Text Editors" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            {/* Font size */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
-              <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>
-                Default Font Size for Text Editors
-              </Typography>
-              <TextField
-                variant="standard"
-                value={settings['Default Font Size for Text Editors'] || "10"}
-                onChange={(e) => handleChange('Default Font Size for Text Editors', e.target.value)}
-                inputProps={{ style: { width: 36, textAlign: 'center', fontSize: '0.85rem' } }}
-                sx={{ width: 44 }}
-              />
-              <Typography variant="body2" color="text.secondary">pt</Typography>
-            </Box>
-
-            {/* Font family */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
-              <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>
-                Default Font Family for Text Editors
-              </Typography>
-              <FormControl variant="standard" sx={{ minWidth: 200 }}>
-                <Select 
-                  value={settings['Default Font Family for Text Editors'] || "lato"}
-                  onChange={(e) => handleChange('Default Font Family for Text Editors', e.target.value)}
-                  sx={{ fontSize: '0.85rem' }}
-                >
-                  <MenuItem value="lato" sx={{ fontSize: '0.85rem' }}>Lato</MenuItem>
-                  <MenuItem value="arial" sx={{ fontSize: '0.85rem' }}>Arial</MenuItem>
-                  <MenuItem value="times" sx={{ fontSize: '0.85rem' }}>Times New Roman</MenuItem>
-                  <MenuItem value="roboto" sx={{ fontSize: '0.85rem' }}>Roboto</MenuItem>
-                </Select>
-              </FormControl>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                Preview Text
-              </Typography>
-            </Box>
-
-            {/* Font color */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
-              <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>
-                Default Font Color for Text Editors
-              </Typography>
-              <Box
-                component="input"
-                type="color"
-                value={settings['Default Font Color for Text Editors'] || "#000000"}
-                onChange={(e) => handleChange('Default Font Color for Text Editors', e.target.value)}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  border: '1px solid #ccc',
-                  borderRadius: '2px',
-                  padding: 0,
-                  cursor: 'pointer',
-                  backgroundColor: 'transparent',
-                }}
-              />
-            </Box>
-          </Box>
+        <Box id="text-editors" sx={{ mb: 4 }}>
+          <TextEditors />
         </Box>
 
         {/* ── Time Clock ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="time-clock" label="Time Clock" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Allow Users To Edit Time Clock Records" />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 0.75 }}>
-              <Typography variant="body2" color="primary.main">Select Pay Period Options</Typography>
-              <FormControl variant="standard" sx={{ minWidth: 200 }}>
-                <Select 
-                  value={settings['Select Pay Period Options'] || "not-set"}
-                  onChange={(e) => handleChange('Select Pay Period Options', e.target.value)}
-                  sx={{ fontSize: '0.85rem' }}
-                >
-                  <MenuItem value="not-set" sx={{ fontSize: '0.85rem' }}>Not Set</MenuItem>
-                  <MenuItem value="weekly" sx={{ fontSize: '0.85rem' }}>Weekly</MenuItem>
-                  <MenuItem value="bi-weekly" sx={{ fontSize: '0.85rem' }}>Bi-Weekly</MenuItem>
-                  <MenuItem value="monthly" sx={{ fontSize: '0.85rem' }}>Monthly</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 0.75 }}>
-              <Typography variant="body2" color="primary.main" sx={{ flex: 1 }}>
-                Users will be Automatically clocked out at
-              </Typography>
-              <TextField
-                variant="standard"
-                value={settings['Automatically clock out hour'] || "21"}
-                onChange={(e) => handleChange('Automatically clock out hour', e.target.value)}
-                inputProps={{ style: { width: 28, textAlign: 'center', fontSize: '0.85rem' } }}
-                sx={{ width: 36 }}
-              />
-              <Typography variant="body2" color="text.secondary">:</Typography>
-              <TextField
-                variant="standard"
-                value={settings['Automatically clock out minute'] || "00"}
-                onChange={(e) => handleChange('Automatically clock out minute', e.target.value)}
-                inputProps={{ style: { width: 28, textAlign: 'center', fontSize: '0.85rem' } }}
-                sx={{ width: 36 }}
-              />
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>(24h format)</Typography>
-              <Tooltip title="More info" placement="right"><span><InfoIcon /></span></Tooltip>
-            </Box>
-          </Box>
+        <Box id="time-clock" sx={{ mb: 4 }}>
+          <TimeClock />
         </Box>
 
         {/* ── Treatment Plan Page ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="treatment-plan-page" label="Treatment Plan Page" />
-          <Box sx={{ mt: 1.5, pl: 0.5 }}>
-            <SettingCheckbox label="Collapse Recare Plan Procedures By Default" defaultChecked info />
-            <SettingCheckbox label="Show Discount Amount" defaultChecked info />
-            <SettingCheckbox label="Show Insurance Portion" defaultChecked info />
-            <SettingCheckbox label="Show Insurance Write Off Portion" info />
-            <SettingCheckbox label="Show Max Allowed" info />
-            <SettingCheckbox label="Show Office Fee" defaultChecked info />
-          </Box>
+        <Box id="treatment-plan-page" sx={{ mb: 4 }}>
+          <TreatmentPlanPage />
         </Box>
 
         {/* ── Treatment Printout Form ── */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader id="treatment-printout-form" label="Treatment Printout Form" />
+        <Box id="treatment-printout-form" sx={{ mb: 4 }}>
+          <TreatmentPrintoutForm />
         </Box>
 
       </Box>
 
-      {/* ── Sticky anchor nav ── */}
-      <Box
-        sx={{
-          width: 16,
-          flexShrink: 0,
-          position: 'sticky',
-          top: 80,
-          alignSelf: 'flex-start',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 2.5,
-          pt: 6,
-        }}
-      >
-        {SECTIONS.map((s) => (
-          <Tooltip key={s.id} title={s.label} placement="left">
-            <Box
-              onClick={() => scrollTo(s.id)}
-              sx={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                backgroundColor: 'primary.main',
-                cursor: 'pointer',
-                opacity: 0.7,
-                '&:hover': { opacity: 1, transform: 'scale(1.3)' },
-                transition: 'all 0.15s',
-              }}
-            />
-          </Tooltip>
-        ))}
-      </Box>
+
+        </Box>
       </Box>
     </SettingsContext.Provider>
   );

@@ -7,6 +7,7 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { COLORS } from '../../../constants/colors';
 import { fontWeight, fontSize } from '../../../constants/styles';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
+import PurchaseProductDialog from './PurchaseProductDialog';
 
 const PRE_APPT_ITEMS = [
   { label: 'Import History' },
@@ -34,7 +35,7 @@ const CHECK_OUT_ITEMS = [
 ];
 
 // Single checklist item row
-const ChecklistItem = ({ label, status, onSetStatus, link }) => (
+const ChecklistItem = ({ label, status, onSetStatus, link, onClickLink }) => (
   <Box
     sx={{
       display: 'flex',
@@ -46,11 +47,13 @@ const ChecklistItem = ({ label, status, onSetStatus, link }) => (
     }}
   >
     <Typography
+      onClick={link && onClickLink ? onClickLink : undefined}
       sx={{
         fontSize: '13px',
         color: link ? COLORS.ACCENT : COLORS.TEXT_PRIMARY,
         textDecoration: link ? 'underline' : 'none',
         fontWeight: link ? fontWeight.medium : fontWeight.regular,
+        cursor: link ? 'pointer' : 'default',
       }}
     >
       {label}
@@ -82,7 +85,7 @@ const ChecklistItem = ({ label, status, onSetStatus, link }) => (
 );
 
 // Collapsible checklist section
-const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen }) => {
+const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen, onLinkClick }) => {
   const total = items.length;
   // Both 'checked' and 'na' are truthy, so they both count towards 'done'
   const done = items.filter(i => state[i.label]).length;
@@ -128,6 +131,7 @@ const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen
             status={state[item.label]}
             link={item.link}
             onSetStatus={(val) => onSetStatus(item.label, val)}
+            onClickLink={() => onLinkClick && onLinkClick(item.label)}
           />
         ))}
       </Collapse>
@@ -144,6 +148,14 @@ const AppointmentChecklist = () => {
   const [preApptState, setPreApptState] = useState({});
   const [checkInState, setCheckInState] = useState({});
   const [checkOutState, setCheckOutState] = useState({});
+  
+  const [purchaseProductOpen, setPurchaseProductOpen] = useState(false);
+
+  const handleLinkClick = (label) => {
+    if (label === 'Purchase Products') {
+      setPurchaseProductOpen(true);
+    }
+  };
 
   const { showSnackbar } = useSnackbar();
 
@@ -200,6 +212,7 @@ const AppointmentChecklist = () => {
         onSetStatus={setStatus(setCheckOutState)}
         open={checkOutOpen}
         onToggleOpen={() => setCheckOutOpen(v => !v)}
+        onLinkClick={handleLinkClick}
       />
 
       {/* Footer */}
@@ -240,6 +253,11 @@ const AppointmentChecklist = () => {
           </Typography>
         </Box>
       </Box>
+
+      <PurchaseProductDialog 
+        open={purchaseProductOpen} 
+        onClose={() => setPurchaseProductOpen(false)} 
+      />
     </Box>
   );
 };

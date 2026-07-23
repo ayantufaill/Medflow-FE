@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -434,9 +435,12 @@ export const StandardClaimsTable = ({
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
                           fontSize: "0.72rem",
+                          "&:hover": { textDecoration: "underline" },
                         }}
                       >
-                        {claim.claimNumber}
+                        <Link to={`/claims/${claim.id}`} style={{ color: "inherit", textDecoration: "inherit" }}>
+                          {claim.claimNumber}
+                        </Link>
                       </Typography>
                       {activeTab === 4 && claim.createdDate && (
                         <Typography

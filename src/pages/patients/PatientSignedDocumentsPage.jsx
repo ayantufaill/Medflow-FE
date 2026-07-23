@@ -3,26 +3,27 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Typography,
-  Paper,
   Button,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   IconButton,
-  Tooltip,
 } from "@mui/material";
 import {
-  ArrowBack as ArrowBackIcon,
   Description as DocIcon,
   CheckCircle as CheckCircleIcon,
-  Visibility as ViewIcon,
-  PhotoCamera as CameraIcon,
   Assignment as ChecklistIcon,
+  Add as AddIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
 import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import SectionCard from "../../components/shared/SectionCard";
+import { DocumentForm } from "../../components/documents";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -71,46 +72,15 @@ const PageContainer = (props) => (
   />
 );
 
-const FloatingActions = (props) => (
-  <Box
-    {...props}
-    sx={{
-      position: "fixed",
-      right: 16,
-      top: "50%",
-      transform: "translateY(-50%)",
-      display: "flex",
-      flexDirection: "column",
-      gap: 8,
-      zIndex: 10,
-      ...(props.sx || {}),
-    }}
-  />
-);
-
-const FloatingActionButton = (props) => (
-  <IconButton
-    {...props}
-    sx={{
-      bgcolor: "#ffffff",
-      borderRadius: "50%",
-      border: "1px solid #e0e0e0",
-      boxShadow: "0px 1px 3px rgba(0,0,0,0.15)",
-      "&:hover": {
-        bgcolor: "#fafafa",
-      },
-      ...(props.sx || {}),
-    }}
-  />
-);
-
 const PatientSignedDocumentsPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+
   // Redux hooks
   const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
-  const { documents, loading: docsLoading, fetch: fetchDocuments } = usePatientDocuments(patientId);
+  const { documents, loading: docsLoading, fetch: fetchDocuments, refresh: refreshDocuments } = usePatientDocuments(patientId);
 
   useEffect(() => {
     if (patientId) {
@@ -122,7 +92,16 @@ const PatientSignedDocumentsPage = () => {
   const isActuallyLoading = docsLoading && documents.length === 0;
 
   const hipaaDocs = documents.filter(isHipaDocument);
-  const signedDocs = documents.filter((d) => !isHipaDocument(d));
+  const signedDocs = documents.filter((d) => {
+    const type = (d.documentType || d.type || "").toLowerCase();
+    const name = (d.documentName || d.title || d.name || "").toLowerCase();
+    const category = (d.category || "").toLowerCase();
+    const isConsentOrSigned = type === 'consent_form' || type === 'consent' || type.includes('signed') || name.includes('consent') || name.includes('signed') || category.includes('consent');
+    return isConsentOrSigned && !isHipaDocument(d);
+  });
+
+  const allSignedDocs = [...hipaaDocs, ...signedDocs];
+  const hasAnySignedDocs = allSignedDocs.length > 0;
 
   const getPatientName = () => {
     if (patient?.firstName && patient?.lastName)
@@ -130,7 +109,11 @@ const PatientSignedDocumentsPage = () => {
     return "Patient";
   };
 
-  const allSignedDocs = [...hipaaDocs, ...signedDocs];
+  const handleUploadSuccess = async () => {
+    setUploadDialogOpen(false);
+    showSnackbar("Document uploaded successfully", "success");
+    await refreshDocuments();
+  };
 
   if (isActuallyLoading && !patient) {
     return (
@@ -143,13 +126,78 @@ const PatientSignedDocumentsPage = () => {
   return (
     <PageContainer>
       <PatientSectionTabs activeTab="signed_docs" patientId={patientId} />
-      <FloatingActions>
-        <FloatingActionButton
-          onClick={() => navigate(`/documents/upload?patientId=${patientId}`)}
+
+      {/* Upload Document Dialog */}
+      <Dialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          '& .MuiDialog-container': {
+            // Give equal padding top/bottom; top accounts for the 64px navbar
+            pt: '64px',
+            pb: '20px',
+          },
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: radius.xl,
+            border: `0.8px solid ${COLORS.BORDER}`,
+            // Constrain height so it never overflows — content shrinks to fit
+            maxHeight: 'calc(100vh - 84px)',
+            display: 'flex',
+            flexDirection: 'column',
+            m: 0,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: COLORS.SURFACE_TINT,
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            py: 1,
+            px: 2.5,
+            flexShrink: 0,
+          }}
         >
-          <CameraIcon fontSize="small" />
-        </FloatingActionButton>
-      </FloatingActions>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                backgroundColor: COLORS.ACCENT_BG,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <DocIcon sx={{ fontSize: 16, color: COLORS.ACCENT }} />
+            </Box>
+            <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
+              Upload Signed Document — {getPatientName()}
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setUploadDialogOpen(false)} sx={{ color: COLORS.TEXT_MUTED }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 1.5, pt: '12px !important', overflowY: 'auto', flex: 1 }}>
+          <DocumentForm
+            mode="create"
+            patientIdParam={patientId}
+            initialData={{ documentType: 'consent_form' }}
+            onSuccess={handleUploadSuccess}
+            onCancel={() => setUploadDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+
 
       <Box
         sx={{
@@ -176,7 +224,26 @@ const PatientSignedDocumentsPage = () => {
           </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setUploadDialogOpen(true)}
+            sx={{
+              textTransform: "none",
+              borderRadius: radius.md,
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.base,
+              boxShadow: "none",
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_BODY,
+              backgroundColor: COLORS.SURFACE_CARD,
+              "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
+            }}
+          >
+            Upload Document
+          </Button>
           <Button
             variant="contained"
             size="small"
@@ -198,7 +265,7 @@ const PatientSignedDocumentsPage = () => {
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
         </Box>
-      ) : documents.length === 0 ? (
+      ) : !hasAnySignedDocs ? (
         <Alert severity="info">No signed documents for this patient.</Alert>
       ) : (
         <>
