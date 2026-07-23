@@ -15,7 +15,31 @@ import {
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 
-const GeneralConfigurationCard = () => {
+const GeneralConfigurationCard = ({ settings, setSettings }) => {
+  if (!settings) return null;
+
+  const handleEmailChange = (field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      emailConfig: { ...prev.emailConfig, [field]: value }
+    }));
+  };
+
+  const handleTextChange = (field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      textConfig: { ...prev.textConfig, [field]: value }
+    }));
+  };
+
+  const toggleTextDay = (day) => {
+    const currentDays = settings.textConfig.enabledDays || [];
+    const newDays = currentDays.includes(day)
+      ? currentDays.filter(d => d !== day)
+      : [...currentDays, day];
+    handleTextChange('enabledDays', newDays);
+  };
+
   return (
     <Box sx={{ 
       border: '1px solid #E5E9F2', 
@@ -63,25 +87,33 @@ const GeneralConfigurationCard = () => {
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
               <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>Days</Typography>
-              <Select size="small" value="Weekdays" sx={{ height: 32, fontSize: '0.8rem', width: 140, bgcolor: '#fff' }}>
+              <Select 
+                size="small" 
+                value={settings.emailConfig?.days || 'Weekdays'} 
+                onChange={(e) => handleEmailChange('days', e.target.value)}
+                sx={{ height: 32, fontSize: '0.8rem', width: 140, bgcolor: '#fff' }}
+              >
                 <MenuItem value="Weekdays">Weekdays</MenuItem>
                 <MenuItem value="Custom">Custom</MenuItem>
               </Select>
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-              <TextField size="small" defaultValue="08" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <TextField size="small" defaultValue="00" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <Box sx={{ bgcolor: '#3B82F6', color: '#fff', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>AM</Box>
+              <TextField 
+                type="time" 
+                size="small" 
+                value={settings.emailConfig?.startTime || '08:00'} 
+                onChange={(e) => handleEmailChange('startTime', e.target.value)}
+                sx={{ width: 120, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} 
+              />
               <Typography sx={{ fontSize: '0.8rem', mx: 0.5, color: '#64748b' }}>to</Typography>
-              <TextField size="small" defaultValue="21" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <TextField size="small" defaultValue="00" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <Box sx={{ bgcolor: '#3B82F6', color: '#fff', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>PM</Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#94a3b8' }}>
-              <TimeIcon sx={{ fontSize: '1rem' }} />
-              <Typography sx={{ fontSize: '0.75rem' }}>Time Window: 8 h</Typography>
+              <TextField 
+                type="time" 
+                size="small" 
+                value={settings.emailConfig?.endTime || '17:00'} 
+                onChange={(e) => handleEmailChange('endTime', e.target.value)}
+                sx={{ width: 120, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} 
+              />
             </Box>
           </Box>
 
@@ -92,7 +124,12 @@ const GeneralConfigurationCard = () => {
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
               <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>Days</Typography>
-              <Select size="small" value="Custom" sx={{ height: 32, fontSize: '0.8rem', width: 140, bgcolor: '#fff' }}>
+              <Select 
+                size="small" 
+                value={settings.textConfig?.days || 'Custom'} 
+                onChange={(e) => handleTextChange('days', e.target.value)}
+                sx={{ height: 32, fontSize: '0.8rem', width: 140, bgcolor: '#fff' }}
+              >
                 <MenuItem value="Weekdays">Weekdays</MenuItem>
                 <MenuItem value="Custom">Custom</MenuItem>
               </Select>
@@ -105,7 +142,8 @@ const GeneralConfigurationCard = () => {
                   control={
                     <Checkbox
                       size="small"
-                      defaultChecked={day !== 'Sunday'}
+                      checked={(settings.textConfig?.enabledDays || []).includes(day)}
+                      onChange={() => toggleTextDay(day)}
                       sx={{ 
                         p: 0.5, 
                         color: '#CBD5E1',
@@ -121,18 +159,21 @@ const GeneralConfigurationCard = () => {
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-              <TextField size="small" defaultValue="08" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <TextField size="small" defaultValue="00" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <Box sx={{ bgcolor: '#3B82F6', color: '#fff', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>AM</Box>
+              <TextField 
+                type="time" 
+                size="small" 
+                value={settings.textConfig?.startTime || '08:00'} 
+                onChange={(e) => handleTextChange('startTime', e.target.value)}
+                sx={{ width: 120, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} 
+              />
               <Typography sx={{ fontSize: '0.8rem', mx: 0.5, color: '#64748b' }}>to</Typography>
-              <TextField size="small" defaultValue="20" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <TextField size="small" defaultValue="30" sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} />
-              <Box sx={{ bgcolor: '#3B82F6', color: '#fff', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>PM</Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#94a3b8' }}>
-              <TimeIcon sx={{ fontSize: '1rem' }} />
-              <Typography sx={{ fontSize: '0.75rem' }}>Time Window: 12 h 30 min</Typography>
+              <TextField 
+                type="time" 
+                size="small" 
+                value={settings.textConfig?.endTime || '20:30'} 
+                onChange={(e) => handleTextChange('endTime', e.target.value)}
+                sx={{ width: 120, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem' } }} 
+              />
             </Box>
           </Box>
         </Box>

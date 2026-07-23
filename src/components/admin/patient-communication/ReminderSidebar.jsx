@@ -1,7 +1,7 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 
-const ReminderSidebar = ({ activeTab, setActiveTab }) => {
+const ReminderSidebar = ({ activeTab, setActiveTab, onSave }) => {
   const sidebarItems = [
     { id: 'reminder-config', label: 'Reminder Config' },
     { id: 'email-defaults', label: 'Welcome/Update Email Defaults' },
@@ -10,10 +10,7 @@ const ReminderSidebar = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <Box sx={{ width: 230, minWidth: 230, py: 2.5 }}>
-      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#1E293B', px: 3, mb: 3 }}>
-        Communication Setting
-      </Typography>
+    <Box sx={{ width: 230, minWidth: 230, py: 2.5, pt: 0 }}>
       {sidebarItems.map((item) => (
         <Box
           key={item.id}

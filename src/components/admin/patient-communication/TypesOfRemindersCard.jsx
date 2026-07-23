@@ -16,17 +16,17 @@ import {
   Email as EmailIcon,
 } from '@mui/icons-material';
 
-const TypesOfRemindersCard = () => {
-  const reminderItems = [
-    { label: 'Existing Appointments (Treatment and Hygiene)', checked: true },
-    { label: 'Recall (Patients without recare appointments)', checked: true },
-    { label: 'Birthdays', checked: true },
-    { label: 'Appointment Reminder After Confirmation', checked: true },
-    { label: "Include Don't Remind me Again Button", checked: true },
-    { label: 'Include All Same-Day Appointments for Each Patient in Reminders (Not only the First Appt Time) *', checked: true },
-    { label: 'Appointment Notification After Cancellation using Email *', checked: false },
-    { label: "Automatic reply for patient's missed calls", checked: false },
-  ];
+const TypesOfRemindersCard = ({ settings, setSettings }) => {
+  if (!settings) return null;
+
+  const handleReminderChange = (index, checked) => {
+    const updatedReminders = [...settings.reminders];
+    updatedReminders[index] = { ...updatedReminders[index], checked };
+    setSettings(prev => ({
+      ...prev,
+      reminders: updatedReminders
+    }));
+  };
 
   return (
     <Box sx={{ 
@@ -55,13 +55,14 @@ const TypesOfRemindersCard = () => {
       <Box sx={{ p: 2.5, display: 'flex', gap: 6, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
         {/* Checkbox List */}
         <Box sx={{ flex: 1 }}>
-          {reminderItems.map((item, idx) => (
+          {(settings.reminders || []).map((item, idx) => (
             <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
               <FormControlLabel
                 control={
                   <Checkbox
                     size="small"
-                    defaultChecked={item.checked}
+                    checked={item.checked}
+                    onChange={(e) => handleReminderChange(idx, e.target.checked)}
                     sx={{ 
                       p: 0.5, 
                       color: '#CBD5E1',

@@ -4,7 +4,7 @@ import { DescriptionOutlined as DescriptionOutlinedIcon } from '@mui/icons-mater
 import GeneralConfigurationCard from './GeneralConfigurationCard';
 import TypesOfRemindersCard from './TypesOfRemindersCard';
 
-const ReminderConfig = () => {
+const ReminderConfig = ({ settings, setSettings }) => {
   return (
     <Box sx={{ 
       border: '1px solid #E5E9F2', 
@@ -30,8 +30,8 @@ const ReminderConfig = () => {
 
       {/* Content */}
       <Box sx={{ px: 3, pb: 3, pt: 3 }}>
-        <GeneralConfigurationCard />
-        <TypesOfRemindersCard />
+        <GeneralConfigurationCard settings={settings} setSettings={setSettings} />
+        <TypesOfRemindersCard settings={settings} setSettings={setSettings} />
       </Box>
     </Box>
   );
