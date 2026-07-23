@@ -258,8 +258,8 @@ const OperatorySchedulePage = () => {
 
         showSnackbar("Shortlist appointment scheduled successfully", "success");
       } catch (err) {
-        if (err.response?.status === 409) {
-          const conflictMsg = err.response.data?.error?.message;
+        if (err.status === 409 || err.response?.status === 409) {
+          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
           showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
         } else {
           const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to schedule shortlist appointment";
@@ -283,8 +283,8 @@ const OperatorySchedulePage = () => {
 
         showSnackbar("Appointment rescheduled successfully", "success");
       } catch (err) {
-        if (err.response?.status === 409) {
-          const conflictMsg = err.response.data?.error?.message;
+        if (err.status === 409 || err.response?.status === 409) {
+          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
           showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
         } else {
           const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
@@ -420,6 +420,11 @@ const OperatorySchedulePage = () => {
   }, [fetchScheduleBlocks]);
 
   const handleToggleOperatoryStatus = useCallback(async (dateStr, columnId) => {
+    if (dayjs(dateStr).isBefore(dayjs(), 'day')) {
+      showSnackbar("Cannot open or close an operatory for a past date", "error");
+      return;
+    }
+
     const key = `${dateStr}:${columnId}`;
     const isCurrentlyClosed = closedOperatories[key];
     const roomIdStr = columnId.replace(/^op/, "");
@@ -858,7 +863,7 @@ const OperatorySchedulePage = () => {
       setFormOpen(false);
     } catch (err) {
       if (err.status === 409 || err.response?.status === 409) {
-        const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+        const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
         showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
       } else {
         const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
@@ -927,7 +932,7 @@ const OperatorySchedulePage = () => {
         showSnackbar('Shortlist item successfully added to schedule!', 'success');
       } catch (err) {
         if (err.status === 409 || err.response?.status === 409) {
-          const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
           showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
         } else {
           const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add to schedule.';
@@ -1152,7 +1157,7 @@ const OperatorySchedulePage = () => {
             } catch (e) {
               console.error("Failed to update appointment", e);
               if (e.status === 409 || e.response?.status === 409) {
-                const conflictMsg = e.response?.data?.error?.message || e.response?.data?.message;
+                const conflictMsg = e.message || e.response?.data?.error?.message || e.response?.data?.message;
                 showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
               } else {
                 const msg = e.message || e.response?.data?.error?.message || e.response?.data?.message || 'Failed to update appointment';
