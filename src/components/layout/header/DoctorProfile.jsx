@@ -82,10 +82,10 @@ const DoctorProfile = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => navigate('/account/profile')}>
+        <MenuItem onClick={() => navigate('/profile')}>
           My Profile
         </MenuItem>
-        <MenuItem onClick={() => navigate('/account/change-password')}>
+        <MenuItem onClick={() => navigate('/change-password')}>
           Change Password
         </MenuItem>
         <Divider sx={{ my: '4px !important' }} />
