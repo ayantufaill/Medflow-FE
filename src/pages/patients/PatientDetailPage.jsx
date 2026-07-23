@@ -13,6 +13,7 @@ import { validateUSPhoneNumber, patientValidations } from '../../validations/pat
 
 const PatientDetailOverview = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.PatientDetailOverview })));
 const AddFamilyMemberDialog = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.AddFamilyMemberDialog })));
+const RequestUpdatesDialog = lazy(() => import('../../components/patient-detail/RequestUpdatesDialog'));
 const PatientInsuranceTabContent = lazy(() => import('../../components/patient-tabs').then(module => ({ default: module.PatientInsuranceTabContent })));
 
 /**
@@ -38,6 +39,7 @@ const PatientDetailPage = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPatientData, setEditedPatientData] = useState(null);
   const [addFamilyDialogOpen, setAddFamilyDialogOpen] = useState(false);
+  const [requestMenuAnchor, setRequestMenuAnchor] = useState(null);
 
   useEffect(() => {
     if (!patientId) return;
@@ -321,6 +323,7 @@ const PatientDetailPage = () => {
                 onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
                 onAddFamilyMember={() => setAddFamilyDialogOpen(true)}
                 onSendUpdateRequest={handleSendUpdateRequest}
+                onRequestUpdatesClick={(e) => setRequestMenuAnchor(e.currentTarget)}
               />
             )}
           </Suspense>
@@ -370,6 +373,11 @@ const PatientDetailPage = () => {
               showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');
             }
           }}
+        />
+        <RequestUpdatesDialog
+          anchorEl={requestMenuAnchor}
+          onClose={() => setRequestMenuAnchor(null)}
+          onSend={handleSendUpdateRequest}
         />
       </Suspense>
     </Box>

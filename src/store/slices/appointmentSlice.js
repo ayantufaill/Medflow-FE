@@ -477,7 +477,13 @@ const appointmentSlice = createSlice({
       .addCase(createAppointmentThunk.fulfilled, (state, action) => {
         // Append immediately so the schedule grid shows the new appointment
         // without waiting for a full list refetch.
-        if (action.payload) state.list.push(action.payload);
+        if (action.payload) {
+          const newAppt = { ...action.payload };
+          if (!newAppt.patientName && action.meta.arg?.patientName) {
+            newAppt.patientName = action.meta.arg.patientName;
+          }
+          state.list.push(newAppt);
+        }
       })
 
       // ── updateAppointmentThunk ────────────────────────────────────────────
