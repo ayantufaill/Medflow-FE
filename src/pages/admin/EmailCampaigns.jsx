@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Breadcrumbs, Link } from '@mui/material';
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { communicationService } from '../../services/communication.service';
 
 import CreateCampaignModal from './CreateCampaignModal';
 import PreviewCampaignModal from './PreviewCampaignModal';
@@ -22,9 +23,33 @@ const EmailCampaigns = () => {
   const [editingTemplateName, setEditingTemplateName] = useState('');
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [editorTitle, setEditorTitle] = useState('');
+  const [editorCampaign, setEditorCampaign] = useState(null);
 
-  const handleEditCampaign = (title) => {
-    setEditorTitle(title);
+  const [campaigns, setCampaigns] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+
+  const fetchCampaignData = async () => {
+    try {
+      const [campaignsData, metricsData] = await Promise.all([
+        communicationService.getCampaigns(),
+        communicationService.getCampaignMetrics()
+      ]);
+      setCampaigns(campaignsData.campaigns || campaignsData);
+      setMetrics(metricsData);
+    } catch (error) {
+      console.error('Failed to fetch campaign data', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'home') {
+      fetchCampaignData();
+    }
+  }, [activeTab]);
+
+  const handleEditCampaign = (campaign) => {
+    setEditorTitle(campaign.subject || campaign.name);
+    setEditorCampaign(campaign);
     setCampaignModalOpen(true);
   };
 
@@ -36,6 +61,7 @@ const EmailCampaigns = () => {
   const handleCreateNew = () => {
     setCreateModalOpen(false);
     setEditorTitle('New Campaign');
+    setEditorCampaign(null);
     setCampaignModalOpen(true);
   };
 
@@ -69,8 +95,8 @@ const EmailCampaigns = () => {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {activeTab === 'home' ? (
             <>
-              <CampaignSummaryCards />
-              <CampaignsTable onEditCampaign={handleEditCampaign} onPreviewCampaign={() => setPreviewModalOpen(true)} />
+              <CampaignSummaryCards metrics={metrics} />
+              <CampaignsTable campaigns={campaigns} onEditCampaign={handleEditCampaign} onPreviewCampaign={(camp) => setPreviewModalOpen(true)} />
             </>
           ) : (
             <TemplatesList onEditTemplate={handleEditTemplate} />
@@ -95,8 +121,9 @@ const EmailCampaigns = () => {
       />
       <CampaignEditor 
         open={campaignModalOpen}
-        onClose={() => setCampaignModalOpen(false)}
+        onClose={() => { setCampaignModalOpen(false); fetchCampaignData(); }}
         title={editorTitle}
+        campaign={editorCampaign}
         onPreview={() => setPreviewModalOpen(true)}
       />
     </Box>

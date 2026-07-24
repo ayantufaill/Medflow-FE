@@ -34,13 +34,20 @@ const SummaryCard = ({ title, count, icon: Icon, color, bgcolor }) => (
   </Box>
 );
 
-const CampaignSummaryCards = () => {
+const CampaignSummaryCards = ({ metrics }) => {
+  const m = metrics || {
+    totalOpened: "5,069",
+    totalClicked: "1,661",
+    totalBounced: "114",
+    totalSent: "10,113"
+  };
+
   return (
     <Box sx={{ display: 'flex', gap: 3, mb: 4, width: '100%' }}>
-      <SummaryCard title="Total Opened" count="5,069" icon={EmailIcon} color="#3B82F6" bgcolor="#F0F5FF" />
-      <SummaryCard title="Total Clicked" count="1,661" icon={ClickIcon} color="#10B981" bgcolor="#ECFDF5" />
-      <SummaryCard title="Total Bounced" count="114" icon={BounceIcon} color="#F59E0B" bgcolor="#FFFBEB" />
-      <SummaryCard title="Total Sent" count="10,113" icon={SendIcon} color="#64748B" bgcolor="#F8FAFC" />
+      <SummaryCard title="Total Opened" count={m.totalOpened || 0} icon={EmailIcon} color="#3B82F6" bgcolor="#F0F5FF" />
+      <SummaryCard title="Total Clicked" count={m.totalClicked || 0} icon={ClickIcon} color="#10B981" bgcolor="#ECFDF5" />
+      <SummaryCard title="Total Bounced" count={m.totalBounced || 0} icon={BounceIcon} color="#F59E0B" bgcolor="#FFFBEB" />
+      <SummaryCard title="Total Sent" count={m.totalSent || 0} icon={SendIcon} color="#64748B" bgcolor="#F8FAFC" />
     </Box>
   );
 };

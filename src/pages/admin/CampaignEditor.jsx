@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import { VariableAccordion } from '../../components/admin/patient-communication/templates/VariableAccordion';
 import { VariableButton } from '../../components/admin/patient-communication/templates/VariableButton';
+import { communicationService } from '../../services/communication.service';
 
 const RichTextToolbar = () => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, border: '1px solid #E5E9F2', borderBottom: 'none', p: 0.5, bgcolor: '#FBFCFE', flexWrap: 'wrap', borderRadius: '6px 6px 0 0' }}>
@@ -61,7 +62,38 @@ const RichTextToolbar = () => (
   </Box>
 );
 
-const CampaignEditor = ({ open, title, onClose, onPreview }) => {
+const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (campaign) {
+      setSubject(campaign.subject || campaign.name || '');
+      setBody(campaign.body || campaign.bodyText || '');
+    } else {
+      setSubject('BOTOX: Just $10/Unit + Bring a Friend Bonus!');
+      setBody(`Botox Special: Save More When You Share!\n\nBotox Specials You'll Love. Starting October 1st!\nWe're making it easier than ever to look refreshed and feel confident this season.\n\nJust $10 per unit of Botox, bring a friend and you'll each receive $25 OFF your treatment!\n\nThis special runs October 1 through December 31, 2025- the perfect time to smooth fine lines before the holidays and start the new year looking refreshed!\n\nAppointments are limited!\n\nThank you,\nRobin\nFront Office Coordinator`);
+    }
+  }, [campaign, open]);
+
+  const handleSave = async (status) => {
+    try {
+      setLoading(true);
+      const payload = { subject, body, status };
+      if (campaign && campaign.id) {
+        await communicationService.updateCampaign(campaign.id, payload);
+      } else {
+        await communicationService.createCampaign(payload);
+      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to save campaign', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -113,7 +145,8 @@ const CampaignEditor = ({ open, title, onClose, onPreview }) => {
             <TextField 
               fullWidth 
               size="small" 
-              defaultValue="BOTOX: Just $10/Unit + Bring a Friend Bonus!"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
               sx={{ mb: 3, '& .MuiOutlinedInput-root': { height: 40, fontSize: '0.85rem', borderRadius: 1.5, '& fieldset': { borderColor: '#E5E9F2' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#3B82F6' } } }} 
             />
 
@@ -123,7 +156,8 @@ const CampaignEditor = ({ open, title, onClose, onPreview }) => {
               fullWidth 
               multiline 
               rows={12} 
-              defaultValue={`Botox Special: Save More When You Share!\n\nBotox Specials You'll Love. Starting October 1st!\nWe're making it easier than ever to look refreshed and feel confident this season.\n\nJust $10 per unit of Botox, bring a friend and you'll each receive $25 OFF your treatment!\n\nThis special runs October 1 through December 31, 2025- the perfect time to smooth fine lines before the holidays and start the new year looking refreshed!\n\nAppointments are limited!\n\nThank you,\nRobin\nFront Office Coordinator`}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0 0 6px 6px', fontSize: '0.85rem', lineHeight: 1.6, '& fieldset': { borderColor: '#E5E9F2' } } }} 
             />
             <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', mt: 1, display: 'inline-flex', alignItems: 'center', cursor: 'pointer', fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}>
@@ -204,12 +238,16 @@ const CampaignEditor = ({ open, title, onClose, onPreview }) => {
           </Button>
           <Button 
             variant="contained" 
+            onClick={() => handleSave('Draft')}
+            disabled={loading}
             sx={{ textTransform: 'none', fontWeight: 600, bgcolor: '#3B82F6', borderRadius: 1.5, px: 3, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
           >
-            Send Test
+            Save Draft
           </Button>
           <Button 
             variant="contained" 
+            onClick={() => handleSave('Sent')}
+            disabled={loading}
             sx={{ textTransform: 'none', fontWeight: 600, bgcolor: '#10B981', borderRadius: 1.5, px: 3, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#059669', boxShadow: 'none' } }}
           >
             Schedule Campaign

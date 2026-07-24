@@ -37,9 +37,11 @@ const mockData = [
   { name: 'BOTOX-655677420', status: 'Draft', date: '10/01/2025', opened: 'NA', clicked: 'NA', bounced: 'NA', notOpened: 'NA', sentTo: '0' },
 ];
 
-const CampaignsTable = ({ onEditCampaign, onPreviewCampaign }) => {
+const CampaignsTable = ({ campaigns, onEditCampaign, onPreviewCampaign }) => {
   const thSx = { fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', py: 1.5, borderBottom: '1px solid #E5E9F2', backgroundColor: '#FBFCFE' };
   const tdSx = { fontSize: '0.85rem', py: 1.5, borderBottom: '1px solid #F1F5F9' };
+
+  const tableData = campaigns || mockData;
 
   return (
     <Box>
@@ -81,9 +83,20 @@ const CampaignsTable = ({ onEditCampaign, onPreviewCampaign }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockData.map((row, i) => (
-              <TableRow key={i} hover sx={{ '&:last-child td, &:last-child th': { border: 0 }, transition: 'background-color 0.15s', '&:hover': { bgcolor: '#F8FAFC' } }}>
-                <TableCell sx={{ ...tdSx, fontWeight: 500, color: '#1E293B' }}>{row.name}</TableCell>
+            {tableData.map((row, i) => {
+              // Handle mapped backend fields or fallback to mockData structure
+              const name = row.subject || row.name;
+              const status = row.status || 'Draft';
+              const createdDate = row.createdAt ? new Date(row.createdAt).toLocaleDateString() : row.date;
+              const sentTo = row.targetAudienceId || row.sentTo || '0';
+              const opened = row.opened || 'NA';
+              const clicked = row.clicked || 'NA';
+              const bounced = row.bounced || 'NA';
+              const notOpened = row.notOpened || 'NA';
+
+              return (
+              <TableRow key={row.id || i} hover sx={{ '&:last-child td, &:last-child th': { border: 0 }, transition: 'background-color 0.15s', '&:hover': { bgcolor: '#F8FAFC' } }}>
+                <TableCell sx={{ ...tdSx, fontWeight: 500, color: '#1E293B' }}>{name}</TableCell>
                 <TableCell sx={tdSx}>
                   <Box sx={{
                     display: 'inline-flex',
@@ -92,40 +105,40 @@ const CampaignsTable = ({ onEditCampaign, onPreviewCampaign }) => {
                     borderRadius: 1,
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    bgcolor: row.status === 'Sent' ? '#ECFDF5' : '#F1F5F9',
-                    color: row.status === 'Sent' ? '#059669' : '#64748b',
+                    bgcolor: status === 'Sent' ? '#ECFDF5' : '#F1F5F9',
+                    color: status === 'Sent' ? '#059669' : '#64748b',
                     border: '1px solid',
-                    borderColor: row.status === 'Sent' ? '#A7F3D0' : '#E2E8F0'
+                    borderColor: status === 'Sent' ? '#A7F3D0' : '#E2E8F0'
                   }}>
-                    {row.status}
+                    {status}
                   </Box>
                 </TableCell>
-                <TableCell sx={{ ...tdSx, color: '#64748b' }}>{row.date}</TableCell>
+                <TableCell sx={{ ...tdSx, color: '#64748b' }}>{createdDate}</TableCell>
                 <TableCell sx={tdSx} align="center">
-                  {row.opened !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{row.opened}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
+                  {opened !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{opened}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
                 </TableCell>
                 <TableCell sx={tdSx} align="center">
-                  {row.clicked !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{row.clicked}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
+                  {clicked !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{clicked}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
                 </TableCell>
                 <TableCell sx={tdSx} align="center">
-                  {row.bounced !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{row.bounced}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
+                  {bounced !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{bounced}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
                 </TableCell>
                 <TableCell sx={tdSx} align="center">
-                  {row.notOpened !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{row.notOpened}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
+                  {notOpened !== 'NA' ? <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#3B82F6' }}>{notOpened}</Link> : <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>NA</Typography>}
                 </TableCell>
                 <TableCell sx={tdSx}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <PersonIcon sx={{ fontSize: '1rem', color: '#64748b' }} />
-                    <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#1E293B' }}>{row.sentTo}</Link>
+                    <Link href="#" underline="hover" sx={{ fontWeight: 500, color: '#1E293B' }}>{sentTo}</Link>
                   </Box>
                 </TableCell>
                 <TableCell sx={tdSx} align="right">
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-                    {row.status === 'Draft' && (
+                    {status === 'Draft' && (
                       <Button 
                         variant="outlined" 
                         size="small" 
-                        onClick={() => onEditCampaign(row.name)}
+                        onClick={() => onEditCampaign(row)}
                         sx={{ borderRadius: 1.5, textTransform: 'none', py: 0.3, px: 1.5, fontSize: '0.75rem', borderColor: '#3B82F6', color: '#3B82F6', fontWeight: 600, '&:hover': { bgcolor: '#F0F5FF', borderColor: '#2563EB' } }}
                       >
                         Edit
@@ -134,7 +147,7 @@ const CampaignsTable = ({ onEditCampaign, onPreviewCampaign }) => {
                     <Button 
                       variant="contained" 
                       size="small" 
-                      onClick={() => onPreviewCampaign(row.name)}
+                      onClick={() => onPreviewCampaign(row)}
                       sx={{ borderRadius: 1.5, textTransform: 'none', py: 0.3, px: 1.5, fontSize: '0.75rem', bgcolor: '#F1F5F9', color: '#475569', boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#E2E8F0', boxShadow: 'none' } }}
                     >
                       Preview
@@ -145,7 +158,7 @@ const CampaignsTable = ({ onEditCampaign, onPreviewCampaign }) => {
                   </Box>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </TableContainer>
