@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, CircularProgress } from '@mui/material';
 
 import { useNavigate } from 'react-router-dom';
+import { communicationService } from '../../services/communication.service';
 
 import CreateQuestionnaireModal from '../../components/admin/patient-communication/questionnaires/CreateQuestionnaireModal';
 import QuestionnaireEditor from '../../components/admin/patient-communication/questionnaires/QuestionnaireEditor';
@@ -17,16 +18,46 @@ const Questionnaires = () => {
   // Editor State
   const [editorMode, setEditorMode] = useState('list'); // 'list', 'custom', 'system'
   const [editorTitle, setEditorTitle] = useState('');
+  const [editorDesc, setEditorDesc] = useState('');
+  const [editorId, setEditorId] = useState(null);
+  
+  const [questionnaires, setQuestionnaires] = useState({ custom: [], system: [] });
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateNew = () => {
+  const fetchQuestionnaires = async () => {
+    try {
+      setLoading(true);
+      const data = await communicationService.getQuestionnaires();
+      setQuestionnaires(data);
+    } catch (error) {
+      console.error('Failed to fetch questionnaires:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuestionnaires();
+  }, []);
+
+  const handleCreateNew = (payload) => {
     setCreateModalOpen(false);
-    setEditorTitle('health'); // using the mockup name
+    setEditorTitle(payload?.title || ''); 
+    setEditorDesc(payload?.description || '');
+    setEditorId(null);
     setEditorMode('custom');
   };
 
-  const handleOpenSystem = (title) => {
-    setEditorTitle(title.toLowerCase().split(' ')[0]); // 'dental' from 'Dental History'
+  const handleOpenSystem = (title, id) => {
+    setEditorTitle(title);
+    setEditorId(id);
     setEditorMode('system');
+  };
+
+  const handleOpenCustom = (title, id) => {
+    setEditorTitle(title);
+    setEditorId(id);
+    setEditorMode('custom');
   };
 
 
@@ -48,11 +79,24 @@ const Questionnaires = () => {
         </Box>
 
         {/* Content Area */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          {activeTab === 'custom' ? (
-            <CustomQuestionnairesTab onOpenCreateModal={() => setCreateModalOpen(true)} />
+        <Box sx={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: 400 }}>
+              <CircularProgress size={40} sx={{ color: '#3B82F6' }} />
+            </Box>
+          ) : activeTab === 'custom' ? (
+            <CustomQuestionnairesTab 
+              questionnaires={questionnaires.custom}
+              onOpenCreateModal={() => setCreateModalOpen(true)} 
+              onOpenCustom={handleOpenCustom}
+              refreshList={fetchQuestionnaires}
+            />
           ) : (
-            <SystemQuestionnairesTab onOpenSystem={handleOpenSystem} />
+            <SystemQuestionnairesTab 
+              questionnaires={questionnaires.system}
+              onOpenSystem={handleOpenSystem} 
+              refreshList={fetchQuestionnaires}
+            />
           )}
         </Box>
       </Box>
@@ -68,7 +112,12 @@ const Questionnaires = () => {
         open={editorMode !== 'list'}
         mode={editorMode} 
         title={editorTitle} 
-        onClose={() => setEditorMode('list')} 
+        description={editorDesc}
+        id={editorId}
+        onClose={() => {
+          setEditorMode('list');
+          fetchQuestionnaires();
+        }} 
       />
     </Box>
   );

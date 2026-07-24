@@ -56,5 +56,31 @@ export const communicationService = {
   deleteCampaign: async (id) => {
     const response = await apiClient.delete(`/communication/campaigns/${id}`);
     return response.data?.data || response.data;
+  },
+
+  // Questionnaire endpoints
+  getQuestionnaires: async () => {
+    const response = await apiClient.get('/communication/questionnaires');
+    return response.data?.data || response.data;
+  },
+
+  getQuestionnaireById: async (id) => {
+    const response = await apiClient.get(`/communication/questionnaires/${id}`);
+    return response.data?.data || response.data;
+  },
+
+  createQuestionnaire: async (data) => {
+    const response = await apiClient.post('/communication/questionnaires', data);
+    return response.data?.data || response.data;
+  },
+
+  updateQuestionnaire: async (id, data) => {
+    const response = await apiClient.put(`/communication/questionnaires/${id}`, data);
+    return response.data?.data || response.data;
+  },
+
+  deleteQuestionnaire: async (id) => {
+    const response = await apiClient.delete(`/communication/questionnaires/${id}`);
+    return response.data?.data || response.data;
   }
 };

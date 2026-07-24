@@ -2,15 +2,9 @@ import React, { useState } from 'react';
 import { Box, Typography, Grid, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { MoreVert as MoreVertIcon, AssignmentOutlined as AssignmentIcon, EditOutlined as EditIcon, DeleteOutline as DeleteIcon } from '@mui/icons-material';
 
-const initialCards = [
-  { title: 'Dental History', questions: 37 },
-  { title: 'Medical History', questions: 62 },
-  { title: 'Pediatric Dental Hx', questions: 31 },
-  { title: 'Pediatric Medical Hx', questions: 44 },
-];
+import { communicationService } from '../../../../services/communication.service';
 
-const SystemQuestionnairesTab = ({ onOpenSystem }) => {
-  const [cards, setCards] = useState(initialCards);
+const SystemQuestionnairesTab = ({ questionnaires, onOpenSystem, refreshList }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeCard, setActiveCard] = useState(null);
 
@@ -29,15 +23,20 @@ const SystemQuestionnairesTab = ({ onOpenSystem }) => {
   const handleEdit = (event) => {
     event.stopPropagation();
     if (activeCard) {
-      onOpenSystem(activeCard.title);
+      onOpenSystem(activeCard.description, activeCard._id);
     }
     handleCloseMenu();
   };
 
-  const handleDelete = (event) => {
+  const handleDelete = async (event) => {
     event.stopPropagation();
     if (activeCard !== null) {
-      setCards(cards.filter((_, idx) => idx !== activeCard.index));
+      try {
+        await communicationService.deleteQuestionnaire(activeCard._id);
+        if (refreshList) refreshList();
+      } catch (error) {
+        console.error('Failed to delete questionnaire:', error);
+      }
     }
     handleCloseMenu();
   };
@@ -55,10 +54,10 @@ const SystemQuestionnairesTab = ({ onOpenSystem }) => {
       </Box>
 
       <Grid container spacing={3}>
-        {cards.map((card, idx) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={idx}>
+        {questionnaires?.map((card, idx) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={card._id || idx}>
             <Box 
-              onClick={() => onOpenSystem(card.title)}
+              onClick={() => onOpenSystem(card.description, card._id)}
               sx={{ 
                 bgcolor: '#fff',
                 p: 2.5,
@@ -85,8 +84,8 @@ const SystemQuestionnairesTab = ({ onOpenSystem }) => {
                 </IconButton>
               </Box>
               <Box sx={{ mt: 'auto' }}>
-                <Typography sx={{ fontSize: '0.95rem', color: '#1E293B', fontWeight: 600, mb: 0.5 }}>{card.title}</Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>{card.questions} Questions</Typography>
+                <Typography sx={{ fontSize: '0.95rem', color: '#1E293B', fontWeight: 600, mb: 0.5 }}>{card.description}</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>{card.questionsCount} Questions</Typography>
               </Box>
             </Box>
           </Grid>

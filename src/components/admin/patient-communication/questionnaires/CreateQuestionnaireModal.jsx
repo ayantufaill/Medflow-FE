@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,15 @@ import {
 import { Close as CloseIcon, Assignment as ClipboardIcon } from '@mui/icons-material';
 
 const CreateQuestionnaireModal = ({ open, onClose, onCreate }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  const handleCreate = () => {
+    onCreate({ title, description });
+    setTitle('');
+    setDescription('');
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -51,6 +60,8 @@ const CreateQuestionnaireModal = ({ open, onClose, onCreate }) => {
               size="small" 
               fullWidth 
               placeholder="E.g., Initial Health Intake"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem', borderRadius: 1.5, '& fieldset': { borderColor: '#E5E9F2' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#3B82F6' } } }} 
             />
           </Box>
@@ -62,13 +73,16 @@ const CreateQuestionnaireModal = ({ open, onClose, onCreate }) => {
               multiline
               rows={3}
               placeholder="Brief description of the questionnaire's purpose..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem', borderRadius: 1.5, '& fieldset': { borderColor: '#E5E9F2' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#3B82F6' } } }} 
             />
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
             <Button 
               variant="contained" 
-              onClick={onCreate}
+              onClick={handleCreate}
+              disabled={!title.trim()}
               sx={{ bgcolor: '#3B82F6', textTransform: 'none', fontWeight: 600, borderRadius: 1.5, px: 4, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
             >
               Create

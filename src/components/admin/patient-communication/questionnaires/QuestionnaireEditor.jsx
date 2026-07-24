@@ -10,7 +10,8 @@ import {
   FormControlLabel,
   IconButton,
   Divider,
-  TextField
+  TextField,
+  CircularProgress
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -22,6 +23,8 @@ import {
   Add as AddIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
+
+import { communicationService } from '../../../../services/communication.service';
 
 const TypePill = ({ icon: Icon, label, active, onClick }) => (
   <Box 
@@ -41,20 +44,71 @@ const TypePill = ({ icon: Icon, label, active, onClick }) => (
   </Box>
 );
 
-const QuestionnaireEditor = ({ open, mode, title, onClose }) => {
+const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) => {
   const isSystem = mode === 'system';
   const [localTitle, setLocalTitle] = useState(title || 'Untitled Questionnaire');
-  const [localDesc, setLocalDesc] = useState('Description goes here...');
+  const [localDesc, setLocalDesc] = useState(description || 'Description goes here...');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   
-  const [questions, setQuestions] = useState(isSystem ? [
-    { text: 'Are you fearful of dental treatment?', type: 'yesno' },
-    { text: 'Have you had an unfavorable dental experience?', type: 'yesno' },
-    { text: 'Have you ever had complications from past dental treatment?', type: 'yesno' },
-    { text: 'Have you ever had trouble getting numb or had any reactions to local anesthetic?', type: 'yesno' },
-    { text: 'Did you ever have braces, orthodontic treatment or had your bite adjusted, and at what age?', type: 'short' }
-  ] : []);
+  const [questions, setQuestions] = useState([]);
+
+  React.useEffect(() => {
+    if (open) {
+      if (id) {
+        fetchQuestionnaire();
+      } else {
+        setLocalTitle(title || 'Untitled Questionnaire');
+        setLocalDesc(description || 'Description goes here...');
+        setQuestions([]);
+      }
+    }
+  }, [open, id]);
+
+  const fetchQuestionnaire = async () => {
+    try {
+      setLoading(true);
+      const data = await communicationService.getQuestionnaireById(id);
+      setLocalDesc(data.description || 'Description goes here...');
+      setLocalTitle(title);
+      setQuestions(data.questions?.map(q => ({
+        text: q.name,
+        type: q.type,
+        options: q.choices || []
+      })) || []);
+    } catch (error) {
+      console.error('Failed to fetch questionnaire details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    try {
+      setSaving(true);
+      const payload = {
+        description: localTitle, 
+        questions: questions.map(q => ({
+          name: q.text,
+          type: q.type || 'text',
+          choices: q.options || []
+        }))
+      };
+
+      if (id) {
+        await communicationService.updateQuestionnaire(id, payload);
+      } else {
+        await communicationService.createQuestionnaire(payload);
+      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to save questionnaire:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleAddQuestion = () => {
     setQuestions([...questions, { text: '', type: null, allowSkip: false, disabled: false }]);
@@ -171,8 +225,13 @@ const QuestionnaireEditor = ({ open, mode, title, onClose }) => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button variant="contained" sx={{ bgcolor: '#3B82F6', textTransform: 'none', borderRadius: 1.5, px: 3, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}>
-            {isSystem ? 'Publish Again' : 'Publish'}
+          <Button 
+            variant="contained" 
+            onClick={handlePublish}
+            disabled={loading || saving}
+            sx={{ bgcolor: '#3B82F6', textTransform: 'none', borderRadius: 1.5, px: 3, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
+          >
+            {saving ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : (isSystem ? 'Publish Again' : 'Publish')}
           </Button>
           <Button variant="outlined" sx={{ color: '#64748b', borderColor: '#E5E9F2', textTransform: 'none', borderRadius: 1.5, px: 3, fontWeight: 600, '&:hover': { bgcolor: '#F8FAFC', borderColor: '#cbd5e1' } }}>
             {isSystem ? 'Hide From Menu' : 'Show In Menu'}
@@ -186,9 +245,15 @@ const QuestionnaireEditor = ({ open, mode, title, onClose }) => {
 
       <DialogContent sx={{ p: 0, display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Left Column (Editor Area) */}
-        <Box sx={{ flex: 1, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', bgcolor: '#F8FAFC' }}>
-          <Box sx={{ width: '100%', maxWidth: 700 }}>
+        {loading ? (
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <CircularProgress size={50} sx={{ color: '#3B82F6' }} />
+          </Box>
+        ) : (
+          <>
+            {/* Left Column (Editor Area) */}
+            <Box sx={{ flex: 1, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', bgcolor: '#F8FAFC' }}>
+              <Box sx={{ width: '100%', maxWidth: 700 }}>
             
             {/* Title Block */}
             <Box sx={{ bgcolor: '#fff', border: '1px solid #E5E9F2', borderRadius: 2, mb: 4, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
@@ -326,7 +391,8 @@ const QuestionnaireEditor = ({ open, mode, title, onClose }) => {
             </Box>
           </Box>
         </Box>
-
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
