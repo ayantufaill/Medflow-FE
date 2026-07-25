@@ -52,7 +52,29 @@ const ChatBubbleIllustration = () => (
 
 const ReviewSettings = () => {
   const navigate = useNavigate();
-  const [hasTwoNotifications, setHasTwoNotifications] = useState(false);
+  
+  const [notifications, setNotifications] = useState([
+    { id: '1', method: 'SMS', time: '1', frequency: 'Hours', isEditing: false }
+  ]);
+
+  const handleAddNotification = () => {
+    setNotifications([
+      ...notifications,
+      { id: Date.now().toString(), method: 'SMS', time: '1', frequency: 'Hours', isEditing: true }
+    ]);
+  };
+
+  const handleDeleteNotification = (id) => {
+    setNotifications(notifications.filter(n => n.id !== id));
+  };
+
+  const toggleEditNotification = (id) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, isEditing: !n.isEditing } : n));
+  };
+
+  const updateNotification = (id, field, value) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, [field]: value } : n));
+  };
 
   return (
     <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
@@ -89,7 +111,7 @@ const ReviewSettings = () => {
           </Box>
           <Button 
             variant="contained" 
-            onClick={() => setHasTwoNotifications(true)}
+            onClick={handleAddNotification}
             sx={{ bgcolor: '#3B82F6', textTransform: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, px: 2.5, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
           >
             + Add Notification
@@ -97,66 +119,87 @@ const ReviewSettings = () => {
         </Box>
 
         <Grid container spacing={2}>
-          {/* Notification 1 */}
-          <Grid item xs={12} md={hasTwoNotifications ? 6 : 6}>
-            <Box sx={{ bgcolor: '#FAFAF9', border: '1px solid #E5E7EB', borderRadius: 3, p: 2.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>#1 NOTIFICATION</Typography>
-                  <Box sx={{ bgcolor: '#EFF6FF', color: '#2563EB', fontSize: '0.65rem', fontWeight: 700, px: 1.5, py: 0.4, borderRadius: 1.5 }}>DEFAULT</Box>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <IconButton size="small"><DeleteIcon sx={{ fontSize: '1.1rem', color: '#EF4444' }} /></IconButton>
-                  <IconButton size="small"><EditIcon sx={{ fontSize: '1.1rem', color: '#3B82F6' }} /></IconButton>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Send <Box component="span" sx={{ fontWeight: 600, color: '#1E293B' }}>Review Reminder</Box></Typography>
-                <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>→</Typography>
-                <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>as <Box component="span" sx={{ fontWeight: 600, color: '#1E293B' }}>SMS</Box></Typography>
-                <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>→</Typography>
-                <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>after <Box component="span" sx={{ fontWeight: 600, color: '#1E293B' }}>1 Hours</Box></Typography>
-              </Box>
-            </Box>
-          </Grid>
-
-          {/* Notification 2 */}
-          {hasTwoNotifications && (
-            <Grid item xs={12} md={6}>
-              <Box sx={{ bgcolor: '#FAFAF9', border: '1px solid #E5E7EB', borderRadius: 3, p: 2.5 }}>
+          {notifications.map((notif, idx) => (
+            <Grid item xs={12} md={6} key={notif.id}>
+              <Box sx={{ bgcolor: '#FAFAF9', border: '1px solid #E5E7EB', borderRadius: 3, p: 2.5, height: '100%' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>#2 NOTIFICATION</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>#{idx + 1} NOTIFICATION</Typography>
+                    {idx === 0 && (
+                      <Box sx={{ bgcolor: '#EFF6FF', color: '#2563EB', fontSize: '0.65rem', fontWeight: 700, px: 1.5, py: 0.4, borderRadius: 1.5 }}>DEFAULT</Box>
+                    )}
                   </Box>
-                  <Typography 
-                    onClick={() => setHasTwoNotifications(false)}
-                    sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#EF4444', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                  >
-                    Delete Notification
-                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    {notif.isEditing ? (
+                      <Typography 
+                        onClick={() => handleDeleteNotification(notif.id)}
+                        sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#EF4444', cursor: 'pointer', mr: 1, '&:hover': { textDecoration: 'underline' } }}
+                      >
+                        Delete
+                      </Typography>
+                    ) : (
+                      <IconButton size="small" onClick={() => handleDeleteNotification(notif.id)}><DeleteIcon sx={{ fontSize: '1.1rem', color: '#EF4444' }} /></IconButton>
+                    )}
+                    {!notif.isEditing && (
+                      <IconButton size="small" onClick={() => toggleEditNotification(notif.id)}><EditIcon sx={{ fontSize: '1.1rem', color: '#3B82F6' }} /></IconButton>
+                    )}
+                  </Box>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Send Review Reminder</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Send <Box component="span" sx={{ fontWeight: 600, color: '#1E293B' }}>Review Reminder</Box></Typography>
                   <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>→</Typography>
                   <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>as</Typography>
-                  <Select size="small" defaultValue="" displayEmpty sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#ffffff' } }}>
-                    <MenuItem value="" disabled sx={{ fontSize: '0.85rem' }}>Delivery Method</MenuItem>
-                    <MenuItem value="SMS" sx={{ fontSize: '0.85rem' }}>SMS</MenuItem>
-                    <MenuItem value="Email" sx={{ fontSize: '0.85rem' }}>Email</MenuItem>
-                  </Select>
+                  
+                  {notif.isEditing ? (
+                    <Select 
+                      size="small" 
+                      value={notif.method} 
+                      onChange={(e) => updateNotification(notif.id, 'method', e.target.value)}
+                      displayEmpty 
+                      sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#ffffff' } }}
+                    >
+                      <MenuItem value="SMS" sx={{ fontSize: '0.85rem' }}>SMS</MenuItem>
+                      <MenuItem value="Email" sx={{ fontSize: '0.85rem' }}>Email</MenuItem>
+                    </Select>
+                  ) : (
+                    <Box component="span" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.85rem' }}>{notif.method}</Box>
+                  )}
+                  
                   <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>→</Typography>
                   <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>after</Typography>
-                  <TextField size="small" defaultValue="1" sx={{ width: 45, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#ffffff' }, '& input': { textAlign: 'center', p: 0 } }} />
-                  <Select size="small" defaultValue="" displayEmpty sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#ffffff' } }}>
-                    <MenuItem value="" disabled sx={{ fontSize: '0.85rem' }}>Frequency</MenuItem>
-                    <MenuItem value="Hours" sx={{ fontSize: '0.85rem' }}>Hours</MenuItem>
-                    <MenuItem value="Days" sx={{ fontSize: '0.85rem' }}>Days</MenuItem>
-                  </Select>
-                  <Button variant="contained" sx={{ bgcolor: '#3B82F6', minWidth: 'auto', px: 2, height: 32, fontSize: '0.8rem', borderRadius: '6px', boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}>
-                    Add
-                  </Button>
+                  
+                  {notif.isEditing ? (
+                    <>
+                      <TextField 
+                        size="small" 
+                        value={notif.time} 
+                        onChange={(e) => updateNotification(notif.id, 'time', e.target.value)}
+                        sx={{ width: 45, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#ffffff' }, '& input': { textAlign: 'center', p: 0 } }} 
+                      />
+                      <Select 
+                        size="small" 
+                        value={notif.frequency} 
+                        onChange={(e) => updateNotification(notif.id, 'frequency', e.target.value)}
+                        displayEmpty 
+                        sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#ffffff' } }}
+                      >
+                        <MenuItem value="Hours" sx={{ fontSize: '0.85rem' }}>Hours</MenuItem>
+                        <MenuItem value="Days" sx={{ fontSize: '0.85rem' }}>Days</MenuItem>
+                      </Select>
+                      <Button variant="contained" onClick={() => toggleEditNotification(notif.id)} sx={{ bgcolor: '#3B82F6', minWidth: 'auto', px: 2, height: 32, fontSize: '0.8rem', borderRadius: '6px', boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}>
+                        Save
+                      </Button>
+                    </>
+                  ) : (
+                    <Box component="span" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.85rem' }}>{notif.time} {notif.frequency}</Box>
+                  )}
                 </Box>
               </Box>
+            </Grid>
+          ))}
+          {notifications.length === 0 && (
+            <Grid item xs={12}>
+              <Typography sx={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', py: 2 }}>No notifications configured yet.</Typography>
             </Grid>
           )}
         </Grid>
