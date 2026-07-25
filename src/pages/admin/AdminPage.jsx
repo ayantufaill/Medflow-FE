@@ -51,9 +51,9 @@ const TABS = [
   { label: 'User Management', path: '/admin/user-management' },
   { label: 'Practice Setup', path: '/admin/practice-setup', clickPath: '/admin/practice-setup/onboarding' },
   { label: 'Patient Communication', path: '/admin/patient-communication' },
-  { label: 'Clinical Management', path: '/admin/clinical-management' },
-  { label: 'Finance Management', path: '/admin/finance-management' },
-  { label: 'Insurance Management', path: '/admin/insurance-management' },
+  { label: 'Clinical Management', path: '/admin/clinical-management', clickPath: '/admin/clinical-management/products' },
+  { label: 'Finance Management', path: '/admin/finance-management', clickPath: '/admin/finance-management/adjustment-types' },
+  { label: 'Insurance Management', path: '/admin/insurance-management', clickPath: '/admin/insurance-management/carriers' },
 ];
 
 const PRACTICE_SETUP_SUB_TABS = [
@@ -132,6 +132,9 @@ const AdminPage = () => {
     TABS.some((tab) => tab.path === location.pathname) ||
     isUserManagementSubTab ||
     isPatientCommunicationSubTab ||
+    isClinicalManagementSubTab ||
+    isFinancialManagementSubTab ||
+    isInsuranceManagementSubTab ||
     location.pathname === '/admin/practice-setup/installation-guide' ||
     location.pathname === '/admin/practice-setup/move-data' ||
     location.pathname === '/admin/practice-setup/document-category-setup' ||
@@ -151,6 +154,18 @@ const AdminPage = () => {
 
   if (location.pathname === '/admin/patient-communication') {
     return <Navigate to="/admin/patient-communication/settings" replace />;
+  }
+
+  if (location.pathname === '/admin/clinical-management') {
+    return <Navigate to="/admin/clinical-management/products" replace />;
+  }
+
+  if (location.pathname === '/admin/finance-management') {
+    return <Navigate to="/admin/finance-management/adjustment-types" replace />;
+  }
+
+  if (location.pathname === '/admin/insurance-management') {
+    return <Navigate to="/admin/insurance-management/carriers" replace />;
   }
 
   return (
