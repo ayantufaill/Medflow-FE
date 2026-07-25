@@ -18,6 +18,12 @@ import PracticeInformation from './PracticeInformation';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
 import ChecklistsManagement from './ChecklistsManagement';
+import PrescriptionTemplates from './PrescriptionTemplates';
+import ClinicalSystemSettings from './ClinicalSystemSettings';
+import RecareConfiguration from './RecareConfiguration';
+import TreatmentPlanPresentation from './TreatmentPlanPresentation';
+import InformedConsent from './InformedConsent';
+import PrePostOps from './PrePostOps';
 import InsuranceCarriers from './InsuranceCarriers';
 import InsurancePlans from './InsurancePlans';
 import MembershipPlans from './MembershipPlans';
@@ -391,6 +397,18 @@ const AdminPage = () => {
               <ProcedureCodesManagement />
             ) : location.pathname === '/admin/clinical-management/checklists' ? (
               <ChecklistsManagement />
+            ) : location.pathname === '/admin/clinical-management/prescription-templates' ? (
+              <PrescriptionTemplates />
+            ) : location.pathname === '/admin/clinical-management/system-settings' ? (
+              <ClinicalSystemSettings />
+            ) : location.pathname === '/admin/clinical-management/recare-configuration' ? (
+              <RecareConfiguration />
+            ) : location.pathname === '/admin/clinical-management/TreatmentPlan-Presentation' ? (
+              <TreatmentPlanPresentation />
+            ) : location.pathname === '/admin/clinical-management/informed-consent' ? (
+              <InformedConsent />
+            ) : location.pathname === '/admin/clinical-management/pre-post-ops' ? (
+              <PrePostOps />
             ) : (
               <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
                 <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
