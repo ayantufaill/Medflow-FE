@@ -65,19 +65,34 @@ const RichTextToolbar = () => (
 const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [initialData, setInitialData] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let initSub = '';
+    let initBody = '';
+    
     if (campaign) {
-      setSubject(campaign.subject || campaign.name || '');
-      setBody(campaign.body || campaign.bodyText || '');
+      initSub = campaign.subject || campaign.name || '';
+      initBody = campaign.body || campaign.bodyText || '';
     } else {
-      setSubject('BOTOX: Just $10/Unit + Bring a Friend Bonus!');
-      setBody(`Botox Special: Save More When You Share!\n\nBotox Specials You'll Love. Starting October 1st!\nWe're making it easier than ever to look refreshed and feel confident this season.\n\nJust $10 per unit of Botox, bring a friend and you'll each receive $25 OFF your treatment!\n\nThis special runs October 1 through December 31, 2025- the perfect time to smooth fine lines before the holidays and start the new year looking refreshed!\n\nAppointments are limited!\n\nThank you,\nRobin\nFront Office Coordinator`);
+      initSub = 'BOTOX: Just $10/Unit + Bring a Friend Bonus!';
+      initBody = `Botox Special: Save More When You Share!\n\nBotox Specials You'll Love. Starting October 1st!\nWe're making it easier than ever to look refreshed and feel confident this season.\n\nJust $10 per unit of Botox, bring a friend and you'll each receive $25 OFF your treatment!\n\nThis special runs October 1 through December 31, 2025- the perfect time to smooth fine lines before the holidays and start the new year looking refreshed!\n\nAppointments are limited!\n\nThank you,\nRobin\nFront Office Coordinator`;
     }
+    
+    setSubject(initSub);
+    setBody(initBody);
+    setInitialData({ subject: initSub, body: initBody });
   }, [campaign, open]);
 
+  const currentData = { subject, body };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handleSave = async (status) => {
+    // If saving as draft and nothing changed, block.
+    // If changing status (e.g., scheduling a draft), allow even if text didn't change.
+    if (!isDirty && status === 'Draft') return;
+    
     try {
       setLoading(true);
       const payload = { subject, body, status };
@@ -86,6 +101,7 @@ const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
       } else {
         await communicationService.createCampaign(payload);
       }
+      setInitialData(currentData);
       onClose();
     } catch (error) {
       console.error('Failed to save campaign', error);
@@ -97,7 +113,7 @@ const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
   if (!open) return null;
 
   return (
-    <Dialog 
+    <Dialog
       open={open} 
       onClose={onClose} 
       maxWidth="lg" 
@@ -231,7 +247,7 @@ const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button 
             variant="outlined" 
-            onClick={onPreview}
+            onClick={() => onPreview({ subject, body })}
             sx={{ textTransform: 'none', fontWeight: 600, color: '#3B82F6', borderColor: '#3B82F6', borderRadius: 1.5, px: 3, py: 1, '&:hover': { bgcolor: '#F0F5FF', borderColor: '#2563EB' } }}
           >
             Preview
@@ -239,7 +255,7 @@ const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
           <Button 
             variant="contained" 
             onClick={() => handleSave('Draft')}
-            disabled={loading}
+            disabled={loading || !isDirty}
             sx={{ textTransform: 'none', fontWeight: 600, bgcolor: '#3B82F6', borderRadius: 1.5, px: 3, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
           >
             Save Draft

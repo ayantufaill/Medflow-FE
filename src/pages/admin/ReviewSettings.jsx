@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -11,6 +11,7 @@ import {
   IconButton,
   Breadcrumbs,
   Link,
+  CircularProgress,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -22,6 +23,7 @@ import {
   NavigateNext as NavigateNextIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { communicationService } from '../../services/communication.service';
 
 const ChatBubbleIllustration = () => (
   <Box sx={{ position: 'relative', width: 250, height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -53,9 +55,79 @@ const ChatBubbleIllustration = () => (
 const ReviewSettings = () => {
   const navigate = useNavigate();
   
-  const [notifications, setNotifications] = useState([
-    { id: '1', method: 'SMS', time: '1', frequency: 'Hours', isEditing: false }
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [initialData, setInitialData] = useState(null);
+  
+  const [isActive, setIsActive] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [enablePhoneCallRequests, setEnablePhoneCallRequests] = useState(false);
+  const [includeFacebookReview, setIncludeFacebookReview] = useState(false);
+  const [includeYelpReview, setIncludeYelpReview] = useState(false);
+  const [skipDuplicateDays, setSkipDuplicateDays] = useState(30);
+  const [googleReviewLink, setGoogleReviewLink] = useState('');
+  const [reputationManagementActive, setReputationManagementActive] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const data = await communicationService.getReviewSettings();
+      const parsedData = {
+        isActive: data.isActive || false,
+        notifications: data.notifications || [],
+        enablePhoneCallRequests: data.enablePhoneCallRequests || false,
+        includeFacebookReview: data.includeFacebookReview || false,
+        includeYelpReview: data.includeYelpReview || false,
+        skipDuplicateDays: parseInt(data.skipDuplicateDays) || 30,
+        googleReviewLink: data.googleReviewLink || '',
+        reputationManagementActive: data.reputationManagementActive || false,
+      };
+      
+      setInitialData(parsedData);
+      setIsActive(parsedData.isActive);
+      setNotifications(parsedData.notifications);
+      setEnablePhoneCallRequests(parsedData.enablePhoneCallRequests);
+      setIncludeFacebookReview(parsedData.includeFacebookReview);
+      setIncludeYelpReview(parsedData.includeYelpReview);
+      setSkipDuplicateDays(parsedData.skipDuplicateDays);
+      setGoogleReviewLink(parsedData.googleReviewLink);
+      setReputationManagementActive(parsedData.reputationManagementActive);
+    } catch (error) {
+      console.error('Error fetching review settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const currentData = {
+    isActive,
+    notifications,
+    enablePhoneCallRequests,
+    includeFacebookReview,
+    includeYelpReview,
+    skipDuplicateDays: parseInt(skipDuplicateDays) || 30,
+    googleReviewLink,
+    reputationManagementActive
+  };
+
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
+  const handleSave = async () => {
+    if (!isDirty) return;
+    try {
+      setSaving(true);
+      await communicationService.updateReviewSettings(currentData);
+      setInitialData(currentData);
+    } catch (error) {
+      console.error('Error saving review settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleAddNotification = () => {
     setNotifications([
@@ -76,6 +148,10 @@ const ReviewSettings = () => {
     setNotifications(notifications.map(n => n.id === id ? { ...n, [field]: value } : n));
   };
 
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
+  }
+
   return (
     <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
       {/* Page Header */}
@@ -88,6 +164,24 @@ const ReviewSettings = () => {
             Customize review options for your office and manage feedback.
           </Typography>
         </Box>
+        <Box>
+          <Button 
+            variant="contained" 
+            onClick={handleSave} 
+            disabled={saving || !isDirty}
+            sx={{ 
+              bgcolor: '#3B82F6', 
+              textTransform: 'none', 
+              borderRadius: '8px', 
+              px: 3, 
+              fontWeight: 600,
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } 
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </Box>
       </Box>
 
       {/* Main Content Container */}
@@ -99,7 +193,7 @@ const ReviewSettings = () => {
           <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#1E293B', mb: 0.5 }}>Office Review</Typography>
           <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Enable this setting to activate and customize review options for your office.</Typography>
         </Box>
-        <Switch defaultChecked sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
+        <Switch checked={isActive} onChange={(e) => setIsActive(e.target.checked)} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
       </Box>
 
       {/* Notification Reminder Setting */}
@@ -220,14 +314,14 @@ const ReviewSettings = () => {
             <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#1E293B', mb: 0.5 }}>Enable Phone Call Requests</Typography>
             <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Let patients request a phone call directly through your review process.</Typography>
           </Box>
-          <Switch defaultChecked sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
+          <Switch checked={enablePhoneCallRequests} onChange={(e) => setEnablePhoneCallRequests(e.target.checked)} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
         </Box>
         <Box sx={{ bgcolor: '#ffffff', borderRadius: 3, p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #E5E7EB' }}>
           <Box sx={{ pr: 2 }}>
             <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#1E293B', mb: 0.5 }}>Include a Facebook Review Button</Typography>
             <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Add a button in your review emails so patients can leave a review on Facebook.</Typography>
           </Box>
-          <Switch sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
+          <Switch checked={includeFacebookReview} onChange={(e) => setIncludeFacebookReview(e.target.checked)} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
         </Box>
 
         {/* Row 2 */}
@@ -236,7 +330,7 @@ const ReviewSettings = () => {
             <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#1E293B', mb: 0.5 }}>Include a Yelp Review Button</Typography>
             <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Add a button in your review emails so patients can leave a review on Yelp.</Typography>
           </Box>
-          <Switch sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
+          <Switch checked={includeYelpReview} onChange={(e) => setIncludeYelpReview(e.target.checked)} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
         </Box>
         <Box sx={{ bgcolor: '#ffffff', borderRadius: 3, p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #E5E7EB' }}>
           <Box sx={{ pr: 2 }}>
@@ -245,7 +339,8 @@ const ReviewSettings = () => {
               Avoid sending review requests to patients who have already received one in the past
               <TextField 
                 size="small" 
-                defaultValue="30" 
+                value={skipDuplicateDays} 
+                onChange={(e) => setSkipDuplicateDays(e.target.value)}
                 sx={{ width: 50, mx: 1, '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.85rem', bgcolor: '#F1F5F9' }, '& input': { textAlign: 'center', p: 0 } }} 
               />
               days.
@@ -257,14 +352,16 @@ const ReviewSettings = () => {
         <Box sx={{ bgcolor: '#ffffff', borderRadius: 3, p: 3, height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #E5E7EB' }}>
           <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#1E293B', mb: 1 }}>Google Review Link</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <Typography sx={{ fontSize: '0.85rem', color: '#3B82F6', wordBreak: 'break-all' }}>
-              https://search.google.com/local/writereview?placeid=ChIJxVQ0i1Tt1hRkDFB...
-            </Typography>
+            <TextField 
+                size="small" 
+                value={googleReviewLink} 
+                onChange={(e) => setGoogleReviewLink(e.target.value)}
+                placeholder="https://search.google.com/local/writereview?placeid=..."
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', bgcolor: '#F1F5F9' } }} 
+            />
             <IconButton size="small" sx={{ color: '#64748b' }}><CopyIcon sx={{ fontSize: '1rem' }} /></IconButton>
           </Box>
-          <Button variant="outlined" size="small" sx={{ textTransform: 'none', borderRadius: '6px', fontSize: '0.8rem', color: '#475569', borderColor: '#CBD5E1', '&:hover': { borderColor: '#94A3B8', bgcolor: '#F8FAFC' } }}>
-            Regenerate Link
-          </Button>
         </Box>
       </Box>
 
@@ -299,7 +396,7 @@ const ReviewSettings = () => {
         </Box>
         
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <Switch defaultChecked sx={{ alignSelf: 'flex-end', mb: 2, '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
+          <Switch checked={reputationManagementActive} onChange={(e) => setReputationManagementActive(e.target.checked)} sx={{ alignSelf: 'flex-end', mb: 2, '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} />
           <ChatBubbleIllustration />
         </Box>
       </Box>

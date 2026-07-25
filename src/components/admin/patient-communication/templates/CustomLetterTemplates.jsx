@@ -22,6 +22,7 @@ export const CustomLetterTemplates = () => {
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [initialData, setInitialData] = useState(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -45,9 +46,20 @@ export const CustomLetterTemplates = () => {
   }, []);
 
   const populateForm = (tpl) => {
-    setDescription(tpl.description || '');
-    setSubject(tpl.subject || '');
-    setBodyText(tpl.bodyText || '');
+    if (!tpl) {
+      setDescription('');
+      setSubject('');
+      setBodyText('');
+      setInitialData({ description: '', subject: '', bodyText: '' });
+      return;
+    }
+    const initDesc = tpl.description || '';
+    const initSub = tpl.subject || '';
+    const initBody = tpl.bodyText || '';
+    setDescription(initDesc);
+    setSubject(initSub);
+    setBodyText(initBody);
+    setInitialData({ description: initDesc, subject: initSub, bodyText: initBody });
   };
 
   const handleSelectTemplate = (index) => {
@@ -55,7 +67,11 @@ export const CustomLetterTemplates = () => {
     populateForm(templates[index]);
   };
 
+  const currentData = { description, subject, bodyText };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handleSave = async () => {
+    if (!isDirty) return;
     try {
       const data = { description, subject, bodyText, templateType: 4 };
       const tpl = templates[selectedTemplate];
@@ -109,7 +125,7 @@ export const CustomLetterTemplates = () => {
                 </Box>
                 <List sx={{ p: 0 }}>
                   {templates.map((template, index) => (
-                    <React.Fragment key={template._id}>
+                    <React.Fragment key={template.id || index}>
                       <ListItem button onClick={() => handleSelectTemplate(index)} sx={{ mx: 2, px: 2, py: 1.2, mb: 0.5, borderRadius: '6px', cursor: 'pointer', bgcolor: selectedTemplate === index ? '#F0F5FF' : 'transparent', '&:hover': { bgcolor: selectedTemplate === index ? '#F0F5FF' : '#F8FAFC' }, transition: 'all 0.15s', borderLeft: selectedTemplate === index ? '4px solid #3B82F6' : '4px solid transparent' }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', flexGrow: 1 }}>{template.description}</Typography>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -127,9 +143,15 @@ export const CustomLetterTemplates = () => {
 
           {/* Center Editor */}
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#FBFCFE' }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {templates.length === 0 ? (
+              <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBFCFE' }}>
+                <Typography color="text.secondary">Select a template or create a new one to begin</Typography>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <TextField placeholder="Enter template title" variant="standard" value={description} onChange={(e) => setDescription(e.target.value)} sx={{ width: '60%', '& .MuiInput-input': { fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' } }} InputProps={{ disableUnderline: false }} />
-              <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
+              <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
             </Box>
 
             <Box sx={{ p: 4, flexGrow: 1, overflowY: 'auto' }}>
@@ -168,6 +190,8 @@ export const CustomLetterTemplates = () => {
                 </Box>
               </Box>
             </Box>
+              </>
+            )}
           </Box>
 
           {/* Right Sidebar */}

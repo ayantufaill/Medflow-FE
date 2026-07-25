@@ -16,6 +16,7 @@ export const ReferralTemplates = () => {
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [initialData, setInitialData] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const fetchTemplates = async () => {
@@ -38,9 +39,13 @@ export const ReferralTemplates = () => {
   }, []);
 
   const populateForm = (tpl) => {
-    setDescription(tpl.description || tpl.name || '');
-    setSubject(tpl.subject || '');
-    setBodyText(tpl.bodyText || (tpl.blocks ? tpl.blocks.map(b => b.content).join('\n\n') : ''));
+    const initDesc = tpl.description || tpl.name || '';
+    const initSub = tpl.subject || '';
+    const initBody = tpl.bodyText || (tpl.blocks ? tpl.blocks.map(b => b.content).join('\n\n') : '');
+    setDescription(initDesc);
+    setSubject(initSub);
+    setBodyText(initBody);
+    setInitialData({ description: initDesc, subject: initSub, bodyText: initBody });
   };
 
   const handleSelectTemplate = (index) => {
@@ -48,7 +53,11 @@ export const ReferralTemplates = () => {
     populateForm(templates[index]);
   };
 
+  const currentData = { description, subject, bodyText };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handleSave = async () => {
+    if (!isDirty) return;
     try {
       const data = { description, subject, bodyText, templateType: 3 };
       const tpl = templates[selectedTemplate];
@@ -149,12 +158,11 @@ export const ReferralTemplates = () => {
               backgroundColor: '#FFFFFF'
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
-                  {description}
-                </Typography>
+                <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>{description}</Typography>
                 <IconButton size="small"><EditIcon sx={{ fontSize: 16 }} /></IconButton>
+                <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={() => setDeleteConfirmOpen(true)}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
               </Box>
-              <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22c55e', '&:hover': { backgroundColor: '#16a34a' } }}>Save</Button>
+              <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
             </Box>
 
             <Box sx={{ p: 4, flexGrow: 1, overflowY: 'auto' }}>

@@ -6,6 +6,32 @@ export const communicationService = {
     return response.data?.data || response.data;
   },
 
+  // Gap Fills endpoints
+  getGapFills: async () => {
+    const response = await apiClient.get('/communication/gap-fills');
+    return response.data?.data || response.data;
+  },
+
+  saveGapFill: async (data) => {
+    const response = await apiClient.post('/communication/gap-fills', data);
+    return response.data?.data || response.data;
+  },
+
+  deleteGapFill: async (id) => {
+    const response = await apiClient.delete(`/communication/gap-fills/${id}`);
+    return response.data?.data || response.data;
+  },
+
+  getGapFillSettings: async () => {
+    const response = await apiClient.get('/communication/gap-fills/settings');
+    return response.data?.data || response.data;
+  },
+
+  saveGapFillSettings: async (settings) => {
+    const response = await apiClient.post('/communication/gap-fills/settings', settings);
+    return response.data?.data || response.data;
+  },
+
   updateSettings: async (settingsData) => {
     const response = await apiClient.put('/communication/settings', settingsData);
     return response.data?.data || response.data;
@@ -81,6 +107,16 @@ export const communicationService = {
 
   deleteQuestionnaire: async (id) => {
     const response = await apiClient.delete(`/communication/questionnaires/${id}`);
+    return response.data?.data || response.data;
+  },
+
+  getReviewSettings: async () => {
+    const response = await apiClient.get('/communication/reviews/settings');
+    return response.data?.data || response.data;
+  },
+
+  updateReviewSettings: async (data) => {
+    const response = await apiClient.put('/communication/reviews/settings', data);
     return response.data?.data || response.data;
   }
 };
