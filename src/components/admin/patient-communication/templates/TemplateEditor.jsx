@@ -27,7 +27,7 @@ export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelet
     setDeleteConfirmOpen(false);
   };
 
-  const isCreating = selectedTemplate === -1;
+
 
   if (!templateInfo) {
     return (
@@ -47,20 +47,6 @@ export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelet
         alignItems: 'center',
         backgroundColor: '#FFFFFF'
       }}>
-        {isCreating ? (
-          <TextField 
-            placeholder="Enter template title"
-            variant="standard"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            sx={{ 
-              width: '60%', 
-              '& .MuiInput-input': { fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' } 
-            }}
-            InputProps={{ disableUnderline: false }}
-            autoFocus
-          />
-        ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
               {description}
@@ -68,7 +54,6 @@ export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelet
             <IconButton size="small"><EditIcon sx={{ fontSize: 16 }} /></IconButton>
             <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={() => setDeleteConfirmOpen(true)}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
           </Box>
-        )}
         <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
       </Box>
 
