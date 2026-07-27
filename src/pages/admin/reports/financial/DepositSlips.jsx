@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import DownloadIcon from '@mui/icons-material/Download';
+import PrintIcon from '@mui/icons-material/Print';
 import {
   Box,
   Typography,
@@ -121,8 +125,8 @@ const DepositSlips = () => {
 
   // Filter States
   const [filterMode, setFilterMode] = useState('daily');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(dayjs());
+  const [endDate, setEndDate] = useState(dayjs());
 
   // Created Slip Report States
   const [createdSlipDetails, setCreatedSlipDetails] = useState(null);
@@ -168,8 +172,8 @@ const DepositSlips = () => {
         .map((d) => new Date(d).getTime());
 
       if (allDates.length > 0) {
-        const minDateStr = getLocalDateOnly(Math.min(...allDates));
-        const maxDateStr = getLocalDateOnly(Math.max(...allDates));
+        const minDateStr = dayjs(Math.min(...allDates));
+        const maxDateStr = dayjs(Math.max(...allDates));
         setStartDate(minDateStr);
         setEndDate(maxDateStr);
         setFilterMode('range');
@@ -178,33 +182,23 @@ const DepositSlips = () => {
   }, [unDeposited]);
 
   const applyModeDates = (mode) => {
-    const today = new Date();
-    const getLocalDateString = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
+    const today = dayjs();
 
     if (mode === 'daily') {
-      const todayStr = getLocalDateString(today);
-      setStartDate(todayStr);
-      setEndDate(todayStr);
+      setStartDate(today);
+      setEndDate(today);
     } else if (mode === 'weekly') {
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(today.setDate(diff));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      const startOfWeek = today.startOf('week');
+      const endOfWeek = today.endOf('week');
       
-      setStartDate(getLocalDateString(startOfWeek));
-      setEndDate(getLocalDateString(endOfWeek));
+      setStartDate(startOfWeek);
+      setEndDate(endOfWeek);
     } else if (mode === 'monthly') {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const startOfMonth = today.startOf('month');
+      const endOfMonth = today.endOf('month');
       
-      setStartDate(getLocalDateString(startOfMonth));
-      setEndDate(getLocalDateString(endOfMonth));
+      setStartDate(startOfMonth);
+      setEndDate(endOfMonth);
     }
   };
 
@@ -256,6 +250,9 @@ const DepositSlips = () => {
 
   // Filtered Payments for Live Preview
   const { filteredPatientPayments, filteredInsurancePayments } = useMemo(() => {
+    const startStr = startDate ? startDate.format('YYYY-MM-DD') : '';
+    const endStr = endDate ? endDate.format('YYYY-MM-DD') : '';
+
     const pts = (unDeposited.patientPayments || []).filter((p) => {
       // Check if it's a refund
       const isSelected = p.amount < 0 
@@ -264,9 +261,9 @@ const DepositSlips = () => {
       
       if (!isSelected) return false;
 
-      if (p.date) {
+      if (p.date && startStr && endStr) {
         const pDate = getLocalDateOnly(p.date);
-        if (pDate < startDate || pDate > endDate) return false;
+        if (pDate < startStr || pDate > endStr) return false;
       }
       return true;
     });
@@ -278,9 +275,9 @@ const DepositSlips = () => {
 
       if (!isSelected) return false;
 
-      if (ins.date) {
+      if (ins.date && startStr && endStr) {
         const insDate = getLocalDateOnly(ins.date);
-        if (insDate < startDate || insDate > endDate) return false;
+        if (insDate < startStr || insDate > endStr) return false;
       }
       return true;
     });
@@ -441,19 +438,19 @@ const DepositSlips = () => {
   return (
     <Box sx={{ p: 0 }}>
       {templateTitle && (
-        <Typography variant="h5" sx={{ textAlign: 'center', mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
+        <Typography variant="h5" sx={{ textAlign: 'center', mb: 3, fontWeight: 700, color: '#1e293b' }}>
           {templateTitle}
         </Typography>
       )}
-      <Typography variant="h6" className="no-print" sx={{ mb: 2, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5 }}>
+      <Typography variant="h6" className="no-print" sx={{ mb: 2, fontWeight: 700, color: '#1e293b' }}>
         Deposit Slips:
       </Typography>
 
-      <Grid container spacing={2} sx={{ flexWrap: 'nowrap' }}>
+      <Grid container spacing={3} sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
         {/* Left Section - Controls */}
-        <Grid item xs={4} className="no-print">
-          <Box sx={{ borderRight: '1px solid #e0e0e0', pr: 3, height: '100%' }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>Create new deposit slip:</Typography>
+        <Grid item xs={12} md={8} className="no-print">
+          <Paper elevation={0} sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '8px', height: '100%' }}>
+            <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: '#2563eb' }}>Create new deposit slip:</Typography>
           
           <RadioGroup row value={filterMode} onChange={handleFilterModeChange} sx={{ mb: 2 }}>
             <FormControlLabel value="daily" control={<Radio size="small" />} label={<Typography variant="caption">Daily</Typography>} />
@@ -463,22 +460,34 @@ const DepositSlips = () => {
           </RadioGroup>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600, color: '#1e293b' }}>
               Transactions done from: 
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px', fontFamily: 'inherit' }}
+              <DatePicker
+                value={startDate}
+                onChange={(v) => setStartDate(v)}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 1400 } },
+                  textField: { 
+                    size: 'small', 
+                    sx: { width: '140px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '8px', height: '36px', backgroundColor: '#fff' }, '& fieldset': { borderColor: '#e2e8f0' } } 
+                  }
+                }}
               />
             </Typography>
-            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600, color: '#1e293b' }}>
               to: 
-              <input 
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px', fontFamily: 'inherit' }}
+              <DatePicker
+                value={endDate}
+                onChange={(v) => setEndDate(v)}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 1400 } },
+                  textField: { 
+                    size: 'small', 
+                    sx: { width: '140px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '8px', height: '36px', backgroundColor: '#fff' }, '& fieldset': { borderColor: '#e2e8f0' } } 
+                  }
+                }}
               />
             </Typography>
             <FormControlLabel
@@ -536,65 +545,71 @@ const DepositSlips = () => {
             {renderCheckboxList('Include Deposits', paymentTypes, 'include', incDepTypes, incDepAll)}
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4, pt: 3, borderTop: '1px solid #e2e8f0' }}>
             {!showTemplateForm && (
               <Button 
-                variant="contained" 
-                onClick={handleCreateDepositClick}
-                disabled={loading}
-                sx={{ textTransform: 'none', bgcolor: '#4a90e2' }}
+                variant="outlined" 
+                size="small"
+                onClick={() => setShowTemplateForm(true)}
+                sx={{ textTransform: 'none', borderRadius: '8px', borderColor: '#e2e8f0', color: '#1e293b', fontWeight: 600, '&:hover': { bgcolor: '#f8fafc' } }}
               >
-                {loading ? 'Creating...' : 'Create Deposit'}
+                Create Template
               </Button>
             )}
             
-            {showTemplateForm ? (
+            {showTemplateForm && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <TextField
                   size="small"
                   placeholder="Enter Template Name"
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
-                  sx={{ width: 200, '& .MuiInputBase-root': { height: 36, fontSize: '0.85rem' } }}
+                  sx={{ width: 200, '& .MuiInputBase-root': { height: 36, fontSize: '0.85rem', borderRadius: '8px' }, '& fieldset': { borderColor: '#e2e8f0' } }}
                   autoFocus
                 />
                 <Button 
                   variant="contained" 
+                  size="small"
                   disabled={savingTemplate}
                   onClick={handleSaveTemplate}
-                  sx={{ textTransform: 'none', bgcolor: '#8db3d9', height: 36 }}
+                  sx={{ textTransform: 'none', bgcolor: '#3b82f6', borderRadius: '8px', boxShadow: 'none', height: 36, '&:hover': { bgcolor: '#2563eb', boxShadow: 'none' } }}
                 >
                   {savingTemplate ? 'Saving...' : 'Save'}
                 </Button>
                 <Button 
-                  variant="contained" 
+                  variant="outlined" 
+                  size="small"
                   onClick={() => {
                     setShowTemplateForm(false);
                     setTemplateName('');
                   }}
-                  sx={{ textTransform: 'none', bgcolor: '#d1a066', height: 36 }}
+                  sx={{ textTransform: 'none', borderRadius: '8px', height: 36, borderColor: '#e2e8f0', color: '#64748b', '&:hover': { bgcolor: '#f8fafc' } }}
                 >
                   Cancel
                 </Button>
               </Box>
-            ) : (
+            )}
+
+            {!showTemplateForm && (
               <Button 
                 variant="contained" 
-                onClick={() => setShowTemplateForm(true)}
-                sx={{ textTransform: 'none', bgcolor: '#f5a623' }}
+                size="small"
+                onClick={handleCreateDepositClick}
+                disabled={loading}
+                sx={{ textTransform: 'none', bgcolor: '#2563eb', borderRadius: '8px', boxShadow: 'none', px: 3, '&:hover': { bgcolor: '#1d4ed8', boxShadow: 'none' } }}
               >
-                Create Template
+                {loading ? 'Generating...' : 'Generate Deposit Slip'}
               </Button>
             )}
           </Box>
-          </Box>
+          </Paper>
         </Grid>
 
-        {/* Right Section - Dynamic Preview / Created Report */}
-        <Grid item xs={8} sx={{ minWidth: 0 }}>
+        <Grid item xs={12} md={4} sx={{ minWidth: 0 }}>
+          <Paper elevation={0} sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '8px', height: '100%' }}>
           {!createdSlipDetails ? (
             <Box className="no-print">
-              <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: '#2563eb' }}>
                 Deposit slip preview:
               </Typography>
               
@@ -607,40 +622,56 @@ const DepositSlips = () => {
                 </Box>
               ) : (
                 <Box>
-                  <Paper variant="outlined" sx={{ p: 2, mb: 2, backgroundColor: '#fafafa' }}>
+                  <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: '12px', borderColor: '#e2e8f0', backgroundColor: '#ffffff' }}>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Total Deposit Amount</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL DEPOSIT AMOUNT</Typography>
+                        <Typography sx={{ fontWeight: 800, color: '#00c853', fontSize: '2rem', lineHeight: 1 }}>
                           ${previewTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Total Item Count</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                          {previewPayments.length} ({filteredPatientPayments.length} pt, {filteredInsurancePayments.length} ins)
-                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL ITEM COUNT</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography sx={{ fontWeight: 800, fontSize: '2rem', color: '#000000', lineHeight: 1 }}>
+                            {previewPayments.length}
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 700, color: '#334155' }}>
+                            ({filteredPatientPayments.length} pt, {filteredInsurancePayments.length} ins)
+                          </Typography>
+                        </Box>
                       </Grid>
                     </Grid>
                   </Paper>
-                  <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>Included Items:</Typography>
-                  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', maxHeight: 350, overflowY: 'auto' }}>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#000000' }}>Included Items:</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button startIcon={<DownloadIcon fontSize="small" />} variant="outlined" size="small" sx={{ textTransform: 'none', color: '#000000', borderColor: '#cbd5e1', borderRadius: '6px', px: 2, fontWeight: 600, '&:hover': { bgcolor: '#f8fafc' } }}>
+                        CSV
+                      </Button>
+                      <Button startIcon={<PrintIcon fontSize="small" />} variant="outlined" size="small" sx={{ textTransform: 'none', color: '#000000', borderColor: '#cbd5e1', borderRadius: '6px', px: 2, fontWeight: 600, '&:hover': { bgcolor: '#f8fafc' } }}>
+                        Print
+                      </Button>
+                    </Box>
+                  </Box>
+                  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #cbd5e1', borderRadius: '12px', maxHeight: 350, overflowY: 'auto' }}>
                     <Table size="small" stickyHeader>
                       <TableHead>
-                        <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                          <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700 }}>Patient/Carrier</TableCell>
-                          <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700 }}>Method</TableCell>
-                          <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700 }}>Date</TableCell>
-                          <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700 }}>Amount</TableCell>
+                        <TableRow sx={{ '& th': { backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.85rem', fontWeight: 500, py: 2, borderBottom: '1px solid #cbd5e1' } }}>
+                          <TableCell>Patient/Carrier</TableCell>
+                          <TableCell>Method</TableCell>
+                          <TableCell>Date</TableCell>
+                          <TableCell align="right">Amount</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {previewPayments.map((p, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{p.patientName || p.carrierName || 'Unknown'}</TableCell>
-                            <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{formatMethodLabel(p.method)}</TableCell>
-                            <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>${p.amount.toFixed(2)}</TableCell>
+                          <TableRow key={idx} sx={{ '& td': { fontSize: '0.85rem', py: 2, verticalAlign: 'middle', borderBottom: '1px solid #cbd5e1', color: '#0f172a' }, backgroundColor: '#ffffff' }}>
+                            <TableCell>{p.patientName || p.carrierName || 'Unknown Carrier'}</TableCell>
+                            <TableCell>{formatMethodLabel(p.method)}</TableCell>
+                            <TableCell>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>${p.amount.toFixed(2)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -653,8 +684,8 @@ const DepositSlips = () => {
             /* Created Deposit Slip Preview */
             <Box sx={{ fontFamily: 'sans-serif', color: '#333' }}>
               {/* Slip Header */}
-              <Box sx={{ borderBottom: '1px solid #ccc', pb: 2, mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1976d2', textDecoration: 'underline', mb: 2 }}>
+              <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 2, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 2 }}>
                   Deposit slip:
                 </Typography>
                 
@@ -665,10 +696,10 @@ const DepositSlips = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <Typography variant="body2" sx={{ color: '#555' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b' }}>
                       Bank account number:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#555' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b' }}>
                       Bank account info: {createdSlipDetails.slip.bankAccountInfo || ''}
                     </Typography>
                   </Grid>
@@ -678,7 +709,7 @@ const DepositSlips = () => {
               {/* Patient Payments Grouped Section */}
               {createdSlipDetails.patientPayments.length > 0 && (
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="body2" sx={{ bgcolor: '#1976d2', color: 'white', px: 1, py: 0.5, fontWeight: 700, mb: 2, width: 'fit-content' }}>
+                  <Typography variant="body2" sx={{ bgcolor: '#f8fafc', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '8px', px: 2, py: 1, fontWeight: 700, mb: 2, width: 'fit-content' }}>
                     Patient Payment:
                   </Typography>
 
@@ -686,37 +717,37 @@ const DepositSlips = () => {
                     const groupTotal = items.reduce((sum, item) => sum + item.amount, 0);
                     return (
                       <Box key={method} sx={{ mb: 3, pl: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#555' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#64748b' }}>
                           {method}
                         </Typography>
-                        <TableContainer sx={{ overflowX: 'auto', mb: 1 }}>
+                        <TableContainer sx={{ overflowX: 'auto', mb: 1, border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                           <Table size="small">
                             <TableHead>
-                            <TableRow sx={{ '& th': { borderBottom: '1px solid #ddd', fontSize: '0.75rem', color: '#777', fontWeight: 600, py: 0.5 } }}>
-                              <TableCell sx={{ pl: 0 }}>date</TableCell>
-                              <TableCell>name</TableCell>
-                              <TableCell>pay type</TableCell>
-                              <TableCell>check number</TableCell>
-                              <TableCell>pay amount</TableCell>
-                              <TableCell sx={{ pr: 0 }}>description</TableCell>
+                            <TableRow sx={{ '& th': { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, py: 1 } }}>
+                              <TableCell>Date</TableCell>
+                              <TableCell>Name</TableCell>
+                              <TableCell>Pay Type</TableCell>
+                              <TableCell>Check Number</TableCell>
+                              <TableCell>Pay Amount</TableCell>
+                              <TableCell>Description</TableCell>
                             </TableRow>
                           </TableHead>
-                          <TableBody sx={{ '& td': { borderBottom: 'none', fontSize: '0.75rem', py: 0.5 } }}>
-                            {items.map((p) => (
-                              <TableRow key={p.id}>
-                                <TableCell sx={{ pl: 0 }}>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
-                                <TableCell sx={{ color: '#1976d2' }}>{p.patientName}</TableCell>
+                          <TableBody>
+                            {items.map((p, idx) => (
+                              <TableRow key={p.id} sx={{ '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                                <TableCell>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
+                                <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{p.patientName}</TableCell>
                                 <TableCell>{p.method}</TableCell>
                                 <TableCell>{p.checkNum || ''}</TableCell>
                                 <TableCell>${p.amount.toFixed(2)}</TableCell>
-                                <TableCell sx={{ pr: 0 }}>{p.notes || ''}</TableCell>
+                                <TableCell>{p.notes || ''}</TableCell>
                               </TableRow>
                             ))}
                             {/* Group Total */}
-                            <TableRow>
-                              <TableCell colSpan={4} />
-                              <TableCell colSpan={2} sx={{ pr: 0, pt: 1, borderTop: '1px solid #eee' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right' }}>
+                            <TableRow sx={{ backgroundColor: '#ffffff' }}>
+                              <TableCell colSpan={4} sx={{ borderBottom: 'none' }} />
+                              <TableCell colSpan={2} sx={{ pt: 1.5, pb: 1.5, borderTop: '2px solid #e2e8f0', borderBottom: 'none' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right', color: '#1e293b' }}>
                                   Total: ${groupTotal.toFixed(2)}
                                 </Typography>
                               </TableCell>
@@ -733,7 +764,7 @@ const DepositSlips = () => {
               {/* Insurance Payments Grouped Section */}
               {createdSlipDetails.insurancePayments.length > 0 && (
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="body2" sx={{ bgcolor: '#1976d2', color: 'white', px: 1, py: 0.5, fontWeight: 700, mb: 2, width: 'fit-content' }}>
+                  <Typography variant="body2" sx={{ bgcolor: '#f8fafc', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '8px', px: 2, py: 1, fontWeight: 700, mb: 2, width: 'fit-content' }}>
                     Insurance Payment:
                   </Typography>
 
@@ -741,39 +772,39 @@ const DepositSlips = () => {
                     const groupTotal = items.reduce((sum, item) => sum + item.amount, 0);
                     return (
                       <Box key={method} sx={{ mb: 3, pl: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#555' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#64748b' }}>
                           {method}
                         </Typography>
-                        <TableContainer sx={{ overflowX: 'auto', mb: 1 }}>
+                        <TableContainer sx={{ overflowX: 'auto', mb: 1, border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                           <Table size="small">
                             <TableHead>
-                            <TableRow sx={{ '& th': { borderBottom: '1px solid #ddd', fontSize: '0.75rem', color: '#777', fontWeight: 600, py: 0.5 } }}>
-                              <TableCell sx={{ pl: 0 }}>date</TableCell>
-                              <TableCell>name</TableCell>
-                              <TableCell>ins. name</TableCell>
-                              <TableCell>pay type</TableCell>
-                              <TableCell>check number</TableCell>
-                              <TableCell>pay amount</TableCell>
-                              <TableCell sx={{ pr: 0 }}>description</TableCell>
+                            <TableRow sx={{ '& th': { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, py: 1 } }}>
+                              <TableCell>Date</TableCell>
+                              <TableCell>Name</TableCell>
+                              <TableCell>Ins. Name</TableCell>
+                              <TableCell>Pay Type</TableCell>
+                              <TableCell>Check Number</TableCell>
+                              <TableCell>Pay Amount</TableCell>
+                              <TableCell>Description</TableCell>
                             </TableRow>
                           </TableHead>
-                          <TableBody sx={{ '& td': { borderBottom: 'none', fontSize: '0.75rem', py: 0.5 } }}>
-                            {items.map((ins) => (
-                              <TableRow key={ins.id}>
-                                <TableCell sx={{ pl: 0 }}>{ins.date ? new Date(ins.date).toLocaleDateString() : '-'}</TableCell>
-                                <TableCell sx={{ color: '#1976d2' }}>{ins.patientName || 'Unknown'}</TableCell>
+                          <TableBody>
+                            {items.map((ins, idx) => (
+                              <TableRow key={ins.id} sx={{ '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                                <TableCell>{ins.date ? new Date(ins.date).toLocaleDateString() : '-'}</TableCell>
+                                <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{ins.patientName || 'Unknown'}</TableCell>
                                 <TableCell>{ins.carrierName || 'Unknown'}</TableCell>
                                 <TableCell>{ins.method}</TableCell>
                                 <TableCell>{ins.checkNum || ''}</TableCell>
                                 <TableCell>${ins.amount.toFixed(2)}</TableCell>
-                                <TableCell sx={{ pr: 0 }}>{ins.notes || ''}</TableCell>
+                                <TableCell>{ins.notes || ''}</TableCell>
                               </TableRow>
                             ))}
                             {/* Group Total */}
-                            <TableRow>
-                              <TableCell colSpan={5} />
-                              <TableCell colSpan={2} sx={{ pr: 0, pt: 1, borderTop: '1px solid #eee' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right' }}>
+                            <TableRow sx={{ backgroundColor: '#ffffff' }}>
+                              <TableCell colSpan={5} sx={{ borderBottom: 'none' }} />
+                              <TableCell colSpan={2} sx={{ pt: 1.5, pb: 1.5, borderTop: '2px solid #e2e8f0', borderBottom: 'none' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right', color: '#1e293b' }}>
                                   Total: ${groupTotal.toFixed(2)}
                                 </Typography>
                               </TableCell>
@@ -822,6 +853,7 @@ const DepositSlips = () => {
               </Box>
             </Box>
           )}
+          </Paper>
         </Grid>
       </Grid>
 

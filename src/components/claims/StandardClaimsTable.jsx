@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -434,9 +435,12 @@ export const StandardClaimsTable = ({
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
                           fontSize: "0.72rem",
+                          "&:hover": { textDecoration: "underline" },
                         }}
                       >
-                        {claim.claimNumber}
+                        <Link to={`/claims/${claim.id}`} style={{ color: "inherit", textDecoration: "inherit" }}>
+                          {claim.claimNumber}
+                        </Link>
                       </Typography>
                       {activeTab === 4 && claim.createdDate && (
                         <Typography
@@ -568,7 +572,7 @@ export const StandardClaimsTable = ({
                     {activeTab === 5 && (
                       <TableCell>
                         <Typography sx={{ color: "#4a5568", fontWeight: 500 }}>
-                          {claim.treatingProvider || "—"}
+                          {claim.treatingProvider ? `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim() || '—' : "—"}
                         </Typography>
                       </TableCell>
                     )}
@@ -995,93 +999,58 @@ export const StandardClaimsTable = ({
                             borderBottom: "1px solid #e0e6ed",
                           }}
                         >
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ fontWeight: 700, color: "#1a3a6b", mb: 1 }}
-                          >
-                            Linked Procedures:
-                          </Typography>
-                          <Table size="small" sx={{ maxWidth: "600px", mb: 1 }}>
+                          <Table size="small" sx={{ mb: 1, border: '1px solid #e2e8f0', '& .MuiTableCell-root': { borderBottom: '1px solid #e2e8f0' } }}>
                             <TableHead>
-                              <TableRow>
-                                <TableCell
-                                  sx={{
-                                    fontWeight: 600,
-                                    fontSize: "0.75rem",
-                                    py: 0.5,
-                                  }}
-                                >
+                              <TableRow sx={{ backgroundColor: '#eef4ff' }}>
+                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
+                                  DOS
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
+                                  Tooth #
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
+                                  Surface
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
                                   Code
                                 </TableCell>
-                                <TableCell
-                                  sx={{
-                                    fontWeight: 600,
-                                    fontSize: "0.75rem",
-                                    py: 0.5,
-                                  }}
-                                >
+                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
                                   Description
                                 </TableCell>
-                                <TableCell
-                                  align="right"
-                                  sx={{
-                                    fontWeight: 600,
-                                    fontSize: "0.75rem",
-                                    py: 0.5,
-                                  }}
-                                >
-                                  Fee
+                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
+                                  Provider
+                                </TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
+                                  Total Submitted Amount
                                 </TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {claim.procedures.map((proc, index) => (
-                                <TableRow key={index}>
-                                  <TableCell
-                                    sx={{ fontSize: "0.75rem", py: 0.5 }}
-                                  >
-                                    {proc.code}
+                                <TableRow key={index} sx={{ backgroundColor: '#fff' }}>
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    {proc.dateOfService ? new Date(proc.dateOfService).toLocaleDateString() : (claim.createdDate ? new Date(claim.createdDate).toLocaleDateString() : '-')}
                                   </TableCell>
-                                  <TableCell
-                                    sx={{ fontSize: "0.75rem", py: 0.5 }}
-                                  >
-                                    {proc.name}
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    {proc.tooth || '-'}
                                   </TableCell>
-                                  <TableCell
-                                    align="right"
-                                    sx={{ fontSize: "0.75rem", py: 0.5 }}
-                                  >
-                                    ${proc.fee.toFixed(2)}
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    {proc.surface || '-'}
+                                  </TableCell>
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    {proc.code || '-'}
+                                  </TableCell>
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    {proc.name || proc.description || '-'}
+                                  </TableCell>
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    {proc.providerName || (claim.treatingProvider ? `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim() : null) || '-'}
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 1 }}>
+                                    ${proc.fee ? Number(proc.fee).toFixed(2) : '0.00'}
                                   </TableCell>
                                 </TableRow>
                               ))}
-                              <TableRow
-                                sx={{ backgroundColor: "rgba(0,0,0,0.01)" }}
-                              >
-                                <TableCell
-                                  colSpan={2}
-                                  sx={{
-                                    fontWeight: 700,
-                                    fontSize: "0.75rem",
-                                    py: 0.5,
-                                  }}
-                                >
-                                  Total Charge:
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  sx={{
-                                    fontWeight: 700,
-                                    fontSize: "0.75rem",
-                                    py: 0.5,
-                                  }}
-                                >
-                                  $
-                                  {claim.procedures
-                                    .reduce((acc, curr) => acc + curr.fee, 0)
-                                    .toFixed(2)}
-                                </TableCell>
-                              </TableRow>
                             </TableBody>
                           </Table>
                         </Box>

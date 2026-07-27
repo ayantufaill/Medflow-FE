@@ -9,6 +9,7 @@ import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import dayjs from 'dayjs';
 import ProductivityCard from './ProductivityCard';
 import api from '../../../config/api';
+import DateNavigation from '../schedule/DateNavigation';
 
 const ProductivityPanel = () => {
   const [providerId, setProviderId] = useState("all");
@@ -49,6 +50,9 @@ const ProductivityPanel = () => {
   useEffect(() => {
     fetchPanelData();
   }, [date, providerId]);
+
+  const handlePrevDay = () => setDate(d => d.subtract(1, 'day'));
+  const handleNextDay = () => setDate(d => d.add(1, 'day'));
 
   const { providers } = useDropdownData({ providers: true });
 
@@ -91,28 +95,13 @@ const ProductivityPanel = () => {
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', mb: '24px', pb: '16px', borderBottom: `1px solid ${COLORS.BORDER}` }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase', width: '40px' }}>
-            Date:
-          </Typography>
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              format="DD/MM/YYYY"
-              value={date}
-              onChange={(newDate) => setDate(newDate)}
-              views={['year', 'month', 'day']}
-              slotProps={{
-                textField: {
-                  size: 'small',
-                  sx: { 
-                    width: "165px", 
-                    '& .MuiInputBase-root': { height: "40px", fontSize: "13px", fontFamily: "Inter", borderRadius: "8px", bgcolor: '#fff' } 
-                  }
-                },
-                popper: { sx: { zIndex: 1600 } }
-              }}
-            />
-          </LocalizationProvider>
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <DateNavigation 
+            date={date} 
+            onPrev={handlePrevDay} 
+            onNext={handleNextDay} 
+            onDateSelect={setDate} 
+          />
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mt: '16px' }}>
           <Button 

@@ -104,9 +104,12 @@ const PatientAdditionalDocumentsPage = () => {
     if (reduxDocuments) {
       const nonHipaaDocs = reduxDocuments
         .filter((doc) => {
-          const type = (doc.documentType || "").toLowerCase();
-          const name = (doc.documentName || "").toLowerCase();
-          return type !== "hipaa" && !name.includes("hipaa");
+          const type = (doc.documentType || doc.type || "").toLowerCase();
+          const name = (doc.documentName || doc.title || doc.name || "").toLowerCase();
+          const category = (doc.category || "").toLowerCase();
+          const isHipaa = type.includes('hipaa') || name.includes('hipaa') || category.includes('hipaa');
+          const isSignedOrConsent = type === 'consent_form' || type === 'consent' || type.includes('signed') || name.includes('consent') || name.includes('signed') || category.includes('consent');
+          return !isHipaa && !isSignedOrConsent;
         })
         .map(doc => ({
           id: doc._id || doc.id,

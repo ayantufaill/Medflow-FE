@@ -58,7 +58,7 @@ const ErroredClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     if (currentFilters.attachment === 'no') result = result.filter(c => !c.attachments?.length && !c.redAttachment && !c.attachmentColor);
     if (currentFilters.status !== 'all') result = result.filter(c => c.status === currentFilters.status);
     if (currentFilters.carrier !== 'all') result = result.filter(c => c.carrier === currentFilters.carrier);
-    if (currentFilters.claimType !== 'all') result = result.filter(c => c.claimType === currentFilters.claimType);
+    if (currentFilters.claimType !== 'all') result = result.filter(c => c.claimType && c.claimType.includes(currentFilters.claimType));
     
     if (currentFilters.search) {
       const q = currentFilters.search.toLowerCase();

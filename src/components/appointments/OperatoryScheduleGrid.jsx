@@ -431,7 +431,12 @@ const OperatoryScheduleGrid = ({
                 const colAppointments = dayAppointments.filter(a => a.columnId === col.id);
                 const operatoryBreakTimes = getBreakTimesForOperatory(col.id);
                 // Filter blocks for this operatory (matching room ID suffix)
-                const colBlocks = scheduleBlocks.filter(b => b.roomId === col.id.replace("op", ""));
+                const colBlocks = scheduleBlocks.filter(b => {
+                  const matchesRoom = b.roomId === col.id.replace("op", "");
+                  const blockDate = dayjs(b.date).format("YYYY-MM-DD");
+                  const currentGridDate = selectedDate.format("YYYY-MM-DD");
+                  return matchesRoom && blockDate === currentGridDate;
+                });
                 
                 return (
                   <Box 

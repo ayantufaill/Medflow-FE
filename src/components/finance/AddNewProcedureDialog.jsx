@@ -20,9 +20,9 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
   const superAdultLeftPost = { top: [62, 63, 64, 65, 66], bottom: [71, 70, 69, 68, 67] };
 
   // Retained Primary Teeth
-  const retainedRightPost = { top: ['A', 'B'], bottom: ['T', 'S'] };
-  const retainedAnterior = { top: ['C', 'D', 'E', 'F', 'G', 'H'], bottom: ['R', 'Q', 'P', 'O', 'N', 'M'] };
-  const retainedLeftPost = { top: ['I', 'J'], bottom: ['L', 'K'] };
+  const retainedRightPost = { top: ['AS', 'BS'], bottom: ['TS', 'SS'] };
+  const retainedAnterior = { top: ['CS', 'DS', 'ES', 'FS', 'GS', 'HS'], bottom: ['RS', 'QS', 'PS', 'OS', 'NS', 'MS'] };
+  const retainedLeftPost = { top: ['IS', 'JS'], bottom: ['LS', 'KS'] };
 
   // Supernumerary Primary Teeth
   const superPrimaryRightPost = { top: ['AS', 'BS'], bottom: ['TS', 'SS'] };

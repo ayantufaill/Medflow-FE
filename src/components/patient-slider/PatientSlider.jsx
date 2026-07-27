@@ -13,29 +13,6 @@ import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
 import { appointmentService } from "../../services/appointment.service";
 
-const DEFAULT_PATIENT = {
-  name: "Ali Tariq",
-  id: "765",
-  dob: "04/20/1990",
-  age: 32,
-  email: "jaylen@oryxdentalsoftware.com",
-  phone: "+1 (855) 849-5255",
-  familyMembersCount: 1,
-  familyBalance: "$0.00",
-  patientBalance: "$0.00",
-  lastPatientPay: "No payment",
-  lastInsPay: "No payment",
-  location: "Riverside Dental · Operatory 2",
-  nextTxAppt: { date: "01/17/2023", time: "10:00 AM", provider: "SMI" },
-  nextHygAppt: { date: "01/17/2023", time: "10:00 AM", provider: "SMI" },
-  hygQueDate: "01/15/2023",
-  badges: ["P", "H", "T", "F", "D"],
-  tags: [
-    { label: "Hyg", bg: "#dcfce7", color: "#15803d", border: "#86efac" },
-    { label: "Tx", bg: "#eff6ff", color: "#2262ef", border: "#bfdbfe" },
-  ],
-};
-
 const EMPTY_APPT = { date: "", time: "", provider: "" };
 
 const getAppointmentDateTime = (appointment) => {
@@ -172,13 +149,13 @@ const toSliderShape = (patient) => {
     (patient.dateOfBirth
       ? dayjs().diff(dayjs(patient.dateOfBirth), "year")
       : "--");
-  const email = patient.email || patient.patientEmail || "";
+  const email = patient.email || patient.patientEmail || "-";
   const phone =
     patient.phone ||
     patient.patientPhone ||
     patient.phonePrimary ||
     patient.mobilePhone ||
-    "";
+    "-";
 
   const familyMembersCount =
     patient.familyMembers?.length ??
@@ -307,7 +284,7 @@ const PatientSlider = ({ open, onClose, patient }) => {
   };
 
   const pt = useMemo(() => {
-    if (!basePt) return DEFAULT_PATIENT;
+    if (!basePt) return null;
     if (
       !fetchedAppointments.appointments.length ||
       String(fetchedAppointments.patientId) !== String(basePt.rawId)
@@ -325,6 +302,8 @@ const PatientSlider = ({ open, onClose, patient }) => {
       nextHygAppt: derivedAppointments.nextHygAppt,
     };
   }, [basePt, fetchedAppointments]);
+
+  if (!pt) return null;
 
   return createPortal(
     <>

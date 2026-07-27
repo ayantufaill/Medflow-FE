@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { PersonOutline, EmailOutlined, MessageOutlined, ScienceOutlined } from "@mui/icons-material";
 
-const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, loading, showExtendedOptions }) => (
+const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, loading, showExtendedOptions, isEditMode }) => (
   <Box sx={{ flexShrink: 0, borderTop: '1px solid #e0e5eb' }}>
 
     {/* Lab Order + Reminder strip — only when opened from PatientCard Book button */}
@@ -11,12 +11,6 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
         px: '20px', py: '10px', borderBottom: '1px solid #f0f0f0',
         flexWrap: 'wrap', gap: '12px',
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-          <ScienceOutlined sx={{ fontSize: '15px', color: '#2262ef' }} />
-          <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#2262ef', '&:hover': { textDecoration: 'underline' } }}>
-            + Lab Order
-          </Typography>
-        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#6b7280' }}>
             Send a reminder to "save the date" now:
@@ -39,6 +33,12 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
       px: "20px", py: "12px",
     }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+       <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+          <ScienceOutlined sx={{ fontSize: '15px', color: '#2262ef' }} />
+          <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#2262ef', '&:hover': { textDecoration: 'underline' } }}>
+            + Lab Order
+          </Typography>
+        </Box>
         <PersonOutline sx={{ fontSize: "16px", color: "#9aa3ae" }} />
         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280" }}>
           Booking for{" "}
@@ -66,19 +66,21 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
         >
           Cancel
         </Button>
-        <Button
-          variant="outlined"
-          color="inherit"
-          sx={{
-            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
-            textTransform: "none", borderRadius: "8px",
-            border: "1px solid #d0d5dd", color: "#374151",
-            px: "16px", py: "7px",
-            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
-          }}
-        >
-          Save as draft
-        </Button>
+        {!isEditMode && (
+          <Button
+            variant="outlined"
+            color="inherit"
+            sx={{
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            }}
+          >
+            Save as draft
+          </Button>
+        )}
         <Button
           variant="contained"
           disableElevation
@@ -93,7 +95,7 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
             "&.Mui-disabled": { backgroundColor: "#c5d3f8", color: "#fff" },
           }}
         >
-          {loading ? "Saving…" : "Add appointment"}
+          {loading ? "Saving…" : (isEditMode ? "Save" : "Add appointment")}
         </Button>
       </Box>
     </Box>

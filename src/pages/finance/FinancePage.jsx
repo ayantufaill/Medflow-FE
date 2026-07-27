@@ -196,7 +196,13 @@ const FinancePage = () => {
 
   const handleEditFlagsSave = async (flagsData) => {
     console.log("Patient flags saved:", flagsData);
-    const activeFlags = Object.keys(flagsData).filter((key) => flagsData[key]);
+    let activeFlags = Array.isArray(flagsData) 
+      ? flagsData 
+      : Object.keys(flagsData).filter((key) => flagsData[key]);
+      
+    // Filter out previous accidental numeric saves like "0", "1"
+    activeFlags = activeFlags.filter(flag => isNaN(flag));
+
     try {
       if (currentPatient && (currentPatient._id || currentPatient.id)) {
         const patientId = currentPatient._id || currentPatient.id;
@@ -308,6 +314,7 @@ const FinancePage = () => {
         onTriggerPatientFinanceIcon={(iconId, e) =>
           patientFinanceRef.current?.triggerIcon?.(iconId, e)
         }
+        patient={currentPatient}
       />
 
       {/* Ledger Filters */}

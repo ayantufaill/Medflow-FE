@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars, no-empty */
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton } from '@mui/material';
+import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton, Backdrop, CircularProgress } from '@mui/material';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import dayjs from 'dayjs';
 import ScheduleGridHeader from '../../components/appointments/schedule/ScheduleGridHeader';
@@ -138,21 +138,20 @@ const OperatorySchedulePage = () => {
   }, [rooms]);
 
   const [isCloseOpenDayMode, setIsCloseOpenDayMode] = useState(false);
+  const [viewMyColumn, setViewMyColumn] = useState(false);
+  const [hideBlocks, setHideBlocks] = useState(false);
+  const [showGhosted, setShowGhosted] = useState(false);
   const [closedOperatories, setClosedOperatories] = useState({}); // Key: "YYYY-MM-DD:opId" -> boolean
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate } = useScheduleState();
+  const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
-  const handleToggleOperatoryStatus = useCallback((dateStr, columnId) => {
-    const key = `${dateStr}:${columnId}`;
-    setClosedOperatories(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  }, []);
+
 
   const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
+  const [scheduleMenuAnchorEl, setScheduleMenuAnchorEl] = useState(null);
   const [printingOrientation, setPrintingOrientation] = useState(null);
 
   const handlePrint = (orientation) => {
@@ -230,7 +229,7 @@ const OperatorySchedulePage = () => {
         const providerId = itemData.providerId || itemData.ProvNum;
 
         // Create new appointment from shortlist data
-        await reduxCreateAppointment({
+        await createAppointment({
           patientId: String(patientId),
           providerId: String(providerId || DUMMY_PROVIDER_ID),
           appointmentDate: start.format('YYYY-MM-DD'),
@@ -259,8 +258,8 @@ const OperatorySchedulePage = () => {
 
         showSnackbar("Shortlist appointment scheduled successfully", "success");
       } catch (err) {
-        if (err.response?.status === 409) {
-          const conflictMsg = err.response.data?.error?.message;
+        if (err.status === 409 || err.response?.status === 409) {
+          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
           showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
         } else {
           const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to schedule shortlist appointment";
@@ -284,8 +283,8 @@ const OperatorySchedulePage = () => {
 
         showSnackbar("Appointment rescheduled successfully", "success");
       } catch (err) {
-        if (err.response?.status === 409) {
-          const conflictMsg = err.response.data?.error?.message;
+        if (err.status === 409 || err.response?.status === 409) {
+          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
           showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
         } else {
           const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
@@ -323,7 +322,7 @@ const OperatorySchedulePage = () => {
     }
   };
 
-  const [selectedDate, setSelectedDate] = useState(dayjs());
+
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
   const [patientQuery, setPatientQuery] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -339,11 +338,42 @@ const OperatorySchedulePage = () => {
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [isOpeningForm, setIsOpeningForm] = useState(false);
 
   useEffect(() => {
     const handleApptDoubleClick = (e) => {
-      setEditingAppointment(e.detail);
-      setDetailModalOpen(true);
+      const shallowAppt = e.detail;
+      const realId = shallowAppt.id && !String(shallowAppt.id).startsWith("temp-") 
+        ? String(shallowAppt.id).replace('appt-', '') 
+        : null;
+
+      if (!realId) {
+        setEditingAppointment(shallowAppt);
+        setFormOpen(true);
+        setShowExtendedOptions(true);
+        return;
+      }
+
+      setIsOpeningForm(true);
+      import('../../services/appointment.service').then(async ({ appointmentService }) => {
+        try {
+          const fullAppt = await appointmentService.getAppointmentById(realId);
+          const fullProcedures = await appointmentService.getAppointmentProcedures(realId);
+          fullAppt.rawAppointment = fullAppt;
+          fullAppt.procedures = fullProcedures;
+          
+          setEditingAppointment(fullAppt);
+          setFormOpen(true);
+          setShowExtendedOptions(true);
+        } catch (err) {
+          console.error("Failed to load appointment full details", err);
+          setEditingAppointment(shallowAppt);
+          setFormOpen(true);
+          setShowExtendedOptions(true);
+        } finally {
+          setIsOpeningForm(false);
+        }
+      });
     };
     window.addEventListener('appointment-card-double-clicked', handleApptDoubleClick);
 
@@ -368,6 +398,18 @@ const OperatorySchedulePage = () => {
       const dateStr = selectedDate.format("YYYY-MM-DD");
       const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
       setScheduleBlocks(blocks);
+
+      // Parse closed days from blocks
+      const closedOps = {};
+      blocks.forEach(block => {
+        if (block.notes === "CLOSED_DAY") {
+          const roomId = block.roomId ? String(block.roomId).replace(/^op/, "") : "";
+          if (roomId) {
+            closedOps[`${dateStr}:op${roomId}`] = true;
+          }
+        }
+      });
+      setClosedOperatories(closedOps);
     } catch (err) {
       console.error("Error fetching schedule blocks:", err);
     }
@@ -377,10 +419,53 @@ const OperatorySchedulePage = () => {
     fetchScheduleBlocks();
   }, [fetchScheduleBlocks]);
 
+  const handleToggleOperatoryStatus = useCallback(async (dateStr, columnId) => {
+    if (dayjs(dateStr).isBefore(dayjs(), 'day')) {
+      showSnackbar("Cannot open or close an operatory for a past date", "error");
+      return;
+    }
+
+    const key = `${dateStr}:${columnId}`;
+    const isCurrentlyClosed = closedOperatories[key];
+    const roomIdStr = columnId.replace(/^op/, "");
+
+    try {
+      if (isCurrentlyClosed) {
+        // OPEN it by deleting the block
+        const blockToDelete = scheduleBlocks.find(b => b.notes === "CLOSED_DAY" && String(b.roomId).replace(/^op/, "") === roomIdStr);
+        if (blockToDelete) {
+          await scheduleBlockService.deleteBlock(blockToDelete._id || blockToDelete.id);
+        }
+        setClosedOperatories(prev => ({ ...prev, [key]: false }));
+      } else {
+        // CLOSE it by creating a full-day block
+        await scheduleBlockService.createBlock({
+          roomId: roomIdStr,
+          date: dateStr,
+          startTime: '00:00',
+          endTime: '23:59',
+          notes: 'CLOSED_DAY',
+          color: '#e5e7eb'
+        });
+        setClosedOperatories(prev => ({ ...prev, [key]: true }));
+      }
+      // Re-fetch to ensure sync with backend
+      fetchScheduleBlocks();
+    } catch (err) {
+      console.error("Failed to toggle operatory status:", err);
+      showSnackbar("Failed to update operatory status", "error");
+    }
+  }, [closedOperatories, scheduleBlocks, fetchScheduleBlocks, showSnackbar]);
+
   const handleSaveBlock = async (blockData) => {
     try {
-      await scheduleBlockService.createBlock(blockData);
-      showSnackbar("Block created successfully", "success");
+      if (blockData.id || blockData._id) {
+        await scheduleBlockService.updateBlock(blockData.id || blockData._id, blockData);
+        showSnackbar("Block updated successfully", "success");
+      } else {
+        await scheduleBlockService.createBlock(blockData);
+        showSnackbar("Block created successfully", "success");
+      }
       setBlockSlotDialogOpen(false);
       fetchScheduleBlocks();
     } catch (err) {
@@ -436,7 +521,8 @@ const OperatorySchedulePage = () => {
 
   const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-    setInitialFormDateTime(dateTime || baseDate.hour(9).minute(0));
+    const now = dayjs();
+    setInitialFormDateTime(dateTime || baseDate.hour(now.hour()).minute(now.minute()));
     setInitialFormRoomId(roomId || null);
     setInitialShortlistData(null);
     setShowExtendedOptions(extendedOptions);
@@ -468,8 +554,7 @@ const OperatorySchedulePage = () => {
     };
   }, []);
 
-  // ── Appointments (for conflict detection inside the form) ─────────
-  const { createAppointment } = useAppointmentList();
+  // createAppointment is obtained from the main useAppointmentList call below (line ~712)
 
   // Maps a raw appointment object from the API into the shape the grid expects
   const mapAppointment = (a) => {
@@ -497,12 +582,10 @@ const OperatorySchedulePage = () => {
         return null;
       }
 
-      const fullName =
-        (a.patientId &&
-          (a.patientId.firstName || a.patientId.lastName) &&
-          `${a.patientId.firstName || ""} ${a.patientId.lastName || ""}`.trim()) ||
-        a.patientName ||
-        "";
+      const patientData = (a.patientId && typeof a.patientId === 'object') ? a.patientId : (a.patient && typeof a.patient === 'object' ? a.patient : null);
+      const fName = patientData?.firstName || patientData?.FName || "";
+      const lName = patientData?.lastName || patientData?.LName || "";
+      const fullName = `${fName} ${lName}`.trim() || patientData?.name || patientData?.fullName || a.patientName || "";
       const initials = fullName
         ? fullName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
         : "PT";
@@ -561,8 +644,6 @@ const OperatorySchedulePage = () => {
       // Resolve operatory room label
       const operatoryLabel =
         OPERATORY_COLUMNS?.find((c) => c.id === columnId)?.label || columnId || "—";
-
-      const patientData = (a.patientId && typeof a.patientId === 'object') ? a.patientId : (a.patient && typeof a.patient === 'object' ? a.patient : null);
       const patientNumber = patientData?.patientCode || patientData?.patientId || patientData?.chartNumber || "";
       const patientPhone = patientData?.phonePrimary || patientData?.phone || patientData?.mobilePhone || "";
       const patientEmail = patientData?.email || "";
@@ -586,6 +667,7 @@ const OperatorySchedulePage = () => {
 
       return {
         id: a._id || a.id,
+        rawAppointment: a,
         appointmentDate: a.appointmentDate,
         date: dateOnly,
         patientId: String((a.patientId && typeof a.patientId === 'object' ? (a.patientId._id || a.patientId.id || a.patientId.PatNum) : a.patientId) || ""),
@@ -630,14 +712,25 @@ const OperatorySchedulePage = () => {
   const {
     appointments: reduxAppointments,
     refresh: refreshAppointments,
+    fetch: fetchApptsMain,
     loading: apptsLoading,
     updateAppointment,
+    createAppointment,
   } = useAppointmentList({
-    patientId: selectedPatientId || "",
     startDate: fetchStartDate,
     endDate: fetchEndDate,
-    limit: 200,
+    limit: 500,
   });
+
+  useEffect(() => {
+    if (fetchApptsMain) {
+      fetchApptsMain({
+        startDate: fetchStartDate,
+        endDate: fetchEndDate,
+        limit: 500,
+      });
+    }
+  }, [fetchStartDate, fetchEndDate, fetchApptsMain]);
 
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
@@ -646,7 +739,12 @@ const OperatorySchedulePage = () => {
     const { providerId, visitType } = frontendFilters || { providerId: 'All', visitType: 'All' };
 
     const mapped = reduxAppointments
-      .filter(a => String(a.status).toLowerCase() !== 'pending')
+      .filter(a => {
+        const status = String(a.status).toLowerCase();
+        if (status === 'pending') return false;
+        if (!showGhosted && (status === 'cancelled' || status === 'no_show' || status === 'no show' || status === 'broken')) return false;
+        return true;
+      })
       .filter(a => {
         if (providerId !== 'All') {
           const aProviderId = String(a.providerId && (a.providerId._id || a.providerId.id || a.providerId));
@@ -759,12 +857,13 @@ const OperatorySchedulePage = () => {
         ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
         ...(formData.roomId && { roomId: formData.roomId }),
         ...(formData.customFields && { customFields: formData.customFields }),
+        patientName: formData.patientName,
       });
       showSnackbar('Appointment created successfully', 'success');
       setFormOpen(false);
     } catch (err) {
       if (err.status === 409 || err.response?.status === 409) {
-        const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+        const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
         showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
       } else {
         const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
@@ -833,7 +932,7 @@ const OperatorySchedulePage = () => {
         showSnackbar('Shortlist item successfully added to schedule!', 'success');
       } catch (err) {
         if (err.status === 409 || err.response?.status === 409) {
-          const conflictMsg = err.response?.data?.error?.message || err.response?.data?.message;
+          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
           showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
         } else {
           const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add to schedule.';
@@ -930,19 +1029,47 @@ const OperatorySchedulePage = () => {
         {/* CENTER PANEL — Dynamic Width */}
         <Box className="print-container" sx={{ flex: 1, minWidth: 0, height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <Box className="no-print">
-            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} />
+            <ScheduleGridHeader onNewAppointment={() => handleOpenForm(null, null)} onPrintClick={(e) => setPrintMenuAnchorEl(e.currentTarget)} onMoreClick={(e) => setMoreMenuAnchorEl(e.currentTarget)} privacyMode={privacyMode} setPrivacyMode={setPrivacyMode} hideBlocks={hideBlocks} setHideBlocks={setHideBlocks} showGhosted={showGhosted} setShowGhosted={setShowGhosted} />
+            {isCloseOpenDayMode && (
+              <Box sx={{ width: '100%', bgcolor: '#fef3c7', color: '#92400e', py: 1, textAlign: 'center', fontWeight: 600, fontSize: '13px', borderBottom: '1px solid #fde68a' }}>
+                Select operatory for opening or closing it
+              </Box>
+            )}
           </Box>
           {calendarView === 'day' || calendarView === 'week' ? (
             <ScheduleCalendar
-              scheduleBlocks={scheduleBlocks}
+              scheduleBlocks={hideBlocks ? [] : scheduleBlocks.filter(b => b.notes !== "CLOSED_DAY")}
               privacyMode={privacyMode}
-              onSlotClick={(hour, mins, roomId) => {
-                const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-                handleOpenForm(baseDate.hour(hour).minute(mins), roomId);
+              showGhosted={showGhosted}
+              isCloseOpenDayMode={isCloseOpenDayMode}
+              closedOperatories={closedOperatories}
+              viewMyColumn={viewMyColumn}
+              onToggleOperatoryStatus={(columnId) => {
+                const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
+                handleToggleOperatoryStatus(dateStr, columnId);
               }}
-              onBlockClick={(hour, mins, roomId) => {
+              onSlotClick={(hour, mins, roomId) => {
+                if (isCloseOpenDayMode || closedOperatories[`${selectedDate.format("YYYY-MM-DD")}:${roomId}`]) return;
                 const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
                 const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+                
+                if (start.isBefore(dayjs())) {
+                  showSnackbar("Cannot create an appointment in the past.", "warning");
+                  return;
+                }
+                
+                handleOpenForm(start, roomId);
+              }}
+              onBlockClick={(hour, mins, roomId) => {
+                if (isCloseOpenDayMode || closedOperatories[`${selectedDate.format("YYYY-MM-DD")}:${roomId}`]) return;
+                const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
+                const start = baseDate.clone().startOf("day").hour(hour).minute(mins);
+                
+                if (start.isBefore(dayjs())) {
+                  showSnackbar("Cannot create a block in the past.", "warning");
+                  return;
+                }
+                
                 const end = start.clone().add(30, "minute");
 
                 setBlockSlotDialogData({
@@ -994,13 +1121,18 @@ const OperatorySchedulePage = () => {
         {/* Add New Appointment Modal */}
         <AddNewPatientAppointmentForm
           open={formOpen}
-          onCancel={() => { setFormOpen(false); setShowExtendedOptions(false); }}
+          onCancel={() => { 
+            setFormOpen(false); 
+            setShowExtendedOptions(false); 
+            setEditingAppointment(null);
+          }}
           onSubmit={handleAddAppointmentSubmit}
           loading={formSaving}
           initialDateTime={initialFormDateTime}
           initialRoomId={initialFormRoomId}
           initialPatient={currentPatient || null}
           initialShortlistData={initialShortlistData}
+          initialAppointment={editingAppointment}
           providers={providers || []}
           rooms={rooms || []}
           appointmentTypes={appointmentTypes || []}
@@ -1025,7 +1157,7 @@ const OperatorySchedulePage = () => {
             } catch (e) {
               console.error("Failed to update appointment", e);
               if (e.status === 409 || e.response?.status === 409) {
-                const conflictMsg = e.response?.data?.error?.message || e.response?.data?.message;
+                const conflictMsg = e.message || e.response?.data?.error?.message || e.response?.data?.message;
                 showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
               } else {
                 const msg = e.message || e.response?.data?.error?.message || e.response?.data?.message || 'Failed to update appointment';
@@ -1151,12 +1283,12 @@ const OperatorySchedulePage = () => {
         >
           <MenuItem
             onClick={() => {
-              setShowConsult(true);
+              setViewMyColumn(prev => !prev);
               setMoreMenuAnchorEl(null);
             }}
             sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
           >
-            Show all columns
+            {viewMyColumn ? "Show all columns" : "View my column"}
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -1185,7 +1317,47 @@ const OperatorySchedulePage = () => {
         >
           <MenuItem
             onClick={() => {
+              setRouteSlipDialogOpen(true);
+              setPrintMenuAnchorEl(null);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Route Slip
+          </MenuItem>
+          <MenuItem
+            onClick={(e) => {
+              setScheduleMenuAnchorEl(e.currentTarget);
+            }}
+            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
+          >
+            Schedule
+          </MenuItem>
+        </Menu>
+
+        {/* Nested Schedule Menu */}
+        <Menu
+          anchorEl={scheduleMenuAnchorEl}
+          open={Boolean(scheduleMenuAnchorEl)}
+          onClose={() => {
+            setScheduleMenuAnchorEl(null);
+            setPrintMenuAnchorEl(null);
+          }}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: {
+              mt: -1,
+              ml: 1,
+              boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+              border: '1px solid #e1e4e8',
+              borderRadius: 1.5,
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => {
               handlePrint("portrait");
+              setScheduleMenuAnchorEl(null);
               setPrintMenuAnchorEl(null);
             }}
             sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
@@ -1195,6 +1367,7 @@ const OperatorySchedulePage = () => {
           <MenuItem
             onClick={() => {
               handlePrint("landscape");
+              setScheduleMenuAnchorEl(null);
               setPrintMenuAnchorEl(null);
             }}
             sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
@@ -1230,6 +1403,12 @@ const OperatorySchedulePage = () => {
       <RouteSlipDialog />
       <FamilyAppointmentsDialog />
 
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 9999 }}
+        open={isOpeningForm}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
     </DndContext>
   );
 };

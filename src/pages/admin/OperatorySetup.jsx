@@ -1,189 +1,95 @@
-import { useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchRooms, deleteRoom, selectRoomList, selectRoomListLoading } from '../../store/slices/roomSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import {
-  Box,
-  Button,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Checkbox,
-  FormControlLabel,
-  IconButton,
-  Breadcrumbs,
-  Link,
-  Paper,
-  Divider
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import { Box, Typography } from '@mui/material';
+
+import OperatorySetupHeader from '../../components/admin/operatory-setup/OperatorySetupHeader';
+import OperatoryList from '../../components/admin/operatory-setup/OperatoryList';
+import OfficeFiltersSection from '../../components/admin/operatory-setup/OfficeFiltersSection';
+import UserFiltersSection from '../../components/admin/operatory-setup/UserFiltersSection';
 
 const OperatorySetup = () => {
   const operatories = useSelector(selectRoomList);
+  const isLoading = useSelector(selectRoomListLoading);
   const dispatch = useDispatch();
-
   const { showSnackbar } = useSnackbar();
+
+  const [showDeleted, setShowDeleted] = useState(false);
 
   useEffect(() => {
     dispatch(fetchRooms({ page: 1, limit: 100 }));
   }, [dispatch]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this operatory?')) return;
-    try {
-      await dispatch(deleteRoom(id)).unwrap();
-      showSnackbar('Operatory deleted successfully', 'success');
-    } catch (error) {
-      console.error(error);
-      showSnackbar('Failed to delete operatory', 'error');
-    }
-  };
+  const handleDelete = useCallback(
+    async (id) => {
+      if (!window.confirm('Are you sure you want to delete this operatory?')) return;
+      try {
+        await dispatch(deleteRoom(id)).unwrap();
+        showSnackbar('Operatory deleted successfully', 'success');
+      } catch (error) {
+        console.error(error);
+        showSnackbar('Failed to delete operatory', 'error');
+      }
+    },
+    [dispatch, showSnackbar]
+  );
 
-  const primaryNavy = '#002855'; // Matching the dark navy in your image
+  const handleToggleShowDeleted = useCallback((e) => {
+    setShowDeleted(e.target.checked);
+    // If the API supports filtering server-side, swap this for:
+    // dispatch(fetchRooms({ page: 1, limit: 100, includeDeleted: e.target.checked }));
+  }, []);
+
+  const handleAddOperatory = useCallback(() => {
+    // TODO: open add-operatory dialog / navigate to create form
+  }, []);
+
+  const handleAddOfficeFilter = useCallback(() => {
+    // TODO: open add office-filter dialog
+  }, []);
+
+  const handleAddUserFilter = useCallback(() => {
+    // TODO: open add user-filter dialog
+  }, []);
+
+  const visibleOperatories = useMemo(
+    () => (showDeleted ? operatories : operatories.filter((op) => (op.status || 'Active') !== 'Deleted')),
+    [operatories, showDeleted]
+  );
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#ffffff', minHeight: '100vh' }}>
-      
-      {/* --- BREADCRUMBS --- */}
-      <Breadcrumbs 
-        separator={<NavigateNextIcon fontSize="small" sx={{ color: '#9e9e9e' }} />} 
-        aria-label="breadcrumb"
-        sx={{ mb: 2 }}
+    <Box
+      sx={{
+        bgcolor: '#f6f8fb',
+        border: '1px solid #e8eaf0',
+        borderRadius: 2,
+        p: 3,
+      }}
+    >
+      <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a1d22', mb: 2.5 }}>
+        Operatory Setup
+      </Typography>
+
+      <Box
+        sx={{
+          bgcolor: '#ffffff',
+          border: '1px solid #e8eaf0',
+          borderRadius: 2,
+          p: 2.5,
+        }}
       >
-        <Typography
-          variant="caption"
-          component={RouterLink}
-          to="/admin/practice-setup"
-          sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-        >
-          Practice Setup
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#9e9e9e', fontWeight: 500 }}>
-          Operatory Setup
-        </Typography>
-      </Breadcrumbs>
-
-      {/* --- OPERATORIES SECTION --- */}
-      <Box sx={{ mb: 8 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Typography variant="h6" sx={{ color: '#333', fontWeight: 500 }}>
-            Operatories
-          </Typography>
-          <Box sx={{ textAlign: 'right' }}>
-            <Button 
-              variant="contained" 
-              sx={{ 
-                borderRadius: '20px', 
-                textTransform: 'none', 
-                px: 3, 
-                bgcolor: primaryNavy,
-                '&:hover': { bgcolor: '#001a3a' }
-              }}
-            >
-              Add Operatory
-            </Button>
-            <Box sx={{ mt: 1 }}>
-              <FormControlLabel 
-                control={<Checkbox size="small" sx={{ p: 0.5 }} />} 
-                label={<Typography variant="caption" color="textSecondary">Show Deleted Operatories</Typography>} 
-              />
-            </Box>
-          </Box>
-        </Box>
-
-        <TableContainer sx={{ border: '1px solid #e0e0e0', borderRadius: 0 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ borderBottom: '2px solid #e0e0e0' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#666' }}>Operatory</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#666' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#666' }}>Order</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#666' }}>Note</TableCell>
-                <TableCell align="right"></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {operatories.map((op, i) => (
-                <TableRow key={op._id || i} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ py: 1.5 }}>{op.name || op.roomNumber}</TableCell>
-                  <TableCell>{op.status || 'Active'}</TableCell>
-                  <TableCell>{op.order || i + 1}</TableCell>
-                  <TableCell>{op.note || ''}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => handleDelete(op._id || op.roomNumber)}>
-                      <DeleteOutlineIcon fontSize="small" sx={{ color: '#bdbdbd' }} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <OperatorySetupHeader
+          onAddOperatory={handleAddOperatory}
+          showDeleted={showDeleted}
+          onToggleShowDeleted={handleToggleShowDeleted}
+        />
+        <OperatoryList operatories={visibleOperatories} onDeleteOperatory={handleDelete} />
       </Box>
 
-      {/* --- OFFICE FILTERS SECTION --- */}
-      <Box sx={{ mb: 8 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: '#333', fontWeight: 500 }}>
-            Office Filters
-          </Typography>
-          <Button 
-            variant="contained" 
-            sx={{ 
-              borderRadius: '20px', 
-              textTransform: 'none', 
-              px: 3, 
-              bgcolor: primaryNavy,
-              '&:hover': { bgcolor: '#001a3a' }
-            }}
-          >
-            Add Filter
-          </Button>
-        </Box>
-        <TableContainer sx={{ border: '1px solid #e0e0e0', borderRadius: 0 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ borderBottom: '2px solid #e0e0e0' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#666', width: '30%' }}>Filter</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#666', width: '40%' }}>Ops Included</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#666', width: '30%' }}>Schedule</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-               <TableRow><TableCell colSpan={3} sx={{ py: 4 }} /></TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+      <OfficeFiltersSection onAddFilter={handleAddOfficeFilter} />
 
-      {/* --- USER FILTERS SECTION --- */}
-      <Box>
-        <Typography variant="h6" sx={{ color: '#333', fontWeight: 500, mb: 1 }}>
-          User Filters
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
-           <Typography variant="body2" sx={{ color: '#1976d2', fontWeight: 600, cursor: 'pointer' }}>
-             [User Display Name]
-           </Typography>
-           <Link 
-             component="button" 
-             variant="body2" 
-             underline="none"
-             sx={{ display: 'flex', alignItems: 'center', color: '#9e9e9e', '&:hover': { color: primaryNavy } }}
-           >
-             <AddIcon sx={{ fontSize: 16, mr: 0.5 }} /> Add Filter
-           </Link>
-        </Box>
-      </Box>
-
+      <UserFiltersSection onAddFilter={handleAddUserFilter} />
     </Box>
   );
 };

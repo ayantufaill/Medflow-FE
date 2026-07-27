@@ -365,6 +365,9 @@ const OperatorySidebar = ({
             const slotEnd = current.hour(slot.endHour).minute(0);
             
             const hasConflict = dayAppts.some(appt => {
+              const statusStr = String(appt.status || '').toLowerCase();
+              if (statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken') return false;
+
               const apptStart = dayjs(appt.start);
               const apptEnd = dayjs(appt.end);
               const isOverlap = apptStart.isBefore(slotEnd) && apptEnd.isAfter(slotStart);

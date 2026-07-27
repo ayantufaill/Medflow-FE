@@ -32,6 +32,8 @@ const AppointmentLeftPanel = ({
   const [showPastVisits, setShowPastVisits] = useState(false);
 
   const handleAddPastProcedure = (proc) => {
+    const exists = procedures.some((p) => p.code === proc.code);
+    if (exists) return;
     setProcedures([...procedures, proc]);
   };
 
@@ -176,7 +178,7 @@ const AppointmentLeftPanel = ({
     {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
     {showExtendedOptions && (
       <>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: '10px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'right', mt: '10px' }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -185,7 +187,7 @@ const AppointmentLeftPanel = ({
               />
             }
             label={
-              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#374151' }}>
+              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#374151', mr:1 }}>
                 check out appointment
               </Typography>
             }
@@ -222,14 +224,6 @@ const AppointmentLeftPanel = ({
         </Box>
       </>
     )}
-
-    {/* Recare hint */}
-    <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280", mb: "4px", mt: 2 }}>
-      Patient doesn't have a recare plan.{" "}
-      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>Add a procedure</Box>
-      {" "}or{" "}
-      <Box component="span" sx={{ color: "#ef4444", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>start a plan.</Box>
-    </Typography>
     
     <Typography 
       sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}

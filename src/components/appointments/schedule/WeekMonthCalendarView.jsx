@@ -3,6 +3,19 @@ import { Box, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
 
+const STATUS_COLORS = {
+  unconfirmed: "#9e9e9e",
+  preconfirmed: "#5c6bc0",
+  confirmed: "#1976d2",
+  seated: "#00796b",
+  call: "#6d4c41",
+  checked_out_incomplete: "#f9a825",
+  checked_out_complete: "#2e7d32",
+  no_show: "#616161",
+  left_message: "#8d6e63",
+  scheduled: "#0284c7"
+};
+
 const WeekMonthCalendarView = ({ 
   calendarView, 
   selectedDate, 
@@ -104,39 +117,49 @@ const WeekMonthCalendarView = ({
                 {dateObj.format('D')}
               </Typography>
               
-              {dayAppointments.map(apt => (
-                <Box 
-                  key={apt.id}
-                  onClick={() => onSlotClick && onSlotClick({ detail: apt })}
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '6px',
-                    cursor: 'pointer',
-                    '&:hover': { opacity: 0.8 }
-                  }}
-                >
-                  <Box 
-                    sx={{ 
-                      width: '6px', 
-                      height: '6px', 
-                      backgroundColor: apt.color || '#3b82f6', 
-                      flexShrink: 0 
-                    }} 
-                  />
-                  <Typography 
-                    noWrap
-                    sx={{ 
-                      fontFamily: 'Inter', 
-                      fontSize: '11px', 
-                      color: '#4b5563',
-                      lineHeight: 1.2
-                    }}
-                  >
-                    {dayjs(apt.start || apt.appointmentDate + 'T' + apt.startTime).format('h:mma').replace(':00', '')} {apt.patientName}
-                  </Typography>
-                </Box>
-              ))}
+              <Box sx={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '4px',
+                maxHeight: isMonth ? '72px' : 'none', // Approx 3 appointments (20px each + 4px gap)
+                '&::-webkit-scrollbar': { width: '4px' },
+                '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
+              }}>
+                {dayAppointments.map(apt => {
+                  const statusKey = String(apt.status).toLowerCase();
+                  const bgColor = STATUS_COLORS[statusKey] || apt.color || '#3b82f6';
+                  return (
+                    <Box 
+                      key={apt.id}
+                      onClick={() => onSlotClick && onSlotClick({ detail: apt })}
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        backgroundColor: bgColor,
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                        cursor: 'pointer',
+                        '&:hover': { opacity: 0.9 }
+                      }}
+                    >
+                      <Typography 
+                        noWrap
+                        sx={{ 
+                          fontFamily: 'Inter', 
+                          fontSize: '11px', 
+                          color: '#fff',
+                          lineHeight: 1.2,
+                          fontWeight: 500
+                        }}
+                      >
+                        {dayjs(apt.start || apt.appointmentDate + 'T' + apt.startTime).format('h:mma').replace(':00', '')} {apt.patientName}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
             </Box>
           );
         })}

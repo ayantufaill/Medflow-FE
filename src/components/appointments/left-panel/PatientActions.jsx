@@ -4,6 +4,8 @@ import { KeyboardArrowUp } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
 import { PatientDetails, FamilyDetails } from './PatientDetailsCard';
 import AppointmentHistoryDialog from '../schedule/appointment-history-modal/AppointmentHistoryDialog';
+import PurchaseProductDialog from './PurchaseProductDialog';
+import ProcedureBlocks from './ProcedureBlocks';
 import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {
@@ -54,6 +56,8 @@ const PatientActions = ({ appointment }) => {
 
   const [appointmentHistoryOpen, setAppointmentHistoryOpen] = useState(false);
 
+  const [purchaseProductOpen, setPurchaseProductOpen] = useState(false);
+
   // ── Button handlers ──────────────────────────────────────────────────────────
 
   const handleAppointmentHistory = () => {
@@ -84,31 +88,8 @@ const PatientActions = ({ appointment }) => {
 
       <Divider sx={{ borderColor: COLORS.BORDER, my: '6px' }} />
 
-      {/* ── Procedure row ────────────────────────────────────────────────────── */}
-      {/* Shows the primary procedure for the currently selected appointment.
-          Greyed out when no appointment is active. */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          backgroundColor: COLORS.SURFACE_CARD,
-          border: `1px solid ${COLORS.BORDER}`,
-          borderRadius: radius.md,
-          px: '12px',
-          py: '10px',
-        }}
-      >
-        <Typography sx={{ ...headingSecondarySx, color: procedureLabel ? COLORS.TEXT_PRIMARY : COLORS.TEXT_MUTED }}>
-          {procedureLabel || 'No procedure scheduled'}
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>
-            {durationLabel}
-          </Typography>
-          <KeyboardArrowUp sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />
-        </Box>
-      </Box>
+      {/* ── Procedure Blocks ────────────────────────────────────────────────────── */}
+      <ProcedureBlocks appointment={activeAppt} />
 
       {/* ── Blue action buttons ──────────────────────────────────────────────── */}
       {ACTION_BUTTONS.map(({ label, onClick, showDots }) => (
@@ -134,17 +115,19 @@ const PatientActions = ({ appointment }) => {
         </Box>
       ))}
 
-      {/* ── Purchase Products — disabled until an appointment is confirmed ───── */}
+      {/* ── Purchase Products ───── */}
       <Box
+        onClick={() => setPurchaseProductOpen(true)}
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#c5cad3',
+          backgroundColor: COLORS.ACCENT, // changed from #c5cad3 to active blue
           borderRadius: radius.md,
           px: '16px',
           py: '12px',
-          cursor: 'not-allowed',
+          cursor: 'pointer', // changed from not-allowed
+          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
         }}
       >
         <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
@@ -160,6 +143,11 @@ const PatientActions = ({ appointment }) => {
         open={appointmentHistoryOpen} 
         onClose={() => setAppointmentHistoryOpen(false)} 
         patient={currentPatient} 
+      />
+
+      <PurchaseProductDialog 
+        open={purchaseProductOpen} 
+        onClose={() => setPurchaseProductOpen(false)} 
       />
     </Box>
   );

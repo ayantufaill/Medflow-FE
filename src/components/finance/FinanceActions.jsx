@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Box, Button, IconButton, Tooltip } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Button, IconButton, Tooltip, Menu, MenuItem, ListItemText } from '@mui/material';
 import {
   KeyboardArrowDown,
-  Refresh
+  CheckCircle,
+  Cancel
 } from '@mui/icons-material';
 import invoicesIcon from '../../assets/finance icons/invoices.svg';
 import patientpaymentIcon from '../../assets/finance icons/patientpayment.svg';
@@ -16,6 +17,11 @@ import accountadjustmentIcon from '../../assets/finance icons/accountadjustment.
 import accountadjustmentminusIcon from '../../assets/finance icons/accountadjustmentminus.svg';
 import addclaimIcon from '../../assets/finance icons/addclaim.svg';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchPatientInsurances, selectPatientInsurancesCache } from '../../store/slices/patientSlice';
+import PatientPrintOptions from './PatientPrintOptions';
+import ShareDropdown from './ShareDropdown';
+import PastStatementsDialog from './PastStatementsDialog';
 import InsuranceCoverageDialog from './InsuranceCoverageDialog';
 
 const FinanceActions = ({ 
@@ -26,13 +32,55 @@ const FinanceActions = ({
   onCashMinusClick,
   onRefreshCoinClick,
   onOpenDepositMenu,
-  onTriggerPatientFinanceIcon
+  onTriggerPatientFinanceIcon,
+  patient
 }) => {
   const navigate = useNavigate();
-  const [showInsuranceDialog, setShowInsuranceDialog] = useState(false);
+  const dispatch = useDispatch();
+  const insurancesCache = useSelector(selectPatientInsurancesCache);
 
-  const handleInsuranceCoverageClick = () => setShowInsuranceDialog(true);
-  const handleCloseInsuranceDialog = () => setShowInsuranceDialog(false);
+  // Insurance Coverage dropdown
+  const [insuranceCoverageAnchorEl, setInsuranceCoverageAnchorEl] = useState(null);
+  const patientId = patient?._id || patient?.id;
+  const patientInsurances = patientId ? (insurancesCache?.[patientId] || []) : [];
+  const hasInsurance = patientInsurances.length > 0;
+
+  useEffect(() => {
+    if (patientId) {
+      dispatch(fetchPatientInsurances({ patientId }));
+    }
+  }, [dispatch, patientId]);
+
+  const handleInsuranceCoverageClick = (e) => setInsuranceCoverageAnchorEl(e.currentTarget);
+  const handleInsuranceCoverageClose = () => setInsuranceCoverageAnchorEl(null);
+  const handleInsuranceCoverageSelect = () => {
+    handleInsuranceCoverageClose();
+    navigate('/insurance');
+  };
+
+  // Add Claim dialog
+  const [showAddClaimDialog, setShowAddClaimDialog] = useState(false);
+
+  // Past Statements dialog
+  const [showPastStatements, setShowPastStatements] = useState(false);
+
+  // Print handlers - local dropdown
+  const [printAnchorEl, setPrintAnchorEl] = useState(null);
+  const handlePrintClick = (e) => setPrintAnchorEl(e.currentTarget);
+  const handlePrintClose = () => setPrintAnchorEl(null);
+  const handlePrintSelect = (option) => {
+    handlePrintClose();
+    onTriggerPatientFinanceIcon?.('printSelect', option);
+  };
+
+  // Share handlers - local dropdown
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
+  const handleShareClick = (e) => setShareAnchorEl(e.currentTarget);
+  const handleShareClose = () => setShareAnchorEl(null);
+  const handleShareSelect = (optionId) => {
+    handleShareClose();
+    onTriggerPatientFinanceIcon?.('shareSelect', optionId);
+  };
 
   const iconStyle = { fontSize: '20px' };
 
@@ -58,15 +106,15 @@ const FinanceActions = ({
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <Tooltip title="Invoices"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('invoice')}><Box component="img" src={invoicesIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Patient Payment"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('userWallet')}><Box component="img" src={patientpaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Insurance Payment"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('claim', e)}><Box component="img" src={insurancepaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Patient Deposit"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('insuranceWallet')}><Box component="img" src={patientdepositIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Courtesy Refund"><IconButton size="small" onClick={onRefreshCoinClick}><Box component="img" src={courtestrefundIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Create Payment Plan"><IconButton size="small" onClick={onOpenDepositMenu}><Box component="img" src={createpaymentplanIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Print"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('print', e)}><Box component="img" src={printIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Share"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('share', e)}><Box component="img" src={shareIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Add Claim"><IconButton size="small" onClick={() => setShowAddClaimDialog(true)}><Box component="img" src={addclaimIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Insurance Payment"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('insuranceWallet')}><Box component="img" src={insurancepaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Courtesy Refund"><IconButton size="small" onClick={onRefreshCoinClick}><Box component="img" src={courtestrefundIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>     
+        <Tooltip title="Patient Deposit"><IconButton size="small" onClick={onOpenDepositMenu}><Box component="img" src={patientdepositIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Print"><IconButton size="small" onClick={handlePrintClick}><Box component="img" src={printIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Share"><IconButton size="small" onClick={handleShareClick}><Box component="img" src={shareIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Account Adjustment"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('cashPlus', e)}><Box component="img" src={accountadjustmentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Account Adjustment Minus"><IconButton size="small" onClick={onCashMinusClick}><Box component="img" src={accountadjustmentminusIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Add Claim"><IconButton size="small" onClick={onCalendarClick}><Box component="img" src={addclaimIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Create Payment Plan"><IconButton size="small" onClick={onCalendarClick}><Box component="img" src={createpaymentplanIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
       </Box>
 
       {/* Right Buttons */}
@@ -88,6 +136,7 @@ const FinanceActions = ({
         </Button>
         <Button 
           variant="contained" 
+          onClick={() => setShowPastStatements(true)}
           sx={{ 
             bgcolor: '#2362EF', 
             '&:hover': { bgcolor: '#1b4ecc' },
@@ -114,24 +163,92 @@ const FinanceActions = ({
         >
           INS. COVERAGE
         </Button>
-        <Button 
-          variant="outlined" 
-          sx={{ 
-            minWidth: '36px',
-            width: '36px',
-            height: '36px',
-            p: 0,
-            borderColor: '#A1C2FA',
-            color: '#2362EF'
-          }}
-        >
-          <Refresh sx={{ fontSize: '20px' }} />
-        </Button>
+        <Tooltip title="Treatment Plan">
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('/clinical/treatment-plan')}
+            sx={{ 
+              minWidth: '36px',
+              width: '36px',
+              height: '36px',
+              p: 0,
+              bgcolor: '#2362EF',
+              color: '#ffffff',
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              textTransform: 'none',
+              boxShadow: 'none',
+              '&:hover': {
+                bgcolor: '#1b4ecc',
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Tx
+          </Button>
+        </Tooltip>
       </Box>
 
-      <InsuranceCoverageDialog 
-        open={showInsuranceDialog} 
-        onClose={handleCloseInsuranceDialog} 
+      {/* Insurance Coverage Dropdown Menu */}
+      <Menu
+        anchorEl={insuranceCoverageAnchorEl}
+        open={Boolean(insuranceCoverageAnchorEl)}
+        onClose={handleInsuranceCoverageClose}
+        PaperProps={{
+          sx: {
+            minWidth: 280,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            '& .MuiMenuItem-root': {
+              py: 1.5,
+              px: 2,
+              '&:hover': { bgcolor: '#f5f5f5' }
+            }
+          }
+        }}
+      >
+        {hasInsurance ? (
+          <MenuItem onClick={handleInsuranceCoverageSelect}>
+            <CheckCircle sx={{ color: '#4caf50', mr: 1.5, fontSize: 20 }} />
+            <ListItemText
+              primary="This patient has insurance coverage"
+              primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
+            />
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={handleInsuranceCoverageSelect}>
+            <Cancel sx={{ color: '#f44336', mr: 1.5, fontSize: 20 }} />
+            <ListItemText
+              primary="No insurance coverage"
+              primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
+            />
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* Past Statements Dialog */}
+      <PastStatementsDialog
+        open={showPastStatements}
+        onClose={() => setShowPastStatements(false)}
+        patient={patient}
+      />
+
+      <InsuranceCoverageDialog
+        open={showAddClaimDialog}
+        onClose={() => setShowAddClaimDialog(false)}
+      />
+
+      <PatientPrintOptions
+        anchorEl={printAnchorEl}
+        open={Boolean(printAnchorEl)}
+        onClose={handlePrintClose}
+        onSelect={handlePrintSelect}
+      />
+
+      <ShareDropdown
+        anchorEl={shareAnchorEl}
+        onClose={handleShareClose}
+        onSelect={handleShareSelect}
       />
     </Box>
   );

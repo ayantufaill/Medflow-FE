@@ -1,16 +1,26 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Box, Tabs, Tab, useTheme, Button, Typography, Paper } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Box, Tabs, Tab, useTheme, Button, Typography, Paper, Breadcrumbs } from '@mui/material';
+import { Add as AddIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
+import OfficeTimings from './OfficeTimings';
+import OnlineScheduleConfiguration from './OnlineSchedule';
 import ProvidersListPage from '../providers/ProvidersListPage';
 import PracticeInfoListPage from '../practice-info/PracticeInfoListPage';
 import InsuranceCompaniesListPage from '../insurance-companies/InsuranceCompaniesListPage';
 import AppointmentTypesListPage from '../appointment-types/AppointmentTypesListPage';
 import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
+import KioskAccountsView from './KioskAccountsView';
+import InformedConsent from './InformedConsent';
+import PrePostOps from './PrePostOps';
+import ReportsDashboard from './ReportsDashboard';
+import AdvancedReporting from './AdvancedReporting';
+import MyChartConfiguration from './MyChartConfiguration';
 import InstallationGuide from './InstallationGuide';
 import MoveData from './MoveData';
+import OperatorySetup from './OperatorySetup';
+import PatientFlags from './PatientFlags';
 import DocumentCategorySetup from './DocumentCategorySetup';
 import ScheduleConfiguration from './ScheduleConfiguration';
 import PracticeSettings from './PracticeSettings';
@@ -119,6 +129,15 @@ const INSURANCE_MANAGEMENT_SUB_TABS = [
   { label: 'Match Vyne Carriers', path: '/admin/insurance-management/match-vyne-carriers' },
 ];
 
+// Groups used to resolve breadcrumbs for sub-pages (parent tab + matched sub tab)
+const SUB_TAB_GROUPS = [
+  { parent: TABS[1], subTabs: PRACTICE_SETUP_SUB_TABS },
+  { parent: TABS[2], subTabs: PATIENT_COMMUNICATION_SUB_TABS },
+  { parent: TABS[3], subTabs: CLINICAL_MANAGEMENT_SUB_TABS },
+  { parent: TABS[4], subTabs: FINANCIAL_MANAGEMENT_SUB_TABS },
+  { parent: TABS[5], subTabs: INSURANCE_MANAGEMENT_SUB_TABS },
+];
+
 const AdminPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -134,7 +153,7 @@ const AdminPage = () => {
   const isFinancialManagementSubTab = FINANCIAL_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
   const isInsuranceManagementSubTab = INSURANCE_MANAGEMENT_SUB_TABS.some((t) => t.path === location.pathname);
 
-  const isTopLevelPage =
+   const isTopLevelPage =
     TABS.some((tab) => tab.path === location.pathname) ||
     isUserManagementSubTab ||
     isPatientCommunicationSubTab ||
@@ -142,6 +161,12 @@ const AdminPage = () => {
     isFinancialManagementSubTab ||
     isInsuranceManagementSubTab ||
     location.pathname === '/admin/practice-setup/installation-guide' ||
+    location.pathname === '/admin/practice-setup/kiosk-accounts' ||
+    location.pathname === '/admin/practice-setup/office-timings' ||
+    location.pathname === '/admin/practice-setup/operatory-setup' ||
+    location.pathname === '/admin/practice-setup/patient-flags' ||
+    location.pathname === '/admin/practice-setup/my-chart-configuration' ||
+    location.pathname === '/admin/practice-setup/online-schedule' ||
     location.pathname === '/admin/practice-setup/move-data' ||
     location.pathname === '/admin/practice-setup/document-category-setup' ||
     location.pathname === '/admin/practice-setup/schedule-configuration' ||
@@ -149,6 +174,16 @@ const AdminPage = () => {
     location.pathname === '/admin/practice-setup/practice-information';
 
   const isSubPage = !isTopLevelPage && location.pathname !== '/admin';
+
+  // Resolve breadcrumb info (parent tab + current sub tab label) for flat sub-pages
+  let breadcrumbInfo = null;
+  for (const group of SUB_TAB_GROUPS) {
+    const matchedSubTab = group.subTabs.find((t) => t.path === location.pathname);
+    if (matchedSubTab) {
+      breadcrumbInfo = { parent: group.parent, current: matchedSubTab };
+      break;
+    }
+  }
 
   if (location.pathname === '/admin') {
     return <Navigate to="/admin/user-management" replace />;
@@ -178,8 +213,7 @@ const AdminPage = () => {
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 65px)' }}>
       <Paper elevation={0} sx={{ backgroundColor: '#fff', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'visible' }}>
 
-      {/* Main tab bar + sub-nav wrapper — Hidden on sub-management pages */}
-      {!isSubPage && (
+        {/* Main tab bar + sub-nav wrapper */}
         <Box
           onMouseLeave={() => setHoveredTab(null)}
           sx={{ position: 'relative', pt: 1 }}
@@ -314,7 +348,6 @@ const AdminPage = () => {
             </Box>
           )}
         </Box>
-      )}
 
       {/* Page content */}
       <Box sx={{ p: 3 }}>

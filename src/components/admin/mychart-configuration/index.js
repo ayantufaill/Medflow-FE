@@ -1,0 +1,9 @@
+export { default as ConfigRow } from './ConfigRow';
+export { default as ColorsSection } from './ColorsSection';
+export { default as PatientPaymentSection } from './PatientPaymentSection';
+export { default as ConfidentialInfoSection } from './ConfidentialInfoSection';
+export { default as PatientInformationSection } from './PatientInformationSection';
+export { default as PhoneNumberSection } from './PhoneNumberSection';
+export { default as GeneralSectionsConfiguration } from './GeneralSectionsConfiguration';
+export { default as DentalInsuranceFinancialSection } from './DentalInsuranceFinancialSection';
+export { default as MyChartConfigurationHeader } from './MyChartConfigurationHeader';

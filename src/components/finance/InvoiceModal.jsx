@@ -22,10 +22,14 @@ import {
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 
-const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
+const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
+  const [addClaim, setAddClaim] = useState(false);
+
+  // Procedures eligible for a claim: only those where dbi is false
+  const claimProcedures = procedures.filter((p) => !p.dbi);
 
   // Providers from Redux (cached — won't re-fetch if already loaded)
   const providersList = useSelector(selectProviderDropdownList);
@@ -503,19 +507,25 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel }) => {
                 gap: "5px",
               }}
             >
-              <input type="checkbox" style={{ margin: 0 }} /> Add Claim
+              <input
+                type="checkbox"
+                style={{ margin: 0 }}
+                checked={addClaim}
+                onChange={(e) => setAddClaim(e.target.checked)}
+              />{" "}
+              Add Claim
             </label>
 
             <button
               type="button"
               style={saveButtonStyle}
               onClick={() => {
-                if (onSave) onSave(procedures);
+                if (onSave) onSave({ procedures, addClaim, claimProcedures });
               }}
             >
               Add New Invoice
             </button>
-            <button type="button" style={cancelButtonStyle} onClick={onCancel}>
+            <button type="button" style={cancelButtonStyle} onClick={onCancel || onClose}>
               Cancel
             </button>
           </div>

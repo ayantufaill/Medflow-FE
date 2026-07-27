@@ -67,17 +67,21 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
             </Box>
           )}
           <Box>
-            <Typography
-              sx={{
-                fontFamily: "Inter",
-                fontWeight: fontWeight.semibold,
-                fontSize: fontSize.lg,
-                color: COLORS.TEXT_PRIMARY,
-                lineHeight: 1.3,
-              }}
-            >
-              {title}
-            </Typography>
+            {typeof title === 'string' ? (
+              <Typography
+                sx={{
+                  fontFamily: "Inter",
+                  fontWeight: fontWeight.semibold,
+                  fontSize: fontSize.lg,
+                  color: COLORS.TEXT_PRIMARY,
+                  lineHeight: 1.3,
+                }}
+              >
+                {title}
+              </Typography>
+            ) : (
+              title
+            )}
             {subtitle && (
               <Typography
                 sx={{
