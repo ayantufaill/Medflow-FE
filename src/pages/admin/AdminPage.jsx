@@ -32,8 +32,6 @@ import PrescriptionTemplates from './PrescriptionTemplates';
 import ClinicalSystemSettings from './ClinicalSystemSettings';
 import RecareConfiguration from './RecareConfiguration';
 import TreatmentPlanPresentation from './TreatmentPlanPresentation';
-import InformedConsent from './InformedConsent';
-import PrePostOps from './PrePostOps';
 import InsuranceCarriers from './InsuranceCarriers';
 import InsurancePlans from './InsurancePlans';
 import MembershipPlans from './MembershipPlans';
