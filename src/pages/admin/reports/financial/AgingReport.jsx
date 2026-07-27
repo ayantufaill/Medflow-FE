@@ -301,7 +301,12 @@ const AgingReport = () => {
     setTabValue(newValue);
   };
 
-  const handleExportCSV = async () => {
+  const handleExportCSV = async (bucketName = null, dataToExport = filteredReportData) => {
+    if (dataToExport.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
     const headers = [
       'Flags',
       !hidePatientNames ? 'Patient Name' : null,
@@ -313,7 +318,7 @@ const AgingReport = () => {
       'Last Billed On'
     ].filter(Boolean);
 
-    const rows = filteredReportData.map(row => {
+    const rows = dataToExport.map(row => {
       const dataRow = [
         '', // Flags
         !hidePatientNames ? row.name || 'Unknown Patient' : null,
@@ -340,7 +345,7 @@ const AgingReport = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Aging_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', bucketName ? `Aging_Report_${bucketName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv` : `Aging_Report_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -348,7 +353,7 @@ const AgingReport = () => {
 
     // Save snapshot to backend archive
     try {
-      await reportingService.archiveReport('aging', filteredReportData);
+      await reportingService.archiveReport('aging', dataToExport);
       if (tabValue === 1) {
         // Refresh list if currently on archived tab
         const list = await reportingService.getArchivedReports();
@@ -359,23 +364,37 @@ const AgingReport = () => {
     }
   };
 
-  const handlePrint = () => {
-    const tableEl = document.getElementById('aging-report-table');
-    if (!tableEl) {
-      alert("Table not found to print.");
-      return;
+  const handlePrint = (tableId = 'aging-report-all-tables', bucketName = null) => {
+    let htmlToPrint = '';
+    
+    if (tableId === 'aging-report-all-tables') {
+      const containerEl = document.getElementById(tableId);
+      if (!containerEl) {
+        alert("Report content not found to print.");
+        return;
+      }
+      htmlToPrint = containerEl.innerHTML;
+    } else {
+      const tableEl = document.getElementById(tableId);
+      if (!tableEl) {
+        alert("Table not found to print.");
+        return;
+      }
+      htmlToPrint = tableEl.outerHTML;
     }
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Aging Report</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }');
     printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
     printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
     printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
-    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
+    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print { display: none !important; }');
+    printWindow.document.write('h6, h5 { font-family: sans-serif; }');
     printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Aging Report</h2>');
-    printWindow.document.write(tableEl.outerHTML);
+    printWindow.document.write(`<h2>Aging Report ${bucketName ? `- ${bucketName}` : ''}</h2>`);
+    printWindow.document.write(htmlToPrint);
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.focus();
@@ -495,24 +514,75 @@ const AgingReport = () => {
             <AgingReportActions 
               hidePatientNames={hidePatientNames} 
               setHidePatientNames={setHidePatientNames} 
-              onExportCsv={handleExportCSV}
-              onPrint={handlePrint}
+              onExportCsv={() => handleExportCSV()}
+              onPrint={() => handlePrint()}
             />
           </Box>
 
-          <AgingReportTable 
-            loading={loading}
-            reportData={filteredReportData}
-            hidePatientNames={hidePatientNames}
-            agingBuckets={agingBuckets}
-            groupByRange={appliedFilters.arRange === 'any'}
-            totals={totals}
-            showFlags={appliedFilters.showFlags}
-            showPaymentPlan={appliedFilters.paymentPlanOwing}
-            setSelectedPatientForNotes={setSelectedPatientForNotes}
-            selectedNames={selectedNames}
-            setSelectedNames={setSelectedNames}
-          />
+          <Box id="aging-report-all-tables">
+            {appliedFilters.arRange === 'any' ? (
+            agingBuckets.map((bucket, index) => {
+              const bucketData = filteredReportData.filter((r) => {
+                let oldest = null;
+                for (let i = agingBuckets.length - 1; i >= 0; i--) {
+                  if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
+                    oldest = agingBuckets[i];
+                    break;
+                  }
+                }
+                if (!oldest) oldest = agingBuckets[0];
+                return oldest === bucket;
+              });
+
+              if (bucketData.length === 0) return null;
+              const tableId = `aging-report-table-${index}`;
+
+              return (
+                <Box key={bucket} sx={{ mb: 4 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
+                    {bucket} Group
+                  </Typography>
+                  <Box className="hide-on-print">
+                    <AgingReportActions 
+                      hidePatientNames={hidePatientNames} 
+                      setHidePatientNames={setHidePatientNames} 
+                      onExportCsv={() => handleExportCSV(bucket, bucketData)}
+                      onPrint={() => handlePrint(tableId, bucket)}
+                      isSubTable={true}
+                    />
+                  </Box>
+                  <AgingReportTable 
+                    tableId={tableId}
+                    loading={loading}
+                    reportData={bucketData}
+                    hidePatientNames={hidePatientNames}
+                    agingBuckets={agingBuckets}
+                    totals={totals}
+                    showFlags={appliedFilters.showFlags}
+                    showPaymentPlan={appliedFilters.paymentPlanOwing}
+                    setSelectedPatientForNotes={setSelectedPatientForNotes}
+                    selectedNames={selectedNames}
+                    setSelectedNames={setSelectedNames}
+                  />
+                </Box>
+              );
+            })
+          ) : (
+              <AgingReportTable 
+                tableId="aging-report-table"
+                loading={loading}
+                reportData={filteredReportData}
+                hidePatientNames={hidePatientNames}
+                agingBuckets={agingBuckets}
+                totals={totals}
+                showFlags={appliedFilters.showFlags}
+                showPaymentPlan={appliedFilters.paymentPlanOwing}
+                setSelectedPatientForNotes={setSelectedPatientForNotes}
+                selectedNames={selectedNames}
+                setSelectedNames={setSelectedNames}
+              />
+            )}
+          </Box>
         </>
       ) : (
         <Box sx={{ mt: 2 }}>

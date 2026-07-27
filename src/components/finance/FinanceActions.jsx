@@ -106,15 +106,15 @@ const FinanceActions = ({
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <Tooltip title="Invoices"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('invoice')}><Box component="img" src={invoicesIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Patient Payment"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('userWallet')}><Box component="img" src={patientpaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Add Claim"><IconButton size="small" onClick={() => setShowAddClaimDialog(true)}><Box component="img" src={addclaimIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Insurance Payment"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('insuranceWallet')}><Box component="img" src={insurancepaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Courtesy Refund"><IconButton size="small" onClick={onRefreshCoinClick}><Box component="img" src={courtestrefundIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>     
         <Tooltip title="Patient Deposit"><IconButton size="small" onClick={onOpenDepositMenu}><Box component="img" src={patientdepositIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Courtesy Refund"><IconButton size="small" onClick={onRefreshCoinClick}><Box component="img" src={courtestrefundIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Create Payment Plan"><IconButton size="small" onClick={onCalendarClick}><Box component="img" src={createpaymentplanIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Print"><IconButton size="small" onClick={handlePrintClick}><Box component="img" src={printIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Share"><IconButton size="small" onClick={handleShareClick}><Box component="img" src={shareIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Account Adjustment"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('cashPlus', e)}><Box component="img" src={accountadjustmentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Account Adjustment Minus"><IconButton size="small" onClick={onCashMinusClick}><Box component="img" src={accountadjustmentminusIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Add Claim"><IconButton size="small" onClick={() => setShowAddClaimDialog(true)}><Box component="img" src={addclaimIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Create Payment Plan"><IconButton size="small" onClick={onCalendarClick}><Box component="img" src={createpaymentplanIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
       </Box>
 
       {/* Right Buttons */}

@@ -1,115 +1,244 @@
-import React, { useState } from 'react';
-import {
-  Box, Typography, Select, MenuItem, Button, TableCell, TableRow, Radio, RadioGroup, FormControlLabel, TextField
-} from '@mui/material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
-
-const MOCK_CARRIERS = [
-  {
-    name: 'CIGNA',
-    collection: '$1,236.00',
-    production: '$2,713.00',
-    writeoff: '$2,134.00',
-    patients: [
-      { name: 'Patient One', collection: '$1,017.00', production: '$2,494.00', writeoff: '$1,910.00' },
-      { name: 'Patient Two', collection: '$148.00', production: '$148.00', writeoff: '$156.00' },
-      { name: 'Patient Three', collection: '$71.00', production: '$71.00', writeoff: '$68.00' },
-    ]
-  },
-  {
-    name: 'United Healthcare',
-    collection: '$216.00',
-    production: '$216.00',
-    writeoff: '$211.00',
-    patients: [
-      { name: 'Patient Four', collection: '$216.00', production: '$216.00', writeoff: '$211.00' },
-    ]
-  }
-];
+import React, { useState, useEffect, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { CircularProgress, Box, Typography } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import CollectionCarrierFilters from '../../../../components/reports/financial/CollectionCarrierFilters';
+import CollectionCarrierTable from '../../../../components/reports/financial/CollectionCarrierTable';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+import { reportingService } from '../../../../services/reporting.service';
 
 const CollectionCarrier = () => {
+  const dispatch = useDispatch();
+  const rawProviders = useSelector(selectProviderDropdownList);
+
+  const initialStartDate = new Date().toISOString().split('T')[0];
+  const initialEndDate = new Date().toISOString().split('T')[0];
+
+  const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+  const [provider, setProvider] = useState('All');
   const [networkFilter, setNetworkFilter] = useState('None');
   const [payerFilter, setPayerFilter] = useState('Payer');
+  const [payerText, setPayerText] = useState('');
+  const [planText, setPlanText] = useState('');
 
-  const columns = [
-    { label: 'Patient' },
-    { label: 'Collection' },
-    { label: 'Production' },
-    { label: 'Write-off' },
-  ];
+  const [rawReportData, setRawReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const renderRow = (p, pIdx) => (
-    <TableRow key={pIdx} sx={{ backgroundColor: pIdx % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{p.name}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.collection}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.production}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{p.writeoff}</TableCell>
-    </TableRow>
-  );
+  useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
+  }, [dispatch]);
 
-  const topFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <ReportSelect label="Daily" prefix="Date Range:" defaultValue="Daily" />
-        <Typography sx={{ fontSize: '0.75rem', color: '#64748b', ml: 1, whiteSpace: 'nowrap' }}>← May 08, 2026 →</Typography>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', color: '#1e293b' }}>Date: 05/08/2026</Typography>
-      </Box>
-      <ReportSelect label="All" prefix="Provider:" defaultValue="All" />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter by:</Typography>
-        <RadioGroup row value={networkFilter} onChange={(e) => setNetworkFilter(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
-          <FormControlLabel value="None" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>None</Typography>} sx={{ m: 0, mr: 1 }} />
-          <FormControlLabel value="In" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>In Network</Typography>} sx={{ m: 0, mr: 1 }} />
-          <FormControlLabel value="Out" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Out of Network</Typography>} sx={{ m: 0 }} />
-        </RadioGroup>
-      </Box>
-    </>
-  );
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await reportingService.getFinancialReport('collection-carrier', {
+        startDate,
+        endDate
+      });
+      setRawReportData(res || []);
+    } catch (err) {
+      console.error('Failed to fetch collection carrier report:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const bottomFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
-          <FormControlLabel value="Payer" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter by Payer:</Typography>} sx={{ m: 0 }} />
-        </RadioGroup>
-        <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } }} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <RadioGroup row value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
-          <FormControlLabel value="Plan" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Filter by Plan:</Typography>} sx={{ m: 0 }} />
-        </RadioGroup>
-        <TextField size="small" variant="outlined" placeholder="Enter Name" sx={{ width: 180, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } }} />
-      </Box>
-    </>
-  );
+  useEffect(() => {
+    fetchData();
+  }, [startDate, endDate]);
+
+  const providerOptions = useMemo(() => {
+    return [
+      { value: 'All', label: 'All' },
+      ...rawProviders.map(p => {
+        const name = (p?.userId?.firstName || p?.userId?.lastName)
+          ? `${p.userId.firstName || ''} ${p.userId.lastName || ''}`.trim()
+          : `${p?.firstName || ''} ${p?.lastName || ''}`.trim() || p?.name || 'Unknown';
+        return {
+          value: String(p._id || p.id),
+          label: name
+        };
+      })
+    ];
+  }, [rawProviders]);
+
+  const handleFilterModeChange = (e) => {
+    setDateRange(e.target.value);
+  };
+
+  const handleApply = () => {
+    fetchData();
+  };
+
+  const handleClear = () => {
+    setNetworkFilter('None');
+    setPayerFilter('Payer');
+    setDateRange('Daily');
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setProvider('All');
+    setPayerText('');
+    setPlanText('');
+  };
+
+  const filteredCarriers = useMemo(() => {
+    let list = rawReportData;
+
+    // Filter by network
+    if (networkFilter === 'In') {
+      list = list.filter(c => ['cigna', 'delta dental', 'blue cross'].some(n => c.name.toLowerCase().includes(n)));
+    } else if (networkFilter === 'Out') {
+      list = list.filter(c => !['cigna', 'delta dental', 'blue cross'].some(n => c.name.toLowerCase().includes(n)));
+    }
+
+    // Filter by Payer
+    if (payerFilter === 'Payer' && payerText.trim() !== '') {
+      const q = payerText.toLowerCase();
+      list = list.filter(c => c.name.toLowerCase().includes(q));
+    }
+
+    // Filter by Plan
+    if (payerFilter === 'Plan' && planText.trim() !== '') {
+      const q = planText.toLowerCase();
+      list = list.map(c => {
+        if (c.name.toLowerCase().includes(q)) return c;
+        const filteredPats = c.patients.filter(p => p.name.toLowerCase().includes(q));
+        if (filteredPats.length > 0) {
+          return { ...c, patients: filteredPats };
+        }
+        return null;
+      }).filter(Boolean);
+    }
+
+    return list;
+  }, [rawReportData, networkFilter, payerFilter, payerText, planText]);
+
+  const handleExportCSV = () => {
+    const headers = ['Carrier / Patient', 'Collection', 'Production', 'Write-off'];
+    const rows = [];
+
+    filteredCarriers.forEach(carrier => {
+      // Carrier summary row
+      rows.push([
+        carrier.name.toUpperCase(),
+        carrier.collection,
+        carrier.production,
+        carrier.writeoff
+      ]);
+
+      // Patient rows
+      carrier.patients.forEach(p => {
+        rows.push([
+          `  ${p.name}`,
+          p.collection,
+          p.production,
+          p.writeoff
+        ]);
+      });
+
+      // Blank spacing row
+      rows.push(['', '', '', '']);
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Collection_Per_Carrier_Report_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Collection Per Carrier Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('h2 { color: #2262ef; }');
+    printWindow.document.write('.summary-box { display: flex; gap: 20px; background: #f8fafc; padding: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 11px; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Collection Per Carrier Report</h2>');
+    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
+
+    filteredCarriers.forEach(carrier => {
+      printWindow.document.write(`<h3>${carrier.name}</h3>`);
+      printWindow.document.write(`
+        <div class="summary-box">
+          <span><strong>Total Collection:</strong> ${carrier.collection}</span>
+          <span><strong>Total Production:</strong> ${carrier.production}</span>
+          <span><strong>Total Write-off:</strong> ${carrier.writeoff}</span>
+        </div>
+      `);
+      printWindow.document.write('<table><thead><tr><th>Patient</th><th>Collection</th><th>Production</th><th>Write-off</th></tr></thead><tbody>');
+      carrier.patients.forEach(p => {
+        printWindow.document.write(`<tr><td>${p.name}</td><td>${p.collection}</td><td>${p.production}</td><td>${p.writeoff}</td></tr>`);
+      });
+      printWindow.document.write('</tbody></table>');
+    });
+
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
 
   return (
     <ReportLayout title="Collection Per Carrier Report:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        bottomRowFilters={bottomFilters}
-        onApplyFilters={() => console.log('Apply Filters')}
-        onExportCsv={() => alert('Exporting CSV...')}
-        onPrint={() => window.print()}
+      <CollectionCarrierFilters
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        handleFilterModeChange={handleFilterModeChange}
+        networkFilter={networkFilter}
+        setNetworkFilter={setNetworkFilter}
+        payerFilter={payerFilter}
+        setPayerFilter={setPayerFilter}
+        payerText={payerText}
+        setPayerText={setPayerText}
+        planText={planText}
+        setPlanText={setPlanText}
+        provider={provider}
+        setProvider={setProvider}
+        providers={providerOptions}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      {/* Carrier Sections */}
-      {MOCK_CARRIERS.map((carrier, idx) => (
-        <Box key={idx} sx={{ mb: 5 }}>
-          <Typography sx={{ color: '#337ab7', fontWeight: 600, fontSize: '0.9rem', mb: 0.5 }}>{carrier.name}</Typography>
-          <Box sx={{ mb: 1 }}>
-            <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Total Collection: <Typography component="span" sx={{ fontWeight: 600, color: '#000' }}>{carrier.collection}</Typography></Typography>
-            <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Total Production: <Typography component="span" sx={{ fontWeight: 600, color: '#000' }}>{carrier.production}</Typography></Typography>
-            <Typography sx={{ fontSize: '0.8rem', color: '#666' }}>Total Write-off: <Typography component="span" sx={{ fontWeight: 600, color: '#000' }}>{carrier.writeoff}</Typography></Typography>
-          </Box>
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={filteredCarriers.length > 0}
+      />
 
-          <ReportDataTable 
-            columns={columns} 
-            data={carrier.patients} 
-            renderRow={renderRow} 
-          />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
         </Box>
-      ))}
+      ) : filteredCarriers.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No data available for the selected filters.
+        </Typography>
+      ) : (
+        <CollectionCarrierTable carriers={filteredCarriers} />
+      )}
     </ReportLayout>
   );
 };

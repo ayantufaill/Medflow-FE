@@ -19,9 +19,9 @@ export const BILLING_DATE_OPTIONS = [
 ];
 
 export const CLAIMS_OPTIONS = [
-  { value: 'with_or_without', label: 'With or without claims' },
-  { value: 'with', label: 'With claims' },
-  { value: 'without', label: 'Without claims' }
+  { value: 'with_or_without', label: 'With or without open claims' },
+  { value: 'with', label: 'With open claims' },
+  { value: 'without', label: 'Without open claims' }
 ];
 
 export const PATIENTS_OPTIONS = [

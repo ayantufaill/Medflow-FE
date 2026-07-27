@@ -24,6 +24,7 @@ import depositReducer from './slices/depositSlice';
 import referralReportReducer from './slices/referralReportSlice';
 import patientReportReducer from './slices/patientReportSlice';
 import clinicalReportReducer from './slices/clinicalReportSlice';
+import othersReportReducer from './slices/othersReportSlice';
 import waitlistReducer from './slices/waitlistSlice';
 
 const appReducer = combineReducers({
@@ -52,6 +53,7 @@ const appReducer = combineReducers({
   referralReport: referralReportReducer,
   patientReport: patientReportReducer,
   clinicalReport: clinicalReportReducer,
+  othersReport: othersReportReducer,
   waitlist: waitlistReducer,
 });
 

@@ -15,9 +15,6 @@ const SliderFooter = ({ pt }) => (
         {pt.location}
       </Typography>
     </Box>
-    <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>
-      Last updated just now
-    </Typography>
   </Box>
 );
 

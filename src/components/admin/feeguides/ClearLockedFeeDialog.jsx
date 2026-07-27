@@ -29,40 +29,44 @@ const ClearLockedFeeDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 2, p: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogContent sx={{ py: 3, px: 2 }}>
-        <Typography variant="body1" sx={{ mb: 3, fontWeight: 500, color: '#333', textAlign: 'center' }}>
+      <DialogContent sx={{ py: 4, px: 4 }}>
+        <Typography variant="body1" sx={{ mb: 4, fontWeight: 600, color: '#1e293b', textAlign: 'center', fontSize: '1.1rem' }}>
           Are you sure you want to clear locked fee?
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
           <Button 
-            variant="contained" 
+            variant="text" 
             sx={{ 
-              bgcolor: '#d9a366', 
+              color: '#475569', 
               textTransform: 'none', 
-              minWidth: 90,
-              fontSize: '0.875rem',
-              '&:hover': { bgcolor: '#c08d50' } 
-            }}
-            onClick={handleConfirm}
-            disabled={loading}
-          >
-            {loading ? 'Clearing...' : 'Proceed'}
-          </Button>
-          <Button 
-            variant="contained" 
-            sx={{ 
-              bgcolor: '#999', 
-              textTransform: 'none', 
-              minWidth: 90,
-              fontSize: '0.875rem',
-              '&:hover': { bgcolor: '#888' } 
+              minWidth: 100,
+              fontWeight: 600,
+              borderRadius: 2,
+              '&:hover': { backgroundColor: '#f1f5f9' } 
             }}
             onClick={onClose}
             disabled={loading}
           >
             Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            sx={{ 
+              backgroundColor: '#2563eb', 
+              textTransform: 'none', 
+              minWidth: 100,
+              fontWeight: 600,
+              borderRadius: 2,
+              boxShadow: 'none',
+              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+            }}
+            onClick={handleConfirm}
+            disabled={loading}
+          >
+            {loading ? 'Clearing...' : 'Proceed'}
           </Button>
         </Box>
       </DialogContent>

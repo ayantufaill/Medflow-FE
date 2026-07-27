@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { PatientDetails, FamilyDetails } from './PatientDetailsCard';
 import AppointmentHistoryDialog from '../schedule/appointment-history-modal/AppointmentHistoryDialog';
 import PurchaseProductDialog from './PurchaseProductDialog';
+import ProcedureBlocks from './ProcedureBlocks';
 import { usePatient, useScheduleState } from '../../../hooks/redux';
 import { useAppointmentDetail } from '../../../hooks/redux';
 import {
@@ -87,31 +88,8 @@ const PatientActions = ({ appointment }) => {
 
       <Divider sx={{ borderColor: COLORS.BORDER, my: '6px' }} />
 
-      {/* ── Procedure row ────────────────────────────────────────────────────── */}
-      {/* Shows the primary procedure for the currently selected appointment.
-          Greyed out when no appointment is active. */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          backgroundColor: COLORS.SURFACE_CARD,
-          border: `1px solid ${COLORS.BORDER}`,
-          borderRadius: radius.md,
-          px: '12px',
-          py: '10px',
-        }}
-      >
-        <Typography sx={{ ...headingSecondarySx, color: procedureLabel ? COLORS.TEXT_PRIMARY : COLORS.TEXT_MUTED }}>
-          {procedureLabel || 'No procedure scheduled'}
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>
-            {durationLabel}
-          </Typography>
-          <KeyboardArrowUp sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />
-        </Box>
-      </Box>
+      {/* ── Procedure Blocks ────────────────────────────────────────────────────── */}
+      <ProcedureBlocks appointment={activeAppt} />
 
       {/* ── Blue action buttons ──────────────────────────────────────────────── */}
       {ACTION_BUTTONS.map(({ label, onClick, showDots }) => (

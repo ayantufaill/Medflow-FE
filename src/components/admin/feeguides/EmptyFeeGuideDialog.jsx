@@ -28,20 +28,23 @@ const EmptyFeeGuideDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
       <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1,
-        fontSize: '1rem',
-        fontWeight: 600
+        backgroundColor: '#fff',
+        color: '#0f172a',
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        py: 3,
+        px: 4,
+        lineHeight: 1.3,
+        borderBottom: '1px solid #f1f5f9'
       }}>
         Empty Fee Guide
       </DialogTitle>
-      <DialogContent sx={{ py: 3, px: 2 }}>
-        <Typography variant="body2" sx={{ mb: 1, fontWeight: 700, color: '#333' }}>
+      <DialogContent sx={{ py: 4, px: 4 }}>
+        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#334155' }}>
           Name
         </Typography>
         <TextField
@@ -50,29 +53,43 @@ const EmptyFeeGuideDialog = ({ open, onClose }) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           sx={{ 
-            mb: 3,
-            '& .MuiOutlinedInput-root': { 
-              '& fieldset': { borderColor: '#4fc3f7' },
-              '&:hover fieldset': { borderColor: '#4fc3f7' },
-              '&.Mui-focused fieldset': { borderColor: '#4fc3f7' },
-            }
+            mb: 4,
+            '& .MuiInputBase-root': { backgroundColor: '#f8fafc', borderRadius: 2 },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
           }}
         />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+          <Button 
+            variant="text" 
+            sx={{ 
+              textTransform: 'none', 
+              color: '#475569', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 3, 
+              '&:hover': { backgroundColor: '#f1f5f9' } 
+            }}
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
           <Button 
             variant="contained" 
-            sx={{ bgcolor: '#d9a366', textTransform: 'none', minWidth: 80, '&:hover': { bgcolor: '#c08d50' } }}
+            sx={{ 
+              textTransform: 'none', 
+              backgroundColor: '#2563eb', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 3, 
+              boxShadow: 'none', 
+              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+            }}
             onClick={handleSave}
             disabled={!name.trim()}
           >
             Save
-          </Button>
-          <Button 
-            variant="contained" 
-            sx={{ bgcolor: '#999', textTransform: 'none', minWidth: 80, '&:hover': { bgcolor: '#888' } }}
-            onClick={onClose}
-          >
-            Cancel
           </Button>
         </Box>
       </DialogContent>

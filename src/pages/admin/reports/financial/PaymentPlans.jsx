@@ -1,190 +1,220 @@
-import React, { useState } from 'react';
-import {
-  Box, Typography, Select, MenuItem, Checkbox, FormControlLabel,
-  Button, Table, TableBody, TableCell, TableHead, TableRow, Radio, RadioGroup,
-  IconButton, Collapse,
-} from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
-
-const MOCK_PAYMENT_PLANS = [
-  {
-    patient: 'Patient One',
-    createdOn: '09/18/2025',
-    amount: '$2,147.20',
-    totalPayments: 6,
-    remainingPayments: 3,
-    remainingBalance: '$1,073.59',
-    nextDue: '12/18/2025',
-    missed: 3,
-    lastBilled: '',
-    lastPayment: '',
-    type: 'Regular Invoice',
-    status: 'Failed',
-    history: [
-      { amount: '$357.87', status: 'Paid', created: '09/18/2025', due: '09/18/2025', downPayment: 'No', charged: '09/18/2025', failed: '', error: '' },
-      { amount: '$357.87', status: 'Paid', created: '09/18/2025', due: '10/18/2025', downPayment: 'No', charged: '10/18/2025', failed: '', error: '' },
-      { amount: '$357.87', status: 'Paid', created: '09/18/2025', due: '11/18/2025', downPayment: 'No', charged: '11/18/2025', failed: '', error: '' },
-      { amount: '$357.87', status: 'Failed', created: '09/18/2025', due: '12/18/2025', downPayment: 'No', charged: '', failed: '12/24/2025', error: 'Transaction declined: Insufficient Funds' },
-    ]
-  },
-  {
-    patient: 'Patient Two',
-    createdOn: '12/15/2025',
-    amount: '$420.00',
-    totalPayments: 10,
-    remainingPayments: 5,
-    remainingBalance: '$210.00',
-    nextDue: '05/24/2026',
-    missed: 0,
-    lastBilled: '',
-    lastPayment: '',
-    type: 'Regular Invoice',
-    status: 'Scheduled',
-    history: []
-  }
-];
-
-const Row = ({ row, index }) => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <React.Fragment>
-      <TableRow sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc', '& > *': { borderBottom: 'unset' } }}>
-        <TableCell sx={{ py: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton size="small" onClick={() => setOpen(!open)}>
-              {open ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
-            </IconButton>
-            <Typography sx={{ fontSize: '0.75rem', color: '#337ab7', textDecoration: 'underline', ml: 1, cursor: 'pointer' }}>{row.patient}</Typography>
-          </Box>
-        </TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.createdOn}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.amount}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.totalPayments}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.remainingPayments}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.remainingBalance}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.nextDue}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000' }}>{row.missed}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem' }}>{row.lastBilled}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem' }}>{row.lastPayment}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem' }}>{row.type}</TableCell>
-        <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Failed' ? '#d93025' : '#000', fontWeight: 500 }}>{row.status}</TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={12}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1, backgroundColor: '#f8f9fa', p: 2, borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#fff' }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Date Created</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Due Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Down Payment</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Charged On</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Failed On</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Error Message</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {row.history.map((h, i) => (
-                    <TableRow key={i} sx={{ backgroundColor: '#fff' }}>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.amount}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', color: h.status === 'Paid' ? '#166534' : '#d93025', fontWeight: 500 }}>{h.status}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.created}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.due}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.downPayment}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.charged}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.failed}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem' }}>{h.error}</TableCell>
-                    </TableRow>
-                  ))}
-                  {row.history.length === 0 && (
-                    <TableRow sx={{ backgroundColor: '#fff' }}>
-                      <TableCell colSpan={8} align="center" sx={{ fontSize: '0.75rem', py: 2, color: 'text.secondary' }}>No history available</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    </React.Fragment>
-  );
-};
+import React, { useState, useEffect, useMemo } from 'react';
+import { CircularProgress, Box, Typography } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import PaymentPlansFilters from '../../../../components/reports/financial/PaymentPlansFilters';
+import PaymentPlansTable from '../../../../components/reports/financial/PaymentPlansTable';
+import { reportingService } from '../../../../services/reporting.service';
 
 const PaymentPlans = () => {
+  const initialStartDate = new Date().toISOString().split('T')[0];
+  const initialEndDate = new Date().toISOString().split('T')[0];
+
+  const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+  const [selectedStatus, setSelectedStatus] = useState('Scheduled');
   const [filterType, setFilterType] = useState('All');
+  const [includeArchived, setIncludeArchived] = useState(false);
 
-  const columns = [
-    { label: 'Patient' },
-    { label: 'Created On' },
-    { label: 'Payment Amount' },
-    { label: 'Total Payments' },
-    { label: 'Remaining Payments' },
-    { label: 'Remaining Balance' },
-    { label: 'Next Payment Due' },
-    { label: 'Missed Payments' },
-    { label: 'Last Billed On' },
-    { label: 'Last Payment Due' },
-    { label: 'Type' },
-    { label: 'Status' },
-  ];
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const topFilters = (
-    <>
-      <ReportSelect defaultValue="Range" prefix="Created On Date Filter:" options={[{ value: 'Range', label: 'Range' }]} width="100px" />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', borderBottom: '1px solid #ccc', pb: 0.5 }}>05/08/2025</Typography>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', borderBottom: '1px solid #ccc', pb: 0.5 }}>05/08/2026</Typography>
-      </Box>
-      <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-        <ReportSelect defaultValue="Select Status" prefix="Filter by Status:" options={[{ value: 'Select Status', label: 'Select Status' }]} width="160px" />
-        <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#4a89dc', color: '#4a89dc', textTransform: 'none', '&:hover': { backgroundColor: '#f0f7ff' } }}>Failed</Button>
-        <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#4a89dc', color: '#4a89dc', textTransform: 'none', '&:hover': { backgroundColor: '#f0f7ff' } }}>Pending</Button>
-        <Button variant="outlined" size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#4a89dc', color: '#4a89dc', textTransform: 'none', '&:hover': { backgroundColor: '#f0f7ff' } }}>Scheduled</Button>
-      </Box>
-    </>
-  );
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await reportingService.getFinancialReport('payment-plans', {
+        startDate,
+        endDate
+      });
+      setReportData(res || []);
+    } catch (err) {
+      console.error('Failed to fetch payment plans report:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const bottomFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter by Type:</Typography>
-        <RadioGroup row value={filterType} onChange={(e) => setFilterType(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
-          <FormControlLabel value="All" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>All</Typography>} sx={{ m: 0, mr: 1 }} />
-          <FormControlLabel value="Manual" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Manual Fee</Typography>} sx={{ m: 0, mr: 1 }} />
-          <FormControlLabel value="Regular" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Regular Invoices</Typography>} sx={{ m: 0, mr: 1 }} />
-          <FormControlLabel value="Membership" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Membership Plans</Typography>} sx={{ m: 0 }} />
-        </RadioGroup>
-      </Box>
-      <ReportCheckbox label="Include Archived" />
-    </>
-  );
+  useEffect(() => {
+    fetchData();
+  }, [startDate, endDate]);
+
+  const handleFilterModeChange = (e) => {
+    setDateRange(e.target.value);
+  };
+
+  const handleApply = () => {
+    fetchData();
+  };
+
+  const handleClear = () => {
+    setDateRange('Daily');
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setSelectedStatus('Scheduled');
+    setFilterType('All');
+    setIncludeArchived(false);
+  };
+
+  const filteredData = useMemo(() => {
+    let list = reportData;
+
+    // Filter by status
+    if (selectedStatus !== 'All') {
+      list = list.filter(row => row.status?.toLowerCase() === selectedStatus.toLowerCase());
+    }
+
+    // Filter by type
+    if (filterType !== 'All') {
+      list = list.filter(row => row.type?.toLowerCase() === filterType.toLowerCase());
+    }
+
+    // Filter by archived
+    if (!includeArchived) {
+      list = list.filter(row => row.status?.toLowerCase() !== 'closed');
+    }
+
+    return list;
+  }, [reportData, selectedStatus, filterType, includeArchived]);
+
+  const handleExportCSV = () => {
+    const headers = ['Patient', 'Created On', 'Payment Amount', 'Total Payments', 'Remaining Payments', 'Remaining Balance', 'Next Payment Due', 'Missed Payments', 'Last Billed On', 'Last Payment Due', 'Type', 'Status'];
+    const rows = [];
+
+    filteredData.forEach(plan => {
+      // Plan summary row
+      rows.push([
+        plan.patient,
+        plan.createdOn,
+        plan.amount,
+        plan.totalPayments,
+        plan.remainingPayments,
+        plan.remainingBalance,
+        plan.nextDue || '',
+        plan.missed,
+        plan.lastBilled || '',
+        plan.lastPayment || '',
+        plan.type,
+        plan.status
+      ]);
+
+      // History rows
+      if (plan.history && plan.history.length > 0) {
+        rows.push(['  -- History --', '', '', '', '', '', '', '', '', '', '', '']);
+        plan.history.forEach(h => {
+          rows.push([
+            `    Due: ${h.dueDate || h.due}`,
+            h.amount,
+            h.status,
+            `Created: ${h.created}`,
+            `Down: ${h.downPayment}`,
+            `Charged: ${h.chargedOn || h.charged || ''}`,
+            `Failed: ${h.failedOn || h.failed || ''}`,
+            h.error || ''
+          ]);
+        });
+      }
+
+      // Blank spacing row
+      rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Payment_Plans_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Payment Plans Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('h2 { color: #2262ef; }');
+    printWindow.document.write('.plan-box { background: #f8fafc; padding: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 11px; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Payment Plans Report</h2>');
+    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
+
+    filteredData.forEach(plan => {
+      printWindow.document.write(`<h3>${plan.patient}</h3>`);
+      printWindow.document.write(`
+        <div class="plan-box">
+          <span><strong>Created On:</strong> ${plan.createdOn}</span> | 
+          <span><strong>Amount:</strong> ${plan.amount}</span> | 
+          <span><strong>Remaining Balance:</strong> ${plan.remainingBalance}</span> | 
+          <span><strong>Status:</strong> ${plan.status}</span>
+        </div>
+      `);
+      printWindow.document.write('<table><thead><tr><th>Amount</th><th>Status</th><th>Date Created</th><th>Due Date</th><th>Down Payment</th><th>Charged On</th><th>Failed On</th><th>Error Message</th></tr></thead><tbody>');
+      if (plan.history && plan.history.length > 0) {
+        plan.history.forEach(h => {
+          printWindow.document.write(`<tr><td>${h.amount}</td><td>${h.status}</td><td>${h.created}</td><td>${h.dueDate || h.due}</td><td>${h.downPayment}</td><td>${h.chargedOn || h.charged || '-'}</td><td>${h.failedOn || h.failed || '-'}</td><td>${h.error || '-'}</td></tr>`);
+        });
+      } else {
+        printWindow.document.write('<tr><td colspan="8" align="center">No history available</td></tr>');
+      }
+      printWindow.document.write('</tbody></table>');
+    });
+
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
 
   return (
-    <ReportLayout title="Payment Plans Report">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        bottomRowFilters={bottomFilters}
-        onApplyFilters={() => console.log('Apply Filters')}
-        onPrint={() => window.print()}
-        onExportCsv={() => console.log('Exporting CSV...')}
+    <ReportLayout title="Payment Plans Report:">
+      <PaymentPlansFilters
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        selectedStatus={selectedStatus}
+        filterType={filterType}
+        includeArchived={includeArchived}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setSelectedStatus={setSelectedStatus}
+        setFilterType={setFilterType}
+        setIncludeArchived={setIncludeArchived}
+        handleFilterModeChange={handleFilterModeChange}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      {/* Shared Data Table */}
-      <ReportDataTable 
-        columns={columns} 
-        data={MOCK_PAYMENT_PLANS} 
-        renderRow={(row, idx) => <Row key={idx} index={idx} row={row} />} 
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={filteredData.length > 0}
       />
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : filteredData.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No data available for the selected filters.
+        </Typography>
+      ) : (
+        <PaymentPlansTable data={filteredData} />
+      )}
     </ReportLayout>
   );
 };

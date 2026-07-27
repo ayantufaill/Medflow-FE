@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import dayjs from "dayjs";
 import { useDroppable } from "@dnd-kit/core";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchPatientById } from "../../../store/slices/patientSlice";
 import {
   HOURS,
@@ -20,6 +20,7 @@ import {
   useScheduleState,
   useAppointmentList,
   useDropdownData,
+  usePatient,
 } from "../../../hooks/redux";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight } from "../../../constants/styles";
@@ -92,13 +93,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     : typeof appt.patientId === "string" || typeof appt.patientId === "number" || typeof appt.patientId === "bigint"
       ? String(appt.patientId)
       : null;
-  const patientName = patientObj
-    ? `${patientObj.firstName || ""} ${patientObj.lastName || ""}`.trim() ||
-      "Patient"
-    : topLevelPatientObj
-      ? `${topLevelPatientObj.firstName || ""} ${topLevelPatientObj.lastName || ""}`.trim() ||
-        "Patient"
-      : appt.patientName || "Patient";
+  const fName = patientData?.firstName || patientData?.FName || "";
+  const lName = patientData?.lastName || patientData?.LName || "";
+  const patientName = `${fName} ${lName}`.trim() || patientData?.name || patientData?.fullName || appt.patientName || "Patient";
 
   const providerObj =
     appt.providerId && typeof appt.providerId === "object"
@@ -362,49 +359,34 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
   );
 };
 
-const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, scheduleBlocks, privacyMode, showGhosted, isCloseOpenDayMode, closedOperatories = {} }) => {
+const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, scheduleBlocks, privacyMode, showGhosted, isCloseOpenDayMode, closedOperatories = {}, compactMode = false }) => {
   const dispatch = useDispatch();
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
-  
+  const rawAppointments = useSelector((state) => state.appointment.list);
+  const loading = useSelector((state) => state.appointment.listLoading);
+  const dayjsDate = dayjs(selectedDate);
+  const viewUnit = calendarView === "day" ? "day" : calendarView;
+  const startDate = dayjsDate.startOf(viewUnit).format("YYYY-MM-DD");
+  const endDate = dayjsDate.endOf(viewUnit).add(1, 'day').format("YYYY-MM-DD");
+
   useEffect(() => {
     const handleClickOutside = (e) => {
-      // Very basic outside click handler
       if (activeCell) setActiveCell(null);
     };
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
   }, [activeCell]);
 
+  const { currentPatient } = usePatient();
+
+  // We fetch standard lists from Redux
   const { rooms: fetchedRooms, providers } = useDropdownData({
     rooms: !propRooms,
     providers: true,
   });
 
   const rooms = propRooms || fetchedRooms;
-
-  // Convert the ISO date string to a dayjs object for date arithmetic.
-  const dayjsDate = dayjs(selectedDate);
-
-  // Derive the API query date range from the current view and selected date.
-  // Day view: a single day. Week/month views bracket the full period.
-  const viewUnit = calendarView === "day" ? "day" : calendarView;
-  const startDate = dayjsDate.startOf(viewUnit).format("YYYY-MM-DD");
-  const endDate = dayjsDate.endOf(viewUnit).format("YYYY-MM-DD");
-
-  // Auto-fetches on mount using the current date range as initialFilters.
-  // The thunk condition prevents concurrent requests so the double-fire from
-  // the re-fetch effect below is harmless on mount.
-  const {
-    appointments: rawAppointments,
-    fetch: fetchAppts,
-    loading,
-  } = useAppointmentList({ startDate, endDate, limit: 200 });
-
-  // Re-fetch when the user navigates to a different date or switches view.
-  useEffect(() => {
-    fetchAppts({ startDate, endDate, limit: 200 });
-  }, [startDate, endDate]); // fetchAppts is a stable useCallback; startDate/endDate are strings
 
   const isWeek = calendarView === 'week';
 
@@ -425,15 +407,18 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
   const colIndexMap = useMemo(() => {
     const map = {};
     activeColumns.forEach((col, idx) => {
-      const id = col._id || col.id;
-      if (id) map[id] = idx;
+      const id = String(col._id || col.id);
+      if (id) {
+        map[`op${id}`] = idx;
+        map[id] = idx; // Fallback
+      }
     });
     return map;
   }, [activeColumns]);
 
   const providerMap = useMemo(() => {
     const map = {};
-    providers.forEach((provider) => {
+    providers?.forEach((provider) => {
       [
         provider._id,
         provider.id,
@@ -515,7 +500,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
         endHour: endH,
         durationMinutes,
         type: "block",
-        title: block.notes || "Blocked",
+        title: block.notes || "Blocked Slot",
         color: block.color,
         ...block
       };
@@ -612,66 +597,102 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
       )}
 
       {/* ── Appointment cards — absolutely positioned in the grid ──────────── */}
-      {visibleAppointments.map((gridItem, i) => {
-        // Resolve column index
-        let colIndex = 0;
+      {(() => {
         if (isWeek) {
-          // gridItem.date format is "MMM D, YYYY", need YYYY-MM-DD
-          const apptDateStr = dayjs(gridItem.date).format('YYYY-MM-DD');
-          colIndex = colIndexMap[apptDateStr] ?? 0;
-        } else {
-          colIndex = colIndexMap[gridItem.roomId] ?? 0;
+          const weekGroups = {};
+          visibleAppointments.forEach((gridItem) => {
+            const apptDateStr = dayjs(gridItem.date).format('YYYY-MM-DD');
+            const colIndex = colIndexMap[apptDateStr] ?? 0;
+            const pos = getGridPosition(gridItem, colIndex);
+            
+            // Group by the exact top position (or 30 min block)
+            const blockIndex = Math.floor(pos.top / (HOUR_HEIGHT / 2));
+            const key = `${colIndex}-${blockIndex}`;
+            
+            if (!weekGroups[key]) {
+              weekGroups[key] = {
+                colIndex,
+                blockIndex,
+                top: blockIndex * (HOUR_HEIGHT / 2),
+                left: pos.left,
+                width: pos.width,
+                appointments: []
+              };
+            }
+            weekGroups[key].appointments.push(gridItem);
+          });
+          
+          return Object.values(weekGroups).map((group, i) => (
+            <Box
+              key={`week-group-${i}`}
+              sx={{
+                position: "absolute",
+                top: group.top + 2,
+                left: group.left,
+                width: group.width,
+                zIndex: 2,
+                maxHeight: '80px', // Roughly 3 appointments
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                pointerEvents: 'auto',
+                '&::-webkit-scrollbar': { width: '4px' },
+                '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' }
+              }}
+            >
+              {group.appointments.map((appt, j) => (
+                <Box key={appt.id || j} sx={{ height: '24px', flexShrink: 0 }}>
+                  <CompactAppointmentPoint 
+                    appointment={appt} 
+                    onSlotClick={(e) => {
+                      const detailAppt = e.detail;
+                      window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
+                        detail: { ...detailAppt },
+                      }));
+                      if (detailAppt.patientId) {
+                        const pId = typeof detailAppt.patientId === 'object' 
+                          ? detailAppt.patientId._id || detailAppt.patientId.id || detailAppt.patientId.PatNum 
+                          : detailAppt.patientId;
+                        if (pId) dispatch(fetchPatientById(pId));
+                      }
+                    }} 
+                  />
+                </Box>
+              ))}
+            </Box>
+          ));
         }
 
-        const pos = getGridPosition(gridItem, colIndex);
+        // DAY VIEW
+        return visibleAppointments.map((gridItem, i) => {
+          const colIndex = colIndexMap[gridItem.roomId] ?? 0;
+          const pos = getGridPosition(gridItem, colIndex);
+          const statusStr = String(gridItem.status || '').toLowerCase();
+          const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
 
-        if (isWeek) {
-          // For week view, we render them as fixed height points, but we can stack them using their index i to avoid overlap if we want.
-          // Or just render them at the top position.
-          // Let's adjust pos.height for compact view.
-          pos.height = 24; 
-          // to prevent perfect overlap if same time, we could add a slight offset but it's okay for now.
-        }
+          if (isGhosted) {
+            pos.left = pos.left + pos.width / 2;
+            pos.width = pos.width / 2;
+          }
 
-        const statusStr = String(gridItem.status || '').toLowerCase();
-        const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
-
-        if (isGhosted) {
-          pos.left = pos.left + pos.width / 2;
-          pos.width = pos.width / 2;
-        }
-
-        return (
-          <Box
-            key={gridItem.id + i}
-            sx={{
-              position: "absolute",
-              top: pos.top,
-              height: pos.height,
-              left: pos.left,
-              width: pos.width,
-              zIndex: isGhosted ? 3 : 2,
-            }}
-          >
-            {isWeek ? (
-              <CompactAppointmentPoint appointment={gridItem} onSlotClick={(e) => {
-                const appt = e.detail;
-                window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
-                  detail: { ...appt },
-                }));
-                if (appt.patientId) {
-                  const pId = typeof appt.patientId === 'object' 
-                    ? appt.patientId._id || appt.patientId.id || appt.patientId.PatNum 
-                    : appt.patientId;
-                  if (pId) dispatch(fetchPatientById(pId));
-                }
-              }} />
-            ) : (
+          return (
+            <Box
+              key={gridItem.id + i}
+              sx={{
+                position: "absolute",
+                top: pos.top,
+                height: pos.height,
+                left: pos.left,
+                width: pos.width,
+                zIndex: isGhosted ? 3 : 2,
+              }}
+            >
               <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
-            )}
-          </Box>
-        );
-      })}
+            </Box>
+          );
+        });
+      })()}
     </Box>
   );
 };

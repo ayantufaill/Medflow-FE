@@ -43,19 +43,20 @@ const PreviewStatementDialog = ({ open, onClose }) => {
       onClose={onClose} 
       maxWidth="md" 
       fullWidth
+      sx={{ zIndex: 9999 }}
       PaperProps={{
-        sx: { borderRadius: 0, minHeight: '90vh' }
+        sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
       }}
     >
       {/* Header Bar */}
-      <Box sx={{ bgcolor: '#4a89dc', py: 1, px: 2, display: 'flex', justifyContent: 'center', position: 'relative' }}>
-        <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '1rem' }}>
+      <Box sx={{ bgcolor: 'white', py: 2, px: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+        <Typography sx={{ color: '#1e293b', fontWeight: 600, fontSize: '1.1rem' }}>
           Preview of Statement/Invoice/Receipt
         </Typography>
         <IconButton 
           onClick={onClose} 
           size="small" 
-          sx={{ position: 'absolute', right: 8, top: 4, color: 'white' }}
+          sx={{ color: '#64748b', '&:hover': { bgcolor: '#f1f5f9' } }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
@@ -324,16 +325,18 @@ const PreviewStatementDialog = ({ open, onClose }) => {
         </Box>
 
         {/* Footer Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 2, mt: 4, borderTop: '1px solid #f1f5f9' }}>
           <Button 
             onClick={onClose} 
             variant="contained" 
             sx={{ 
-              bgcolor: '#aab2bd', 
-              color: 'white', 
               textTransform: 'none', 
-              borderRadius: 1,
-              '&:hover': { bgcolor: '#939ba3' }
+              backgroundColor: '#2563eb', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 4, 
+              boxShadow: 'none', 
+              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
             }}
           >
             Close

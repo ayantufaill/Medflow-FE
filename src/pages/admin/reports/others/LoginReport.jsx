@@ -1,18 +1,50 @@
-import React from 'react';
-import { 
-  Box, Typography, TextField, Select, MenuItem, Button, IconButton, Divider, TableCell, TableRow
-} from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
+import React, { useState, useEffect } from 'react';
+import { TableCell, TableRow } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLoginReport } from '../../../../store/slices/othersReportSlice';
+import { ReportLayout, ReportDataTable } from '../../../../components/reports/ui';
+import LoginReportFilters from '../../../../components/reports/others/LoginReportFilters';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import dayjs from 'dayjs';
 
 const LoginReport = () => {
-  const rows = [
-    { id: 1, username: 'Babar Magsi', date: '05/08/2026 2:20 PM', status: 'Success', ip: '125.209.73.246', machine: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36' },
-    { id: 2, username: 'Dr. Smith', date: '05/08/2026 1:07 PM', status: 'Success', ip: '125.209.73.246', machine: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' },
-    { id: 3, username: 'Hygienist A', date: '05/08/2026 1:05 PM', status: 'Success', ip: '182.188.108.206', machine: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' },
-    { id: 4, username: 'Staff B', date: '05/08/2026 1:02 PM', status: 'Success', ip: '162.251.62.66', machine: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' },
-    { id: 5, username: 'Babar Magsi', date: '05/08/2026 12:42 PM', status: 'Success', ip: '182.188.108.206', machine: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' },
-  ];
+  const dispatch = useDispatch();
+  const { loginData, loading } = useSelector((state) => state.othersReport);
+
+  const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [endDate, setEndDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchReportData = () => {
+    dispatch(fetchLoginReport({
+      startDate,
+      endDate,
+      range: dateRange,
+    }));
+  };
+
+  useEffect(() => {
+    fetchReportData();
+  }, []);
+
+  const handleApply = () => {
+    fetchReportData();
+  };
+
+  const handleClear = () => {
+    setDateRange('Daily');
+    setStartDate(dayjs().format('YYYY-MM-DD'));
+    setEndDate(dayjs().format('YYYY-MM-DD'));
+    setSearchQuery('');
+    setTimeout(() => {
+      dispatch(fetchLoginReport({
+        startDate: dayjs().format('YYYY-MM-DD'),
+        endDate: dayjs().format('YYYY-MM-DD'),
+        range: 'Daily',
+      }));
+    }, 0);
+  };
 
   const columns = [
     { label: 'Username' },
@@ -22,57 +54,48 @@ const LoginReport = () => {
     { label: 'Machine info' }
   ];
 
+  const filteredData = (loginData || []).filter(row => {
+    if (searchQuery && !row.username?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
+
   const renderRow = (row, index) => (
-    <TableRow key={row.id} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600 }}>{row.username}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Success' ? '#166534' : '#d93025', fontWeight: 500 }}>{row.status}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.ip}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', maxWidth: 400, wordBreak: 'break-all', color: '#666' }}>{row.machine}</TableCell>
+    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
+      <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600 }}>{row.username || 'Unknown'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.date || row.createdAt ? dayjs(row.createdAt).format('MM/DD/YYYY h:mm A') : 'N/A'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Success' ? '#166534' : '#d93025', fontWeight: 500 }}>{row.status || 'Success'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.ip || 'N/A'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem', maxWidth: 400, wordBreak: 'break-all', color: '#666' }}>{row.machine || row.userAgent || 'N/A'}</TableCell>
     </TableRow>
-  );
-
-  const topFilters = (
-    <>
-      <ReportSelect 
-        label="Daily" 
-        prefix="Date Range:" 
-        defaultValue="Daily"
-        options={[{ value: 'Daily', label: 'Daily' }]}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 2, mr: 2 }}>
-        <IconButton size="small" sx={{ color: '#337ab7', p: 0 }}><ChevronLeft fontSize="small" /></IconButton>
-        <Typography variant="body2" sx={{ color: '#337ab7', fontWeight: 600 }}>May 08, 2026</Typography>
-        <Typography variant="body2" sx={{ mx: 0.5, color: '#337ab7' }}>➔</Typography>
-        <Typography variant="caption" sx={{ fontWeight: 600 }}>Date:</Typography>
-        <Typography variant="body2" sx={{ color: '#337ab7', fontWeight: 600 }}>05/08/2026</Typography>
-        <IconButton size="small" sx={{ color: '#337ab7', p: 0 }}><ChevronRight fontSize="small" /></IconButton>
-      </Box>
-
-      <Box sx={{ ml: 'auto' }}>
-        <ReportSearchInput 
-          placeholder="Search User" 
-          value="" 
-          onChange={() => {}}
-        />
-      </Box>
-    </>
   );
 
   return (
     <ReportLayout title="Login Report:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        onApplyFilters={() => console.log('Apply Filters')}
-        onExportCsv={() => alert('Exporting CSV...')}
-        onPrint={() => window.print()}
+      <LoginReportFilters 
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        searchQuery={searchQuery}
+        setDateRange={setDateRange}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setSearchQuery={setSearchQuery}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      {/* Login Table */}
+      <ProductionReportActions 
+        onExportCsv={() => alert('Exporting CSV...')} 
+        onPrint={() => window.print()} 
+      />
+
       <ReportDataTable 
         columns={columns} 
-        data={rows} 
+        data={filteredData} 
         renderRow={renderRow} 
+        loading={loading}
         emptyMessage="No login logs found for this date range"
       />
     </ReportLayout>

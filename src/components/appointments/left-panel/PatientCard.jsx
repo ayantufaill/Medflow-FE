@@ -8,8 +8,10 @@ import {
 } from '@mui/icons-material';
 import { usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { Tooltip } from '@mui/material';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
+import RequestUpdatesDialog from '../../patient-detail/RequestUpdatesDialog';
 
 // Patient flag tags shown in the footer row of the card.
 // These will eventually be driven by patient.tags or patient.flags from the API.
@@ -91,8 +93,19 @@ const ContactRow = ({ icon, text }) => {
 // mounts this component only after a patient is selected.
 
 const PatientCard = () => {
-  const { currentPatient } = usePatient();
+  const { currentPatient, sendUpdateRequest } = usePatient();
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
+  const [requestUpdatesOpen, setRequestUpdatesOpen] = useState(false);
+
+  const handleSendUpdateRequest = async (payload) => {
+    try {
+      await sendUpdateRequest(currentPatient?._id || currentPatient?.id, payload).unwrap();
+      showSnackbar('Patient update request sent', 'success');
+    } catch (err) {
+      showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to send update request', 'error');
+    }
+  };
 
   // Guard — should not render when no patient is selected (LeftPanel gates it),
   // but defensive early return prevents blank-card flash during Redux hydration.
@@ -133,12 +146,15 @@ const PatientCard = () => {
       {/* ── Header: avatar + name + drag handle ─────────────────────────────── */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
         <Box
+          onClick={() => navigate(`/patients/details/${currentPatient._id || currentPatient.id}`)}
           sx={{
             width: avatarSize.lg, height: avatarSize.lg,
             borderRadius: '50%',
             backgroundColor: COLORS.ACCENT,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 },
           }}
         >
           <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: COLORS.WHITE }}>
@@ -181,12 +197,15 @@ const PatientCard = () => {
         {/* Hx badge — "Autorenew" icon overlaid with "Hx" label. Indicates
             that appointment history records exist for this patient. */}
         <Box
+          onClick={() => setRequestUpdatesOpen(true)}
           sx={{
             position: 'relative',
             width: '38px', height: '38px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
             mt: '2px',
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.8 },
           }}
         >
           <Autorenew sx={{ fontSize: '38px', color: COLORS.STATUS_WARNING, position: 'absolute' }} />
@@ -295,6 +314,12 @@ const PatientCard = () => {
           </Box>
         ))}
       </Box>
+
+      <RequestUpdatesDialog
+        open={requestUpdatesOpen}
+        onClose={() => setRequestUpdatesOpen(false)}
+        onSend={handleSendUpdateRequest}
+      />
     </Box>
   );
 };
