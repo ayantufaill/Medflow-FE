@@ -98,9 +98,10 @@ const FinanceDialogManager = ({
       )}
 
       {showAccountNotes && (
-        <DialogWrapper onClose={() => setShowAccountNotes(false)} maxWidth="800px">
-          <AccountNotesDialog onClose={() => setShowAccountNotes(false)} />
-        </DialogWrapper>
+        <AccountNotesDialog 
+          patient={patient} 
+          onClose={() => setShowAccountNotes(false)} 
+        />
       )}
 
       {showNewInvoice && (

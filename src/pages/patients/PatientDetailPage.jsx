@@ -145,6 +145,17 @@ const PatientDetailPage = () => {
         delete dataToSave.workAddress.postalCode;
       }
       
+      // Clean phone numbers: backend requires digits only
+      if (dataToSave.phonePrimary) {
+        dataToSave.phonePrimary = dataToSave.phonePrimary.replace(/\D/g, '');
+      }
+      if (dataToSave.phoneSecondary) {
+        dataToSave.phoneSecondary = dataToSave.phoneSecondary.replace(/\D/g, '');
+      }
+      if (dataToSave.emergencyContact?.phone) {
+        dataToSave.emergencyContact.phone = dataToSave.emergencyContact.phone.replace(/\D/g, '');
+      }
+
       // Validate US phone numbers and Dates before saving
       const validationErrors = [];
       

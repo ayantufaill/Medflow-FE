@@ -17,6 +17,7 @@ import EditDeposit from './EditDeposit';
 import InvoiceModal from './InvoiceModal';
 import TransferCreditConfirmationDialog from './TransferCreditConfirmationDialog';
 import EditInvoiceDetailsDialog from './EditInvoiceDetailsDialog';
+import ClaimAttachmentsDialog from '../claims/attachments/ClaimAttachmentsDialog';
 
 const LedgerDialogManager = ({
   anchorEl, setAnchorEl, handleBackdateDone,
@@ -35,7 +36,8 @@ const LedgerDialogManager = ({
   showInvoiceModal, handleInvoiceModalCancel, handleInvoiceModalSave, invoiceModalData,
   magicStickAnchorEl, setMagicStickAnchorEl,
   showTransferConfirmation, setShowTransferConfirmation,
-  showEditInvoice, setShowEditInvoice, editInvoiceTarget
+  showEditInvoice, setShowEditInvoice, editInvoiceTarget,
+  showAttachDialog, setShowAttachDialog, attachTarget
 }) => (
   <>
     {/* ── Popovers / Dropdowns ── */}
@@ -115,6 +117,27 @@ const LedgerDialogManager = ({
           <EditInvoiceDetailsDialog onClose={() => setShowEditInvoice(false)} invoiceId={editInvoiceTarget?.id} />
         </Box>
       </Box>
+    )}
+
+    {showAttachDialog && attachTarget && (
+      <ClaimAttachmentsDialog
+        open={showAttachDialog}
+        attachingClaim={attachTarget}
+        onClose={() => setShowAttachDialog(false)}
+        onSave={async (data) => {
+          if (data.newFiles && data.newFiles.length > 0 && attachTarget?.id) {
+            try {
+              const { claimService } = await import('../../services/claim.service');
+              await claimService.uploadAttachments(attachTarget.id, data.newFiles);
+              window.dispatchEvent(new CustomEvent('refresh-ledger'));
+            } catch (err) {
+              console.error('Failed to upload attachments', err);
+              alert('Failed to upload attachments. Please try again.');
+            }
+          }
+          setShowAttachDialog(false);
+        }}
+      />
     )}
   </>
 );

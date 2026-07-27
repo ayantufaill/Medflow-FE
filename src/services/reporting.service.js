@@ -71,6 +71,16 @@ export const reportingService = {
   },
 
   /**
+   * Get others report data by name (e.g. login, audit)
+   * @param {string} reportName
+   * @param {Object} params
+   */
+  async getOthersReport(reportName, params = {}) {
+    const response = await apiClient.get(`/reports/others/${reportName}`, { params });
+    return response.data.data;
+  },
+
+  /**
    * Archive a report snapshot
    * @param {string} type - Report type (e.g. 'aging')
    * @param {Object} data - The JSON report data

@@ -5,7 +5,7 @@ import PrintIcon from '@mui/icons-material/Print';
 
 const ProductionReportActions = ({ onExportCsv, onPrint }) => {
   return (
-    <Box sx={{ mt: 1, display: 'flex', justifyContent: "right", alignItems: "center", gap: 1, mb: 1 }}>
+    <Box sx={{ mt: 2, display: 'flex', justifyContent: "right", alignItems: "center", gap: 1, mb: 2 }}>
       <Button 
         onClick={onExportCsv} 
         variant="contained" 

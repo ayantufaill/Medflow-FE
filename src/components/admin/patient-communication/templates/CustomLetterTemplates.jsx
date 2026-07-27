@@ -11,29 +11,9 @@ import {
 import { VariablesSidebar } from './VariablesSidebar';
 import { communicationService } from '../../../../services/communication.service';
 
-const MOCK_TEMPLATES = [
-  { description: 'COVID-19', bodyText: 'This letter confirms the patient has been screened for COVID-19.' },
-  { description: 'KOR Whitening Informed Consent', bodyText: 'I consent to KOR Whitening procedure and understand the risks.' },
-  { description: 'TDS Financial Agreement', bodyText: 'I agree to the financial terms and conditions of this practice.' },
-  { description: 'Kor Whitening-Post-sensitivity', bodyText: 'Instructions for managing post-whitening tooth sensitivity.' },
-  { description: 'Composite (tooth colored restoration) Informed Consent', bodyText: 'I consent to receiving a composite restoration.' },
-  { description: 'N2O (Nitrous Oxide) Sedation Informed Consent', bodyText: 'I understand the risks and benefits of N2O sedation.' },
-  { description: 'Elective to Self Pay', bodyText: 'I am electing to self-pay for the following procedures.' },
-  { description: 'Acknowledgement of Non-Services Agreement', bodyText: 'I acknowledge that certain services are not covered.' },
-  { description: 'Gingival Rejuvenating Alternative Informed Consent', bodyText: 'I consent to gingival rejuvenating alternative treatment.' },
-  { description: 'TDS School Absence Form (returning to Work/school same day)', bodyText: 'The patient was seen today and may return to school/work.' },
-  { description: 'Patient Referral', bodyText: 'We are referring the patient to your office for specialized care.' },
-  { description: 'TDS School Absence Form (not returning)', bodyText: 'The patient was seen today and should be excused for the remainder of the day.' },
-  { description: 'Crown and Bridge Informed Consent', bodyText: 'I consent to crown and bridge procedures.' },
-  { description: 'Placement Permanent Crown Informed Consent', bodyText: 'I consent to the permanent placement of my crown.' },
-  { description: 'Tooth Extraction Informed Consent', bodyText: 'I consent to tooth extraction and understand post-op instructions.' },
-  { description: 'Cosmetic Dentistry Informed Consent', bodyText: 'I consent to cosmetic dental procedures.' },
-];
-
 export const CustomLetterTemplates = () => {
   const [showDeleted, setShowDeleted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(0);
-  const [isCreating, setIsCreating] = useState(false);
 
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,15 +22,17 @@ export const CustomLetterTemplates = () => {
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [initialData, setInitialData] = useState(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      setTemplates(MOCK_TEMPLATES);
-      if (MOCK_TEMPLATES.length > 0 && !isCreating) {
-        populateForm(MOCK_TEMPLATES[selectedTemplate] || MOCK_TEMPLATES[0]);
+      const data = await communicationService.getTemplates(4);
+      setTemplates(data || []);
+      if (data && data.length > 0) {
+        populateForm(data[selectedTemplate] || data[0]);
       }
     } catch (err) {
       console.error('Failed to fetch templates', err);
@@ -64,39 +46,39 @@ export const CustomLetterTemplates = () => {
   }, []);
 
   const populateForm = (tpl) => {
-    setDescription(tpl.description || '');
-    setSubject(tpl.subject || '');
-    setBodyText(tpl.bodyText || '');
-  };
-
-  const handleCreateNew = () => {
-    setIsCreating(true);
-    setSelectedTemplate(-1);
-    setDescription('New Custom Letter');
-    setSubject('');
-    setBodyText('');
+    if (!tpl) {
+      setDescription('');
+      setSubject('');
+      setBodyText('');
+      setInitialData({ description: '', subject: '', bodyText: '' });
+      return;
+    }
+    const initDesc = tpl.description || '';
+    const initSub = tpl.subject || '';
+    const initBody = tpl.bodyText || '';
+    setDescription(initDesc);
+    setSubject(initSub);
+    setBodyText(initBody);
+    setInitialData({ description: initDesc, subject: initSub, bodyText: initBody });
   };
 
   const handleSelectTemplate = (index) => {
-    setIsCreating(false);
     setSelectedTemplate(index);
     populateForm(templates[index]);
   };
 
+  const currentData = { description, subject, bodyText };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handleSave = async () => {
+    if (!isDirty) return;
     try {
       const data = { description, subject, bodyText, templateType: 4 };
-      if (isCreating) {
-        await communicationService.createTemplate(data);
-        setIsCreating(false);
-        setSelectedTemplate(0);
-      } else {
-        const tpl = templates[selectedTemplate];
-        if (tpl && tpl._id) {
-          await communicationService.updateTemplate(tpl._id, data);
-        }
+      const tpl = templates[selectedTemplate];
+      if (tpl && tpl.id) {
+        await communicationService.updateTemplate(tpl.id, data);
+        fetchTemplates();
       }
-      fetchTemplates();
     } catch (err) {
       console.error('Failed to save', err);
     }
@@ -105,8 +87,8 @@ export const CustomLetterTemplates = () => {
   const handleDelete = async () => {
     try {
       const tpl = templates[selectedTemplate];
-      if (tpl && tpl._id) {
-        await communicationService.deleteTemplate(tpl._id);
+      if (tpl && tpl.id) {
+        await communicationService.deleteTemplate(tpl.id);
         setDeleteConfirmOpen(false);
         setSelectedTemplate(0);
         fetchTemplates();
@@ -133,9 +115,6 @@ export const CustomLetterTemplates = () => {
                   <Box component="input" type="checkbox" checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} sx={{ width: 14, height: 14, cursor: 'pointer' }} />
                   <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>Show deleted</Typography>
                 </Box>
-                <Button variant="contained" size="small" onClick={handleCreateNew} sx={{ textTransform: 'none', backgroundColor: '#3B82F6', borderRadius: '16px', px: 2, fontSize: '0.7rem', '&:hover': { backgroundColor: '#2563EB' } }}>
-                  + Create New Form
-                </Button>
               </Box>
 
               <Box sx={{ border: '1px solid #E5E9F2', borderRadius: '4px', overflow: 'hidden' }}>
@@ -146,7 +125,7 @@ export const CustomLetterTemplates = () => {
                 </Box>
                 <List sx={{ p: 0 }}>
                   {templates.map((template, index) => (
-                    <React.Fragment key={template._id}>
+                    <React.Fragment key={template.id || index}>
                       <ListItem button onClick={() => handleSelectTemplate(index)} sx={{ mx: 2, px: 2, py: 1.2, mb: 0.5, borderRadius: '6px', cursor: 'pointer', bgcolor: selectedTemplate === index ? '#F0F5FF' : 'transparent', '&:hover': { bgcolor: selectedTemplate === index ? '#F0F5FF' : '#F8FAFC' }, transition: 'all 0.15s', borderLeft: selectedTemplate === index ? '4px solid #3B82F6' : '4px solid transparent' }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', flexGrow: 1 }}>{template.description}</Typography>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -164,9 +143,15 @@ export const CustomLetterTemplates = () => {
 
           {/* Center Editor */}
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#FBFCFE' }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {templates.length === 0 ? (
+              <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBFCFE' }}>
+                <Typography color="text.secondary">Select a template or create a new one to begin</Typography>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <TextField placeholder="Enter template title" variant="standard" value={description} onChange={(e) => setDescription(e.target.value)} sx={{ width: '60%', '& .MuiInput-input': { fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' } }} InputProps={{ disableUnderline: false }} />
-              <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
+              <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
             </Box>
 
             <Box sx={{ p: 4, flexGrow: 1, overflowY: 'auto' }}>
@@ -205,6 +190,8 @@ export const CustomLetterTemplates = () => {
                 </Box>
               </Box>
             </Box>
+              </>
+            )}
           </Box>
 
           {/* Right Sidebar */}

@@ -50,6 +50,11 @@ import {
 } from '@mui/icons-material';
 import { feeService } from '../../services/fee.service';
 
+import ProcedureCodesTabs from '../../components/admin/clinical-management/procedure-codes/ProcedureCodesTabs';
+import NoChargePowerCodesTab from '../../components/admin/clinical-management/procedure-codes/NoChargePowerCodesTab';
+import ProcedureCodesListTab from '../../components/admin/clinical-management/procedure-codes/ProcedureCodesListTab';
+import EligibilityTab from '../../components/admin/clinical-management/procedure-codes/EligibilityTab';
+
 const CODES_CATEGORIES = [
   'Diagnostic',
   'Preventive',
@@ -1362,537 +1367,70 @@ const ProcedureCodesManagement = () => {
   );
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumb Navigation */}
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography
-          onClick={() => navigate('/admin/clinical-management')}
-          sx={{
-            color: '#1a3a6b',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
-          }}
-        >
-          Clinical Management
-        </Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-          Procedure Codes
-        </Typography>
-      </Box>
-
-      {/* Main Tabs and Sync */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0, borderBottom: '1px solid #e0e0e0' }}>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          sx={{
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              minWidth: 'auto',
-              px: 3,
-              color: '#666',
-            },
-            '& .Mui-selected': {
-              color: '#1a3a6b !important',
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#1a3a6b',
-            },
-          }}
-        >
-          <Tab label="Power Codes" />
-          <Tab label="Codes" />
-          <Tab label="Eligibility Used ADA Codes" />
-        </Tabs>
-        <Box
-          onClick={handleOpenSyncDialog}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5,
-            mb: 1.5,
-            cursor: 'pointer',
-            color: '#1a3a6b',
-            '&:hover': { textDecoration: 'underline' }
-          }}
-        >
-          <SyncIcon sx={{ fontSize: '1.1rem' }} />
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Sync</Typography>
+    <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
+      {/* Page Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', px: 4, pt: 4, mb: 4 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.2rem', color: '#1E293B', mb: 0.5 }}>Procedure Codes</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Manage your clinical procedure codes, power codes, and eligibility.</Typography>
         </Box>
       </Box>
+
+      {/* Main Content Container */}
+      <Box sx={{ px: 4 }}>
+        <ProcedureCodesTabs 
+          activeTab={activeTab} 
+          handleTabChange={handleTabChange} 
+          handleOpenSyncDialog={handleOpenSyncDialog} 
+        />
 
       {/* Tab Content: Power Codes */}
       {activeTab === 0 && (
-        <Box sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mb: 3 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={includeInactive}
-                  onChange={(e) => setIncludeInactive(e.target.checked)}
-                  sx={{ color: '#999', '&.Mui-checked': { color: '#1a3a6b' } }}
-                />
-              }
-              label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Include Inactive Codes</Typography>}
-            />
-            <Button
-              variant="contained"
-              onClick={handleResetCategories}
-              sx={{
-                textTransform: 'none',
-                backgroundColor: '#d9a36d',
-                '&:hover': { backgroundColor: '#c28e5a' },
-                fontSize: '0.85rem',
-                px: 3,
-                borderRadius: '4px',
-                boxShadow: 'none',
-                height: 32,
-              }}
-            >
-              Reset Power Codes
-            </Button>
-          </Box>
-
-          {loadingCategories ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <CircularProgress size={32} />
-            </Box>
-          ) : (
-            <Box sx={{ pl: 1 }}>
-              {categories.map((cat, catIdx) => (
-                <Box key={catIdx} sx={{ mb: 1 }}>
-                  {cat.isHeader ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 1, mt: 1 }}>
-                      <Typography sx={{ color: '#1a3a6b', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                        {cat.name}
-                      </Typography>
-                      {cat.hasInfo && <InfoIcon sx={{ color: '#999', fontSize: '1rem', ml: 0.5 }} />}
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.2, cursor: 'pointer' }} onClick={() => toggleCategory(cat.name)}>
-                      {expandedCategories.includes(cat.name) ? (
-                         <KeyboardArrowDownIcon sx={{ color: '#1a3a6b', fontSize: '1.1rem' }} />
-                      ) : (
-                         <ChevronRightIcon sx={{ color: '#1a3a6b', fontSize: '1.1rem' }} />
-                      )}
-                      <Box sx={{ width: 14, height: 14, backgroundColor: '#1a3a6b', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CheckIcon sx={{ color: '#fff', fontSize: '0.8rem' }} />
-                      </Box>
-                      <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>{cat.name}</Typography>
-                      {cat.hasInfo && <InfoIcon sx={{ color: '#999', fontSize: '0.9rem', ml: 0.5 }} />}
-                    </Box>
-                  )}
-
-                  {expandedCategories.includes(cat.name) && !cat.isHeader && (
-                    <Box>
-                      {cat.subItems?.map((item, itemIdx) => (
-                         <Box key={itemIdx}>{renderSubItem(catIdx, itemIdx, item)}</Box>
-                      ))}
-                      {cat.subItems && (
-                        <Box sx={{ mt: 1, pl: 3.5 }}>
-                          <Typography 
-                            onClick={() => handleAddPowerCode(catIdx)}
-                            variant="caption" 
-                            sx={{ color: '#1a3a6b', cursor: 'pointer', fontWeight: 500, fontSize: '0.75rem', '&:hover': { textDecoration: 'underline' } }}
-                          >
-                            + Add Power Code
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
+        <NoChargePowerCodesTab
+          includeInactive={includeInactive}
+          setIncludeInactive={setIncludeInactive}
+          handleResetCategories={handleResetCategories}
+          loadingCategories={loadingCategories}
+          categories={categories}
+          expandedCategories={expandedCategories}
+          toggleCategory={toggleCategory}
+          renderSubItem={renderSubItem}
+          handleAddPowerCode={handleAddPowerCode}
+        />
       )}
-
+      
       {/* Tab Content: Codes */}
       {activeTab === 1 && (
-        <Box sx={{ mt: 3 }}>
-          {/* Search Row */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, pl: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#333' }}>Search Procedure</Typography>
-            <TextField
-              placeholder="Enter code or procedure"
-              size="small"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (e.target.value) fetchProcedureCodes();
-              }}
-              sx={{
-                width: 300,
-                '& .MuiInputBase-input': { fontSize: '0.85rem', py: 0.7 },
-                '& .MuiOutlinedInput-root': { borderRadius: '4px' }
-              }}
-            />
-          </Box>
-
-          {/* Categories or Search Results */}
-          <Box sx={{ pl: 1 }}>
-            {searchQuery ? (
-               <Box>
-                 {loading ? (
-                   <CircularProgress size={24} />
-                 ) : [
-                    ...localCustomCodes.filter(c => 
-                      c.ProcCode.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                      c.Descript.toLowerCase().includes(searchQuery.toLowerCase())
-                    ),
-                    ...procedureCodes
-                  ].map((sub, subIdx) => (
-                     <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
-                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                         <Typography sx={{ color: '#666', fontSize: '1.1rem', mr: 0.5 }}>+</Typography>
-                         <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
-                           {sub.ProcCode} - {sub.Descript}
-                         </Typography>
-                       </Box>
-                     </Box>
-                  ))}
-                </Box>
-             ) : (
-               INITIAL_CODES_TAB.map((category, idx) => (
-                 <Box key={idx}>
-                   <Box 
-                     onClick={() => handleToggleCodesCategory(category.name)}
-                     sx={{ 
-                       display: 'flex', 
-                       alignItems: 'center', 
-                       py: 0.8, 
-                       cursor: 'pointer',
-                       backgroundColor: expandedCodesCategories.includes(category.name) ? '#f5f7f9' : 'transparent',
-                       borderBottom: '1px solid #f0f0f0',
-                       px: 1,
-                       mx: -1
-                     }}
-                   >
-                     <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                       <Typography sx={{ color: '#666', fontSize: '1.05rem', fontWeight: 'bold', width: 20, mr: 0.5 }}>
-                         {expandedCodesCategories.includes(category.name) ? '−' : '+'}
-                       </Typography>
-                       <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500, mr: 2 }}>
-                         {category.name}
-                       </Typography>
-                       <Typography
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           handleOpenAddCustomCode(category.name);
-                         }}
-                         sx={{
-                           color: '#4a90e2',
-                           fontSize: '0.8rem',
-                           fontWeight: 500,
-                           cursor: 'pointer',
-                           '&:hover': { textDecoration: 'underline' }
-                         }}
-                       >
-                         + Add Custom Code
-                       </Typography>
-                     </Box>
-                   </Box>
-
-                    {expandedCodesCategories.includes(category.name) && (
-                      <Box sx={{ pl: 3 }}>
-                        {category.subItems && category.subItems.length > 0 ? (
-                          category.subItems.map((subItem, subIdx) => {
-                            const isSubTypeExpanded = expandedSubTypes.includes(subItem);
-                            return (
-                              <Box key={subIdx} sx={{ mb: 0.5 }}>
-                                {/* SubType Header Row */}
-                                <Box
-                                  onClick={() => handleToggleSubType(subItem)}
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    py: 0.6,
-                                    cursor: 'pointer',
-                                    '&:hover': { backgroundColor: '#f8fafc' },
-                                    borderBottom: '1px solid #f1f5f9'
-                                  }}
-                                >
-                                  <Typography sx={{ color: '#666', fontSize: '0.95rem', fontWeight: 'bold', width: 20, mr: 0.5, pl: 0.5 }}>
-                                    {isSubTypeExpanded ? '−' : '+'}
-                                  </Typography>
-                                  <Typography sx={{ color: '#1a3a6b', fontSize: '0.8rem', fontWeight: 600, mr: 2 }}>
-                                    {subItem}
-                                  </Typography>
-                                  <Typography
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenAddCustomCode(subItem);
-                                    }}
-                                    sx={{
-                                      color: '#4a90e2',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 500,
-                                      cursor: 'pointer',
-                                      '&:hover': { textDecoration: 'underline' }
-                                    }}
-                                  >
-                                    + Add Custom Code
-                                  </Typography>
-                                </Box>
-
-                                {/* SubType Expanded Procedure Codes */}
-                                {isSubTypeExpanded && (
-                                  <Box sx={{ pl: 3, borderLeft: '1px dashed #cbd5e1', ml: 1.5 }}>
-                                    {loadingSubTypes[subItem] ? (
-                                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                                        <CircularProgress size={20} />
-                                      </Box>
-                                    ) : getProcedureCodesForSubType(subItem).length === 0 ? (
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', py: 1, fontStyle: 'italic' }}>
-                                        No procedures found
-                                      </Typography>
-                                    ) : (
-                                      getProcedureCodesForSubType(subItem).map((procItem, procIdx) => (
-                                        <Box
-                                          key={procIdx}
-                                          sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            py: 1,
-                                            borderBottom: '1px solid #f1f5f9',
-                                            gap: 2
-                                          }}
-                                        >
-                                          {/* Icon */}
-                                          <DescriptionIcon sx={{ color: '#94a3b8', fontSize: '1.1rem' }} />
-
-                                          {/* Code Box */}
-                                          <Box
-                                            sx={{
-                                              border: '1px solid #cbd5e1',
-                                              borderRadius: '4px',
-                                            px: 1.2,
-                                            py: 0.3,
-                                            backgroundColor: '#f8fafc',
-                                            minWidth: 65,
-                                            textAlign: 'center'
-                                          }}
-                                        >
-                                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>
-                                            {procItem.ProcCode}
-                                          </Typography>
-                                        </Box>
-
-                                        {/* Description */}
-                                        <Typography sx={{ fontSize: '0.75rem', color: '#334155', flex: 1 }}>
-                                          {procItem.Descript}
-                                        </Typography>
-
-                                        {/* Custom Site Dropdown */}
-                                        <Select
-                                          size="small"
-                                          value={procItem.site || 'None'}
-                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'site', e.target.value)}
-                                          sx={{ height: 26, fontSize: '0.75rem', minWidth: 110, backgroundColor: '#fff' }}
-                                        >
-                                          <MenuItem value="None">None</MenuItem>
-                                          <MenuItem value="Upper Right">Upper Right</MenuItem>
-                                          <MenuItem value="Upper Left">Upper Left</MenuItem>
-                                          <MenuItem value="Lower Right">Lower Right</MenuItem>
-                                          <MenuItem value="Lower Left">Lower Left</MenuItem>
-                                          <MenuItem value="Upper Arch">Upper Arch</MenuItem>
-                                          <MenuItem value="Lower Arch">Lower Arch</MenuItem>
-                                        </Select>
-
-                                        {/* Checkbox DBI */}
-                                        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 60 }}>
-                                          <Checkbox
-                                            size="small"
-                                            sx={{ p: 0.5 }}
-                                            checked={procItem.dbi || false}
-                                            onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'dbi', e.target.checked)}
-                                          />
-                                          <Typography sx={{ fontSize: '0.75rem', color: '#475569', ml: 0.5 }}>DBI</Typography>
-                                        </Box>
-
-                                        {/* Office Code Input */}
-                                        <TextField
-                                          size="small"
-                                          placeholder="Office Code"
-                                          value={procItem.officeCode || ''}
-                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'officeCode', e.target.value)}
-                                          sx={{ 
-                                            width: 100,
-                                            '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 },
-                                            '& .MuiOutlinedInput-root': { borderRadius: '4px', height: 26 }
-                                          }}
-                                        />
-
-                                        {/* Office Desc Input */}
-                                        <TextField
-                                          size="small"
-                                          placeholder="Office Desc."
-                                          value={procItem.officeDesc || ''}
-                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'officeDesc', e.target.value)}
-                                          sx={{ 
-                                            width: 120,
-                                            '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.4 },
-                                            '& .MuiOutlinedInput-root': { borderRadius: '4px', height: 26 }
-                                          }}
-                                        />
-
-                                        {/* Provider Dropdown */}
-                                        <Select
-                                          size="small"
-                                          value={procItem.provider || 'Default'}
-                                          onChange={(e) => handleUpdateProcedureCodeField(subItem, procItem.ProcCode, 'provider', e.target.value)}
-                                          sx={{ height: 26, fontSize: '0.75rem', minWidth: 90, backgroundColor: '#fff' }}
-                                        >
-                                          <MenuItem value="Default">Default</MenuItem>
-                                          <MenuItem value="Dentist">Dentist</MenuItem>
-                                          <MenuItem value="Hygienist">Hygienist</MenuItem>
-                                        </Select>
-                                      </Box>
-                                    ))
-                                  )}
-                                  </Box>
-                                )}
-                              </Box>
-                            );
-                          })
-                        ) : (
-                          [
-                            ...localCustomCodes.filter(c => c.Category.toLowerCase() === category.name.toLowerCase()),
-                            ...procedureCodes
-                          ].map((sub, subIdx) => (
-                            <Box key={subIdx} sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #f0f0f0' }}>
-                              <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>
-                                {sub.ProcCode} - {sub.Descript}
-                              </Typography>
-                            </Box>
-                          ))
-                        )}
-                      </Box>
-                    )}
-                 </Box>
-               ))
-             )}
-           </Box>
-
-           {/* Footer Add */}
-           <Box sx={{ mt: 2, pl: 1 }}>
-             <Typography
-               onClick={() => handleOpenAddCustomCode('')}
-               sx={{
-                 color: '#4a90e2',
-                 fontSize: '0.8rem',
-                 fontWeight: 500,
-                 cursor: 'pointer',
-                 '&:hover': { textDecoration: 'underline' }
-               }}
-             >
-               + Add Custom Code
-             </Typography>
-           </Box>
-         </Box>
+        <ProcedureCodesListTab
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          fetchProcedureCodes={fetchProcedureCodes}
+          loading={loading}
+          localCustomCodes={localCustomCodes}
+          procedureCodes={procedureCodes}
+          INITIAL_CODES_TAB={INITIAL_CODES_TAB}
+          handleToggleCodesCategory={handleToggleCodesCategory}
+          expandedCodesCategories={expandedCodesCategories}
+          handleOpenAddCustomCode={handleOpenAddCustomCode}
+          expandedSubTypes={expandedSubTypes}
+          handleToggleSubType={handleToggleSubType}
+          loadingSubTypes={loadingSubTypes}
+          getProcedureCodesForSubType={getProcedureCodesForSubType}
+        />
       )}
 
       {/* Tab Content: Eligibility Used ADA Codes */}
       {activeTab === 2 && (
-        <Box sx={{ mt: 3 }}>
-          {/* Search/Add Row */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, pl: 1 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#333' }}>
-              Add Procedure Code
-            </Typography>
-            <TextField
-              placeholder="Enter code (e.g. D0180)"
-              size="small"
-              value={eligibilityQuery}
-              onChange={(e) => setEligibilityQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddEligibilityCode();
-              }}
-              sx={{
-                width: 250,
-                '& .MuiInputBase-input': { fontSize: '0.85rem', py: 0.7 },
-                '& .MuiOutlinedInput-root': { borderRadius: '4px' }
-              }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleAddEligibilityCode}
-              sx={{
-                textTransform: 'none',
-                backgroundColor: '#1a3a6b',
-                color: '#fff',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                height: 32,
-                px: 3,
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#0c2447', boxShadow: 'none' }
-              }}
-            >
-              Add Code
-            </Button>
-          </Box>
-
-          {/* List Table */}
-          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eef2f6', borderRadius: 2, width: '100%' }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f8fafc' }}>
-                  <TableCell sx={{ py: 1.5, fontWeight: 600, color: '#1a3a6b', fontSize: '0.8rem', width: '25%' }}>Procedure Code</TableCell>
-                  <TableCell sx={{ py: 1.5, fontWeight: 600, color: '#1a3a6b', fontSize: '0.8rem' }}>Description</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5, fontWeight: 600, color: '#1a3a6b', fontSize: '0.8rem', width: 80 }}>Action</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {eligibilityCodes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ py: 8 }}>
-                      <Typography sx={{ color: '#999', fontSize: '0.85rem' }}>No procedure codes configured for real-time eligibility verification</Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  eligibilityCodes.map((item) => (
-                    <TableRow key={item.ProcCode} sx={{ '&:hover': { backgroundColor: '#fbfcfd' } }}>
-                      <TableCell sx={{ py: 1.5 }}>
-                        <Box
-                          sx={{
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '4px',
-                            px: 1.2,
-                            py: 0.3,
-                            backgroundColor: '#f8fafc',
-                            width: 65,
-                            textAlign: 'center'
-                          }}
-                        >
-                          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>
-                            {item.ProcCode}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ py: 1.5, fontSize: '0.8rem', color: '#475569' }}>
-                        {item.Descript}
-                      </TableCell>
-                      <TableCell align="right" sx={{ py: 0.5 }}>
-                        <IconButton size="small" onClick={() => handleDeleteEligibilityCode(item.ProcCode)} sx={{ color: '#e57373' }}>
-                          <DeleteIcon sx={{ fontSize: '1.1rem' }} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+        <EligibilityTab
+          eligibilityQuery={eligibilityQuery}
+          setEligibilityQuery={setEligibilityQuery}
+          handleAddEligibilityCode={handleAddEligibilityCode}
+          eligibilityCodes={eligibilityCodes}
+          handleDeleteEligibilityCode={handleDeleteEligibilityCode}
+        />
       )}
+
+      </Box>
 
       {/* Sync Dialog */}
       <Dialog
@@ -1900,27 +1438,31 @@ const ProcedureCodesManagement = () => {
         onClose={handleCloseSyncDialog}
         maxWidth="sm"
         fullWidth
+        sx={{ zIndex: 9999 }}
         PaperProps={{
-          sx: { borderRadius: 1, overflow: 'hidden' }
+          sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
         }}
       >
         <DialogTitle
           sx={{
-            backgroundColor: '#0c345d',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: 500,
-            py: 2,
-            px: 3,
-            lineHeight: 1.3,
+            backgroundColor: '#fff',
+            color: '#1e293b',
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            py: 2.5,
+            px: 4,
+            borderBottom: '1px solid #e2e8f0'
           }}
         >
-          Select the offices you would like to sync with the source office
+          Sync Procedure Codes
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 400, mt: 0.5 }}>
+            Select the target offices you would like to sync with the source office
+          </Typography>
         </DialogTitle>
-        <DialogContent sx={{ mt: 3, px: 3 }}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
-              Source Office:
+        <DialogContent sx={{ mt: 3, px: 4 }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#334155' }}>
+              Source Office
             </Typography>
             <TextField
               fullWidth
@@ -1928,33 +1470,36 @@ const ProcedureCodesManagement = () => {
               value="thedentalstudio"
               disabled
               sx={{
-                '& .MuiInputBase-input': { backgroundColor: '#f0f0f0', fontSize: '0.85rem' },
-                '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                '& .MuiInputBase-input': { backgroundColor: '#f8fafc', fontSize: '0.9rem', py: 1, borderRadius: 2, color: '#475569' },
+                '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #e2e8f0' }
               }}
             />
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
+            <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#334155' }}>
               Target Offices
             </Typography>
             {/* Placeholder for Target Offices list - matching Products/Checklists page */}
-            <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1, backgroundColor: '#fafafa', textAlign: 'center' }}>
-              <Typography variant="caption" color="textSecondary">
+            <Box sx={{ p: 4, border: '1px dashed #cbd5e1', borderRadius: 2, backgroundColor: '#f8fafc', textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
                 Select target offices from the list below...
               </Typography>
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+        <DialogActions sx={{ px: 4, pb: 4, pt: 1, gap: 1.5 }}>
           <Button
             onClick={handleCloseSyncDialog}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#e0e0e0',
-              color: '#333',
-              fontSize: '0.85rem',
+              backgroundColor: '#f1f5f9',
+              color: '#475569',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              borderRadius: 2,
               px: 3,
-              '&:hover': { backgroundColor: '#d0d0d0' }
+              py: 0.8,
+              '&:hover': { backgroundColor: '#e2e8f0' }
             }}
           >
             Cancel
@@ -1964,14 +1509,18 @@ const ProcedureCodesManagement = () => {
             variant="contained"
             sx={{
               textTransform: 'none',
-              backgroundColor: '#6b8fb9',
+              backgroundColor: '#2563eb',
               color: '#fff',
-              fontSize: '0.85rem',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              borderRadius: 2,
               px: 4,
-              '&:hover': { backgroundColor: '#5a7ca8' }
+              py: 0.8,
+              boxShadow: 'none',
+              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
             }}
           >
-            Sync
+            Sync Offices
           </Button>
         </DialogActions>
       </Dialog>

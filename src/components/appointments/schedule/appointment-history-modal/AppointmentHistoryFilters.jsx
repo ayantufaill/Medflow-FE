@@ -36,7 +36,7 @@ const AppointmentHistoryFilters = ({
             <ReportSelect 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)} 
-              options={uniqueStatuses.map(s => ({ label: s === 'all' ? 'All Statuses' : s, value: s }))} 
+              options={uniqueStatuses.map(s => ({ label: s === 'all' ? 'All Status' : s, value: s }))} 
               sx={{ width: 150 }} 
             />
           </>

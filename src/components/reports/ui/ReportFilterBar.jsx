@@ -35,7 +35,7 @@ export const ReportFilterBar = ({
           '&::-webkit-scrollbar': { height: 0, display: 'none' } 
         }}>
           {topRowFilters && (
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'nowrap' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', flexWrap: 'nowrap' }}>
               {topRowFilters}
             </Box>
           )}
@@ -43,7 +43,7 @@ export const ReportFilterBar = ({
           <Box sx={{ flexGrow: 1 }} />
           
           {topRowActions && (
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end' }}>
               {topRowActions}
             </Box>
           )}
@@ -54,38 +54,36 @@ export const ReportFilterBar = ({
       {hasMiddleRow && (
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center', 
+          alignItems: 'flex-end', 
           flexWrap: 'nowrap', 
           gap: 1.5, 
           px: 2, 
-          py: 1.5,
+          pb: hasBottomRow ? 1.5 : 2,
           backgroundColor: '#fff',
           borderTop: hasTopRow ? '1px solid #e2e8f0' : 'none',
           overflowX: 'auto',
           '&::-webkit-scrollbar': { height: 0, display: 'none' } 
         }}>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'nowrap' }}>
-            {middleRowFilters}
-          </Box>
+          {middleRowFilters}
         </Box>
       )}
 
-      {/* Bottom Filter Row */}
+      {/* Bottom Filter/Action Row */}
       {hasBottomRow && (
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center', 
+          alignItems: 'flex-end', 
           flexWrap: 'nowrap', 
-          gap: 3, 
+          gap: 1.5, 
           p: 2, 
-          pt: hasTopRow ? 1.5 : 2, 
+          pt: hasTopRow || hasMiddleRow ? 1.5 : 2, 
           backgroundColor: '#f8fafc', 
-          borderTop: hasTopRow ? '1px solid #e2e8f0' : 'none',
+          borderTop: hasTopRow || hasMiddleRow ? '1px solid #e2e8f0' : 'none',
           overflowX: 'auto',
-          '&::-webkit-scrollbar': { height: 0, display: 'none' }
+          '&::-webkit-scrollbar': { height: 0, display: 'none' } 
         }}>
           {bottomRowFilters && (
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'nowrap' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', flexWrap: 'nowrap' }}>
               {bottomRowFilters}
             </Box>
           )}

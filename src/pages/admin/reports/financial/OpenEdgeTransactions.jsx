@@ -1,101 +1,146 @@
-import React, { useState } from 'react';
-import {
-  Box, Typography, Select, MenuItem, Button, TableCell, TableRow, TextField
-} from '@mui/material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
-
-const MOCK_TRANSACTIONS = [
-  { id: 'Patient A (861)', created: '05/26/2025', type: 'Payment', number: '18381', status: 'Pending' },
-  { id: 'Patient B (452)', created: '06/24/2025', type: 'Payment', number: '18891', status: 'Pending' },
-  { id: 'Patient C (123)', created: '07/15/2025', type: 'Payment', number: '19282', status: 'Pending' },
-  { id: 'Patient D (789)', created: '02/03/2026', type: 'Payment', number: '23110', status: 'Pending' },
-  { id: 'Patient E (456)', created: '02/27/2026', type: 'Payment', number: '23519', status: 'Pending' },
-  { id: 'Patient F (321)', created: '03/20/2026', type: 'Payment', number: '23987', status: 'Pending' },
-  { id: 'Patient G (654)', created: '03/27/2026', type: 'Payment', number: '24171', status: 'Pending' },
-  { id: 'Patient H (987)', created: '05/08/2026', type: 'Payment', number: '25200', status: 'Pending' },
-  { id: 'Patient I (159)', created: '05/08/2026', type: 'Payment', number: '25214', status: 'Pending' },
-  { id: 'Patient J (753)', created: '07/15/2025', type: 'Deposit', number: '19272', status: 'Pending' },
-];
+import React, { useState, useEffect, useMemo } from 'react';
+import { CircularProgress, Box, Typography } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import OpenEdgeTransactionsFilters from '../../../../components/reports/financial/OpenEdgeTransactionsFilters';
+import OpenEdgeTransactionsTable from '../../../../components/reports/financial/OpenEdgeTransactionsTable';
+import { reportingService } from '../../../../services/reporting.service';
 
 const OpenEdgeTransactions = () => {
-  const columns = [
-    { label: 'Patient ID' },
-    { label: 'Created On' },
-    { label: 'Transaction Type' },
-    { label: 'Transaction Number' },
-    { label: 'Status' },
-  ];
+  const initialStartDate = new Date().toISOString().split('T')[0];
+  const initialEndDate = new Date().toISOString().split('T')[0];
 
-  const renderRow = (row, index) => (
-    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer', fontWeight: 500 }}>{row.id}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.created}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.type}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.number}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Pending' ? '#f5a623' : '#333' }}>{row.status}</TableCell>
-    </TableRow>
-  );
-
+  const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
   const [statusFilter, setStatusFilter] = useState('All');
 
-  const filteredData = MOCK_TRANSACTIONS.filter(row => {
-    if (statusFilter !== 'All' && row.status !== statusFilter) {
-      return false;
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await reportingService.getFinancialReport('openedge-transactions', {
+        startDate,
+        endDate
+      });
+      setReportData(res || []);
+    } catch (err) {
+      console.error('Failed to fetch openedge transactions report:', err);
+    } finally {
+      setLoading(false);
     }
-    return true;
-  });
+  };
 
-  const topFilters = (
-    <>
-      <ReportSelect 
-        label="Range" 
-        prefix="Created On Date Filter:" 
-        defaultValue="Range"
-        options={[{ value: 'Range', label: 'Range' }]}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
-        <TextField size="small" variant="standard" defaultValue="05/08/2025" sx={{ width: 100, '& input': { fontSize: '0.85rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
-        <TextField size="small" variant="standard" defaultValue="05/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
-      </Box>
+  useEffect(() => {
+    fetchData();
+  }, [startDate, endDate]);
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-        <ReportSelect 
-          label="All Statuses" 
-          prefix="Filter by Status:" 
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          options={[
-            { value: 'All', label: 'All Statuses' },
-            { value: 'Pending', label: 'Pending' },
-            { value: 'Credit Card Declined', label: 'Credit Card Declined' },
-            { value: 'Timed Out', label: 'Timed Out' }
-          ]}
-        />
-        <Button onClick={() => setStatusFilter(statusFilter === 'Credit Card Declined' ? 'All' : 'Credit Card Declined')} variant={statusFilter === 'Credit Card Declined' ? 'contained' : 'outlined'} size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#337ab7', color: statusFilter === 'Credit Card Declined' ? '#fff' : '#337ab7', backgroundColor: statusFilter === 'Credit Card Declined' ? '#337ab7' : 'transparent', '&:hover': { backgroundColor: statusFilter === 'Credit Card Declined' ? '#286090' : '#f0f7ff' } }}>Credit Card Declined</Button>
-        <Button onClick={() => setStatusFilter(statusFilter === 'Timed Out' ? 'All' : 'Timed Out')} variant={statusFilter === 'Timed Out' ? 'contained' : 'outlined'} size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#337ab7', color: statusFilter === 'Timed Out' ? '#fff' : '#337ab7', backgroundColor: statusFilter === 'Timed Out' ? '#337ab7' : 'transparent', '&:hover': { backgroundColor: statusFilter === 'Timed Out' ? '#286090' : '#f0f7ff' } }}>Timed Out</Button>
-        <Button onClick={() => setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending')} variant={statusFilter === 'Pending' ? 'contained' : 'outlined'} size="small" sx={{ fontSize: '0.7rem', height: 28, borderColor: '#337ab7', color: statusFilter === 'Pending' ? '#fff' : '#337ab7', backgroundColor: statusFilter === 'Pending' ? '#337ab7' : 'transparent', '&:hover': { backgroundColor: statusFilter === 'Pending' ? '#286090' : '#f0f7ff' } }}>Pending</Button>
-      </Box>
-    </>
-  );
+  const handleFilterModeChange = (e) => {
+    setDateRange(e.target.value);
+  };
+
+  const handleApply = () => {
+    fetchData();
+  };
+
+  const handleClear = () => {
+    setDateRange('Daily');
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setStatusFilter('All');
+  };
+
+  const filteredData = useMemo(() => {
+    if (statusFilter === 'All') return reportData;
+    return reportData.filter(row => row.status?.toLowerCase() === statusFilter.toLowerCase());
+  }, [reportData, statusFilter]);
+
+  const handleExportCSV = () => {
+    const headers = ['Patient ID', 'Created On', 'Transaction Type', 'Transaction Number', 'Status'];
+    const rows = filteredData.map(row => [
+      row.id,
+      row.created,
+      row.type,
+      row.number,
+      row.status
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `OpenEdge_Transactions_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>OpenEdge Transactions Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('h2 { color: #2262ef; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>OpenEdge Transactions Report</h2>');
+    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
+    printWindow.document.write('<table><thead><tr><th>Patient ID</th><th>Created On</th><th>Transaction Type</th><th>Transaction Number</th><th>Status</th></tr></thead><tbody>');
+    filteredData.forEach(row => {
+      printWindow.document.write(`<tr><td>${row.id}</td><td>${row.created}</td><td>${row.type}</td><td>${row.number}</td><td>${row.status}</td></tr>`);
+    });
+    printWindow.document.write('</tbody></table>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
 
   return (
     <ReportLayout title="Open Edge Transactions Report:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onExportCsv={() => alert('Exporting CSV...')}
-        onPrint={() => window.print()}
+      <OpenEdgeTransactionsFilters
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        statusFilter={statusFilter}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setStatusFilter={setStatusFilter}
+        handleFilterModeChange={handleFilterModeChange}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      <ReportDataTable 
-        columns={columns} 
-        data={filteredData} 
-        renderRow={renderRow} 
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={filteredData.length > 0}
       />
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : filteredData.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No data available for the selected filters.
+        </Typography>
+      ) : (
+        <OpenEdgeTransactionsTable data={filteredData} />
+      )}
     </ReportLayout>
   );
 };

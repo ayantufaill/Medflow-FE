@@ -10,10 +10,13 @@ import {
   TableRow,
   TableFooter,
   Paper,
-  Button
+  Button,
+  Grid,
+  Tooltip
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const ProductionReportTable = ({
   sortedReportData,
@@ -104,19 +107,80 @@ const ProductionReportTable = ({
         </Box>
 
         {/* Footer Summary */}
-        <Box sx={{ mt: 3, ml: 4 }} id="production-report-footer">
-          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 500, color: '#475569' }}>
-            <Box component="span" sx={{ color: '#3b82f6', fontWeight: 600 }}>Net est. Production:</Box> 
-            <Box component="span" sx={{ ml: 2, fontWeight: 700, color: '#1e293b' }}>
-              Total Charge + Adj(+/-) - Est Write Off = ${netProduction.toFixed(2)}
+        <Box sx={{ mt: 3, px: 2, mb: 4, fontFamily: 'sans-serif' }} id="production-report-footer">
+          <Grid container sx={{ justifyContent: 'center', gap: { xs: 4, md: 10 } }}>
+            {/* Left Column */}
+            <Grid item xs={12} md="auto">
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 12px', fontSize: '11px' }}>
+                <Box sx={{ color: '#1565c0' }}>Gross Production:</Box> 
+                <Box sx={{ display: 'flex', alignItems: 'center', color: '#333' }}>
+                  ${(totalCharge).toFixed(2)}
+                  <Tooltip title="Total charge amount">
+                    <InfoOutlinedIcon sx={{ fontSize: 12, ml: 0.5, color: '#888' }} />
+                  </Tooltip>
+                </Box>
+                
+                <Box sx={{ color: '#1565c0' }}>Net est. Production:</Box> 
+                <Box sx={{ display: 'flex', alignItems: 'center', color: '#333' }}>
+                  Total Charge + Adj(+/-) - Est Write Off = ${netProduction.toFixed(2)}
+                  <Tooltip title="Total Charge + Adjustments - Estimated Write Off">
+                    <InfoOutlinedIcon sx={{ fontSize: 12, ml: 0.5, color: '#888' }} />
+                  </Tooltip>
+                </Box>
+
+                <Box sx={{ color: '#1565c0' }}>Number of Seen Patients:</Box> 
+                <Box sx={{ color: '#333' }}>{seenPatients}</Box>
+
+                <Box sx={{ color: '#1565c0' }}>Average Production Per Patient:</Box> 
+                <Box sx={{ color: '#333' }}>${(seenPatients > 0 ? netProduction / seenPatients : 0).toFixed(2)}</Box>
+              </Box>
+            </Grid>
+
+            {/* Right Column */}
+            <Grid item xs={12} md="auto">
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 12px', fontSize: '11px' }}>
+                {[
+                  { label: 'Total Collection Incl. Pay From Credit:', val: totalPtPay + totalInsPay + totalPayFromCred },
+                  { label: 'Total Collection Excl. Pay From Credit:', val: totalPtPay + totalInsPay },
+                  { label: 'Collection From Credit:', val: totalPayFromCred },
+                  { label: 'Total Prepayments:', val: 0 },
+                  { label: 'Total Prepayments Excluding Refunds:', val: 0 },
+                  { label: 'Actual Write-Off:', val: totalActualWO },
+                  { label: 'Total Collection Adjustments:', val: totalCollAdj },
+                  { label: 'Total Production Adjustments:', val: totalAdj },
+                  { label: 'Adjusted Collection Incl. Pay From Credit:', val: totalPtPay + totalInsPay + totalPayFromCred + totalCollAdj },
+                  { label: 'Adjusted Collection Excl. Pay From Credit:', val: totalPtPay + totalInsPay + totalCollAdj },
+                  { label: 'Total Patient Refund:', val: totalPtRef },
+                  { label: 'Total Insurance Refund:', val: totalInsRef },
+                  { label: 'Total Overpayment to Credit:', val: totalOverpay },
+                  { label: 'Total Deposit Slip:', val: totalPtPay + totalInsPay },
+                  { label: 'Total Patient Income:', val: totalPtPay },
+                  { label: 'Total Insurance Income:', val: totalInsPay },
+                  { label: 'Total Adjustments:', val: totalAdj },
+                ].map((item, idx) => (
+                  <React.Fragment key={idx}>
+                    <Box sx={{ color: '#1565c0', textAlign: 'left' }}>{item.label}</Box> 
+                    <Box sx={{ display: 'flex', alignItems: 'center', color: '#333' }}>
+                      {item.val < 0 ? '-' : ''}${Math.abs(item.val).toFixed(2)}
+                      <Tooltip title={item.label.replace(':', '')}>
+                        <InfoOutlinedIcon sx={{ fontSize: 12, ml: 0.5, color: '#888' }} />
+                      </Tooltip>
+                    </Box>
+                  </React.Fragment>
+                ))}
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* Collection Percentage Centered Bottom */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Box sx={{ display: 'flex', gap: '8px', fontSize: '11px', whiteSpace: 'nowrap' }}>
+              <Box sx={{ color: '#1565c0' }}>Collection Percentage:</Box> 
+              <Box sx={{ color: '#333' }}>
+                (Total Collection + Collection Adjustment) / Net est. Production * 100 = {netProduction !== 0 ? (((totalPtPay + totalInsPay + totalCollAdj) / netProduction) * 100).toFixed(2) : '0.00'}%
+              </Box>
             </Box>
-          </Typography>
-          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#475569' }}>
-            Number of Seen Patients: <Box component="span" sx={{ ml: 2, fontWeight: 700, color: '#1e293b' }}>{seenPatients}</Box>
-          </Typography>
-          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#475569' }}>
-            Average Production Per Patient: <Box component="span" sx={{ ml: 2, fontWeight: 700, color: '#1e293b' }}>${(seenPatients > 0 ? netProduction / seenPatients : 0).toFixed(2)}</Box>
-          </Typography>
+          </Box>
         </Box>
       </>
     );
@@ -383,21 +447,82 @@ const ProductionReportTable = ({
         </Box>
       )}
 
-      {/* Footer Summary */}
-      <Box sx={{ mt: 3, ml: 4 }} id="production-report-footer">
-        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 500, color: '#475569' }}>
-          <Box component="span" sx={{ color: '#3b82f6', fontWeight: 600 }}>Net est. Production:</Box> 
-          <Box component="span" sx={{ ml: 2, fontWeight: 700, color: '#1e293b' }}>
-            Total Charge + Adj(+/-) - Est Write Off = ${netProduction.toFixed(2)}
+        {/* Footer Summary */}
+        <Box sx={{ mt: 3, px: 2, mb: 4, fontFamily: 'sans-serif' }} id="production-report-footer">
+          <Grid container sx={{ justifyContent: 'center', gap: { xs: 4, md: 10 } }}>
+            {/* Left Column */}
+            <Grid item xs={12} md="auto">
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 12px', fontSize: '11px' }}>
+                <Box sx={{ color: '#1565c0' }}>Gross Production:</Box> 
+                <Box sx={{ display: 'flex', alignItems: 'center', color: '#333' }}>
+                  ${(totalCharge).toFixed(2)}
+                  <Tooltip title="Total charge amount">
+                    <InfoOutlinedIcon sx={{ fontSize: 12, ml: 0.5, color: '#888' }} />
+                  </Tooltip>
+                </Box>
+                
+                <Box sx={{ color: '#1565c0' }}>Net est. Production:</Box> 
+                <Box sx={{ display: 'flex', alignItems: 'center', color: '#333' }}>
+                  Total Charge + Adj(+/-) - Est Write Off = ${netProduction.toFixed(2)}
+                  <Tooltip title="Total Charge + Adjustments - Estimated Write Off">
+                    <InfoOutlinedIcon sx={{ fontSize: 12, ml: 0.5, color: '#888' }} />
+                  </Tooltip>
+                </Box>
+
+                <Box sx={{ color: '#1565c0' }}>Number of Seen Patients:</Box> 
+                <Box sx={{ color: '#333' }}>{seenPatients}</Box>
+
+                <Box sx={{ color: '#1565c0' }}>Average Production Per Patient:</Box> 
+                <Box sx={{ color: '#333' }}>${(seenPatients > 0 ? netProduction / seenPatients : 0).toFixed(2)}</Box>
+              </Box>
+            </Grid>
+
+            {/* Right Column */}
+            <Grid item xs={12} md="auto">
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 12px', fontSize: '11px' }}>
+                {[
+                  { label: 'Total Collection Incl. Pay From Credit:', val: totalPtPay + totalInsPay + totalPayFromCred },
+                  { label: 'Total Collection Excl. Pay From Credit:', val: totalPtPay + totalInsPay },
+                  { label: 'Collection From Credit:', val: totalPayFromCred },
+                  { label: 'Total Prepayments:', val: 0 },
+                  { label: 'Total Prepayments Excluding Refunds:', val: 0 },
+                  { label: 'Actual Write-Off:', val: totalActualWO },
+                  { label: 'Total Collection Adjustments:', val: totalCollAdj },
+                  { label: 'Total Production Adjustments:', val: totalAdj },
+                  { label: 'Adjusted Collection Incl. Pay From Credit:', val: totalPtPay + totalInsPay + totalPayFromCred + totalCollAdj },
+                  { label: 'Adjusted Collection Excl. Pay From Credit:', val: totalPtPay + totalInsPay + totalCollAdj },
+                  { label: 'Total Patient Refund:', val: totalPtRef },
+                  { label: 'Total Insurance Refund:', val: totalInsRef },
+                  { label: 'Total Overpayment to Credit:', val: totalOverpay },
+                  { label: 'Total Deposit Slip:', val: totalPtPay + totalInsPay },
+                  { label: 'Total Patient Income:', val: totalPtPay },
+                  { label: 'Total Insurance Income:', val: totalInsPay },
+                  { label: 'Total Adjustments:', val: totalAdj },
+                ].map((item, idx) => (
+                  <React.Fragment key={idx}>
+                    <Box sx={{ color: '#1565c0', textAlign: 'left' }}>{item.label}</Box> 
+                    <Box sx={{ display: 'flex', alignItems: 'center', color: '#333' }}>
+                      {item.val < 0 ? '-' : ''}${Math.abs(item.val).toFixed(2)}
+                      <Tooltip title={item.label.replace(':', '')}>
+                        <InfoOutlinedIcon sx={{ fontSize: 12, ml: 0.5, color: '#888' }} />
+                      </Tooltip>
+                    </Box>
+                  </React.Fragment>
+                ))}
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* Collection Percentage Centered Bottom */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Box sx={{ display: 'flex', gap: '8px', fontSize: '11px', whiteSpace: 'nowrap' }}>
+              <Box sx={{ color: '#1565c0' }}>Collection Percentage:</Box> 
+              <Box sx={{ color: '#333' }}>
+                (Total Collection + Collection Adjustment) / Net est. Production * 100 = {netProduction !== 0 ? (((totalPtPay + totalInsPay + totalCollAdj) / netProduction) * 100).toFixed(2) : '0.00'}%
+              </Box>
+            </Box>
           </Box>
-        </Typography>
-        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#475569' }}>
-          Number of Seen Patients: <Box component="span" sx={{ ml: 2, fontWeight: 700, color: '#1e293b' }}>{seenPatients}</Box>
-        </Typography>
-        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#475569' }}>
-          Average Production Per Patient: <Box component="span" sx={{ ml: 2, fontWeight: 700, color: '#1e293b' }}>${(seenPatients > 0 ? netProduction / seenPatients : 0).toFixed(2)}</Box>
-        </Typography>
-      </Box>
+        </Box>
     </>
   );
 };

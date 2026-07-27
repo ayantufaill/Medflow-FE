@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, IconButton, Divider, List, ListItem } from '@mui/material';
 import { Sync as SyncIcon, SwapVert as SortIcon, Delete as DeleteIcon, Email as EmailIcon, Sms as SmsIcon } from '@mui/icons-material';
 
-export const AutomatedTemplatesList = ({ templates, selectedTemplate, onSelect, onCreateNew }) => {
+export const AutomatedTemplatesList = ({ templates, selectedTemplate, onSelect }) => {
   const [showDeleted, setShowDeleted] = useState(false);
 
   return (
@@ -19,21 +19,6 @@ export const AutomatedTemplatesList = ({ templates, selectedTemplate, onSelect, 
             />
             <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>Show deleted</Typography>
           </Box>
-          <Button 
-            variant="contained" 
-            size="small" 
-            onClick={onCreateNew}
-            sx={{ 
-              textTransform: 'none', 
-              backgroundColor: '#3B82F6', 
-              borderRadius: '16px',
-              px: 2,
-              fontSize: '0.7rem',
-              '&:hover': { backgroundColor: '#2563EB' }
-            }}
-          >
-            + Create New Form
-          </Button>
         </Box>
 
         <Box sx={{ border: '1px solid #E5E9F2', borderRadius: '4px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
@@ -44,7 +29,7 @@ export const AutomatedTemplatesList = ({ templates, selectedTemplate, onSelect, 
           </Box>
           <List sx={{ p: 0, flexShrink: 0 }}>
             {templates.map((template, index) => (
-              <React.Fragment key={template._id || index}>
+              <React.Fragment key={template.id || index}>
                 <ListItem 
                   button
                   onClick={() => onSelect(index, template)}

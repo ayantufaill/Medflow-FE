@@ -4,30 +4,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
   Button,
-  IconButton,
-  InputAdornment,
-  Menu,
-  MenuItem,
   CircularProgress,
 } from '@mui/material';
-import {
-  Search as SearchIcon,
-  Add as AddIcon,
-  Sync as SyncIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  Description as DescriptionIcon,
-} from '@mui/icons-material';
+import { Sync as SyncIcon } from '@mui/icons-material';
 
 // Sub-components
+import FeeGuidesActionBar from '../../components/admin/feeguides/FeeGuidesActionBar';
+import FeeGuidesTable from '../../components/admin/feeguides/FeeGuidesTable';
 import PlansDialog from '../../components/admin/feeguides/PlansDialog';
 import ClearManualFeeGuideDialog from '../../components/admin/feeguides/ClearManualFeeGuideDialog';
 import ClearLockedFeeDialog from '../../components/admin/feeguides/ClearLockedFeeDialog';
@@ -36,6 +20,9 @@ import EmptyFeeGuideDialog from '../../components/admin/feeguides/EmptyFeeGuideD
 import ReestimateDialog from '../../components/admin/feeguides/ReestimateDialog';
 import EditFeeGuideDialog from '../../components/admin/feeguides/EditFeeGuideDialog';
 import AuditHistoryDialog from '../../components/admin/feeguides/AuditHistoryDialog';
+import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
+
+// Redux
 import { 
   fetchFeeGuides, 
   deleteFeeGuide, 
@@ -46,19 +33,24 @@ import {
 
 const FeeGuides = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  // Dialog States
   const [plansDialogOpen, setPlansDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [lockedFeesDialogOpen, setLockedFeesDialogOpen] = useState(false);
-  const [addMenuAnchor, setAddMenuAnchor] = useState(null);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [emptyDialogOpen, setEmptyDialogOpen] = useState(false);
   const [reestimateDialogOpen, setReestimateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  
+  // Selected Data States
   const [selectedFeeGuide, setSelectedFeeGuide] = useState('');
   const [selectedFeeGuideObj, setSelectedFeeGuideObj] = useState(null);
 
-  const dispatch = useDispatch();
+  // Selectors
   const feeGuidesRaw = useSelector(selectFeeGuides);
   const loading = useSelector(selectFeeGuidesLoading);
   const overrideDefaultId = useSelector(selectDefaultFeeGuideId);
@@ -86,7 +78,7 @@ const FeeGuides = () => {
   };
 
   const handleExportCSV = (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     const csvContent = [
       ['Name', 'Default', 'Default Provider'],
       ...feeGuidesData.map(row => [row.name, row.default, row.defaultProvider])
@@ -102,31 +94,17 @@ const FeeGuides = () => {
     document.body.removeChild(link);
   };
 
-  const tanButtonStyle = {
-    backgroundColor: '#d9a366',
-    color: 'white',
-    textTransform: 'none',
-    fontSize: '0.8rem',
-    fontWeight: 500,
-    px: 2,
-    '&:hover': {
-      backgroundColor: '#c08d50',
-    },
-    whiteSpace: 'nowrap',
+  const handleSync = () => {
+    dispatch(fetchFeeGuides());
   };
 
-  const actionLinkStyle = {
-    color: '#4b71a1',
-    fontSize: '0.8rem',
-    textDecoration: 'none',
-    fontWeight: 500,
-    '&:hover': {
-      textDecoration: 'underline',
-    },
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 0.5,
+  const handleDelete = (id) => {
+    dispatch(deleteFeeGuide(id));
+  };
+
+  const handleEdit = (rowObj) => {
+    setSelectedFeeGuideObj(rowObj);
+    setEditDialogOpen(true);
   };
 
   if (loading && feeGuidesRaw.length === 0) {
@@ -138,112 +116,56 @@ const FeeGuides = () => {
   }
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumb & Top Sync */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="body2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Link to="/admin/finance-management" style={{ textDecoration: 'none', color: '#4b71a1' }}>Finance Management</Link> &gt; Fee Guides
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography sx={actionLinkStyle} onClick={() => dispatch(fetchFeeGuides())}>
-            <SyncIcon fontSize="small" /> Sync
+    <Box sx={{ p: 4, backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh' }}>
+      {/* Header Info */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
+            Fee Guides
           </Typography>
         </Box>
+        <Button
+          startIcon={<SyncIcon />}
+          size="small"
+          onClick={() => setSyncDialogOpen(true)}
+          sx={{
+            textTransform: 'none',
+            backgroundColor: '#2563eb',
+            color: '#fff',
+            fontWeight: 600,
+            borderRadius: 2,
+            px: 2,
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+          }}
+          variant="contained"
+        >
+          Sync
+        </Button>
       </Box>
 
-      {/* Action Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button variant="contained" sx={tanButtonStyle} onClick={() => setReestimateDialogOpen(true)}>Re-estimate Tplans</Button>
-          <Button variant="contained" sx={tanButtonStyle} onClick={() => setLockedFeesDialogOpen(true)}>Clear Locked Fees</Button>
-          <Button variant="contained" sx={tanButtonStyle} onClick={() => setResetDialogOpen(true)}>Reset Treatment Plans to Default Fee Guide</Button>
-        </Box>
+      {/* Action Bar Component */}
+      <FeeGuidesActionBar
+        onReestimate={() => setReestimateDialogOpen(true)}
+        onClearLockedFees={() => setLockedFeesDialogOpen(true)}
+        onResetTreatmentPlans={() => setResetDialogOpen(true)}
+        onCopyFeeGuide={() => setCopyDialogOpen(true)}
+        onEmptyFeeGuide={() => setEmptyDialogOpen(true)}
+      />
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <TextField
-            size="small"
-            placeholder="search"
-            sx={{ 
-              width: 250,
-              '& .MuiInputBase-root': { bgcolor: '#f5f5f5', borderRadius: 1 },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' }
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Typography 
-            sx={{ ...actionLinkStyle, fontWeight: 600 }}
-            onClick={(e) => setAddMenuAnchor(e.currentTarget)}
-          >
-            Add Fee Guide <AddIcon fontSize="small" />
-          </Typography>
-          <Menu
-            anchorEl={addMenuAnchor}
-            open={Boolean(addMenuAnchor)}
-            onClose={() => setAddMenuAnchor(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          >
-            <MenuItem onClick={() => { setAddMenuAnchor(null); setCopyDialogOpen(true); }} sx={{ fontSize: '0.875rem' }}>
-              Copy from existing
-            </MenuItem>
-            <MenuItem onClick={() => { setAddMenuAnchor(null); setEmptyDialogOpen(true); }} sx={{ fontSize: '0.875rem' }}>
-              Empty Fee Guide
-            </MenuItem>
-          </Menu>
-        </Box>
-      </Box>
+      {/* Main Table Component */}
+      <FeeGuidesTable
+        feeGuidesData={feeGuidesData}
+        onRowClick={(id) => navigate(`/admin/finance-management/fee-guide/${id}`)}
+        onExportCSV={handleExportCSV}
+        onSync={handleSync}
+        onDelete={handleDelete}
+        onEdit={handleEdit}
+        onOpenPlans={handleOpenPlans}
+        onAuditHistory={() => setAuditDialogOpen(true)}
+      />
 
-      {/* Table */}
-      <TableContainer sx={{ border: '1px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#1a3a6b' }}>
-              <TableCell sx={{ color: 'white', fontWeight: 600, py: 1.5 }}>Name</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, py: 1.5 }}>Default</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, py: 1.5 }}>Default Provider</TableCell>
-              <TableCell align="right" sx={{ color: 'white', fontWeight: 600, py: 1.5 }}></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {feeGuidesData.map((row) => (
-              <TableRow 
-                key={row.id} 
-                sx={{ '&:hover': { bgcolor: '#f9fafb' }, cursor: 'pointer' }}
-                onClick={() => navigate(`/admin/finance-management/fee-guide/${row.id}`)}
-              >
-                <TableCell sx={{ py: 1, fontWeight: 500, color: '#333' }}>{row.name}</TableCell>
-                <TableCell sx={{ py: 1, color: '#666' }}>{row.default}</TableCell>
-                <TableCell sx={{ py: 1, color: '#666' }}>{row.defaultProvider}</TableCell>
-                <TableCell align="right" sx={{ py: 1 }} onClick={(e) => e.stopPropagation()}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5 }}>
-                    <Typography sx={actionLinkStyle} onClick={handleExportCSV}>Export as CSV</Typography>
-                    <Typography sx={actionLinkStyle} onClick={(e) => { e.stopPropagation(); dispatch(fetchFeeGuides()); }}><SyncIcon sx={{ fontSize: '1rem' }} /> Sync</Typography>
-                    <IconButton size="small" sx={{ color: '#ccc' }} onClick={(e) => { e.stopPropagation(); dispatch(deleteFeeGuide(row.id)); }}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                    <Typography sx={actionLinkStyle} onClick={(e) => { e.stopPropagation(); setSelectedFeeGuideObj(row); setEditDialogOpen(true); }}>Edit</Typography>
-                    <IconButton size="small" sx={{ color: '#4b71a1' }}>
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
-                    <Typography sx={actionLinkStyle} onClick={(e) => { e.stopPropagation(); handleOpenPlans(row.name); }}>{row.plans} Plan(s)</Typography>
-                    <IconButton size="small" sx={{ color: '#4b71a1' }} onClick={(e) => { e.stopPropagation(); setAuditDialogOpen(true); }}>
-                      <DescriptionIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Extracted Dialogs */}
+      {/* Dialogs */}
       <PlansDialog 
         open={plansDialogOpen} 
         onClose={() => setPlansDialogOpen(false)} 
@@ -278,6 +200,10 @@ const FeeGuides = () => {
       <AuditHistoryDialog 
         open={auditDialogOpen} 
         onClose={() => setAuditDialogOpen(false)} 
+      />
+      <AdjustmentTypesSyncDialog
+        open={syncDialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
       />
     </Box>
   );

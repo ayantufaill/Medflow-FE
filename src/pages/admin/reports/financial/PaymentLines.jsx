@@ -1,128 +1,166 @@
-import React, { useState } from 'react';
-import {
-  Box, Typography, Select, MenuItem, Checkbox, FormControlLabel, Button, TableCell, TableRow, TextField
-} from '@mui/material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
-
-const MOCK_PAYMENT_LINES = [
-  { id: '966', patient: 'Patient One', amount: '$65.00', downPayment: 'No', dueDate: '05/15/2026', chargedOn: '', failedOn: '', failedAttempts: 0, status: 'Scheduled', error: '' },
-  { id: '232', patient: 'Patient Two', amount: '$42.00', downPayment: 'No', dueDate: '05/20/2026', chargedOn: '', failedOn: '', failedAttempts: 0, status: 'Scheduled', error: '' },
-  { id: '1247', patient: 'Patient Three', amount: '$599.50', downPayment: 'No', dueDate: '05/22/2026', chargedOn: '', failedOn: '', failedAttempts: 0, status: 'Scheduled', error: '' },
-  { id: '856', patient: 'Patient Four', amount: '$266.67', downPayment: 'No', dueDate: '05/22/2026', chargedOn: '', failedOn: '', failedAttempts: 0, status: 'Scheduled', error: '' },
-  { id: '986', patient: 'Patient Five', amount: '$1,295.67', downPayment: 'No', dueDate: '05/23/2026', chargedOn: '', failedOn: '', failedAttempts: 0, status: 'Scheduled', error: '' },
-];
+import React, { useState, useEffect, useMemo } from 'react';
+import { CircularProgress, Box, Typography } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import PaymentLinesFilters from '../../../../components/reports/financial/PaymentLinesFilters';
+import PaymentLinesTable from '../../../../components/reports/financial/PaymentLinesTable';
+import { reportingService } from '../../../../services/reporting.service';
 
 const PaymentLines = () => {
-  const [dueDateFilter, setDueDateFilter] = useState('Range');
+  const initialStartDate = new Date().toISOString().split('T')[0];
+  const initialEndDate = new Date().toISOString().split('T')[0];
+
+  const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
   const [selectedStatus, setSelectedStatus] = useState('Scheduled');
+  const [includeArchived, setIncludeArchived] = useState(false);
 
-  const StatusChip = ({ label }) => (
-    <Box
-      onClick={() => setSelectedStatus(label)}
-      sx={{
-        px: 2,
-        py: 0.5,
-        borderRadius: '4px',
-        border: '1px solid #4a89dc',
-        cursor: 'pointer',
-        backgroundColor: selectedStatus === label ? '#4a89dc' : '#fff',
-        color: selectedStatus === label ? '#fff' : '#4a89dc',
-        fontSize: '0.8rem',
-        fontWeight: 500,
-        transition: '0.2s',
-        '&:hover': { backgroundColor: selectedStatus === label ? '#357ebd' : '#f0f7ff' }
-      }}
-    >
-      {label}
-    </Box>
-  );
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const columns = [
-    { label: 'Patient ID' },
-    { label: 'Patient' },
-    { label: 'Amount' },
-    { label: 'Down Payment' },
-    { label: 'Due Date' },
-    { label: 'Charged On' },
-    { label: 'Failed On' },
-    { label: 'Failed Attempts' },
-    { label: 'Status' },
-    { label: 'Error Message' },
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await reportingService.getFinancialReport('payment-lines', {
+        startDate,
+        endDate
+      });
+      setReportData(res || []);
+    } catch (err) {
+      console.error('Failed to fetch payment lines report:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderRow = (row, index) => (
-    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.id}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{row.patient}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.amount}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.downPayment}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.dueDate}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.chargedOn}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.failedOn}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.failedAttempts}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.status}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{row.error}</TableCell>
-    </TableRow>
-  );
+  useEffect(() => {
+    fetchData();
+  }, [startDate, endDate]);
 
-  const topFilters = (
-    <>
-      <ReportSelect 
-        label={dueDateFilter} 
-        prefix="Due Date Filter:" 
-        value={dueDateFilter} 
-        onChange={(e) => setDueDateFilter(e.target.value)}
-        options={[{ value: 'Range', label: 'Range' }]}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
-        <TextField size="small" variant="standard" defaultValue="04/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
-        <TextField size="small" variant="standard" defaultValue="06/08/2026" sx={{ width: 100, '& input': { fontSize: '0.85rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } }} />
-      </Box>
-    </>
-  );
+  const handleFilterModeChange = (e) => {
+    setDateRange(e.target.value);
+  };
 
-  const bottomFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-        <ReportSelect 
-          label="Select Status" 
-          prefix="Filter by Status:" 
-          defaultValue="Select Status"
-          options={[{ value: 'Select Status', label: 'Select Status' }]}
-        />
-        <StatusChip label="Failed" />
-        <StatusChip label="Pending" />
-        <StatusChip label="Scheduled" />
-      </Box>
-      <ReportCheckbox label="Include Archived" />
-    </>
-  );
+  const handleApply = () => {
+    fetchData();
+  };
+
+  const handleClear = () => {
+    setDateRange('Daily');
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setSelectedStatus('Scheduled');
+    setIncludeArchived(false);
+  };
+
+  const filteredData = useMemo(() => {
+    let list = reportData;
+
+    // Filter by status
+    if (selectedStatus !== 'All') {
+      list = list.filter(row => row.status?.toLowerCase() === selectedStatus.toLowerCase());
+    }
+
+    // Filter by archived
+    if (!includeArchived) {
+      list = list.filter(row => row.status?.toLowerCase() !== 'archived');
+    }
+
+    return list;
+  }, [reportData, selectedStatus, includeArchived]);
+
+  const handleExportCSV = () => {
+    const headers = ['Patient ID', 'Patient', 'Amount', 'Down Payment', 'Due Date', 'Charged On', 'Failed On', 'Failed Attempts', 'Status', 'Error Message'];
+    const rows = filteredData.map(row => [
+      row.id || row.patientId || '',
+      row.patient,
+      row.amount,
+      row.downPayment,
+      row.dueDate,
+      row.chargedOn || '',
+      row.failedOn || '',
+      row.failedAttempts ?? 0,
+      row.status,
+      row.error || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Payment_Lines_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Payment Lines Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('h2 { color: #2262ef; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Payment Lines Report</h2>');
+    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
+    printWindow.document.write('<table><thead><tr><th>Patient ID</th><th>Patient</th><th>Amount</th><th>Down Payment</th><th>Due Date</th><th>Charged On</th><th>Failed On</th><th>Failed Attempts</th><th>Status</th><th>Error Message</th></tr></thead><tbody>');
+    filteredData.forEach(row => {
+      printWindow.document.write(`<tr><td>${row.id || row.patientId || '-'}</td><td>${row.patient}</td><td>${row.amount}</td><td>${row.downPayment}</td><td>${row.dueDate}</td><td>${row.chargedOn || '-'}</td><td>${row.failedOn || '-'}</td><td>${row.failedAttempts ?? 0}</td><td>${row.status}</td><td>${row.error || '-'}</td></tr>`);
+    });
+    printWindow.document.write('</tbody></table>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
 
   return (
     <ReportLayout title="Payment Lines Report:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        bottomRowFilters={bottomFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onExportCsv={() => alert('Exporting CSV...')}
-        onPrint={() => window.print()}
+      <PaymentLinesFilters
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        selectedStatus={selectedStatus}
+        includeArchived={includeArchived}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setSelectedStatus={setSelectedStatus}
+        setIncludeArchived={setIncludeArchived}
+        handleFilterModeChange={handleFilterModeChange}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      {/* Table Section */}
-      <ReportDataTable 
-        columns={columns} 
-        data={MOCK_PAYMENT_LINES} 
-        renderRow={renderRow} 
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={filteredData.length > 0}
       />
-      <Box sx={{ backgroundColor: '#fff', border: '1px solid #e0e0e0', borderTop: 'none', py: 1.5, px: 2 }}>
-        <Typography sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-          Total: &nbsp; &nbsp; $4,185.77
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : filteredData.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No data available for the selected filters.
         </Typography>
-      </Box>
+      ) : (
+        <PaymentLinesTable data={filteredData} />
+      )}
     </ReportLayout>
   );
 };

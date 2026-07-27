@@ -12,6 +12,7 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Button,
 } from '@mui/material';
 
 const AuditHistoryDialog = ({ open, onClose }) => {
@@ -21,43 +22,49 @@ const AuditHistoryDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
       <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1,
-        fontSize: '1rem',
-        fontWeight: 600
+        backgroundColor: '#fff',
+        color: '#0f172a',
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        py: 3,
+        px: 4,
+        lineHeight: 1.3,
+        borderBottom: '1px solid #f1f5f9'
       }}>
-        Audit FeeGuides History
+        Audit Fee Guides History
       </DialogTitle>
-      <DialogContent sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Typography variant="body2" sx={{ color: '#4b71a1', fontWeight: 600 }}>Filter list by:</Typography>
-          <Typography variant="body2" sx={{ color: '#4b71a1', fontWeight: 600, ml: 4 }}>Action:</Typography>
+      <DialogContent sx={{ p: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>Filter list by:</Typography>
+          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600, ml: 3 }}>Action:</Typography>
           <TextField 
             select 
             size="small" 
             defaultValue="All"
             SelectProps={{ native: true }}
-            sx={{ '& .MuiInputBase-root': { fontSize: '0.8rem' } }}
+            sx={{ 
+              '& .MuiInputBase-root': { backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' }
+            }}
           >
             <option value="All">All</option>
           </TextField>
         </Box>
-        <TableContainer sx={{ border: '1px solid #e0e0e0', maxHeight: 500 }}>
+        <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2, maxHeight: 500 }}>
           <Table stickyHeader size="small">
             <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: '#f9fafb', fontWeight: 700, fontSize: '0.75rem', py: 1.5 } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
                 <TableCell>Date</TableCell>
                 <TableCell>User</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Action</TableCell>
                 <TableCell sx={{ textAlign: 'center' }} colSpan={3}>Difference</TableCell>
               </TableRow>
-              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: '#f9fafb', fontWeight: 700, fontSize: '0.75rem', py: 1 } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', py: 1, borderBottom: '2px solid #e2e8f0' } }}>
                 <TableCell colSpan={4} />
                 <TableCell sx={{ textAlign: 'center', width: '20%' }}>Key</TableCell>
                 <TableCell sx={{ textAlign: 'center', width: '20%' }}>Old</TableCell>
@@ -78,7 +85,7 @@ const AuditHistoryDialog = ({ open, onClose }) => {
                 { date: '09/22/2021 09:10:12 AM', user: 'John Davis', name: 'FeeGuide', action: 'Update', diff: [{ key: '/default', old: 'No', new: 'Yes' }] },
               ].map((row, i) => (
                 <React.Fragment key={i}>
-                  <TableRow sx={{ '& .MuiTableCell-root': { py: 1, fontSize: '0.75rem', verticalAlign: 'top', borderBottom: row.diff.length > 0 ? 'none' : '1px solid #e0e0e0' } }}>
+                  <TableRow sx={{ '& .MuiTableCell-root': { py: 1.5, fontSize: '0.85rem', color: '#1e293b', verticalAlign: 'top', borderBottom: row.diff.length > 0 ? 'none' : '1px solid #f1f5f9' } }}>
                     <TableCell rowSpan={row.diff.length || 1}>{row.date}</TableCell>
                     <TableCell rowSpan={row.diff.length || 1}>{row.user}</TableCell>
                     <TableCell rowSpan={row.diff.length || 1}>{row.name}</TableCell>
@@ -86,17 +93,17 @@ const AuditHistoryDialog = ({ open, onClose }) => {
                     {row.diff.length === 0 && <TableCell colSpan={3} />}
                     {row.diff.length > 0 && (
                       <>
-                        <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{row.diff[0].key}</TableCell>
-                        <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{row.diff[0].old}</TableCell>
-                        <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{row.diff[0].new}</TableCell>
+                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}>{row.diff[0].key}</TableCell>
+                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#dc2626' }}>{row.diff[0].old}</TableCell>
+                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#16a34a' }}>{row.diff[0].new}</TableCell>
                       </>
                     )}
                   </TableRow>
                   {row.diff.slice(1).map((d, j) => (
-                    <TableRow key={j} sx={{ '& .MuiTableCell-root': { py: 1, fontSize: '0.75rem', borderBottom: j === row.diff.length - 2 ? '1px solid #e0e0e0' : 'none' } }}>
-                      <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{d.key}</TableCell>
-                      <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{d.old}</TableCell>
-                      <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{d.new}</TableCell>
+                    <TableRow key={j} sx={{ '& .MuiTableCell-root': { py: 1.5, fontSize: '0.85rem', borderBottom: j === row.diff.length - 2 ? '1px solid #f1f5f9' : 'none' } }}>
+                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}>{d.key}</TableCell>
+                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#dc2626' }}>{d.old}</TableCell>
+                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#16a34a' }}>{d.new}</TableCell>
                     </TableRow>
                   ))}
                 </React.Fragment>
@@ -104,6 +111,23 @@ const AuditHistoryDialog = ({ open, onClose }) => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+          <Button 
+            variant="contained" 
+            sx={{ 
+              textTransform: 'none', 
+              backgroundColor: '#2563eb', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 4, 
+              boxShadow: 'none', 
+              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+            }}
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        </Box>
       </DialogContent>
     </Dialog>
   );
