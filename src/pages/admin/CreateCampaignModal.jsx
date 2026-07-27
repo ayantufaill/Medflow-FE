@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,9 @@ const latestTemplates = [
 ];
 
 const CreateCampaignModal = ({ open, onClose, onCreate }) => {
+  const [campaignName, setCampaignName] = useState('');
+  const [subject, setSubject] = useState('');
+
   return (
     <Dialog 
       open={open} 
@@ -58,6 +61,8 @@ const CreateCampaignModal = ({ open, onClose, onCreate }) => {
               size="small" 
               fullWidth 
               placeholder="E.g., Winter Newsletter"
+              value={campaignName}
+              onChange={(e) => setCampaignName(e.target.value)}
               sx={{ '& .MuiOutlinedInput-root': { height: 40, fontSize: '0.85rem', borderRadius: 1.5, '& fieldset': { borderColor: '#E5E9F2' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#3B82F6' } } }} 
             />
           </Box>
@@ -67,12 +72,15 @@ const CreateCampaignModal = ({ open, onClose, onCreate }) => {
               size="small" 
               fullWidth 
               placeholder="Keep it catchy!"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
               sx={{ '& .MuiOutlinedInput-root': { height: 40, fontSize: '0.85rem', borderRadius: 1.5, '& fieldset': { borderColor: '#E5E9F2' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#3B82F6' } } }} 
             />
           </Box>
           <Button 
             variant="contained" 
-            onClick={onCreate}
+            onClick={() => onCreate({ name: campaignName, subject })}
+            disabled={!campaignName.trim()}
             sx={{ bgcolor: '#3B82F6', textTransform: 'none', fontWeight: 600, borderRadius: 1.5, px: 3, height: 40, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
           >
             Create

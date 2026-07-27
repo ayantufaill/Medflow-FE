@@ -52,6 +52,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [initialData, setInitialData] = useState(null);
   
   const [questions, setQuestions] = useState([]);
 
@@ -60,9 +61,12 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
       if (id) {
         fetchQuestionnaire();
       } else {
-        setLocalTitle(title || 'Untitled Questionnaire');
-        setLocalDesc(description || 'Description goes here...');
+        const initTitle = title || 'Untitled Questionnaire';
+        const initDesc = description || 'Description goes here...';
+        setLocalTitle(initTitle);
+        setLocalDesc(initDesc);
         setQuestions([]);
+        setInitialData({ title: initTitle, desc: initDesc, questions: [] });
       }
     }
   }, [open, id]);
@@ -71,13 +75,23 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
     try {
       setLoading(true);
       const data = await communicationService.getQuestionnaireById(id);
-      setLocalDesc(data.description || 'Description goes here...');
-      setLocalTitle(title);
-      setQuestions(data.questions?.map(q => ({
+      const parsedDesc = data.description || 'Description goes here...';
+      const parsedTitle = title;
+      const parsedQuestions = data.questions?.map(q => ({
         text: q.name,
         type: q.type,
         options: q.choices || []
-      })) || []);
+      })) || [];
+
+      setLocalDesc(parsedDesc);
+      setLocalTitle(parsedTitle);
+      setQuestions(parsedQuestions);
+      
+      setInitialData({
+        title: parsedTitle,
+        desc: parsedDesc,
+        questions: parsedQuestions
+      });
     } catch (error) {
       console.error('Failed to fetch questionnaire details:', error);
     } finally {
@@ -85,7 +99,16 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
     }
   };
 
+  const currentData = {
+    title: localTitle,
+    desc: localDesc,
+    questions: questions
+  };
+
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handlePublish = async () => {
+    if (!isDirty) return;
     try {
       setSaving(true);
       const payload = {
@@ -102,6 +125,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
       } else {
         await communicationService.createQuestionnaire(payload);
       }
+      setInitialData(currentData);
       onClose();
     } catch (error) {
       console.error('Failed to save questionnaire:', error);
@@ -114,6 +138,12 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
     setQuestions([...questions, { text: '', type: null, allowSkip: false, disabled: false }]);
   };
 
+  const updateQuestion = (idx, updates) => {
+    const newQuestions = [...questions];
+    newQuestions[idx] = { ...newQuestions[idx], ...updates };
+    setQuestions(newQuestions);
+  };
+
   const handleAddQuestionOfType = (type) => {
     setQuestions([...questions, { 
       text: '', 
@@ -122,12 +152,6 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
       disabled: false, 
       options: (type === 'multiple' || type === 'checkbox') ? ['Option 1'] : [] 
     }]);
-  };
-
-  const updateQuestion = (idx, updates) => {
-    const newQuestions = [...questions];
-    newQuestions[idx] = { ...newQuestions[idx], ...updates };
-    setQuestions(newQuestions);
   };
 
   const deleteQuestion = (idx) => {
@@ -228,7 +252,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
           <Button 
             variant="contained" 
             onClick={handlePublish}
-            disabled={loading || saving}
+            disabled={loading || saving || !isDirty}
             sx={{ bgcolor: '#3B82F6', textTransform: 'none', borderRadius: 1.5, px: 3, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
           >
             {saving ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : (isSystem ? 'Publish Again' : 'Publish')}

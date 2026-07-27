@@ -14,7 +14,9 @@ import { communicationService } from '../../services/communication.service';
 const PatientCommunicationSettings = () => {
   const [activeTab, setActiveTab] = useState('reminder-config');
   const [settings, setSettings] = useState(null);
+  const [initialSettings, setInitialSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
@@ -22,6 +24,7 @@ const PatientCommunicationSettings = () => {
       try {
         const data = await communicationService.getSettings();
         setSettings(data);
+        setInitialSettings(data);
       } catch (error) {
         console.error('Failed to load settings:', error);
       } finally {
@@ -31,14 +34,20 @@ const PatientCommunicationSettings = () => {
     fetchSettings();
   }, []);
 
+  const isDirty = initialSettings && JSON.stringify(initialSettings) !== JSON.stringify(settings);
+
   const handleSave = async () => {
-    if (!settings) return;
+    if (!settings || !isDirty) return;
     try {
+      setSaving(true);
       await communicationService.updateSettings(settings);
+      setInitialSettings(settings);
       setToast({ open: true, message: 'Settings saved successfully!', severity: 'success' });
     } catch (error) {
       console.error('Error saving settings:', error);
       setToast({ open: true, message: 'Failed to save settings.', severity: 'error' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -68,8 +77,13 @@ const PatientCommunicationSettings = () => {
           <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#1E293B' }}>
             Communication Setting
           </Typography>
-          <Button variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#3B82F6', minWidth: 'auto', px: 3 }}>
-            Save Settings
+          <Button 
+            variant="contained" 
+            onClick={handleSave} 
+            disabled={saving || !isDirty}
+            sx={{ textTransform: 'none', backgroundColor: '#3B82F6', minWidth: 'auto', px: 3, '&:hover': { bgcolor: '#2563EB' } }}
+          >
+            {saving ? 'Saving...' : 'Save Settings'}
           </Button>
         </Box>
 

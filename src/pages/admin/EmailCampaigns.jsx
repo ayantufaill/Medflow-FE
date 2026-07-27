@@ -19,6 +19,7 @@ const EmailCampaigns = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingTemplateName, setEditingTemplateName] = useState('');
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -58,10 +59,10 @@ const EmailCampaigns = () => {
     setTemplateModalOpen(true);
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = (data) => {
     setCreateModalOpen(false);
-    setEditorTitle('New Campaign');
-    setEditorCampaign(null);
+    setEditorTitle(data?.name || 'New Campaign');
+    setEditorCampaign(data ? { name: data.name, subject: data.subject, body: '' } : null);
     setCampaignModalOpen(true);
   };
 
@@ -96,7 +97,7 @@ const EmailCampaigns = () => {
           {activeTab === 'home' ? (
             <>
               <CampaignSummaryCards metrics={metrics} />
-              <CampaignsTable campaigns={campaigns} onEditCampaign={handleEditCampaign} onPreviewCampaign={(camp) => setPreviewModalOpen(true)} />
+              <CampaignsTable campaigns={campaigns} onEditCampaign={handleEditCampaign} onPreviewCampaign={(camp) => { setPreviewData(camp); setPreviewModalOpen(true); }} />
             </>
           ) : (
             <TemplatesList onEditTemplate={handleEditTemplate} />
@@ -113,6 +114,7 @@ const EmailCampaigns = () => {
       <PreviewCampaignModal 
         open={previewModalOpen} 
         onClose={() => setPreviewModalOpen(false)} 
+        campaign={previewData}
       />
       <TemplateEditorModal
         open={templateModalOpen}
@@ -124,7 +126,7 @@ const EmailCampaigns = () => {
         onClose={() => { setCampaignModalOpen(false); fetchCampaignData(); }}
         title={editorTitle}
         campaign={editorCampaign}
-        onPreview={() => setPreviewModalOpen(true)}
+        onPreview={(data) => { setPreviewData(data); setPreviewModalOpen(true); }}
       />
     </Box>
   );

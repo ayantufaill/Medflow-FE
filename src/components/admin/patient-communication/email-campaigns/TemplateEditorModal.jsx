@@ -26,7 +26,22 @@ const RichTextToolbar = () => (
 );
 
 const TemplateEditorModal = ({ open, onClose, templateName }) => {
+  const defaultBody = `Hi {Patient: First Name},\n\nWe wanted to remind you about our Membership Plan which can save you up to 20% on all treatments!\n\nIf you have any questions, feel free to contact us.\n\nBest,\nThe Team at Medflow`;
   const [subject, setSubject] = useState(templateName || 'Membership Plan');
+  const [body, setBody] = useState(defaultBody);
+  const [initialData, setInitialData] = useState({ subject: templateName || 'Membership Plan', body: defaultBody });
+
+  React.useEffect(() => {
+    if (open) {
+      const initSub = templateName || 'Membership Plan';
+      setSubject(initSub);
+      setBody(defaultBody);
+      setInitialData({ subject: initSub, body: defaultBody });
+    }
+  }, [open, templateName]);
+
+  const currentData = { subject, body };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
   
   return (
     <Dialog 
@@ -71,7 +86,8 @@ const TemplateEditorModal = ({ open, onClose, templateName }) => {
               fullWidth 
               multiline 
               rows={12} 
-              defaultValue={`Hi {Patient: First Name},\n\nWe wanted to remind you about our Membership Plan which can save you up to 20% on all treatments!\n\nIf you have any questions, feel free to contact us.\n\nBest,\nThe Team at Medflow`}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0 0 6px 6px', fontSize: '0.85rem', lineHeight: 1.6, '& fieldset': { borderColor: '#E5E9F2' } } }} 
             />
           </Box>
@@ -108,6 +124,7 @@ const TemplateEditorModal = ({ open, onClose, templateName }) => {
         <Button 
           variant="contained" 
           onClick={onClose}
+          disabled={!isDirty}
           sx={{ textTransform: 'none', fontWeight: 600, bgcolor: '#3B82F6', borderRadius: 1.5, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
         >
           Save Changes

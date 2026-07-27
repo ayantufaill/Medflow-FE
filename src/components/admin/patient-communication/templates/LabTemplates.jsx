@@ -23,6 +23,7 @@ export const LabTemplates = () => {
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [initialData, setInitialData] = useState(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -43,9 +44,13 @@ export const LabTemplates = () => {
   }, []);
 
   const populateForm = (tpl) => {
-    setDescription(tpl.description || '');
-    setSubject(tpl.subject || '');
-    setBodyText(tpl.bodyText || '');
+    const initDesc = tpl.description || '';
+    const initSub = tpl.subject || '';
+    const initBody = tpl.bodyText || '';
+    setDescription(initDesc);
+    setSubject(initSub);
+    setBodyText(initBody);
+    setInitialData({ description: initDesc, subject: initSub, bodyText: initBody });
   };
 
   const handleSelectTemplate = (index) => {
@@ -53,7 +58,11 @@ export const LabTemplates = () => {
     populateForm(templates[index]);
   };
 
+  const currentData = { description, subject, bodyText };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handleSave = async () => {
+    if (!isDirty) return;
     try {
       const data = { description, subject, bodyText, templateType: 5 };
       const tpl = templates[selectedTemplate];
@@ -135,7 +144,7 @@ export const LabTemplates = () => {
               <>
                 <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <TextField placeholder="Enter template title *" variant="standard" value={description} onChange={(e) => setDescription(e.target.value)} sx={{ width: '60%', '& .MuiInput-input': { fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' } }} InputProps={{ disableUnderline: false }} />
-                  <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
+                  <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
                 </Box>
 
                 <Box sx={{ p: 4, flexGrow: 1, overflowY: 'auto' }}>

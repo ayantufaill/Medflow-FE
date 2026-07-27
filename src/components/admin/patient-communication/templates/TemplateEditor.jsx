@@ -7,18 +7,38 @@ export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelet
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
   const [type, setType] = useState('email'); // 'email' or 'text'
+  const [initialData, setInitialData] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (templateInfo) {
-      setDescription(templateInfo.name || templateInfo.description || '');
-      setSubject(templateInfo.subject || '');
-      setBodyText(templateInfo.bodyText || '');
-      setType(templateInfo.type || 'email');
+      const initDesc = templateInfo.name || templateInfo.description || '';
+      const initSub = templateInfo.subject || '';
+      const initBody = templateInfo.bodyText || '';
+      const initType = templateInfo.type || 'email';
+      
+      setDescription(initDesc);
+      setSubject(initSub);
+      setBodyText(initBody);
+      setType(initType);
+      
+      setInitialData({
+        description: initDesc,
+        subject: initSub,
+        bodyText: initBody,
+        type: initType
+      });
     }
   }, [templateInfo]);
 
+  const currentData = { description, subject: type === 'email' ? subject : '', bodyText, type };
+  // the currentData logic needs to match what happens when we compare. 
+  // Wait, if type is 'text', subject is ignored. Let's just compare what's currently in state.
+  const currentRawData = { description, subject, bodyText, type };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentRawData);
+
   const handleSave = () => {
+    if (!isDirty) return;
     onSave({ description, subject: type === 'email' ? subject : '', bodyText, type });
   };
 
@@ -54,7 +74,7 @@ export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelet
             <IconButton size="small"><EditIcon sx={{ fontSize: 16 }} /></IconButton>
             <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={() => setDeleteConfirmOpen(true)}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
           </Box>
-        <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
+        <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
       </Box>
 
       <Box sx={{ p: 4, flexGrow: 1, overflowY: 'auto' }}>

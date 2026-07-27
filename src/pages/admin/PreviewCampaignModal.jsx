@@ -16,7 +16,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 
-const PreviewCampaignModal = ({ open, onClose }) => {
+const PreviewCampaignModal = ({ open, onClose, campaign }) => {
   return (
     <Dialog 
       open={open} 
@@ -49,26 +49,13 @@ const PreviewCampaignModal = ({ open, onClose }) => {
           
           {/* Placeholder for Header Image */}
           <Box sx={{ width: '100%', height: 100, bgcolor: '#1E293B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 700 }}>
-            THE DENTAL STUDIO
+            MedFlow
           </Box>
 
           {/* Email Body content */}
           <Box sx={{ p: 4 }}>
-            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', mb: 2 }}>
-              Hi Yash,
-            </Typography>
-            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', mb: 2, lineHeight: 1.7 }}>
-              I hope you're doing well. I'm reaching out with an important update about your dental membership plan.
-              We will be transitioning all membership plans from the FFS platform into our own practice software. This allows us to manage everything in-house so we can take care of your accounting and membership details directly. Our goal is to keep things simple for you and provide an even smoother experience.
-              There is nothing you need to do right now. When your plan is approaching renewal, we will reach out to gather any updated billing information that may be needed. You may receive an email that your membership has been terminated with the existing platform in line with the evening platform.
-            </Typography>
-            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', mb: 2, lineHeight: 1.7 }}>
-              All membership updates will be completed by December 31, 2025. If you have any questions in the meantime, please feel free to call or email us. We're always here to help.
-            </Typography>
-            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', mt: 4 }}>
-              Warmly,
-              <br/>
-              Robin | Front Office Coordinator
+            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', mb: 2, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+              {campaign?.body || 'No content provided.'}
             </Typography>
           </Box>
 
