@@ -30,26 +30,39 @@ const ReestimateDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
       <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1.5,
-        fontSize: '1rem',
-        fontWeight: 600
+        backgroundColor: '#fff',
+        color: '#0f172a',
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        py: 3,
+        px: 4,
+        lineHeight: 1.3,
+        borderBottom: '1px solid #f1f5f9'
       }}>
-        The system will start re-estimating all active treatment plans.
+        Re-estimate Treatment Plans
       </DialogTitle>
-      <DialogContent sx={{ pb: 2, px: 2 }}>
-        <Typography variant="body2" sx={{ textAlign: 'center', mt: 6, mb: 4, color: '#333' }}>
+      <DialogContent sx={{ py: 4, px: 4 }}>
+        <Typography variant="body1" sx={{ fontWeight: 600, color: '#1e293b', mb: 2 }}>
+          The system will start re-estimating all active treatment plans.
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#475569', mb: 4 }}>
           This process can take up to 2 hours depending on the number of treatment plans in your system.
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
           <Button 
-            variant="outlined" 
-            sx={{ textTransform: 'none', color: '#666', borderColor: '#ccc' }}
+            variant="text" 
+            sx={{ 
+              textTransform: 'none', 
+              color: '#475569', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 3, 
+              '&:hover': { backgroundColor: '#f1f5f9' } 
+            }}
             onClick={onClose}
             disabled={loading}
           >
@@ -57,7 +70,15 @@ const ReestimateDialog = ({ open, onClose }) => {
           </Button>
           <Button 
             variant="contained" 
-            sx={{ bgcolor: '#d9a366', textTransform: 'none', minWidth: 60, '&:hover': { bgcolor: '#c08d50' } }}
+            sx={{ 
+              textTransform: 'none', 
+              backgroundColor: '#2563eb', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 3, 
+              boxShadow: 'none', 
+              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+            }}
             onClick={handleConfirm}
             disabled={loading}
           >
