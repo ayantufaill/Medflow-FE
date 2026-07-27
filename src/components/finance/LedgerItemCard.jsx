@@ -73,9 +73,6 @@ const LedgerItemCard = ({
 
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Applied WO:</Typography>
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.appliedWo || '$0.00'}</Typography>
-
-            <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Invoice Balance:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>$0.00</Typography>
           </Box>
 
           {/* Column 2 */}
@@ -94,6 +91,23 @@ const LedgerItemCard = ({
 
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Paid:</Typography>
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>$0.00</Typography>
+          </Box>
+
+          {/* Column 4: Invoice Balance & Claim */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Invoice Balance:</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px', whiteSpace: 'nowrap' }}>
+              {displayItem.amount || '$0.00'}
+            </Typography>
+
+            {displayItem.details?.some(d => d.isClaim) && (
+              <>
+                <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Claim:</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                  {displayItem.details.find(d => d.isClaim).status || 'Claim in process'}
+                </Typography>
+              </>
+            )}
           </Box>
         </Box>
 
@@ -148,6 +162,9 @@ const LedgerItemCard = ({
                 onAttachClick={handleAttachClick}
                 attachData={detail}
                 procedures={detail.procedures}
+                claimStatus={detail.status}
+                statusResponse={detail.statusResponse}
+                isApproved={detail.isApproved}
               />
             )))}
 

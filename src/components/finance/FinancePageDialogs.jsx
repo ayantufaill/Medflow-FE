@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 
 import AccountAdjustmentDialog from './AccountAdjustmentDialog';
 import CourtesyRefundDialog from './CourtesyRefundDialog';
-import EditPatientFlagsDialog from './EditPatientFlagsDialog';
+import PatientFlagsDialog from '../patient-flags/PatientFlagsDialog';
 import DepositDialog from './DepositDialog';
 import DepositOptionsMenu from './DepositOptionsMenu';
 import CourtesyCreditComponent from './CourtesyCreditComponent';
@@ -71,15 +71,15 @@ const FinancePageDialogs = ({
         </DialogWrapper>
       )}
 
-      {showEditFlags && (
-        <DialogWrapper onClose={() => setShowEditFlags(false)} maxWidth="750px" extraSx={{ width: '90%', overflow: 'hidden' }}>
-          <EditPatientFlagsDialog 
-            onClose={() => setShowEditFlags(false)}
-            onSave={handleEditFlagsSave}
-            initialFlags={patient?.patientFlags || []}
-          />
-        </DialogWrapper>
-      )}
+      <PatientFlagsDialog
+        open={showEditFlags}
+        onClose={() => setShowEditFlags(false)}
+        onSave={(newFlags) => {
+          handleEditFlagsSave(newFlags);
+          setShowEditFlags(false);
+        }}
+        initialFlags={patient?.patientFlags || []}
+      />
 
       {showDeposit && (
         <DialogWrapper onClose={() => setShowDeposit(false)} maxWidth="900px" extraSx={{ width: '90%' }}>

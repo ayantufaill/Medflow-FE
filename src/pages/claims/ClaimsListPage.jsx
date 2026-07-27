@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { claimService } from '../../services/claim.service';
 import ClaimManagementHeader from '../../components/claims/ClaimManagementHeader';
 import ClaimTabBar from '../../components/claims/ClaimTabBar';
@@ -12,8 +13,7 @@ import PredeterminationTab from '../../components/claims/PredeterminationTab';
 import DenticalReportsTab from '../../components/claims/DenticalReportsTab';
 import EraReportsTab from '../../components/claims/EraReportsTab';
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
-import ClaimAttachmentsDialog from '../../components/claims/attachments/ClaimAttachmentsDialog';
-import ClaimPrintPreviewDialog from '../../components/claims/ClaimPrintPreviewDialog';
+import RightPanelCollapsed from '../../components/appointments/right-panel/RightPanelCollapsed';
 import { ClaimsDialogs } from '../../components/claims/ClaimsDialogs';
 
 const TAB_COMPONENTS = [
@@ -29,6 +29,7 @@ const TAB_COMPONENTS = [
 
 const ClaimsListPage = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
   // Dialogs State (Shared across all tabs if needed)
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -65,12 +66,13 @@ const ClaimsListPage = () => {
   // For now, the tabs handle their own rendering for the most part.
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f7f8fa' }}>
+    <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
       
       {/* LEFT COLUMN - Main Claim Content (~75%) */}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Box sx={{ backgroundColor: '#ffffff', p: 2, borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', flex: 1, overflowY: 'auto' }}>
-          <ClaimManagementHeader />
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ p: 2, flex: 1, overflowY: 'auto' }}>
+            <ClaimManagementHeader />
           <ClaimTabBar 
             activeTab={activeTab} 
             onTabChange={setActiveTab} 
@@ -83,13 +85,25 @@ const ClaimsListPage = () => {
               onOpenPreview={(claim) => { setPreviewingClaim(claim); setOpenPreviewDialog(true); }}
             />
           </Box>
+          </Box>
         </Box>
       </Box>
 
       {/* RIGHT COLUMN - RightPanel component (~25%) */}
-      <Box sx={{ width: 320, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <RightPanel />
-      </Box>
+      {rightPanelOpen ? (
+        <Box sx={{ flex: '0 0 320px', width: '320px', minWidth: '320px', maxWidth: '320px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+            <IconButton onClick={() => setRightPanelOpen(false)} sx={{ color: 'text.secondary', p: 0, '&:hover': { color: 'primary.main' } }}>
+              <KeyboardDoubleArrowRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          <RightPanel hideAppointmentShortlist={true} />
+        </Box>
+      ) : (
+        <Box sx={{ height: '100%', flexShrink: 0 }}>
+          <RightPanelCollapsed onExpand={() => setRightPanelOpen(true)} hideAppointmentShortlist={true} />
+        </Box>
+      )}
 
       {/* Shared Dialogs */}
       <ClaimsDialogs

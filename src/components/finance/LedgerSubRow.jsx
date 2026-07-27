@@ -3,7 +3,9 @@ import { Box, Typography, Stack } from '@mui/material';
 import {
   Edit, NotInterested, Settings, MoreHoriz,
   InsertDriveFileOutlined, CalendarTodayOutlined,
-  AttachFileOutlined, SaveOutlined, KeyboardArrowDown, KeyboardArrowRight
+  AttachFileOutlined, KeyboardArrowDown, KeyboardArrowRight,
+  CompareArrowsOutlined, ShieldOutlined, PrintOutlined,
+  LocalHospital, ArrowUpward
 } from '@mui/icons-material';
 
 import SVGIcon from '../../assets/finance icons/SVG.svg';
@@ -19,7 +21,8 @@ const LedgerSubRow = ({
   showExtendedTools, onVoidClick, voidData, onEditClick, editData,
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
-  onAttachClick, attachData, procedures
+  onAttachClick, attachData, procedures,
+  claimStatus, statusResponse, isApproved
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasProcedures = procedures && procedures.length > 0;
@@ -64,7 +67,7 @@ const LedgerSubRow = ({
       ) : isPayment ? (
         <Typography variant="caption" sx={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 600 }}>{title}</Typography>
       ) : isClaim ? (
-        <Typography variant="caption" sx={{ color: '#0288d1', fontSize: '12px', fontWeight: 600 }}>{title}</Typography>
+        <Typography variant="caption" sx={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 600 }}>{title}</Typography>
       ) : (
         <Typography variant="caption" sx={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 600 }}>
           {isAdjustment ? 'Adjustment' : 'Invoice'} #{id || '24636'}: [ {title} ]{' '}
@@ -74,7 +77,7 @@ const LedgerSubRow = ({
         </Typography>
       )}
     </Typography>
-    {hasProcedures && expanded ? (
+    {hasProcedures && expanded && !isClaim ? (
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Typography variant="caption" sx={{ width: 100, fontWeight: 600, color: '#e57373', fontSize: '11px', textAlign: 'right', mr: 2 }}>
           Patient: ${patientTotal.toFixed(2)}
@@ -91,13 +94,24 @@ const LedgerSubRow = ({
           </Typography>
         </Box>
       </Box>
+    ) : isClaim && !isApproved ? (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+          {claimStatus || 'Claim in process'}
+        </Typography>
+        {statusResponse && (
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {statusResponse}
+          </Typography>
+        )}
+      </Box>
     ) : (
       <Typography variant="caption" sx={{ width: 80, fontWeight: 600, color: '#1A1A1A', fontSize: '12px', textAlign: 'right', mr: 2 }}>
         {title.includes('(uncollected)') ? '$0.00' : amount}
       </Typography>
     )}
 
-    <Typography variant="caption" sx={{ width: 40, color: '#6B778C', fontSize: '12px', textAlign: 'center', mr: 2, display: hasProcedures && expanded ? 'none' : 'block' }}>
+    <Typography variant="caption" sx={{ width: 40, color: '#6B778C', fontSize: '12px', textAlign: 'center', mr: 2, display: (hasProcedures && expanded) ? 'none' : 'block' }}>
       {initials || 'MAG'}
     </Typography>
     
@@ -111,13 +125,34 @@ const LedgerSubRow = ({
           <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
         </>
       ) : isClaim ? (
-        <>
-          <AttachFileOutlined 
-            sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
-            onClick={() => onAttachClick?.(attachData)}
-          />
-          <SaveOutlined sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
-        </>
+        <Stack direction="row" spacing={1} alignItems="center">
+          {/* Attachment */}
+          <Box sx={{ width: 22, height: 22, bgcolor: '#b3d4ff', border: '1px solid #4a90e2', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => onAttachClick?.(attachData)}>
+            <AttachFileOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
+          </Box>
+          {/* Arrows pointing in */}
+          <Box sx={{ width: 22, height: 22, bgcolor: '#86efac', border: '1px solid #22c55e', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <CompareArrowsOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
+          </Box>
+          {/* Shield / Send Claim */}
+          <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ShieldOutlined sx={{ fontSize: 22, color: '#64748b', fill: '#e2e8f0' }} />
+            <LocalHospital sx={{ fontSize: 12, color: '#3b82f6', position: 'absolute', top: 5 }} />
+            <ArrowUpward sx={{ fontSize: 12, color: '#22c55e', position: 'absolute', right: -6, top: -2 }} />
+          </Box>
+          {/* EOB */}
+          <Box sx={{ px: 0.5, height: 18, bgcolor: '#6366f1', border: '1px solid #4338ca', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <Typography sx={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>EOB</Typography>
+          </Box>
+          {/* Print */}
+          <Box sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <PrintOutlined sx={{ fontSize: 20, color: '#38bdf8' }} />
+          </Box>
+          {/* Edit / Pencil */}
+          <Box sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <Edit sx={{ fontSize: 18, color: '#10b981' }} />
+          </Box>
+        </Stack>
       ) : showExtendedTools ? (
         <>
           <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onAdjustmentSelect?.(e)} />

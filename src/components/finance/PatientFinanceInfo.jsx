@@ -4,7 +4,7 @@ import { appointmentService } from '../../services/appointment.service';
 import { paymentService } from '../../services/payment.service';
 import { invoiceService } from '../../services/invoice.service';
 import { createInvoice, invalidatePaymentInvoices } from '../../store/slices/billingSlice';
-import { Box, Typography, Stack, IconButton, Radio, RadioGroup, FormControlLabel, Button } from '@mui/material';
+import { Box, Typography, Stack, IconButton, Radio, RadioGroup, FormControlLabel, Button, Tooltip } from '@mui/material';
 import {
   NoteAdd as NoteAddIcon,
   Add as AddIcon
@@ -386,11 +386,29 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography sx={{ color: '#1A1A1A', fontSize: '14px', fontWeight: 500, width: '80px' }}>
-              Billing flags:
-            </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+          <Typography sx={{ color: '#1A1A1A', fontSize: '14px', fontWeight: 500, width: '80px' }}>
+            Billing flags:
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            {flags && flags.length > 0 && (
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {flags.map((flag, idx) => (
+                  <Tooltip key={idx} title={flag === 'appointment_reminder' ? 'Appt Reminder' : flag} arrow placement="top">
+                    <Box 
+                      sx={{ 
+                        width: 14, 
+                        height: 14, 
+                        borderRadius: '2px', 
+                        bgcolor: flagColorMap[flag] || '#cccccc', 
+                        flexShrink: 0,
+                        cursor: 'pointer'
+                      }} 
+                    />
+                  </Tooltip>
+                ))}
+              </Box>
+            )}
             <Button 
               variant="text" 
               startIcon={<Box component="img" src={addFlagsIcon} alt="add flags" sx={{ width: 14, height: 14 }} />} 
@@ -399,9 +417,6 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
             >
               add flags
             </Button>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ width: '80px' }} />
             <Button 
               variant="text" 
               startIcon={<Box component="img" src={addAccountNoteIcon} alt="add account note" sx={{ width: 14, height: 14 }} />} 

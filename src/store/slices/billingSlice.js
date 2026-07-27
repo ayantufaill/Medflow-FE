@@ -122,17 +122,25 @@ export const fetchLedgerItems = createAsyncThunk(
 
         const claimProcedures = (invoice.lineItems || []).filter(l => !l.dbi);
 
-        const claimsMapped = invoiceClaims.map((claim) => ({
-          id: claim.id || claim._id,
-          claimNumber: claim.claimNumber || claim.id || claim._id,
-          status: claim.statusDisplay || claim.status,
-          attachments: claim.attachments || [],
-          title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status}) with: ${claim.insuranceCompany?.name || 'Insurance'}`,
-          amount: `$${claimProceduresAmount.toFixed(2)}`,
-          isClaim: true,
-          isPayment: false,
-          procedures: claimProcedures
-        }));
+        const claimsMapped = invoiceClaims.map((claim) => {
+          let claimStatus = claim.statusDisplay || claim.status || 'Unsent';
+          if (claimStatus.toLowerCase() === 'draft') claimStatus = 'Claim in process';
+          
+          const isApproved = claimStatus.toLowerCase().includes('approved') || claimStatus.toLowerCase().includes('paid');
+          return {
+            id: claim.id || claim._id,
+            claimNumber: claim.claimNumber || claim.id || claim._id,
+            status: claimStatus,
+            statusResponse: claim.statusMessage || claim.statusResponse || (claimStatus.toLowerCase() !== 'unsent' && !isApproved ? 'Status Response (A0): The claim is in process' : ''),
+            attachments: claim.attachments || [],
+            title: `${claim.claimNumber || claim.id || claim._id} to ${claim.insuranceCompany?.name || 'Insurance'}(${claim.insuranceCompany?.payerId || '00000'}) :`,
+            amount: `$${claimProceduresAmount.toFixed(2)}`,
+            isClaim: true,
+            isPayment: false,
+            isApproved,
+            procedures: claimProcedures
+          };
+        });
 
         let detailsMapped = [];
         if (invoice.lineItems?.length > 0) {
