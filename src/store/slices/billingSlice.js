@@ -116,30 +116,48 @@ export const fetchLedgerItems = createAsyncThunk(
           };
         });
 
+        const claimProceduresAmount = (invoice.lineItems || [])
+          .filter(l => !l.dbi)
+          .reduce((sum, line) => sum + Number(line.total || line.totalPrice || line.charge || 0), 0);
+
+        const claimProcedures = (invoice.lineItems || []).filter(l => !l.dbi);
+
         const claimsMapped = invoiceClaims.map((claim) => ({
           id: claim.id || claim._id,
+          claimNumber: claim.claimNumber || claim.id || claim._id,
+          status: claim.statusDisplay || claim.status,
+          attachments: claim.attachments || [],
           title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status}) with: ${claim.insuranceCompany?.name || 'Insurance'}`,
-          amount: `$${Number(claim.totalAmount || 0).toFixed(2)}`,
+          amount: `$${claimProceduresAmount.toFixed(2)}`,
           isClaim: true,
           isPayment: false,
+          procedures: claimProcedures
         }));
 
         let detailsMapped = [];
         if (invoice.lineItems?.length > 0) {
-          const combinedTitle = invoice.lineItems
+          // The inner invoice row should only show procedures where dbi is true
+          const invoiceProcedures = invoice.lineItems.filter(l => l.dbi === true);
+          
+          const combinedTitle = invoiceProcedures
             .map((l) => l.description || 'Procedure')
             .join(', ');
-          const totalAmount = invoice.lineItems.reduce(
-            (sum, line) => sum + Number(line.total || line.totalPrice || 0),
+            
+          const totalAmount = invoiceProcedures.reduce(
+            (sum, line) => sum + Number(line.total || line.totalPrice || line.charge || 0),
             0
           );
-          detailsMapped = [{
-            id: invoice.invoiceNumber || invoice._id || invoice.id,
-            title: combinedTitle,
-            amount: `$${totalAmount.toFixed(2)}`,
-            isGrouped: true,
-            isPayment: false,
-          }];
+
+          if (invoiceProcedures.length > 0) {
+            detailsMapped = [{
+              id: invoice.invoiceNumber || invoice._id || invoice.id,
+              title: combinedTitle,
+              amount: `$${totalAmount.toFixed(2)}`,
+              isGrouped: true,
+              isPayment: false,
+              procedures: invoiceProcedures
+            }];
+          }
         }
 
         return {
@@ -262,12 +280,24 @@ export const fetchInvoiceDetails = createAsyncThunk(
       try {
         const claimsResponse = await claimService.getAllClaims({ invoiceId });
         const claims = claimsResponse?.claims || claimsResponse || [];
+        
+        // Calculate the total of all procedures on the invoice that went to a claim (dbi = false)
+        const claimProceduresAmount = (fullInvoice.lineItems || [])
+          .filter(l => !l.dbi)
+          .reduce((sum, line) => sum + Number(line.total || line.totalPrice || line.charge || 0), 0);
+          
+        const claimProcedures = (fullInvoice.lineItems || []).filter(l => !l.dbi);
+
         claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => ({
           id: claim.id || claim._id,
+          claimNumber: claim.claimNumber || claim.id || claim._id,
+          status: claim.statusDisplay || claim.status,
+          attachments: claim.attachments || [],
           title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status}) with: ${claim.insuranceCompany?.name || 'Insurance'}`,
-          amount: `$${Number(claim.totalAmount || 0).toFixed(2)}`,
+          amount: `$${claimProceduresAmount.toFixed(2)}`,
           isClaim: true,
           isPayment: false,
+          procedures: claimProcedures
         }));
       } catch (e) {
         console.error('Failed to fetch claims for invoice', e);
@@ -275,20 +305,28 @@ export const fetchInvoiceDetails = createAsyncThunk(
 
       let detailsMapped = [];
       if (fullInvoice.lineItems?.length > 0) {
-        const combinedTitle = fullInvoice.lineItems
+        // The inner invoice row should only show procedures where dbi is true
+        const invoiceProcedures = fullInvoice.lineItems.filter(l => l.dbi === true);
+        
+        const combinedTitle = invoiceProcedures
           .map((l) => l.description || 'Procedure')
           .join(', ');
-        const totalAmount = fullInvoice.lineItems.reduce(
-          (sum, line) => sum + Number(line.total || line.totalPrice || 0),
+          
+        const totalAmount = invoiceProcedures.reduce(
+          (sum, line) => sum + Number(line.total || line.totalPrice || line.charge || 0),
           0
         );
-        detailsMapped = [{
-          id: fullInvoice.invoiceNumber || fullInvoice._id || fullInvoice.id,
-          title: combinedTitle,
-          amount: `$${totalAmount.toFixed(2)}`,
-          isGrouped: true,
-          isPayment: false,
-        }];
+
+        if (invoiceProcedures.length > 0) {
+          detailsMapped = [{
+            id: fullInvoice.invoiceNumber || fullInvoice._id || fullInvoice.id,
+            title: combinedTitle,
+            amount: `$${totalAmount.toFixed(2)}`,
+            isGrouped: true,
+            isPayment: false,
+            procedures: invoiceProcedures
+          }];
+        }
       }
 
       return {

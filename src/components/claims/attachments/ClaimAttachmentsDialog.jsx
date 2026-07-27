@@ -103,7 +103,7 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '8px', minHeight: '400px' } }}>
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '8px', minHeight: '400px' } }}>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2.5, pb: 1 }}>
           <Typography sx={{ fontWeight: 600, color: '#333', fontSize: '1.05rem' }}>
             Claim Attachments

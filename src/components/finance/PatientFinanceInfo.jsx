@@ -17,6 +17,7 @@ import {
 } from './FinanceActionIcons';
 import FinanceDialogManager from './FinanceDialogManager';
 import apiClient from '../../config/api';
+import { claimService } from '../../services/claim.service';
 import addFlagsIcon from '../../assets/finance icons/add flag.svg';
 import addAccountNoteIcon from '../../assets/finance icons/add account note.svg';
 
@@ -64,7 +65,12 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
     }
   }));
 
-  const handleInvoiceModalSave = async (data) => {
+  const handleInvoiceModalSave = async (savePayload) => {
+    // Support both old array format and new object format from InvoiceModal
+    const data = Array.isArray(savePayload) ? savePayload : savePayload.procedures;
+    const shouldAddClaim = !Array.isArray(savePayload) && savePayload.addClaim;
+    const claimRows = !Array.isArray(savePayload) ? (savePayload.claimProcedures || []) : [];
+
     const patientId = patient?._id || patient?.id;
     try {
       const payload = {
@@ -99,8 +105,27 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
         return;
       }
       
-      await dispatch(createInvoice(payload)).unwrap();
+      const result = await dispatch(createInvoice(payload)).unwrap();
       setShowNewInvoice(false);
+
+      // If "Add Claim" was checked, create a claim for all dbi=false procedures
+      if (shouldAddClaim && claimRows.length > 0) {
+        const createdInvoiceId = result?.invoice?._id || result?.invoice?.id || result?._id || result?.id;
+        if (createdInvoiceId) {
+          try {
+            await claimService.createClaimFromInvoice(createdInvoiceId, {
+              procedures: claimRows.map((row) => ({
+                code: row.code,
+                description: row.treatment,
+                charge: parseFloat((String(row.charge || '')).replace(/[^0-9.-]+/g, '')) || 0,
+                insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+              })),
+            });
+          } catch (claimErr) {
+            console.warn('Invoice created but claim creation failed:', claimErr);
+          }
+        }
+      }
       
       // Dispatch custom event so LedgerList can refresh
       window.dispatchEvent(new CustomEvent('refresh-ledger'));

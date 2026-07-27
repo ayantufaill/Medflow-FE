@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Stack } from '@mui/material';
 import {
   Edit, NotInterested, Settings, MoreHoriz,
-  InsertDriveFileOutlined, CalendarTodayOutlined
+  InsertDriveFileOutlined, CalendarTodayOutlined,
+  AttachFileOutlined, SaveOutlined, KeyboardArrowDown, KeyboardArrowRight
 } from '@mui/icons-material';
 
 import SVGIcon from '../../assets/finance icons/SVG.svg';
@@ -18,10 +19,31 @@ const LedgerSubRow = ({
   showExtendedTools, onVoidClick, voidData, onEditClick, editData,
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
-}) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', p: '12px 24px', borderTop: '1px solid #DFE5EC', bgcolor: '#FFFFFF', '&:hover': { bgcolor: '#f8f9fa' } }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', width: 220 }}>
-      <InsertDriveFileOutlined sx={{ fontSize: 16, color: '#6B778C', mr: 0.5 }} />
+  onAttachClick, attachData, procedures
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const hasProcedures = procedures && procedures.length > 0;
+
+  const patientTotal = hasProcedures ? procedures.reduce((sum, proc) => sum + Number(proc.ptPortion || 0), 0) : 0;
+  const insTotal = hasProcedures ? procedures.reduce((sum, proc) => sum + Number(proc.insPortion || 0), 0) : 0;
+  
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box 
+        onClick={() => { if (hasProcedures) setExpanded(!expanded); }}
+        sx={{ 
+          display: 'flex', alignItems: 'center', p: '12px 24px', borderTop: '1px solid #DFE5EC', 
+          bgcolor: '#FFFFFF', cursor: hasProcedures ? 'pointer' : 'default', 
+          '&:hover': { bgcolor: '#f8f9fa' } 
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', width: 220 }}>
+          {hasProcedures && (
+            expanded ? 
+              <KeyboardArrowDown sx={{ fontSize: 18, color: '#6B778C', mr: 0.5 }} /> : 
+              <KeyboardArrowRight sx={{ fontSize: 18, color: '#6B778C', mr: 0.5 }} />
+          )}
+          {!hasProcedures && <InsertDriveFileOutlined sx={{ fontSize: 16, color: '#6B778C', mr: 0.5 }} />}
       <Typography variant="caption" sx={{ color: '#6B778C', fontSize: '12px', mr: 2 }}>{date}</Typography>
       <CalendarTodayOutlined sx={{ fontSize: 16, color: '#6B778C', mr: 1 }} />
     </Box>
@@ -52,11 +74,30 @@ const LedgerSubRow = ({
         </Typography>
       )}
     </Typography>
-    
-    <Typography variant="caption" sx={{ width: 80, fontWeight: 600, color: '#1A1A1A', fontSize: '12px', textAlign: 'right', mr: 2 }}>
-      {title.includes('(uncollected)') ? '$0.00' : amount}
-    </Typography>
-    <Typography variant="caption" sx={{ width: 40, color: '#6B778C', fontSize: '12px', textAlign: 'center', mr: 2 }}>
+    {hasProcedures && expanded ? (
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Typography variant="caption" sx={{ width: 100, fontWeight: 600, color: '#e57373', fontSize: '11px', textAlign: 'right', mr: 2 }}>
+          Patient: ${patientTotal.toFixed(2)}
+        </Typography>
+        <Typography variant="caption" sx={{ width: 110, fontWeight: 600, color: '#e57373', fontSize: '11px', textAlign: 'right', mr: 2 }}>
+          Insurance: ${insTotal.toFixed(2)}
+        </Typography>
+        <Box sx={{ width: 140, textAlign: 'right', mr: 2, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#e57373', fontSize: '10px' }}>
+            Previous Total Balance:
+          </Typography>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#e57373', fontSize: '11px' }}>
+            {amount}
+          </Typography>
+        </Box>
+      </Box>
+    ) : (
+      <Typography variant="caption" sx={{ width: 80, fontWeight: 600, color: '#1A1A1A', fontSize: '12px', textAlign: 'right', mr: 2 }}>
+        {title.includes('(uncollected)') ? '$0.00' : amount}
+      </Typography>
+    )}
+
+    <Typography variant="caption" sx={{ width: 40, color: '#6B778C', fontSize: '12px', textAlign: 'center', mr: 2, display: hasProcedures && expanded ? 'none' : 'block' }}>
       {initials || 'MAG'}
     </Typography>
     
@@ -70,7 +111,13 @@ const LedgerSubRow = ({
           <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
         </>
       ) : isClaim ? (
-        null
+        <>
+          <AttachFileOutlined 
+            sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} 
+            onClick={() => onAttachClick?.(attachData)}
+          />
+          <SaveOutlined sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+        </>
       ) : showExtendedTools ? (
         <>
           <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onAdjustmentSelect?.(e)} />
@@ -81,12 +128,63 @@ const LedgerSubRow = ({
       ) : (
         <>
           <Box component="img" src={SVGIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-          <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={() => onRefreshClick?.(refreshData)} />
-          <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={() => onVoidClick?.(voidData)} />
+          <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
+          <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onVoidClick?.(voidData); }} />
         </>
       )}
     </Stack>
   </Box>
+
+  {/* Render Procedures if expanded */}
+  {expanded && hasProcedures && (
+    <Box sx={{ pl: 4, pr: 3, py: 1, bgcolor: '#fbfbfb', borderTop: '1px solid #eee' }}>
+      
+      {/* Header for the procedures */}
+      <Box sx={{ display: 'flex', alignItems: 'center', py: 0.5, borderBottom: '1px solid #ddd', mb: 1 }}>
+        <Typography variant="caption" sx={{ width: 80, color: '#666', fontSize: '10px', fontWeight: 600 }}>Date</Typography>
+        <Typography variant="caption" sx={{ width: 60, color: '#666', fontSize: '10px', fontWeight: 600 }}>Code</Typography>
+        <Typography variant="caption" sx={{ flexGrow: 1, color: '#666', fontSize: '10px', fontWeight: 600 }}>Description</Typography>
+        <Typography variant="caption" sx={{ width: 120, color: '#666', fontSize: '10px', fontWeight: 600 }}>Provider</Typography>
+        <Typography variant="caption" sx={{ width: 100, color: '#666', fontSize: '10px', fontWeight: 600, textAlign: 'right', mr: 2 }}>Patient</Typography>
+        <Typography variant="caption" sx={{ width: 110, color: '#666', fontSize: '10px', fontWeight: 600, textAlign: 'right', mr: 2 }}>Insurance</Typography>
+        <Typography variant="caption" sx={{ width: 140, color: '#666', fontSize: '10px', fontWeight: 600, textAlign: 'right', mr: 2 }}>Fee</Typography>
+        <Box sx={{ minWidth: 120 }} />
+      </Box>
+
+      {procedures.map((proc, idx) => (
+        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', py: 0.75, borderBottom: idx !== procedures.length - 1 ? '1px dashed #e0e0e0' : 'none' }}>
+          <Box sx={{ width: 80, display: 'flex', alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#555', fontSize: '11px' }}>
+              {date || proc.date}
+            </Typography>
+          </Box>
+          <Box sx={{ width: 60, display: 'flex', alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#1A1A1A', fontSize: '11px', fontWeight: 600 }}>
+              {proc.code}
+            </Typography>
+          </Box>
+          <Typography variant="caption" sx={{ flexGrow: 1, color: '#444', fontSize: '11px' }}>
+            {proc.description || proc.treatment} {proc.site && `(Tooth ${proc.site})`}
+          </Typography>
+          <Typography variant="caption" sx={{ width: 120, color: '#555', fontSize: '11px' }}>
+            {proc.provider || initials || 'Staff'}
+          </Typography>
+          <Typography variant="caption" sx={{ width: 100, color: '#1A1A1A', fontSize: '11px', textAlign: 'right', mr: 2 }}>
+            ${Number(proc.ptPortion || 0).toFixed(2)}
+          </Typography>
+          <Typography variant="caption" sx={{ width: 110, color: '#1A1A1A', fontSize: '11px', textAlign: 'right', mr: 2 }}>
+            ${Number(proc.insPortion || 0).toFixed(2)}
+          </Typography>
+          <Typography variant="caption" sx={{ width: 140, color: '#1A1A1A', fontSize: '11px', fontWeight: 600, textAlign: 'right', mr: 2 }}>
+            ${Number(proc.total || proc.totalPrice || proc.charge || 0).toFixed(2)}
+          </Typography>
+          <Box sx={{ minWidth: 120 }} />
+        </Box>
+      ))}
+    </Box>
+  )}
+</Box>
 );
+}
 
 export default LedgerSubRow;

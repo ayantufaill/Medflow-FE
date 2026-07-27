@@ -14,6 +14,11 @@ import {
 import dayjs from 'dayjs';
 import { useDropdownData } from '../../../../hooks/redux/useDropdownData';
 
+const capitalizeFirst = (str) => {
+  if (typeof str !== 'string' || !str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
 const getProviderId = (provider) => {
   if (!provider) return "";
   if (typeof provider === "string" || typeof provider === "number") {
@@ -211,9 +216,9 @@ const AppointmentHistoryTable = ({
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>{dayjs(appt.appointmentDate).format("MM/DD/YYYY")}</TableCell>
                       <TableCell>{appt.startTime ? dayjs(`2000-01-01 ${appt.startTime}`).format("hh:mm A") : dayjs(appt.appointmentDate).format("hh:mm A")}</TableCell>
-                      <TableCell>{getVisitType(appt)}</TableCell>
+                      <TableCell>{capitalizeFirst(getVisitType(appt))}</TableCell>
                       <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {proceduresText}
+                        {capitalizeFirst(proceduresText)}
                       </TableCell>
                       <TableCell>{appt.duration || 60} mins</TableCell>
                       <TableCell>
@@ -233,7 +238,7 @@ const AppointmentHistoryTable = ({
                         </Box>
                       </TableCell>
                       <TableCell sx={{ fontWeight: 500, color: appt.status?.toLowerCase() === 'cancelled' ? '#ef4444' : '#475569' }}>
-                        {appt.status || "Unconfirmed"}
+                        {capitalizeFirst(appt.status || "Unconfirmed")}
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>

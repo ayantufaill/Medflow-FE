@@ -105,7 +105,19 @@ const ClaimsListPage = () => {
         previewingClaim={previewingClaim}
         activeTab={activeTab}
         handleSaveEdit={() => setOpenEditDialog(false)}
-        handleSaveAttach={() => setOpenAttachDialog(false)}
+        handleSaveAttach={async (data) => {
+          if (data.newFiles && data.newFiles.length > 0 && attachingClaim?.id) {
+            try {
+              await claimService.uploadAttachments(attachingClaim.id, data.newFiles);
+              // Trigger a reload of the tab data (the tab will re-fetch if we dispatch an event, or we can just reload the page)
+              window.dispatchEvent(new CustomEvent('refresh-claims'));
+            } catch (err) {
+              console.error('Failed to upload attachments', err);
+              alert('Failed to upload attachments. Please try again.');
+            }
+          }
+          setOpenAttachDialog(false);
+        }}
       />
 
     </Box>

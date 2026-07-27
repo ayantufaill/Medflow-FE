@@ -28,7 +28,8 @@ const LedgerItemCard = ({
   setAdjItem,
   setPrintAnchorEl,
   setPrintItem,
-  handleAddProcedureClick
+  handleAddProcedureClick,
+  handleAttachClick
 }) => {
   const title = displayItem.method === 'Invoice'
     ? `Invoice #${displayItem.invoiceNumber || displayItem.id} (${displayItem.date})`
@@ -144,6 +145,9 @@ const LedgerItemCard = ({
                 onSettingsClick={(data) => { setEditInvoiceTarget(data); setShowEditInvoice(true); }}
                 onAdjustmentSelect={(e) => { setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }}
                 onPrintClick={(e) => { setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }}
+                onAttachClick={handleAttachClick}
+                attachData={detail}
+                procedures={detail.procedures}
               />
             )))}
 
