@@ -17,8 +17,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 import DocumentCategoryCard from '../../components/admin/practice-setup/document-category/DocumentCategoryCard';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
@@ -167,7 +169,14 @@ const DocumentCategorySetup = () => {
 
   return (
     <Box>
-      
+      <Box
+        sx={{
+          backgroundColor: '#FBFCFE',
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          p: { xs: 3, sm: 4 },
+        }}
+      >
       {/* --- HEADER SECTION --- */}
       <Box 
         sx={{ 
@@ -222,25 +231,51 @@ const DocumentCategorySetup = () => {
         </Box>
       </Box>
 
+      </Box>
+
       {/* --- INPUT DIALOG (ADD/EDIT) --- */}
-      <BaseDialog
+      <Dialog
         open={inputDialog.open}
         onClose={() => setInputDialog(prev => ({ ...prev, open: false }))}
-        title={`${inputDialog.mode === 'add' ? 'Add New' : 'Edit'} ${inputDialog.type === 'document' ? 'Document' : 'Category'}`}
-        showCloseButton
         maxWidth="sm"
-        actions={
-          <>
-            <Button onClick={() => setInputDialog(prev => ({ ...prev, open: false }))} color="inherit">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmInput} variant="contained" color="primary">
-              Save
-            </Button>
-          </>
-        }
+        fullWidth
+        sx={{ zIndex: 10000 }}
+        PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
       >
-        <Box sx={{ mt: 2 }}>
+        <DialogTitle
+          sx={{
+            backgroundColor: '#F1F5FD',
+            color: '#111',
+            py: 2,
+            px: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #E5E7EB'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ 
+              width: 40, height: 40, borderRadius: '50%', backgroundColor: '#e2ebfc', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center' 
+            }}>
+              <img src={inputDialog.type === 'document' ? DocumentsIcon : CategoryIcon} alt="Icon" style={{ width: 20, height: 20 }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', lineHeight: '24px', letterSpacing: '-0.4px', color: '#111' }}>
+                {`${inputDialog.mode === 'add' ? 'Add New' : 'Edit'} ${inputDialog.type === 'document' ? 'Document' : 'Category'}`}
+              </Typography>
+              <Typography sx={{ fontFamily: 'Inter', fontWeight: 400, fontSize: '11.5px', lineHeight: '17.25px', color: '#6B7280' }}>
+                Enter the details below
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setInputDialog(prev => ({ ...prev, open: false }))} sx={{ color: '#6B7280' }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2.5 }}>
           <TextField
             autoFocus
             margin="dense"
@@ -259,8 +294,56 @@ const DocumentCategorySetup = () => {
               }
             }}
           />
-        </Box>
-      </BaseDialog>
+        </DialogContent>
+
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2, 
+          backgroundColor: '#F9FAFB', 
+          borderTop: '1px solid #E5E7EB', 
+          gap: 1.5,
+          justifyContent: 'flex-end'
+        }}>
+          <Button 
+            onClick={() => setInputDialog(prev => ({ ...prev, open: false }))}
+            variant="outlined"
+            sx={{ 
+              borderColor: '#D1D5DB', 
+              color: '#374151',
+              backgroundColor: '#FFFFFF',
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '6px',
+              px: 2,
+              '&:hover': {
+                backgroundColor: '#F3F4F6',
+                borderColor: '#D1D5DB'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmInput}
+            variant="contained"
+            sx={{ 
+              backgroundColor: '#2563EB', 
+              color: '#FFFFFF',
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '6px',
+              px: 2.5,
+              boxShadow: 'none',
+              '&:hover': { 
+                backgroundColor: '#1D4ED8',
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* --- DELETE CONFIRMATION DIALOG --- */}
       <ConfirmationDialog
