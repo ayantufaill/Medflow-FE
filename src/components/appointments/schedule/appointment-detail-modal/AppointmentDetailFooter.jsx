@@ -1,31 +1,71 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Button } from '@mui/material';
+import { NotificationsActiveOutlined } from '@mui/icons-material';
 import dayjs from 'dayjs';
+import { appointmentService } from '../../../../services/appointment.service';
+import { useSnackbar } from '../../../../contexts/SnackbarContext';
 
-const AppointmentDetailFooter = ({ 
+const AppointmentDetailFooter = ({
   onClose, onSave, status, notes, editDate, editTime, editAmPm,
-  isRescheduling, onCancelReschedule, onStartReschedule, onClinicalExam
+  isRescheduling, onCancelReschedule, onStartReschedule, onClinicalExam,
+  appointmentId
 }) => {
+  const { showSnackbar } = useSnackbar();
+  const [sendingConfirmation, setSendingConfirmation] = useState(false);
+
+  const handleSendConfirmation = async () => {
+    if (!appointmentId || sendingConfirmation) return;
+    setSendingConfirmation(true);
+    try {
+      const result = await appointmentService.sendConfirmationNotification(appointmentId);
+      const sentVia = [
+        result?.email?.sent && 'email',
+        result?.sms?.sent && 'SMS',
+      ].filter(Boolean);
+      if (sentVia.length > 0) {
+        showSnackbar(`Confirmation sent via ${sentVia.join(' and ')}`, 'success', { vertical: 'top', horizontal: 'right' });
+      } else {
+        const reason = result?.email?.reason || result?.sms?.reason || 'No contact info available for this patient';
+        showSnackbar(reason, 'warning', { vertical: 'top', horizontal: 'right' });
+      }
+    } catch (error) {
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to send confirmation', 'error', { vertical: 'top', horizontal: 'right' });
+    } finally {
+      setSendingConfirmation(false);
+    }
+  };
+
   return (
     <Box sx={{ height: '57px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', px: '24px', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
       {!isRescheduling ? (
         <>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             onClick={onClose}
             sx={{ textTransform: 'none', borderColor: '#cbd5e1', color: '#0f172a', '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' }, fontWeight: 600, borderRadius: '6px', px: '16px' }}
           >
             Close
           </Button>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             onClick={onClinicalExam}
             sx={{ textTransform: 'none', borderColor: '#cbd5e1', color: '#0f172a', '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' }, fontWeight: 600, borderRadius: '6px', px: '16px' }}
           >
             Clinical Exam
           </Button>
-          <Button 
-            variant="contained" 
+          {status === 'confirmed' && (
+            <Button
+              variant="outlined"
+              onClick={handleSendConfirmation}
+              disabled={sendingConfirmation}
+              startIcon={<NotificationsActiveOutlined sx={{ fontSize: '18px' }} />}
+              sx={{ textTransform: 'none', borderColor: '#1d4ed8', color: '#1d4ed8', '&:hover': { bgcolor: '#eff6ff', borderColor: '#1d4ed8' }, fontWeight: 600, borderRadius: '6px', px: '16px' }}
+            >
+              {sendingConfirmation ? 'Sending...' : 'Send Confirmation'}
+            </Button>
+          )}
+          <Button
+            variant="contained"
             disableElevation
             onClick={onStartReschedule}
             sx={{ textTransform: 'none', bgcolor: '#1d4ed8', '&:hover': { bgcolor: '#1e40af' }, fontWeight: 600, borderRadius: '6px', px: '24px' }}

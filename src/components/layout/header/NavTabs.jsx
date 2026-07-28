@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const TABS = [
   { label: 'Schedule', path: '/appointments/operatory-schedule' },
   { label: 'Patients', path: '/patients' },
-  { label: 'Clinical', path: '/clinical' },
+  { label: 'Clinical', path: '/clinical/treatment-plan' },
   { label: 'Insurance', path: '/insurance' },
   { label: 'Billing', path: '/finance' },
   { label: 'Reports', path: '/patient-reports' },
@@ -14,7 +14,12 @@ const NavTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const isActive = (path) => {
+    if (path === '/clinical/treatment-plan') {
+      return location.pathname === path || location.pathname.startsWith('/clinical');
+    }
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>

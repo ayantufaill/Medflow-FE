@@ -56,7 +56,7 @@ const PaymentPlansFilters = ({
             textField: { 
               size: 'small', 
               sx: { 
-                width: '150px',
+                width: '180px',
                 '& .MuiInputBase-root': { 
                   fontFamily: 'Inter', 
                   fontSize: '13px', 
@@ -65,6 +65,7 @@ const PaymentPlansFilters = ({
                   backgroundColor: '#fafbfe',
                   color: '#09121f'
                 }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' }, 
                 '& fieldset': { borderColor: '#e2e8f0' } 
               } 
             }
@@ -84,7 +85,7 @@ const PaymentPlansFilters = ({
             textField: { 
               size: 'small', 
               sx: { 
-                width: '150px',
+                width: '180px',
                 '& .MuiInputBase-root': { 
                   fontFamily: 'Inter', 
                   fontSize: '13px', 
@@ -93,6 +94,7 @@ const PaymentPlansFilters = ({
                   backgroundColor: '#fafbfe',
                   color: '#09121f'
                 }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' }, 
                 '& fieldset': { borderColor: '#e2e8f0' } 
               } 
             }

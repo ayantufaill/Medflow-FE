@@ -19,6 +19,7 @@ import HeadAndNeck from '../pages/clinical/HeadAndNeck';
 import TeethStructureExam from '../pages/clinical/TeehthStructureExam';
 import Radiographic from '../pages/clinical/Radiographic';
 import TreatmentPlanPage from '../pages/clinical/TreatmentPlanPage';
+import NewTreatmentPlanPage from '../pages/clinical/NewTreatmentPlanPage';
 import AdjunctiveTherapyPage from '../pages/clinical/AdjunctiveTherapyPage';
 import RXPage from '../pages/clinical/RXPage';
 import ReferralPage from '../pages/clinical/ReferralPage';
@@ -66,7 +67,7 @@ const clinicalRoutes = [
   <Route key="/clinical/diagnostic-opinion/biomechanical" path="/clinical/diagnostic-opinion/biomechanical" element={adminDoctor(<BiomechanicalPage />)} />,
   <Route key="/clinical/diagnostic-opinion/functional" path="/clinical/diagnostic-opinion/functional" element={adminDoctor(<FunctionalPage />)} />,
   <Route key="/clinical/diagnostic-opinion/dentofacial" path="/clinical/diagnostic-opinion/dentofacial" element={adminDoctor(<DentofacialPage />)} />,
-  <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={adminDoctor(<TreatmentPlanPage />)} />,
+  <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={adminDoctor(<NewTreatmentPlanPage />)} />,
   <Route key="/clinical/adjunctive-therapy" path="/clinical/adjunctive-therapy" element={adminDoctor(<AdjunctiveTherapyPage />)} />,
   <Route key="/clinical/rx" path="/clinical/rx" element={adminDoctor(<RXPage />)} />,
   <Route key="/clinical/referral" path="/clinical/referral" element={adminDoctor(<ReferralPage />)} />,

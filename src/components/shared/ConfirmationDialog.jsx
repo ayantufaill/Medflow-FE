@@ -35,6 +35,7 @@ const ConfirmationDialog = ({
       onClose={loading ? undefined : handleClose}
       aria-labelledby="confirmation-dialog-title"
       aria-describedby="confirmation-dialog-description"
+      sx={{ zIndex: 9999 }}
     >
       <DialogTitle id="confirmation-dialog-title">{title}</DialogTitle>
       <DialogContent>

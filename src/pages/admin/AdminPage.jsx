@@ -13,6 +13,7 @@ import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
 import KioskAccountsView from './KioskAccountsView';
 import InformedConsent from './InformedConsent';
+//removes extra imports
 import PrePostOps from './PrePostOps';
 import ReportsDashboard from './ReportsDashboard';
 import AdvancedReporting from './AdvancedReporting';
@@ -378,6 +379,18 @@ const AdminPage = () => {
             <PracticeSettings />
           ) : location.pathname === '/admin/practice-setup/practice-information' ? (
             <PracticeInformation />
+          ) : location.pathname === '/admin/practice-setup/kiosk-accounts' ? (
+            <KioskAccountsView />
+          ) : location.pathname === '/admin/practice-setup/my-chart-configuration' ? (
+            <MyChartConfiguration />
+          ) : location.pathname === '/admin/practice-setup/office-timings' ? (
+            <OfficeTimings />
+          ) : location.pathname === '/admin/practice-setup/online-schedule' ? (
+            <OnlineScheduleConfiguration />
+          ) : location.pathname === '/admin/practice-setup/operatory-setup' ? (
+            <OperatorySetup />
+          ) : location.pathname === '/admin/practice-setup/patient-flags' ? (
+            <PatientFlags />
           ) : (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
