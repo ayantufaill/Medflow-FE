@@ -21,7 +21,7 @@ const DashboardRoute = () => {
   const roles = getRoleNames(user);
 
   if (roles.includes('Admin')) {
-    return <Navigate to="/admin/reports" replace />;
+    return <Navigate to="/appointments/operatory-schedule" replace />;
   }
   
   if (roles.includes('Doctor') || roles.includes('Provider')) {
