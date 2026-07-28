@@ -99,20 +99,23 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
                           {(() => {
-                            let flagsToRender = row.flags && row.flags.length > 0 ? row.flags : getFlagColors(idx);
+                            let flagsToRender = row.flags && Array.isArray(row.flags) ? row.flags : [];
                             
-                            // If it's a string, split it (just in case backend sends comma separated)
-                            if (typeof flagsToRender === 'string') {
-                              flagsToRender = flagsToRender.split(',').map(s => s.trim()).filter(Boolean);
+                            if (typeof row.flags === 'string') {
+                              flagsToRender = row.flags.split(',').map(s => s.trim()).filter(Boolean);
                             }
                             
-                            return (Array.isArray(flagsToRender) ? flagsToRender : []).map((flagObj, i) => {
+                            const stringColors = ['#e11d48', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+                            
+                            return flagsToRender.map((flagObj, i) => {
                               let flagColor = '#3b82f6';
                               let flagName = 'Flag';
                               
                               if (typeof flagObj === 'string') {
-                                flagColor = flagObj;
-                                flagName = `Flag`;
+                                flagName = flagObj;
+                                // Simple hash to pick a consistent color from the palette
+                                const hash = Array.from(flagObj).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                                flagColor = stringColors[hash % stringColors.length];
                               } else if (flagObj) {
                                 flagColor = flagObj.color || flagColor;
                                 flagName = flagObj.name || flagName;
