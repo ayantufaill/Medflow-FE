@@ -32,6 +32,17 @@ const MatchConvertedCarriers = () => {
   const [selectedOryx, setSelectedOryx] = useState(null);
   const [activeButton, setActiveButton] = useState("Match Payer");
 
+  // Filter logic
+  const filteredOldPayers = oldPayers.filter(p => 
+    p.name.toLowerCase().includes(oldSearch.toLowerCase()) || 
+    p.id.toLowerCase().includes(oldSearch.toLowerCase())
+  );
+
+  const filteredOryxPayers = oryxPayers.filter(p => 
+    p.name.toLowerCase().includes(oryxSearch.toLowerCase()) || 
+    p.id.toLowerCase().includes(oryxSearch.toLowerCase())
+  );
+
   useEffect(() => {
     dispatch(fetchConvertedCarriersThunk());
   }, [dispatch]);
@@ -75,8 +86,8 @@ const MatchConvertedCarriers = () => {
         setOldSearch={setOldSearch}
         oryxSearch={oryxSearch}
         setOryxSearch={setOryxSearch}
-        oldPayers={oldPayers}
-        oryxPayers={oryxPayers}
+        oldPayers={filteredOldPayers}
+        oryxPayers={filteredOryxPayers}
         selectedOld={selectedOld}
         setSelectedOld={setSelectedOld}
         selectedOryx={selectedOryx}
