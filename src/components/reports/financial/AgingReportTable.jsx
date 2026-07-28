@@ -45,8 +45,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
   
   return (
     <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2 }}>
-      <TableContainer elevation={0}>
-        <Table id={tableId} size="small">
+      <TableContainer elevation={0} sx={{ overflowX: 'auto' }}>
+        <Table id={tableId} size="small" sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
               <TableCell padding="checkbox" sx={{ width: '40px' }}>
