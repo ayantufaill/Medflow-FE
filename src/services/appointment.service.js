@@ -149,6 +149,20 @@ export const appointmentService = {
   },
 
   /**
+   * Send a one-click confirmation notification (email and/or SMS) to the patient
+   * @param {string} appointmentId - Appointment ID
+   * @param {string[]} [channels] - Defaults to both email and sms
+   * @returns {Promise<Object>} Send result per channel
+   */
+  async sendConfirmationNotification(appointmentId, channels) {
+    const response = await apiClient.post(
+      `/appointments/${appointmentId}/send-confirmation`,
+      channels ? { channels } : {}
+    );
+    return response.data.data;
+  },
+
+  /**
    * Cancel appointment
    * @param {string} appointmentId - Appointment ID
    * @param {string} cancellationReason - Reason for cancellation
