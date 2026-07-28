@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableFooter, Checkbox, Tooltip } from '@mui/material';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import { getFlagColor } from '../../patient-flags/constants';
 
 const getFlagColors = (idx) => {
   const defaultFlags = [
@@ -105,24 +106,20 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                               flagsToRender = row.flags.split(',').map(s => s.trim()).filter(Boolean);
                             }
                             
-                            const stringColors = ['#e11d48', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
-                            
                             return flagsToRender.map((flagObj, i) => {
-                              let flagColor = '#3b82f6';
+                              let flagColor = '#cbd5e1';
                               let flagName = 'Flag';
                               
                               if (typeof flagObj === 'string') {
                                 flagName = flagObj;
-                                // Simple hash to pick a consistent color from the palette
-                                const hash = Array.from(flagObj).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                                flagColor = stringColors[hash % stringColors.length];
+                                flagColor = getFlagColor(flagObj);
                               } else if (flagObj) {
-                                flagColor = flagObj.color || flagColor;
                                 flagName = flagObj.name || flagName;
+                                flagColor = flagObj.color || getFlagColor(flagName);
                               }
                               
                               return (
-                                <Tooltip key={i} title={flagName} arrow placement="top">
+                                <Tooltip key={i} title={flagName === 'appointment_reminder' ? 'Appt Reminder' : flagName} arrow placement="top">
                                   <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: flagColor, flexShrink: 0, cursor: 'help' }} />
                                 </Tooltip>
                               );

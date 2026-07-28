@@ -92,6 +92,13 @@ const AddNewPatientAppointmentForm = ({
     const occupied = new Set();
     appointments.forEach(appt => {
       if (!appt.appointmentDate || !appt.roomId || !appt.startTime) return;
+      
+      if (initialAppointment) {
+        const apptId = String(appt.id || appt._id).replace('appt-', '');
+        const editId = String(initialAppointment.id || initialAppointment._id).replace('appt-', '');
+        if (apptId === editId) return;
+      }
+
       const apptDateStr = String(appt.appointmentDate).slice(0, 10);
       if (apptDateStr !== selectedStart.format("YYYY-MM-DD")) return;
 
@@ -119,7 +126,7 @@ const AddNewPatientAppointmentForm = ({
     });
 
     return occupied;
-  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins]);
+  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins, initialAppointment]);
 
   useEffect(() => {
     if (open) {
