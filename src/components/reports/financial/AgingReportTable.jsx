@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableFooter, Checkbox, Tooltip } from '@mui/material';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import { getFlagColor } from '../../patient-flags/constants';
 
 const getFlagColors = (idx) => {
   const defaultFlags = [
@@ -26,7 +27,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
   
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelectedNames(reportData.map((row) => row.name));
+      const safeData = Array.isArray(reportData) ? reportData : [];
+      setSelectedNames(safeData.map((row) => row.name));
     } else {
       setSelectedNames([]);
     }
@@ -45,8 +47,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
   
   return (
     <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2 }}>
-      <TableContainer elevation={0}>
-        <Table id={tableId} size="small">
+      <TableContainer elevation={0} sx={{ overflowX: 'auto' }}>
+        <Table id={tableId} size="small" sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
               <TableCell padding="checkbox" sx={{ width: '40px' }}>
@@ -76,7 +78,7 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                   <Typography variant="body2" color="text.secondary">Loading...</Typography>
                 </TableCell>
               </TableRow>
-            ) : reportData.length === 0 ? (
+            ) : !Array.isArray(reportData) || reportData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={15} align="center" sx={{ py: 6 }}>
                   <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>No data available</Typography>
@@ -98,27 +100,26 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
                           {(() => {
-                            let flagsToRender = row.flags && row.flags.length > 0 ? row.flags : getFlagColors(idx);
+                            let flagsToRender = row.flags && Array.isArray(row.flags) ? row.flags : [];
                             
-                            // If it's a string, split it (just in case backend sends comma separated)
-                            if (typeof flagsToRender === 'string') {
-                              flagsToRender = flagsToRender.split(',').map(s => s.trim()).filter(Boolean);
+                            if (typeof row.flags === 'string') {
+                              flagsToRender = row.flags.split(',').map(s => s.trim()).filter(Boolean);
                             }
                             
-                            return (Array.isArray(flagsToRender) ? flagsToRender : []).map((flagObj, i) => {
-                              let flagColor = '#3b82f6';
+                            return flagsToRender.map((flagObj, i) => {
+                              let flagColor = '#cbd5e1';
                               let flagName = 'Flag';
                               
                               if (typeof flagObj === 'string') {
-                                flagColor = flagObj;
-                                flagName = `Flag`;
+                                flagName = flagObj;
+                                flagColor = getFlagColor(flagObj);
                               } else if (flagObj) {
-                                flagColor = flagObj.color || flagColor;
                                 flagName = flagObj.name || flagName;
+                                flagColor = flagObj.color || getFlagColor(flagName);
                               }
                               
                               return (
-                                <Tooltip key={i} title={flagName} arrow placement="top">
+                                <Tooltip key={i} title={flagName === 'appointment_reminder' ? 'Appt Reminder' : flagName} arrow placement="top">
                                   <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: flagColor, flexShrink: 0, cursor: 'help' }} />
                                 </Tooltip>
                               );
@@ -142,21 +143,21 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '60px' }}>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Pt</Typography>
-                            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${row.buckets[bucket].pt.toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${(row.buckets?.[bucket]?.pt || 0).toFixed(2)}</Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Ins</Typography>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>${row.buckets[bucket].ins.toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>${(row.buckets?.[bucket]?.ins || 0).toFixed(2)}</Typography>
                           </Box>
                         </Box>
                       </TableCell>
                     ))}
                     <TableCell align="right">
-                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.total.toFixed(2)}</Typography>
+                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${(row.total || 0).toFixed(2)}</Typography>
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.totalOwings.toFixed(2)}</TableCell>
-                    {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.paymentPlan.toFixed(2)}</TableCell>}
-                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.credit.toFixed(2)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${(row.totalOwings || 0).toFixed(2)}</TableCell>
+                    {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${(row.paymentPlan || 0).toFixed(2)}</TableCell>}
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${(row.credit || 0).toFixed(2)}</TableCell>
                     <TableCell sx={{ color: '#475569' }}>{row.lastBilled || '07/15/2022'}</TableCell>
                     <TableCell className="no-print">
                       <Box 
