@@ -26,7 +26,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
   
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelectedNames(reportData.map((row) => row.name));
+      const safeData = Array.isArray(reportData) ? reportData : [];
+      setSelectedNames(safeData.map((row) => row.name));
     } else {
       setSelectedNames([]);
     }
@@ -76,7 +77,7 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                   <Typography variant="body2" color="text.secondary">Loading...</Typography>
                 </TableCell>
               </TableRow>
-            ) : reportData.length === 0 ? (
+            ) : !Array.isArray(reportData) || reportData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={15} align="center" sx={{ py: 6 }}>
                   <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>No data available</Typography>

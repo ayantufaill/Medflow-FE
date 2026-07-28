@@ -70,7 +70,7 @@ const PatientAgingReport = () => {
     setAppliedFilters(defaultFilters);
   };
 
-  const filteredReportData = patientAging || [];
+  const filteredReportData = Array.isArray(patientAging) ? patientAging : [];
 
   const { totals, netOutstandingBalance } = useMemo(() => {
     const bucketsTotals = {};
