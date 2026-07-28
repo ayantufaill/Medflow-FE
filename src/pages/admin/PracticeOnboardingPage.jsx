@@ -203,7 +203,7 @@ const WizardProgressBar = ({ activeStep }) => {
       {STEPS.map((step, index) => {
         const isCompleted = index < activeStep;
         const isActive = index === activeStep;
-        
+
         const elements = [];
 
         // Connector line before this step
@@ -499,33 +499,33 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
-      <PracticeInformationForm 
-        register={register} 
-        errors={errors} 
-        control={control} 
-        setPhoneCountry={setPhoneCountry} 
-        setFaxCountry={setFaxCountry} 
-      />
-      
-      <AddressLocationForm 
-        register={register} 
-        errors={errors} 
-        control={control} 
+      <PracticeInformationForm
+        register={register}
+        errors={errors}
+        control={control}
+        setPhoneCountry={setPhoneCountry}
+        setFaxCountry={setFaxCountry}
       />
 
-      <OfficeLogoUpload 
-        control={control} 
-        logoPreview={logoPreview} 
-        handleLogoChange={handleLogoChange} 
+      <AddressLocationForm
+        register={register}
+        errors={errors}
+        control={control}
+      />
+
+      <OfficeLogoUpload
+        control={control}
+        logoPreview={logoPreview}
+        handleLogoChange={handleLogoChange}
         handleRemoveLogo={(rhfOnChange) => {
           setLogoPreview(null);
           rhfOnChange(null);
-        }} 
+        }}
       />
 
-      <SocialMediaLinksForm 
-        register={register} 
-        errors={errors} 
+      <SocialMediaLinksForm
+        register={register}
+        errors={errors}
       />
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 4, mb: 2 }}>
@@ -705,7 +705,7 @@ const PracticeOnboardingPage = () => {
           mx: "auto",
           bgcolor: "#fff",
           border: "1px solid #e5e7eb",
-          borderRadius: "16px",
+          borderRadius: "12px",
           p: { xs: 3, sm: 5, md: 6 },
         }}
       >

@@ -12,21 +12,13 @@ import {
   Box,
   Typography,
   TextField,
-  Checkbox,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
   Button,
   Grid,
-  Paper,
   IconButton,
-  Divider,
   Select,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -34,7 +26,11 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-
+import HeaderConfig from '../../components/admin/clinical-management/treatment-plan-presentation/HeaderConfig';
+import DisplayConfig from '../../components/admin/clinical-management/treatment-plan-presentation/DisplayConfig';
+import PaymentOptionsConfig from '../../components/admin/clinical-management/treatment-plan-presentation/PaymentOptionsConfig';
+import AcknowledgmentsConfig from '../../components/admin/clinical-management/treatment-plan-presentation/AcknowledgmentsConfig';
+import TreatmentPlanSyncDialog from '../../components/admin/clinical-management/treatment-plan-presentation/TreatmentPlanSyncDialog';
 
 const TreatmentPlanPresentation = () => {
   const navigate = useNavigate();
@@ -58,11 +54,11 @@ const TreatmentPlanPresentation = () => {
     contractedFee: true, ptPortion: true, insCoverage: true, insAdj: false, appliedAdj: false, appliedAdjPct: false
   });
   const [totals, setTotals] = useState({ officeFees: false, billedFees: true, contractedFees: true, adjustment: false, ptPortion: true, insCoverage: true });
-  
+
   // Payment Options States
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [addedPaymentTypes, setAddedPaymentTypes] = useState([]);
-  
+
   // Acknowledgment Paragraphs state
   const [acknowledgments, setAcknowledgments] = useState([]);
 
@@ -99,7 +95,7 @@ const TreatmentPlanPresentation = () => {
   const handleAddPaymentOption = (type) => {
     const nextIndex = addedPaymentTypes.length + 1;
     const hasVariables = (type === 'Payment Plan' || type === 'Financing');
-    
+
     const newType = {
       id: Date.now().toString(),
       typeName: `Payment Type ${nextIndex}`,
@@ -114,19 +110,19 @@ const TreatmentPlanPresentation = () => {
         { name: 'Monthly Payment', value: 'Auto calculated', isAuto: true }
       ] : []
     };
-    
+
     setAddedPaymentTypes([...addedPaymentTypes, newType]);
     setDropdownOpen(false);
   };
 
   const handleTitleChange = (optionId, value) => {
-    setAddedPaymentTypes(addedPaymentTypes.map(opt => 
+    setAddedPaymentTypes(addedPaymentTypes.map(opt =>
       opt.id === optionId ? { ...opt, title: value } : opt
     ));
   };
 
   const handleBodyChange = (optionId, value) => {
-    setAddedPaymentTypes(addedPaymentTypes.map(opt => 
+    setAddedPaymentTypes(addedPaymentTypes.map(opt =>
       opt.id === optionId ? { ...opt, body: value } : opt
     ));
   };
@@ -134,7 +130,7 @@ const TreatmentPlanPresentation = () => {
   const handleVariableValueChange = (optionId, varName, value) => {
     setAddedPaymentTypes(addedPaymentTypes.map(opt => {
       if (opt.id === optionId) {
-        const updatedVars = opt.variables.map(v => 
+        const updatedVars = opt.variables.map(v =>
           v.name === varName ? { ...v, value: value } : v
         );
         return { ...opt, variables: updatedVars };
@@ -151,10 +147,10 @@ const TreatmentPlanPresentation = () => {
     const endPos = textarea.selectionEnd;
     const textVal = textarea.value;
     const variableText = `{${variableName}}`;
-    
+
     const newBody = textVal.substring(0, startPos) + variableText + textVal.substring(endPos, textVal.length);
-    
-    setAddedPaymentTypes(addedPaymentTypes.map(opt => 
+
+    setAddedPaymentTypes(addedPaymentTypes.map(opt =>
       opt.id === optionId ? { ...opt, body: newBody } : opt
     ));
 
@@ -180,7 +176,7 @@ const TreatmentPlanPresentation = () => {
   const handleDeleteParagraph = (indexToDelete) => {
     setAcknowledgments(acknowledgments.filter((_, idx) => idx !== indexToDelete));
   };
-  
+
   const handleOpenSyncDialog = () => setSyncDialogOpen(true);
   const handleCloseSyncDialog = () => setSyncDialogOpen(false);
 
@@ -245,6 +241,7 @@ const TreatmentPlanPresentation = () => {
   const handleCreateNewForm = () => {
     const newName = `New Presentation ${Date.now().toString().slice(-4)}`;
     const newForm = {
+      isNew: true,
       name: newName,
       headerChecks: { logo: true, phone: true, address: false, website: false, email: false },
       displayBy: 'itemized',
@@ -272,652 +269,220 @@ const TreatmentPlanPresentation = () => {
     dispatch(fetchSystemSettings());
   };
 
+  const originalForm = savedForms.find(f => f.name === activeForm) || null;
+  const currentFormObj = {
+    name: formName || 'Untitled Presentation',
+    headerChecks,
+    displayBy,
+    displayPerItem,
+    totals,
+    addedPaymentTypes,
+    acknowledgments
+  };
+  
+  const isDirty = originalForm ? (originalForm.isNew || JSON.stringify(originalForm) !== JSON.stringify(currentFormObj)) : true;
+
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumb Navigation */}
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography
-          onClick={() => navigate('/admin/clinical-management')}
-          sx={{
-            color: '#1a3a6b',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
-          }}
-        >
-          Clinical Management
-        </Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-          TreatmentPlan Presentation
-        </Typography>
-      </Box>
-
-      {/* Action Icons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1, pr: 2, gap: 2 }}>
-        <Box 
-          onClick={handleRefresh}
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#1a3a6b', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-        >
-          <RefreshIcon sx={{ fontSize: '1.1rem' }} />
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Refresh</Typography>
+    <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
+      {/* Header Info */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', px: 4, pt: 4, mb: 4 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>Treatment Plan Presentation</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b', mt: 0.5 }}>
+            Configure and manage the treatment plan presentation templates for your practice.
+          </Typography>
         </Box>
-        <Box 
-          onClick={handleOpenSyncDialog}
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#1a3a6b', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-        >
-          <SyncIcon sx={{ fontSize: '1.1rem' }} />
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Sync</Typography>
-        </Box>
-      </Box>
 
-      <Grid container spacing={4}>
-        {/* Left Column: Form Configuration */}
-        <Grid size={{ xs: 12, md: 9 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#666' }}>Form Name:</Typography>
-            <TextField
-              size="small"
-              value={formName}
-              onChange={(e) => setFormName(e.target.value)}
-              sx={{ width: 350, '& .MuiInputBase-input': { fontSize: '0.85rem', py: 0.8 } }}
-            />
+        {/* Action Icons */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box
+            onClick={handleRefresh}
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#3b82f6', cursor: 'pointer', '&:hover': { color: '#2563eb' } }}
+          >
+            <RefreshIcon sx={{ fontSize: '1.2rem' }} />
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Refresh</Typography>
           </Box>
+          <Box
+            onClick={handleOpenSyncDialog}
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#3b82f6', cursor: 'pointer', '&:hover': { color: '#2563eb' } }}
+          >
+            <SyncIcon sx={{ fontSize: '1.2rem' }} />
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Sync</Typography>
+          </Box>
+        </Box>
+      </Box>
 
-          {/* Header Area Section */}
-          <Paper variant="outlined" sx={{ mb: 2.5, p: 0, borderRadius: 1, borderColor: '#e0e0e0' }}>
-            <Grid container>
-              <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Header Area</Typography>
-              </Grid>
-              <Grid size={10.5} sx={{ p: 2 }}>
-                <Grid container spacing={3}>
-                  <Grid size={3}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Office Info</Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.logo || false} onChange={(e) => setHeaderChecks({...headerChecks, logo: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Logo</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.phone || false} onChange={(e) => setHeaderChecks({...headerChecks, phone: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Phone Number</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.address || false} onChange={(e) => setHeaderChecks({...headerChecks, address: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Address</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.website || false} onChange={(e) => setHeaderChecks({...headerChecks, website: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Website</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.email || false} onChange={(e) => setHeaderChecks({...headerChecks, email: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Email</Typography>} />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Patient Info</Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.fullName || false} onChange={(e) => setHeaderChecks({...headerChecks, fullName: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Full Name</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.title || false} onChange={(e) => setHeaderChecks({...headerChecks, title: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Title</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.age || false} onChange={(e) => setHeaderChecks({...headerChecks, age: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Age</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.dob || false} onChange={(e) => setHeaderChecks({...headerChecks, dob: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient DOB</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.patientPhone || false} onChange={(e) => setHeaderChecks({...headerChecks, patientPhone: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Phone Number</Typography>} />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Benefits</Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.carrier || false} onChange={(e) => setHeaderChecks({...headerChecks, carrier: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Carrier</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.deductible || false} onChange={(e) => setHeaderChecks({...headerChecks, deductible: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Deductible</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.remaining || false} onChange={(e) => setHeaderChecks({...headerChecks, remaining: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Primary Remaining</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.secCarrier || false} onChange={(e) => setHeaderChecks({...headerChecks, secCarrier: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Carrier</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.secDeductible || false} onChange={(e) => setHeaderChecks({...headerChecks, secDeductible: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Deductible</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={headerChecks.secRemaining || false} onChange={(e) => setHeaderChecks({...headerChecks, secRemaining: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient Secondary Remaining</Typography>} />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Other</Typography>
-                    <FormControlLabel control={<Checkbox size="small" checked={headerChecks.showPlanName || false} onChange={(e) => setHeaderChecks({...headerChecks, showPlanName: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Show treatment plan name</Typography>} />
-                  </Grid>
-                </Grid>
-              </Grid>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>Loading configurations...</Typography>
+        </Box>
+      ) : (
+        <Box sx={{ px: 4 }}>
+          <Grid container spacing={4}>
+            {/* Left Column: Form Configuration */}
+            <Grid size={{ xs: 12, md: 9 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#475569' }}>Form Name:</Typography>
+                <TextField
+                  size="small"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  sx={{
+                    width: 350,
+                    '& .MuiInputBase-input': { fontSize: '0.9rem', py: 1, backgroundColor: '#fff' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0', borderRadius: 2 }
+                  }}
+                />
+              </Box>
+
+              <HeaderConfig headerChecks={headerChecks} setHeaderChecks={setHeaderChecks} />
+
+              <DisplayConfig
+                displayBy={displayBy}
+                setDisplayBy={setDisplayBy}
+                displayPerItem={displayPerItem}
+                setDisplayPerItem={setDisplayPerItem}
+                totals={totals}
+                setTotals={setTotals}
+              />
+
+              <PaymentOptionsConfig
+                addedPaymentTypes={addedPaymentTypes}
+                setAddedPaymentTypes={setAddedPaymentTypes}
+                handleAddPaymentOption={handleAddPaymentOption}
+                handleTitleChange={handleTitleChange}
+                handleBodyChange={handleBodyChange}
+                handleVariableValueChange={handleVariableValueChange}
+                handleInsertVariable={handleInsertVariable}
+              />
+
+              <AcknowledgmentsConfig
+                acknowledgments={acknowledgments}
+                setAcknowledgments={setAcknowledgments}
+                handleDeleteParagraph={handleDeleteParagraph}
+                handleAddParagraph={handleAddParagraph}
+              />
+
+              {/* Signature Section */}
+              <Box sx={{ mb: 4, p: 3, backgroundColor: '#fff', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <Typography variant="h6" sx={{ color: '#1e293b', fontWeight: 600, fontSize: '1.05rem', mb: 2 }}>
+                  Signature Requirements
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 6 }}>
+                  <FormControlLabel control={<Checkbox size="small" checked sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} label={<Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>Patient/Guardian</Typography>} />
+                  <FormControlLabel control={<Checkbox size="small" checked sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} label={<Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>Office</Typography>} />
+                </Box>
+              </Box>
+
+              {/* Bottom Footer Actions */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleRefresh}
+                  sx={{ borderColor: '#cbd5e1', color: '#475569', textTransform: 'none', px: 5, borderRadius: 1.5, '&:hover': { backgroundColor: '#f8fafc', borderColor: '#94a3b8' } }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  disabled={!isDirty}
+                  onClick={handleSaveForm}
+                  sx={{ backgroundColor: '#3b82f6', color: '#fff', textTransform: 'none', px: 5, borderRadius: 1.5, boxShadow: 'none', '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }, '&.Mui-disabled': { backgroundColor: '#94a3b8', color: '#f1f5f9' } }}
+                >
+                  Save
+                </Button>
+              </Box>
             </Grid>
-          </Paper>
 
-          {/* Procedure List Section */}
-          <Paper variant="outlined" sx={{ mb: 2.5, p: 0, borderRadius: 1, borderColor: '#e0e0e0' }}>
-            <Grid container>
-              <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Procedure List</Typography>
-              </Grid>
-              <Grid size={10.5} sx={{ p: 2 }}>
-                <Grid container spacing={3}>
-                  <Grid size={4}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Display by</Typography>
-                    <RadioGroup value={displayBy} onChange={(e) => setDisplayBy(e.target.value)}>
-                      <FormControlLabel value="itemized" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Itemized per Phase & Visit Show Totals</Typography>} />
-                      <FormControlLabel value="no_sep" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Itemized (no separation)</Typography>} />
-                      <FormControlLabel value="code" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Grouped per Code</Typography>} />
-                      <FormControlLabel value="tooth" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.72rem' }}>Grouped per Tooth</Typography>} />
-                    </RadioGroup>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Display per item</Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.dateDiagnosed || false} onChange={(e) => setDisplayPerItem({...displayPerItem, dateDiagnosed: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Date diagnosed</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.toothNumber || false} onChange={(e) => setDisplayPerItem({...displayPerItem, toothNumber: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Tooth number</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.procCode || false} onChange={(e) => setDisplayPerItem({...displayPerItem, procCode: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Procedure Code</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.shortDesc || false} onChange={(e) => setDisplayPerItem({...displayPerItem, shortDesc: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>System Short Description</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.officeDesc || false} onChange={(e) => setDisplayPerItem({...displayPerItem, officeDesc: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Description</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.procNote || false} onChange={(e) => setDisplayPerItem({...displayPerItem, procNote: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Procedure Note</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.showProcs || false} onChange={(e) => setDisplayPerItem({...displayPerItem, showProcs: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Show Procedures</Typography>} />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Box sx={{ mt: 3.5, display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.officeFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, officeFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office Fee/UCR</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.newFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, newFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>New Fee</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.billedFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, billedFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Billed Fee</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.contractedFee || false} onChange={(e) => setDisplayPerItem({...displayPerItem, contractedFee: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Contracted fee</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.ptPortion || false} onChange={(e) => setDisplayPerItem({...displayPerItem, ptPortion: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated pt portion</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.insCoverage || false} onChange={(e) => setDisplayPerItem({...displayPerItem, insCoverage: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Coverage</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.insAdj || false} onChange={(e) => setDisplayPerItem({...displayPerItem, insAdj: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Adj</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.appliedAdj || false} onChange={(e) => setDisplayPerItem({...displayPerItem, appliedAdj: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Applied Adjustment</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={displayPerItem.appliedAdjPct || false} onChange={(e) => setDisplayPerItem({...displayPerItem, appliedAdjPct: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Applied Adjustment Percentage</Typography>} />
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          </Paper>
+            {/* Right Column: Management Sidebar */}
+            <Grid size={{ xs: 12, md: 3 }}>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleCreateNewForm}
+                sx={{ backgroundColor: '#3b82f6', color: '#fff', textTransform: 'none', mb: 3, py: 1.2, fontWeight: 600, borderRadius: 1.5, boxShadow: 'none', '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' } }}
+              >
+                + Create new Presentation
+              </Button>
 
-          {/* Totals Section */}
-          <Paper variant="outlined" sx={{ mb: 2.5, p: 0, borderRadius: 1, borderColor: '#e0e0e0' }}>
-            <Grid container>
-              <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Totals</Typography>
-              </Grid>
-              <Grid size={10.5} sx={{ p: 2 }}>
-                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1, color: '#888' }}>Fee Totals</Typography>
-                <Grid container spacing={2}>
-                  <Grid size={4}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={totals.officeFees || false} onChange={(e) => setTotals({...totals, officeFees: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office fees/UCR</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={totals.billedFees || false} onChange={(e) => setTotals({...totals, billedFees: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Billed fees</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={totals.contractedFees || false} onChange={(e) => setTotals({...totals, contractedFees: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Contracted fees</Typography>} />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <FormControlLabel control={<Checkbox size="small" checked={totals.adjustment || false} onChange={(e) => setTotals({...totals, adjustment: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Adjustment</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={totals.ptPortion || false} onChange={(e) => setTotals({...totals, ptPortion: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated pt portion</Typography>} />
-                      <FormControlLabel control={<Checkbox size="small" checked={totals.insCoverage || false} onChange={(e) => setTotals({...totals, insCoverage: e.target.checked})} />} label={<Typography sx={{ fontSize: '0.75rem' }}>Estimated Ins Coverage</Typography>} />
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          </Paper>
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mb: 0.5, fontWeight: 600, textTransform: 'uppercase' }}>Sort By</Typography>
+                  <Select fullWidth size="small" value="Created Date" sx={{ fontSize: '0.85rem', backgroundColor: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0', borderRadius: 1.5 } }}>
+                    <MenuItem value="Created Date">Created Date</MenuItem>
+                  </Select>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mb: 0.5 }}>&nbsp;</Typography>
+                  <Select fullWidth size="small" value="Descending" sx={{ fontSize: '0.85rem', backgroundColor: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0', borderRadius: 1.5 } }}>
+                    <MenuItem value="Descending">Descending</MenuItem>
+                  </Select>
+                </Box>
+              </Box>
 
-          {/* Payment Options Section */}
-          <Paper variant="outlined" sx={{ mb: 2.5, p: 0, borderRadius: 1, borderColor: '#e0e0e0' }}>
-            <Grid container>
-              <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Payment Options</Typography>
-              </Grid>
-              <Grid size={10.5} sx={{ p: 2 }}>
-                {/* Dynamic Stack of Payment Options */}
-                {addedPaymentTypes.map((option, idx) => (
-                  <Box key={option.id} sx={{ mb: 3.5 }}>
-                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#4a5568', mb: 1 }}>
-                      {option.typeName}
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start' }}>
-                      {/* Left: Variables Table */}
-                      <Box sx={{ width: '40%', border: '1px solid #cbd5e0', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#fff' }}>
-                        <Box sx={{ display: 'flex', backgroundColor: '#0c345d', color: '#fff', p: '6px 12px' }}>
-                          <Typography sx={{ fontSize: '11px', fontWeight: 700, flex: 1.2 }}>Variables</Typography>
-                          <Typography sx={{ fontSize: '11px', fontWeight: 700, flex: 1 }}>Default Values</Typography>
-                        </Box>
-                        
-                        {option.variables.map((variable) => (
-                          <Box 
-                            key={variable.name} 
-                            sx={{ 
-                              display: 'flex', 
-                              borderBottom: '1px solid #e2e8f0', 
-                              '&:last-child': { borderBottom: 'none' }, 
-                              alignItems: 'center', 
-                              p: '6px 12px' 
-                            }}
-                          >
-                            <Typography 
-                              onClick={() => handleInsertVariable(option.id, variable.name)}
-                              sx={{ 
-                                fontSize: '11px', 
-                                color: '#1a3a6b', 
-                                fontWeight: 500, 
-                                flex: 1.2, 
-                                cursor: 'pointer', 
-                                '&:hover': { textDecoration: 'underline', color: '#4a90e2' } 
-                              }}
-                            >
-                              {variable.name}
-                            </Typography>
-                            
-                            {variable.isAuto ? (
-                              <Typography sx={{ fontSize: '11px', color: '#a0aec0', fontStyle: 'italic', flex: 1 }}>
-                                Auto calculated
-                              </Typography>
-                            ) : (
-                              <TextField
-                                size="small"
-                                placeholder={variable.placeholder}
-                                value={variable.value}
-                                onChange={(e) => handleVariableValueChange(option.id, variable.name, e.target.value)}
-                                sx={{ 
-                                  flex: 1,
-                                  '& .MuiInputBase-input': { 
-                                    fontSize: '11px', 
-                                    py: 0.4, 
-                                    px: 1,
-                                    color: '#4a5568',
-                                    backgroundColor: '#fff'
-                                  },
-                                  '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#cbd5e0'
-                                  }
-                                }}
-                              />
-                            )}
-                          </Box>
-                        ))}
-                      </Box>
-
-                      {/* Right: Title & Body Textarea */}
-                      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#4a5568', width: '35px' }}>
-                            Title:
-                          </Typography>
-                          <TextField 
-                            size="small" 
-                            fullWidth 
-                            value={option.title} 
-                            onChange={(e) => handleTitleChange(option.id, e.target.value)}
-                            sx={{ '& .MuiInputBase-input': { fontSize: '11px', py: 0.5 } }} 
-                          />
-                        </Box>
-                        
-                        <TextField
-                          fullWidth
-                          multiline
-                          rows={4}
-                          value={option.body}
-                          id={`body-textarea-${option.id}`}
-                          onChange={(e) => handleBodyChange(option.id, e.target.value)}
-                          sx={{ 
-                            '& .MuiInputBase-root': { backgroundColor: '#fff' },
-                            '& .MuiInputBase-input': { fontSize: '11px', lineHeight: 1.5, color: '#333' } 
-                          }}
-                        />
-                        
-                        <Typography sx={{ fontSize: '10px', color: '#718096', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          ℹ️ To add a variable into your body, simply put your text cursor where you would like to add it, then click on the variable
-                        </Typography>
-                      </Box>
-
-                      {/* Far Right: Delete Trash Icon */}
-                      <Box sx={{ pt: 0.5 }}>
-                        <IconButton 
-                          size="small"
-                          onClick={() => setAddedPaymentTypes(addedPaymentTypes.filter(opt => opt.id !== option.id))}
-                          sx={{ color: '#f56565', '&:hover': { color: '#e53e3e', backgroundColor: '#fff5f5' } }}
-                        >
-                          <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+              <Box sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e2e8f0', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Saved Templates</Typography>
+                </Box>
+                <Box>
+                  {savedForms.map((form) => (
+                    <Box
+                      key={form.name}
+                      onClick={() => {
+                        setActiveForm(form.name);
+                        setFormName(form.name);
+                        setHeaderChecks(form.headerChecks || {});
+                        setDisplayBy(form.displayBy || 'itemized');
+                        setDisplayPerItem(form.displayPerItem || {});
+                        setTotals(form.totals || {});
+                        setAddedPaymentTypes(form.addedPaymentTypes || []);
+                        setAcknowledgments(form.acknowledgments || []);
+                      }}
+                      sx={{
+                        p: 2,
+                        borderBottom: '1px solid #f1f5f9',
+                        cursor: 'pointer',
+                        backgroundColor: activeForm === form.name ? '#f0f9ff' : 'transparent',
+                        color: activeForm === form.name ? '#0f172a' : '#475569',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        transition: '0.2s',
+                        '&:hover': { backgroundColor: activeForm === form.name ? '#e0f2fe' : '#f8fafc' },
+                        position: 'relative',
+                        '&::before': activeForm === form.name ? {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: '4px',
+                          backgroundColor: '#3b82f6'
+                        } : {}
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: activeForm === form.name ? 600 : 500, flex: 1, pr: 1, pl: activeForm === form.name ? 1 : 0 }}>
+                        {form.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenSyncDialog(); }} sx={{ p: 0.5, color: '#94a3b8', '&:hover': { color: '#3b82f6', backgroundColor: '#e0f2fe' } }}>
+                          <SyncIcon sx={{ fontSize: '1rem' }} />
+                        </IconButton>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteForm(form.name); }} sx={{ p: 0.5, color: '#94a3b8', '&:hover': { color: '#ef4444', backgroundColor: '#fee2e2' } }}>
+                          <DeleteIcon sx={{ fontSize: '1rem' }} />
                         </IconButton>
                       </Box>
                     </Box>
-                    
-                    {idx < addedPaymentTypes.length - 1 && <Divider sx={{ mt: 3.5, mb: 3.5 }} />}
-                  </Box>
-                ))}
-
-                {/* Add new payment option button */}
-                <Box sx={{ position: 'relative', display: 'inline-block', mt: addedPaymentTypes.length > 0 ? 1 : 0 }}>
-                  <Typography 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDropdownOpen(!dropdownOpen);
-                    }}
-                    sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                  >
-                    + add new payment option
-                  </Typography>
-
-                  {dropdownOpen && (
-                    <Box 
-                      sx={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        zIndex: 1000,
-                        mt: 0.5,
-                        minWidth: 180,
-                        backgroundColor: '#edf2f7',
-                        border: '1px solid #718096',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                        borderRadius: '2px',
-                        overflow: 'hidden',
-                        fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
-                      }}
-                    >
-                      {/* Please choose payment kind */}
-                      <Box 
-                        sx={{ 
-                          p: '6px 12px', 
-                          backgroundColor: '#e2e8f0', 
-                          borderBottom: '1px solid #cbd5e0',
-                          cursor: 'default'
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '11px', fontWeight: 500, color: '#718096' }}>
-                          Please choose payment kind
-                        </Typography>
-                      </Box>
-
-                      {/* Pay In Advance */}
-                      <Box 
-                        onClick={() => handleAddPaymentOption('Pay In Advance')}
-                        sx={{ 
-                          p: '6px 12px', 
-                          backgroundColor: '#edf2f7', 
-                          color: '#1a3a6b',
-                          cursor: 'pointer',
-                          '&:hover': { backgroundColor: '#e2e8f0' }
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
-                          Pay In Advance
-                        </Typography>
-                      </Box>
-
-                      {/* Pay As You Go */}
-                      <Box 
-                        onClick={() => handleAddPaymentOption('Pay As You Go')}
-                        sx={{ 
-                          p: '6px 12px', 
-                          backgroundColor: '#edf2f7', 
-                          color: '#1a3a6b',
-                          cursor: 'pointer',
-                          borderTop: '1px solid #cbd5e0',
-                          '&:hover': { backgroundColor: '#e2e8f0' }
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
-                          Pay As You Go
-                        </Typography>
-                      </Box>
-
-                      {/* Payment Plan */}
-                      <Box 
-                        onClick={() => handleAddPaymentOption('Payment Plan')}
-                        sx={{ 
-                          p: '6px 12px', 
-                          backgroundColor: '#1a3a6b', 
-                          color: '#fff',
-                          cursor: 'pointer',
-                          borderTop: '1px solid #cbd5e0',
-                          '&:hover': { backgroundColor: '#142a52' }
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
-                          Payment Plan
-                        </Typography>
-                      </Box>
-
-                      {/* Financing */}
-                      <Box 
-                        onClick={() => handleAddPaymentOption('Financing')}
-                        sx={{ 
-                          p: '6px 12px', 
-                          backgroundColor: '#edf2f7', 
-                          color: '#1a3a6b',
-                          cursor: 'pointer',
-                          borderTop: '1px solid #cbd5e0',
-                          '&:hover': { backgroundColor: '#e2e8f0' }
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '11px', fontWeight: 500 }}>
-                          Financing
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
+                  ))}
                 </Box>
-              </Grid>
+              </Box>
             </Grid>
-          </Paper>
-
-          {/* Acknowledgment Section */}
-          <Paper variant="outlined" sx={{ mb: 2.5, p: 0, borderRadius: 1, borderColor: '#e0e0e0' }}>
-            <Grid container>
-              <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Acknowledgment</Typography>
-              </Grid>
-              <Grid size={10.5} sx={{ p: 2 }}>
-                {acknowledgments.map((text, idx) => (
-                  <Box key={idx} sx={{ mb: 2.5 }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={3}
-                      value={text}
-                      onChange={(e) => {
-                        const updated = [...acknowledgments];
-                        updated[idx] = e.target.value;
-                        setAcknowledgments(updated);
-                      }}
-                      sx={{ 
-                        '& .MuiInputBase-root': { backgroundColor: '#fff' },
-                        '& .MuiInputBase-input': { fontSize: '0.8rem', lineHeight: 1.5, color: '#333' } 
-                      }}
-                    />
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-                      <IconButton 
-                        size="small"
-                        onClick={() => handleDeleteParagraph(idx)}
-                      >
-                        <DeleteIcon sx={{ fontSize: '1rem', color: '#f8d7da', '&:hover': { color: '#e53e3e' } }} />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                ))}
-                <Typography 
-                  onClick={handleAddParagraph}
-                  sx={{ fontSize: '0.75rem', color: '#4a90e2', cursor: 'pointer', mt: 1, '&:hover': { textDecoration: 'underline' } }}
-                >
-                  + add new paragraph
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
-
-          {/* Signature Section */}
-          <Paper variant="outlined" sx={{ mb: 4, p: 0, borderRadius: 1, borderColor: '#e0e0e0' }}>
-            <Grid container>
-              <Grid size={1.5} sx={{ p: 2, borderRight: '1px solid #e0e0e0', backgroundColor: '#fdfdfd' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: '#1a3a6b', fontWeight: 600 }}>Signature</Typography>
-              </Grid>
-              <Grid size={10.5} sx={{ p: 2, display: 'flex', gap: 6 }}>
-                <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Patient/Guardian</Typography>} />
-                <FormControlLabel control={<Checkbox size="small" checked />} label={<Typography sx={{ fontSize: '0.75rem' }}>Office</Typography>} />
-              </Grid>
-            </Grid>
-          </Paper>
-
-          {/* Bottom Footer Actions */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 10 }}>
-            <Button 
-              variant="contained" 
-              onClick={handleRefresh}
-              sx={{ backgroundColor: '#a0aec0', color: '#fff', textTransform: 'none', px: 5, boxShadow: 'none', '&:hover': { backgroundColor: '#718096', boxShadow: 'none' } }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleSaveForm}
-              sx={{ backgroundColor: '#6b8fb9', color: '#fff', textTransform: 'none', px: 5, boxShadow: 'none', '&:hover': { backgroundColor: '#4a6a8a', boxShadow: 'none' } }}
-            >
-              Save
-            </Button>
-          </Box>
-        </Grid>
-
-        {/* Right Column: Management Sidebar */}
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleCreateNewForm}
-            sx={{ backgroundColor: '#6b8fb9', color: '#fff', textTransform: 'none', mb: 3, py: 1, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#4a6a8a', boxShadow: 'none' } }}
-          >
-            Create new Presentation
-          </Button>
-
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography sx={{ fontSize: '0.7rem', color: '#666', mb: 0.5, fontWeight: 500 }}>Sort By</Typography>
-              <Select fullWidth size="small" value="Created Date" sx={{ fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                <MenuItem value="Created Date">Created Date</MenuItem>
-              </Select>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography sx={{ fontSize: '0.7rem', color: '#666', mb: 0.5 }}>&nbsp;</Typography>
-              <Select fullWidth size="small" value="Descending" sx={{ fontSize: '0.75rem', backgroundColor: '#fff' }}>
-                <MenuItem value="Descending">Descending</MenuItem>
-              </Select>
-            </Box>
-          </Box>
-
-          <Paper variant="outlined" sx={{ borderRadius: 1, overflow: 'hidden', borderColor: '#e0e0e0' }}>
-            <Box sx={{ p: 1.5, backgroundColor: '#6b8fb9', color: '#fff' }}>
-              <Typography sx={{ fontSize: '0.8rem', textAlign: 'center', fontWeight: 600 }}>Saved Treatment Printout Form</Typography>
-            </Box>
-            <Box sx={{ backgroundColor: '#fff' }}>
-              {savedForms.map((form) => (
-                <Box
-                  key={form.name}
-                  onClick={() => {
-                    setActiveForm(form.name);
-                    setFormName(form.name);
-                    setHeaderChecks(form.headerChecks || {});
-                    setDisplayBy(form.displayBy || 'itemized');
-                    setDisplayPerItem(form.displayPerItem || {});
-                    setTotals(form.totals || {});
-                    setAddedPaymentTypes(form.addedPaymentTypes || []);
-                    setAcknowledgments(form.acknowledgments || []);
-                  }}
-                  sx={{
-                    p: 2,
-                    borderBottom: '1px solid #f0f0f0',
-                    cursor: 'pointer',
-                    backgroundColor: activeForm === form.name ? '#718096' : 'transparent',
-                    color: activeForm === form.name ? '#fff' : '#444',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    transition: '0.2s',
-                    '&:hover': { backgroundColor: activeForm === form.name ? '#718096' : '#f8f9fa' }
-                  }}
-                >
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 500, flex: 1, pr: 1 }}>{form.name}</Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenSyncDialog(); }} sx={{ p: 0, color: activeForm === form.name ? '#fff' : '#4a90e2' }}>
-                      <SyncIcon sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteForm(form.name); }} sx={{ p: 0, color: activeForm === form.name ? '#fff' : '#f8d7da' }}>
-                      <DeleteIcon sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+          </Grid>
+        </Box>
+      )}
 
       {/* Sync Dialog */}
-      <Dialog
-        open={isSyncDialogOpen}
-        onClose={handleCloseSyncDialog}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 1, overflow: 'hidden' }
-        }}
-      >
-        <DialogTitle
-          sx={{
-            backgroundColor: '#0c345d',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: 500,
-            py: 2,
-            px: 3,
-            lineHeight: 1.3,
-          }}
-        >
-          Select the offices you would like to sync with the source office
-        </DialogTitle>
-        <DialogContent sx={{ mt: 3, px: 3 }}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
-              Source Office:
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              value="thedentalstudio"
-              disabled
-              sx={{
-                '& .MuiInputBase-input': { backgroundColor: '#f0f0f0', fontSize: '0.85rem' },
-                '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-              }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
-              Target Offices
-            </Typography>
-            <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1, backgroundColor: '#fafafa', textAlign: 'center' }}>
-              <Typography variant="caption" color="textSecondary">
-                Select target offices from the list below...
-              </Typography>
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleCloseSyncDialog}
-            sx={{
-              textTransform: 'none',
-              backgroundColor: '#e0e0e0',
-              color: '#333',
-              fontSize: '0.85rem',
-              px: 3,
-              '&:hover': { backgroundColor: '#d0d0d0' }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCloseSyncDialog}
-            variant="contained"
-            sx={{
-              textTransform: 'none',
-              backgroundColor: '#6b8fb9',
-              color: '#fff',
-              fontSize: '0.85rem',
-              px: 4,
-              '&:hover': { backgroundColor: '#5a7ca8' }
-            }}
-          >
-            Sync
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <TreatmentPlanSyncDialog isOpen={isSyncDialogOpen} onClose={handleCloseSyncDialog} />
     </Box>
   );
 };

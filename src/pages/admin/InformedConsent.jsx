@@ -9,44 +9,12 @@ import {
   selectLoadingConsent
 } from '../../store/slices/clinicalManagementSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  InputAdornment,
-  Collapse,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  Checkbox,
-  Grid,
-  Divider,
-} from '@mui/material';
-import {
-  Search as SearchIcon,
-  CloudDownload as DownloadIcon,
-  Visibility as ViewIcon,
-  Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  Description as DocIcon,
-  FileUpload as UploadIcon,
-} from '@mui/icons-material';
+import { Box } from '@mui/material';
 
-
-
+import InformedConsentsHeader from '../../components/admin/clinical-management/informed-consents/InformedConsentsHeader';
+import InformedConsentsList from '../../components/admin/clinical-management/informed-consents/InformedConsentsList';
+import AddConsentDialog from '../../components/admin/clinical-management/informed-consents/AddConsentDialog';
+import ViewConsentDialog from '../../components/admin/clinical-management/informed-consents/ViewConsentDialog';
 
 const mapBackendToFrontend = (backend) => {
   let contentData = {};
@@ -71,9 +39,12 @@ const InformedConsent = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
+  
   const [customExpanded, setCustomExpanded] = useState(true);
   const [systemExpanded, setSystemExpanded] = useState(true);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedConsent, setSelectedConsent] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   const templates = useSelector(selectConsentTemplates);
@@ -151,6 +122,11 @@ const InformedConsent = () => {
     setSystemConsents(systemConsents.filter((_, i) => i !== idx));
   };
 
+  const handleViewConsent = (consent) => {
+    setSelectedConsent(consent);
+    setViewDialogOpen(true);
+  };
+
   const handleSaveConsent = async () => {
     if (newConsentDraft.name) {
       try {
@@ -188,199 +164,43 @@ const InformedConsent = () => {
   };
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumb Navigation */}
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography 
-          onClick={() => navigate('/admin/clinical-management')} 
-          sx={{ 
-            color: '#1a3a6b', 
-            fontSize: '0.9rem', 
-            fontWeight: 700, 
-            cursor: 'pointer', 
-            '&:hover': { textDecoration: 'underline' } 
-          }}
-        >
-          Clinical Management
-        </Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>Informed Consents</Typography>
+    <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
+      <Box sx={{ px: 4, pt: 4 }}>
+        <InformedConsentsHeader 
+          searchQuery={searchQuery}
+          handleSearch={handleSearch}
+          setAddDialogOpen={setAddDialogOpen}
+          navigate={navigate}
+        />
+
+        <InformedConsentsList 
+          customExpanded={customExpanded}
+          setCustomExpanded={setCustomExpanded}
+          systemExpanded={systemExpanded}
+          setSystemExpanded={setSystemExpanded}
+          filteredCustom={filteredCustom}
+          filteredSystem={filteredSystem}
+          handleDeleteCustom={handleDeleteCustom}
+          handleDeleteSystem={handleDeleteSystem}
+          handleViewConsent={handleViewConsent}
+        />
       </Box>
 
-      {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, fontSize: '1rem' }}>Informed Consents</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            size="small"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={handleSearch}
-            sx={{ width: 300, '& .MuiInputBase-root': { fontSize: '0.85rem', height: 36 } }}
-            InputProps={{ endAdornment: (<InputAdornment position="end"><SearchIcon sx={{ fontSize: '1.2rem', color: '#999' }} /></InputAdornment>) }}
-          />
-          <Button
-            variant="contained"
-            onClick={() => setAddDialogOpen(true)}
-            startIcon={<Typography sx={{ fontSize: '1.2rem' }}>+</Typography>}
-            sx={{ backgroundColor: '#0c345d', color: '#fff', textTransform: 'none', fontSize: '0.85rem', height: 36, px: 3 }}
-          >
-            Add New Consent
-          </Button>
-        </Box>
-      </Box>
+      <AddConsentDialog 
+        isAddDialogOpen={isAddDialogOpen}
+        setAddDialogOpen={setAddDialogOpen}
+        newConsentDraft={newConsentDraft}
+        setNewConsentDraft={setNewConsentDraft}
+        handleFileChange={handleFileChange}
+        fileInputRef={fileInputRef}
+        handleSaveConsent={handleSaveConsent}
+      />
 
-      {/* Main Table */}
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ borderBottom: '1px solid #e0e0e0' }}>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#1a3a6b', width: '30%' }}>Consent Name</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#1a3a6b' }}>Procedures</TableCell>
-              <TableCell sx={{ width: 100 }} />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* Custom Informed Consents */}
-            <TableRow onClick={() => setCustomExpanded(!customExpanded)} sx={{ backgroundColor: '#f0f4fa', cursor: 'pointer' }}>
-              <TableCell colSpan={3} sx={{ py: 1, px: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a3a6b' }}>Custom Informed Consents</Typography>
-                  {customExpanded ? <ExpandLessIcon sx={{ fontSize: '1.2rem' }} /> : <ExpandMoreIcon sx={{ fontSize: '1.2rem' }} />}
-                </Box>
-              </TableCell>
-            </TableRow>
-            {customExpanded && filteredCustom.map((item, idx) => (
-              <TableRow key={idx} sx={{ '& td': { py: 2, borderBottom: '1px solid #f0f0f0' } }}>
-                <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><DocIcon sx={{ fontSize: '1.1rem', color: '#d9a36d' }} /><Typography sx={{ fontSize: '0.85rem', color: '#333', fontWeight: 500 }}>{item.name}</Typography></Box></TableCell>
-                <TableCell>{item.procedures.map((proc, pIdx) => (<Box key={pIdx} sx={{ mb: 0.5, display: 'flex', gap: 1 }}><Typography sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600, minWidth: 45 }}>{proc.code}</Typography><Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{proc.desc}</Typography></Box>))}</TableCell>
-                <TableCell align="right"><Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}><IconButton size="small"><DownloadIcon sx={{ fontSize: '1rem' }} /></IconButton><IconButton size="small"><ViewIcon sx={{ fontSize: '1rem' }} /></IconButton><IconButton size="small" onClick={() => handleDeleteCustom(idx)}><DeleteIcon sx={{ fontSize: '1rem', color: '#e57373' }} /></IconButton></Box></TableCell>
-              </TableRow>
-            ))}
-
-            {/* System Default Informed Consents */}
-            <TableRow onClick={() => setSystemExpanded(!systemExpanded)} sx={{ backgroundColor: '#f0f4fa', cursor: 'pointer' }}>
-              <TableCell colSpan={3} sx={{ py: 1, px: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a3a6b' }}>System Default Informed Consents</Typography>
-                  {systemExpanded ? <ExpandLessIcon sx={{ fontSize: '1.2rem' }} /> : <ExpandMoreIcon sx={{ fontSize: '1.2rem' }} />}
-                </Box>
-              </TableCell>
-            </TableRow>
-            {systemExpanded && filteredSystem.map((item, idx) => (
-              <TableRow key={idx} sx={{ '& td': { py: 2, borderBottom: '1px solid #f0f0f0' } }}>
-                <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><DocIcon sx={{ fontSize: '1.1rem', color: '#d9a36d' }} /><Typography sx={{ fontSize: '0.85rem', color: '#333', fontWeight: 500 }}>{item.name}</Typography></Box></TableCell>
-                <TableCell>{item.procedures.map((proc, pIdx) => (<Box key={pIdx} sx={{ mb: 0.5, display: 'flex', gap: 1 }}><Typography sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600, minWidth: 45 }}>{proc.code}</Typography><Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{proc.desc}</Typography></Box>))}</TableCell>
-                <TableCell align="right"><Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}><IconButton size="small"><DownloadIcon sx={{ fontSize: '1rem' }} /></IconButton><IconButton size="small"><ViewIcon sx={{ fontSize: '1rem' }} /></IconButton><IconButton size="small" onClick={() => handleDeleteSystem(idx)}><DeleteIcon sx={{ fontSize: '1rem', color: '#e57373' }} /></IconButton></Box></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Add New Informed Consent Dialog */}
-      <Dialog open={isAddDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
-        <DialogTitle sx={{ color: '#1a3a6b', fontSize: '1.1rem', fontWeight: 600, pb: 1 }}>Add New Informed Consent</DialogTitle>
-        <DialogContent sx={{ px: 4 }}>
-          <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>File:</Typography>
-            <RadioGroup row value={newConsentDraft.fileType} onChange={(e) => setNewConsentDraft({ ...newConsentDraft, fileType: e.target.value })}>
-              <FormControlLabel value="Upload PDF" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.85rem' }}>Upload PDF</Typography>} />
-              <FormControlLabel value="Create Form" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.85rem' }}>Create Form</Typography>} />
-            </RadioGroup>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, mb: 1 }}>Upload PDF <Typography component="span" sx={{ fontSize: '0.75rem', color: '#666' }}>(The system only accepts .pdf files)</Typography></Typography>
-            <Box 
-              sx={{ 
-                border: '1px dashed #ccc', 
-                borderRadius: 1, 
-                p: 4, 
-                textAlign: 'center', 
-                backgroundColor: '#fafafa',
-                cursor: 'pointer',
-                '&:hover': { backgroundColor: '#f0f4fa' }
-              }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".pdf"
-                style={{ display: 'none' }}
-                onChange={handleFileChange}
-              />
-              <UploadIcon sx={{ fontSize: '2rem', color: '#ccc', mb: 1 }} />
-              {newConsentDraft.selectedFile ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#1a3a6b' }}>
-                    {newConsentDraft.selectedFile.name}
-                  </Typography>
-                  <IconButton 
-                    size="small" 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setNewConsentDraft({ ...newConsentDraft, selectedFile: null });
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                  >
-                    <DeleteIcon sx={{ fontSize: '1.1rem', color: '#e57373' }} />
-                  </IconButton>
-                </Box>
-              ) : (
-                <Typography sx={{ fontSize: '0.85rem', color: '#666' }}>
-                  Drop items here or <Typography component="span" sx={{ color: '#4a90e2', fontWeight: 600 }}>Browse Files</Typography>
-                </Typography>
-              )}
-            </Box>
-            <Typography sx={{ fontSize: '0.7rem', color: '#999', mt: 0.5 }}>Up to 3MB • Filename without special characters</Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}>Informed Consent Name:</Typography>
-            <TextField fullWidth size="small" placeholder="Enter Name" value={newConsentDraft.name} onChange={(e) => setNewConsentDraft({ ...newConsentDraft, name: e.target.value })} />
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}>Procedures:</Typography>
-            <TextField fullWidth size="small" placeholder="Enter code or procedure" value={newConsentDraft.procedures} onChange={(e) => setNewConsentDraft({ ...newConsentDraft, procedures: e.target.value })} />
-          </Box>
-
-          <Divider sx={{ my: 3 }} />
-
-          <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 2 }}>Signature</Typography>
-            <Grid container spacing={2}>
-              {['Guardian', 'Office', 'Patient', 'Witness', 'Doctor', 'Other'].map((item) => (
-                <Grid size={4} key={item}>
-                  <FormControlLabel
-                    control={<Checkbox size="small" checked={newConsentDraft.signatures[item.toLowerCase()]} onChange={(e) => setNewConsentDraft({ ...newConsentDraft, signatures: { ...newConsentDraft.signatures, [item.toLowerCase()]: e.target.checked } })} />}
-                    label={<Typography sx={{ fontSize: '0.85rem' }}>{item}</Typography>}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 4, pb: 4, gap: 1 }}>
-          <Button
-            onClick={handleSaveConsent}
-            variant="contained"
-            sx={{ backgroundColor: '#6b8fb9', color: '#fff', textTransform: 'none', px: 4, borderRadius: 5 }}
-            disabled={!newConsentDraft.name}
-          >
-            Add Consent
-          </Button>
-          <Button
-            onClick={() => setAddDialogOpen(false)}
-            variant="contained"
-            sx={{ backgroundColor: '#cbd5e0', color: '#4a5568', textTransform: 'none', px: 4, borderRadius: 5, boxShadow: 'none' }}
-          >
-            Cancel
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ViewConsentDialog
+        open={viewDialogOpen}
+        onClose={() => setViewDialogOpen(false)}
+        consent={selectedConsent}
+      />
     </Box>
   );
 };

@@ -30,29 +30,33 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
       <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1,
-        fontSize: '1rem',
-        fontWeight: 600
+        backgroundColor: '#fff',
+        color: '#0f172a',
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        py: 3,
+        px: 4,
+        lineHeight: 1.3,
+        borderBottom: '1px solid #f1f5f9'
       }}>
-        Copy Fee Guide from
+        Copy Fee Guide
       </DialogTitle>
       <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ p: 1, bgcolor: '#f5f5f5' }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', backgroundColor: '#F8FAFC' }}>
           <TextField
             size="small"
             fullWidth
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search fee guide"
+            placeholder="Search fee guide..."
             sx={{ 
-              '& .MuiInputBase-root': { bgcolor: 'white' },
-              '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+              '& .MuiInputBase-root': { backgroundColor: '#fff', borderRadius: 2 },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
             }}
           />
         </Box>
@@ -62,19 +66,31 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
               key={guide.id} 
               button 
               onClick={() => handleCopy(guide)}
-              sx={{ borderBottom: '1px solid #f0f0f0', py: 0.2 }}
+              sx={{ borderBottom: '1px solid #f1f5f9', py: 1.5, px: 3, '&:hover': { backgroundColor: '#f8fafc' } }}
             >
               <ListItemText 
                 primary={guide.name} 
-                primaryTypographyProps={{ fontSize: '0.8rem', color: '#333' }}
+                primaryTypographyProps={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: 500 }}
               />
             </ListItem>
           ))}
+          {filteredGuides.length === 0 && (
+            <ListItem sx={{ py: 3, justifyContent: 'center' }}>
+              <ListItemText primary="No fee guides found" primaryTypographyProps={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }} />
+            </ListItem>
+          )}
         </List>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1, borderTop: '1px solid #f0f0f0' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, p: 3, borderTop: '1px solid #f1f5f9' }}>
           <Button 
-            variant="contained" 
-            sx={{ bgcolor: '#999', textTransform: 'none', '&:hover': { bgcolor: '#888' } }}
+            variant="text" 
+            sx={{ 
+              textTransform: 'none', 
+              color: '#475569', 
+              fontWeight: 600, 
+              borderRadius: 2, 
+              px: 3, 
+              '&:hover': { backgroundColor: '#f1f5f9' } 
+            }}
             onClick={onClose}
           >
             Cancel

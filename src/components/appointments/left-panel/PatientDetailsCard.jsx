@@ -168,8 +168,8 @@ export const PatientDetails = () => {
         </Box>
       </SubSection>
 
-      {/* Medical Alerts — chevron on LEFT of bar */}
-      <SubSection label="Medical Alerts" chevronSide="left" open={alertsOpen} onToggle={() => setAlertsOpen((p) => !p)}>
+      {/* Medical Alerts */}
+      <SubSection label="Medical Alerts" chevronSide="right" open={alertsOpen} onToggle={() => setAlertsOpen((p) => !p)}>
         {alertsList.length > 0 ? (
           alertsList.map((alert, i) => (
             <Typography key={i} sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: '#dc2626', textAlign: 'center', pl: '8px' }}>

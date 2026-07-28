@@ -80,29 +80,32 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
       <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1,
-        fontSize: '1rem',
-        fontWeight: 600
+        backgroundColor: '#fff',
+        color: '#0f172a',
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        py: 3,
+        px: 4,
+        lineHeight: 1.3,
+        borderBottom: '1px solid #f1f5f9'
       }}>
         Clear Manual Fee Guide
       </DialogTitle>
-      <DialogContent sx={{ p: 0 }}>
-        <TableContainer sx={{ maxHeight: 400 }}>
+      <DialogContent sx={{ p: 4 }}>
+        <TableContainer sx={{ maxHeight: 400, border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Table stickyHeader size="small">
             <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-root': { py: 1.5, fontWeight: 700, color: '#333', fontSize: '0.85rem' } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' } }}>
                 <TableCell sx={{ width: '40%' }}>Patient Name</TableCell>
                 <TableCell sx={{ width: '40%' }}>Fee Guide Name</TableCell>
                 <TableCell align="center" sx={{ width: '20%' }}>
                   <Typography 
                     onClick={handleSelectAllPatients}
-                    sx={{ ...actionLinkStyle, textDecoration: 'underline', color: '#4b71a1', justifyContent: 'center' }}
+                    sx={{ ...actionLinkStyle, textDecoration: 'underline', color: '#2563eb', justifyContent: 'center' }}
                   >
                     {selectedPatients.length === mockPatients.length ? 'Deselect All' : 'Select All'}
                   </Typography>
@@ -111,7 +114,7 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
             </TableHead>
             <TableBody>
               {mockPatients.map((patient) => (
-                <TableRow key={patient.id} sx={{ '& .MuiTableCell-root': { py: 1, color: '#333' } }}>
+                <TableRow key={patient.id} sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #f1f5f9', py: 1.5, color: '#1e293b', fontSize: '0.85rem' } }}>
                   <TableCell>{patient.name}</TableCell>
                   <TableCell>{patient.feeGuide}</TableCell>
                   <TableCell align="center">
@@ -126,25 +129,40 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, p: 2, borderTop: '1px solid #e0e0e0' }}>
-          <Button 
-            variant="contained" 
-            sx={{ bgcolor: '#999', textTransform: 'none', '&:hover': { bgcolor: '#888' } }}
-            onClick={onClose}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="contained" 
-            sx={{ bgcolor: '#d9a366', textTransform: 'none', '&:hover': { bgcolor: '#c08d50' } }}
-            onClick={handleConfirm}
-            disabled={loading}
-          >
-            {loading ? 'Clearing...' : 'Clear'}
-          </Button>
-        </Box>
       </DialogContent>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, pb: 4 }}>
+        <Button 
+          variant="text" 
+          sx={{ 
+            textTransform: 'none', 
+            color: '#475569', 
+            fontWeight: 600, 
+            borderRadius: 2, 
+            px: 3, 
+            '&:hover': { backgroundColor: '#f1f5f9' } 
+          }}
+          onClick={onClose}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="contained" 
+          sx={{ 
+            textTransform: 'none', 
+            backgroundColor: '#2563eb', 
+            fontWeight: 600, 
+            borderRadius: 2, 
+            px: 3, 
+            boxShadow: 'none', 
+            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+          }}
+          onClick={handleConfirm}
+          disabled={loading}
+        >
+          {loading ? 'Clearing...' : 'Clear'}
+        </Button>
+      </Box>
     </Dialog>
   );
 };

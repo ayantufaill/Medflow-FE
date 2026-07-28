@@ -36,21 +36,21 @@ const MoveData = () => {
   };
 
   return (
-    <Box 
-      sx={{ 
-        bgcolor: '#FBFCFE', 
-        borderRadius: '12px', 
-        border: '1px solid #e0e0e0', 
+    <Box
+      sx={{
+        bgcolor: '#FBFCFE',
+        borderRadius: '12px',
+        border: '1px solid #DFE5EC',
         p: { xs: 2, sm: 3, md: 4 },
         fontFamily: '"Segoe UI", sans-serif'
       }}
     >
       {/* --- HEADER SECTION --- */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 4,
           flexWrap: 'wrap',
           gap: 2
@@ -65,7 +65,7 @@ const MoveData = () => {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {/* Left Column: Move Patient Data */}
         <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' }, maxWidth: '565px' }}>
-          <MovePatientDataCard 
+          <MovePatientDataCard
             fromPatient={fromPatient}
             setFromPatient={setFromPatient}
             toPatient={toPatient}
@@ -78,7 +78,7 @@ const MoveData = () => {
 
         {/* Right Column: Move Provider Future Data */}
         <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' }, maxWidth: '565px' }}>
-          <MoveProviderDataCard 
+          <MoveProviderDataCard
             fromProvider={fromProvider}
             setFromProvider={setFromProvider}
             toProvider={toProvider}

@@ -47,6 +47,11 @@ export const clinicalManagementService = {
     return response.data.data;
   },
 
+  async deleteChecklistCategory(name) {
+    const response = await apiClient.delete(`/clinical-management/checklists/categories/${encodeURIComponent(name)}`);
+    return response.data.data;
+  },
+
   async createChecklist(categoryName, checklistData) {
     const response = await apiClient.post('/clinical-management/checklists', { categoryName, ...checklistData });
     return response.data.data;

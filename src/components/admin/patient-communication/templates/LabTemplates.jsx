@@ -12,17 +12,9 @@ import { VariableAccordion } from './VariableAccordion';
 import { VariableButton } from './VariableButton';
 import { communicationService } from '../../../../services/communication.service';
 
-const MOCK_TEMPLATES = [
-  { description: 'Crown Fabrication', bodyText: 'Please fabricate a full coverage crown for tooth {Tooth Number} using zirconia. Shade A2.' },
-  { description: 'Denture Repair', bodyText: 'Please repair the fractured acrylic base on the maxillary denture. Patient needs it rushed.' },
-  { description: 'Nightguard', bodyText: 'Please fabricate a hard/soft nightguard for the maxillary arch.' },
-  { description: 'Orthodontic Retainer', bodyText: 'Please fabricate an Essix retainer for the mandibular arch.' },
-];
-
 export const LabTemplates = () => {
   const [showDeleted, setShowDeleted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(-1);
-  const [isCreating, setIsCreating] = useState(false);
 
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,16 +23,15 @@ export const LabTemplates = () => {
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [initialData, setInitialData] = useState(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      setTemplates(MOCK_TEMPLATES);
-      if (MOCK_TEMPLATES.length > 0 && !isCreating && selectedTemplate === -1) {
-        // optionally select first one, or leave as -1
-      }
+      const data = await communicationService.getTemplates(5);
+      setTemplates(data || []);
     } catch (err) {
       console.error('Failed to fetch templates', err);
     } finally {
@@ -53,39 +44,32 @@ export const LabTemplates = () => {
   }, []);
 
   const populateForm = (tpl) => {
-    setDescription(tpl.description || '');
-    setSubject(tpl.subject || '');
-    setBodyText(tpl.bodyText || '');
-  };
-
-  const handleCreateNew = () => {
-    setIsCreating(true);
-    setSelectedTemplate(-1);
-    setDescription('New Lab Template');
-    setSubject('');
-    setBodyText('');
+    const initDesc = tpl.description || '';
+    const initSub = tpl.subject || '';
+    const initBody = tpl.bodyText || '';
+    setDescription(initDesc);
+    setSubject(initSub);
+    setBodyText(initBody);
+    setInitialData({ description: initDesc, subject: initSub, bodyText: initBody });
   };
 
   const handleSelectTemplate = (index) => {
-    setIsCreating(false);
     setSelectedTemplate(index);
     populateForm(templates[index]);
   };
 
+  const currentData = { description, subject, bodyText };
+  const isDirty = initialData && JSON.stringify(initialData) !== JSON.stringify(currentData);
+
   const handleSave = async () => {
+    if (!isDirty) return;
     try {
       const data = { description, subject, bodyText, templateType: 5 };
-      if (isCreating) {
-        await communicationService.createTemplate(data);
-        setIsCreating(false);
-        setSelectedTemplate(0); // Optional: would need to fetch then set to matching index
-      } else {
-        const tpl = templates[selectedTemplate];
-        if (tpl && tpl._id) {
-          await communicationService.updateTemplate(tpl._id, data);
-        }
+      const tpl = templates[selectedTemplate];
+      if (tpl && tpl.id) {
+        await communicationService.updateTemplate(tpl.id, data);
+        fetchTemplates();
       }
-      fetchTemplates();
     } catch (err) {
       console.error('Failed to save', err);
     }
@@ -94,8 +78,8 @@ export const LabTemplates = () => {
   const handleDelete = async () => {
     try {
       const tpl = templates[selectedTemplate];
-      if (tpl && tpl._id) {
-        await communicationService.deleteTemplate(tpl._id);
+      if (tpl && tpl.id) {
+        await communicationService.deleteTemplate(tpl.id);
         setDeleteConfirmOpen(false);
         setSelectedTemplate(-1);
         fetchTemplates();
@@ -122,9 +106,6 @@ export const LabTemplates = () => {
                   <Box component="input" type="checkbox" checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} sx={{ width: 14, height: 14, cursor: 'pointer' }} />
                   <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>Show deleted</Typography>
                 </Box>
-                <Button variant="contained" size="small" onClick={handleCreateNew} sx={{ textTransform: 'none', backgroundColor: '#3B82F6', borderRadius: '16px', px: 2, fontSize: '0.7rem', '&:hover': { backgroundColor: '#2563EB' } }}>
-                  + Create New Form
-                </Button>
               </Box>
 
               <Box sx={{ border: '1px solid #E5E9F2', borderRadius: '4px', overflow: 'hidden' }}>
@@ -159,11 +140,11 @@ export const LabTemplates = () => {
 
           {/* Center Editor */}
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#FBFCFE' }}>
-            {isCreating || selectedTemplate !== -1 ? (
+            {selectedTemplate !== -1 ? (
               <>
                 <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <TextField placeholder="Enter template title *" variant="standard" value={description} onChange={(e) => setDescription(e.target.value)} sx={{ width: '60%', '& .MuiInput-input': { fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' } }} InputProps={{ disableUnderline: false }} autoFocus={isCreating} />
-                  <Button size="small" variant="contained" onClick={handleSave} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
+                  <TextField placeholder="Enter template title *" variant="standard" value={description} onChange={(e) => setDescription(e.target.value)} sx={{ width: '60%', '& .MuiInput-input': { fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' } }} InputProps={{ disableUnderline: false }} />
+                  <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
                 </Box>
 
                 <Box sx={{ p: 4, flexGrow: 1, overflowY: 'auto' }}>
@@ -186,7 +167,7 @@ export const LabTemplates = () => {
           </Box>
 
           {/* Right Sidebar */}
-          {(isCreating || selectedTemplate !== -1) && (
+          {selectedTemplate !== -1 && (
             <Box sx={{ width: 250, flexShrink: 0, borderLeft: '1px solid #E5E9F2', backgroundColor: '#FBFCFE', height: '100%', overflowY: 'auto' }}>
               <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2' }}>
                 <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>Variables</Typography>

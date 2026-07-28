@@ -1,52 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Button,
-} from '@mui/material';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import PrintIcon from '@mui/icons-material/Print';
+import dayjs from 'dayjs';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import ModificationsReportFilters from '../../../../components/reports/financial/ModificationsReportFilters';
+import ModificationsReportTable from '../../../../components/reports/financial/ModificationsReportTable';
 import {
   fetchModificationsReport,
   selectModificationsData,
   selectModificationsLoading
 } from '../../../../store/slices/billingSlice';
 
-const MOCK_MODIFICATIONS = [
-  { action: 'Add', trans: 'pay #25197', proc: 'D0120', rendering: 'SAB', billing: 'SAB', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '+$31.00', accountCredit: '$0.00' },
-  { action: 'Add', trans: 'pay #25197', proc: 'D0274', rendering: 'SAB', billing: 'SAB', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '+$35.00', accountCredit: '$0.00' },
-  { action: 'Add', trans: 'pay #25197', proc: 'D1110', rendering: 'SAB', billing: 'SAB', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '+$53.00', accountCredit: '$0.00' },
-  { action: 'Add', trans: 'pay #25200', proc: 'D1110', rendering: 'KAR', billing: 'KAR', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '+$99.00', accountCredit: '$0.00' },
-  { action: 'Add', trans: 'adj #25199', proc: 'D1110', rendering: 'KAR', billing: 'KAR', fees: '$0.00', creditAdj: '-$96.00', debitAdj: '$0.00', collection: '$0.00', accountCredit: '$0.00' },
-  { action: 'Void', trans: 'pay #25213', proc: 'D1110', rendering: 'KAR', billing: 'KAR', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '-$99.00', accountCredit: '$0.00' },
-  { action: 'Void', trans: 'adj #25212', proc: 'D1110', rendering: 'KAR', billing: 'KAR', fees: '$0.00', creditAdj: '+$96.00', debitAdj: '$0.00', collection: '$0.00', accountCredit: '$0.00' },
-  { action: 'Add', trans: 'dep #25208', proc: 'D1110', rendering: '', billing: '', fees: '$0.00', creditAdj: '$0.00', debitAdj: '$0.00', collection: '$0.00', accountCredit: '+$9.90' },
-];
-
 const ModificationsReport = () => {
   const dispatch = useDispatch();
   const reportData = useSelector(selectModificationsData);
   const loading = useSelector(selectModificationsLoading);
 
-  const [affectedDate, setAffectedDate] = useState('2026-05-08');
+  const [affectedDate, setAffectedDate] = useState(dayjs().format('YYYY-MM-DD'));
 
   useEffect(() => {
     dispatch(fetchModificationsReport({ date: affectedDate, range: 'Daily' }));
   }, [dispatch, affectedDate]);
 
   const mappedModifications = useMemo(() => {
-    if (affectedDate === '2026-05-08') {
-      return MOCK_MODIFICATIONS;
-    }
     if (!reportData || reportData.length === 0) {
       return [];
     }
@@ -69,8 +45,9 @@ const ModificationsReport = () => {
       }
       return item;
     });
-  }, [reportData, affectedDate]);
+  }, [reportData]);
 
+  // Derived values for CSV exporting
   const totalFees = useMemo(() => mappedModifications.reduce((sum, row) => {
     const val = parseFloat((row.fees || '0').replace(/[$,]/g, '')) || 0;
     return sum + val;
@@ -131,7 +108,6 @@ const ModificationsReport = () => {
       row.accountCredit
     ]);
 
-    // Add totals row
     rows.push([
       'totals modifications',
       '',
@@ -145,7 +121,6 @@ const ModificationsReport = () => {
       formatAmount(totalAccountCredit, '+')
     ]);
 
-    // Add net prod row
     rows.push([
       'net prod modification',
       '',
@@ -196,135 +171,32 @@ const ModificationsReport = () => {
     printWindow.close();
   };
 
-  return (
-    <Box sx={{ p: 0 }}>
-      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', border: '1px solid #000' }}>
-          <Box sx={{ px: 2, py: 0.5, borderRight: '1px solid #000', backgroundColor: '#f5f5f5' }}>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>affected date:</Typography>
-          </Box>
-          <Box sx={{ px: 2, py: 0.5, display: 'flex', alignItems: 'center' }}>
-            <input 
-              type="date"
-              value={affectedDate}
-              onChange={(e) => setAffectedDate(e.target.value)}
-              style={{ border: 'none', outline: 'none', fontSize: '0.8rem', fontFamily: 'inherit' }}
-            />
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExportCSV}
-            sx={{ fontSize: '0.75rem', py: 0.5 }}
-          >
-            Export CSV
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<PrintIcon />}
-            onClick={handlePrint}
-            sx={{ fontSize: '0.75rem', py: 0.5 }}
-          >
-            Print
-          </Button>
-        </Box>
-      </Box>
-    </Box>
-  );
+  const handleApply = () => {
+    dispatch(fetchModificationsReport({ date: affectedDate, range: 'Daily' }));
+  };
+
+  const handleClear = () => {
+    setAffectedDate(dayjs().format('YYYY-MM-DD'));
+  };
 
   return (
     <ReportLayout title="Modifications Report:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onExportCsv={() => alert('Exporting CSV...')}
-        onPrint={() => window.print()}
+      <ModificationsReportFilters
+        affectedDate={affectedDate}
+        setAffectedDate={setAffectedDate}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-        <Table size="small" sx={{ '& .MuiTableCell-root': { borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', px: 1, py: 1 } }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Action</TableCell>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>transaction #</TableCell>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>procedures</TableCell>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>rendering prov / internal code</TableCell>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>billing prov / internal code</TableCell>
-              <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>production</TableCell>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>collection</TableCell>
-              <TableCell rowSpan={2} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>account credit</TableCell>
-            </TableRow>
-            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>fees</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>credit adj</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>debit adj</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
-            ) : mappedModifications.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 3, color: 'text.secondary', fontSize: '0.75rem' }}>
-                  No modifications found for selected date.
-                </TableCell>
-              </TableRow>
-            ) : (
-              mappedModifications.map((row, index) => {
-                const isAdd = row.action === 'Add';
-                const isVoid = row.action === 'Void';
-                const bgColor = isAdd ? '#e6f4ea' : isVoid ? '#fce8e6' : '#fff';
-                const textColor = isAdd ? '#007b3e' : isVoid ? '#d93025' : '#000';
-                const collectionColor = (row.collection || '').startsWith('-') ? '#d93025' : (row.collection || '').startsWith('+') ? '#007b3e' : '#000';
+      <ProductionReportActions 
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+      />
 
-                return (
-                  <TableRow key={index} sx={{ backgroundColor: bgColor }}>
-                    <TableCell sx={{ fontSize: '0.75rem', color: textColor, fontWeight: 600 }}>{row.action}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', color: '#0052cc', textDecoration: 'underline' }}>{row.trans}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.proc}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.rendering}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.billing}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.fees}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', color: (row.creditAdj || '').startsWith('-') ? '#007b3e' : (row.creditAdj || '').startsWith('+') ? '#d93025' : '#000' }}>{row.creditAdj}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.debitAdj}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', color: collectionColor }}>{row.collection}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', color: (row.accountCredit || '').startsWith('+') ? '#007b3e' : '#000' }}>{row.accountCredit}</TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-
-            {!loading && mappedModifications.length > 0 && (
-              <>
-                {/* Totals Rows */}
-                <TableRow sx={{ backgroundColor: '#fff' }}>
-                  <TableCell colSpan={5} sx={{ fontWeight: 600, fontSize: '0.8rem' }}>totals modifications</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>{formatAmount(totalFees)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: totalCreditAdj < 0 ? '#d93025' : '#000' }}>{formatAmount(totalCreditAdj)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>{formatAmount(totalDebitAdj)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: totalCollection < 0 ? '#d93025' : totalCollection > 0 ? '#007b3e' : '#000' }}>{formatAmount(totalCollection, '+')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: totalAccountCredit < 0 ? '#d93025' : totalAccountCredit > 0 ? '#007b3e' : '#000' }}>{formatAmount(totalAccountCredit, '+')}</TableCell>
-                </TableRow>
-                <TableRow sx={{ backgroundColor: '#fff' }}>
-                  <TableCell colSpan={3} sx={{ border: 'none' }}></TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', backgroundColor: '#f5f5f5' }}>net prod modification</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', backgroundColor: '#f5f5f5' }}>(prod + adj)</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', backgroundColor: '#f5f5f5', color: netProd < 0 ? '#d93025' : '#000' }}>{formatAmount(netProd)}</TableCell>
-                  <TableCell colSpan={4} sx={{ border: 'none' }}></TableCell>
-                </TableRow>
-              </>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <ModificationsReportTable
+        mappedModifications={mappedModifications}
+        loading={loading}
+      />
     </ReportLayout>
   );
 };

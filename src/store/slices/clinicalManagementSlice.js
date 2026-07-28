@@ -127,6 +127,18 @@ export const addChecklistCategory = createAsyncThunk(
   }
 );
 
+export const deleteChecklistCategory = createAsyncThunk(
+  'clinicalManagement/deleteChecklistCategory',
+  async (name, { rejectWithValue }) => {
+    try {
+      await clinicalManagementService.deleteChecklistCategory(name);
+      return name;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to delete checklist category');
+    }
+  }
+);
+
 export const addChecklist = createAsyncThunk(
   'clinicalManagement/addChecklist',
   async ({ categoryName, checklistData }, { rejectWithValue }) => {
@@ -516,6 +528,10 @@ const clinicalManagementSlice = createSlice({
         if (!state.checklists[name]) {
           state.checklists[name] = [];
         }
+      })
+      .addCase(deleteChecklistCategory.fulfilled, (state, action) => {
+        const name = action.payload;
+        delete state.checklists[name];
       })
       .addCase(addChecklist.fulfilled, (state, action) => {
         const { categoryName, checklist } = action.payload;

@@ -844,7 +844,8 @@ const OperatorySchedulePage = () => {
 
     try {
       setFormSaving(true);
-      await createAppointment({
+      
+      const appointmentData = {
         patientId: formData.patientId,
         providerId: formData.providerId,
         appointmentDate: start.format("YYYY-MM-DD"),
@@ -858,15 +859,26 @@ const OperatorySchedulePage = () => {
         ...(formData.roomId && { roomId: formData.roomId }),
         ...(formData.customFields && { customFields: formData.customFields }),
         patientName: formData.patientName,
-      });
-      showSnackbar('Appointment created successfully', 'success');
+      };
+
+      if (editingAppointment) {
+        let apptId = editingAppointment._id || editingAppointment.id;
+        if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
+          apptId = apptId.replace('appt-', '');
+        }
+        await updateAppointment(apptId, appointmentData);
+        showSnackbar('Appointment updated successfully', 'success');
+      } else {
+        await createAppointment(appointmentData);
+        showSnackbar('Appointment created successfully', 'success');
+      }
       setFormOpen(false);
     } catch (err) {
       if (err.status === 409 || err.response?.status === 409) {
         const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
         showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
       } else {
-        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
+        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save appointment.';
         showSnackbar(msg, 'error');
       }
     } finally {

@@ -1,129 +1,184 @@
-import React, { useState } from 'react';
-import {
-  Box, Typography, Select, MenuItem, Button, TableCell, TableRow
-} from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
-
-const MOCK_FAMILIES = [
-  {
-    id: '196',
-    name: 'Family One',
-    patientCollection: '$0.00',
-    insuranceCollection: '$216.00',
-    totalCollection: '$216.00',
-    members: [
-      { id: '196', name: 'Member A', patientCollection: '$0.00', insuranceCollection: '$216.00', totalCollection: '$216.00' }
-    ]
-  },
-  {
-    id: '298',
-    name: 'Family Two',
-    patientCollection: '$0.00',
-    insuranceCollection: '$119.00',
-    totalCollection: '$119.00',
-    members: [
-      { id: '298', name: 'Member B', patientCollection: '$0.00', insuranceCollection: '$119.00', totalCollection: '$119.00' }
-    ]
-  },
-  {
-    id: '782',
-    name: 'Family Three',
-    patientCollection: '$0.00',
-    insuranceCollection: '$99.00',
-    totalCollection: '$99.00',
-    members: [
-      { id: '782', name: 'Member C', patientCollection: '$0.00', insuranceCollection: '$99.00', totalCollection: '$99.00' }
-    ]
-  }
-];
+import React, { useState, useEffect, useMemo } from 'react';
+import { CircularProgress, Box, Typography } from '@mui/material';
+import { ReportLayout } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import TotalCollectionFamilyFilters from '../../../../components/reports/financial/TotalCollectionFamilyFilters';
+import TotalCollectionFamilyTable from '../../../../components/reports/financial/TotalCollectionFamilyTable';
+import { reportingService } from '../../../../services/reporting.service';
 
 const TotalCollectionFamily = () => {
+  const initialStartDate = new Date().toISOString().split('T')[0];
+  const initialEndDate = new Date().toISOString().split('T')[0];
+
   const [dateRange, setDateRange] = useState('Daily');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+  const [sortBy, setSortBy] = useState('Default');
 
-  const topFilters = (
-    <>
-      <ReportSelect 
-        label={dateRange} 
-        prefix="Date Range:" 
-        value={dateRange} 
-        onChange={(e) => setDateRange(e.target.value)}
-        options={['Daily', 'Weekly']}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
-        <ChevronLeft sx={{ fontSize: '1.1rem', color: '#337ab7', cursor: 'pointer', '&:hover': { opacity: 0.7 } }} />
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 600, minWidth: 80, textAlign: 'center', whiteSpace: 'nowrap' }}>
-          May 08, 2026
-        </Typography>
-        <ChevronRight sx={{ fontSize: '1.1rem', color: '#337ab7', cursor: 'pointer', '&:hover': { opacity: 0.7 } }} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', whiteSpace: 'nowrap' }}>
-          05/08/2026
-        </Typography>
-      </Box>
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-      <ReportSelect 
-        defaultValue="Default"
-        prefix="Sort Report By:"
-        options={[
-          { value: 'Default', label: 'Default' },
-          { value: 'Amount', label: 'Amount' }
-        ]}
-      />
-    </>
-  );
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await reportingService.getFinancialReport('total-collection-family', {
+        startDate,
+        endDate
+      });
+      setReportData(res || []);
+    } catch (err) {
+      console.error('Failed to fetch total collection family report:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const columns = [
-    { label: 'ID', width: '80px' },
-    { label: 'Patient' },
-    { label: 'Patient Collection' },
-    { label: 'Insurance Collection' },
-    { label: 'Total Collection' },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, [startDate, endDate]);
 
-  const renderRow = (member, mIdx) => (
-    <TableRow key={mIdx} sx={{ backgroundColor: mIdx % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{member.id}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, color: '#337ab7', textDecoration: 'underline', cursor: 'pointer' }}>{member.name}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{member.patientCollection}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{member.insuranceCollection}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{member.totalCollection}</TableCell>
-    </TableRow>
-  );
+  const handleFilterModeChange = (e) => {
+    setDateRange(e.target.value);
+  };
+
+  const handleApply = () => {
+    fetchData();
+  };
+
+  const handleClear = () => {
+    setDateRange('Daily');
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setSortBy('Default');
+  };
+
+  const sortedData = useMemo(() => {
+    if (sortBy === 'Amount') {
+      return [...reportData].sort((a, b) => {
+        const valA = parseFloat((a.totalCollection || '0').replace(/[$,]/g, '')) || 0;
+        const valB = parseFloat((b.totalCollection || '0').replace(/[$,]/g, '')) || 0;
+        return valB - valA;
+      });
+    }
+    return reportData;
+  }, [reportData, sortBy]);
+
+  const handleExportCSV = () => {
+    const headers = ['Family / Member ID', 'Name / Patient', 'Patient Collection', 'Insurance Collection', 'Total Collection'];
+    const rows = [];
+
+    sortedData.forEach(family => {
+      // Family summary row
+      rows.push([
+        family.id,
+        family.name.toUpperCase(),
+        family.patientCollection,
+        family.insuranceCollection,
+        family.totalCollection
+      ]);
+
+      // Member rows
+      family.members.forEach(member => {
+        rows.push([
+          `  ${member.id}`,
+          member.name,
+          member.patientCollection,
+          member.insuranceCollection,
+          member.totalCollection
+        ]);
+      });
+
+      // Spacing row
+      rows.push(['', '', '', '', '']);
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Total_Collection_Family_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Total Collection Family Report</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('h2 { color: #2262ef; }');
+    printWindow.document.write('.family-box { display: flex; gap: 20px; background: #f8fafc; padding: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 11px; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h2>Total Collection By Family Report</h2>');
+    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
+
+    sortedData.forEach(family => {
+      printWindow.document.write(`<h3>${family.name}</h3>`);
+      printWindow.document.write(`
+        <div class="family-box">
+          <span><strong>Total Patient Collection:</strong> ${family.patientCollection}</span>
+          <span><strong>Total Insurance Collection:</strong> ${family.insuranceCollection}</span>
+          <span><strong>Total Collection:</strong> ${family.totalCollection}</span>
+        </div>
+      `);
+      printWindow.document.write('<table><thead><tr><th>ID</th><th>Patient</th><th>Patient Collection</th><th>Insurance Collection</th><th>Total Collection</th></tr></thead><tbody>');
+      family.members.forEach(member => {
+        printWindow.document.write(`<tr><td>${member.id}</td><td>${member.name}</td><td>${member.patientCollection}</td><td>${member.insuranceCollection}</td><td>${member.totalCollection}</td></tr>`);
+      });
+      printWindow.document.write('</tbody></table>');
+    });
+
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
 
   return (
     <ReportLayout title="Total Collection By Family Report:">
-      <ReportFilterBar 
-        topRowFilters={topFilters}
-        onApplyFilters={() => console.log('Apply')}
-        onExportCsv={() => alert('Exporting CSV...')}
-        onPrint={() => window.print()}
+      <TotalCollectionFamilyFilters
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        sortBy={sortBy}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setSortBy={setSortBy}
+        handleFilterModeChange={handleFilterModeChange}
+        handleApply={handleApply}
+        handleClear={handleClear}
       />
 
-      {/* Families List */}
-      {MOCK_FAMILIES.map((family, fIdx) => (
-        <Box key={fIdx} sx={{ mb: 5 }}>
-          <Box sx={{ mb: 1.5 }}>
-            <Typography sx={{ fontSize: '0.85rem', color: '#337ab7', fontWeight: 600 }}>
-              Total Patient Collection: <Typography component="span" sx={{ fontWeight: 400, color: '#333', ml: 1 }}>{family.patientCollection}</Typography>
-            </Typography>
-            <Typography sx={{ fontSize: '0.85rem', color: '#337ab7', fontWeight: 600 }}>
-              Total Insurance Collection: <Typography component="span" sx={{ fontWeight: 400, color: '#333', ml: 1 }}>{family.insuranceCollection}</Typography>
-            </Typography>
-            <Typography sx={{ fontSize: '0.85rem', color: '#337ab7', fontWeight: 600 }}>
-              Total Collection: <Typography component="span" sx={{ fontWeight: 600, color: '#333', ml: 1 }}>{family.totalCollection}</Typography>
-            </Typography>
-          </Box>
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={sortedData.length > 0}
+      />
 
-          <ReportDataTable 
-            columns={columns} 
-            data={family.members} 
-            renderRow={renderRow} 
-          />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
         </Box>
-      ))}
+      ) : sortedData.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No data available for the selected filters.
+        </Typography>
+      ) : (
+        <TotalCollectionFamilyTable families={sortedData} />
+      )}
     </ReportLayout>
   );
 };

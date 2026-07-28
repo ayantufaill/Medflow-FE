@@ -53,30 +53,35 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
       <DialogTitle sx={{ 
+        backgroundColor: '#fff',
+        color: '#0f172a',
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        py: 3,
+        px: 4,
+        lineHeight: 1.3,
+        borderBottom: '1px solid #f1f5f9',
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        borderBottom: '1px solid #e0e0e0',
-        py: 2
       }}>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#1a3a6b' }}>
-          {selectedFeeGuide}'S PLANS
-        </Typography>
-        <IconButton onClick={onClose} size="small">
+        {selectedFeeGuide}'S PLANS
+        <IconButton onClick={onClose} size="small" sx={{ color: '#64748b' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ p: 3 }}>
-        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, color: '#333' }}>
+      <DialogContent sx={{ p: 4, mt: 1 }}>
+        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: '#334155' }}>
           Insurance Plans:
         </Typography>
-        <TableContainer>
+        <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-root': { borderBottom: '2px solid #e0e0e0', color: '#4b71a1', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' } }}>
                 <TableCell padding="checkbox">
                   <Checkbox 
                     size="small" 
@@ -94,7 +99,7 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
             </TableHead>
             <TableBody>
               {mockPlans.map((plan, index) => (
-                <TableRow key={index} sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #f0f0f0', py: 1.5, color: '#333', fontSize: '0.875rem' } }}>
+                <TableRow key={index} sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #f1f5f9', py: 1.5, color: '#1e293b', fontSize: '0.85rem' } }}>
                   <TableCell padding="checkbox">
                     <Checkbox 
                       size="small" 

@@ -148,7 +148,44 @@ const OnlineScheduleConfiguration = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box
+      sx={{
+        bgcolor: '#FBFCFE',
+        borderRadius: '12px',
+        border: '1px solid #DFE5EC',
+        p: { xs: 2, sm: 3, md: 4 },
+        fontFamily: '"Segoe UI", sans-serif'
+      }}
+    >
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h6" fontWeight="bold" color="#11223F">
+          Online Schedule
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<SaveIcon sx={{ width: 14, height: 14 }} />}
+            onClick={handleSave}
+            sx={{
+              width: '166.59px',
+              height: '30.67px',
+              borderRadius: '8px',
+              bgcolor: '#3B63E0',
+              textTransform: 'none',
+              fontSize: '12px',
+              boxShadow: 'none',
+              '&:hover': {
+                bgcolor: '#2f51bd',
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Save Configuration
+          </Button>
+        </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Section 1 — Scheduling Details */}
       <SchedulingDetailsSection
         settings={settings}
@@ -180,24 +217,6 @@ const OnlineScheduleConfiguration = () => {
       {/* Section 5 — Analytics Setup */}
       <AnalyticsSetupSection />
 
-      {/* Save Configuration Button */}
-      <Box display="flex" justifyContent="flex-end">
-        <Button
-          variant="contained"
-          startIcon={<SaveIcon />}
-          onClick={handleSave}
-          sx={{
-            backgroundColor: '#2563eb',
-            textTransform: 'none',
-            borderRadius: 5,
-            px: 4,
-            py: 1,
-            fontSize: '0.85rem',
-            '&:hover': { backgroundColor: '#1d4ed8' },
-          }}
-        >
-          Save Configuration
-        </Button>
       </Box>
     </Box>
   );

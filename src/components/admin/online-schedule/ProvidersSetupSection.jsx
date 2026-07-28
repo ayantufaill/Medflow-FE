@@ -32,7 +32,7 @@ const ProvidersSetupSection = ({
   return (
     <Paper
       elevation={0}
-      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}
+      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}
     >
       <SectionHeader
         number={3}
@@ -112,7 +112,7 @@ const ProvidersSetupSection = ({
         </Box>
 
         {/* Provider Table */}
-        <TableContainer>
+        <TableContainer sx={{ borderRadius: '6px', overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f8fafc' }}>

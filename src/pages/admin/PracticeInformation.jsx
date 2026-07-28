@@ -45,7 +45,7 @@ const DEFAULT_REFERRALS = [
 const PracticeInformation = () => {
   const dispatch = useDispatch();
   const { data: practiceData, loading, error: reduxError, updateError } = useSelector((state) => state.practiceInfo);
-  
+
   const [success, setSuccess] = useState('');
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -147,7 +147,7 @@ const PracticeInformation = () => {
       if (practiceData.logoPath) {
         setLogoPreview(practiceData.logoPath);
       }
-      
+
       if (practiceData.practiceSettings) {
         if (practiceData.practiceSettings.services) setServices(practiceData.practiceSettings.services);
         if (practiceData.practiceSettings.paymentMethods) setPaymentMethods(practiceData.practiceSettings.paymentMethods);
@@ -166,23 +166,52 @@ const PracticeInformation = () => {
   const handleLogoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { 
-      setLocalError('Logo must be under 5 MB.'); 
-      return; 
+    if (file.size > 5 * 1024 * 1024) {
+      setLocalError('Logo must be under 5 MB.');
+      return;
     }
     setLocalError('');
     dispatch(clearPracticeInfoError());
-    
+
     const reader = new FileReader();
     reader.onloadend = () => setLogoPreview(reader.result);
     reader.readAsDataURL(file);
     setLogoFile(file);
   };
 
+  const getInitialCustomState = () => {
+    let initialServices = [];
+    let initialPaymentMethods = [];
+    let initialReferrals = DEFAULT_REFERRALS;
+    let initialCareTeam = [];
+
+    if (practiceData?.practiceSettings) {
+      if (practiceData.practiceSettings.services) initialServices = practiceData.practiceSettings.services;
+      if (practiceData.practiceSettings.paymentMethods) initialPaymentMethods = practiceData.practiceSettings.paymentMethods;
+      if (practiceData.practiceSettings.referrals) {
+        initialReferrals = practiceData.practiceSettings.referrals.map(r => typeof r === 'string' ? { name: r, isDeleted: false } : r);
+      }
+      if (practiceData.practiceSettings.careTeam) {
+        initialCareTeam = practiceData.practiceSettings.careTeam.map(c => typeof c === 'string' ? { name: c, isDeleted: false } : c);
+      }
+    }
+    return { initialServices, initialPaymentMethods, initialReferrals, initialCareTeam };
+  };
+
+  const { initialServices, initialPaymentMethods, initialReferrals, initialCareTeam } = getInitialCustomState();
+
+  const hasChanges =
+    methods.formState.isDirty ||
+    logoFile !== null ||
+    JSON.stringify(services) !== JSON.stringify(initialServices) ||
+    JSON.stringify(paymentMethods) !== JSON.stringify(initialPaymentMethods) ||
+    JSON.stringify(referrals) !== JSON.stringify(initialReferrals) ||
+    JSON.stringify(careTeam) !== JSON.stringify(initialCareTeam);
+
   const onSubmit = async (formData) => {
     setLocalError('');
     dispatch(clearPracticeInfoError());
-    
+
     // Helper: omit keys with empty-string / null / undefined values
     const stripEmpty = (obj) => {
       const result = {};
@@ -262,6 +291,7 @@ const PracticeInformation = () => {
         await dispatch(createPracticeInfo(payload)).unwrap();
       }
       setSuccess('Saved successfully.');
+      setLogoFile(null);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       // error handled in redux state
@@ -274,13 +304,13 @@ const PracticeInformation = () => {
 
   return (
     <FormProvider {...methods}>
-      <Box 
-        component="form" 
-        onSubmit={methods.handleSubmit(onSubmit)} 
-        sx={{ 
-          bgcolor: '#F4F5F7', 
-          borderRadius: '12px', 
-          border: '1px solid #e0e0e0', 
+      <Box
+        component="form"
+        onSubmit={methods.handleSubmit(onSubmit)}
+        sx={{
+          bgcolor: '#FBFCFE',
+          borderRadius: '12px',
+          border: '1px solid #e0e0e0',
           p: { xs: 2, sm: 3, md: 4 },
           fontFamily: '"Segoe UI", sans-serif'
         }}
@@ -290,21 +320,26 @@ const PracticeInformation = () => {
             Practice Information
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button 
-              type="submit" 
-              variant="contained" 
+            <Button
+              type="submit"
+              variant="contained"
               startIcon={<SaveIcon sx={{ width: 14, height: 14 }} />}
-              sx={{ 
+              disabled={!hasChanges}
+              sx={{
                 width: '93.53px',
                 height: '35.33px',
-                borderRadius: '8px', 
+                borderRadius: '8px',
                 bgcolor: '#2F6FED',
-                textTransform: 'none', 
+                textTransform: 'none',
                 fontSize: '12px',
                 boxShadow: 'none',
                 '&:hover': {
                   bgcolor: '#2558be',
                   boxShadow: 'none'
+                },
+                '&.Mui-disabled': {
+                  bgcolor: '#E5E7EB',
+                  color: '#9CA3AF'
                 }
               }}
             >
@@ -313,7 +348,7 @@ const PracticeInformation = () => {
           </Box>
         </Box>
 
-        {errorMsg && <Alert severity="error" sx={{ mb: 2 }} onClose={() => {setLocalError(''); dispatch(clearPracticeInfoError());}}>{errorMsg}</Alert>}
+        {errorMsg && <Alert severity="error" sx={{ mb: 2 }} onClose={() => { setLocalError(''); dispatch(clearPracticeInfoError()); }}>{errorMsg}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, mb: 2 }}>
@@ -324,7 +359,7 @@ const PracticeInformation = () => {
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
           <OnyxStripeBilling />
-          <AdditionalInformation 
+          <AdditionalInformation
             services={services} setServices={setServices}
             paymentMethods={paymentMethods} setPaymentMethods={setPaymentMethods}
             referrals={referrals} setReferrals={setReferrals}

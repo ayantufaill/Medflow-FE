@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Box, Dialog } from "@mui/material";
+import { Box, Dialog, Alert } from "@mui/material";
 import dayjs from "dayjs";
 import { shortlistService } from "../../services/shortlist.service";
 
@@ -81,6 +81,7 @@ const AddNewPatientAppointmentForm = ({
   // Tracks whether the user has tried to submit at least once — required-field
   // borders only turn red after a failed attempt, not while the form is still empty on open.
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
@@ -91,6 +92,13 @@ const AddNewPatientAppointmentForm = ({
     const occupied = new Set();
     appointments.forEach(appt => {
       if (!appt.appointmentDate || !appt.roomId || !appt.startTime) return;
+      
+      if (initialAppointment) {
+        const apptId = String(appt.id || appt._id).replace('appt-', '');
+        const editId = String(initialAppointment.id || initialAppointment._id).replace('appt-', '');
+        if (apptId === editId) return;
+      }
+
       const apptDateStr = String(appt.appointmentDate).slice(0, 10);
       if (apptDateStr !== selectedStart.format("YYYY-MM-DD")) return;
 
@@ -118,7 +126,7 @@ const AddNewPatientAppointmentForm = ({
     });
 
     return occupied;
-  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins]);
+  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins, initialAppointment]);
 
   useEffect(() => {
     if (open) {
@@ -590,7 +598,7 @@ const AddNewPatientAppointmentForm = ({
 
     const start = dateTime || dayjs();
     if (start.isBefore(dayjs().startOf('day'))) {
-      alert("Appointment date cannot be in the past.");
+      setErrorMessage("Appointment date cannot be in the past.");
       return null;
     }
 
@@ -624,18 +632,18 @@ const AddNewPatientAppointmentForm = ({
 
     const checkedProcedures = procedures.filter(p => p.checked);
     if (checkedProcedures.length === 0) {
-      alert("Please select at least one procedure to create an appointment.");
+      setErrorMessage("Please select at least one procedure to create an appointment.");
       return;
     }
 
     if (durationMins <= 0) {
-      alert("Please enter a valid appointment duration (greater than 0 minutes).");
+      setErrorMessage("Please enter a valid appointment duration (greater than 0 minutes).");
       return;
     }
 
     const startH = dateTime.hour();
     if (startH < 7 || startH >= 21) {
-      alert("Appointments can only be scheduled between 7:00 AM and 9:00 PM.");
+      setErrorMessage("Appointments can only be scheduled between 7:00 AM and 9:00 PM.");
       return;
     }
 
@@ -651,7 +659,7 @@ const AddNewPatientAppointmentForm = ({
 
   const handleConvertToShortlist = async () => {
     if (!patient) {
-      alert("Please select a patient first.");
+      setErrorMessage("Please select a patient first.");
       return;
     }
     const payload = getAppointmentPayload();
@@ -668,7 +676,7 @@ const AddNewPatientAppointmentForm = ({
       if (onCancel) onCancel(); // Close modal
     } catch (err) {
       console.error("Shortlist operation failed:", err);
-      alert(`Failed to ${isShortlistEditMode ? 'update' : 'convert to'} shortlist. See console for details.`);
+      setErrorMessage(`Failed to ${isShortlistEditMode ? 'update' : 'convert to'} shortlist. See console for details.`);
     }
   };
 
@@ -704,7 +712,13 @@ const AddNewPatientAppointmentForm = ({
           visitType={visitType}
         />
 
-        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+        {errorMessage && (
+          <Alert severity="error" sx={{ mx: 2, mt: 2, mb: 1 }} onClose={() => setErrorMessage("")}>
+            {errorMessage}
+          </Alert>
+        )}
+
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0, mt: errorMessage ? 0 : 2 }}>
           <AppointmentLeftPanel
             patients={patients}
             loadingPatients={loadingPatients}

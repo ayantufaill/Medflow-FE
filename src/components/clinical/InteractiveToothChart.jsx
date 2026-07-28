@@ -17,7 +17,8 @@ const InteractiveToothChart = ({
   onSidebarSurfaceClick,
   onMaxToggle,
   onManToggle,
-  isTreatmentPlan = false
+  isTreatmentPlan = false,
+  selectedSidebarSurfaces = []
 }) => {
 
   const renderTooth = (n) => {
@@ -68,15 +69,19 @@ const InteractiveToothChart = ({
         minWidth: 'min-content'
       }}>
       {/* Surface Selection Sidebar */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mr: 3, flexShrink: 0, mt: -1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mr: 3, flexShrink: 0, alignSelf: 'center' }}>
         {['V', 'C', 'B/F', 'M', 'O/I', 'D', 'L', 'MO', 'DO', 'MOD'].map(lbl => (
           <Box 
             key={lbl} 
             onClick={() => onSidebarSurfaceClick && onSidebarSurfaceClick(lbl)}
             sx={{ 
-              width: 32, height: 28, border: '1px solid #ddd', 
+              width: 32, height: 28, 
+              border: selectedSidebarSurfaces.includes(lbl) ? '1px solid #3b82f6' : '1px solid #ddd', 
+              bgcolor: selectedSidebarSurfaces.includes(lbl) ? '#eff6ff' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: fontSize.xs, color: '#666', borderRadius: '2px',
+              fontSize: fontSize.xs, 
+              color: selectedSidebarSurfaces.includes(lbl) ? '#3b82f6' : '#666', 
+              borderRadius: '2px',
               cursor: 'pointer', transition: 'all 0.2s',
               '&:hover': { bgcolor: '#f0f4f8', borderColor: '#3b82f6', color: '#3b82f6' }
             }}
