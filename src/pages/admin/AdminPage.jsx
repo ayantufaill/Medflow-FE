@@ -13,6 +13,7 @@ import ServicesListPage from '../services/ServicesListPage';
 import PaymentTerminals from './PaymentTerminals';
 import KioskAccountsView from './KioskAccountsView';
 import InformedConsent from './InformedConsent';
+//removes extra imports
 import PrePostOps from './PrePostOps';
 import ReportsDashboard from './ReportsDashboard';
 import AdvancedReporting from './AdvancedReporting';
