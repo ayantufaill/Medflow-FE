@@ -142,21 +142,21 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '60px' }}>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Pt</Typography>
-                            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${row.buckets[bucket].pt.toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${(row.buckets?.[bucket]?.pt || 0).toFixed(2)}</Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Ins</Typography>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>${row.buckets[bucket].ins.toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>${(row.buckets?.[bucket]?.ins || 0).toFixed(2)}</Typography>
                           </Box>
                         </Box>
                       </TableCell>
                     ))}
                     <TableCell align="right">
-                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.total.toFixed(2)}</Typography>
+                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${(row.total || 0).toFixed(2)}</Typography>
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.totalOwings.toFixed(2)}</TableCell>
-                    {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.paymentPlan.toFixed(2)}</TableCell>}
-                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.credit.toFixed(2)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${(row.totalOwings || 0).toFixed(2)}</TableCell>
+                    {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${(row.paymentPlan || 0).toFixed(2)}</TableCell>}
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${(row.credit || 0).toFixed(2)}</TableCell>
                     <TableCell sx={{ color: '#475569' }}>{row.lastBilled || '07/15/2022'}</TableCell>
                     <TableCell className="no-print">
                       <Box 
