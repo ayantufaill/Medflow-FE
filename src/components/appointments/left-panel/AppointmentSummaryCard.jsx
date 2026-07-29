@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Select, MenuItem, IconButton } from '@mui/material';
+import { Box, Typography, Select, MenuItem, IconButton, CircularProgress } from '@mui/material';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useDispatch } from 'react-redux';
 import { updateAppointmentThunk } from '../../../store/slices/appointmentSlice';
 import { COLORS } from '../../../constants/colors';
 import { fontWeight } from '../../../constants/styles';
 import { STATUS_OPTIONS } from '../new-appointment/constants';
+import { appointmentService } from '../../../services/appointment.service';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
 
 const STATUS_CONFIG = {
   PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
@@ -32,9 +35,11 @@ const StatusBanner = ({ status }) => {
 // Receives the appointment object directly as a prop from LeftPanel
 const AppointmentSummaryCard = ({ appointment }) => {
   const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
 
   // Local state for optimistic UI updates
   const [localStatus, setLocalStatus] = useState(String(appointment?.status || 'unconfirmed').toLowerCase());
+  const [sendingChannel, setSendingChannel] = useState(null); // 'email' | 'sms' | null
 
   // Sync local status when a new appointment is selected
   useEffect(() => {
@@ -123,10 +128,30 @@ const AppointmentSummaryCard = ({ appointment }) => {
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
     setLocalStatus(newStatus); // Optimistic update
-    
+
     const id = appointment.id || appointment._id;
     if (id) {
       dispatch(updateAppointmentThunk({ appointmentId: id, payload: { status: newStatus } }));
+    }
+  };
+
+  const handleSendConfirmation = async (channel) => {
+    const id = appointment.id || appointment._id;
+    if (!id || sendingChannel) return;
+    setSendingChannel(channel);
+    try {
+      const result = await appointmentService.sendConfirmationNotification(id, [channel]);
+      const channelResult = channel === 'email' ? result?.email : channel === 'whatsapp' ? result?.whatsapp : result?.sms;
+      const channelLabel = channel === 'email' ? 'email' : channel === 'whatsapp' ? 'WhatsApp message' : 'text';
+      if (channelResult?.sent) {
+        showSnackbar(`Confirmation ${channelLabel} sent`, 'success', { vertical: 'top', horizontal: 'right' });
+      } else {
+        showSnackbar(channelResult?.reason || 'Could not send confirmation', 'warning', { vertical: 'top', horizontal: 'right' });
+      }
+    } catch (error) {
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to send confirmation', 'error', { vertical: 'top', horizontal: 'right' });
+    } finally {
+      setSendingChannel(null);
     }
   };
 
@@ -167,11 +192,32 @@ const AppointmentSummaryCard = ({ appointment }) => {
             ))}
           </Select>
           <Box sx={{ display: 'flex', gap: '4px' }}>
-            <IconButton size="small" sx={{ p: '4px', color: COLORS.ACCENT }}>
-              <MailOutlineIcon sx={{ fontSize: '16px' }} />
+            <IconButton
+              size="small"
+              title="Send confirmation email"
+              onClick={() => handleSendConfirmation('email')}
+              disabled={sendingChannel !== null}
+              sx={{ p: '4px', color: COLORS.ACCENT }}
+            >
+              {sendingChannel === 'email' ? <CircularProgress size={16} /> : <MailOutlineIcon sx={{ fontSize: '16px' }} />}
             </IconButton>
-            <IconButton size="small" sx={{ p: '4px', color: COLORS.ACCENT }}>
-              <ChatOutlinedIcon sx={{ fontSize: '16px' }} />
+            <IconButton
+              size="small"
+              title="Send confirmation text"
+              onClick={() => handleSendConfirmation('sms')}
+              disabled={sendingChannel !== null}
+              sx={{ p: '4px', color: COLORS.ACCENT }}
+            >
+              {sendingChannel === 'sms' ? <CircularProgress size={16} /> : <ChatOutlinedIcon sx={{ fontSize: '16px' }} />}
+            </IconButton>
+            <IconButton
+              size="small"
+              title="Send confirmation via WhatsApp"
+              onClick={() => handleSendConfirmation('whatsapp')}
+              disabled={sendingChannel !== null}
+              sx={{ p: '4px', color: '#25D366' }}
+            >
+              {sendingChannel === 'whatsapp' ? <CircularProgress size={16} /> : <WhatsAppIcon sx={{ fontSize: '16px' }} />}
             </IconButton>
           </Box>
         </Box>
