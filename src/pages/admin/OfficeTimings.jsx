@@ -135,60 +135,63 @@ const OfficeTimings = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ p: 4, bgcolor: '#fff', minHeight: '100vh' }}>
-        {/* Outer Office Timing Container */}
-        <Paper
-          elevation={0}
-          sx={{
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-            backgroundColor: '#fff',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Container Title + Buttons */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
-            <Typography fontWeight={700} fontSize="1.15rem">
-              Office Timing
-            </Typography>
-            <Box display="flex" gap={2}>
-              <Button
-                variant="outlined"
-                sx={{
-                  textTransform: 'none',
-                  px: 3,
-                  borderColor: '#2563eb',
-                  color: '#2563eb',
-                  '&:hover': {
-                    borderColor: '#1d4ed8',
-                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                  },
-                }}
-              >
-                Re-Generate
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                onClick={handleSave}
-                disabled={updateLoading}
-                sx={{
-                  textTransform: 'none',
-                  px: 3,
-                  backgroundColor: '#2563eb',
-                  '&:hover': {
-                    backgroundColor: '#1d4ed8',
-                  },
-                }}
-              >
-                {updateLoading ? 'Saving...' : 'Save Timings'}
-              </Button>
-            </Box>
+      <Box
+        sx={{
+          bgcolor: '#FBFCFE',
+          borderRadius: '12px',
+          border: '1px solid #DFE5EC',
+          p: { xs: 2, sm: 3, md: 4 },
+          fontFamily: '"Segoe UI", sans-serif'
+        }}
+      >
+        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="h6" fontWeight="bold" color="#11223F">
+            Office Timings
+          </Typography>
+          <Box display="flex" gap={2}>
+            <Button
+              variant="outlined"
+              sx={{
+                textTransform: 'none',
+                height: '30.67px',
+                px: 2,
+                fontSize: '12px',
+                borderRadius: '8px',
+                borderColor: '#3B63E0',
+                color: '#3B63E0',
+                '&:hover': {
+                  borderColor: '#2f51bd',
+                  backgroundColor: 'rgba(59, 99, 224, 0.08)',
+                },
+              }}
+            >
+              Re-Generate
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={updateLoading ? <CircularProgress size={14} color="inherit" /> : <SaveIcon sx={{ width: 14, height: 14 }} />}
+              onClick={handleSave}
+              disabled={updateLoading}
+              sx={{
+                height: '30.67px',
+                borderRadius: '8px',
+                bgcolor: '#3B63E0',
+                textTransform: 'none',
+                fontSize: '12px',
+                boxShadow: 'none',
+                '&:hover': {
+                  bgcolor: '#2f51bd',
+                  boxShadow: 'none'
+                }
+              }}
+            >
+              {updateLoading ? 'Saving...' : 'Save Timings'}
+            </Button>
           </Box>
+        </Box>
 
-          {/* Cycles Section */}
-          <Box sx={{ mx: 3, mb: 3 }}>
+        {/* Cycles Section */}
+          <Box sx={{ mb: 3 }}>
             <OfficeTimingCycles
               cycles={timings.cycles || []}
               showAddCycle={showAddCycle}
@@ -202,14 +205,13 @@ const OfficeTimings = () => {
           </Box>
 
           {/* Schedule Section */}
-          <Box sx={{ mx: 3, mb: 3 }}>
+          <Box sx={{ mb: 3 }}>
             <OfficeTimingScheduleEditor
               days={days}
               timings={timings}
               onTimingChange={handleTimingChange}
             />
           </Box>
-        </Paper>
       </Box>
     </LocalizationProvider>
   );
