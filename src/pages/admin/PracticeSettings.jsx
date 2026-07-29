@@ -57,10 +57,10 @@ import {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PracticeSettings = () => {
-  const [search, setSearch]         = useState('');
-  const contentRef                  = useRef(null);
+  const [search, setSearch] = useState('');
+  const contentRef = useRef(null);
   const { showSnackbar } = useSnackbar();
-  
+
   const [settings, setSettings] = useState({});
   const practiceInfo = useSelector(selectPracticeInfo);
   const dispatch = useDispatch();
@@ -78,6 +78,8 @@ const PracticeSettings = () => {
 
   const handleChange = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
 
+  const hasChanges = JSON.stringify(settings) !== JSON.stringify(practiceInfo?.practiceSettings || {});
+
   const handleSave = async () => {
     try {
       let id = practiceInfo?._id || practiceInfo?.id;
@@ -90,7 +92,7 @@ const PracticeSettings = () => {
         })).unwrap();
         id = newPractice._id || newPractice.id;
       }
-      
+
       await dispatch(updatePracticeSettings({ practiceInfoId: id, practiceSettingsData: settings })).unwrap();
       showSnackbar('Practice Settings saved successfully', 'success');
     } catch (error) {
@@ -103,11 +105,11 @@ const PracticeSettings = () => {
 
   return (
     <SettingsContext.Provider value={{ settings, handleChange }}>
-      <Box 
-        sx={{ 
-          bgcolor: '#F4F5F7', 
-          borderRadius: '12px', 
-          border: '1px solid #e0e0e0', 
+      <Box
+        sx={{
+          bgcolor: '#FBFCFE',
+          borderRadius: '12px',
+          border: '1px solid #DFE5EC',
           p: { xs: 2, sm: 3, md: 4 },
           fontFamily: '"Segoe UI", sans-serif'
         }}
@@ -115,7 +117,7 @@ const PracticeSettings = () => {
         <Box sx={{ display: 'flex', gap: 3, position: 'relative' }}>
           {/* ── Main content ── */}
           <Box ref={contentRef} sx={{ flex: 1, minWidth: 0 }}>
-  
+
             {/* Header + Search */}
             <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
               <Typography variant="h6" fontWeight="bold" color="#11223F">
@@ -134,7 +136,7 @@ const PracticeSettings = () => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ 
+                  sx={{
                     width: '220px',
                     '& .MuiOutlinedInput-root': {
                       height: '31.33px',
@@ -144,21 +146,26 @@ const PracticeSettings = () => {
                     }
                   }}
                 />
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   startIcon={<SaveIcon sx={{ width: 14, height: 14 }} />}
                   onClick={handleSave}
-                  sx={{ 
+                  disabled={!hasChanges}
+                  sx={{
                     width: '166.59px',
                     height: '30.67px',
-                    borderRadius: '8px', 
+                    borderRadius: '8px',
                     bgcolor: '#3B63E0',
-                    textTransform: 'none', 
+                    textTransform: 'none',
                     fontSize: '12px',
                     boxShadow: 'none',
                     '&:hover': {
                       bgcolor: '#2f51bd',
                       boxShadow: 'none'
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: '#E5E7EB',
+                      color: '#9CA3AF'
                     }
                   }}
                 >
@@ -167,92 +174,92 @@ const PracticeSettings = () => {
               </Box>
             </Box>
 
-        {/* ── First Row: AI & Aging Report ── */}
-        <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
-          <Box id="ai" sx={{ width: { xs: '100%', md: '30%' }, flexShrink: 0 }}>
-            <AI />
+            {/* ── First Row: AI & Aging Report ── */}
+            <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+              <Box id="ai" sx={{ width: { xs: '100%', md: '30%' }, flexShrink: 0 }}>
+                <AI />
+              </Box>
+              <Box id="aging-report" sx={{ flex: 1, minWidth: 0 }}>
+                <AgingReport />
+              </Box>
+            </Box>
+
+            {/* ── Automated Workflows ── */}
+            <Box id="automated-workflows" sx={{ mb: 4 }}>
+              <AutomatedWorkflows />
+            </Box>
+
+            {/* ── Claim Management ── */}
+            <Box id="claim-management" sx={{ mb: 4 }}>
+              <ClaimManagement />
+            </Box>
+
+            {/* ── Communication ── */}
+            <Box id="communication" sx={{ mb: 4 }}>
+              <Communication />
+            </Box>
+
+            {/* ── Exam Page Items ── */}
+            <Box id="exam-page-items" sx={{ mb: 4 }}>
+              <ExamPageItems />
+            </Box>
+
+            {/* ── General ── */}
+            <Box id="general" sx={{ mb: 4 }}>
+              <General />
+            </Box>
+
+            {/* ── Imaging Settings ── */}
+            <Box id="imaging-settings" sx={{ mb: 4 }}>
+              <ImagingSettings />
+            </Box>
+
+            {/* ── Insurance (for NEA/Vyne offices) ── */}
+            <Box id="insurance-nea-vyne" sx={{ mb: 4 }}>
+              <Insurance />
+            </Box>
+
+            {/* ── Menu Items ── */}
+            <Box id="menu-items" sx={{ mb: 4 }}>
+              <MenuItems />
+            </Box>
+
+            {/* ── Patient Confidential Info ── */}
+            <Box id="patient-confidential-info" sx={{ mb: 4 }}>
+              <PatientConfidentialInfo />
+            </Box>
+
+            {/* ── Reports ── */}
+            <Box id="reports" sx={{ mb: 4 }}>
+              <Reports />
+            </Box>
+
+            {/* ── Templates (Emails/Texts) ── */}
+            <Box id="templates" sx={{ mb: 4 }}>
+              <Templates />
+            </Box>
+
+            {/* ── Text Editors ── */}
+            <Box id="text-editors" sx={{ mb: 4 }}>
+              <TextEditors />
+            </Box>
+
+            {/* ── Time Clock ── */}
+            <Box id="time-clock" sx={{ mb: 4 }}>
+              <TimeClock />
+            </Box>
+
+            {/* ── Treatment Plan Page ── */}
+            <Box id="treatment-plan-page" sx={{ mb: 4 }}>
+              <TreatmentPlanPage />
+            </Box>
+
+            {/* ── Treatment Printout Form ── */}
+            <Box id="treatment-printout-form" sx={{ mb: 4 }}>
+              <TreatmentPrintoutForm />
+            </Box>
+
           </Box>
-          <Box id="aging-report" sx={{ flex: 1, minWidth: 0 }}>
-            <AgingReport />
-          </Box>
-        </Box>
-
-        {/* ── Automated Workflows ── */}
-        <Box id="automated-workflows" sx={{ mb: 4 }}>
-          <AutomatedWorkflows />
-        </Box>
-
-        {/* ── Claim Management ── */}
-        <Box id="claim-management" sx={{ mb: 4 }}>
-          <ClaimManagement />
-        </Box>
-
-        {/* ── Communication ── */}
-        <Box id="communication" sx={{ mb: 4 }}>
-          <Communication />
-        </Box>
-
-        {/* ── Exam Page Items ── */}
-        <Box id="exam-page-items" sx={{ mb: 4 }}>
-          <ExamPageItems />
-        </Box>
-
-        {/* ── General ── */}
-        <Box id="general" sx={{ mb: 4 }}>
-          <General />
-        </Box>
-
-        {/* ── Imaging Settings ── */}
-        <Box id="imaging-settings" sx={{ mb: 4 }}>
-          <ImagingSettings />
-        </Box>
-
-        {/* ── Insurance (for NEA/Vyne offices) ── */}
-        <Box id="insurance-nea-vyne" sx={{ mb: 4 }}>
-          <Insurance />
-        </Box>
-
-        {/* ── Menu Items ── */}
-        <Box id="menu-items" sx={{ mb: 4 }}>
-          <MenuItems />
-        </Box>
-
-        {/* ── Patient Confidential Info ── */}
-        <Box id="patient-confidential-info" sx={{ mb: 4 }}>
-          <PatientConfidentialInfo />
-        </Box>
-
-        {/* ── Reports ── */}
-        <Box id="reports" sx={{ mb: 4 }}>
-          <Reports />
-        </Box>
-
-        {/* ── Templates (Emails/Texts) ── */}
-        <Box id="templates" sx={{ mb: 4 }}>
-          <Templates />
-        </Box>
-
-        {/* ── Text Editors ── */}
-        <Box id="text-editors" sx={{ mb: 4 }}>
-          <TextEditors />
-        </Box>
-
-        {/* ── Time Clock ── */}
-        <Box id="time-clock" sx={{ mb: 4 }}>
-          <TimeClock />
-        </Box>
-
-        {/* ── Treatment Plan Page ── */}
-        <Box id="treatment-plan-page" sx={{ mb: 4 }}>
-          <TreatmentPlanPage />
-        </Box>
-
-        {/* ── Treatment Printout Form ── */}
-        <Box id="treatment-printout-form" sx={{ mb: 4 }}>
-          <TreatmentPrintoutForm />
-        </Box>
-
-      </Box>
 
 
         </Box>

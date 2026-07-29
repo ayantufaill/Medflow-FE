@@ -128,7 +128,7 @@ const PlanFormDialog = ({
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" fontWeight={600} sx={{ color: '#475569', mb: 0.5, display: 'block' }}>Plan Fee Guide:</Typography>
               <FormControl fullWidth size="small">
-                <Select value="None" sx={{ fontSize: '0.85rem' }}>
+                <Select value="None" sx={{ fontSize: '0.85rem' }} MenuProps={{ sx: { zIndex: 10000 } }}>
                   <MenuItem value="None">None</MenuItem>
                 </Select>
               </FormControl>

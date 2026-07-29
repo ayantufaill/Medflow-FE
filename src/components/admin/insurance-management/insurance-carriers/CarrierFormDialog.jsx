@@ -131,6 +131,7 @@ const CarrierFormDialog = ({
                 value={carrier.country || 'United States'}
                 onChange={(e) => setCarrier({ ...carrier, country: e.target.value })}
                 sx={{ fontSize: '0.85rem' }}
+                MenuProps={{ sx: { zIndex: 10000 } }}
               >
                 <MenuItem value="United States">United States</MenuItem>
                 <MenuItem value="Canada">Canada</MenuItem>
@@ -165,6 +166,7 @@ const CarrierFormDialog = ({
                 displayEmpty
                 onChange={(e) => setCarrier({ ...carrier, state: e.target.value, city: '' })}
                 sx={{ fontSize: '0.85rem' }}
+                MenuProps={{ sx: { zIndex: 10000 } }}
               >
                 <MenuItem value="" disabled>State/Province</MenuItem>
                 {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
@@ -239,6 +241,7 @@ const CarrierFormDialog = ({
                 onChange={(e) => setCarrier({ ...carrier, claimType: e.target.value })}
                 sx={{ fontSize: '0.85rem' }}
                 displayEmpty
+                MenuProps={{ sx: { zIndex: 10000 } }}
               >
                 <MenuItem value="" disabled>Select Type</MenuItem>
                 <MenuItem value="Dental">Dental</MenuItem>
