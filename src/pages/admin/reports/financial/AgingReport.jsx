@@ -521,52 +521,68 @@ const AgingReport = () => {
 
           <Box id="aging-report-all-tables">
             {appliedFilters.arRange === 'any' ? (
-            agingBuckets.map((bucket, index) => {
-              const bucketData = filteredReportData.filter((r) => {
-                let oldest = null;
-                for (let i = agingBuckets.length - 1; i >= 0; i--) {
-                  if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
-                    oldest = agingBuckets[i];
-                    break;
-                  }
-                }
-                if (!oldest) oldest = agingBuckets[0];
-                return oldest === bucket;
-              });
+              filteredReportData.length === 0 ? (
+                <AgingReportTable 
+                  tableId="aging-report-table-empty"
+                  loading={loading}
+                  reportData={[]}
+                  hidePatientNames={hidePatientNames}
+                  agingBuckets={agingBuckets}
+                  totals={null}
+                  showFlags={appliedFilters.showFlags}
+                  showPaymentPlan={appliedFilters.paymentPlanOwing}
+                  setSelectedPatientForNotes={setSelectedPatientForNotes}
+                  selectedNames={selectedNames}
+                  setSelectedNames={setSelectedNames}
+                />
+              ) : (
+                agingBuckets.map((bucket, index) => {
+                  const bucketData = filteredReportData.filter((r) => {
+                    let oldest = null;
+                    for (let i = agingBuckets.length - 1; i >= 0; i--) {
+                      if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
+                        oldest = agingBuckets[i];
+                        break;
+                      }
+                    }
+                    if (!oldest) oldest = agingBuckets[0];
+                    return oldest === bucket;
+                  });
 
-              if (bucketData.length === 0) return null;
-              const tableId = `aging-report-table-${index}`;
+                  if (bucketData.length === 0) return null;
+                  const tableId = `aging-report-table-${index}`;
 
-              return (
-                <Box key={bucket} sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
-                    {bucket} Group
-                  </Typography>
-                  <Box className="hide-on-print">
-                    <AgingReportActions 
-                      hidePatientNames={hidePatientNames} 
-                      setHidePatientNames={setHidePatientNames} 
-                      onExportCsv={() => handleExportCSV(bucket, bucketData)}
-                      onPrint={() => handlePrint(tableId, bucket)}
-                      isSubTable={true}
-                    />
-                  </Box>
-                  <AgingReportTable 
-                    tableId={tableId}
-                    loading={loading}
-                    reportData={bucketData}
-                    hidePatientNames={hidePatientNames}
-                    agingBuckets={agingBuckets}
-                    totals={totals}
-                    showFlags={appliedFilters.showFlags}
-                    showPaymentPlan={appliedFilters.paymentPlanOwing}
-                    setSelectedPatientForNotes={setSelectedPatientForNotes}
-                    selectedNames={selectedNames}
-                    setSelectedNames={setSelectedNames}
-                  />
-                </Box>
-              );
-            })
+                  return (
+                    <Box key={bucket} sx={{ mb: 4 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
+                        {bucket} Group
+                      </Typography>
+                      <Box className="hide-on-print">
+                        <AgingReportActions 
+                          hidePatientNames={hidePatientNames} 
+                          setHidePatientNames={setHidePatientNames} 
+                          onExportCsv={() => handleExportCSV(bucket, bucketData)}
+                          onPrint={() => handlePrint(tableId, bucket)}
+                          isSubTable={true}
+                        />
+                      </Box>
+                      <AgingReportTable 
+                        tableId={tableId}
+                        loading={loading}
+                        reportData={bucketData}
+                        hidePatientNames={hidePatientNames}
+                        agingBuckets={agingBuckets}
+                        totals={totals}
+                        showFlags={appliedFilters.showFlags}
+                        showPaymentPlan={appliedFilters.paymentPlanOwing}
+                        setSelectedPatientForNotes={setSelectedPatientForNotes}
+                        selectedNames={selectedNames}
+                        setSelectedNames={setSelectedNames}
+                      />
+                    </Box>
+                  );
+                })
+              )
           ) : (
               <AgingReportTable 
                 tableId="aging-report-table"
