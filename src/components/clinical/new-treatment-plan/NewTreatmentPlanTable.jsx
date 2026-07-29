@@ -30,8 +30,8 @@ import editSvg from '../../../assets/treatmentplan/edit.svg';
 import toggleViewSvg from '../../../assets/treatmentplan/toggle_view.svg';
 import arrowUpSvg from '../../../assets/treatmentplan/Arrow_up.svg';
 
-const NewTreatmentPlanTable = ({ treatmentPlans }) => {
-  const [activeFilters, setActiveFilters] = useState(['Referred', 'Scheduled', 'Planned']);
+const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems }) => {
+  const [activeFilters, setActiveFilters] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
   const handleStatusSelect = (e) => {
@@ -99,27 +99,38 @@ const NewTreatmentPlanTable = ({ treatmentPlans }) => {
           <IconButton size="small"><Box component="img" src={arrowUpSvg} alt="arrow up" sx={{ width: 18, height: 18 }} /></IconButton>
           <IconButton size="small"><Box component="img" src={uploadSvg} alt="upload" sx={{ width: 18, height: 18 }} /></IconButton>
           <IconButton size="small"><Box component="img" src={documentSvg} alt="copy" sx={{ width: 18, height: 18 }} /></IconButton>
-          <IconButton size="small"><Box component="img" src={deleteSvg} alt="delete" sx={{ width: 18, height: 18 }} /></IconButton>
+          <IconButton size="small" onClick={() => {
+            if (selectedRows.length > 0 && onDeleteItems) {
+              onDeleteItems(selectedRows);
+              setSelectedRows([]); // Clear selection
+            }
+          }}>
+            <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 18, height: 18 }} />
+          </IconButton>
           
           <Chip label={`${filteredPlans.length} procedures`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 600, ml: 1, borderRadius: '4px' }} />
-          <Typography variant="caption" sx={{ color: '#64748b', ml: 1 }}>Filtered results</Typography>
-          <Typography 
-            variant="caption" 
-            onClick={handleClearFilters}
-            sx={{ color: '#3b82f6', ml: 1, cursor: 'pointer', fontWeight: 600 }}
-          >
-            Clear all filters
-          </Typography>
-          
-          {activeFilters.map(status => (
-            <Chip 
-              key={status}
-              label={status} 
-              onDelete={() => handleRemoveFilter(status)}
-              size="small" 
-              sx={{ bgcolor: '#eff6ff', color: '#2563eb', borderRadius: '4px', ml: 1, '& .MuiChip-deleteIcon': { color: '#2563eb' } }} 
-            />
-          ))}
+          {activeFilters.length > 0 && (
+            <>
+              <Typography variant="caption" sx={{ color: '#64748b', ml: 1 }}>Filtered results</Typography>
+              <Typography 
+                variant="caption" 
+                onClick={handleClearFilters}
+                sx={{ color: '#3b82f6', ml: 1, cursor: 'pointer', fontWeight: 600 }}
+              >
+                Clear all filters
+              </Typography>
+              
+              {activeFilters.map(status => (
+                <Chip 
+                  key={status}
+                  label={status} 
+                  onDelete={() => handleRemoveFilter(status)}
+                  size="small" 
+                  sx={{ bgcolor: '#eff6ff', color: '#2563eb', borderRadius: '4px', ml: 1, '& .MuiChip-deleteIcon': { color: '#2563eb' } }} 
+                />
+              ))}
+            </>
+          )}
         </Box>
         <IconButton size="small">
           <Box component="img" src={editSvg} alt="edit" sx={{ width: 18, height: 18 }} />

@@ -6,7 +6,7 @@ import notesSvg from '../../../assets/treatmentplan/mdi_notes-outline.svg';
 
 const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram }) => {
   return (
-    <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Paper elevation={0} sx={{ p: 2, mb: 1, borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {/* Left Date Pill */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, bgcolor: '#e6f0ff', px: 1.5, height: '30px', borderRadius: '15px' }}>
@@ -24,7 +24,14 @@ const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram }) => {
         </Box>
       </Box>
       <Box sx={{ display: 'flex', gap: 1 }}>
-        <Button variant="outlined" size="small" startIcon={<Box component="img" src={notesSvg} alt="notes" sx={{ width: 16, height: 16 }} />} sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b' }}>Notes</Button>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          startIcon={<Box component="img" src={notesSvg} alt="notes" sx={{ width: 16, height: 16 }} />} 
+          sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b' }}
+        >
+          Notes
+        </Button>
         <Button 
           variant="contained" 
           size="small" 

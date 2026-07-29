@@ -117,7 +117,7 @@ const spouseEmailField = (disabled) => [
 
 const EMERGENCY_CONTACT_FIELDS = [
   { name: "emergencyContactName", label: "Full Name", type: "text", required: "Emergency contact name is required", placeholder: "Contact full name", gridSize: { xs: 12, sm: 4 } },
-  { name: "emergencyRelationship", label: "Relationship", type: "select", required: "Relationship is required", gridSize: { xs: 12, sm: 4 },
+  { name: "emergencyRelationship", label: "Relationship", type: "select", gridSize: { xs: 12, sm: 4 },
     options: [{ value: "", label: "Select relationship" }, ...["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"].map((r) => ({ value: r, label: r }))] },
   { name: "emergencyHomePhone", label: "Home Phone", type: "phone", gridSize: { xs: 12, sm: 4 } },
   { name: "emergencyWorkPhone", label: "Work Phone", type: "phone", gridSize: { xs: 12, sm: 4 } },
@@ -202,7 +202,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
     const payload = removeEmptyCustomFields({
       firstName: trimValue(values.firstName), lastName: trimValue(values.lastName), middleName: trimValue(values.middleName) || "", preferredName: trimValue(values.preferredName) || "",
-      dateOfBirth: formatDateValue(values.dateOfBirth), gender: values.genderIdentity || values.sexAtBirth || "", ssn: (values.ssn || "").replace(/\D/g, ""),
+      dateOfBirth: formatDateValue(values.dateOfBirth), gender: (() => { const g = values.genderIdentity || values.sexAtBirth || ""; return g === "intersex" ? "unknown" : g; })(), ssn: (values.ssn || "").replace(/\D/g, ""),
       phonePrimary: normalizePhone(values.mobileNumber || values.homePhoneNumber), phoneSecondary: normalizePhone(values.homePhoneNumber || values.workPhoneNumber), email: trimValue(values.emailAddress) || "",
       preferredLanguage: "en", communicationPreference: (() => {
         const prefs = [];
@@ -310,7 +310,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormField label="Gender Identity">
                   <Controller name="genderIdentity" control={control} render={({ field }) => (
-                    <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label:"Male / Man",value:"male"}, {label:"Female / Woman",value:"female"}, {label:"Non-binary",value:"non-binary"}, {label:"Prefer not to say",value:"prefer_not_to_say"}]} />
+                    <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label:"Male / Man",value:"male"}, {label:"Female / Woman",value:"female"}, {label:"Non-binary",value:"non_binary"}, {label:"Prefer not to say",value:"prefer_not_to_say"}]} />
                   )} />
                 </FormField>
               </Grid>
