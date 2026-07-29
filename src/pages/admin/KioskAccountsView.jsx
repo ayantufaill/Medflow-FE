@@ -105,16 +105,21 @@ const KioskAccountsView = () => {
   }
 
   return (
-    <Box sx={{
-      border: '1px solid #DFE5EC',
-      borderRadius: 2,
-      bgcolor: '#FBFCFE',
-      p: 3,
-    }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+    <Box
+      sx={{
+        bgcolor: '#FBFCFE',
+        borderRadius: '12px',
+        border: '1px solid #DFE5EC',
+        p: { xs: 2, sm: 3, md: 4 },
+        fontFamily: '"Segoe UI", sans-serif'
+      }}
+    >
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h6" fontWeight="bold" color="#11223F">
           Kiosk Accounts
         </Typography>
+      </Box>
+      <Box sx={{ mb: 3 }}>
         <KioskAccessSection
           kioskLink={kioskLink}
           password={password}
