@@ -343,10 +343,44 @@ const MyChartConfiguration = () => {
   }
 
   return (
-    <>
-      <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mb: 3 }}>MyChart Configuration</Typography>
+    <Box
+      sx={{
+        bgcolor: '#FBFCFE',
+        borderRadius: '12px',
+        border: '1px solid #DFE5EC',
+        p: { xs: 2, sm: 3, md: 4 },
+        fontFamily: '"Segoe UI", sans-serif'
+      }}
+    >
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h6" fontWeight="bold" color="#11223F">
+          MyChart Configuration
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<SaveIcon sx={{ width: 14, height: 14 }} />}
+            onClick={handleSave}
+            sx={{
+              width: '166.59px',
+              height: '30.67px',
+              borderRadius: '8px',
+              bgcolor: '#3B63E0',
+              textTransform: 'none',
+              fontSize: '12px',
+              boxShadow: 'none',
+              '&:hover': {
+                bgcolor: '#2f51bd',
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Save Configuration
+          </Button>
+        </Box>
+      </Box>
 
-          <Box sx={{ display: 'flex', gap: 2.5, width: '100%', mb: 2.5, flexDirection: { xs: 'column', md: 'row' } }}>
+      <Box sx={{ display: 'flex', gap: 2.5, width: '100%', mb: 2.5, flexDirection: { xs: 'column', md: 'row' } }}>
             {/* ROW 1 */}
             <Box sx={{ flex: { xs: '1 1 auto', md: 3 } }}>
               {/* Colors Section */}
@@ -690,18 +724,7 @@ const MyChartConfiguration = () => {
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<SaveIcon />}
-              onClick={handleSave}
-              sx={{ borderRadius: 2, textTransform: 'none', px: 4, py: 1.2 }}
-            >
-              Save Configuration
-            </Button>
-          </Box>
-    </>
+    </Box>
   );
 };
 
