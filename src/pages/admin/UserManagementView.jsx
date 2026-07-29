@@ -124,7 +124,7 @@ const RoleBlock = ({ roleName, users }) => {
   if (users.length === 0) return null;
 
   return (
-    <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1, overflow: 'hidden' }}>
+    <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '6px', overflow: 'hidden' }}>
       <Box
         onClick={() => setExpanded((p) => !p)}
         sx={{

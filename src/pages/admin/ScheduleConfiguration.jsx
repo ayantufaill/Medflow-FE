@@ -161,7 +161,7 @@ const ScheduleConfiguration = () => {
   // Sync route slip and checklist settings from Redux
   useEffect(() => {
     if (practiceData?.scheduleConfig?.routeSlipSettings) {
-      setRouteSlipSettings(prev => ({...prev, ...practiceData.scheduleConfig.routeSlipSettings}));
+      setRouteSlipSettings(prev => ({ ...prev, ...practiceData.scheduleConfig.routeSlipSettings }));
     }
     if (practiceData?.scheduleConfig?.enableRouteSlip !== undefined) {
       setEnableRouteSlip(practiceData.scheduleConfig.enableRouteSlip);
@@ -176,16 +176,16 @@ const ScheduleConfiguration = () => {
       setCheckOutChecklist(practiceData.scheduleConfig.checkOutChecklist);
     }
     if (practiceData?.scheduleConfig?.generalSettings) {
-      setGeneralSettings(prev => ({...prev, ...practiceData.scheduleConfig.generalSettings}));
+      setGeneralSettings(prev => ({ ...prev, ...practiceData.scheduleConfig.generalSettings }));
     }
     if (practiceData?.scheduleConfig?.appointmentCardHeader) {
-      setAppointmentCardHeader(prev => ({...prev, ...practiceData.scheduleConfig.appointmentCardHeader}));
+      setAppointmentCardHeader(prev => ({ ...prev, ...practiceData.scheduleConfig.appointmentCardHeader }));
     }
     if (practiceData?.scheduleConfig?.appointmentCardSettings) {
-      setAppointmentCardSettings(prev => ({...prev, ...practiceData.scheduleConfig.appointmentCardSettings}));
+      setAppointmentCardSettings(prev => ({ ...prev, ...practiceData.scheduleConfig.appointmentCardSettings }));
     }
     if (practiceData?.scheduleConfig?.treatmentScheduleSettings) {
-      setTreatmentScheduleSettings(prev => ({...prev, ...practiceData.scheduleConfig.treatmentScheduleSettings}));
+      setTreatmentScheduleSettings(prev => ({ ...prev, ...practiceData.scheduleConfig.treatmentScheduleSettings }));
     }
     if (practiceData?.scheduleConfig?.statusColors && practiceData.scheduleConfig.statusColors.length > 0) {
       setStatusColors(practiceData.scheduleConfig.statusColors);
@@ -242,7 +242,7 @@ const ScheduleConfiguration = () => {
     else if (category === 'checkIn') setCheckInChecklist(prev => prev.filter((_, i) => i !== index));
     else if (category === 'checkOut') setCheckOutChecklist(prev => prev.filter((_, i) => i !== index));
   };
-  
+
   const [expandedSections, setExpandedSections] = useState({
     patientDetails: false,
     accountDetails: false,
@@ -261,23 +261,23 @@ const ScheduleConfiguration = () => {
     patientPrefDentist: true,
     patientPrefHygienist: true,
     patientReferringSources: true,
-    
+
     totalOutstanding: true,
     individualOutstanding: true,
     insuranceOutstanding: true,
-    
+
     carrierName: true,
     subscriberId: true,
     groupNumber: true,
-    
+
     apptTime: true,
     apptReason: true,
     apptProvider: true,
-    
+
     nextApptDate: true,
     nextApptTime: true,
     nextApptReason: true,
-    
+
     printableNotes: true,
     customHeader: false,
   });
@@ -288,114 +288,114 @@ const ScheduleConfiguration = () => {
 
   return (
     <ThemeProvider theme={scheduleConfigTheme}>
-      <Box 
-        sx={{ 
-          bgcolor: '#F4F5F7', 
-          borderRadius: '12px', 
-          border: '1px solid #e0e0e0', 
+      <Box
+        sx={{
+          bgcolor: '#FBFCFE',
+          borderRadius: '12px',
+          border: '1px solid #e0e0e0',
           p: { xs: 2, sm: 3, md: 4 },
           fontFamily: '"Segoe UI", sans-serif'
         }}
       >
-      {/* --- HEADER SECTION --- */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 4,
-          flexWrap: 'wrap',
-          gap: 2
-        }}
-      >
-        <Typography variant="h6" fontWeight="bold" color="#11223F">
-          Schedule Configuration
-        </Typography>
-        
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={handleSave}
-          disabled={updateLoading}
-          sx={{ borderRadius: 1.5, textTransform: 'none', px: 2, py: 1 }}
-          startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <img src={SaveConfigIcon} alt="Save" style={{ width: 16, height: 16 }} />}
+        {/* --- HEADER SECTION --- */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 4,
+            flexWrap: 'wrap',
+            gap: 2
+          }}
         >
-          {updateLoading ? 'Saving...' : 'Save Configuration'}
-        </Button>
-      </Box>
+          <Typography variant="h6" fontWeight="bold" color="#11223F">
+            Schedule Configuration
+          </Typography>
 
-      {/* --- CONTENT SECTION --- */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        
-        {/* General Settings */}
-        <GeneralSettings generalSettings={generalSettings} setGeneralSettings={setGeneralSettings} />
-
-        {/* Appointment Card Header & Settings */}
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' }, alignItems: 'stretch' }}>
-          <Box sx={{ width: { xs: '100%', sm: '320px' }, flexShrink: 0 }}>
-            <AppointmentCardHeader appointmentCardHeader={appointmentCardHeader} setAppointmentCardHeader={setAppointmentCardHeader} />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <AppointmentCardSettings appointmentCardSettings={appointmentCardSettings} setAppointmentCardSettings={setAppointmentCardSettings} />
-          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSave}
+            disabled={updateLoading}
+            sx={{ borderRadius: 1.5, textTransform: 'none', px: 2, py: 1 }}
+            startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <img src={SaveConfigIcon} alt="Save" style={{ width: 16, height: 16 }} />}
+          >
+            {updateLoading ? 'Saving...' : 'Save Configuration'}
+          </Button>
         </Box>
 
-        {/* Treatment & Schedule Settings */}
-        <TreatmentScheduleSettings treatmentScheduleSettings={treatmentScheduleSettings} setTreatmentScheduleSettings={setTreatmentScheduleSettings} />
+        {/* --- CONTENT SECTION --- */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-        {/* Appointment Status Colors */}
-        <AppointmentStatusColors statusColors={statusColors} setStatusColors={setStatusColors} />
+          {/* General Settings */}
+          <GeneralSettings generalSettings={generalSettings} setGeneralSettings={setGeneralSettings} />
 
-        {/* Appointment Types Settings */}
-        <AppointmentTypesSetting apptTypes={appointmentTypes} setApptTypes={setAppointmentTypes} />
+          {/* Appointment Card Header & Settings */}
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' }, alignItems: 'stretch' }}>
+            <Box sx={{ width: { xs: '100%', sm: '320px' }, flexShrink: 0 }}>
+              <AppointmentCardHeader appointmentCardHeader={appointmentCardHeader} setAppointmentCardHeader={setAppointmentCardHeader} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <AppointmentCardSettings appointmentCardSettings={appointmentCardSettings} setAppointmentCardSettings={setAppointmentCardSettings} />
+            </Box>
+          </Box>
 
-        {/* Tooltip, Patient Info & Route Slip */}
-        <TooltipPatientInfoRouteSlip 
-          enableRouteSlip={enableRouteSlip}
-          setEnableRouteSlip={setEnableRouteSlip}
-          routeSlipSettings={routeSlipSettings}
-          setRouteSlipSettings={setRouteSlipSettings}
-          expandedSections={expandedSections}
-          toggleSection={toggleSection}
-        />
+          {/* Treatment & Schedule Settings */}
+          <TreatmentScheduleSettings treatmentScheduleSettings={treatmentScheduleSettings} setTreatmentScheduleSettings={setTreatmentScheduleSettings} />
 
-        {/* Appointment Checklists */}
-        <AppointmentChecklist 
-          preApptChecklist={preApptChecklist}
-          checkInChecklist={checkInChecklist}
-          checkOutChecklist={checkOutChecklist}
-          handleAddItem={handleAddItem}
-          handleDeleteItem={handleDeleteItem}
-        />
-      </Box>
+          {/* Appointment Status Colors */}
+          <AppointmentStatusColors statusColors={statusColors} setStatusColors={setStatusColors} />
 
-      {/* Add Checklist Item Dialog */}
-      <Dialog open={addItemModalOpen} onClose={() => setAddItemModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Segoe UI", sans-serif', fontWeight: 600, fontSize: '16px' }}>
-          Add {addItemCategory === 'preAppt' ? 'Pre-appointment' : addItemCategory === 'checkIn' ? 'Check-in' : 'Check-out'} Checklist Item
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Item Description"
-            type="text"
-            fullWidth
-            variant="outlined"
-            size="small"
-            value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitNewItem();
-            }}
+          {/* Appointment Types Settings */}
+          <AppointmentTypesSetting apptTypes={appointmentTypes} setApptTypes={setAppointmentTypes} />
+
+          {/* Tooltip, Patient Info & Route Slip */}
+          <TooltipPatientInfoRouteSlip
+            enableRouteSlip={enableRouteSlip}
+            setEnableRouteSlip={setEnableRouteSlip}
+            routeSlipSettings={routeSlipSettings}
+            setRouteSlipSettings={setRouteSlipSettings}
+            expandedSections={expandedSections}
+            toggleSection={toggleSection}
           />
-        </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={() => setAddItemModalOpen(false)} sx={{ textTransform: 'none', color: '#6b7280' }}>Cancel</Button>
-          <Button onClick={submitNewItem} variant="contained" color="primary" sx={{ textTransform: 'none', boxShadow: 'none', borderRadius: '4px' }}>Add Item</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+
+          {/* Appointment Checklists */}
+          <AppointmentChecklist
+            preApptChecklist={preApptChecklist}
+            checkInChecklist={checkInChecklist}
+            checkOutChecklist={checkOutChecklist}
+            handleAddItem={handleAddItem}
+            handleDeleteItem={handleDeleteItem}
+          />
+        </Box>
+
+        {/* Add Checklist Item Dialog */}
+        <Dialog open={addItemModalOpen} onClose={() => setAddItemModalOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ fontFamily: '"Segoe UI", sans-serif', fontWeight: 600, fontSize: '16px' }}>
+            Add {addItemCategory === 'preAppt' ? 'Pre-appointment' : addItemCategory === 'checkIn' ? 'Check-in' : 'Check-out'} Checklist Item
+          </DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Item Description"
+              type="text"
+              fullWidth
+              variant="outlined"
+              size="small"
+              value={newItemText}
+              onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitNewItem();
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2, pt: 0 }}>
+            <Button onClick={() => setAddItemModalOpen(false)} sx={{ textTransform: 'none', color: '#6b7280' }}>Cancel</Button>
+            <Button onClick={submitNewItem} variant="contained" color="primary" sx={{ textTransform: 'none', boxShadow: 'none', borderRadius: '4px' }}>Add Item</Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </ThemeProvider>
   );
 };

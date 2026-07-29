@@ -28,7 +28,7 @@ import MacOSInstallationSteps from '../../components/admin/installation/MacOSIns
 const InstallationGuide = () => {
   const [selectedOs, setSelectedOs] = useState('');
   const [submittedOs, setSubmittedOs] = useState('');
-  
+
   // --- DIALOG STATE FOR SCHEDULING ---
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduledSuccess, setScheduledSuccess] = useState(false);
@@ -76,19 +76,19 @@ const InstallationGuide = () => {
   const submitBtnHover = '#3b5d8a';
 
   return (
-    <Box sx={{ 
-      p: 4, 
-      bgcolor: '#FFFFFF', 
-      borderRadius: '12px', 
+    <Box sx={{
+      p: 4,
+      bgcolor: '#FBFCFE',
+      borderRadius: '12px',
       border: '1px solid #E2E8F0',
       minHeight: '266px' // from the figma design, though it will expand with content
     }}>
-      
+
       {/* Header Container */}
       <Box sx={{ mb: 1 }}>
-        <Typography 
-          variant="subtitle1" 
-          fontWeight="bold" 
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
           color="#11223F"
           sx={{ fontSize: '16px' }}
         >
@@ -98,10 +98,10 @@ const InstallationGuide = () => {
 
       {/* Main Form/Wizard Area */}
       {!submittedOs ? (
-        <OSSelectionCard 
-          selectedOs={selectedOs} 
-          setSelectedOs={setSelectedOs} 
-          onSubmit={handleOsSubmit} 
+        <OSSelectionCard
+          selectedOs={selectedOs}
+          setSelectedOs={setSelectedOs}
+          onSubmit={handleOsSubmit}
         />
       ) : (
         /* STEP-BY-STEP GUIDES */
@@ -144,7 +144,7 @@ const InstallationGuide = () => {
               <Typography variant="body2" sx={{ color: '#666', mb: 2.5, lineHeight: 1.5 }}>
                 Book a 15-minute call with an Oryx integration specialist to help you set up or troubleshoot your imaging workstations.
               </Typography>
-              
+
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <TextField
                   label="Your Name"
@@ -154,7 +154,7 @@ const InstallationGuide = () => {
                   value={scheduleForm.name}
                   onChange={(e) => setScheduleForm(prev => ({ ...prev, name: e.target.value }))}
                 />
-                
+
                 <TextField
                   label="Your Email"
                   type="email"
@@ -205,19 +205,19 @@ const InstallationGuide = () => {
                 />
               </Box>
             </DialogContent>
-            
+
             <DialogActions sx={{ px: 3, pb: 2.5 }}>
               <Button onClick={handleCloseSchedule} color="inherit" size="small" sx={{ textTransform: 'none' }}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                variant="contained" 
-                size="small" 
-                sx={{ 
-                  textTransform: 'none', 
+              <Button
+                type="submit"
+                variant="contained"
+                size="small"
+                sx={{
+                  textTransform: 'none',
                   backgroundColor: scheduleBtnBg,
-                  '&:hover': { backgroundColor: scheduleBtnHover } 
+                  '&:hover': { backgroundColor: scheduleBtnHover }
                 }}
               >
                 Confirm Booking
@@ -234,15 +234,15 @@ const InstallationGuide = () => {
             <Typography variant="body2" sx={{ color: '#718096', lineHeight: 1.5, mb: 3 }}>
               Thank you, <strong>{scheduleForm.name}</strong>. An onboarding calendar invite has been sent to <strong>{scheduleForm.email}</strong> for <strong>{scheduleForm.date}</strong> at <strong>{scheduleForm.timeSlot}</strong>.
             </Typography>
-            <Button 
-              variant="contained" 
-              onClick={handleCloseSchedule} 
-              size="small" 
-              sx={{ 
-                textTransform: 'none', 
-                backgroundColor: submitBtnBg, 
-                px: 4, 
-                '&:hover': { backgroundColor: submitBtnHover } 
+            <Button
+              variant="contained"
+              onClick={handleCloseSchedule}
+              size="small"
+              sx={{
+                textTransform: 'none',
+                backgroundColor: submitBtnBg,
+                px: 4,
+                '&:hover': { backgroundColor: submitBtnHover }
               }}
             >
               Close
