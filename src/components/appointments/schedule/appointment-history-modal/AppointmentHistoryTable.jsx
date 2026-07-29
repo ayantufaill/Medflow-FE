@@ -183,7 +183,7 @@ const AppointmentHistoryTable = ({
                 <TableCell>Type</TableCell>
                 <TableCell>Procedures</TableCell>
                 <TableCell>Duration</TableCell>
-                <TableCell>Provider</TableCell>
+                <TableCell sx={{ minWidth: 110 }}>Provider</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Audit</TableCell>
                 <TableCell>Reminders</TableCell>
@@ -231,7 +231,10 @@ const AppointmentHistoryTable = ({
                             color: "#166534", 
                             borderRadius: "4px", 
                             fontSize: "0.7rem", 
-                            fontWeight: 700 
+                            fontWeight: 700,
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                            maxWidth: "100%",
                           }}
                         >
                           {providerName}

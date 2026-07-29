@@ -161,6 +161,13 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
               body * { visibility: hidden; }
               .printable-content, .printable-content * { visibility: visible; }
               .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+              @page { size: landscape; margin: 10mm; }
+              .printable-content .MuiTableCell-paddingCheckbox { display: none !important; }
+              .printable-content .MuiTableHead-root th:nth-of-type(9),
+              .printable-content .MuiTableHead-root th:nth-of-type(10),
+              .printable-content .MuiTableBody-root td:nth-of-type(9),
+              .printable-content .MuiTableBody-root td:nth-of-type(10) { display: none !important; }
+              .printable-content .MuiTable-root { font-size: 0.75rem; table-layout: auto; width: 100%; }
             }
           `}
         </style>
