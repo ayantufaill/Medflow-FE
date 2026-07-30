@@ -8,7 +8,9 @@ import {
   Typography,
   TextField,
   Button,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const CarrierSyncDialog = ({ open, onClose }) => {
   return (
@@ -19,78 +21,94 @@ const CarrierSyncDialog = ({ open, onClose }) => {
       fullWidth
       sx={{ zIndex: 9999 }}
       PaperProps={{
-        sx: { borderRadius: 2, overflow: 'hidden' }
+        sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
       }}
     >
-      <DialogTitle
-        sx={{
-          backgroundColor: '#F8FAFC',
-          color: '#1e293b',
-          fontSize: '1rem',
-          fontWeight: 600,
-          py: 2,
-          px: 3,
-          lineHeight: 1.3,
-          borderBottom: '1px solid #e2e8f0'
-        }}
-      >
-        Select the offices you would like to sync with the source office
-      </DialogTitle>
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "10px", py: "10px",
+        borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ 
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Sync Carrier
+          </Typography>
+          <Typography sx={{ 
+            fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
+            textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
+          }}>
+            Select the offices you would like to sync with the source office.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       <DialogContent sx={{ mt: 3, px: 3 }}>
         <Box sx={{ mb: 3 }}>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#334155' }}>
+          <Typography sx={{ fontFamily: "Inter", mb: 1, fontWeight: 600, color: '#374151', fontSize: '12px' }}>
             Source Office:
           </Typography>
           <TextField
             fullWidth
+            variant="outlined"
             size="small"
             value="thedentalstudio"
             disabled
-            sx={{
-              '& .MuiInputBase-input': { backgroundColor: '#f1f5f9', fontSize: '0.85rem', color: '#64748b' },
-              '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #e2e8f0' }
+            InputProps={{
+              sx: { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#f1f5f9", color: "#6b7280" }
             }}
+            sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' } }}
           />
         </Box>
         <Box>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#334155' }}>
+          <Typography sx={{ fontFamily: "Inter", mb: 1, fontWeight: 600, color: '#374151', fontSize: '12px' }}>
             Target Offices
           </Typography>
-          <Box sx={{ p: 2, border: '1px solid #e2e8f0', borderRadius: 1, backgroundColor: '#f8fafc', textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+          <Box sx={{ p: 2, border: '1px solid #d0d5dd', borderRadius: "8px", backgroundColor: '#f8fafc', textAlign: 'center' }}>
+            <Typography sx={{ fontFamily: "Inter", color: '#6b7280', fontSize: "13px" }}>
               Select target offices from the list below...
             </Typography>
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-        <Button
+      <DialogActions sx={{ px: "20px", py: "12px", borderTop: '1px solid #e0e5eb', gap: 1.5, justifyContent: 'flex-end' }}>
+        <Button 
+          variant="outlined" 
           onClick={onClose}
-          variant="outlined"
-          sx={{
-            textTransform: 'none',
-            color: '#475569',
-            borderColor: '#cbd5e1',
-            fontSize: '0.85rem',
-            px: 3,
-            borderRadius: '6px',
-            '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#94a3b8' }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Cancel
         </Button>
-        <Button
+        <Button 
+          variant="contained" 
           onClick={onClose}
-          variant="contained"
-          sx={{
-            textTransform: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            fontSize: '0.85rem',
-            px: 4,
-            borderRadius: '6px',
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
           }}
         >
           Sync

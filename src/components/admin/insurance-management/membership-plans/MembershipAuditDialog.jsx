@@ -13,7 +13,9 @@ import {
   TableHead,
   TableRow,
   Button,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const MembershipAuditDialog = ({ open, onClose }) => {
   return (
@@ -23,11 +25,41 @@ const MembershipAuditDialog = ({ open, onClose }) => {
       maxWidth="md"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ backgroundColor: '#F8FAFC', color: '#1e293b', fontSize: '1.1rem', py: 2, px: 3, fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>
-        Audit Membership Plan History
-      </DialogTitle>
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "10px", py: "10px",
+        borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ 
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Audit Membership Plan History
+          </Typography>
+          <Typography sx={{ 
+            fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
+            textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
+          }}>
+            View the historical audit trail for this membership plan.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       <DialogContent sx={{ mt: 2, p: 0 }}>
         <TableContainer>
           <Table size="small">
@@ -97,13 +129,16 @@ const MembershipAuditDialog = ({ open, onClose }) => {
           </Table>
         </TableContainer>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, pt: 2, backgroundColor: '#F8FAFC', borderTop: '1px solid #e2e8f0' }}>
+      <DialogActions sx={{ px: "20px", py: "12px", borderTop: '1px solid #e0e5eb', gap: 1.5, justifyContent: 'flex-end' }}>
         <Button 
+          variant="outlined" 
           onClick={onClose}
-          variant="outlined"
           sx={{ 
-            textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', px: 3, borderRadius: '6px',
-            '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#94a3b8' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Close

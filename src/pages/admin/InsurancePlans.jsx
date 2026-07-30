@@ -251,16 +251,16 @@ const InsurancePlans = () => {
         onClose={(e) => { e.stopPropagation(); setSubscribersAnchorEl(null); }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-        PaperProps={{ sx: { p: 2, minWidth: 200 } }}
+        PaperProps={{ sx: { p: 2, minWidth: 200, borderRadius: "8px", boxShadow: "0 10px 40px rgba(0,0,0,0.1)" } }}
         disableRestoreFocus
       >
-        <Typography variant="caption" fontWeight={600} sx={{ display: 'block', mb: 1 }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: "13px", fontWeight: 600, color: '#374151', display: 'block', mb: 1 }}>
           Subscribers:
         </Typography>
         {!Array.isArray(activeSubscribers) ? (
-          <Typography variant="body2" color="text.secondary">Invalid subscriber data</Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280" }}>Invalid subscriber data</Typography>
         ) : activeSubscribers.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">No subscribers details available</Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#6b7280" }}>No subscribers details available</Typography>
         ) : (
           activeSubscribers.map((sub, i) => {
             let displayName = 'Unknown Subscriber';
@@ -271,7 +271,7 @@ const InsurancePlans = () => {
             else if (sub.subscriberName) displayName = sub.subscriberName;
             
             return (
-              <Typography key={i} variant="body2" sx={{ ml: 1, mb: 0.5 }}>
+              <Typography key={i} sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", ml: 1, mb: 0.5 }}>
                 - {displayName}
               </Typography>
             );
@@ -279,9 +279,15 @@ const InsurancePlans = () => {
         )}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
           <Button 
-            size="small" 
             variant="contained" 
-            sx={{ bgcolor: '#2563eb', color: '#fff', textTransform: 'none', boxShadow: 'none' }} 
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "16px", py: "5px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            }} 
             onClick={(e) => { 
               e.stopPropagation(); 
               e.currentTarget.blur();

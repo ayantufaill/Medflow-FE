@@ -13,8 +13,9 @@ import {
   Box,
   InputAdornment,
   Link,
+  IconButton
 } from '@mui/material';
-import { InfoOutlined as InfoIcon } from '@mui/icons-material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon, InfoOutlined as InfoIcon } from '@mui/icons-material';
 
 const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave }) => {
   if (!formData) return null;
@@ -26,42 +27,72 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
       maxWidth="md"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ backgroundColor: '#F8FAFC', color: '#1e293b', fontSize: '1.1rem', py: 2, px: 3, fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>
-        Add New Membership Plan
-      </DialogTitle>
-      <DialogContent sx={{ mt: 3, px: 3 }}>
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "10px", py: "10px",
+        borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ 
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Add New Membership Plan
+          </Typography>
+          <Typography sx={{ 
+            fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
+            textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
+          }}>
+            Configure membership plan details.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ mt: 1, px: 4, py: 3 }}>
         {/* Plan Details Section */}
         <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', mb: 2, color: '#1e293b' }}>Membership Plan Details</Typography>
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>MEMBERSHIP PLAN NAME *</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>MEMBERSHIP PLAN NAME *</Typography>
             <TextField 
               fullWidth size="small" placeholder="Enter plan name"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+              sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>MEMBERSHIP PLAN ANNUAL FEE *</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>MEMBERSHIP PLAN ANNUAL FEE *</Typography>
             <TextField 
               fullWidth size="small" placeholder="Enter annual fee"
               value={formData.annualFee}
               onChange={(e) => setFormData({...formData, annualFee: e.target.value})}
               InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-              sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+              sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>MEMBERSHIP PLAN MONTHLY FEE *</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>MEMBERSHIP PLAN MONTHLY FEE *</Typography>
             <TextField 
               fullWidth size="small" placeholder="Enter monthly fee"
               value={formData.monthlyFee}
               onChange={(e) => setFormData({...formData, monthlyFee: e.target.value})}
               InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-              sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+              sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
             />
           </Grid>
           <Grid item xs={12}>
@@ -82,7 +113,7 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
         <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', mb: 2, color: '#1e293b' }}>Coverage Details</Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>INDIVIDUAL ANNUAL MAX *</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>INDIVIDUAL ANNUAL MAX *</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <TextField 
                 fullWidth size="small" placeholder="Enter amount"
@@ -90,7 +121,7 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
                 value={formData.individualMax}
                 onChange={(e) => setFormData({...formData, individualMax: e.target.value})}
                 InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
               />
               <FormControlLabel
                 control={<Checkbox size="small" checked={formData.isIndividualMaxUnlimited} onChange={(e) => setFormData({...formData, isIndividualMaxUnlimited: e.target.checked})} sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} />}
@@ -100,7 +131,7 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
             </Box>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>FAMILY ANNUAL MAX *</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>FAMILY ANNUAL MAX *</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <TextField 
                 fullWidth size="small" placeholder="Enter amount"
@@ -108,7 +139,7 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
                 value={formData.familyMax}
                 onChange={(e) => setFormData({...formData, familyMax: e.target.value})}
                 InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
               />
               <FormControlLabel
                 control={<Checkbox size="small" checked={formData.isFamilyMaxUnlimited} onChange={(e) => setFormData({...formData, isFamilyMaxUnlimited: e.target.checked})} sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} />}
@@ -118,13 +149,13 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
             </Box>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>ORTHO LIFETIME LIMIT</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>ORTHO LIFETIME LIMIT</Typography>
             <TextField 
               fullWidth size="small" placeholder="Enter amount"
               value={formData.orthoLimit}
               onChange={(e) => setFormData({...formData, orthoLimit: e.target.value})}
               InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-              sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+              sx={{ "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px" }, "& .MuiInputBase-input": { color: "#374151" } }}
             />
           </Grid>
         </Grid>
@@ -140,23 +171,30 @@ const MembershipPlanFormDialog = ({ open, onClose, formData, setFormData, onSave
           />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1, backgroundColor: '#F8FAFC', borderTop: '1px solid #e2e8f0' }}>
-        <Button
+      <DialogActions sx={{ px: "20px", py: "12px", borderTop: '1px solid #e0e5eb', gap: 1.5, justifyContent: 'flex-end' }}>
+        <Button 
+          variant="outlined" 
           onClick={onClose}
-          variant="outlined"
-          sx={{
-            textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', fontSize: '0.85rem', px: 3, borderRadius: '6px',
-            '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#94a3b8' }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Cancel
         </Button>
-        <Button
+        <Button 
+          variant="contained" 
           onClick={onSave}
-          variant="contained"
-          sx={{
-            textTransform: 'none', backgroundColor: '#2563eb', color: '#fff', fontSize: '0.85rem', px: 3, borderRadius: '6px', boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
           }}
         >
           Create New Plan
