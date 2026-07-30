@@ -3,25 +3,10 @@ import { Box, Paper, MenuItem, Button, TextField, Autocomplete, CircularProgress
 import { OutlinedSelect } from '../../patients/form-components/formInputs';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProcedureCodes, fetchProcedureButtons, selectProcedureCodes, selectProcedureCodesLoading, selectProcedureButtons, selectProcedureButtonsLoading } from '../../../store/slices/feeGuideSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { COLORS } from '../../../constants/colors';
 import { roundedAutocompletePaperSx, radius, fontSize } from '../../../constants/styles';
 import { KeyboardArrowDown as ExpandMoreIcon } from '@mui/icons-material';
-
-const PROCEDURE_CATEGORIES = [
-  'Exam', 'Xray', 'Posterior Restorative', 'Ant Composite', 'Oral Surgery', 'Implantology', 'Periodontics',
-];
-
-const MOCK_PROCEDURES = [
-  { id: '1', name: 'Comp Ex', code: 'D0150' },
-  { id: '2', name: 'Periodic', code: 'D0120' },
-  { id: '3', name: 'Exam<3y', code: 'D0145' },
-  { id: '4', name: 'Limited Ex', code: 'D0140' },
-  { id: '5', name: 'Consultation', code: 'D9310' },
-  { id: '6', name: 'Fluor Varnish', code: 'D1206' },
-  { id: '7', name: 'ReEvaluation', code: 'D0171' },
-  { id: '8', name: 'Prophy Child', code: 'D1120' },
-  { id: '9', name: 'Prophy Adult', code: 'D1110' },
-];
 
 const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
   const dispatch = useDispatch();
@@ -29,9 +14,11 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
   const procedureCodesLoading = useSelector(selectProcedureCodesLoading);
   const procedureButtons = useSelector(selectProcedureButtons) || [];
   const procedureButtonsLoading = useSelector(selectProcedureButtonsLoading);
+  const providersList = useSelector(selectProviderDropdownList) || [];
   
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProcedureType, setSelectedProcedureType] = useState('Planned');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedProcedureOption, setSelectedProcedureOption] = useState(null);
   const [procedureSearchInput, setProcedureSearchInput] = useState('');
 
@@ -39,18 +26,12 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
   const [hasRequestedButtons, setHasRequestedButtons] = useState(false);
 
   // Determine what to render based on API data
-  const renderCategories = procedureButtons.length > 0 
-    ? procedureButtons.map(b => b.category) 
-    : PROCEDURE_CATEGORIES;
+  const renderCategories = procedureButtons.map(b => b.category);
     
   // Auto-select first category when loaded
   useEffect(() => {
-    if (!selectedCategory) {
-      if (procedureButtons.length > 0) {
-        setSelectedCategory(procedureButtons[0].category);
-      } else {
-        setSelectedCategory(PROCEDURE_CATEGORIES[0]);
-      }
+    if (!selectedCategory && procedureButtons.length > 0) {
+      setSelectedCategory(procedureButtons[0].category);
     }
   }, [procedureButtons, selectedCategory]);
 
@@ -63,12 +44,13 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
       setHasRequestedButtons(true);
       dispatch(fetchProcedureButtons());
     }
-  }, [dispatch, procedureCodes.length, procedureCodesLoading, procedureButtons.length, procedureButtonsLoading, hasRequestedCodes, hasRequestedButtons]);
+    if (providersList.length === 0) {
+      dispatch(fetchAllProvidersForDropdown());
+    }
+  }, [dispatch, procedureCodes.length, procedureCodesLoading, procedureButtons.length, procedureButtonsLoading, hasRequestedCodes, hasRequestedButtons, providersList.length]);
 
   // Find procedures for currently selected category
-  const activeProcedures = procedureButtons.length > 0
-    ? (procedureButtons.find(b => b.category === selectedCategory)?.items || [])
-    : MOCK_PROCEDURES;
+  const activeProcedures = procedureButtons.find(b => b.category === selectedCategory)?.items || [];
 
   return (
     <Paper elevation={0} sx={{ p: 2, borderRadius: '8px', border: '1px solid #e2e8f0', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -81,16 +63,30 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
             fullWidth
           >
             <MenuItem value="Planned">Planned</MenuItem>
-            <MenuItem value="Completed">Completed</MenuItem>
+            <MenuItem value="Existing">Existing</MenuItem>
+            <MenuItem value="Referred">Referred</MenuItem>
+            <MenuItem value="Scheduled">Scheduled</MenuItem>
           </OutlinedSelect>
         </Box>
         
         <Box sx={{ width: '65%' }}>
           <OutlinedSelect
-            value={selectedProcedureType}
+            value={selectedProvider}
+            onChange={(e) => setSelectedProvider(e.target.value)}
+            displayEmpty
             fullWidth
           >
-            <MenuItem value="Planned">Planned</MenuItem>
+            <MenuItem value="" disabled>Select Provider</MenuItem>
+            {providersList.map((provider) => {
+              const first = provider.userId?.firstName || provider.firstName || provider.FName || '';
+              const last = provider.userId?.lastName || provider.lastName || provider.LName || '';
+              const name = `${first} ${last}`.trim() || provider.providerCode || provider._id || 'Unknown';
+              return (
+                <MenuItem key={provider._id} value={provider._id}>
+                  {name}
+                </MenuItem>
+              );
+            })}
           </OutlinedSelect>
         </Box>
       </Box>
@@ -145,7 +141,9 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
                 name: proc.name,
                 code: proc.code,
                 procedureCode: proc.code,
-                description: proc.name
+                description: proc.name,
+                provider: selectedProvider,
+                status: selectedProcedureType
               })}
               variant="outlined"
               sx={{
@@ -199,6 +197,8 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
               code: value.ProcCode || value.code,
               procedureCode: value.ProcCode || value.code,
               description: value.Descript || value.name || value.AbbrDesc || '',
+              provider: selectedProvider,
+              status: selectedProcedureType
             });
             setProcedureSearchInput('');
           }}

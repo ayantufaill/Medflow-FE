@@ -120,11 +120,6 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
     fetchInvoices();
   }, [patient]);
 
-  React.useEffect(() => {
-    if (invoices.length === 0) {
-      setSelectedInvoiceIds(['24636', '24635', '24634', '24633']);
-    }
-  }, [invoices]);
 
   const mapInvoiceToPlanRow = (inv) => {
     const ptBalance = inv.patientPortion !== undefined ? inv.patientPortion - (inv.ptPaid || 0) : inv.balanceDue;
@@ -157,12 +152,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
     );
   };
 
-  const planItems = invoices.length > 0 ? invoices : [
-    { id: '24636', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-    { id: '24635', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-    { id: '24634', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-    { id: '24633', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-  ];
+  const planItems = invoices;
   return (
     <Box sx={{ p: 2, bgcolor: '#fff', minHeight: '100vh' }}>
       <Dialog 

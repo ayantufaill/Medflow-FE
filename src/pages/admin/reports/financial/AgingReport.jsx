@@ -67,76 +67,7 @@ const AgingReport = () => {
     setAppliedFilters(newFilters);
   };
   
-  const [batches, setBatches] = useState([
-    {
-      id: 1,
-      date: '07/15/2022',
-      totalCreated: 1,
-      sentViaMyChart: 1,
-      manualCreated: 0,
-      details: {
-        withoutEmails: 0,
-        withMcAccounts: 0,
-        withEmails: 0,
-      },
-      myChartSent: {
-        count: 1,
-        successMessage: '1 e-statements successfully sent!',
-      },
-      manualPdfs: null,
-    },
-    {
-      id: 2,
-      date: '07/15/2022',
-      totalCreated: 3,
-      sentViaMyChart: 0,
-      manualCreated: 3,
-      details: {
-        withoutEmails: 0,
-        withMcAccounts: 3,
-        withEmails: 0,
-      },
-      myChartSent: null,
-      manualPdfs: [
-        {
-          id: 'm1',
-          label: '3 manual statements for pts with My Chart accounts',
-          hasMyChart: true,
-        }
-      ],
-    },
-    {
-      id: 3,
-      date: '07/14/2022',
-      totalCreated: 4,
-      sentViaMyChart: 0,
-      manualCreated: 4,
-      details: {
-        withoutEmails: 1,
-        withMcAccounts: 2,
-        withEmails: 1,
-      },
-      myChartSent: null,
-      manualPdfs: [
-        {
-          id: 'm2',
-          label: '1 manual statements for pts without emails',
-          hasMyChart: false,
-        },
-        {
-          id: 'm3',
-          label: '2 manual statements for pts with My Chart accounts',
-          hasMyChart: true,
-        },
-        {
-          id: 'm4',
-          label: '1 manual statements for pts with emails!',
-          hasMyChart: false,
-          showCreateSend: true,
-        }
-      ],
-    }
-  ]);
+  const [batches, setBatches] = useState([]);
 
   const handleGenerateBatch = (config) => {
     setShowGenerateStatements(false);

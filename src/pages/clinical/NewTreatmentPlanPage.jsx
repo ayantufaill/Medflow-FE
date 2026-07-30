@@ -49,7 +49,7 @@ const NewTreatmentPlanPage = () => {
             const mappedItems = activePlan.items.map((item, idx) => ({
               id: item.id || idx + 1,
               priority: item.priority || '- -',
-              status: item.status === 'P' ? 'Planned' : (item.status === 'D' ? 'Completed' : (item.status || 'Planned')),
+              status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing' : (item.status === 'R' ? 'Referred' : (item.status === 'D' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : 'Planned')))),
               created: item.created || dayjs(activePlan.createdAt).format('MM/DD/YYYY') || dayjs().format('MM/DD/YYYY'),
               scheduled: item.scheduled || '-',
               site: item.site || '-',
@@ -112,14 +112,14 @@ const NewTreatmentPlanPage = () => {
     const newProcedure = {
       id: newId,
       priority: '- -',
-      status: 'Planned',
+      status: procedure.status || 'Planned',
       created: dayjs().format('MM/DD/YYYY'),
       scheduled: '-',
       site: formattedSite,
       code: procedureCode,
       description: procedureDescription,
       icd: '-',
-      provider: 'CB',
+      provider: procedure.provider || 'CB',
       negRate: '$0.00',
       insEst: '-',
       ptEst: '$0.00',
@@ -151,9 +151,9 @@ const NewTreatmentPlanPage = () => {
           fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
           charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
           priority: item.priority,
-          status: 'P', // Maps to Planned in OpenDental
+          status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))), 
           icd: item.icd,
-          provider: item.provider,
+          provider: item.provider !== 'CB' ? item.provider : null,
           preAuth: item.preAuth,
           labCase: item.labCase,
           insEst: item.insEst,
@@ -206,9 +206,9 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: 'P', // Force valid OpenDental item status
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))), 
         icd: item.icd,
-        provider: item.provider,
+        provider: item.provider !== 'CB' ? item.provider : null,
         preAuth: item.preAuth,
         labCase: item.labCase,
         insEst: item.insEst,
@@ -221,6 +221,96 @@ const NewTreatmentPlanPage = () => {
       console.error('Failed to auto-save treatment plan after deletion:', error);
       const errData = error.response?.data?.error;
       const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to auto-save plan.');
+      setToast({ open: true, message: errMsg, type: 'error' });
+      // Revert optimistic update
+      setTreatmentPlans(treatmentPlans);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleMoveToTop = async (itemIdsToMove) => {
+    if (!currentPatient || !activePlanId || itemIdsToMove.length === 0) return;
+
+    const itemsToMove = treatmentPlans.filter(item => itemIdsToMove.includes(item.id));
+    const remainingItems = treatmentPlans.filter(item => !itemIdsToMove.includes(item.id));
+    const newTreatmentPlans = [...itemsToMove, ...remainingItems];
+
+    // Optimistic UI update
+    setTreatmentPlans(newTreatmentPlans);
+
+    // Auto-save logic
+    try {
+      setIsSaving(true);
+      
+      const payloadItems = newTreatmentPlans.map(item => ({
+        procedureCode: item.code,
+        description: item.description,
+        tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+        site: item.site,
+        fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+        charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+        priority: item.priority,
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))), 
+        icd: item.icd,
+        provider: item.provider !== 'CB' ? item.provider : null,
+        preAuth: item.preAuth,
+        labCase: item.labCase,
+        insEst: item.insEst,
+        ptEst: item.ptEst,
+      }));
+
+      await treatmentPlanService.update(activePlanId, { items: payloadItems });
+      setToast({ open: true, message: 'Procedures moved to top and plan auto-saved!', type: 'success' });
+    } catch (error) {
+      console.error('Failed to auto-save treatment plan after reordering:', error);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to auto-save plan.');
+      setToast({ open: true, message: errMsg, type: 'error' });
+      // Revert optimistic update
+      setTreatmentPlans(treatmentPlans);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateItemStatus = async (itemId, newStatus) => {
+    if (!currentPatient || !activePlanId) return;
+
+    const newTreatmentPlans = treatmentPlans.map(item => 
+      item.id === itemId ? { ...item, status: newStatus } : item
+    );
+
+    // Optimistic UI update
+    setTreatmentPlans(newTreatmentPlans);
+
+    // Auto-save logic
+    try {
+      setIsSaving(true);
+      
+      const payloadItems = newTreatmentPlans.map(item => ({
+        procedureCode: item.code,
+        description: item.description,
+        tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+        site: item.site,
+        fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+        charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+        priority: item.priority,
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))), 
+        icd: item.icd,
+        provider: item.provider !== 'CB' ? item.provider : null,
+        preAuth: item.preAuth,
+        labCase: item.labCase,
+        insEst: item.insEst,
+        ptEst: item.ptEst,
+      }));
+
+      await treatmentPlanService.update(activePlanId, { items: payloadItems });
+      setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Failed to update item status:', error);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to update status.');
       setToast({ open: true, message: errMsg, type: 'error' });
       // Revert optimistic update
       setTreatmentPlans(treatmentPlans);
@@ -242,17 +332,19 @@ const NewTreatmentPlanPage = () => {
       <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'stretch', width: '100%' }}>
         
         {/* Left Pane - Odontogram */}
-        <Box sx={{ flex: 7.5, minWidth: 0 }}>
-          <NewTreatmentPlanOdontogram 
-            selectedTeeth={selectedTeeth} 
-            onToothClick={handleToothClick} 
-            selectedSurfaces={selectedSurfaces}
-            onSidebarSurfaceClick={handleSidebarSurfaceClick}
-          />
-        </Box>
+        {showOdontogram && (
+          <Box sx={{ flex: 7.5, minWidth: 0 }}>
+            <NewTreatmentPlanOdontogram 
+              selectedTeeth={selectedTeeth} 
+              onToothClick={handleToothClick} 
+              selectedSurfaces={selectedSurfaces}
+              onSidebarSurfaceClick={handleSidebarSurfaceClick}
+            />
+          </Box>
+        )}
 
         {/* Right Pane - Navigation & Procedures */}
-        <Box sx={{ flex: 4.5, minWidth: 0 }}>
+        <Box sx={{ flex: showOdontogram ? 4.5 : 12, minWidth: 0 }}>
           <NewTreatmentPlanProcedures 
             onProcedureClick={handleAddProcedure} 
           />
@@ -264,6 +356,8 @@ const NewTreatmentPlanPage = () => {
       <NewTreatmentPlanTable 
         treatmentPlans={treatmentPlans} 
         onDeleteItems={handleDeleteItems}
+        onMoveToTop={handleMoveToTop}
+        onUpdateItemStatus={handleUpdateItemStatus}
       />
       
       <Snackbar 

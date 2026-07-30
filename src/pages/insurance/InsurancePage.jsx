@@ -57,12 +57,15 @@ const InsurancePage = () => {
       subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
       status: (item.isActive === true || item.status === 'active') ? 'active' : 'inactive',
       eligibilityChecked: item.lastEligibilityCheckDate || 'Not checked',
-      dentist: item.provider?.name || 'Default Dentist'
+      dentist: item.provider?.name || 'Default Dentist',
+      isFamilyPlan: item.isFamilyPlan || false
     }));
   }, [insurancesData]);
 
-  const activeCoverages = mappedData.filter(i => i.status === 'active');
-  const archivedCoverages = mappedData.filter(i => i.status === 'inactive');
+  const activeCoverages = mappedData.filter(i => i.status === 'active' && !i.isFamilyPlan);
+  const familyCoverages = mappedData.filter(i => i.status === 'active' && i.isFamilyPlan);
+  const archivedCoverages = mappedData.filter(i => i.status === 'inactive' && !i.isFamilyPlan);
+  const archivedFamilyCoverages = mappedData.filter(i => i.status === 'inactive' && i.isFamilyPlan);
 
   useEffect(() => {
     if (patientId) {
@@ -78,18 +81,6 @@ const InsurancePage = () => {
         });
     }
   }, [patientId, dispatch]);
-
-  const [familyCoverages] = useState([
-    {
-      id: 4,
-      payer: 'United Healthcare',
-      plan: 'FAMILY PLAN',
-      subscriber: 'John Doe',
-      members: ['John Doe', 'Jane Doe', 'Jimmy Doe'],
-      eligibilityChecked: '03/05/2026',
-      status: 'active'
-    }
-  ]);
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -195,7 +186,7 @@ const InsurancePage = () => {
       case 0: return activeCoverages;
       case 1: return familyCoverages;
       case 2: return archivedCoverages;
-      case 3: return [];
+      case 3: return archivedFamilyCoverages;
       default: return activeCoverages;
     }
   };

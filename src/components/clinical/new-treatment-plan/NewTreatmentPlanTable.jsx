@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import {
   Box,
   Paper,
@@ -13,7 +15,8 @@ import {
   TableHead,
   TableRow,
   Checkbox,
-  InputAdornment
+  InputAdornment,
+  Select
 } from '@mui/material';
 import {
   KeyboardArrowDown as ExpandMoreIcon,
@@ -30,9 +33,25 @@ import editSvg from '../../../assets/treatmentplan/edit.svg';
 import toggleViewSvg from '../../../assets/treatmentplan/toggle_view.svg';
 import arrowUpSvg from '../../../assets/treatmentplan/Arrow_up.svg';
 
-const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems }) => {
+const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onUpdateItemStatus }) => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const providersList = useSelector(selectProviderDropdownList) || [];
+
+  const getProviderName = (providerId) => {
+    if (!providerId) return '-';
+    if (providerId === 'CB') return 'CB'; // Keep fallback for existing mock items
+    const provider = providersList.find(p => p._id === providerId || p.providerCode === providerId);
+    if (!provider) return providerId;
+    
+    const first = provider.userId?.firstName || provider.firstName || provider.FName || '';
+    const last = provider.userId?.lastName || provider.lastName || provider.LName || '';
+    
+    if (first || last) {
+      return `${first.charAt(0).toUpperCase()}${last.charAt(0).toUpperCase()}`;
+    }
+    return provider.providerCode || provider._id || 'Unknown';
+  };
 
   const handleStatusSelect = (e) => {
     const status = e.target.value;
@@ -96,7 +115,14 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton size="small"><Box component="img" src={plusSvg} alt="add" sx={{ width: 18, height: 18 }} /></IconButton>
           <IconButton size="small"><Box component="img" src={toggleViewSvg} alt="toggle view" sx={{ width: 18, height: 18 }} /></IconButton>
-          <IconButton size="small"><Box component="img" src={arrowUpSvg} alt="arrow up" sx={{ width: 18, height: 18 }} /></IconButton>
+          <IconButton size="small" onClick={() => {
+            if (selectedRows.length > 0 && onMoveToTop) {
+              onMoveToTop(selectedRows);
+              setSelectedRows([]); // Clear selection after moving
+            }
+          }}>
+            <Box component="img" src={arrowUpSvg} alt="arrow up" sx={{ width: 18, height: 18 }} />
+          </IconButton>
           <IconButton size="small"><Box component="img" src={uploadSvg} alt="upload" sx={{ width: 18, height: 18 }} /></IconButton>
           <IconButton size="small"><Box component="img" src={documentSvg} alt="copy" sx={{ width: 18, height: 18 }} /></IconButton>
           <IconButton size="small" onClick={() => {
@@ -179,9 +205,25 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems }) => {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.priority}</TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {row.status} <ExpandMoreIcon fontSize="inherit" />
-                  </Box>
+                  <Select
+                    value={row.status}
+                    onChange={(e) => onUpdateItemStatus && onUpdateItemStatus(row.id, e.target.value)}
+                    variant="standard"
+                    disableUnderline
+                    IconComponent={ExpandMoreIcon}
+                    sx={{ 
+                      fontSize: '0.8rem', 
+                      color: '#475569',
+                      '& .MuiSelect-select': { py: 0, px: 0, display: 'flex', alignItems: 'center' },
+                      '& .MuiSvgIcon-root': { fontSize: '1rem', ml: 0.5, color: '#94a3b8' }
+                    }}
+                  >
+                    <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
+                    <MenuItem value="Existing" sx={{ fontSize: '0.8rem' }}>Existing</MenuItem>
+                    <MenuItem value="Referred" sx={{ fontSize: '0.8rem' }}>Referred</MenuItem>
+                    <MenuItem value="Scheduled" sx={{ fontSize: '0.8rem' }}>Scheduled</MenuItem>
+                    <MenuItem value="Completed" sx={{ fontSize: '0.8rem' }}>Completed</MenuItem>
+                  </Select>
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.created}</TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>{row.scheduled}</TableCell>
@@ -190,7 +232,7 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems }) => {
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.description}</TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.icd}</TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                  <Box sx={{ bgcolor: '#eff6ff', borderRadius: '4px', display: 'inline-block', px: 1 }}>{row.provider}</Box>
+                  <Box sx={{ bgcolor: '#eff6ff', borderRadius: '4px', display: 'inline-block', px: 1 }}>{getProviderName(row.provider)}</Box>
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.negRate}</TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.insEst}</TableCell>
