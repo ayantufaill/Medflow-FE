@@ -28,6 +28,8 @@ import {
   deleteChecklistCategory,
   deleteChecklist,
   deleteChecklistItem,
+  removeChoiceFromChecklistItem,
+  removeProductFromChecklistItem,
   selectChecklists,
   selectLoadingChecklists
 } from '../../store/slices/clinicalManagementSlice';
@@ -241,6 +243,30 @@ const ChecklistsManagement = () => {
     }
   };
 
+  const handleRemoveChoice = async (category, checklistIdx, itemIdx, choiceIdx) => {
+    const item = checklists[category][checklistIdx].items[itemIdx];
+    try {
+      await dispatch(removeChoiceFromChecklistItem({ itemId: item.id, choiceIndex: choiceIdx })).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Choice removed successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to remove choice', 'error');
+    }
+  };
+
+  const handleRemoveProduct = async (category, checklistIdx, itemIdx, productIdx) => {
+    const item = checklists[category][checklistIdx].items[itemIdx];
+    try {
+      await dispatch(removeProductFromChecklistItem({ itemId: item.id, productIndex: productIdx })).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Product removed successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to remove product', 'error');
+    }
+  };
+
   const handleDeleteChecklist = async (category, checklistIdx) => {
     const checklist = checklists[category][checklistIdx];
     try {
@@ -265,19 +291,13 @@ const ChecklistsManagement = () => {
 
   return (
     <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
-      {/* Page Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', px: 4, pt: 4, mb: 4 }}>
-        <Box>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
-            Checklists Management
-          </Typography>
-        </Box>
-      </Box>
+      {/* Page Header and Toolbar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 4, pt: 4, mb: 4 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
+          Checklists Management
+        </Typography>
 
-      {/* Main Content Area */}
-      <Box sx={{ px: 4 }}>
-        {/* Toolbar */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {activeInput?.type === 'category' ? (
             <TextField
               autoFocus
@@ -342,6 +362,10 @@ const ChecklistsManagement = () => {
             Sync
           </Button>
         </Box>
+      </Box>
+
+      {/* Main Content Area */}
+      <Box sx={{ px: 4 }}>
 
         {/* Categories List */}
         <ChecklistCategoryList 
@@ -360,6 +384,8 @@ const ChecklistsManagement = () => {
           handleInputSubmit={handleInputSubmit}
           handleDeleteItem={handleDeleteItem}
           handleCopyItemToClipboard={handleCopyItemToClipboard}
+          handleRemoveChoice={handleRemoveChoice}
+          handleRemoveProduct={handleRemoveProduct}
         />
       </Box>
 
