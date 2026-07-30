@@ -6,7 +6,6 @@ import {
   Button,
   Link,
   CircularProgress,
-  Collapse,
 } from '@mui/material';
 import {
   SwapHoriz as SwapHorizIcon,
@@ -111,10 +110,12 @@ const KioskAccountsView = () => {
       bgcolor: '#FBFCFE',
       p: 3,
     }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h6" fontWeight="bold" color="#11223F">
           Kiosk Accounts
         </Typography>
+      </Box>
+      <Box sx={{ mb: 3 }}>
         <KioskAccessSection
           kioskLink={kioskLink}
           password={password}
@@ -145,9 +146,7 @@ const KioskAccountsView = () => {
         onAddAccount={handleAddAccount}
       />
 
-      <Collapse in={showMoveData}>
-        <KioskMoveDataPanel />
-      </Collapse>
+      <KioskMoveDataPanel open={showMoveData} onClose={() => setShowMoveData(false)} />
     </Box>
   );
 };

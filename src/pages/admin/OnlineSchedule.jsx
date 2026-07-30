@@ -52,6 +52,7 @@ const defaultSettings = {
 
 const OnlineScheduleConfiguration = () => {
   const [settings, setSettings] = useState(defaultSettings);
+  const [initialSettings, setInitialSettings] = useState(defaultSettings);
   const [providerSearch, setProviderSearch] = useState('');
   const [providerSpecialty, setProviderSpecialty] = useState('');
   const { showSnackbar } = useSnackbar();
@@ -69,8 +70,9 @@ const OnlineScheduleConfiguration = () => {
 
   useEffect(() => {
     if (practiceInfo?.onlineSchedule && Object.keys(practiceInfo.onlineSchedule).length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSettings(prev => deepMerge(prev, practiceInfo.onlineSchedule));
+      const merged = deepMerge(defaultSettings, practiceInfo.onlineSchedule);
+      setSettings(merged);
+      setInitialSettings(merged);
     }
   }, [practiceInfo?.onlineSchedule]);
 
@@ -121,6 +123,7 @@ const OnlineScheduleConfiguration = () => {
         practiceInfoId: id,
         onlineScheduleData: settings
       })).unwrap();
+      setInitialSettings(settings);
       showSnackbar('Online Schedule configuration saved successfully', 'success');
     } catch (error) {
       console.error(error);
@@ -147,6 +150,8 @@ const OnlineScheduleConfiguration = () => {
     );
   }
 
+  const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+
   return (
     <Box
       sx={{
@@ -164,6 +169,7 @@ const OnlineScheduleConfiguration = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
             variant="contained"
+            disabled={!hasChanges}
             startIcon={<SaveIcon sx={{ width: 14, height: 14 }} />}
             onClick={handleSave}
             sx={{

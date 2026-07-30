@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import AddIcon from '@mui/icons-material/Add';
+import { COLORS } from '../../../constants/colors';
 
 const SECTION_HEADER_BG = '#eef4ff';
 
@@ -48,11 +49,20 @@ const OfficeTimingCycles = ({
       </Box>
 
       <Button
-        size="small"
         variant="contained"
-        startIcon={<AddIcon sx={{ fontSize: '0.95rem' }} />}
+        startIcon={<AddIcon />}
         onClick={onShowAddCycle}
-        sx={{ textTransform: 'none', fontSize: '0.85rem', backgroundColor: '#2563eb', '&:hover': { backgroundColor: '#1d4ed8' } }}
+        sx={{
+          textTransform: 'none',
+          fontSize: '12px',
+          fontWeight: 600,
+          borderRadius: '8px',
+          px: 2,
+          height: '30.67px',
+          bgcolor: COLORS.ACCENT,
+          boxShadow: 'none',
+          '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
+        }}
       >
         Add Cycle
       </Button>
@@ -101,36 +111,71 @@ const OfficeTimingCycles = ({
       ))}
 
       {showAddCycle && (
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', py: 1.5, flexWrap: 'wrap' }}>
-          <TextField
-            size="small"
-            placeholder="Name (e.g. Summer)"
-            value={newCycle.name}
-            onChange={(e) => onCycleFieldChange('name', e.target.value)}
-          />
-          <TextField
-            size="small"
-            placeholder="From (e.g. Jun 1)"
-            value={newCycle.fromDate}
-            onChange={(e) => onCycleFieldChange('fromDate', e.target.value)}
-          />
-          <TextField
-            size="small"
-            placeholder="To (e.g. Aug 31)"
-            value={newCycle.toDate}
-            onChange={(e) => onCycleFieldChange('toDate', e.target.value)}
-          />
-          <Button size="small" variant="contained" onClick={onAddCycle} sx={{ textTransform: 'none', backgroundColor: '#1a3a6b', '&:hover': { backgroundColor: '#142d52' } }}>
-            Add
-          </Button>
-          <Button size="small" variant="outlined" onClick={onCancelAddCycle} sx={{ textTransform: 'none' }}>
-            Cancel
-          </Button>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'flex-end',
+            p: 2,
+            bgcolor: COLORS.SURFACE_TINT,
+            borderRadius: '8px',
+            border: `1px solid ${COLORS.BORDER_LIGHT}`,
+            flexWrap: 'wrap',
+            mt: 2,
+            mb: 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: COLORS.TEXT_SECONDARY, mb: '4px' }}>Name</Typography>
+            <TextField
+              size="small"
+              placeholder="e.g. Summer"
+              value={newCycle.name}
+              onChange={(e) => onCycleFieldChange('name', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px', fontSize: '13px' } }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: COLORS.TEXT_SECONDARY, mb: '4px' }}>From</Typography>
+            <TextField
+              size="small"
+              placeholder="e.g. Jun 1"
+              value={newCycle.fromDate}
+              onChange={(e) => onCycleFieldChange('fromDate', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px', fontSize: '13px' } }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: COLORS.TEXT_SECONDARY, mb: '4px' }}>To</Typography>
+            <TextField
+              size="small"
+              placeholder="e.g. Aug 31"
+              value={newCycle.toDate}
+              onChange={(e) => onCycleFieldChange('toDate', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px', fontSize: '13px' } }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              onClick={onAddCycle}
+              sx={{ textTransform: 'none', bgcolor: COLORS.ACCENT, borderRadius: '6px', fontWeight: 600, fontSize: '12px', boxShadow: 'none', height: '36px', '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}
+            >
+              Add
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={onCancelAddCycle}
+              sx={{ textTransform: 'none', borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: '6px', fontWeight: 600, fontSize: '12px', height: '36px', '&:hover': { borderColor: COLORS.TEXT_SECONDARY } }}
+            >
+              Cancel
+            </Button>
+          </Box>
         </Box>
       )}
 
       <Typography
-        sx={{ color: '#2563eb', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer', mt: cycles.length ? 0 : 1 }}
+        sx={{ color: COLORS.ACCENT, fontWeight: 600, fontSize: '12px', cursor: 'pointer', mt: cycles.length ? 2 : 1 }}
       >
         + Add Exception
       </Typography>

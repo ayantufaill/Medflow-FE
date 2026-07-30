@@ -15,6 +15,8 @@ import {
   LockOutlined,
   SwapHoriz,
 } from '@mui/icons-material';
+import { standardFieldSx, radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const SECTION_HEADER_BG = '#F3F8FD';
 
@@ -84,10 +86,10 @@ const KioskAccessSection = ({
               <TextField
                 placeholder="Password"
                 type={showPassword ? 'text' : 'password'}
-                size="small"
                 value={password}
                 onChange={onPasswordChange}
                 fullWidth
+                sx={standardFieldSx}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -107,12 +109,12 @@ const KioskAccessSection = ({
               <TextField
                 placeholder="Confirm Password"
                 type={showConfirm ? 'text' : 'password'}
-                size="small"
                 value={confirmPassword}
                 onChange={onConfirmChange}
                 error={confirmMismatch}
                 helperText={confirmMismatch ? 'Passwords do not match' : ''}
                 fullWidth
+                sx={standardFieldSx}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -129,10 +131,18 @@ const KioskAccessSection = ({
           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="contained"
-              size="small"
+              disableElevation
               onClick={onSavePassword}
               disabled={!canSavePassword}
-              sx={{ textTransform: 'none', backgroundColor: '#2563eb', '&:hover': { backgroundColor: '#1d4ed8' } }}
+              sx={{
+                textTransform: 'none',
+                borderRadius: radius.md,
+                fontFamily: 'Inter',
+                fontSize: fontSize.base,
+                fontWeight: fontWeight.semibold,
+                backgroundColor: COLORS.ACCENT,
+                '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+              }}
             >
               Set Password
             </Button>
@@ -144,14 +154,18 @@ const KioskAccessSection = ({
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
         <Button
           variant={showMoveData ? 'contained' : 'outlined'}
-          size="small"
-          startIcon={<SwapHoriz fontSize="small" />}
+          disableElevation
+          startIcon={<SwapHoriz sx={{ fontSize: '16px' }} />}
           onClick={onToggleMoveData}
           sx={{
             textTransform: 'none',
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
             ...(showMoveData
-              ? { backgroundColor: '#1a3a6b', '&:hover': { backgroundColor: '#142d52' } }
-              : { borderColor: 'divider', color: 'text.primary' }),
+              ? { backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }
+              : { borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY }),
           }}
         >
           Move Data

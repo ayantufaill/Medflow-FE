@@ -6,7 +6,10 @@ import {
   DialogActions,
   Button,
   CircularProgress,
+  Typography,
+  IconButton
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 const ConfirmationDialog = ({
   open,
@@ -37,8 +40,26 @@ const ConfirmationDialog = ({
       aria-describedby="confirmation-dialog-description"
       sx={{ zIndex: 9999 }}
     >
-      <DialogTitle id="confirmation-dialog-title">{title}</DialogTitle>
-      <DialogContent>
+      <DialogTitle
+        id="confirmation-dialog-title"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 3,
+          py: 2,
+          bgcolor: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.1rem' }}>
+          {title}
+        </Typography>
+        <IconButton onClick={handleClose} size="small" sx={{ color: '#64748b' }}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ p: 3, pt: '24px !important' }}>
         {customContent ? (
           <>
             <DialogContentText
@@ -55,8 +76,21 @@ const ConfirmationDialog = ({
           </DialogContentText>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} color="inherit" disabled={loading}>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e2e8f0', bgcolor: '#fff', gap: 1 }}>
+        <Button 
+          onClick={handleClose} 
+          variant="outlined" 
+          disabled={loading}
+          sx={{
+            color: '#64748b',
+            borderColor: '#cbd5e1',
+            textTransform: 'none',
+            borderRadius: '8px',
+            fontWeight: 600,
+            px: 3,
+            '&:hover': { borderColor: '#94a3b8', bgcolor: '#f1f5f9' },
+          }}
+        >
           {cancelText}
         </Button>
         <Button
@@ -65,13 +99,23 @@ const ConfirmationDialog = ({
           variant="contained"
           autoFocus
           disabled={loading}
-          sx={typeof confirmColor === 'string' && confirmColor.startsWith('#') ? {
-            bgcolor: confirmColor,
-            color: '#fff',
-            '&:hover': {
-              bgcolor: confirmColor === '#0f766e' ? '#0d5e58' : confirmColor,
-            }
-          } : undefined}
+          sx={{
+            textTransform: 'none',
+            borderRadius: '8px',
+            fontWeight: 600,
+            px: 3,
+            boxShadow: 'none',
+            ...(typeof confirmColor === 'string' && confirmColor.startsWith('#') ? {
+              bgcolor: confirmColor,
+              color: '#fff',
+              '&:hover': {
+                bgcolor: confirmColor === '#0f766e' ? '#0d5e58' : confirmColor,
+                boxShadow: 'none',
+              }
+            } : {
+              '&:hover': { boxShadow: 'none' }
+            })
+          }}
           startIcon={
             loading ? <CircularProgress size={16} color="inherit" /> : null
           }

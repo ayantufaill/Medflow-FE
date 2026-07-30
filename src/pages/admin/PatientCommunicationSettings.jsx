@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Box, Paper, Typography, Button, CircularProgress, Snackbar, Alert } from '@mui/material';
 
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+
 import WelcomeEmailDefaults from './WelcomeEmailDefaults';
 import EmailTemplateSettings from './EmailTemplateSettings';
 import EmailNotifications from './EmailNotifications';
@@ -78,10 +81,28 @@ const PatientCommunicationSettings = () => {
             Communication Setting
           </Typography>
           <Button 
-            variant="contained" 
+            variant="contained"
+            disableElevation
             onClick={handleSave} 
             disabled={saving || !isDirty}
-            sx={{ textTransform: 'none', backgroundColor: '#3B82F6', minWidth: 'auto', px: 3, '&:hover': { bgcolor: '#2563EB' } }}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              minWidth: 'auto',
+              px: 3,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+              '&.Mui-disabled': {
+                backgroundColor: COLORS.BORDER,
+                color: COLORS.TEXT_MUTED,
+              }
+            }}
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>

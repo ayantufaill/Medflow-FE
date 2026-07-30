@@ -5,6 +5,10 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Box, Typography, Button, Grid, Dialog, DialogTitle, DialogContent, TextField, DialogActions } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { Save as SaveIcon } from '@mui/icons-material';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 import GeneralSettings from '../../components/admin/practice-setup/schedule-configuration/GeneralSettings';
 import AppointmentCardHeader from '../../components/admin/practice-setup/schedule-configuration/AppointmentCardHeader';
@@ -314,11 +318,27 @@ const ScheduleConfiguration = () => {
 
           <Button
             variant="contained"
-            color="primary"
+            disableElevation
             onClick={handleSave}
             disabled={updateLoading}
-            sx={{ borderRadius: 1.5, textTransform: 'none', px: 2, py: 1 }}
-            startIcon={updateLoading ? <CircularProgress size={20} color="inherit" /> : <img src={SaveConfigIcon} alt="Save" style={{ width: 16, height: 16 }} />}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 3,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+              '&.Mui-disabled': {
+                backgroundColor: COLORS.BORDER,
+                color: COLORS.TEXT_MUTED,
+              }
+            }}
+            startIcon={updateLoading ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '16px' }} />}
           >
             {updateLoading ? 'Saving...' : 'Save Configuration'}
           </Button>
