@@ -25,24 +25,22 @@ const EligibilityTab = ({
           }}
           sx={{
             width: 300,
-            '& .MuiOutlinedInput-root': { borderRadius: 2, backgroundColor: '#f8fafc' },
-            '& .MuiInputBase-input': { fontSize: '0.9rem', py: 0.8 },
+            "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+            "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
           }}
         />
         <Button
           variant="contained"
+          disableElevation
           onClick={handleAddEligibilityCode}
           sx={{
-            textTransform: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            height: 38,
-            px: 3,
-            borderRadius: 2,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            height: "38px",
+            '&:hover': { backgroundColor: "#1a50cc" },
           }}
         >
           Add Code

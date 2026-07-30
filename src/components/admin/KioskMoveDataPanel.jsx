@@ -43,7 +43,7 @@ const KioskMoveDataPanel = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      sx={{ zIndex: 1305 }}
+      sx={{ zIndex: 9990 }}
       PaperProps={{
         sx: {
           borderRadius: radius.xl,
@@ -147,7 +147,7 @@ const KioskMoveDataPanel = ({ open, onClose }) => {
               sx={{ ...standardFieldSx, mb: 2 }}
               SelectProps={{
                 displayEmpty: true,
-                MenuProps: { sx: { zIndex: 1400 } }
+                MenuProps: { sx: { zIndex: 9999 } }
               }}
             >
               <MenuItem value=""><em>Select provider</em></MenuItem>
@@ -167,7 +167,7 @@ const KioskMoveDataPanel = ({ open, onClose }) => {
               sx={{ ...standardFieldSx, mb: 3 }}
               SelectProps={{
                 displayEmpty: true,
-                MenuProps: { sx: { zIndex: 1400 } }
+                MenuProps: { sx: { zIndex: 9999 } }
               }}
             >
               <MenuItem value=""><em>Select provider</em></MenuItem>

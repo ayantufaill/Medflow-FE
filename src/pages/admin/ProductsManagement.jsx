@@ -12,10 +12,12 @@ import {
   selectLoadingProducts
 } from '../../store/slices/clinicalManagementSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { CircularProgress } from '@mui/material';
-import { Box, Typography, Button, Divider } from '@mui/material';
+import { CircularProgress, Box, Typography, Button, Divider } from '@mui/material';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 import CategoryAccordion from '../../components/admin/clinical-management/products/CategoryAccordion';
-import CategoryInlineForm from '../../components/admin/clinical-management/products/CategoryInlineForm';
+import AddCategoryDialog from '../../components/admin/clinical-management/products/AddCategoryDialog';
 import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 // Data for the top general section
@@ -418,35 +420,26 @@ const ProductsManagement = () => {
         />
       ))}
 
-      {/* Inline Product Add for Top Section */}
-      {isAddingProductInSection === 'top' ? (
-        <Box sx={{ mt: 2 }}>
-          <CategoryInlineForm
-            productDraftName={productDraftName}
-            setProductDraftName={setProductDraftName}
-            handleSaveInlineProduct={handleSaveInlineProduct}
-            handleCancelInlineProduct={handleCancelInlineProduct}
-          />
-        </Box>
-      ) : (
-        <Box sx={{ mt: 2, mb: 5 }}>
-          <Button
-            variant="outlined"
-            onClick={() => handleStartInlineProduct('top')}
-            sx={{
-              textTransform: 'none',
-              borderRadius: 2,
-              fontWeight: 600,
-              color: '#2563eb',
-              borderColor: '#bfdbfe',
-              '&:hover': { backgroundColor: '#eff6ff', borderColor: '#93c5fd' },
-              px: 3,
-            }}
-          >
-            + Add New Product
-          </Button>
-        </Box>
-      )}
+      {/* Add New Product for Top Section */}
+      <Box sx={{ mt: 2, mb: 5 }}>
+        <Button
+          variant="outlined"
+          onClick={() => handleStartInlineProduct('top')}
+          sx={{
+            textTransform: 'none',
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            color: COLORS.ACCENT,
+            borderColor: COLORS.ACCENT,
+            '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.ACCENT_HOVER },
+            px: 3,
+          }}
+        >
+          + Add New Product
+        </Button>
+      </Box>
 
       {/* Progress Notes Section */}
       <Divider sx={{ my: 4, borderColor: '#f1f5f9' }} />
@@ -481,40 +474,40 @@ const ProductsManagement = () => {
         />
       ))}
 
-      {/* Inline Product Add for Progress Section */}
-      {isAddingProductInSection === 'progress' ? (
-        <Box sx={{ mt: 2 }}>
-          <CategoryInlineForm
-            productDraftName={productDraftName}
-            setProductDraftName={setProductDraftName}
-            handleSaveInlineProduct={handleSaveInlineProduct}
-            handleCancelInlineProduct={handleCancelInlineProduct}
-          />
-        </Box>
-      ) : (
-        <Box sx={{ mt: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => handleStartInlineProduct('progress')}
-            sx={{
-              textTransform: 'none',
-              borderRadius: 2,
-              fontWeight: 600,
-              color: '#2563eb',
-              borderColor: '#bfdbfe',
-              '&:hover': { backgroundColor: '#eff6ff', borderColor: '#93c5fd' },
-              px: 3,
-            }}
-          >
-            + Add New Product
-          </Button>
-        </Box>
-      )}
+      {/* Add New Product for Progress Section */}
+      <Box sx={{ mt: 2 }}>
+        <Button
+          variant="outlined"
+          onClick={() => handleStartInlineProduct('progress')}
+          sx={{
+            textTransform: 'none',
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            color: COLORS.ACCENT,
+            borderColor: COLORS.ACCENT,
+            '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.ACCENT_HOVER },
+            px: 3,
+          }}
+        >
+          + Add New Product
+        </Button>
+      </Box>
       
       </Box>
 
       {/* Sync Dialog */}
       <SyncOfficesDialog open={isSyncDialogOpen} onClose={handleCloseSyncDialog} />
+
+      {/* Add Category Dialog */}
+      <AddCategoryDialog
+        open={Boolean(isAddingProductInSection)}
+        productDraftName={productDraftName}
+        setProductDraftName={setProductDraftName}
+        handleSaveInlineProduct={handleSaveInlineProduct}
+        handleCancelInlineProduct={handleCancelInlineProduct}
+      />
     </Box>
   );
 };

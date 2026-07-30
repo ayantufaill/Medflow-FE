@@ -30,15 +30,12 @@ const NoChargePowerCodesTab = ({
           variant="outlined"
           onClick={handleResetCategories}
           sx={{
-            textTransform: 'none',
-            color: '#ea580c',
-            borderColor: '#fed7aa',
-            '&:hover': { backgroundColor: '#fff7ed', borderColor: '#fdba74' },
-            fontSize: '0.85rem',
-            px: 3,
-            borderRadius: 2,
-            fontWeight: 600,
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
             height: 36,
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Reset Power Codes
@@ -102,12 +99,11 @@ const NoChargePowerCodesTab = ({
                         variant="text"
                         onClick={() => handleAddPowerCode(catIdx)}
                         sx={{
-                          textTransform: 'none',
-                          color: '#2563eb',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                          borderRadius: 2,
-                          '&:hover': { backgroundColor: '#eff6ff' },
+                          fontFamily: "Inter", fontSize: "12px", fontWeight: 500,
+                          textTransform: "none", borderRadius: "8px",
+                          border: "1px solid #d0d5dd", color: "#374151",
+                          px: "12px", py: "4px",
+                          "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
                         }}
                       >
                         + Add Power Code

@@ -26,6 +26,9 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+
 import HeaderConfig from '../../components/admin/clinical-management/treatment-plan-presentation/HeaderConfig';
 import DisplayConfig from '../../components/admin/clinical-management/treatment-plan-presentation/DisplayConfig';
 import PaymentOptionsConfig from '../../components/admin/clinical-management/treatment-plan-presentation/PaymentOptionsConfig';
@@ -379,15 +382,37 @@ const TreatmentPlanPresentation = () => {
                 <Button
                   variant="outlined"
                   onClick={handleRefresh}
-                  sx={{ borderColor: '#cbd5e1', color: '#475569', textTransform: 'none', px: 5, borderRadius: 1.5, '&:hover': { backgroundColor: '#f8fafc', borderColor: '#94a3b8' } }}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: radius.md,
+                    fontFamily: 'Inter',
+                    fontSize: fontSize.base,
+                    fontWeight: fontWeight.semibold,
+                    color: COLORS.TEXT_MUTED,
+                    borderColor: COLORS.BORDER,
+                    px: 5,
+                    '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.TEXT_MUTED }
+                  }}
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="contained"
+                  disableElevation
                   disabled={!isDirty}
                   onClick={handleSaveForm}
-                  sx={{ backgroundColor: '#3b82f6', color: '#fff', textTransform: 'none', px: 5, borderRadius: 1.5, boxShadow: 'none', '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }, '&.Mui-disabled': { backgroundColor: '#94a3b8', color: '#f1f5f9' } }}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: radius.md,
+                    fontFamily: 'Inter',
+                    fontSize: fontSize.base,
+                    fontWeight: fontWeight.semibold,
+                    backgroundColor: COLORS.ACCENT,
+                    color: COLORS.WHITE,
+                    px: 5,
+                    '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+                    '&.Mui-disabled': { backgroundColor: COLORS.TEXT_MUTED, color: COLORS.BACKGROUND }
+                  }}
                 >
                   Save
                 </Button>
@@ -398,9 +423,21 @@ const TreatmentPlanPresentation = () => {
             <Grid size={{ xs: 12, md: 3 }}>
               <Button
                 variant="contained"
+                disableElevation
                 fullWidth
                 onClick={handleCreateNewForm}
-                sx={{ backgroundColor: '#3b82f6', color: '#fff', textTransform: 'none', mb: 3, py: 1.2, fontWeight: 600, borderRadius: 1.5, boxShadow: 'none', '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' } }}
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: radius.md,
+                  fontFamily: 'Inter',
+                  fontSize: fontSize.base,
+                  fontWeight: fontWeight.semibold,
+                  backgroundColor: COLORS.ACCENT,
+                  color: COLORS.WHITE,
+                  mb: 3,
+                  py: 1.2,
+                  '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
+                }}
               >
                 + Create new Presentation
               </Button>

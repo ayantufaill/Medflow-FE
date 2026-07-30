@@ -10,6 +10,9 @@ import {
   Typography
 } from '@mui/material';
 
+import { radius, fontSize, fontWeight } from '../../../../constants/styles';
+import { COLORS } from '../../../../constants/colors';
+
 const SyncPrescriptionsDialog = ({ open, onClose }) => {
   return (
     <Dialog
@@ -68,13 +71,17 @@ const SyncPrescriptionsDialog = ({ open, onClose }) => {
       <DialogActions sx={{ px: 4, py: 3, gap: 1, borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
         <Button
           onClick={onClose}
+          variant="outlined"
           sx={{
             textTransform: 'none',
-            color: '#64748b',
-            fontWeight: 600,
-            fontSize: '0.85rem',
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            color: COLORS.TEXT_MUTED,
+            borderColor: COLORS.BORDER,
             px: 3,
-            '&:hover': { backgroundColor: '#e2e8f0' }
+            '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.TEXT_MUTED }
           }}
         >
           Cancel
@@ -82,16 +89,17 @@ const SyncPrescriptionsDialog = ({ open, onClose }) => {
         <Button
           onClick={onClose}
           variant="contained"
+          disableElevation
           sx={{
             textTransform: 'none',
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: '0.85rem',
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
             px: 4,
-            boxShadow: 'none',
-            borderRadius: 1.5,
-            '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
           }}
         >
           Sync Data

@@ -44,17 +44,13 @@ const DirectionSettings = ({ directions, handleDirectionChange, handleSaveDirect
           onClick={handleSaveDirections}
           disabled={!isModified}
           sx={{
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            textTransform: 'none',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            px: 4,
-            py: 1,
-            borderRadius: 1.5,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' },
-            '&.Mui-disabled': { backgroundColor: '#cbd5e1', color: '#f8fafc' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
         >
           Save Directions

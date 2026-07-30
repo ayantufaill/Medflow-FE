@@ -14,6 +14,9 @@ import {
 import { Sync as SyncIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 import {
   fetchChecklists,
   addChecklistCategory,
@@ -303,14 +306,15 @@ const ChecklistsManagement = () => {
               onClick={() => setActiveInput({ type: 'category', value: '' })}
               sx={{
                 textTransform: 'none',
-                color: '#3b82f6',
-                borderColor: '#3b82f6',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                borderRadius: 1.5,
+                borderRadius: radius.md,
+                fontFamily: 'Inter',
+                fontSize: fontSize.base,
+                fontWeight: fontWeight.semibold,
+                color: COLORS.ACCENT,
+                borderColor: COLORS.ACCENT,
                 px: 2,
                 py: 0.8,
-                '&:hover': { backgroundColor: '#eff6ff', borderColor: '#2563eb' }
+                '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.ACCENT_HOVER }
               }}
             >
               + Add Checklist Category
@@ -319,19 +323,20 @@ const ChecklistsManagement = () => {
 
           <Button
             variant="contained"
+            disableElevation
             onClick={handleOpenSyncDialog}
             startIcon={<SyncIcon />}
             sx={{
-              bgcolor: '#3B82F6',
               textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              borderRadius: 1.5,
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
               px: 3,
               py: 0.8,
-              boxShadow: 'none',
-              transition: 'all 0.15s',
-              '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' }
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
             }}
           >
             Sync
@@ -479,16 +484,20 @@ const ChecklistsManagement = () => {
         <DialogActions sx={{ px: 4, pb: 4, pt: 1, gap: 1.5 }}>
           <Button
             onClick={handleCloseSyncDialog}
+            variant="outlined"
             sx={{
               textTransform: 'none',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              borderRadius: 2,
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              color: COLORS.TEXT_MUTED,
+              borderColor: COLORS.BORDER,
+              '&:hover': {
+                borderColor: COLORS.TEXT_MUTED,
+                backgroundColor: COLORS.BACKGROUND,
+              },
               px: 3,
-              py: 0.8,
-              '&:hover': { backgroundColor: '#e2e8f0' }
             }}
           >
             Cancel
@@ -496,17 +505,17 @@ const ChecklistsManagement = () => {
           <Button
             onClick={handleCloseSyncDialog}
             variant="contained"
+            disableElevation
             sx={{
               textTransform: 'none',
-              backgroundColor: '#2563eb',
-              color: '#fff',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              borderRadius: 2,
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
               px: 4,
-              py: 0.8,
-              boxShadow: 'none',
-              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
             }}
           >
             Sync Offices
