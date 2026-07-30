@@ -13,7 +13,9 @@ import {
   TableCell,
   TableBody,
   Button,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const AuditHistoryDialog = ({ open, onClose }) => {
   return (
@@ -23,32 +25,45 @@ const AuditHistoryDialog = ({ open, onClose }) => {
       maxWidth="lg"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#fff',
-        color: '#0f172a',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        py: 3,
-        px: 4,
-        lineHeight: 1.3,
-        borderBottom: '1px solid #f1f5f9'
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        Audit Fee Guides History
-      </DialogTitle>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Audit Fee Guides History
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            View history of actions taken on fee guides.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       <DialogContent sx={{ p: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>Filter list by:</Typography>
-          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600, ml: 3 }}>Action:</Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: '#475569', fontWeight: 500 }}>Filter list by:</Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: '#475569', fontWeight: 500, ml: 3 }}>Action:</Typography>
           <TextField 
             select 
             size="small" 
             defaultValue="All"
             SelectProps={{ native: true }}
             sx={{ 
-              '& .MuiInputBase-root': { backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' }
+              '& .MuiInputBase-root': { fontFamily: "Inter", fontSize: "13px", backgroundColor: '#fff', borderRadius: "8px", color: "#374151" },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
             }}
           >
             <option value="All">All</option>
@@ -111,17 +126,17 @@ const AuditHistoryDialog = ({ open, onClose }) => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9', mx: -4, mb: -4, mt: 3 }}>
           <Button 
             variant="contained" 
             sx={{ 
-              textTransform: 'none', 
-              backgroundColor: '#2563eb', 
-              fontWeight: 600, 
-              borderRadius: 2, 
-              px: 4, 
-              boxShadow: 'none', 
-              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+              "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
             }}
             onClick={onClose}
           >

@@ -10,7 +10,10 @@ import {
   ListItem,
   ListItemText,
   Button,
+  IconButton,
+  Typography,
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 import { copyFeeGuide } from '../../../store/slices/feeGuideSlice';
 
 const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
@@ -31,20 +34,33 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
       maxWidth="xs"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#fff',
-        color: '#0f172a',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        py: 3,
-        px: 4,
-        lineHeight: 1.3,
-        borderBottom: '1px solid #f1f5f9'
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        Copy Fee Guide
-      </DialogTitle>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Copy Fee Guide
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Select a fee guide to copy.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', backgroundColor: '#F8FAFC' }}>
           <TextField
@@ -54,9 +70,10 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search fee guide..."
             sx={{ 
-              '& .MuiInputBase-root': { backgroundColor: '#fff', borderRadius: 2 },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+              '& .MuiInputBase-root': { fontFamily: "Inter", fontSize: "13px", backgroundColor: '#fff', borderRadius: "8px", color: "#374151" },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262ef' }
             }}
           />
         </Box>
@@ -80,16 +97,15 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
             </ListItem>
           )}
         </List>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, p: 3, borderTop: '1px solid #f1f5f9' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9' }}>
           <Button 
-            variant="text" 
+            variant="outlined" 
             sx={{ 
-              textTransform: 'none', 
-              color: '#475569', 
-              fontWeight: 600, 
-              borderRadius: 2, 
-              px: 3, 
-              '&:hover': { backgroundColor: '#f1f5f9' } 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
             }}
             onClick={onClose}
           >
