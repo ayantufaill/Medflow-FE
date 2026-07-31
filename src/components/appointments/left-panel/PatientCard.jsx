@@ -26,7 +26,7 @@ const TAGS = [
 const ACTION_BUTTONS = [
   { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
   { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
-  { label: 'MH',      icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
+  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
   { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
 ];
 
@@ -254,6 +254,17 @@ const PatientCard = () => {
           ))}
         </Box>
 
+        {/* Provider initials avatar (assigned hygienist/dentist — static for now) */}
+        <Box
+          sx={{
+            width: avatarSize.sm, height: avatarSize.sm,
+            borderRadius: '50%',
+            backgroundColor: COLORS.TEXT_MUTED,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <Typography sx={{ fontSize: '9px', fontWeight: fontWeight.bold, color: COLORS.WHITE }}>MH</Typography>
+        </Box>
       </Box>
 
       <Divider sx={{ borderColor: COLORS.BORDER, my: '6px' }} />
@@ -265,8 +276,8 @@ const PatientCard = () => {
             key={label}
             onClick={() => {
               if (disabled) return;
-              if (label === 'MH') {
-                // To be implemented: Route or action for MH
+              if (label === 'Book') {
+                window.dispatchEvent(new CustomEvent('open-new-appointment-modal', { detail: { isFromPatientCard: true } }));
               }
             }}
             sx={{
