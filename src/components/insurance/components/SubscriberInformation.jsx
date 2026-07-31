@@ -18,7 +18,9 @@ const SubscriberInformation = ({
   relationshipOptions = ['Self', 'Spouse', 'Child', 'Parent', 'Other'],
   assignmentOptions = [],
   inputBg,
-  errors = {}
+  errors = {},
+  patient,
+  handleSubscriberSelect
 }) => {
   const [showSsn, setShowSsn] = useState(false);
 
@@ -32,6 +34,30 @@ const SubscriberInformation = ({
     { value: 2, label: 'Pay to patient (Benefit)' },
     { value: 3, label: 'Pay to both (Split)' }
   ];
+
+  const householdMembers = Array.isArray(patient?.household) ? patient.household : [];
+  const familyOptions = householdMembers.map(m => {
+    const name = m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim();
+    return {
+      name,
+      dateOfBirth: m.dateOfBirth || m.dob,
+      ssn: m.ssn,
+      relationship: m.relationship
+    };
+  });
+  
+  if (patient?.spouseInfo) {
+    const spouse = patient.spouseInfo;
+    const name = spouse.name || `${spouse.firstName || ''} ${spouse.lastName || ''}`.trim();
+    if (name && !familyOptions.find(o => o.name === name)) {
+      familyOptions.push({
+        name,
+        dateOfBirth: spouse.dateOfBirth || spouse.dob,
+        ssn: spouse.ssn,
+        relationship: 'Spouse'
+      });
+    }
+  }
 
   return (
     <Box sx={{ 
@@ -81,15 +107,41 @@ const SubscriberInformation = ({
         {/* Name and ID */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
-            <FormInput
-              label="Subscriber Name"
-              required
-              value={formData.subscriber?.name || ''}
-              onChange={(e) => handleSubscriberChange('name', e.target.value)}
-              disabled={formData.subscriber?.relationship === 'Self'}
-              error={!!errors.subscriberName}
-              helperText={errors.subscriberName}
-            />
+            {formData.subscriber?.relationship !== 'Self' && familyOptions.length > 0 ? (
+              <FormInput
+                select
+                label="Subscriber Name"
+                required
+                value={formData.subscriber?.name || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const member = familyOptions.find(o => o.name === val);
+                  if (member && handleSubscriberSelect) {
+                    handleSubscriberSelect(member);
+                  } else {
+                    handleSubscriberChange('name', val);
+                  }
+                }}
+                error={!!errors.subscriberName}
+                helperText={errors.subscriberName}
+              >
+                {familyOptions.map((opt) => (
+                  <MenuItem key={opt.name} value={opt.name} sx={{ fontSize: '14px' }}>
+                    {opt.name}
+                  </MenuItem>
+                ))}
+              </FormInput>
+            ) : (
+              <FormInput
+                label="Subscriber Name"
+                required
+                value={formData.subscriber?.name || ''}
+                onChange={(e) => handleSubscriberChange('name', e.target.value)}
+                disabled={formData.subscriber?.relationship === 'Self'}
+                error={!!errors.subscriberName}
+                helperText={errors.subscriberName}
+              />
+            )}
           </Box>
           <Box sx={{ flex: 1 }}>
             <FormInput

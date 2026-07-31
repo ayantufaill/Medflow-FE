@@ -58,7 +58,7 @@ const adminBillingFrontDesk = (children) => (
 );
 
 const billingRoutes = [
-  <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />)} />,
+  <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />, true)} />,
   <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />, true)} />,
   <Route key="/finance" path="/finance" element={adminBillingReception(<FinancePage />, true)} />,
 

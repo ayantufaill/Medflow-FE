@@ -79,7 +79,7 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear, onPr
         </Box>
 
         <Box sx={{ width: "150px" }}>
-          <FilterLabel>Max Appt. Duration</FilterLabel>
+          <FilterLabel>Max Appt.Duration (min)</FilterLabel>
           <FilterInput
             type="number"
             placeholder="e.g. 60"
@@ -92,7 +92,7 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear, onPr
         </Box>
 
         <Box sx={{ width: "150px" }}>
-          <FilterLabel>Min Appt. Duration</FilterLabel>
+          <FilterLabel>Min Appt.Duration (min)</FilterLabel>
           <FilterInput
             type="number"
             placeholder="e.g. 30"

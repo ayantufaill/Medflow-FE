@@ -208,6 +208,22 @@ export const patientService = {
   },
 
   /**
+   * Get all insurances across all patients globally
+   * @param {boolean} isActive - Optional active filter
+   * @returns {Promise<Array>} Array of all patient insurances
+   */
+  async getAllPatientInsurances(isActive) {
+    const query = isActive !== undefined ? `isActive=${isActive}` : '';
+    const url = query
+      ? `/patients/all/coverages?${query}`
+      : `/patients/all/coverages`;
+      
+    const response = await apiClient.get(url);
+    const result = response.data?.data?.coverages || response.data?.data?.plans || response.data?.data?.insurances || response.data?.data || response.data;
+    return Array.isArray(result) ? result : [];
+  },
+
+  /**
    * Get patient insurance by ID
    * @param {string} patientId - Patient ID
    * @param {string} patientInsuranceId - Patient Insurance ID

@@ -13,8 +13,12 @@ const TableHeader = ({ allChecked, onToggleAll }) => (
     px: "14px", py: "10px",
     backgroundColor: "#fafbfc",
     borderBottom: "1px solid #e0e5eb",
+    "@media print": {
+      display: "table-header-group",
+      "& svg": { display: "none" }
+    }
   }}>
-    <Cell col="check" sx={{ "@media print": { display: "none" } }}>
+    <Cell col="check" className="no-print" sx={{ "@media print": { display: "none" } }}>
       <Checkbox
         size="small"
         checked={allChecked}
@@ -45,7 +49,7 @@ const TableHeader = ({ allChecked, onToggleAll }) => (
     </Cell>
 
     <Cell col="nextApt"><ColLabel>Next Apt. Date</ColLabel></Cell>
-    <Cell col="actions" sx={{ "@media print": { display: "none" } }} />
+    <Cell col="actions" className="no-print" sx={{ "@media print": { display: "none" } }} />
   </Box>
 );
 
@@ -74,8 +78,17 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
   
   const rawPrefDay = patient.PreferredDay || patient.prefDay || "Any";
   const prefDay = apptDate ? dayjs(apptDate).format("ddd") : (rawPrefDay !== "Any" ? rawPrefDay.substring(0, 3) : "Any");
-  const prefTime = startTime || patient.PreferredTime || patient.prefTime || "Any";
-  
+  const rawPrefTime = startTime || patient.PreferredTime || patient.prefTime || "Any";
+  let prefTime = rawPrefTime;
+  if (rawPrefTime !== "Any") {
+    let parsed = dayjs(rawPrefTime);
+    if (!parsed.isValid() && typeof rawPrefTime === 'string' && rawPrefTime.includes(':')) {
+      parsed = dayjs(`2000-01-01T${rawPrefTime}`);
+    }
+    if (parsed.isValid()) {
+      prefTime = parsed.format("hh:mm A");
+    }
+  }
   let procs = [];
   const customFields = patient.CustomFields || patient.customFields || {};
   if (customFields.procedures && customFields.procedures.length > 0) {
@@ -102,8 +115,12 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
       borderBottom: "1px solid #f0f2f5",
       "&:last-child": { borderBottom: "none" },
       "&:hover": { backgroundColor: "#fafbfc" },
+      "@media print": {
+        display: "table-row",
+        pageBreakInside: "avoid"
+      }
     }}>
-      <Cell col="check" sx={{ "@media print": { display: "none" } }}>
+      <Cell col="check" className="no-print" sx={{ "@media print": { display: "none" } }}>
         <Checkbox
           size="small"
           checked={checked}
@@ -152,7 +169,7 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151" }}>{nextAptDate}</Typography>
       </Cell>
 
-      <Cell col="actions" sx={{ "@media print": { display: "none" } }}>
+      <Cell col="actions" className="no-print" sx={{ "@media print": { display: "none" } }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Typography 
             onClick={() => window.dispatchEvent(new CustomEvent('edit-shortlist-item', { detail: patient }))}
@@ -181,8 +198,45 @@ const ShortlistTable = ({ patients, selected, onToggleAll, onToggleRow, onDelete
   const { providers: providersList } = useDropdownData({ providers: true });
 
   return (
-    <Box sx={{ flex: 1, overflowY: "auto", px: "24px", py: "16px" }}>
-      <Box sx={{ border: "1px solid #e0e5eb", borderRadius: "10px", overflow: "hidden" }}>
+    <Box sx={{ 
+      flex: 1, 
+      overflowY: "auto", 
+      px: "24px", 
+      py: "16px",
+      "@media print": {
+        overflow: "visible",
+        overflowY: "visible",
+        height: "auto",
+        display: "block",
+        px: 0,
+        py: 0
+      }
+    }}>
+      <Box sx={{ 
+        border: "1px solid #e0e5eb", 
+        borderRadius: "10px", 
+        overflow: "hidden",
+        "@media print": {
+          overflow: "visible",
+          display: "table",
+          tableLayout: "fixed",
+          width: "100%",
+          borderCollapse: "collapse",
+          border: "none",
+          "& > * > *": {
+            display: "table-cell",
+            verticalAlign: "middle",
+            padding: "12px 10px",
+            borderBottom: "1px solid #e0e5eb"
+          },
+          "& > * > .no-print": {
+            display: "none !important",
+            padding: "0 !important",
+            border: "none !important",
+            width: "0 !important"
+          }
+        }
+      }}>
         <TableHeader allChecked={allChecked} onToggleAll={onToggleAll} />
         {patients.map((patient) => (
           <TableRow

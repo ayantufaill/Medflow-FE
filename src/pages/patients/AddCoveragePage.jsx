@@ -621,10 +621,23 @@ const AddCoveragePage = () => {
               <SubscriberInformation
                 formData={formData}
                 handleSubscriberChange={handleSubscriberChange}
+                handleSubscriberSelect={(member) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    subscriber: {
+                      ...prev.subscriber,
+                      name: member.name || '',
+                      dateOfBirth: member.dateOfBirth ? member.dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
+                      ssn: member.ssn || prev.subscriber.ssn
+                    }
+                  }));
+                  setErrors(prev => ({ ...prev, subscriberName: null, dateOfBirth: null }));
+                }}
                 handleInputChange={handleInputChange}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 inputBg={STYLE_CONSTANTS.inputBg}
                 errors={errors}
+                patient={patient}
               />
 
               <RenewalSection

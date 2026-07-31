@@ -47,8 +47,8 @@ const BlockSlotDialog = ({
     if (open && initialData) {
       setStartTime(initialData.startTime || "08:00");
       setEndTime(initialData.endTime || "09:00");
-      setNotes("");
-      setSelectedColor(PREMIUM_COLORS[0]);
+      setNotes(initialData.notes || initialData.note || "");
+      setSelectedColor(initialData.color || PREMIUM_COLORS[0]);
     }
   }, [open, initialData]);
 

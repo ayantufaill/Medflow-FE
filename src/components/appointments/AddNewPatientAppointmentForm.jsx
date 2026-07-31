@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Box, Dialog, Alert } from "@mui/material";
+import { Box, Dialog, Alert, Snackbar } from "@mui/material";
 import dayjs from "dayjs";
 import { shortlistService } from "../../services/shortlist.service";
 
@@ -82,6 +82,7 @@ const AddNewPatientAppointmentForm = ({
   // borders only turn red after a failed attempt, not while the form is still empty on open.
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
 
   const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
@@ -152,8 +153,10 @@ const AddNewPatientAppointmentForm = ({
             setPatient(fullPatient || mockPatient);
             
             let parsedDate = dayjs();
-            if (sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate) {
-              parsedDate = dayjs(sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate);
+            const rawDate = sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate;
+            if (rawDate) {
+              const dateStr = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate.split('T')[0] : rawDate;
+              parsedDate = dayjs(dateStr);
             }
             
             const timeStr = sourceAppt.startTime || initialAppointment.time || initialAppointment.startTime;
@@ -523,6 +526,7 @@ const AddNewPatientAppointmentForm = ({
       if (template && tagInfo) {
         const existing = procedures.find((p) => p.code === template.code);
         if (existing) {
+          setToastMessage("Already added");
           setSelectedTagLabels((prev) => new Set([...prev, key]));
           setTagProcedureIds((prev) => ({ ...prev, [key]: existing.id }));
           return;
@@ -545,6 +549,7 @@ const AddNewPatientAppointmentForm = ({
     if (!option) return;
     const exists = procedures.some((p) => p.code === option.code);
     if (exists) {
+      setToastMessage("Already added");
       setProcedureInput("");
       setAddingProcedure(false);
       return;
@@ -746,6 +751,7 @@ const AddNewPatientAppointmentForm = ({
             setProcedures={setProcedures}
             providers={providers}
             showExtendedOptions={showExtendedOptions}
+            onDuplicateProcedure={setToastMessage}
           />
 
           <AppointmentRightPanel
@@ -790,6 +796,11 @@ const AddNewPatientAppointmentForm = ({
           isEditMode={isEditMode}
         />
       </Box>
+      <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setToastMessage("")} severity="info" sx={{ width: '100%' }}>
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

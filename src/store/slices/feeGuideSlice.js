@@ -99,6 +99,25 @@ export const fetchProcedureCodes = createAsyncThunk(
   }
 );
 
+export const fetchProcedureButtons = createAsyncThunk(
+  'feeGuides/fetchProcedureButtons',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await feeService.getProcedureButtons();
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { feeGuides } = getState();
+      if (feeGuides.procedureButtonsLoading || feeGuides.procedureButtons.length > 0) return false;
+      return true;
+    }
+  }
+);
+
 export const updateProcedureFee = createAsyncThunk(
   'feeGuides/updateProcedureFee',
   async ({ id, procCode, amount }, { rejectWithValue }) => {
@@ -140,6 +159,9 @@ const initialState = {
   procedureCodes: [],
   procedureCodesLoading: false,
   procedureCodesError: null,
+  procedureButtons: [],
+  procedureButtonsLoading: false,
+  procedureButtonsError: null,
 };
 
 const feeGuideSlice = createSlice({
@@ -229,6 +251,19 @@ const feeGuideSlice = createSlice({
       .addCase(fetchProcedureCodes.rejected, (state, action) => {
         state.procedureCodesLoading = false;
         state.procedureCodesError = action.payload;
+      })
+      // Fetch Procedure Buttons
+      .addCase(fetchProcedureButtons.pending, (state) => {
+        state.procedureButtonsLoading = true;
+        state.procedureButtonsError = null;
+      })
+      .addCase(fetchProcedureButtons.fulfilled, (state, action) => {
+        state.procedureButtonsLoading = false;
+        state.procedureButtons = action.payload || [];
+      })
+      .addCase(fetchProcedureButtons.rejected, (state, action) => {
+        state.procedureButtonsLoading = false;
+        state.procedureButtonsError = action.payload;
       });
   },
 });
@@ -243,5 +278,7 @@ export const selectFeeGuideDetails = (state) => state.feeGuides.selectedFeeGuide
 export const selectFeeGuideDetailsLoading = (state) => state.feeGuides.detailsLoading;
 export const selectProcedureCodes = (state) => state.feeGuides.procedureCodes;
 export const selectProcedureCodesLoading = (state) => state.feeGuides.procedureCodesLoading;
+export const selectProcedureButtons = (state) => state.feeGuides.procedureButtons;
+export const selectProcedureButtonsLoading = (state) => state.feeGuides.procedureButtonsLoading;
 
 export default feeGuideSlice.reducer;

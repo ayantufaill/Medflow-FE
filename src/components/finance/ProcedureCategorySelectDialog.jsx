@@ -21,6 +21,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from '../../store/slices/feeGuideSlice';
+import { COLORS } from '../../constants/colors';
+import { FormatListNumbered as FormatListNumberedIcon } from '@mui/icons-material';
 
 const classifyCode = (code) => {
   const num = parseInt((code || '').replace(/\D/g, ''), 10);
@@ -125,12 +127,26 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth sx={{ zIndex: 1500 }}>
-      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f5f5f5' }}>
-        <Typography variant="h6" fontWeight={700}>
-          Select Code(s):
-        </Typography>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon />
+      <DialogTitle 
+        sx={{ 
+          m: 0, 
+          px: "24px", 
+          py: "16px", 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          bgcolor: COLORS.SURFACE_TINT,
+          borderBottom: `1px solid ${COLORS.BORDER}` 
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FormatListNumberedIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+          <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+            Select Code(s):
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 2, minHeight: '300px' }}>
@@ -141,20 +157,20 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
         ) : (
           <Box>
             {Object.keys(hierarchy).sort().map((type) => (
-              <Accordion key={type} disableGutters elevation={0} square sx={{ borderBottom: '1px solid #e0e0e0', '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#ebebeb', minHeight: '36px', '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                  <Typography fontWeight={600} fontSize="0.85rem" color="#333">- {type}</Typography>
+              <Accordion key={type} disableGutters elevation={0} square sx={{ borderBottom: `1px solid ${COLORS.BORDER}`, '&:before': { display: 'none' } }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: COLORS.TEXT_SECONDARY }} />} sx={{ bgcolor: COLORS.SURFACE_TINT, minHeight: '36px', '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                  <Typography fontWeight={600} fontSize="0.85rem" color={COLORS.TEXT_PRIMARY}>- {type}</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{ p: 0 }}>
-                  <Box sx={{ pl: 2, bgcolor: '#f4f4f4' }}>
+                  <Box sx={{ pl: 2, bgcolor: COLORS.SURFACE_TINT }}>
                     {Object.keys(hierarchy[type]).sort().map((group) => (
                       <Box key={group}>
-                        <Typography sx={{ py: 1, px: 2, fontSize: '0.8rem', color: '#555' }}>
+                        <Typography sx={{ py: 1, px: 2, fontSize: '0.8rem', color: COLORS.TEXT_SECONDARY }}>
                           - {group}
                         </Typography>
-                        <List disablePadding sx={{ bgcolor: '#fff' }}>
+                        <List disablePadding sx={{ bgcolor: 'white' }}>
                           {hierarchy[type][group].map((proc) => (
-                            <ListItem key={proc.ProcCode} disablePadding sx={{ px: 4, py: 0.5, borderBottom: '1px solid #f9f9f9' }}>
+                            <ListItem key={proc.ProcCode} disablePadding sx={{ px: 4, py: 0.5, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
                               <FormControlLabel
                                 value={proc.ProcCode}
                                 control={
@@ -162,12 +178,12 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
                                     size="small" 
                                     checked={selectedProcs.some(p => p.ProcCode === proc.ProcCode)}
                                     onChange={() => handleToggleProcedure(proc)}
-                                    sx={{ p: 0.5, color: '#888', '&.Mui-checked': { color: '#555' } }}
+                                    sx={{ p: 0.5, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }}
                                   />
                                 }
                                 label={
-                                  <Typography sx={{ fontSize: '0.8rem', color: '#555' }}>
-                                    {proc.ProcCode} <span style={{ marginLeft: '12px' }}>{proc.Descript || 'Unknown'}</span>
+                                  <Typography sx={{ fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY }}>
+                                    {proc.ProcCode} <span style={{ marginLeft: '12px', color: COLORS.TEXT_SECONDARY }}>{proc.Descript || 'Unknown'}</span>
                                   </Typography>
                                 }
                               />
@@ -183,7 +199,7 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+      <DialogActions sx={{ p: 2, bgcolor: COLORS.SURFACE_TINT, borderTop: `1px solid ${COLORS.BORDER}` }}>
         <Button 
           onClick={() => {
             if (selectedProcs.length > 0) {
@@ -192,11 +208,28 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
           }} 
           disabled={selectedProcs.length === 0}
           variant="contained" 
-          sx={{ bgcolor: '#d2b48c', color: 'white', '&:hover': { bgcolor: '#c1a37b' } }}
+          sx={{ 
+            bgcolor: COLORS.ACCENT, 
+            color: 'white', 
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': { bgcolor: '#1565c0', boxShadow: 'none' },
+            '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#9e9e9e' }
+          }}
         >
           Ok
         </Button>
-        <Button onClick={onClose} variant="contained" sx={{ bgcolor: '#9ca3af', color: 'white', '&:hover': { bgcolor: '#8b949e' } }}>
+        <Button 
+          onClick={onClose} 
+          variant="outlined" 
+          sx={{ 
+            color: COLORS.TEXT_SECONDARY, 
+            borderColor: COLORS.BORDER, 
+            bgcolor: 'white',
+            textTransform: 'none',
+            '&:hover': { bgcolor: '#f5f5f5' } 
+          }}
+        >
           Cancel
         </Button>
       </DialogActions>
