@@ -413,6 +413,7 @@ const PatientDetailPage = () => {
               }
 
               await updatePatient(selectedPatient._id || selectedPatient.id, { guarantorId: patientId }).unwrap();
+              fetchById(patientId); // Refresh the current patient to see the new household member
               showSnackbar('Family member linked successfully', 'success');
             } catch (err) {
               showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');

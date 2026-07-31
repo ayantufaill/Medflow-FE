@@ -178,7 +178,19 @@ export const fetchPatientHistory = createAsyncThunk(
         startTime: a.startTime || null,
         endTime: a.endTime || null,
         status: a.status || null,
-        duration: a.durationMinutes || a.duration || 60,
+        duration: (() => {
+          const explicit = a.durationMinutes || a.DurationMins || a.duration || a.customFields?.durationMinutes || a.customFields?.duration || a.customFields?.DurationMins || (a.Pattern ? a.Pattern.length * 5 : null);
+          if (explicit) return explicit;
+          if (a.startTime && a.endTime) {
+            const t1 = new Date(`2000-01-01T${a.startTime}:00`);
+            const t2 = new Date(`2000-01-01T${a.endTime}:00`);
+            if (!isNaN(t1) && !isNaN(t2)) {
+              const diff = (t2 - t1) / 60000;
+              if (diff > 0) return diff;
+            }
+          }
+          return 60;
+        })(),
         appointmentType: a.appointmentType || null,
         appointmentTypeId: a.appointmentTypeId || null,
         visitType:

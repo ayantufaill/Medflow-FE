@@ -235,7 +235,7 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode }) => {
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode, isWeek }) => {
   const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
   
   // Create two droppable zones for the hour: top half (0 mins) and bottom half (30 mins)
@@ -256,11 +256,15 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
         const y = e.clientY - rect.top;
         const isBottomHalf = y > HOUR_HEIGHT / 2;
         const mins = isBottomHalf ? 30 : 0;
-        setActiveCell({
-          hour,
-          mins,
-          roomId
-        });
+        if (isWeek) {
+          if (onSlotClick) onSlotClick(hour, mins, roomId);
+        } else {
+          setActiveCell({
+            hour,
+            mins,
+            roomId
+          });
+        }
       }}
       sx={{
         width: COLUMN_MIN_WIDTH,
@@ -569,6 +573,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 onBlockClick={onBlockClick}
                 isClosed={isClosed}
                 isCloseOpenDayMode={isCloseOpenDayMode}
+                isWeek={isWeek}
               />
             );
           })}

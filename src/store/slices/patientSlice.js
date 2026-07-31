@@ -161,12 +161,14 @@ export const createPatientThunk = createAsyncThunk(
 
 export const updatePatientThunk = createAsyncThunk(
   'patient/updatePatient',
-  async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
+  async ({ patientId, payload }, { dispatch, getState, rejectWithValue }) => {
     try {
       const response = await patientService.updatePatient(patientId, payload);
-      
-      // After a successful update, we should refresh the workspace payload to ensure Redux has all relational data
-      dispatch(fetchPatientById(patientId));
+      const state = getState();
+      // Only refresh if the updated patient is the currently selected one
+      if (state.patient.selectedPatientId === patientId) {
+        dispatch(fetchPatientById(patientId));
+      }
       return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient');

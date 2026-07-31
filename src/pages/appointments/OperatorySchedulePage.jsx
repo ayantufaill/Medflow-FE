@@ -1248,33 +1248,35 @@ const OperatorySchedulePage = () => {
                 primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
               />
             </ListItem>
-            <ListItem
-              button
-              onClick={() => {
-                setSlotPopoverAnchorEl(null);
-                if (selectedSlotInfo) {
-                  const start = selectedDate
-                    .clone()
-                    .startOf("day")
-                    .add(selectedSlotInfo.minutesFromStart, "minute");
-                  const end = start.clone().add(30, "minute"); // default 30 min block
+            {calendarView === 'day' && (
+              <ListItem
+                button
+                onClick={() => {
+                  setSlotPopoverAnchorEl(null);
+                  if (selectedSlotInfo) {
+                    const start = selectedDate
+                      .clone()
+                      .startOf("day")
+                      .add(selectedSlotInfo.minutesFromStart, "minute");
+                    const end = start.clone().add(30, "minute"); // default 30 min block
 
-                  setBlockSlotDialogData({
-                    roomId: selectedSlotInfo.columnId.replace("op", ""),
-                    date: selectedDate.format("YYYY-MM-DD"),
-                    startTime: start.format("HH:mm"),
-                    endTime: end.format("HH:mm")
-                  });
-                  setBlockSlotDialogOpen(true);
-                }
-              }}
-              sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
-            >
-              <ListItemText
-                primary="Block Slot"
-                primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
-              />
-            </ListItem>
+                    setBlockSlotDialogData({
+                      roomId: selectedSlotInfo.columnId.replace("op", ""),
+                      date: selectedDate.format("YYYY-MM-DD"),
+                      startTime: start.format("HH:mm"),
+                      endTime: end.format("HH:mm")
+                    });
+                    setBlockSlotDialogOpen(true);
+                  }
+                }}
+                sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+              >
+                <ListItemText
+                  primary="Block Slot"
+                  primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
+                />
+              </ListItem>
+            )}
           </List>
         </Popover>
 
