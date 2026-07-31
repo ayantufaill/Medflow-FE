@@ -65,6 +65,7 @@ const ActionIcons = () => {
           horizontal: 'right',
         }}
         disableScrollLock
+        sx={{ zIndex: 1500 }}
         PaperProps={{
           sx: {
             overflow: 'visible',

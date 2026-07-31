@@ -4,7 +4,7 @@ import PatientDropdown from './header/PatientDropdown';
 import OpenPatientSlider from './header/OpenPatientSlider';
 import NavTabs from './header/NavTabs';
 import ActionIcons from './header/ActionIcons';
-import DoctorProfile from './header/DoctorProfile';
+import UserProfile from './header/UserProfile';
 import VerticalDivider from './header/VerticalDivider';
 
 const Header = ({ onOpenPatientSlider, sliderOpen }) => (
@@ -54,7 +54,7 @@ const Header = ({ onOpenPatientSlider, sliderOpen }) => (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
         <ActionIcons />
         <VerticalDivider />
-        <DoctorProfile />
+        <UserProfile />
       </Box>
     </Box>
   </Box>
