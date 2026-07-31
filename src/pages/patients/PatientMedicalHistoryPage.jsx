@@ -29,6 +29,7 @@ import {
   Refresh as RefreshIcon,
   WarningAmberOutlined as PremedIcon,
 } from "@mui/icons-material";
+import medflowLogo from "../../assets/medflow-logo.png";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { useMedicalHistory } from "../../hooks/redux/useMedicalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
@@ -395,9 +396,128 @@ const PatientMedicalHistoryPage = () => {
   }
 
   return (
-    <PageContainer>
+    <PageContainer id="medical-history-page-root">
+      <Box className="print-only" sx={{ display: 'none', textAlign: 'center', mb: 3 }}>
+        <img src={medflowLogo} alt="Medflow" style={{ height: '40px' }} />
+      </Box>
+      <style>
+        {`
+          @media print {
+            @page {
+              size: letter portrait;
+              margin: 15mm;
+            }
+
+            body {
+              background: white !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            body * { 
+              visibility: hidden; 
+            }
+
+            #medical-history-page-root, #medical-history-page-root * { 
+              visibility: visible; 
+            }
+
+            #medical-history-page-root {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background-color: white !important;
+            }
+
+            .no-print, .no-print * {
+              display: none !important;
+            }
+
+            .section-card-icon, .legend-dot {
+              display: none !important;
+            }
+            .section-card-text, .section-card-text * {
+              display: block !important;
+              visibility: visible !important;
+            }
+
+            .print-only {
+              display: block !important;
+              margin-bottom: 32px !important;
+            }
+
+            .section-card {
+              border-radius: 4px !important;
+              border: 1px solid #cbd5e1 !important;
+              margin-bottom: 16px !important;
+              page-break-inside: avoid !important;
+            }
+            .section-card > .MuiBox-root:first-of-type {
+              border-top-left-radius: 4px !important;
+              border-top-right-radius: 4px !important;
+              padding-left: 12px !important;
+            }
+            .section-card-body {
+              padding: 16px !important;
+            }
+
+            #medical-history-header {
+              border-radius: 4px !important;
+              border: 1px solid #cbd5e1 !important;
+              margin-bottom: 16px !important;
+              padding: 12px 16px !important;
+              page-break-inside: avoid !important;
+            }
+
+            /* Professional Form Fields */
+            .MuiOutlinedInput-root {
+              background: transparent !important;
+            }
+            .MuiOutlinedInput-notchedOutline {
+              border: 1px solid #cbd5e1 !important;
+              border-radius: 4px !important;
+            }
+            .MuiInputBase-input {
+              padding: 6px 10px !important;
+              font-size: 13px !important;
+              color: black !important;
+              -webkit-text-fill-color: black !important;
+            }
+            .MuiSelect-icon {
+              display: none !important;
+            }
+            
+            #medical-history-grid {
+              display: block !important;
+            }
+            
+            #medical-history-grid > .MuiBox-root {
+              width: 100% !important;
+              margin-bottom: 16px !important;
+            }
+
+            #medical-history-top-row, #medical-history-meds-grid {
+              display: block !important;
+            }
+
+            .MuiPaper-root {
+              box-shadow: none !important;
+              border: 1px solid #e2e8f0 !important;
+              border-radius: 4px !important;
+              page-break-inside: avoid !important;
+              margin-bottom: 16px !important;
+            }
+          }
+        `}
+      </style>
       <UnsavedChangesPrompt when={hasUnsavedChanges} onSave={() => saveMedicalHistory(false)} />
-      <PatientSectionTabs activeTab="medical" patientId={patientId} />
+      <Box className="no-print">
+        <PatientSectionTabs activeTab="medical" patientId={patientId} />
+      </Box>
 
       {/* <FloatingActions
         sx={{
@@ -420,6 +540,7 @@ const PatientMedicalHistoryPage = () => {
       {/* Header — same rounded-card treatment as the Patient Details page
           header (PatientDetailOverview.jsx), with this page's own action set. */}
       <Box
+        id="medical-history-header"
         sx={{
           mt: 1.5,
           mb: 2,
@@ -444,7 +565,7 @@ const PatientMedicalHistoryPage = () => {
           </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+        <Box className="no-print" sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
           <Button
             variant={hasUnsavedChanges ? "contained" : "outlined"}
             size="small"
@@ -539,9 +660,9 @@ const PatientMedicalHistoryPage = () => {
           starts below it. Ratio matches the Figma spec (~77:23 main:sidebar,
           ~69:31 Timeline:Premedication) and the same ~4:1 split the
           Task List/Messages cards use on the schedule operatory page. */}
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
+      <Box id="medical-history-grid" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
         <Box sx={{ minWidth: 0 }}>
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "7fr 3fr" }, gap: 2, mb: 2, alignItems: "start" }}>
+          <Box id="medical-history-top-row" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "7fr 3fr" }, gap: 2, mb: 2, alignItems: "start" }}>
             <SectionCard icon={HistoryTimelineIcon} title="History Timeline" sx={{ mb: 0 }}>
               {visitDates.length ? (
                 <VisitDatesTimeline visitDates={visitDates} />
@@ -623,7 +744,7 @@ const PatientMedicalHistoryPage = () => {
                 onSectionChange={handleSummarySectionChange}
               />
 
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mt: 2 }}>
+              <Box id="medical-history-meds-grid" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mt: 2 }}>
                 <MedicationListCard
                   title="Medication List"
                   rows={medications}
@@ -642,6 +763,7 @@ const PatientMedicalHistoryPage = () => {
 
               <Typography
                 variant="caption"
+                className="no-print"
                 sx={{
                   display: "block",
                   textAlign: "center",
@@ -662,8 +784,8 @@ const PatientMedicalHistoryPage = () => {
             operatory pages, plus a Signature card in the same card shell.
             One column spanning both rows above, not re-declared per row. */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-          <TaskList />
-          <Messages />
+          <Box className="no-print"><TaskList /></Box>
+          <Box className="no-print"><Messages /></Box>
           <PatientSignatureCard
             value={signature}
             onChange={setSignature}

@@ -34,7 +34,7 @@ const SummarySection = ({
         isFirst={isFirst}
       />
       
-      <Box sx={{ px: { xs: 1, sm: 2 }, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: 4, alignItems: 'start' }}>
+      <Box className="print-stack" sx={{ px: { xs: 1, sm: 2 }, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '7fr 3fr' }, gap: 4, alignItems: 'start' }}>
         <Box>
           {answeredItems.length > 0 ? (
             answeredItems.map((item) => (
