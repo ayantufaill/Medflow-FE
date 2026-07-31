@@ -642,8 +642,8 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
                 if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Reports') navigate('/admin/reports/financial');
                 if (item === 'KPI Dashboard') {
-                  console.log("Navigating to KPI Dashboard route: /admin/reports/kpi");
-                  navigate('/admin/reports/kpi');
+                  console.log("Navigating to KPI Dashboard route: /admin/kpi");
+                  navigate('/kpi');
                 }
                 handleSettingsClose();
               }}

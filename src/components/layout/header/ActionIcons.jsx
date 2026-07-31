@@ -94,7 +94,7 @@ const ActionIcons = () => {
                 if (item === 'Advanced Reporting') navigate('/admin/advanced-reporting');
                 if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Reports') navigate('/admin/reports/financial');
-                if (item === 'KPI Dashboard') navigate('/admin/reports/kpi');
+                if (item === 'KPI Dashboard') navigate('/kpi');
                 handleSettingsClose();
               }}
               sx={{
