@@ -23,18 +23,18 @@ import AuditHistoryDialog from '../../components/admin/feeguides/AuditHistoryDia
 import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
 
 // Redux
-import { 
-  fetchFeeGuides, 
-  deleteFeeGuide, 
-  selectFeeGuides, 
+import {
+  fetchFeeGuides,
+  deleteFeeGuide,
+  selectFeeGuides,
   selectDefaultFeeGuideId,
-  selectFeeGuidesLoading 
+  selectFeeGuidesLoading
 } from '../../store/slices/feeGuideSlice';
 
 const FeeGuides = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   // Dialog States
   const [plansDialogOpen, setPlansDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -45,7 +45,7 @@ const FeeGuides = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
-  
+
   // Selected Data States
   const [selectedFeeGuide, setSelectedFeeGuide] = useState('');
   const [selectedFeeGuideObj, setSelectedFeeGuideObj] = useState(null);
@@ -62,15 +62,15 @@ const FeeGuides = () => {
   const feeGuidesData = (feeGuidesRaw || [])
     .filter(fs => fs && !fs.isHidden && fs.IsHidden !== 1 && fs.IsHidden !== true)
     .map((fs, index) => {
-    const fsId = fs?._id?.toString() || fs?.id?.toString() || fs?.FeeSchedNum?.toString() || `fallback-${index}`;
-    return {
-      id: fsId,
-      name: fs?.description || fs?.Description || 'Unnamed',
-      default: overrideDefaultId ? (overrideDefaultId === fsId ? 'Yes' : 'No') : (index === 0 ? 'Yes' : 'No'),
-      defaultProvider: '',
-      plans: 0 // Mocked for now
-    };
-  });
+      const fsId = fs?._id?.toString() || fs?.id?.toString() || fs?.FeeSchedNum?.toString() || `fallback-${index}`;
+      return {
+        id: fsId,
+        name: fs?.description || fs?.Description || 'Unnamed',
+        default: overrideDefaultId ? (overrideDefaultId === fsId ? 'Yes' : 'No') : (index === 0 ? 'Yes' : 'No'),
+        defaultProvider: '',
+        plans: 0 // Mocked for now
+      };
+    });
 
   const handleOpenPlans = (name) => {
     setSelectedFeeGuide((name || '').toUpperCase());
@@ -128,11 +128,11 @@ const FeeGuides = () => {
           variant="contained"
           onClick={() => setSyncDialogOpen(true)}
           startIcon={<SyncIcon sx={{ fontSize: '18px' }} />}
-          sx={{ 
+          sx={{
             fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
             textTransform: "none", borderRadius: "8px",
             backgroundColor: "#2262ef", color: "#fff",
-            height: 38, 
+            height: 38,
             px: "20px",
             boxShadow: "none",
             "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
@@ -164,40 +164,40 @@ const FeeGuides = () => {
       />
 
       {/* Dialogs */}
-      <PlansDialog 
-        open={plansDialogOpen} 
-        onClose={() => setPlansDialogOpen(false)} 
-        selectedFeeGuide={selectedFeeGuide} 
+      <PlansDialog
+        open={plansDialogOpen}
+        onClose={() => setPlansDialogOpen(false)}
+        selectedFeeGuide={selectedFeeGuide}
       />
-      <ClearManualFeeGuideDialog 
-        open={resetDialogOpen} 
-        onClose={() => setResetDialogOpen(false)} 
+      <ClearManualFeeGuideDialog
+        open={resetDialogOpen}
+        onClose={() => setResetDialogOpen(false)}
       />
-      <ClearLockedFeeDialog 
-        open={lockedFeesDialogOpen} 
-        onClose={() => setLockedFeesDialogOpen(false)} 
+      <ClearLockedFeeDialog
+        open={lockedFeesDialogOpen}
+        onClose={() => setLockedFeesDialogOpen(false)}
       />
-      <CopyFeeGuideDialog 
-        open={copyDialogOpen} 
-        onClose={() => setCopyDialogOpen(false)} 
+      <CopyFeeGuideDialog
+        open={copyDialogOpen}
+        onClose={() => setCopyDialogOpen(false)}
         feeGuidesData={feeGuidesData}
       />
-      <EmptyFeeGuideDialog 
-        open={emptyDialogOpen} 
-        onClose={() => setEmptyDialogOpen(false)} 
+      <EmptyFeeGuideDialog
+        open={emptyDialogOpen}
+        onClose={() => setEmptyDialogOpen(false)}
       />
-      <ReestimateDialog 
-        open={reestimateDialogOpen} 
-        onClose={() => setReestimateDialogOpen(false)} 
+      <ReestimateDialog
+        open={reestimateDialogOpen}
+        onClose={() => setReestimateDialogOpen(false)}
       />
-      <EditFeeGuideDialog 
-        open={editDialogOpen} 
-        onClose={() => setEditDialogOpen(false)} 
+      <EditFeeGuideDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
         feeGuideObj={selectedFeeGuideObj}
       />
-      <AuditHistoryDialog 
-        open={auditDialogOpen} 
-        onClose={() => setAuditDialogOpen(false)} 
+      <AuditHistoryDialog
+        open={auditDialogOpen}
+        onClose={() => setAuditDialogOpen(false)}
       />
       <AdjustmentTypesSyncDialog
         open={syncDialogOpen}

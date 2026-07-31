@@ -25,6 +25,7 @@ const Header = ({ onOpenPatientSlider, sliderOpen }) => (
       backgroundColor: '#FCFCFC',
       borderBottom: '1px solid #e0e5eb',
       boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      '@media print': { display: 'none' },
     }}
   >
     <Box
