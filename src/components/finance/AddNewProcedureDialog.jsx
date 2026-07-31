@@ -451,14 +451,16 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
                 
                 selectedProcedures.forEach((proc, index) => {
                   const isLast = index === selectedProcedures.length - 1;
-                  const code = typeof proc === 'string' ? proc : proc.ProcCode;
-                  const desc = typeof proc === 'string' ? '' : (proc.Descript || '');
+                  const code = typeof proc === 'string' ? proc : proc.ProcCode || proc.code;
+                  const desc = typeof proc === 'string' ? '' : (proc.Descript || proc.name || '');
+                  const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
 
                   onSave({
                     selectedTeeth,
                     selectedSurfaces,
                     procedureCode: code,
                     procedureDescription: desc,
+                    fee: feeAmount,
                     dontChangeCode
                   }, !isLast);
                 });

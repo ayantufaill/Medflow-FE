@@ -21,8 +21,9 @@ import {
   TextField,
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
+import { invoiceService } from "../../services/invoice.service";
 
-const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
+const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
@@ -135,11 +136,13 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
     fontSize: "14px",
   };
 
-  const handleSaveProcedure = (savedData, keepOpen = false) => {
+  const handleSaveProcedure = async (savedData, keepOpen = false) => {
     if (!keepOpen) {
       setShowAddProcedure(false);
     }
     if (!savedData) return;
+
+    const baseFee = parseFloat(savedData.fee || 0);
 
     const newProcedure = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
@@ -154,12 +157,28 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
       provider: "", // default to empty instead of 'SMI'
       writeoff: "$0.00",
       ptPortion: "$0.00",
-      insPortion: `$${parseFloat(savedData.fee || 0).toFixed(2)}`,
-      charge: `$${parseFloat(savedData.fee || 0).toFixed(2)}`,
-      balance: `$${parseFloat(savedData.fee || 0).toFixed(2)}`,
+      insPortion: `$${baseFee.toFixed(2)}`,
+      charge: `$${baseFee.toFixed(2)}`,
+      balance: `$${baseFee.toFixed(2)}`,
       dbi: false,
       completed: true,
     };
+
+    if (patient && patient._id) {
+      try {
+        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
+          { code: newProcedure.code, charge: baseFee }
+        ]);
+        if (estimates && estimates.length > 0) {
+          const est = estimates[0];
+          newProcedure.insPortion = `$${Number(est.insPortion || 0).toFixed(2)}`;
+          newProcedure.ptPortion = `$${Number(est.ptPortion || 0).toFixed(2)}`;
+          newProcedure.balance = `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch estimate for procedure:", err);
+      }
+    }
 
     setProcedures((prev) => [...prev, newProcedure]);
   };
@@ -176,12 +195,15 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
     setProcedures((prev) => prev.filter((p) => p.id !== procedureId));
   };
 
-  const handleAmountChange = (procedureId, field, value) => {
-    setProcedures((prev) =>
-      prev.map((p) => {
+  const handleAmountChange = async (procedureId, field, value) => {
+    let updatedProcedure = null;
+    
+    setProcedures((prev) => {
+      return prev.map((p) => {
         if (p.id !== procedureId) return p;
 
         const updated = { ...p, [field]: value };
+        updatedProcedure = updated;
 
         const numCharge =
           parseFloat(
@@ -193,7 +215,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
           ) || 0;
         const dbiState = updated.dbi;
 
-        if (["charge", "writeoff", "dbi"].includes(field)) {
+        if (["writeoff", "dbi"].includes(field)) {
           const owed = Math.max(0, numCharge - numWriteoff);
 
           if (dbiState) {
@@ -207,11 +229,36 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
           updated.balance = `$${owed.toFixed(2)}`;
         } else if (["ptPortion", "insPortion"].includes(field)) {
           updated.balance = `$${Math.max(0, numCharge - numWriteoff).toFixed(2)}`;
+        } else if (field === "charge") {
+          updated.balance = `$${numCharge.toFixed(2)}`;
         }
 
         return updated;
-      }),
-    );
+      });
+    });
+
+    if (field === "charge" && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
+      try {
+        const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
+          { code: updatedProcedure.code, charge: numCharge }
+        ]);
+        if (estimates && estimates.length > 0) {
+          const est = estimates[0];
+          setProcedures((prev) => prev.map((p) => {
+            if (p.id !== procedureId) return p;
+            return {
+              ...p,
+              insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
+              ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
+              balance: `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`
+            };
+          }));
+        }
+      } catch (err) {
+        console.warn("Failed to fetch estimate after charge change:", err);
+      }
+    }
   };
 
   const ProviderDropdown = ({ value, onChange }) => {
