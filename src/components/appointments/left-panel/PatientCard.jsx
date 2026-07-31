@@ -24,17 +24,10 @@ const TAGS = [
 ];
 
 const ACTION_BUTTONS = [
-  { key: 'call', label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
-  { key: 'email', label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
-  { key: 'book', label: 'MH',    icon: (
-      <Box sx={{
-        width: '24px', height: '18px', borderRadius: '4px',
-        backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: COLORS.ACCENT, lineHeight: 1 }}>MH</Typography>
-      </Box>
-    ),  dot: false, disabled: false },
-  { key: 'jump-to', label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
+  { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
+  { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
+  { label: 'MH',      icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
+  { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
 ];
 
 // Renders one contact-info row with an icon, text, and copy button.
@@ -260,19 +253,20 @@ const PatientCard = () => {
             </Box>
           ))}
         </Box>
+
       </Box>
 
       <Divider sx={{ borderColor: COLORS.BORDER, my: '6px' }} />
 
       {/* ── Quick-action buttons ─────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', gap: '6px' }}>
-        {ACTION_BUTTONS.map(({ key, label, icon, dot, disabled }) => (
+        {ACTION_BUTTONS.map(({ label, icon, dot, disabled }) => (
           <Box
-            key={key}
+            key={label}
             onClick={() => {
               if (disabled) return;
-              if (key === 'book') {
-                navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`);
+              if (label === 'MH') {
+                // To be implemented: Route or action for MH
               }
             }}
             sx={{
