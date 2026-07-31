@@ -153,8 +153,10 @@ const AddNewPatientAppointmentForm = ({
             setPatient(fullPatient || mockPatient);
             
             let parsedDate = dayjs();
-            if (sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate) {
-              parsedDate = dayjs(sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate);
+            const rawDate = sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate;
+            if (rawDate) {
+              const dateStr = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate.split('T')[0] : rawDate;
+              parsedDate = dayjs(dateStr);
             }
             
             const timeStr = sourceAppt.startTime || initialAppointment.time || initialAppointment.startTime;

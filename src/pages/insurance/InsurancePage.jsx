@@ -15,7 +15,8 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
-  fetchPatientInsurances, 
+  fetchPatientInsurances,
+  fetchAllPatientInsurances,
   updatePatientInsuranceThunk, 
   deletePatientInsuranceThunk 
 } from '../../store/slices/patientSlice';
@@ -45,20 +46,29 @@ const InsurancePage = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const dispatch = useDispatch();
-  const insurancesData = useSelector(state => state.patient.insurancesCache[patientId]?.data || []);
-  const isFetching = useSelector(state => state.patient.patientInsurancesLoading);
+  const insurancesData = useSelector(state => 
+    patientId 
+      ? (state.patient.insurancesCache[patientId]?.data || [])
+      : (state.patient.globalInsurances || [])
+  );
+  const isFetching = useSelector(state => 
+    patientId 
+      ? state.patient.patientInsurancesLoading
+      : state.patient.globalInsurancesLoading
+  );
 
   const mappedData = React.useMemo(() => {
     return insurancesData.map(item => ({
       ...item,
-      id: item._id || item.id,
-      payer: item.insuranceCompany?.name || item.payer || 'Unknown Payer',
-      plan: item.planType || item.plan || 'No Plan',
-      subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
-      status: (item.isActive === true || item.status === 'active') ? 'active' : 'inactive',
+      id: item._id || item.id || item.PatPlanNum,
+      patientName: item.patientName || (item.patient ? `${item.patient.FName} ${item.patient.LName}` : 'Unknown Patient'),
+      payer: item.insuranceCompanyId?.name || item.insuranceCompany?.name || item.payer || (item.inssub?.insplan?.carrier?.CarrierName) || 'Unknown Payer',
+      plan: item.groupName || item.planType || item.plan || 'No Plan',
+      subscriber: item.subscriberName || item.subscriber || item.patientName || 'Unknown Subscriber',
+      status: (item.isActive === true || item.status === 'active' || item.Relationship === 0) ? 'active' : 'inactive',
       eligibilityChecked: item.lastEligibilityCheckDate || 'Not checked',
       dentist: item.provider?.name || 'Default Dentist',
-      isFamilyPlan: item.isFamilyPlan || false
+      isFamilyPlan: item.isFamilyPlan || (item.relationshipToPatient && item.relationshipToPatient !== 'self') || false
     }));
   }, [insurancesData]);
 
@@ -75,6 +85,17 @@ const InsurancePage = () => {
         .catch((error) => {
           console.error('Error fetching insurances:', error);
           showSnackbar('Failed to load insurance coverage', 'error');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(true);
+      dispatch(fetchAllPatientInsurances())
+        .unwrap()
+        .catch((error) => {
+          console.error('Error fetching global insurances:', error);
+          showSnackbar('Failed to load global coverages', 'error');
         })
         .finally(() => {
           setLoading(false);
@@ -305,6 +326,7 @@ const InsurancePage = () => {
         <Table size="small" sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#fbfbfb', '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: '#888', whiteSpace: 'nowrap' } }}>
+              {!patientId && <TableCell>PATIENT</TableCell>}
               <TableCell>PAYER/CARRIER</TableCell>
               <TableCell align="center">PLAN</TableCell>
               <TableCell>SUBSCRIBER</TableCell>
@@ -314,7 +336,7 @@ const InsurancePage = () => {
           <TableBody>
             {currentTabData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3, fontSize: '0.78rem', color: '#999' }}>
+                <TableCell colSpan={patientId ? 4 : 5} align="center" sx={{ py: 3, fontSize: '0.78rem', color: '#999' }}>
                   No coverages found in this tab
                 </TableCell>
               </TableRow>
@@ -322,6 +344,11 @@ const InsurancePage = () => {
               currentTabData.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow sx={{ '& .MuiTableCell-body': { py: 1.25, borderBottom: expandedRowId === row.id ? 'none' : '1px solid #eee' } }}>
+                    {!patientId && (
+                      <TableCell sx={{ fontSize: '0.78rem', color: '#444', fontWeight: 600 }}>
+                        {row.patientName}
+                      </TableCell>
+                    )}
                     <TableCell sx={{ fontSize: '0.78rem', color: '#444', fontWeight: 500 }}>
                       {row.payer}
                     </TableCell>
@@ -397,7 +424,7 @@ const InsurancePage = () => {
                   
                   {/* Expanded Detail View */}
                   <TableRow>
-                    <TableCell colSpan={4} sx={{ p: 0 }}>
+                    <TableCell colSpan={patientId ? 4 : 5} sx={{ p: 0 }}>
                       <Collapse in={expandedRowId === row.id} timeout="auto" unmountOnExit>
                         <Box sx={{ px: 3, pb: 3, pt: 1, borderBottom: '1px solid #eee' }}>
                           <Grid container spacing={4}>

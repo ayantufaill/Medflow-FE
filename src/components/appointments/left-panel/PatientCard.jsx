@@ -26,7 +26,14 @@ const TAGS = [
 const ACTION_BUTTONS = [
   { key: 'call', label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
   { key: 'email', label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
-  { key: 'book', label: 'MH',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
+  { key: 'book', label: 'MH',    icon: (
+      <Box sx={{
+        width: '24px', height: '18px', borderRadius: '4px',
+        backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: COLORS.ACCENT, lineHeight: 1 }}>MH</Typography>
+      </Box>
+    ),  dot: false, disabled: false },
   { key: 'jump-to', label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
 ];
 
@@ -264,6 +271,9 @@ const PatientCard = () => {
             key={key}
             onClick={() => {
               if (disabled) return;
+              if (key === 'book') {
+                navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`);
+              }
             }}
             sx={{
               flex: 1,
