@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, CircularProgress } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
@@ -46,50 +46,77 @@ const MetricCard = ({ title, value, icon, trend, trendLabel, color }) => (
       <Typography sx={{ color: '#1A1A1A', fontSize: '28px', fontWeight: 700 }}>
         {value}
       </Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-        <Typography sx={{ color: trend >= 0 ? '#42C070' : '#E55353', fontSize: '13px', fontWeight: 600 }}>
-          {trend >= 0 ? '+' : ''}{trend}%
-        </Typography>
-        <Typography sx={{ color: '#8898AA', fontSize: '13px' }}>
-          {trendLabel}
-        </Typography>
-      </Box>
+      {trend !== undefined && trend !== null && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+          <Typography sx={{ color: trend >= 0 ? '#42C070' : '#E55353', fontSize: '13px', fontWeight: 600 }}>
+            {trend > 0 ? '+' : ''}{trend}%
+          </Typography>
+          <Typography sx={{ color: '#8898AA', fontSize: '13px' }}>
+            {trendLabel}
+          </Typography>
+        </Box>
+      )}
     </Box>
   </Paper>
 );
 
-const KpiTopCards = () => {
+const KpiTopCards = ({ summaryData, loading }) => {
+  if (loading) {
+    return (
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 120 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Format currency
+  const formatMoney = (val) => {
+    if (val == null) return '$0.00';
+    return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Format counts
+  const formatCount = (val) => {
+    if (val == null) return '0';
+    return val.toLocaleString('en-US');
+  };
+
+  const netProd = summaryData?.netProduction || {};
+  const totalColl = summaryData?.totalCollection || {};
+  const seenPt = summaryData?.seenPatients || {};
+  const caseAcc = summaryData?.caseAccepted || {};
+
   return (
-    <Box sx={{ mb: 4, display: 'flex', gap: 3, width: '100%' }}>
+    <Box sx={{ mb: 4, display: 'flex', gap: 3, width: '100%', '@media print': { display: 'none' } }}>
       <MetricCard
         title="TOTAL NET PRODUCTION"
-        value="$41,383.80"
+        value={formatMoney(netProd.current)}
         icon={<TrendingUpIcon fontSize="small" />}
-        trend={12.5}
+        trend={netProd.changePercent}
         trendLabel="vs last month"
         color="#2362EF"
       />
       <MetricCard
         title="TOTAL COLLECTION"
-        value="$42,362.93"
+        value={formatMoney(totalColl.current)}
         icon={<AttachMoneyIcon fontSize="small" />}
-        trend={8.2}
+        trend={totalColl.changePercent}
         trendLabel="vs last month"
         color="#42C070"
       />
       <MetricCard
         title="TOTAL SEEN PATIENTS"
-        value="84"
+        value={formatCount(seenPt.current)}
         icon={<PeopleOutlineIcon fontSize="small" />}
-        trend={-2.4}
+        trend={seenPt.changePercent}
         trendLabel="vs last month"
         color="#F59E0B"
       />
       <MetricCard
         title="CASE ACCEPTED"
-        value="$57,091.40"
+        value={formatMoney(caseAcc.current)}
         icon={<AssignmentTurnedInIcon fontSize="small" />}
-        trend={15.3}
+        trend={caseAcc.changePercent}
         trendLabel="vs last month"
         color="#8B5CF6"
       />
