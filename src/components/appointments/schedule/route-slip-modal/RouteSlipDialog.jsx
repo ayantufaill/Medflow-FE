@@ -178,57 +178,34 @@ const RouteSlipDialog = () => {
         <style>
           {`
             @media print {
-              @page {
-                size: letter portrait;
-                margin: 15mm;
-              }
-
+              body * { visibility: hidden; }
+              #route-slip-print-content, #route-slip-print-content * { visibility: visible; }
+              
               body {
-                background: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+                margin: 0;
+                padding: 0;
+                background-color: white;
               }
 
-              body * { 
-                visibility: hidden; 
-              }
-              
-              /* Hide backdrops completely */
-              .MuiBackdrop-root {
-                display: none !important;
-              }
-
-              #route-slip-print-content, #route-slip-print-content * { 
-                visibility: visible; 
-              }
-              
               #route-slip-print-content {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
+                width: 900px !important; /* Force desktop width to maintain grid alignment */
+                max-width: 900px !important;
                 margin: 0 !important;
-                padding: 0 !important;
-                background-color: white !important;
-                box-sizing: border-box !important;
-                overflow: visible !important;
-                /* Optional: ensure fonts look crisp */
-                color: black !important;
+                padding: 30px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
 
-              /* Force margin between sections to avoid print resets stripping them */
-              #route-slip-print-content > .MuiBox-root {
-                margin-bottom: 32px !important;
-                page-break-inside: avoid !important;
-              }
-
-              /* Reset MUI Dialog specific styles so they don't constrain the print content */
               .MuiDialog-root, .MuiDialog-container, .MuiDialog-paper, .MuiDialogContent-root {
-                position: static !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
                 width: 100% !important;
                 height: auto !important;
-                min-height: 0 !important;
+                min-height: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 overflow: visible !important;
@@ -240,9 +217,12 @@ const RouteSlipDialog = () => {
                 max-height: none !important;
               }
 
-              .MuiDialogActions-root, .no-print-in-modal { 
-                display: none !important; 
+              /* Also specifically ensure DialogContent doesn't have internal scrolling */
+              #route-slip-print-content {
+                overflow: visible !important;
               }
+
+              .MuiDialogActions-root, .no-print-in-modal { display: none !important; }
             }
           `}
         </style>
@@ -290,7 +270,7 @@ const RouteSlipDialog = () => {
         </Box>
 
         {/* PATIENT SECTION */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 2 }}>
           <SectionHeader title="PATIENT" />
           <SectionContainer>
             <Grid container spacing={2}>
@@ -306,7 +286,7 @@ const RouteSlipDialog = () => {
                   <InfoRow label="Preferred Dentist" value={preferredDentistName} />
                   <InfoRow label="Preferred Hygienist" value={preferredHygienistName} />
                   <InfoRow label="Referring Sources" value="--" />
-                  <InfoRow label="Care Team Providers" value="--" />
+
                 </Box>
               </Grid>
             </Grid>
@@ -314,7 +294,7 @@ const RouteSlipDialog = () => {
         </Box>
 
         {/* ACCOUNT & INSURANCE SECTIONS */}
-        <Box sx={{ display: 'flex', gap: '32px', mb: 4 }}>
+        <Box sx={{ display: 'flex', gap: '16px', mb: 2 }}>
           <Box sx={{ flex: 1 }}>
             <SectionHeader title="ACCOUNT" />
             <SectionContainer sx={{ height: '100px' }}>
@@ -340,7 +320,7 @@ const RouteSlipDialog = () => {
         </Box>
 
         {/* PRIMARY APPOINTMENT */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 2 }}>
           <SectionHeader title={primaryApptTitle} />
           <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
             {routeSlipAppt ? (
@@ -360,7 +340,7 @@ const RouteSlipDialog = () => {
         </Box>
 
         {/* NEXT APPOINTMENT */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 2 }}>
           <SectionHeader title="NEXT APPOINTMENT" />
           <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
             {nextAppt ? (
