@@ -13,7 +13,7 @@ import {
   selectClinicAnalyticsData,
   selectClinicAnalyticsLoading,
 } from '../../../store/slices/clinicAnalyticsSlice';
-
+// comment added
 const UserProfile = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
