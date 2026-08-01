@@ -14,7 +14,10 @@ import {
 } from '@mui/material';
 import {
   FileUploadOutlined as UploadIcon,
+  Close as CloseIcon,
+  DescriptionOutlined as DescriptionIcon
 } from '@mui/icons-material';
+import IconButton from '@mui/material/IconButton';
 
 const PrePostOpsForm = ({
   open,
@@ -48,16 +51,38 @@ const PrePostOpsForm = ({
         } 
       }}
     >
-      <DialogTitle sx={{ color: '#1e293b', fontSize: '1.25rem', fontWeight: 700, pb: 2, pt: 3, px: 4, borderBottom: '1px solid #f1f5f9' }}>
-        {editingId ? 'Edit Pre/Post Operation Document' : 'Add New Pre/Post Operation Document'}
-      </DialogTitle>
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            {editingId ? 'Edit Pre/Post Operation Document' : 'Add New Pre/Post Operation Document'}
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Create or edit a pre/post operation document.
+          </Typography>
+        </Box>
+        <IconButton onClick={handleClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       
       <DialogContent sx={{ px: 4, py: 3 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           
           {/* Type Selection */}
           <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1.5 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
               Type
             </Typography>
             <RadioGroup
@@ -67,20 +92,20 @@ const PrePostOpsForm = ({
             >
               <FormControlLabel 
                 value="Post Operation" 
-                control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-                label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Post Operation</Typography>} 
+                control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} />} 
+                label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>Post Operation</Typography>} 
               />
               <FormControlLabel 
                 value="Pre Operation" 
-                control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-                label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Pre Operation</Typography>} 
+                control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} />} 
+                label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>Pre Operation</Typography>} 
               />
             </RadioGroup>
           </Box>
 
           {/* Send form to patient */}
           <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
               Send form to patient
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -90,8 +115,9 @@ const PrePostOpsForm = ({
                 onChange={(e) => setSendHours(e.target.value)}
                 sx={{ 
                   width: 80,
-                  '& .MuiInputBase-input': { textAlign: 'center', py: 0.8, fontSize: '0.9rem' },
-                  '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }
+                  '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px", textAlign: 'center' },
+                  '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
                 }} 
               />
               <TextField 
@@ -102,14 +128,15 @@ const PrePostOpsForm = ({
                 onChange={(e) => setSendUnit(e.target.value)}
                 sx={{ 
                   width: 120,
-                  '& .MuiInputBase-input': { py: 0.8, fontSize: '0.9rem' },
-                  '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }
+                  '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+                  '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
                 }}
               >
                 <option value="hours">hours</option>
                 <option value="days">days</option>
               </TextField>
-              <Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>
+              <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#475569" }}>
                 after appointment.
               </Typography>
             </Box>
@@ -117,7 +144,7 @@ const PrePostOpsForm = ({
 
           {/* File Option Selection */}
           <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1.5 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
               File Type
             </Typography>
             <RadioGroup
@@ -127,13 +154,13 @@ const PrePostOpsForm = ({
             >
               <FormControlLabel 
                 value="Upload PDF" 
-                control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-                label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Upload PDF</Typography>} 
+                control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} />} 
+                label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>Upload PDF</Typography>} 
               />
               <FormControlLabel 
                 value="Create Form" 
-                control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-                label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Create Form</Typography>} 
+                control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} />} 
+                label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>Create Form</Typography>} 
               />
             </RadioGroup>
           </Box>
@@ -141,7 +168,7 @@ const PrePostOpsForm = ({
           {/* Dotted Upload Box */}
           {fileOption === 'Upload PDF' && (
             <Box>
-              <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1.5 }}>
+              <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                 Upload PDF <Typography component="span" sx={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 400 }}>(The system only accepts .pdf files)</Typography>
               </Typography>
               <Box
@@ -178,7 +205,7 @@ const PrePostOpsForm = ({
 
           {/* Document Name */}
           <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
               Document Name
             </Typography>
             <TextField
@@ -188,15 +215,16 @@ const PrePostOpsForm = ({
               value={docName}
               onChange={(e) => setDocName(e.target.value)}
               sx={{ 
-                '& .MuiInputBase-input': { fontSize: '0.9rem', py: 0.8 },
-                '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }
+                '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+                '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
               }}
             />
           </Box>
 
           {/* Procedures */}
           <Box>
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
               Procedures
             </Typography>
             <TextField
@@ -206,8 +234,9 @@ const PrePostOpsForm = ({
               value={procedures}
               onChange={(e) => setProcedures(e.target.value)}
               sx={{ 
-                '& .MuiInputBase-input': { fontSize: '0.9rem', py: 0.8 },
-                '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }
+                '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+                '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
               }}
             />
           </Box>
@@ -219,19 +248,12 @@ const PrePostOpsForm = ({
         <Button
           onClick={handleClose}
           variant="outlined"
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            borderRadius: 1.5,
-            px: 4,
-            py: 1,
-            borderColor: '#cbd5e1',
-            color: '#475569',
-            '&:hover': {
-              backgroundColor: '#f8fafc',
-              borderColor: '#94a3b8'
-            }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Cancel
@@ -240,24 +262,14 @@ const PrePostOpsForm = ({
           variant="contained"
           onClick={handleSaveDocument}
           disabled={!docName}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            borderRadius: 1.5,
-            px: 4,
-            py: 1,
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            boxShadow: 'none',
-            '&:hover': {
-              backgroundColor: '#2563eb',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
-            },
-            '&.Mui-disabled': {
-              backgroundColor: '#cbd5e1',
-              color: '#f8fafc'
-            }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
         >
           {editingId ? 'Update Pre/Post-Op' : 'Add Pre/Post-Op'}

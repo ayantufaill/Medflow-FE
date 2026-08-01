@@ -179,7 +179,7 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
             <RadioGroup
               row
-              value={sexAtBirth === 'male' ? 'male' : sexAtBirth === 'female' ? 'female' : ''}
+              value={['male', 'female', 'intersex'].includes(sexAtBirth) ? sexAtBirth : ''}
               onChange={(e) => handleFieldChange('sexAtBirth', e.target.value)}
               disabled={!isEditMode}
             >
@@ -194,6 +194,13 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
                 value="female"
                 control={<Radio size="small" />}
                 label="Female"
+                slotProps={{ typography: radioLabelTypographySx }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+              />
+              <FormControlLabel
+                value="intersex"
+                control={<Radio size="small" />}
+                label="Intersex"
                 slotProps={{ typography: radioLabelTypographySx }}
                 sx={{ opacity: !isEditMode ? 0.6 : 1 }}
               />
@@ -216,7 +223,8 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
           </Typography>
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
             <RadioGroup
-              value={genderIdentity === 'male' ? 'male' : genderIdentity === 'female' ? 'female' : ''}
+              row
+              value={['male', 'female', 'non_binary', 'prefer_not_to_say'].includes(genderIdentity) ? genderIdentity : ''}
               onChange={(e) => handleFieldChange('genderIdentity', e.target.value)}
               disabled={!isEditMode}
             >
@@ -231,6 +239,20 @@ export default function PatientDetailsSection({ patient, isEditMode = false, onP
                 value="female"
                 control={<Radio size="small" />}
                 label="Female/Woman"
+                slotProps={{ typography: radioLabelTypographySx }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+              />
+              <FormControlLabel
+                value="non_binary"
+                control={<Radio size="small" />}
+                label="Non-binary"
+                slotProps={{ typography: radioLabelTypographySx }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+              />
+              <FormControlLabel
+                value="prefer_not_to_say"
+                control={<Radio size="small" />}
+                label="Prefer not to say"
                 slotProps={{ typography: radioLabelTypographySx }}
                 sx={{ opacity: !isEditMode ? 0.6 : 1 }}
               />

@@ -7,6 +7,10 @@ import {
   Collapse,
   Breadcrumbs,
   Link,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -15,7 +19,9 @@ import {
   Add as AddIcon,
   DeleteOutline as DeleteIcon,
   Edit as EditIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
+import { DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   fetchCoverageShortcuts, 
@@ -38,6 +44,9 @@ const CoverageBookShortcuts = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  
+  const [addTemplateModalOpen, setAddTemplateModalOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
 
   React.useEffect(() => {
     dispatch(fetchCoverageShortcuts());
@@ -70,10 +79,15 @@ const CoverageBookShortcuts = () => {
   };
 
   const handleAddTemplate = () => {
-    const newTemplateName = prompt("Enter new template name:");
-    if (newTemplateName) {
-      dispatch(createCoverageShortcut({ name: newTemplateName, groups: [] }));
+    setNewTemplateName('');
+    setAddTemplateModalOpen(true);
+  };
+
+  const handleSaveTemplate = () => {
+    if (newTemplateName.trim()) {
+      dispatch(createCoverageShortcut({ name: newTemplateName.trim(), groups: [] }));
     }
+    setAddTemplateModalOpen(false);
   };
 
   const handleDeleteTemplate = (e, id) => {
@@ -127,18 +141,17 @@ const CoverageBookShortcuts = () => {
           Coverage Book Shortcuts
         </Typography>
         <Button
-          onClick={handleAddTemplate}
           variant="contained"
-          startIcon={<AddIcon />}
-          sx={{
-            textTransform: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            fontWeight: 600,
-            borderRadius: 2,
-            px: 2,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' },
+          onClick={handleAddTemplate}
+          startIcon={<AddIcon sx={{ fontSize: '18px' }} />}
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            height: 38, 
+            px: "20px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
           }}
         >
           Add Template
@@ -172,6 +185,93 @@ const CoverageBookShortcuts = () => {
         onSave={handleSaveGroup}
         groupData={selectedGroup}
       />
+
+      {/* Add Template Modal */}
+      <Dialog 
+        open={addTemplateModalOpen} 
+        onClose={() => setAddTemplateModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        sx={{ zIndex: 9999 }}
+        PaperProps={{
+          sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "20px", py: "16px",
+          borderBottom: "1px solid #e0e5eb",
+          backgroundColor: "#f3f8fd",
+        }}>
+          <Box sx={{
+            width: "36px", height: "36px", borderRadius: "8px",
+            backgroundColor: "#eff6ff",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+              Add Template
+            </Typography>
+            <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+              Create a new coverage book template.
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setAddTemplateModalOpen(false)} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ px: 4, py: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", color: '#374151', fontWeight: 600, fontSize: '13px' }}>
+              Template Name:
+            </Typography>
+            <TextField
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              placeholder="Enter template name"
+              variant="outlined"
+              size="small"
+              fullWidth
+              autoFocus
+              InputProps={{
+                sx: { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" }
+              }}
+              sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' } }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 4, py: 3, borderTop: '1px solid #f1f5f9', gap: 1.5, justifyContent: 'flex-end' }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => setAddTemplateModalOpen(false)}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveTemplate}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            }}
+          >
+            Create Template
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

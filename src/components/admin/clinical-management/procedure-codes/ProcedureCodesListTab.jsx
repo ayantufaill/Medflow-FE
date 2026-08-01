@@ -31,8 +31,9 @@ const ProcedureCodesListTab = ({
           }}
           sx={{
             width: 350,
-            '& .MuiOutlinedInput-root': { borderRadius: 2, backgroundColor: '#f8fafc' },
-            '& .MuiInputBase-input': { fontSize: '0.9rem', py: 0.8 },
+            "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+            "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
           }}
         />
       </Box>
@@ -94,12 +95,11 @@ const ProcedureCodesListTab = ({
                       handleOpenAddCustomCode(category.name);
                     }}
                     sx={{
-                      color: '#2563eb',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      borderRadius: 2,
-                      '&:hover': { backgroundColor: '#eff6ff' }
+                      fontFamily: "Inter", fontSize: "12px", fontWeight: 500,
+                      textTransform: "none", borderRadius: "8px",
+                      border: "1px solid #d0d5dd", color: "#374151",
+                      px: "12px", py: "4px",
+                      "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
                     }}
                   >
                     + Add Custom Code
@@ -143,12 +143,11 @@ const ProcedureCodesListTab = ({
                                 handleOpenAddCustomCode(subItem);
                               }}
                               sx={{
-                                color: '#2563eb',
-                                fontSize: '0.7rem',
-                                fontWeight: 600,
-                                textTransform: 'none',
-                                borderRadius: 2,
-                                '&:hover': { backgroundColor: '#eff6ff' }
+                                fontFamily: "Inter", fontSize: "12px", fontWeight: 500,
+                                textTransform: "none", borderRadius: "8px",
+                                border: "1px solid #d0d5dd", color: "#374151",
+                                px: "12px", py: "4px",
+                                "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
                               }}
                             >
                               + Add Custom Code

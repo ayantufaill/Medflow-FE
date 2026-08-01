@@ -38,17 +38,14 @@ const AISettings = ({ aiPrompt, setAiPrompt, isEditingPrompt, handleToggleEditPr
             onClick={handleToggleEditPrompt}
             disabled={isEditingPrompt && !isAiPromptModified}
             sx={{
-              backgroundColor: isEditingPrompt ? '#10b981' : '#3b82f6',
-              color: '#fff',
-              textTransform: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              px: 4,
-              py: 1,
-              borderRadius: 1.5,
-              boxShadow: 'none',
-              '&:hover': { backgroundColor: isEditingPrompt ? '#059669' : '#2563eb', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' },
-              '&.Mui-disabled': { backgroundColor: '#cbd5e1', color: '#f8fafc' }
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: isEditingPrompt ? "#10b981" : "#2262ef",
+              color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: isEditingPrompt ? "#059669" : "#1a50cc", boxShadow: "none" },
+              "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
             }}
           >
             {isEditingPrompt ? 'Save Prompt' : 'Edit Prompt'}
@@ -57,15 +54,11 @@ const AISettings = ({ aiPrompt, setAiPrompt, isEditingPrompt, handleToggleEditPr
             variant="outlined"
             onClick={handleResetPrompt}
             sx={{
-              borderColor: '#cbd5e1',
-              color: '#64748b',
-              textTransform: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              px: 3,
-              py: 1,
-              borderRadius: 1.5,
-              '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#94a3b8', color: '#475569' }
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
             }}
           >
             Reset to Default

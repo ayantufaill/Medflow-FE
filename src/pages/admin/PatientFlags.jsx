@@ -11,6 +11,7 @@ import { Box, Grid } from '@mui/material';
 import PatientFlagsHeader from '../../components/admin/patient-flags/PatientFlagsHeader';
 import PatientFlagCategorySection from '../../components/admin/patient-flags/PatientFlagCategorySection';
 import PatientFlagsDialog from '../../components/admin/patient-flags/PatientFlagsDialog';
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const defaultFlags = [
   { id: '1', category: 'Patient Communication', name: 'Send appointment reminder earlier than scheduled time', color: '#22c55e' },
@@ -28,6 +29,7 @@ const PatientFlags = () => {
   const [dialogMode, setDialogMode] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
   const [editFlagId, setEditFlagId] = useState(null);
+  const [deleteFlagId, setDeleteFlagId] = useState(null);
   const [formData, setFormData] = useState({ categoryName: '', name: '', color: '#3b82f6' });
 
   const practiceInfo = useSelector(selectPracticeInfo);
@@ -110,8 +112,14 @@ const PatientFlags = () => {
   };
 
   const handleDeleteFlag = (id) => {
-    if (!window.confirm('Are you sure you want to delete this flag?')) return;
-    setFlags((prev) => prev.filter((f) => f.id !== id));
+    setDeleteFlagId(id);
+  };
+
+  const confirmDeleteFlag = () => {
+    if (deleteFlagId) {
+      setFlags((prev) => prev.filter((f) => f.id !== deleteFlagId));
+      setDeleteFlagId(null);
+    }
   };
 
   const categories = [...new Set(flags.map((f) => f.category))];
@@ -144,6 +152,16 @@ const PatientFlags = () => {
         onFormChange={(key, value) => setFormData((prev) => ({ ...prev, [key]: value }))}
         onClose={() => setDialogOpen(false)}
         onSubmit={handleDialogSubmit}
+      />
+
+      <ConfirmationDialog
+        open={!!deleteFlagId}
+        onClose={() => setDeleteFlagId(null)}
+        onConfirm={confirmDeleteFlag}
+        title="Delete Flag"
+        message="Are you sure you want to delete this flag? This action cannot be undone."
+        confirmText="Delete"
+        confirmColor="error"
       />
     </Box>
   );

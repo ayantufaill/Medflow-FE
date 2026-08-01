@@ -218,8 +218,21 @@ const FamilyAppointmentsDialog = () => {
           display: "flex",
           overflow: "hidden",
           backgroundColor: "#f8fafc",
+          "@media print": { p: 0, '& .no-print': { display: 'none !important' } },
         }}
       >
+        <style>
+          {`
+            @media print {
+              body * { visibility: hidden; }
+              .printable-family-content, .printable-family-content * { visibility: visible; }
+              .printable-family-content { position: absolute; left: 0; top: 0; width: 100%; overflow: visible !important; }
+              .MuiDialog-root, .MuiDialog-container, .MuiDialog-paper,
+              .MuiDialogContent-root { overflow: visible !important; position: static !important; height: auto !important; max-height: none !important; }
+            }
+          `}
+        </style>
+        <Box className="printable-family-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
         {tabValue === 0 ? (
           <FamilyAppointmentsScheduledTab 
             allAppointments={allAppointments}
@@ -232,6 +245,7 @@ const FamilyAppointmentsDialog = () => {
             getPatientName={getPatientName}
           />
         )}
+        </Box>
       </DialogContent>
 
       {/* ── FOOTER ─────────────────────────────────────────────────────────── */}

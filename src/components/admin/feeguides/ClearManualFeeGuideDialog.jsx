@@ -14,7 +14,9 @@ import {
   Checkbox,
   Box,
   Button,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const mockPatients = [
   { id: '1', name: 'John Doe', feeGuide: 'Office Fees 2026' },
@@ -81,21 +83,34 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
       maxWidth="md"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#fff',
-        color: '#0f172a',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        py: 3,
-        px: 4,
-        lineHeight: 1.3,
-        borderBottom: '1px solid #f1f5f9'
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        Clear Manual Fee Guide
-      </DialogTitle>
-      <DialogContent sx={{ p: 4 }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Clear Manual Fee Guide
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Select patients to clear their manual fee guides.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ p: 4, pt: 3 }}>
         <TableContainer sx={{ maxHeight: 400, border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Table stickyHeader size="small">
             <TableHead>
@@ -130,16 +145,15 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
           </Table>
         </TableContainer>
       </DialogContent>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, pb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9' }}>
         <Button 
-          variant="text" 
+          variant="outlined" 
           sx={{ 
-            textTransform: 'none', 
-            color: '#475569', 
-            fontWeight: 600, 
-            borderRadius: 2, 
-            px: 3, 
-            '&:hover': { backgroundColor: '#f1f5f9' } 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
           onClick={onClose}
           disabled={loading}
@@ -149,13 +163,13 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
         <Button 
           variant="contained" 
           sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#2563eb', 
-            fontWeight: 600, 
-            borderRadius: 2, 
-            px: 3, 
-            boxShadow: 'none', 
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
           onClick={handleConfirm}
           disabled={loading}

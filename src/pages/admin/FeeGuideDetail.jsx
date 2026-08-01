@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchFeeGuideDetails,
@@ -20,8 +20,11 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Button,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
-import { HelpOutline as HelpOutlineIcon } from '@mui/icons-material';
+import { HelpOutline as HelpOutlineIcon, ArrowBack as ArrowBackIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import FeeGuideDetailHeader from '../../components/admin/feeguides/FeeGuideDetailHeader';
 import CategoryRow from '../../components/admin/feeguides/CategoryRow';
 import RoundFeeGuideDialog from '../../components/admin/feeguides/RoundFeeGuideDialog';
@@ -30,23 +33,24 @@ import UploadFeeGuideDialog from '../../components/admin/feeguides/UploadFeeGuid
 
 const FeeGuideDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState([]);
   const [roundDialogOpen, setRoundDialogOpen] = useState(false);
   const [setProviderOpen, setSetProviderOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const dispatch = useDispatch();
-  
+
   const backendData = useSelector(selectFeeGuideDetails);
   const loading = useSelector(selectFeeGuideDetailsLoading);
   const feeGuides = useSelector(selectFeeGuides);
-  
-  const currentGuide = feeGuides.find(g => 
-    g._id === id || 
-    g.id === id || 
+
+  const currentGuide = feeGuides.find(g =>
+    g._id === id ||
+    g.id === id ||
     (g.FeeSchedNum && g.FeeSchedNum.toString() === id)
   );
-  
+
   const feeGuideName = currentGuide?.description || currentGuide?.Description || currentGuide?.name || "Fee Guide";
 
   useEffect(() => {
@@ -80,13 +84,13 @@ const FeeGuideDetail = () => {
   // Removed hardcoded mock data
 
   const toggleCategory = (name) => {
-    setExpandedCategories(prev => 
+    setExpandedCategories(prev =>
       prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
     );
   };
 
   const toggleGroup = (name) => {
-    setExpandedGroups(prev => 
+    setExpandedGroups(prev =>
       prev.includes(name) ? prev.filter(g => g !== name) : [...prev, name]
     );
   };
@@ -95,7 +99,7 @@ const FeeGuideDetail = () => {
 
   const filteredData = categoryData.map(cat => {
     const filteredGroups = cat.groups.map(group => {
-      const filteredProcedures = group.procedures.filter(proc => 
+      const filteredProcedures = group.procedures.filter(proc =>
         proc.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         proc.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -124,9 +128,16 @@ const FeeGuideDetail = () => {
   }, [searchQuery]);
 
   return (
-    <Box sx={{ p: 0 }}>
-      <FeeGuideDetailHeader 
-        feeGuideName={feeGuideName} 
+    <Box sx={{ p: 4, backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh' }}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate(-1)} 
+        sx={{ mb: 3, color: '#64748b', textTransform: 'none', fontWeight: 600, '&:hover': { backgroundColor: '#f1f5f9' } }}
+      >
+        Back to Fee Guides
+      </Button>
+      <FeeGuideDetailHeader
+        feeGuideName={feeGuideName}
         onSetProvider={() => setSetProviderOpen(true)}
         onRoundUp={() => setRoundDialogOpen(true)}
         onUpload={() => setUploadDialogOpen(true)}
@@ -134,36 +145,48 @@ const FeeGuideDetail = () => {
 
       {/* Search Bar Section */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Typography variant="body2" sx={{ color: '#4b71a1', fontWeight: 600, textDecoration: 'underline' }}>Search for Code</Typography>
+
         <TextField
           size="small"
-          placeholder="Enter code or procedure"
+          placeholder="Search for code or procedure..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ 
-            width: 200,
-            '& .MuiInputBase-root': { 
-              fontSize: '0.85rem',
-              borderBottom: '1px solid #e0e0e0',
-              borderRadius: 0,
-            },
-            '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+          sx={{
+            width: 300,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#94a3b8', fontSize: 20 }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchQuery ? (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setSearchQuery('')} edge="end">
+                  <ClearIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
           }}
         />
       </Box>
 
       {/* Main Table */}
-      <TableContainer sx={{ border: '1px solid #e0e0e0' }}>
+      <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ bgcolor: '#1a3a6b' }}>
-              <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '15%', whiteSpace: 'nowrap' }}>Type</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '15%', whiteSpace: 'nowrap' }}>Group</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '10%', whiteSpace: 'nowrap' }}>Code</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '20%', whiteSpace: 'nowrap' }}>Procedure Name</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '20%', whiteSpace: 'nowrap' }}>Description</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '10%', whiteSpace: 'nowrap' }}>Fee</TableCell>
-              <TableCell align="center" sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', width: '10%', whiteSpace: 'nowrap' }}>
+            <TableRow sx={{ backgroundColor: '#F8FAFC' }}>
+              <TableCell sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '15%', whiteSpace: 'nowrap' }}>Type</TableCell>
+              <TableCell sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '15%', whiteSpace: 'nowrap' }}>Group</TableCell>
+              <TableCell sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '10%', whiteSpace: 'nowrap' }}>Code</TableCell>
+              <TableCell sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '20%', whiteSpace: 'nowrap' }}>Procedure Name</TableCell>
+              <TableCell sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '20%', whiteSpace: 'nowrap' }}>Description</TableCell>
+              <TableCell sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '10%', whiteSpace: 'nowrap' }}>Fee</TableCell>
+              <TableCell align="center" sx={{ color: '#475569', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #e2e8f0 !important', width: '10%', whiteSpace: 'nowrap' }}>
                 Change fee by % <HelpOutlineIcon sx={{ fontSize: '0.85rem', verticalAlign: 'middle', ml: 0.5 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mt: 0.5, fontSize: '0.75rem' }}>
                   <span>(-/+)</span>
@@ -178,7 +201,7 @@ const FeeGuideDetail = () => {
                 <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>Loading procedures...</TableCell>
               </TableRow>
             ) : displayData.map((cat, index) => (
-              <CategoryRow 
+              <CategoryRow
                 key={index}
                 cat={cat}
                 expandedCategories={expandedCategories}
@@ -195,8 +218,8 @@ const FeeGuideDetail = () => {
       </TableContainer>
 
       {/* Dialogs */}
-      <RoundFeeGuideDialog 
-        open={roundDialogOpen} 
+      <RoundFeeGuideDialog
+        open={roundDialogOpen}
         onClose={() => setRoundDialogOpen(false)}
         onSave={(val) => {
           const numericVal = parseFloat(val);
@@ -208,7 +231,7 @@ const FeeGuideDetail = () => {
           setRoundDialogOpen(false);
         }}
       />
-      <SetProviderFeeGuideDialog 
+      <SetProviderFeeGuideDialog
         open={setProviderOpen}
         onClose={() => setSetProviderOpen(false)}
         onSave={(name) => {
@@ -216,7 +239,7 @@ const FeeGuideDetail = () => {
           setSetProviderOpen(false);
         }}
       />
-      <UploadFeeGuideDialog 
+      <UploadFeeGuideDialog
         open={uploadDialogOpen}
         onClose={() => setUploadDialogOpen(false)}
         onUpload={(file) => {

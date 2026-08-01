@@ -51,18 +51,7 @@ const CollectionCodeCarrierFilters = ({
             popper: { sx: { zIndex: 1400 } },
             textField: { 
               size: 'small', 
-              sx: { 
-                width: '160px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
+              sx: { width: '180px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '32px', backgroundColor: '#fafbfe', color: '#09121f' }, '& .MuiInputBase-input': { padding: '4px 10px' }, '& fieldset': { borderColor: '#e2e8f0' } } 
             }
           }}
         />
@@ -79,18 +68,7 @@ const CollectionCodeCarrierFilters = ({
             popper: { sx: { zIndex: 1400 } },
             textField: { 
               size: 'small', 
-              sx: { 
-                width: '160px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
+              sx: { width: '180px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '32px', backgroundColor: '#fafbfe', color: '#09121f' }, '& .MuiInputBase-input': { padding: '4px 10px' }, '& fieldset': { borderColor: '#e2e8f0' } } 
             }
           }}
         />

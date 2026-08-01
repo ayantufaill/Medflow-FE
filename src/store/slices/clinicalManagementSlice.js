@@ -187,6 +187,30 @@ export const addProductToChecklistItem = createAsyncThunk(
   }
 );
 
+export const removeChoiceFromChecklistItem = createAsyncThunk(
+  'clinicalManagement/removeChoiceFromChecklistItem',
+  async ({ itemId, choiceIndex }, { rejectWithValue }) => {
+    try {
+      const data = await clinicalManagementService.removeChoiceFromChecklistItem(itemId, choiceIndex);
+      return { itemId, choices: data.choices };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to remove choice from item');
+    }
+  }
+);
+
+export const removeProductFromChecklistItem = createAsyncThunk(
+  'clinicalManagement/removeProductFromChecklistItem',
+  async ({ itemId, productIndex }, { rejectWithValue }) => {
+    try {
+      const data = await clinicalManagementService.removeProductFromChecklistItem(itemId, productIndex);
+      return { itemId, products: data.products };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to remove product from item');
+    }
+  }
+);
+
 export const updateChecklist = createAsyncThunk(
   'clinicalManagement/updateChecklist',
   async ({ checklistId, updates }, { rejectWithValue }) => {

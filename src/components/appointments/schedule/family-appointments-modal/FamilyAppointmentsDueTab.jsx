@@ -5,6 +5,8 @@ import dayjs from "dayjs";
 import { COLORS } from "../../../../constants/colors";
 
 const STATUS_COLOR_MAP = {
+  scheduled:              { bg: '#dbeafe', text: '#2563eb', label: 'Scheduled' },
+  completed:              { bg: '#dcfce7', text: '#16a34a', label: 'Completed' },
   confirmed:              { bg: '#dcfce7', text: '#16a34a', label: 'Confirmed' },
   unconfirmed:            { bg: '#fef9c3', text: '#ca8a04', label: 'Unconfirmed' },
   preconfirmed:           { bg: '#dbeafe', text: '#2563eb', label: 'Preconfirmed' },
@@ -42,9 +44,10 @@ const FamilyAppointmentsDueTab = ({ dueAppointments, getPatientName }) => {
               <Box
                 key={appt._id || i}
                 sx={{
-                  display: "flex",
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr auto auto",
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  gap: "12px",
                   p: "12px 16px",
                   borderRadius: "10px",
                   backgroundColor: COLORS.WHITE,
@@ -52,50 +55,52 @@ const FamilyAppointmentsDueTab = ({ dueAppointments, getPatientName }) => {
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      backgroundColor: COLORS.ACCENT + "18",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "13px", fontWeight: 700, color: COLORS.ACCENT }}>
-                      {getPatientName(appt).charAt(0)}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: "13px", fontWeight: 600, color: COLORS.TEXT_PRIMARY }}>
-                      {getPatientName(appt)}
-                    </Typography>
-                    <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>
-                      {appt.visitType || "Appointment"}
-                    </Typography>
-                  </Box>
+                {/* Avatar */}
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    backgroundColor: COLORS.ACCENT + "18",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Typography sx={{ fontSize: "13px", fontWeight: 700, color: COLORS.ACCENT }}>
+                    {getPatientName(appt).charAt(0)}
+                  </Typography>
                 </Box>
 
-                <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>
-                    {dayjs(appt.appointmentDate).format("MMM DD, YYYY")}
+                {/* Name + Visit Type */}
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontSize: "13px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {getPatientName(appt)}
                   </Typography>
-                  <Chip
-                    label={statusInfo.label}
-                    size="small"
-                    sx={{
-                      backgroundColor: statusInfo.bg,
-                      color: statusInfo.text,
-                      fontWeight: 600,
-                      fontSize: "11px",
-                      height: "22px",
-                      borderRadius: "5px",
-                    }}
-                  />
+                  <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>
+                    {appt.visitType || "Appointment"}
+                  </Typography>
                 </Box>
+
+                {/* Date */}
+                <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_SECONDARY, whiteSpace: "nowrap" }}>
+                  {dayjs(appt.appointmentDate).format("MMM DD, YYYY")}
+                </Typography>
+
+                {/* Status Chip */}
+                <Chip
+                  label={statusInfo.label}
+                  size="small"
+                  sx={{
+                    backgroundColor: statusInfo.bg,
+                    color: statusInfo.text,
+                    fontWeight: 600,
+                    fontSize: "11px",
+                    height: "22px",
+                    borderRadius: "5px",
+                  }}
+                />
               </Box>
             );
           })}

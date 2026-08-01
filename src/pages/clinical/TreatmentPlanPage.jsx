@@ -1400,7 +1400,7 @@ export default function TreatmentPlanPage() {
       createMutation.mutate({
         patientId: patientId.toString(),
         title: 'Phase 1 Restorative Plan',
-        status: 'active',
+        status: 'A',
         totalAmount: 0,
         items: [
           {
@@ -1488,7 +1488,7 @@ export default function TreatmentPlanPage() {
     createMutation.mutate({
       patientId: patientId.toString(),
       title: `TP ${nextNum}`,
-      status: 'active',
+      status: 'A',
       totalAmount: 0,
       items: [
         {

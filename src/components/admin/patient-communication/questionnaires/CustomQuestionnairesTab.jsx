@@ -4,6 +4,9 @@ import { MoreVert as MoreVertIcon, AssignmentOutlined as AssignmentIcon, EditOut
 import EmptyStateIllustration from './EmptyStateIllustration';
 import { communicationService } from '../../../../services/communication.service';
 
+import { radius, fontSize, fontWeight } from '../../../../constants/styles';
+import { COLORS } from '../../../../constants/colors';
+
 const CustomQuestionnairesTab = ({ questionnaires, onOpenCreateModal, onOpenCustom, refreshList }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeCard, setActiveCard] = useState(null);
@@ -49,9 +52,22 @@ const CustomQuestionnairesTab = ({ questionnaires, onOpenCreateModal, onOpenCust
           Custom Questionnaires
         </Typography>
         <Button 
-          variant="contained" 
+          variant="contained"
+          disableElevation
           onClick={onOpenCreateModal}
-          sx={{ bgcolor: '#3B82F6', textTransform: 'none', fontWeight: 600, fontSize: '0.85rem', borderRadius: 1.5, px: 3, py: 1, boxShadow: 'none', transition: 'all 0.15s', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
+          sx={{
+            textTransform: 'none',
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            px: 3,
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
+            '&:hover': {
+              backgroundColor: COLORS.ACCENT_HOVER,
+            },
+          }}
         >
           Create Questionnaire
         </Button>
@@ -104,9 +120,22 @@ const CustomQuestionnairesTab = ({ questionnaires, onOpenCreateModal, onOpenCust
             No Questionnaires Yet
           </Typography>
           <Button 
-            variant="contained" 
+            variant="contained"
+            disableElevation
             onClick={onOpenCreateModal}
-            sx={{ bgcolor: '#3B82F6', textTransform: 'none', fontWeight: 600, fontSize: '0.85rem', borderRadius: 1.5, px: 4, py: 1, boxShadow: 'none', transition: 'all 0.15s', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 4,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+            }}
           >
             Get Started
           </Button>

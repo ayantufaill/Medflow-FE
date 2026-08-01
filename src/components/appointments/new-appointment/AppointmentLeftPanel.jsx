@@ -28,12 +28,16 @@ const AppointmentLeftPanel = ({
   // Procedure table
   procedures, setProcedures, providers,
   showExtendedOptions,
+  onDuplicateProcedure,
 }) => {
   const [showPastVisits, setShowPastVisits] = useState(false);
 
   const handleAddPastProcedure = (proc) => {
     const exists = procedures.some((p) => p.code === proc.code);
-    if (exists) return;
+    if (exists) {
+      if (onDuplicateProcedure) onDuplicateProcedure("Already added");
+      return;
+    }
     setProcedures([...procedures, proc]);
   };
 

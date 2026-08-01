@@ -37,8 +37,8 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
       const { startTime: initStart, endTime: initEnd } = initialData;
       if (initStart) setStartTime(initStart);
       if (initEnd) setEndTime(initEnd);
-      setNotes('');
-      setSelectedColor(BLOCK_COLORS[0]);
+      setNotes(initialData.notes || initialData.note || '');
+      setSelectedColor(initialData.color || BLOCK_COLORS[0]);
     }
   }, [open, initialData]);
 

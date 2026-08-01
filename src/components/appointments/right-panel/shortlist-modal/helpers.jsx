@@ -3,8 +3,8 @@ import { KeyboardArrowDown } from "@mui/icons-material";
 import { COL } from "./tableConfig";
 
 /* ── table cell wrapper ────────────────────────────────────── */
-export const Cell = ({ col, children, sx }) => (
-  <Box sx={{ width: COL[col].width, flex: COL[col].flex, minWidth: COL[col].minWidth, flexShrink: 0, ...sx }}>
+export const Cell = ({ col, children, sx, className }) => (
+  <Box className={className} sx={{ width: COL[col].width, flex: COL[col].flex, minWidth: COL[col].minWidth, flexShrink: 0, ...sx }}>
     {children}
   </Box>
 );

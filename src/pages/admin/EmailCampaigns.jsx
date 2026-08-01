@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Breadcrumbs, Link } from '@mui/material';
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 import { useNavigate } from 'react-router-dom';
 import { communicationService } from '../../services/communication.service';
 
@@ -76,9 +79,22 @@ const EmailCampaigns = () => {
         </Box>
         {activeTab === 'home' && (
           <Button 
-            variant="contained" 
+            variant="contained"
+            disableElevation
             onClick={() => setCreateModalOpen(true)}
-            sx={{ bgcolor: '#3B82F6', textTransform: 'none', fontWeight: 600, fontSize: '0.85rem', borderRadius: 1.5, px: 3, py: 1, boxShadow: 'none', transition: 'all 0.15s', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 3,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+            }}
           >
             Create Campaign
           </Button>

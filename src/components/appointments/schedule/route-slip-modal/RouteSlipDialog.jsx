@@ -62,10 +62,10 @@ const RouteSlipDialog = () => {
   const dob = currentPatient?.dateOfBirth || currentPatient?.dob ? dayjs(currentPatient.dateOfBirth || currentPatient.dob).format('MM/DD/YYYY') : '--';
   const email = currentPatient?.email || currentPatient?.emailAddress || '--';
   const phone = currentPatient?.phonePrimary || currentPatient?.mobileNumber || currentPatient?.phone || currentPatient?.mobile || '--';
-  
+
   const getProviderName = (providerData) => {
     if (!providerData) return '--';
-    
+
     // If it's already an object with names, use them directly
     if (typeof providerData === 'object') {
       if (providerData.name) return providerData.name;
@@ -73,10 +73,10 @@ const RouteSlipDialog = () => {
         return `${providerData.firstName || ''} ${providerData.lastName || ''}`.trim();
       }
     }
-    
+
     // Otherwise, try to extract an ID to look up in our providers list
     const idToFind = typeof providerData === 'object' ? (providerData._id || providerData.id) : providerData;
-    
+
     if (idToFind !== null && idToFind !== undefined) {
       const searchId = String(idToFind);
       const found = providers.find(p => String(p._id) === searchId || String(p.id) === searchId);
@@ -85,7 +85,7 @@ const RouteSlipDialog = () => {
       }
       return searchId; // Fallback to raw ID if we couldn't find the provider
     }
-    
+
     return '--';
   };
 
@@ -99,7 +99,7 @@ const RouteSlipDialog = () => {
 
   // Identify the primary appointment for the Route Slip
   let routeSlipAppt = null;
-  
+
   // If we have an active appointment in Redux and it belongs to this patient, use it
   if (currentAppointment && (currentAppointment.patientId === currentPatient?._id || currentAppointment.patientId === currentPatient?.id)) {
     routeSlipAppt = currentAppointment;
@@ -125,13 +125,13 @@ const RouteSlipDialog = () => {
     } else {
       dateStr = dayjs().format('YYYY-MM-DD');
     }
-    
+
     let timeStr = '00:00';
     if (appt.time) { // from calendar mapped object e.g. "6:00 PM"
-       const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
-       if (timeObj.isValid()) {
-         timeStr = timeObj.format('HH:mm');
-       }
+      const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+      if (timeObj.isValid()) {
+        timeStr = timeObj.format('HH:mm');
+      }
     } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
       timeStr = appt.startTime;
       if (timeStr.split(':').length === 2) timeStr += ':00';
@@ -139,7 +139,7 @@ const RouteSlipDialog = () => {
       // Extract the HH:mm:ss directly from the string to ignore timezone offset
       timeStr = appt.start.split('T')[1].substring(0, 8);
     }
-    
+
     return dayjs(`${dateStr}T${timeStr}`);
   };
 
@@ -155,7 +155,7 @@ const RouteSlipDialog = () => {
     return getApptDateTime(appt).isAfter(referenceDateTime);
   });
   futureAppts.sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
-    const nextAppt = futureAppts.length > 0 ? futureAppts[0] : null;
+  const nextAppt = futureAppts.length > 0 ? futureAppts[0] : null;
 
   return (
     <Dialog
@@ -255,7 +255,7 @@ const RouteSlipDialog = () => {
 
       {/* MODAL BODY (Print Target) */}
       <DialogContent id="route-slip-print-content" sx={{ p: '25px', pt: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
-        
+
         {/* Print Layout Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 3 }}>
           <Typography sx={{ fontSize: '14px', color: '#334155' }}>
@@ -286,7 +286,7 @@ const RouteSlipDialog = () => {
                   <InfoRow label="Preferred Dentist" value={preferredDentistName} />
                   <InfoRow label="Preferred Hygienist" value={preferredHygienistName} />
                   <InfoRow label="Referring Sources" value="--" />
-                  <InfoRow label="Care Team Providers" value="--" />
+
                 </Box>
               </Grid>
             </Grid>
@@ -325,10 +325,10 @@ const RouteSlipDialog = () => {
           <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
             {routeSlipAppt ? (
               <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
-                <RouteSlipApptDisplay 
-                  appt={routeSlipAppt} 
-                  OPERATORY_COLUMNS={OPERATORY_COLUMNS} 
-                  getProviderName={getProviderName} 
+                <RouteSlipApptDisplay
+                  appt={routeSlipAppt}
+                  OPERATORY_COLUMNS={OPERATORY_COLUMNS}
+                  getProviderName={getProviderName}
                 />
               </Box>
             ) : (
@@ -348,10 +348,10 @@ const RouteSlipDialog = () => {
                 <Box sx={{ px: 2, boxSizing: 'border-box', width: '100%' }}>
                   <InfoRow label="Date" value={dayjs(nextAppt.appointmentDate || nextAppt.start).format('MM/DD/YYYY')} />
                 </Box>
-                <RouteSlipApptDisplay 
-                  appt={nextAppt} 
-                  OPERATORY_COLUMNS={OPERATORY_COLUMNS} 
-                  getProviderName={getProviderName} 
+                <RouteSlipApptDisplay
+                  appt={nextAppt}
+                  OPERATORY_COLUMNS={OPERATORY_COLUMNS}
+                  getProviderName={getProviderName}
                 />
               </Box>
             ) : (
@@ -365,13 +365,13 @@ const RouteSlipDialog = () => {
       </DialogContent>
 
       <DialogActions className="no-print-in-modal" sx={{ p: '12px 24px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE, justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           size="small"
           onClick={handleClose}
-          sx={{ 
-            color: '#64748b', 
-            borderColor: '#cbd5e1', 
+          sx={{
+            color: '#64748b',
+            borderColor: '#cbd5e1',
             borderRadius: '8px',
             '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
             textTransform: 'none',
@@ -381,17 +381,17 @@ const RouteSlipDialog = () => {
         >
           Cancel
         </Button>
-          <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           size="small"
-          startIcon={<PrintIcon />} 
+          startIcon={<PrintIcon />}
           onClick={handlePrint}
-          sx={{ 
+          sx={{
             textTransform: 'none',
-            borderColor: '#3b82f6', 
-            color: '#3b82f6', 
-            borderRadius: '8px', 
-            px: 2, 
+            borderColor: '#3b82f6',
+            color: '#3b82f6',
+            borderRadius: '8px',
+            px: 2,
             fontWeight: 600,
             '&:hover': { backgroundColor: '#eff6ff', borderColor: '#2563eb' }
           }}

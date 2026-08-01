@@ -57,7 +57,7 @@ import PaymentPresentation from './PaymentPresentation';
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
   { label: 'Providers', path: '/admin/user-management/providers' },
-  { label: 'Roles', path: '/admin/user-management/roles', disabled: true },
+  { label: 'Roles', path: '/admin/user-management/roles' },
   { label: 'Time Clock', path: '/admin/user-management/time-clock', disabled: true },
   { label: 'Task Management', path: '/admin/user-management/task-management', disabled: true },
 ];
@@ -379,6 +379,18 @@ const AdminPage = () => {
             <PracticeSettings />
           ) : location.pathname === '/admin/practice-setup/practice-information' ? (
             <PracticeInformation />
+          ) : location.pathname === '/admin/practice-setup/kiosk-accounts' ? (
+            <KioskAccountsView />
+          ) : location.pathname === '/admin/practice-setup/my-chart-configuration' ? (
+            <MyChartConfiguration />
+          ) : location.pathname === '/admin/practice-setup/office-timings' ? (
+            <OfficeTimings />
+          ) : location.pathname === '/admin/practice-setup/online-schedule' ? (
+            <OnlineScheduleConfiguration />
+          ) : location.pathname === '/admin/practice-setup/operatory-setup' ? (
+            <OperatorySetup />
+          ) : location.pathname === '/admin/practice-setup/patient-flags' ? (
+            <PatientFlags />
           ) : (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>

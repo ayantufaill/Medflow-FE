@@ -56,7 +56,7 @@ export default function HeadOfCommunicationSection({ patient, isEditMode = false
           sx={{
             width: 32,
             height: 32,
-            bgcolor: 'primary.main',
+            bgcolor: COLORS.ACCENT,
             fontSize: '0.75rem',
           }}
         >

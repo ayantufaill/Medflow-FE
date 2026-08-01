@@ -166,10 +166,11 @@ const AppointmentDetailModal = ({ open, appointment, onClose, onSave }) => {
         </Box>
       </Box>
 
-      <AppointmentDetailFooter 
+      <AppointmentDetailFooter
         onClose={onClose}
         onSave={onSave}
         status={status}
+        appointmentId={appointment._id || appointment.id}
         notes={notes}
         editDate={editDate}
         editTime={editTime}

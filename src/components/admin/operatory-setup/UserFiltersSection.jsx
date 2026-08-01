@@ -60,7 +60,9 @@ const UserFiltersSection = ({ onAddFilter }) => (
         startIcon={<AddIcon />}
         onClick={onAddFilter}
         sx={{
-          borderRadius: "20px",
+          borderRadius: "8px",
+          height: "30.67px",
+          fontSize: "12px",
           textTransform: "none",
           px: 2.5,
           bgcolor: ACCENT_BLUE,

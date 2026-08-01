@@ -3,6 +3,8 @@ import { Box, Typography, Button, Stack } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
+import { radius, fontSize, fontWeight } from '../../../constants/styles';
+import { COLORS } from '../../../constants/colors';
 
 const PatientFlagsHeader = ({ onAddCategory, onSave, onSync }) => (
   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6, flexWrap: 'wrap', gap: 2 }}>
@@ -12,26 +14,34 @@ const PatientFlagsHeader = ({ onAddCategory, onSave, onSync }) => (
 
     <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
       <Button
-        startIcon={<SyncIcon />}
+        startIcon={<SyncIcon sx={{ fontSize: '16px' }} />}
         onClick={onSync}
-        sx={{ textTransform: 'none', color: '#666', fontWeight: 600, fontSize: '0.8rem' }}
+        sx={{ 
+          textTransform: 'none', 
+          color: COLORS.TEXT_MUTED,
+          fontFamily: 'Inter',
+          fontSize: fontSize.base,
+          fontWeight: fontWeight.semibold,
+        }}
       >
         Sync
       </Button>
       <Button
         variant="outlined"
-        startIcon={<AddIcon />}
+        disableElevation
+        startIcon={<AddIcon sx={{ fontSize: '16px' }} />}
         onClick={onAddCategory}
         sx={{
           textTransform: 'none',
-          color: '#2563eb',
-          borderColor: '#2563eb',
-          borderRadius: '20px',
-          fontWeight: 600,
-          fontSize: '0.8rem',
+          borderRadius: radius.md,
+          fontFamily: 'Inter',
+          fontSize: fontSize.base,
+          fontWeight: fontWeight.semibold,
+          color: COLORS.ACCENT,
+          borderColor: COLORS.ACCENT,
           '&:hover': {
-            borderColor: '#1d4ed8',
-            backgroundColor: 'rgba(37, 99, 235, 0.08)',
+            borderColor: COLORS.ACCENT_HOVER,
+            backgroundColor: COLORS.ACCENT_BG,
           },
         }}
       >
@@ -39,16 +49,20 @@ const PatientFlagsHeader = ({ onAddCategory, onSave, onSync }) => (
       </Button>
       <Button
         variant="contained"
-        startIcon={<SaveIcon />}
+        disableElevation
+        startIcon={<SaveIcon sx={{ fontSize: '16px' }} />}
         onClick={onSave}
         sx={{
-          borderRadius: '20px',
           textTransform: 'none',
+          borderRadius: radius.md,
+          fontFamily: 'Inter',
+          fontSize: fontSize.base,
+          fontWeight: fontWeight.semibold,
           px: 3,
-          backgroundColor: '#2563eb',
-          color: '#fff',
+          backgroundColor: COLORS.ACCENT,
+          color: COLORS.WHITE,
           '&:hover': {
-            backgroundColor: '#1d4ed8',
+            backgroundColor: COLORS.ACCENT_HOVER,
           },
         }}
       >

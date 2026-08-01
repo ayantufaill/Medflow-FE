@@ -18,6 +18,10 @@ import {
   Add as AddIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+
 import { useNavigate } from 'react-router-dom';
 import { communicationService } from '../../services/communication.service';
 
@@ -173,13 +177,26 @@ const ScheduleGapFills = () => {
                 }
                 setIsEditing(false);
               }}
-              sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600, color: '#475569', borderColor: '#CBD5E1', '&:hover': { borderColor: '#94A3B8', bgcolor: '#F8FAFC' } }}
+              sx={{
+                textTransform: 'none',
+                borderRadius: radius.md,
+                fontFamily: 'Inter',
+                fontSize: fontSize.base,
+                fontWeight: fontWeight.semibold,
+                color: COLORS.TEXT_MUTED,
+                borderColor: COLORS.BORDER,
+                '&:hover': {
+                  borderColor: COLORS.TEXT_MUTED,
+                  backgroundColor: COLORS.BACKGROUND,
+                },
+              }}
             >
               Cancel
             </Button>
           )}
           <Button 
-            variant="contained" 
+            variant="contained"
+            disableElevation
             onClick={() => {
               if (isEditing || isDirty) {
                 if (isDirty) handleSave();
@@ -189,14 +206,22 @@ const ScheduleGapFills = () => {
               }
             }} 
             disabled={loading || ((isEditing || isDirty) && !isDirty)}
-            sx={{ 
-              bgcolor: '#3B82F6', 
-              textTransform: 'none', 
-              borderRadius: '8px', 
-              px: 3, 
-              fontWeight: 600,
-              boxShadow: 'none',
-              '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } 
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 3,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+              '&.Mui-disabled': {
+                backgroundColor: COLORS.BORDER,
+                color: COLORS.TEXT_MUTED,
+              }
             }}
           >
             {(isEditing || isDirty) ? (loading ? 'Saving...' : 'Save Settings') : 'Edit Notifications'}
@@ -205,10 +230,10 @@ const ScheduleGapFills = () => {
       </Box>
 
       {/* Main Content Container */}
-      <Box sx={{ maxWidth: 900, mx: 'auto', px: 4 }}>
+      <Box sx={{ px: 4 }}>
         
         {!isEditing && (
-          <>
+          <Box key="view-mode-container">
             <Box sx={{ bgcolor: '#ffffff', borderRadius: 3, p: 3, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #eaeaea' }}>
               <Box>
                 <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#1E293B', mb: 0.5 }}>
@@ -240,11 +265,11 @@ const ScheduleGapFills = () => {
                 sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#3B82F6' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3B82F6' } }} 
               />
             </Box>
-          </>
+          </Box>
         )}
 
         {isEditing && (
-          <>
+          <Box key="edit-mode-container">
             <Typography sx={{ fontSize: '0.9rem', color: '#64748b', mb: 3 }}>
               Set up automated <span style={{ textDecoration: 'underline' }}>unscheduled procedures</span> notifications based on your preferences. Choose how and when to send reminders—whether via text, email, or both—after procedure creation date.
             </Typography>
@@ -256,12 +281,12 @@ const ScheduleGapFills = () => {
               </Typography>
               <IconButton size="small" sx={{ ml: 2, p: 0 }}><CloseIcon sx={{ fontSize: '1.1rem', color: '#B45309' }}/></IconButton>
             </Box>
-          </>
+          </Box>
         )}
 
         <Box sx={{ bgcolor: '#ffffff', borderRadius: 3, p: 3, mb: 5, display: 'flex', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #eaeaea' }}>
           {isEditing ? (
-            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+            <Typography key="edit-skip" sx={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
               Skip sending reminders if the patient had a treatment appointment in the last{' '}
               <TextField 
                 size="small" 
@@ -272,7 +297,7 @@ const ScheduleGapFills = () => {
               {' '}days.
             </Typography>
           ) : (
-            <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: 500 }}>
+            <Typography key="view-skip" sx={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: 500 }}>
               Skip sending reminders if the patient had a treatment appointment in the last <Box component="span" sx={{ fontWeight: 700 }}>{skipDays}</Box> days.
             </Typography>
           )}
@@ -303,7 +328,7 @@ const ScheduleGapFills = () => {
                   <Box sx={{ bgcolor: '#EFF6FF', color: '#2563EB', fontSize: '0.65rem', fontWeight: 700, px: 1.5, py: 0.4, borderRadius: 1.5 }}>DEFAULT</Box>
                 </Box>
                 {isEditing && (
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#EF4444', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleDeleteNotification(notif.id, notif.isNew)}>Delete Notification</Typography>
+                  <Typography key={`delete-${notif.id}`} sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#EF4444', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleDeleteNotification(notif.id, notif.isNew)}>Delete Notification</Typography>
                 )}
               </Box>
 
@@ -315,6 +340,7 @@ const ScheduleGapFills = () => {
                 
                 {isEditing ? (
                   <Select 
+                    key={`select-${notif.id}`}
                     size="small" 
                     value={notif.type} 
                     onChange={(e) => updateNotification(notif.id, 'type', e.target.value)}
@@ -324,7 +350,7 @@ const ScheduleGapFills = () => {
                     <MenuItem value="Text" sx={{ fontSize: '0.9rem' }}>Text</MenuItem>
                   </Select>
                 ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box key={`view-type-${notif.id}`} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <EmailIcon sx={{ fontSize: '1.2rem', color: '#3B82F6' }} />
                     <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>{notif.type}</Typography>
                   </Box>
@@ -334,7 +360,7 @@ const ScheduleGapFills = () => {
                 <Typography sx={{ fontSize: '0.9rem', color: '#64748b' }}>after</Typography>
 
                 {isEditing ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box key={`edit-days-${notif.id}`} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TextField 
                       size="small" 
                       value={notif.days}
@@ -347,7 +373,7 @@ const ScheduleGapFills = () => {
                     </Select>
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box key={`view-days-${notif.id}`} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>{notif.days}</Typography>
                     <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>Days</Typography>
                   </Box>

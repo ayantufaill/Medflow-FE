@@ -74,29 +74,29 @@ export const COLOR_TAGS = [
   "#22c55e", "#ec4899",
 ];
 
-import AsapSvg from "../../../assets/tags/ASAP.svg";
-import BalanceSvg from "../../../assets/tags/Balance.svg";
-import BotoxSvg from "../../../assets/tags/Botox.svg";
-import CreditSvg from "../../../assets/tags/Credit.svg";
-import DebitSvg from "../../../assets/tags/Debit.svg";
-import DeliveryReceivedSvg from "../../../assets/tags/Delivery Received.svg";
-import DeliverySentSvg from "../../../assets/tags/Delivery Sent.svg";
-import DeliverySvg from "../../../assets/tags/Delivery.svg";
-import DoctorSvg from "../../../assets/tags/Doctor.svg";
-import DoubleAppointmentSvg from "../../../assets/tags/Double Appointment.svg";
-import EmergencySvg from "../../../assets/tags/Emergency.svg";
-import ExamSvg from "../../../assets/tags/Exam.svg";
-import FamilySvg from "../../../assets/tags/Family.svg";
-import FillerSvg from "../../../assets/tags/Filler.svg";
-import HygieneSvg from "../../../assets/tags/Hygiene.svg";
-import MissingDocumentSvg from "../../../assets/tags/Missing Document.svg";
-import NeedsSedationSvg from "../../../assets/tags/Needs Sedation.svg";
-import NewPatientSvg from "../../../assets/tags/New Patient.svg";
-import PredeterminationSvg from "../../../assets/tags/Predetermination.svg";
-import SendDocumentSvg from "../../../assets/tags/Send Document.svg";
-import TreatmentPlanSvg from "../../../assets/tags/Treatment Plan.svg";
-import VerifiedSvg from "../../../assets/tags/Verified.svg";
-import RadiographSvg from "../../../assets/tags/radiograph.svg";
+import AsapSvg from "../../../assets/Tags/ASAP.svg";
+import BalanceSvg from "../../../assets/Tags/Balance.svg";
+import BotoxSvg from "../../../assets/Tags/Botox.svg";
+import CreditSvg from "../../../assets/Tags/Credit.svg";
+import DebitSvg from "../../../assets/Tags/Debit.svg";
+import DeliveryReceivedSvg from "../../../assets/Tags/Delivery Received.svg";
+import DeliverySentSvg from "../../../assets/Tags/Delivery Sent.svg";
+import DeliverySvg from "../../../assets/Tags/Delivery.svg";
+import DoctorSvg from "../../../assets/Tags/Doctor.svg";
+import DoubleAppointmentSvg from "../../../assets/Tags/Double Appointment.svg";
+import EmergencySvg from "../../../assets/Tags/Emergency.svg";
+import ExamSvg from "../../../assets/Tags/Exam.svg";
+import FamilySvg from "../../../assets/Tags/Family.svg";
+import FillerSvg from "../../../assets/Tags/Filler.svg";
+import HygieneSvg from "../../../assets/Tags/Hygiene.svg";
+import MissingDocumentSvg from "../../../assets/Tags/Missing Document.svg";
+import NeedsSedationSvg from "../../../assets/Tags/Needs Sedation.svg";
+import NewPatientSvg from "../../../assets/Tags/New Patient.svg";
+import PredeterminationSvg from "../../../assets/Tags/Predetermination.svg";
+import SendDocumentSvg from "../../../assets/Tags/Send Document.svg";
+import TreatmentPlanSvg from "../../../assets/Tags/Treatment Plan.svg";
+import VerifiedSvg from "../../../assets/Tags/Verified.svg";
+import RadiographSvg from "../../../assets/Tags/radiograph.svg";
 
 export const ICON_TAGS = [
   { id: 'Delivery', label: 'Delivery', src: DeliverySvg },

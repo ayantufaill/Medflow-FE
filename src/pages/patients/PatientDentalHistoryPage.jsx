@@ -23,6 +23,7 @@ import { useDentalHistory } from "../../hooks/redux/useDentalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
 import { usePatientAppointments } from "../../hooks/queries/usePatientAppointments";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
+import medflowLogo from "../../assets/medflow-logo.png";
 import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
 import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
 import { DentalGeneralInfo, DentalHistorySummaryTab, DentalHistoryFullView } from "../../components/dental-history";
@@ -291,6 +292,7 @@ const PatientDentalHistoryPage = () => {
 
   return (
     <Box
+      id="dental-history-page-root"
       sx={{
         bgcolor: "#f5f5f5",
         minHeight: "100%",
@@ -298,7 +300,113 @@ const PatientDentalHistoryPage = () => {
         position: "relative",
       }}
     >
-      <PatientSectionTabs activeTab="dental" patientId={patientId} />
+      <Box className="print-only" sx={{ display: 'none', textAlign: 'center', mb: 3 }}>
+        <img src={medflowLogo} alt="Medflow" style={{ height: '40px' }} />
+      </Box>
+      <style>
+        {`
+          @media print {
+            @page {
+              size: letter portrait;
+              margin: 15mm;
+            }
+
+            body {
+              background: white !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            body * { 
+              visibility: hidden; 
+            }
+
+            #dental-history-page-root, #dental-history-page-root * { 
+              visibility: visible; 
+            }
+
+            #dental-history-page-root {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background-color: white !important;
+            }
+
+            .no-print, .no-print * {
+              display: none !important;
+            }
+
+            .section-card-icon, .legend-dot {
+              display: none !important;
+            }
+            .section-card-text, .section-card-text * {
+              display: block !important;
+              visibility: visible !important;
+            }
+
+            .print-only {
+              display: block !important;
+              margin-bottom: 32px !important;
+            }
+
+            .section-card {
+              border-radius: 4px !important;
+              border: 1px solid #cbd5e1 !important;
+              margin-bottom: 16px !important;
+              page-break-inside: avoid !important;
+            }
+            .section-card > .MuiBox-root:first-of-type {
+              border-top-left-radius: 4px !important;
+              border-top-right-radius: 4px !important;
+              padding-left: 12px !important;
+            }
+            .section-card-body {
+              padding: 16px !important;
+            }
+
+            #dental-history-header {
+              border-radius: 4px !important;
+              border: 1px solid #cbd5e1 !important;
+              margin-bottom: 16px !important;
+              padding: 12px 16px !important;
+              page-break-inside: avoid !important;
+            }
+
+            /* Professional Form Fields */
+            .MuiOutlinedInput-root {
+              background: transparent !important;
+            }
+            .MuiOutlinedInput-notchedOutline {
+              border: 1px solid #cbd5e1 !important;
+              border-radius: 4px !important;
+            }
+            .MuiInputBase-input {
+              padding: 6px 10px !important;
+              font-size: 13px !important;
+              color: black !important;
+              -webkit-text-fill-color: black !important;
+            }
+            .MuiSelect-icon {
+              display: none !important;
+            }
+            
+            #dental-history-grid, .print-stack {
+              display: block !important;
+            }
+            #dental-history-grid > .MuiBox-root, .print-stack > .MuiBox-root {
+              width: 100% !important;
+              margin-bottom: 16px !important;
+            }
+          }
+        `}
+      </style>
+      <Box className="no-print">
+        <PatientSectionTabs activeTab="dental" patientId={patientId} />
+      </Box>
       <UnsavedChangesPrompt when={hasUnsavedChanges} onSave={() => saveDentalHistory(false)} />
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
       {!showContent ? (
@@ -310,6 +418,7 @@ const PatientDentalHistoryPage = () => {
           {/* Header — same rounded-card treatment as the Medical History /
               Patient Details pages, with this page's own action set. */}
           <Box
+            id="dental-history-header"
             sx={{
               mt: 1.5,
               mb: 2,
@@ -413,7 +522,7 @@ const PatientDentalHistoryPage = () => {
               Timeline takes the main column's full width here — unlike
               Medical History, there's no Premedication card to share the
               row with. */}
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
+          <Box id="dental-history-grid" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
             <Box sx={{ minWidth: 0 }}>
               <SectionCard icon={HistoryTimelineIcon} title="History Timeline">
                 {visitDates.length ? (
@@ -501,8 +610,8 @@ const PatientDentalHistoryPage = () => {
             {/* Sidebar — same Task List / Messages cards as the schedule
                 operatory pages and the Medical History page, unmodified. */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-              <TaskList />
-              <Messages />
+              <Box className="no-print"><TaskList /></Box>
+              <Box className="no-print"><Messages /></Box>
               <PatientSignatureCard
                 patient={patient}
                 value={signature}

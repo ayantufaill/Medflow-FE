@@ -6,8 +6,26 @@ import {
   Select,
   MenuItem,
   Stack,
-  Divider,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from "@mui/material";
+import { Close as CloseIcon } from '@mui/icons-material';
+import { COLORS } from "../../constants/colors";
+
+const MENU_PROPS = {
+  disablePortal: true,
+  anchorOrigin: { vertical: "bottom", horizontal: "left" },
+  transformOrigin: { vertical: "top", horizontal: "left" },
+  PaperProps: {
+    sx: {
+      bgcolor: '#fff',
+      zIndex: 1600,
+      '& .MuiMenuItem-root': { fontSize: '12px', py: 0.5 }
+    },
+  },
+};
 
 const CourtesyCreditComponent = ({
   adjustmentData,
@@ -66,191 +84,172 @@ const CourtesyCreditComponent = ({
     <Box
       sx={{
         width: "100%",
-        maxWidth: 600,
+        minWidth: "600px",
         bgcolor: "#fff",
-        border: "1px solid #ccc",
-        borderRadius: "4px",
-        overflow: "hidden",
+        border: `1px solid ${COLORS.BORDER}`,
+        borderRadius: "14px",
+        overflow: "visible",
+        boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
       }}
     >
-      {/* Blue Header Bar */}
-      <Box
-        sx={{ bgcolor: "#7788bb", color: "#fff", p: 1, textAlign: "center" }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: "12px" }}>
+      {/* Header */}
+      <DialogTitle sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+      }}>
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Courtesy Credit
         </Typography>
-      </Box>
+        <IconButton onClick={handleCancel} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
 
-      <Box sx={{ p: 2 }}>
+      <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2, display: 'flex', flexDirection: 'column' }}>
         {/* Main Selection Row */}
-        <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
-          <Typography
-            variant="caption"
-            sx={{ color: "#5c6bc0", fontWeight: "bold", pb: 0.5 }}
-          >
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          flexWrap: 'nowrap', 
+          gap: 1.5, 
+          borderBottom: `1px solid ${COLORS.BORDER}`, 
+          pb: 1.5,
+          mb: 2 
+        }}>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
             {adjustmentData?.date || "04/15/2026"}
           </Typography>
 
-          <Typography variant="caption" sx={{ color: "#5c6bc0", pb: 0.5 }}>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '0.85rem', whiteSpace: 'nowrap', ml: 1 }}>
             Adjustment Type
           </Typography>
 
-          {/* Underlined Dropdown Menu */}
-          <Box sx={{ flexGrow: 1, borderBottom: "1.5px solid #7788bb" }}>
-            <Select
-              value={adjustmentType}
-              onChange={(e) => setAdjustmentType(e.target.value)}
-              variant="standard"
-              fullWidth
-              sx={{
-                fontSize: "13px",
-                height: 25,
-                "& .MuiSelect-select": { pb: 0.5 },
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    bgcolor: "#fff",
-                    "& .MuiMenuItem-root": {
-                      fontSize: "12px",
-                      py: 0.5,
-                      borderBottom: "1px solid #eee",
-                    },
-                    "& .Mui-selected": {
-                      bgcolor: "#5c6bc0 !important", // Matches the blue highlight
-                      color: "#fff",
-                    },
-                  },
-                },
-              }}
-            >
-              {options.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-            </Select>
-          </Box>
-        </Stack>
-
-        {/* Bottom Decorative/functional line found in legacy UI */}
-        <Divider
-          sx={{ borderBottom: "1px solid #7788bb", opacity: 0.5, mb: 2 }}
-        />
+          <Select
+            value={adjustmentType}
+            onChange={(e) => setAdjustmentType(e.target.value)}
+            variant="outlined"
+            size="small"
+            sx={{ 
+              fontSize: '0.8125rem', minWidth: 220, height: '28px',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT }
+            }}
+            MenuProps={MENU_PROPS}
+          >
+            {options.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+        </Box>
 
         {/* Courtesy Credit Amount - Only show when showAmountSection is true */}
         {showAmountSection && (
-          <>
-            {/* Courtesy Credit Amount */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                mt: 2,
-                mb: 2,
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 1 }}>
+            <Typography 
+              sx={{ 
+                fontSize: '0.85rem', 
+                color: '#2c3e50', 
+                fontWeight: 500 
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: "0.85rem",
-                  color: "#2c3e50",
-                  fontWeight: 500,
-                }}
-              >
-                Courtesy Credit Amount:
-              </Typography>
-
-              <Box
-                sx={{
-                  border: "1.5px dashed #666",
-                  borderRadius: "2px",
-                  px: 1,
-                  py: 0.5,
-                  minWidth: "60px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  bgcolor: "transparent",
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#1a237e",
-                    mr: 0.5,
-                  }}
-                >
-                  $
-                </Typography>
-                <input
-                  type="text"
-                  value={creditAmount}
-                  onChange={(e) => setCreditAmount(e.target.value)}
-                  style={{
-                    border: "none",
-                    outline: "none",
-                    background: "transparent",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#1a237e",
-                    textAlign: "center",
-                    width: "60px",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </Box>
-            </Box>
-
-            {/* Add Description */}
-            <Typography
-              sx={{
-                color: "#5c7cb6",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                "&:hover": { textDecoration: "underline" },
-                mb: 2,
-              }}
-            >
-              + Add description
+              Courtesy Credit Amount:
             </Typography>
-          </>
+
+            <Box 
+              sx={{ 
+                border: '1.5px dashed #666',
+                borderRadius: '4px',
+                px: 1.5,
+                py: 0.5,
+                minWidth: '70px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                bgcolor: 'transparent'
+              }}
+            >
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a237e', mr: 0.5 }}>$</Typography>
+              <input
+                type="text"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+                style={{
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#1a237e",
+                  textAlign: "center",
+                  width: "60px",
+                  fontFamily: "inherit",
+                }}
+              />
+            </Box>
+          </Box>
+        )}
+      </DialogContent>
+
+      {/* Action Buttons - Always visible */}
+      <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
+        {showAmountSection ? (
+          <Typography 
+            sx={{ 
+              color: COLORS.ACCENT, 
+              fontSize: '0.85rem', 
+              cursor: 'pointer',
+              '&:hover': { textDecoration: 'underline' }
+            }}
+          >
+            + Add description
+          </Typography>
+        ) : (
+          <Box />
         )}
 
-        {/* Action Buttons - Always visible */}
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
-          <Button
-            size="small"
-            variant="contained"
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button 
+            variant="contained" 
             onClick={handleSave}
-            sx={{
-              bgcolor: "#d4c4a8",
-              color: "#fff",
-              textTransform: "none",
-              fontSize: "11px",
-              "&:hover": { bgcolor: "#c5b396" },
+            sx={{ 
+              bgcolor: COLORS.ACCENT, 
+              color: '#fff',
+              textTransform: 'none', 
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 3,
+              '&:hover': { bgcolor: '#1565c0', boxShadow: 'none' } 
             }}
           >
             {buttonLabel}
           </Button>
-          <Button
-            size="small"
-            variant="contained"
+          <Button 
+            variant="outlined" 
             onClick={handleCancel}
-            sx={{
-              bgcolor: "#bdbdbd",
-              color: "#fff",
-              textTransform: "none",
-              fontSize: "11px",
-              "&:hover": { bgcolor: "#9e9e9e" },
+            sx={{ 
+              color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, bgcolor: 'white',
+              textTransform: 'none', 
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 3,
+              '&:hover': { bgcolor: '#f5f5f5', boxShadow: 'none' } 
             }}
           >
             Cancel
           </Button>
-        </Stack>
-      </Box>
+        </Box>
+      </DialogActions>
     </Box>
   );
 };

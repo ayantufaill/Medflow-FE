@@ -21,7 +21,9 @@ const ChecklistRow = ({
   setActiveInput,
   handleInputSubmit,
   handleDeleteItem,
-  handleCopyItemToClipboard
+  handleCopyItemToClipboard,
+  handleRemoveChoice,
+  handleRemoveProduct
 }) => {
   const isExpanded = expandedChecklists.includes(item.name);
   
@@ -120,6 +122,8 @@ const ChecklistRow = ({
           handleInputSubmit={handleInputSubmit}
           handleDeleteItem={handleDeleteItem}
           handleCopyItemToClipboard={handleCopyItemToClipboard}
+          handleRemoveChoice={handleRemoveChoice}
+          handleRemoveProduct={handleRemoveProduct}
         />
       )}
     </Box>

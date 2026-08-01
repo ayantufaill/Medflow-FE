@@ -13,6 +13,9 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { Box, Typography, Button } from '@mui/material';
 import { Sync as SyncIcon } from '@mui/icons-material';
 
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+
 import PrescriptionTemplatesTable from '../../components/admin/clinical-management/prescriptions/PrescriptionTemplatesTable';
 import AddPrescriptionDialog from '../../components/admin/clinical-management/prescriptions/AddPrescriptionDialog';
 import SyncPrescriptionsDialog from '../../components/admin/clinical-management/prescriptions/SyncPrescriptionsDialog';
@@ -240,23 +243,30 @@ const PrescriptionTemplates = () => {
             onClick={handleOpenSyncDialog}
             sx={{
               textTransform: 'none',
-              fontWeight: 600,
-              color: '#334155',
-              borderColor: '#cbd5e1',
-              '&:hover': { backgroundColor: '#f8fafc', borderColor: '#94a3b8' }
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              color: COLORS.TEXT_MUTED,
+              borderColor: COLORS.BORDER,
+              '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.TEXT_MUTED }
             }}
           >
             Sync
           </Button>
           <Button
             variant="contained"
+            disableElevation
             onClick={handleAddTemplate}
             sx={{
               textTransform: 'none',
-              fontWeight: 600,
-              backgroundColor: '#3b82f6',
-              boxShadow: 'none',
-              '&:hover': { backgroundColor: '#2563eb', boxShadow: 'none' }
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
             }}
           >
             + Add Template

@@ -58,15 +58,11 @@ const GeneralRecareConfig = ({
         <Button 
           variant="outlined" 
           sx={{ 
-            borderColor: '#cbd5e1', 
-            color: '#475569', 
-            textTransform: 'none', 
-            fontSize: '0.8rem', 
-            fontWeight: 600,
-            py: 0.8,
-            px: 2,
-            borderRadius: 1.5,
-            '&:hover': { backgroundColor: '#f8fafc', borderColor: '#94a3b8', color: '#1e293b' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Update Recall Dates For All Patients
@@ -74,16 +70,13 @@ const GeneralRecareConfig = ({
         <Button 
           variant="contained" 
           sx={{ 
-            backgroundColor: '#3b82f6', 
-            color: '#fff', 
-            textTransform: 'none', 
-            fontSize: '0.8rem', 
-            fontWeight: 600,
-            py: 0.8,
-            px: 2,
-            borderRadius: 1.5,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
         >
           Update Recare Plans For All Patients

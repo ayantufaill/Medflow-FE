@@ -18,7 +18,9 @@ import {
 } from '@mui/material';
 import {
   FileUpload as UploadIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Close as CloseIcon,
+  DescriptionOutlined as DescriptionIcon
 } from '@mui/icons-material';
 
 const AddConsentDialog = ({
@@ -44,13 +46,35 @@ const AddConsentDialog = ({
         } 
       }}
     >
-      <DialogTitle sx={{ color: '#1e293b', fontSize: '1.25rem', fontWeight: 700, pb: 2, pt: 3, px: 4, borderBottom: '1px solid #f1f5f9' }}>
-        Add New Informed Consent
-      </DialogTitle>
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Add New Informed Consent
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Create a new informed consent document.
+          </Typography>
+        </Box>
+        <IconButton onClick={() => setAddDialogOpen(false)} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       
       <DialogContent sx={{ px: 4, py: 3 }}>
         <Box sx={{ mb: 4, mt: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>File Type:</Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151" }}>File Type:</Typography>
           <RadioGroup 
             row 
             value={newConsentDraft.fileType} 
@@ -59,18 +83,18 @@ const AddConsentDialog = ({
             <FormControlLabel 
               value="Upload PDF" 
               control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569' }}>Upload PDF</Typography>} 
+              label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>Upload PDF</Typography>} 
             />
             <FormControlLabel 
               value="Create Form" 
               control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569' }}>Create Form</Typography>} 
+              label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>Create Form</Typography>} 
             />
           </RadioGroup>
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1.5 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
             Upload PDF <Typography component="span" sx={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 400 }}>(The system only accepts .pdf files)</Typography>
           </Typography>
           
@@ -127,7 +151,7 @@ const AddConsentDialog = ({
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
             Informed Consent Name
           </Typography>
           <TextField 
@@ -137,13 +161,15 @@ const AddConsentDialog = ({
             value={newConsentDraft.name} 
             onChange={(e) => setNewConsentDraft({ ...newConsentDraft, name: e.target.value })} 
             sx={{ 
-              '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' } 
+              '& .MuiOutlinedInput-root': { borderRadius: '8px', backgroundColor: '#fff' },
+              '& .MuiInputBase-input': { fontFamily: 'Inter', fontSize: '13px' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' } 
             }}
           />
         </Box>
 
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', mb: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
             Procedures
           </Typography>
           <TextField 
@@ -153,7 +179,9 @@ const AddConsentDialog = ({
             value={newConsentDraft.procedures} 
             onChange={(e) => setNewConsentDraft({ ...newConsentDraft, procedures: e.target.value })} 
             sx={{ 
-              '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' } 
+              '& .MuiOutlinedInput-root': { borderRadius: '8px', backgroundColor: '#fff' },
+              '& .MuiInputBase-input': { fontFamily: 'Inter', fontSize: '13px' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' } 
             }}
           />
         </Box>
@@ -161,7 +189,7 @@ const AddConsentDialog = ({
         <Divider sx={{ my: 4, borderColor: '#e2e8f0' }} />
 
         <Box sx={{ mb: 1 }}>
-          <Typography sx={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b', mb: 2 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
             Signature Requirements
           </Typography>
           <Grid container spacing={2}>
@@ -176,7 +204,7 @@ const AddConsentDialog = ({
                       sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }}
                     />
                   }
-                  label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>{item}</Typography>}
+                  label={<Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: "#374151" }}>{item}</Typography>}
                 />
               </Grid>
             ))}
@@ -189,13 +217,11 @@ const AddConsentDialog = ({
           onClick={() => setAddDialogOpen(false)}
           variant="outlined"
           sx={{ 
-            borderColor: '#cbd5e1', 
-            color: '#475569', 
-            textTransform: 'none', 
-            px: 4, 
-            borderRadius: 1.5,
-            fontWeight: 600,
-            '&:hover': { backgroundColor: '#f8fafc', borderColor: '#94a3b8' } 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Cancel
@@ -205,15 +231,13 @@ const AddConsentDialog = ({
           variant="contained"
           disabled={!newConsentDraft.name}
           sx={{ 
-            backgroundColor: '#3b82f6', 
-            color: '#fff', 
-            textTransform: 'none', 
-            px: 4, 
-            borderRadius: 1.5,
-            fontWeight: 600,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' },
-            '&.Mui-disabled': { backgroundColor: '#94a3b8', color: '#f1f5f9' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
         >
           Add Consent

@@ -844,7 +844,8 @@ const OperatorySchedulePage = () => {
 
     try {
       setFormSaving(true);
-      await createAppointment({
+      
+      const appointmentData = {
         patientId: formData.patientId,
         providerId: formData.providerId,
         appointmentDate: start.format("YYYY-MM-DD"),
@@ -858,15 +859,26 @@ const OperatorySchedulePage = () => {
         ...(formData.roomId && { roomId: formData.roomId }),
         ...(formData.customFields && { customFields: formData.customFields }),
         patientName: formData.patientName,
-      });
-      showSnackbar('Appointment created successfully', 'success');
+      };
+
+      if (editingAppointment) {
+        let apptId = editingAppointment._id || editingAppointment.id;
+        if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
+          apptId = apptId.replace('appt-', '');
+        }
+        await updateAppointment(apptId, appointmentData);
+        showSnackbar('Appointment updated successfully', 'success');
+      } else {
+        await createAppointment(appointmentData);
+        showSnackbar('Appointment created successfully', 'success');
+      }
       setFormOpen(false);
     } catch (err) {
       if (err.status === 409 || err.response?.status === 409) {
         const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
         showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
       } else {
-        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
+        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save appointment.';
         showSnackbar(msg, 'error');
       }
     } finally {
@@ -1236,33 +1248,35 @@ const OperatorySchedulePage = () => {
                 primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
               />
             </ListItem>
-            <ListItem
-              button
-              onClick={() => {
-                setSlotPopoverAnchorEl(null);
-                if (selectedSlotInfo) {
-                  const start = selectedDate
-                    .clone()
-                    .startOf("day")
-                    .add(selectedSlotInfo.minutesFromStart, "minute");
-                  const end = start.clone().add(30, "minute"); // default 30 min block
+            {calendarView === 'day' && (
+              <ListItem
+                button
+                onClick={() => {
+                  setSlotPopoverAnchorEl(null);
+                  if (selectedSlotInfo) {
+                    const start = selectedDate
+                      .clone()
+                      .startOf("day")
+                      .add(selectedSlotInfo.minutesFromStart, "minute");
+                    const end = start.clone().add(30, "minute"); // default 30 min block
 
-                  setBlockSlotDialogData({
-                    roomId: selectedSlotInfo.columnId.replace("op", ""),
-                    date: selectedDate.format("YYYY-MM-DD"),
-                    startTime: start.format("HH:mm"),
-                    endTime: end.format("HH:mm")
-                  });
-                  setBlockSlotDialogOpen(true);
-                }
-              }}
-              sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
-            >
-              <ListItemText
-                primary="Block Slot"
-                primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
-              />
-            </ListItem>
+                    setBlockSlotDialogData({
+                      roomId: selectedSlotInfo.columnId.replace("op", ""),
+                      date: selectedDate.format("YYYY-MM-DD"),
+                      startTime: start.format("HH:mm"),
+                      endTime: end.format("HH:mm")
+                    });
+                    setBlockSlotDialogOpen(true);
+                  }
+                }}
+                sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+              >
+                <ListItemText
+                  primary="Block Slot"
+                  primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
+                />
+              </ListItem>
+            )}
           </List>
         </Popover>
 

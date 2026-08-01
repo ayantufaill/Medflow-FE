@@ -19,10 +19,10 @@ export const SectionHeader = ({ title }) => (
 
 export const InfoRow = ({ label, value, alignValue = 'left' }) => (
   <Box sx={{ display: 'flex', width: '100%', mb: '6px', fontSize: '13px', justifyContent: 'space-between' }}>
-    <Box sx={{ fontWeight: 600, color: '#334155', minWidth: '150px' }}>
+    <Box sx={{ fontWeight: 600, color: '#334155', minWidth: '130px', mr: 2, whiteSpace: 'nowrap' }}>
       {label}:
     </Box>
-    <Box sx={{ flex: 1, color: '#475569', textAlign: alignValue }}>
+    <Box sx={{ flex: 1, color: '#475569', textAlign: alignValue, whiteSpace: 'nowrap' }}>
       {value || '--'}
     </Box>
   </Box>

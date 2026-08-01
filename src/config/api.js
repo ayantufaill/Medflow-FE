@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getErrorMessage } from '../utils/errorUtils';
 
 // Use production URL as default for production builds, localhost for development
 const getDefaultApiUrl = () => {
@@ -207,6 +208,7 @@ apiClient.interceptors.response.use(
       }
     }
 
+    error.userMessage = getErrorMessage(error);
     return Promise.reject(error);
   }
 );
