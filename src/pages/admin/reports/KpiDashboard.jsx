@@ -4,6 +4,7 @@ import KpiTopCards from '../../../components/admin/reports/KpiTopCards';
 import KpiActionToolbar from '../../../components/admin/reports/KpiActionToolbar';
 import KpiDataTable from '../../../components/admin/reports/KpiDataTable';
 import { kpiService } from '../../../services/kpi.service';
+import LogoImg from '../../../assets/medflow-logo.png';
 
 const KpiDashboard = () => {
   const [subTab, setSubTab] = useState(0);
@@ -88,7 +89,16 @@ const KpiDashboard = () => {
 
   return (
     <Box sx={{ backgroundColor: '#FFFFFF', p: '24px', minHeight: '100vh', '@media print': { p: 0, minHeight: 'auto', display: 'block' } }}>
-      <Box sx={{ mb: 4 }}>
+      {/* Print-only Header */}
+      <Box sx={{ display: 'none', '@media print': { display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, width: '100%' } }}>
+        <img src={LogoImg} alt="Medflow Logo" style={{ height: '40px', marginBottom: '8px' }} />
+        <Typography sx={{ fontSize: '1.2rem', fontWeight: 600 }}>
+          {subTab === 0 ? 'Main KPI Dashboard' : 'Provider KPI Dashboard'}
+        </Typography>
+        <Typography sx={{ fontSize: '0.9rem', color: '#64748b' }}>Date: {new Date().toLocaleDateString()}</Typography>
+      </Box>
+
+      <Box sx={{ mb: 4, '@media print': { display: 'none' } }}>
         <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 0.5, letterSpacing: '-0.02em', fontSize: '1.75rem' }}>
           KPI Dashboard
         </Typography>
