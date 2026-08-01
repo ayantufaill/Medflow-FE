@@ -26,8 +26,6 @@ import {
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
-
-const InvoiceModal = ({ invoiceData, patientCoverageTable, onSave, onCancel, onClose }) => {
 import { Close as CloseIcon, Receipt as ReceiptIcon } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 
