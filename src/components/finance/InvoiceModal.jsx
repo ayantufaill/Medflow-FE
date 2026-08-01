@@ -25,6 +25,9 @@ import {
   DialogActions,
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
+import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
+
+const InvoiceModal = ({ invoiceData, patientCoverageTable, onSave, onCancel, onClose }) => {
 import { Close as CloseIcon, Receipt as ReceiptIcon } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 
@@ -49,24 +52,34 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     }
     if (!savedData) return;
 
-    const baseFee = parseFloat(savedData.fee || 0);
+    const fee = parseFloat(savedData.fee || 0);
+    const code = savedData.procedureCode || "";
+
+    const portions = calculatePortionsForCategory({
+      charge: fee,
+      writeoff: 0,
+      code,
+      dbi: false,
+      coverageTable: patientCoverageTable,
+    });
 
     const newProcedure = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
       date: new Date().toISOString().split("T")[0],
-      code: savedData.procedureCode || "",
+      code,
       site:
         savedData.selectedTeeth.join(",") +
         (savedData.selectedSurfaces.length > 0
           ? ` (${savedData.selectedSurfaces.join("")})`
           : ""),
       treatment: savedData.procedureDescription || "Custom Procedure",
-      provider: "", // default to empty instead of 'SMI'
+      provider: "",
       writeoff: "$0.00",
-      ptPortion: "$0.00",
-      insPortion: `$${baseFee.toFixed(2)}`,
-      charge: `$${baseFee.toFixed(2)}`,
-      balance: `$${baseFee.toFixed(2)}`,
+      coveragePct: portions.coveragePct,
+      ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+      insPortion: `$${portions.insPortion.toFixed(2)}`,
+      charge: `$${fee.toFixed(2)}`,
+      balance: `$${portions.balance.toFixed(2)}`,
       dbi: false,
       completed: true,
     };
@@ -122,18 +135,19 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           ) || 0;
         const dbiState = updated.dbi;
 
-        if (["writeoff", "dbi"].includes(field)) {
-          const owed = Math.max(0, numCharge - numWriteoff);
-
-          if (dbiState) {
-            updated.ptPortion = `$${owed.toFixed(2)}`;
-            updated.insPortion = `$0.00`;
-          } else {
-            updated.insPortion = `$${owed.toFixed(2)}`;
-            updated.ptPortion = `$0.00`;
-          }
-
-          updated.balance = `$${owed.toFixed(2)}`;
+        if (["charge", "writeoff", "dbi"].includes(field)) {
+          const portions = calculatePortionsForCategory({
+            charge: numCharge,
+            writeoff: numWriteoff,
+            code: updated.code,
+            dbi: dbiState,
+            coverageTable: patientCoverageTable,
+            explicitPct: updated.coveragePct,
+          });
+          updated.insPortion = `$${portions.insPortion.toFixed(2)}`;
+          updated.ptPortion = `$${portions.ptPortion.toFixed(2)}`;
+          updated.balance = `$${portions.balance.toFixed(2)}`;
+          updated.coveragePct = portions.coveragePct;
         } else if (["ptPortion", "insPortion"].includes(field)) {
           updated.balance = `$${Math.max(0, numCharge - numWriteoff).toFixed(2)}`;
         } else if (field === "charge") {
@@ -166,6 +180,31 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         console.warn("Failed to fetch estimate after charge change:", err);
       }
     }
+  };
+
+  const handleReestimate = () => {
+    setProcedures((prev) =>
+      prev.map((p) => {
+        const numCharge =
+          parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const numWriteoff =
+          parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const portions = calculatePortionsForCategory({
+          charge: numCharge,
+          writeoff: numWriteoff,
+          code: p.code,
+          dbi: p.dbi,
+          coverageTable: patientCoverageTable,
+        });
+        return {
+          ...p,
+          insPortion: `$${portions.insPortion.toFixed(2)}`,
+          ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+          balance: `$${portions.balance.toFixed(2)}`,
+          coveragePct: portions.coveragePct,
+        };
+      })
+    );
   };
 
   const ProviderDropdown = ({ value, onChange }) => {
