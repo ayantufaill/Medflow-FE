@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, Select, MenuItem, IconButton, CircularProgress } from '@mui/material';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useDispatch } from 'react-redux';
 import { updateAppointmentThunk } from '../../../store/slices/appointmentSlice';
 import { COLORS } from '../../../constants/colors';
@@ -141,8 +140,8 @@ const AppointmentSummaryCard = ({ appointment }) => {
     setSendingChannel(channel);
     try {
       const result = await appointmentService.sendConfirmationNotification(id, [channel]);
-      const channelResult = channel === 'email' ? result?.email : channel === 'whatsapp' ? result?.whatsapp : result?.sms;
-      const channelLabel = channel === 'email' ? 'email' : channel === 'whatsapp' ? 'WhatsApp message' : 'text';
+      const channelResult = channel === 'email' ? result?.email : result?.sms;
+      const channelLabel = channel === 'email' ? 'email' : 'text';
       if (channelResult?.sent) {
         showSnackbar(`Confirmation ${channelLabel} sent`, 'success', { vertical: 'top', horizontal: 'right' });
       } else {
@@ -209,15 +208,6 @@ const AppointmentSummaryCard = ({ appointment }) => {
               sx={{ p: '4px', color: COLORS.ACCENT }}
             >
               {sendingChannel === 'sms' ? <CircularProgress size={16} /> : <ChatOutlinedIcon sx={{ fontSize: '16px' }} />}
-            </IconButton>
-            <IconButton
-              size="small"
-              title="Send confirmation via WhatsApp"
-              onClick={() => handleSendConfirmation('whatsapp')}
-              disabled={sendingChannel !== null}
-              sx={{ p: '4px', color: '#25D366' }}
-            >
-              {sendingChannel === 'whatsapp' ? <CircularProgress size={16} /> : <WhatsAppIcon sx={{ fontSize: '16px' }} />}
             </IconButton>
           </Box>
         </Box>
